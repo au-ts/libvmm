@@ -374,7 +374,7 @@ static bool vgic_dist_reg_read(vm_t *vm, uint64_t vcpu_id,
         reg = *reg_ptr;
         break;
     default:
-        ZF_LOGE("Unknown register offset 0x%x", offset);
+        printf("VMM|ERROR: Unknown register offset 0x%x", offset);
         err = ignore_fault(fault);
         goto fault_return;
     }
@@ -414,7 +414,7 @@ static bool vgic_dist_reg_write(vm_t *vm, uint64_t vcpu_id,
         } else if (data == 0) {
             vgic_dist_disable(gic_dist);
         } else {
-            ZF_LOGE("Unknown enable register encoding");
+            printf("VMM|ERROR: Unknown enable register encoding");
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
@@ -540,7 +540,7 @@ static bool vgic_dist_reg_write(vm_t *vm, uint64_t vcpu_id,
             target_list = (1 << vcpu_id);
             break;
         default:
-            ZF_LOGE("Unknow SGIR Target List Filter mode");
+            printf("VMM|ERROR: Unknow SGIR Target List Filter mode");
             goto ignore_fault;
         }
         // @ivanv: Here we're making the assumption that there's only one vCPU, and
@@ -558,7 +558,7 @@ static bool vgic_dist_reg_write(vm_t *vm, uint64_t vcpu_id,
     case RANGE32(0xFC0, 0xFFB):
         break;
     default:
-        ZF_LOGE("Unknown register offset 0x%x", offset);
+        printf("VMM|ERROR: Unknown register offset 0x%x", offset);
     }
 ignore_fault:
     // @ivanv: revisit
@@ -569,9 +569,7 @@ ignore_fault:
     return true;
 }
 
-static memory_fault_result_t handle_vgic_dist_fault(vm_t *vm, uint64_t vcpu_id, uintptr_t fault_addr,
-                                                    size_t fault_length,
-                                                    void *cookie)
+bool handle_vgic_dist_fault(uint64_t vcpu_id, uintptr_t fault_addr)
 {
     // @ivanv: revisit this comment
     /* There is a fault object per VCPU with much more context, the parameters

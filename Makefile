@@ -28,9 +28,7 @@ LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-# VMM_OBJS := vmm.o printf.o vgic/vgic_v2.o psci.o smc.o
-# VMM_OBJS := vmm.o printf.o vgic/vgic_v2.o
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o
+VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic/vgic_v2.o
 
 BOARD_DIR := $(SEL4CP_SDK)/board/$(SEL4CP_BOARD)/$(SEL4CP_CONFIG)
 SRC_DIR := src

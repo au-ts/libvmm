@@ -11,7 +11,7 @@
 #include <sel4cp.h>
 
 // SMC VCPU fault handler
-bool handle_smc();
+bool handle_smc(uint32_t hsr);
 
 // Helper functions
 void smc_set_return_value(seL4_UserContext *u, uint64_t val);

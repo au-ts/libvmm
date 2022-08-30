@@ -11,9 +11,9 @@
 #include "fault.h"
 #include "util.h"
 
-bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
+// 0x0, 0x3, 0x6, 0xa
+bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint32_t hsr)
 {
-    printf("VMM|INFO: handling PSCI\n");
     int err;
     // @ivanv: write a note about what convention we assume, should we be checking
     // the convention?
@@ -41,8 +41,6 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
             smc_set_return_value(regs, 2);
             break;
         case PSCI_FEATURES:
-            // @ivanv: a comment like the one below shouldn't be in the code base
-            /* TODO Not sure if required */
             smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
             break;
         case PSCI_SYSTEM_RESET:
@@ -56,7 +54,7 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
     err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
     printf("err seL4_TCB_WriteRegisters: 0x%lx\n", err);
     // halt(!err);
-    advance_fault();
+    advance_vcpu_fault(regs, hsr);
 
     return true;
 }

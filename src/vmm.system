@@ -9,7 +9,8 @@
 
     <protection_domain name="vmm" priority="254">
         <program_image path="vmm.elf" />
-        <virtual_machine name="linux" vm_id="1" priority="253">
+        <map mr="guest_ram" vaddr="0x40000000" perms="r" cached="false" />
+        <virtual_machine name="linux" vm_id="1">
             <program_image path="images/linux" />
             <device_tree path="images/linux.dtb" />
             <map mr="serial" vaddr="0x9000000" perms="rw" cached="false" />
@@ -18,4 +19,3 @@
         </virtual_machine>
     </protection_domain>
 </system>
-

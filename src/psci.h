@@ -50,4 +50,4 @@ typedef enum psci {
     PSCI_MAX = 0x1f
 } psci_id_t;
 
-bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs,  uint64_t fn_number);
+bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs,  uint64_t fn_number, uint32_t hsr);

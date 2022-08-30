@@ -35,7 +35,7 @@ struct virq_handle {
 
 static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
 {
-    irq->ack(vcpu, irq->virq, irq->token);
+    irq->ack(vcpu_id, irq->virq, irq->token);
 }
 
 /* TODO: A typical number of list registers supported by GIC is four, but not
@@ -49,23 +49,24 @@ static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
 #define MAX_IRQ_QUEUE_LEN 64
 #define IRQ_QUEUE_NEXT(_i) (((_i) + 1) & (MAX_IRQ_QUEUE_LEN - 1))
 
-static_halt((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
-              "IRQ ring buffer size must be power of two");
+// @ivanv: come back to
+// static_assert((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
+//               "IRQ ring buffer size must be power of two");
 
 struct irq_queue {
     struct virq_handle *irqs[MAX_IRQ_QUEUE_LEN]; /* circular buffer */
-    size_t head;
-    size_t tail;
+    uint64_t head;
+    uint64_t tail;
 };
 
 /* vCPU specific interrupt context */
 typedef struct vgic_vcpu {
     /* Mirrors the GIC's vCPU list registers */
-    virq_handle_t lr_shadow[NUM_LIST_REGS];
+    struct virq_handle lr_shadow[NUM_LIST_REGS];
     /* Queue for IRQs that don't fit in the GIC's vCPU list registers */
     struct irq_queue irq_queue;
     /*  vCPU local interrupts (SGI, PPI) */
-    virq_handle_t local_virqs[NUM_VCPU_LOCAL_VIRQS];
+    struct virq_handle local_virqs[NUM_VCPU_LOCAL_VIRQS];
 } vgic_vcpu_t;
 
 /* GIC global interrupt context */
@@ -73,7 +74,7 @@ typedef struct vgic {
     /* virtual distributor registers */
     struct gic_dist_map dist;
     /* registered global interrupts (SPI) */
-    virq_handle_t vspis[NUM_SLOTS_SPI_VIRQ];
+    struct virq_handle vspis[NUM_SLOTS_SPI_VIRQ];
     /* vCPU specific interrupt context */
     vgic_vcpu_t vgic_vcpu[CONFIG_MAX_NUM_NODES];
 } vgic_t;
@@ -128,19 +129,19 @@ static inline bool virq_sgi_ppi_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_
     halt(vgic_vcpu);
     int irq = virq_data->virq;
     halt((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
-    virq_handle_t *slot = &vgic_vcpu->local_virqs[irq];
+    struct virq_handle *slot = &vgic_vcpu->local_virqs[irq];
     if (*slot != NULL) {
-        ZF_LOGE("IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
+        printf("VMM|ERROR: IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
         return false;
     }
     *slot = virq_data;
     return true;
 }
 
-static inline bool virq_add(size_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
+static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
 {
     if (virq_data->virq < NUM_VCPU_LOCAL_VIRQS) {
-        return virq_sgi_ppi_add(vcpu, vgic, virq_data);
+        return virq_sgi_ppi_add(vcpu_id, vgic, virq_data);
     }
     return virq_spi_add(vgic, virq_data);
 }

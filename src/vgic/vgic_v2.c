@@ -214,9 +214,9 @@ bool handle_vgic_maintenance()
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, VCPU_ID);
     halt(vgic_vcpu);
     halt((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
-    virq_handle_t *slot = &vgic_vcpu->lr_shadow[idx];
+    struct virq_handle *slot = &vgic_vcpu->lr_shadow[idx];
     halt(*slot);
-    virq_handle_t lr_virq = *slot;
+    struct virq_handle lr_virq = *slot;
     *slot = NULL;
     /* Clear pending */
     DIRQ("Maintenance IRQ %d\n", lr_virq->virq);
