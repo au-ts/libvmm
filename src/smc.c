@@ -113,9 +113,9 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
     }
 }
 
-bool handle_smc()
+bool handle_smc(uint32_t hsr)
 {
-    printf("VMM|INFO: handling SMC\n");
+    printf("VMM|INFO: handling SMC event\n");
     // @ivanv: An optimisation to be made is to store the TCB registers so we don't
     // end up reading them multiple times
     seL4_UserContext regs;
@@ -142,7 +142,8 @@ bool handle_smc()
             break;
         case SMC_CALL_STD_SERVICE:
             if (fn_number < PSCI_MAX) {
-                return handle_psci(VCPU_ID, &regs, fn_number);
+                printf("VMM|INFO: handling PSCI\n");
+                return handle_psci(VCPU_ID, &regs, fn_number, hsr);
             }
             printf("VMM|ERROR: Unhandled SMC: standard service call %lu\n", fn_number);
             break;

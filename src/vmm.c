@@ -7,10 +7,8 @@
 #include "smc.h"
 
 //
-// -> advance_fault
 // -> finish handle_smc
 // -> finish handle_psci
-// -> finish vgic
 // -> 
 
 // @ivanv: do we print out an error if we can't read registers or should we just assert
@@ -81,11 +79,12 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 static bool handle_vcpu_fault(sel4cp_msginfo msginfo)
 {
     // @ivanv: should this be uint32_t?
+    // @ivanv In order to boot, it seems that all we need is SMC handling.
     uint64_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
     switch (hsr_ec_class) {
         case HSR_SMC_64_EXCEPTION:
-            handle_smc();
+            handle_smc(hsr);
             break;
         default:
             // TODO
@@ -172,8 +171,35 @@ static int handle_user_exception(sel4cp_msginfo msginfo)
 static int handle_vm_fault()
 {
     // @ivanv: TODO
+    uint64_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
+    uint64_t fsr = sel4cp_mr_get(seL4_VMFault_FSR);
+    printf("VMM|INFO: Fault on address 0x%lx, FSR: 0x%lx\n", addr, fsr);
+
+    uint64_t addr_page_aligned = addr & (~(0x1000 - 1));
+    printf("addr_page_aligned: 0x%lx\n", addr_page_aligned);
+    switch (addr_page_aligned) {
+        case 0x8000000:
+            printf("Handle GIC distributor fault\n");
+    }
+
     return false;
 }
+
+// Structure of the kernel image header is from the documentation at:
+// https://www.kernel.org/doc/Documentation/arm64/booting.txt
+#define KERNEL_IMAGE_MAGIC 0x644d5241
+struct kernel_image_header {
+    uint32_t code0;                // Executable code
+    uint32_t code1;                // Executable code
+    uint64_t text_offset;          // Image load offset, little endian
+    uint64_t image_size;           // Effective Image size, little endian
+    uint64_t flags;                // kernel flags, little endian
+    uint64_t res2;            // reserved
+    uint64_t res3;            // reserved
+    uint64_t res4;            // reserved
+    uint32_t magic;   // Magic number, little endian, "ARM\x64"
+    uint32_t res5;                 // reserved (used for PE COFF offset
+};
 
 void
 init(void)
@@ -227,7 +253,7 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
     // @ivanv: should be checking the results of the handlers
     switch (label) {
         case seL4_Fault_VMFault:
-            // handle_vm_fault();
+            handle_vm_fault();
             printf("TODO: handle VM faults\n");
             break;
         case seL4_Fault_UnknownSyscall:

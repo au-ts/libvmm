@@ -1,7 +1,7 @@
 #include "../util.h"
 
 void halt(int cond) {
-    if (cond != 0) {
+    if (cond == 0) {
         printf("Halting VMM\n");
         while (1) {}
     }
