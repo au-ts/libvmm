@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<system>
+    <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
+    <!-- We have the guest memory at 0x40000000 as 512MiB is carved out in the DTS already.
+         See seL4/src/plat/qemu-arm-virt/overlay-reserve-vm-memory.dts for details. -->
+    <memory_region name="guest_ram" size="0x20_000_000" phys_addr="0x40000000" />
+    <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
+
+    <protection_domain name="vmm" priority="254">
+        <program_image path="vmm.elf" />
+        <virtual_machine name="linux" vm_id="1" priority="253">
+            <program_image path="images/linux" />
+            <device_tree path="images/linux.dtb" />
+            <map mr="serial" vaddr="0x9000000" perms="rw" cached="false" />
+            <map mr="gic_vcpu" vaddr="0x8040000" perms="rw" cached="false" />
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" cached="false" />
+        </virtual_machine>
+    </protection_domain>
+</system>
+
