@@ -1,14 +1,16 @@
 /*
  * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
-// #include "vm.h"
+#include "../util/util.h"
 
 /* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
  * state, 8 - 15 for secure state), 16 PPIs (interrupt 16 - 31) and 988 SPIs
@@ -27,15 +29,22 @@
  */
 #define NUM_SLOTS_SPI_VIRQ      200
 
+#define VIRQ_INVALID -1
+
+typedef void (*irq_ack_fn_t)(uint64_t vcpu_id, int irq, void *cookie);
+
 struct virq_handle {
-    uint32_t virq;
-    irq_ack_fn_t ack;
+    int virq;
+    irq_ack_fn_t ack_fn;
     void *ack_data;
 };
 
+// @ivanv: revisit
 static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
 {
-    irq->ack(vcpu_id, irq->virq, irq->token);
+    // printf("VGIC|INFO: Acking for vIRQ %d\n", irq->virq);
+    assert(irq->ack_fn);
+    irq->ack_fn(vcpu_id, irq->virq, NULL);
 }
 
 /* TODO: A typical number of list registers supported by GIC is four, but not
@@ -49,9 +58,8 @@ static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
 #define MAX_IRQ_QUEUE_LEN 64
 #define IRQ_QUEUE_NEXT(_i) (((_i) + 1) & (MAX_IRQ_QUEUE_LEN - 1))
 
-// @ivanv: come back to
-// static_assert((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
-//               "IRQ ring buffer size must be power of two");
+static_assert((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
+              "IRQ ring buffer size must be power of two");
 
 struct irq_queue {
     struct virq_handle *irqs[MAX_IRQ_QUEUE_LEN]; /* circular buffer */
@@ -71,34 +79,34 @@ typedef struct vgic_vcpu {
 
 /* GIC global interrupt context */
 typedef struct vgic {
-    /* virtual distributor registers */
-    struct gic_dist_map dist;
+    /* virtual registers */
+    void *registers;
     /* registered global interrupts (SPI) */
     struct virq_handle vspis[NUM_SLOTS_SPI_VIRQ];
     /* vCPU specific interrupt context */
-    vgic_vcpu_t vgic_vcpu[CONFIG_MAX_NUM_NODES];
+    vgic_vcpu_t vgic_vcpu[NUM_VCPUS];
 } vgic_t;
 
 static inline vgic_vcpu_t *get_vgic_vcpu(vgic_t *vgic, int vcpu_id)
 {
-    halt(vgic);
-    halt((vcpu_id >= 0) && (vcpu_id < ARRAY_SIZE(vgic->vgic_vcpu)));
+    assert(vgic);
+    assert((vcpu_id >= 0) && (vcpu_id < ARRAY_SIZE(vgic->vgic_vcpu)));
     return &(vgic->vgic_vcpu[vcpu_id]);
 }
 
 static inline struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, uint64_t vcpu_id, int virq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
-    halt((virq >= 0) && (virq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
-    return vgic_vcpu->local_virqs[virq];
+    assert(vgic_vcpu);
+    assert((virq >= 0) && (virq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
+    return &vgic_vcpu->local_virqs[virq];
 }
 
 static inline struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int virq)
 {
     for (int i = 0; i < ARRAY_SIZE(vgic->vspis); i++) {
-        if (vgic->vspis[i] && vgic->vspis[i]->virq == virq) {
-            return vgic->vspis[i];
+        if (vgic->vspis[i].virq != VIRQ_INVALID && vgic->vspis[i].virq == virq) {
+            return &vgic->vspis[i];
         }
     }
     return NULL;
@@ -115,8 +123,8 @@ static inline struct virq_handle *virq_find_irq_data(struct vgic *vgic, uint64_t
 static inline bool virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
 {
     for (int i = 0; i < ARRAY_SIZE(vgic->vspis); i++) {
-        if (vgic->vspis[i] == NULL) {
-            vgic->vspis[i] = virq_data;
+        if (vgic->vspis[i].virq == VIRQ_INVALID) {
+            vgic->vspis[i] = *virq_data;
             return true;
         }
     }
@@ -125,34 +133,36 @@ static inline bool virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
 
 static inline bool virq_sgi_ppi_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
 {
+    // @ivanv: revisit
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
+    assert(vgic_vcpu);
     int irq = virq_data->virq;
-    halt((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
+    assert((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
     struct virq_handle *slot = &vgic_vcpu->local_virqs[irq];
-    if (*slot != NULL) {
+    if (slot->virq != VIRQ_INVALID) {
         printf("VMM|ERROR: IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
         return false;
     }
-    *slot = virq_data;
+    *slot = *virq_data;
     return true;
 }
 
-static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
+static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_handle)
 {
-    if (virq_data->virq < NUM_VCPU_LOCAL_VIRQS) {
-        return virq_sgi_ppi_add(vcpu_id, vgic, virq_data);
+    if (virq_handle->virq < NUM_VCPU_LOCAL_VIRQS) {
+        return virq_sgi_ppi_add(vcpu_id, vgic, virq_handle);
     }
-    return virq_spi_add(vgic, virq_data);
+    return virq_spi_add(vgic, virq_handle);
 }
 
 static inline int vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_handle *irq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
+    assert(vgic_vcpu);
     struct irq_queue *q = &vgic_vcpu->irq_queue;
 
-    if (unlikely(IRQ_QUEUE_NEXT(q->tail) == q->head)) {
+    // @ivanv: add "unlikely" call
+    if (IRQ_QUEUE_NEXT(q->tail) == q->head) {
         return -1;
     }
 
@@ -165,7 +175,7 @@ static inline int vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_h
 static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, uint64_t vcpu_id)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
+    assert(vgic_vcpu);
     struct irq_queue *q = &vgic_vcpu->irq_queue;
     struct virq_handle *virq = NULL;
 
@@ -180,9 +190,9 @@ static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, uint64_t vcpu_i
 static inline int vgic_find_empty_list_reg(vgic_t *vgic, uint64_t vcpu_id)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
+    assert(vgic_vcpu);
     for (int i = 0; i < ARRAY_SIZE(vgic_vcpu->lr_shadow); i++) {
-        if (vgic_vcpu->lr_shadow[i] == NULL) {
+        if (vgic_vcpu->lr_shadow[i].virq == VIRQ_INVALID) {
             return i;
         }
     }
@@ -190,21 +200,21 @@ static inline int vgic_find_empty_list_reg(vgic_t *vgic, uint64_t vcpu_id)
     return -1;
 }
 
-static inline int vgic_vcpu_load_list_reg(vgic_t *vgic, vcpu_id, int idx, int group, struct virq_handle *virq)
+static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, uint64_t vcpu_id, int idx, int group, struct virq_handle *virq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
-    halt(vgic_vcpu);
-    halt((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
+    assert(vgic_vcpu);
+    assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
 
     // @ivanv: why is the priority 0?
-    // @ivanv: come back to this for SMP
-    int err = seL4_ARM_VCPU_InjectIRQ(BASE_VCPU_CAP + vcpu_id, virq->virq, 0, group, idx);
+    uint64_t err = sel4cp_vcpu_inject_irq(VM_ID, virq->virq, 0, group, idx);
+    assert(err == seL4_NoError);
     if (err) {
-        ZF_LOGF("Failure loading vGIC list register (error %d)", err);
-        return err;
+        printf("VMM|ERROR: Failure loading vGIC list register (error %d)", err);
+        return false;
     }
 
-    vgic_vcpu->lr_shadow[idx] = irq;
+    vgic_vcpu->lr_shadow[idx] = *virq;
 
-    return 0;
+    return true;
 }

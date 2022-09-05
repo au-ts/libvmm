@@ -1,5 +1,6 @@
 /*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -7,19 +8,12 @@
 #include <assert.h>
 #include "smc.h"
 #include "psci.h"
-#include "util.h"
+#include "util/util.h"
 
 // Values in this file are taken from:
 // SMC CALLING CONVENTION
 // System Software on ARM (R) Platforms
 // Issue B
-
-// @ivanv: are these #defines used anywhere?
-#define SMC_CALLING_CONVENTION (1 << 31)
-#define SMC_CALLING_CONVENTION_32 0
-#define SMC_CALLING_CONVENTION_64 1
-#define SMC_FAST_CALL (1 << 31)
-
 #define SMC_SERVICE_CALL_MASK 0x3F
 #define SMC_SERVICE_CALL_SHIFT 24
 
@@ -42,7 +36,7 @@ typedef enum {
 static smc_call_id_t smc_get_call(uintptr_t func_id)
 {
     uint64_t service = ((func_id >> SMC_SERVICE_CALL_SHIFT) & SMC_SERVICE_CALL_MASK);
-    halt(service >= 0 && service <= 0xFFFF);
+    assert(service >= 0 && service <= 0xFFFF);
 
     if (service <= SMC_CALL_VENDOR_HYP_SERVICE) {
         return service;
@@ -57,25 +51,9 @@ static smc_call_id_t smc_get_call(uintptr_t func_id)
     }
 }
 
-// @ivanv: remove?
-// static bool smc_call_is_32(uintptr_t func_id)
-// {
-//     return !!(func_id & SMC_CALLING_CONVENTION) == SMC_CALLING_CONVENTION_32;
-// }
-
-static bool smc_call_is_atomic(uintptr_t func_id)
+static uint64_t smc_get_function_number(seL4_UserContext *regs)
 {
-    return !!(func_id & SMC_FAST_CALL);
-}
-
-static uintptr_t smc_get_function_number(uintptr_t func_id)
-{
-    return (func_id & SMC_FUNC_ID_MASK);
-}
-
-static uint64_t smc_get_function_id(seL4_UserContext *u)
-{
-    return u->x0;
+    return regs->x0 & SMC_FUNC_ID_MASK;
 }
 
 void smc_set_return_value(seL4_UserContext *u, uint64_t val)
@@ -115,53 +93,25 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
 
 bool handle_smc(uint32_t hsr)
 {
-    printf("VMM|INFO: handling SMC event\n");
     // @ivanv: An optimisation to be made is to store the TCB registers so we don't
     // end up reading them multiple times
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    printf("err: 0x%lx\n", err);
-    // halt(err != seL4_NoError);
+    assert(err == seL4_NoError);
 
-    uint64_t id = smc_get_function_id(&regs);
-    uint64_t fn_number = smc_get_function_number(id);
-    smc_call_id_t service = smc_get_call(id);
+    uint64_t fn_number = smc_get_function_number(&regs);
+    smc_call_id_t service = smc_get_call(regs.x0);
 
     switch (service) {
-        case SMC_CALL_ARM_ARCH:
-            printf("VMM|ERROR: Unhandled SMC: ARM architecture call %lu\n", fn_number);
-            break;
-        case SMC_CALL_CPU_SERVICE:
-            printf("VMM|ERROR: Unhandled SMC: CPU service call %lu\n", fn_number);
-            break;
-        case SMC_CALL_SIP_SERVICE:
-            printf("VMM|ERROR: Unhandled SMC: SiP service call %lu\n", fn_number);
-            break;
-        case SMC_CALL_OEM_SERVICE:
-            printf("VMM|ERROR: Unhandled SMC: OEM service call %lu\n", fn_number);
-            break;
         case SMC_CALL_STD_SERVICE:
             if (fn_number < PSCI_MAX) {
-                printf("VMM|INFO: handling PSCI\n");
+                // printf("VMM|INFO: handling PSCI\n");
                 return handle_psci(VCPU_ID, &regs, fn_number, hsr);
             }
             printf("VMM|ERROR: Unhandled SMC: standard service call %lu\n", fn_number);
             break;
-        case SMC_CALL_STD_HYP_SERVICE:
-            printf("VMM|ERROR: Unhandled SMC: standard hyp service call %lu\n", fn_number);
-            break;
-        case SMC_CALL_VENDOR_HYP_SERVICE:
-            printf("VMM|ERROR: Unhandled SMC: vendor hyp service call %lu\n", fn_number);
-            break;
-        case SMC_CALL_TRUSTED_APP:
-            printf("VMM|ERROR: Unhandled SMC: trusted app call %lu\n", fn_number);
-            break;
-        case SMC_CALL_TRUSTED_OS:
-            printf("VMM|ERROR: Unhandled SMC: trusted OS call %lu\n", fn_number);
-            break;
         default:
-            printf("VMM|ERROR: Unhandled SMC: unknown value service: %lu fn_number: %lu\n",
-                    (unsigned long) service, fn_number);
+            printf("VMM|ERROR: Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
             break;
     }
 

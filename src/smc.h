@@ -1,5 +1,6 @@
 /*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -10,7 +11,7 @@
 #include <stdbool.h>
 #include <sel4cp.h>
 
-// SMC VCPU fault handler
+// SMC vCPU fault handler
 bool handle_smc(uint32_t hsr);
 
 // Helper functions

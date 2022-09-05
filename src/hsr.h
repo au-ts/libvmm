@@ -1,4 +1,5 @@
 // @ivanv, where do these come from?
+// @ivanv: license
 
 /* HSR Exception Value */
 #define HSR_UNKNOWN_EXCEPTION       (0x0)

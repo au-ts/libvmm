@@ -1,5 +1,6 @@
 /*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */
@@ -24,7 +25,7 @@
 #define PSCI_DISABLED -8
 #define PSCI_INVALID_ADDRESS -9
 
-// PSCI functoin IDs
+// PSCI function IDs
 typedef enum psci {
     PSCI_VERSION = 0x0,
     PSCI_CPU_SUSPEND = 0x1,

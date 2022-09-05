@@ -1,11 +1,12 @@
 /*
  * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
 /*
- * This file controls and maintains the virtualised GIC (V2) for the VM. The spec used is: @ivanv
+ * This file controls and maintains the virtualised GICv2 device for the VM. The spec used is: @ivanv
  * IRQs must be registered at initialisation using the function: vm_register_irq
  *
  * @ivanv: talk about what features this driver actually implements
@@ -39,37 +40,28 @@
  *         will never occur again.
  */
 
-#include "vgic.h"
-
 #include <stdint.h>
+#include <stdlib.h>
 #include <sel4cp.h>
 
-// #include "../fault.h"
-#include "virq.h"
+#include "vgic.h"
 #include "vgic_v2.h"
+#include "virq.h"
 #include "vdist.h"
-#include "../util.h"
+#include "../util/util.h"
+#include "../fault.h"
 
-// @ivanv: do we really need to store size?
-struct vgic_dist_device {
-    uint64_t pstart;
-    uint64_t size;
-    vgic_t *vgic;
-};
-
-/* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
-static vgic_t vgic;
-static struct vgic_dist_device vgic_dist;
+vgic_t vgic;
+struct gic_dist_map dist;
 
 static void vgic_dist_reset(struct gic_dist_map *gic_dist)
 {
-    gic_dist = {0};
-    gic_dist->ic_type         = 0x0000fce7; /* RO */
-    gic_dist->dist_ident      = 0x0200043b; /* RO */
+    gic_dist->typer = 0x0000fce7; /* RO */
+    gic_dist->iidr = 0x0200043b; /* RO */
 
     for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        gic_dist->enable_set0[i]   = 0x0000ffff; /* 16bit RO */
-        gic_dist->enable_clr0[i]   = 0x0000ffff; /* 16bit RO */
+        gic_dist->enable_set0[i] = 0x0000ffff; /* 16bit RO */
+        gic_dist->enable_clr0[i] = 0x0000ffff; /* 16bit RO */
     }
 
     /* Reset value depends on GIC configuration */
@@ -114,127 +106,18 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->component_id[3] = 0x000000b1; /* RO */
 }
 
-bool vm_register_irq(size_t vcpu_id, int irq, irq_ack_fn_t ack_fn, void *cookie)
+void vgic_init()
 {
-    struct virq_handle virq = {
-        .virq = irq,
-        .ack = ack_fn,
-        .ack_data = cookie,
-    };
-
-    int err = virq_add(vcpu_id, &vgic, virq_data);
-    return err;
-}
-
-int vgic_inject_irq(uint64_t vcpu_id, int irq)
-{
-    DIRQ("Injecting IRQ %d\n", irq);
-
-    int err = vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
-
-    // @ivanv: explain why we don't check error before checking this fault stuff
-    // @ivanv: seperately, it seems weird to have this fault handling code here?
-    // @ivanv: revist
-    // if (!fault_handled(vcpu->vcpu_arch.fault) && fault_is_wfi(vcpu->vcpu_arch.fault)) {
-    //     ignore_fault(vcpu->vcpu_arch.fault);
-    // }
-
-    return err;
-}
-
-// @ivanv: do we need this?
-static bool handle_vgic_vcpu_fault(vm_t *vm, vm_vcpu_t *vcpu, uintptr_t fault_addr,
-                                                    size_t fault_length,
-                                                    void *cookie)
-{
-    /* We shouldn't fault on the vgic vcpu region as it should be mapped in
-     * with all rights */
-    return false;
-}
-
-bool vgic_init()
-{
-    /* Distributor */
-    /* @ivanv: we probably don't need the vgic_dist_device abstraction anyways right? */
-    vgic_dist.pstart = GIC_DIST_PADDR;
-    vgic_dist.size = GIC_DIST_SIZE;
-    vgic_dist.vgic = &vgic;
-
-    // @ivanv: So here we're doing more mapping, should we just do this statically?
-    // we should get rid of this then I guess...
-    // vm_memory_reservation_t *vgic_dist_res = vm_reserve_memory_at(vm, GIC_DIST_PADDR, PAGE_SIZE_4K,
-    //                                                               handle_vgic_dist_fault, (void *)vgic_dist);
-    // vgic_dist_reset(vgic_dist);
-
-    // /* Remap VCPU to CPU */
-    // vm_memory_reservation_t *vgic_vcpu_reservation = vm_reserve_memory_at(vm, GIC_CPU_PADDR, PAGE_SIZE_4K,
-    //                                                                       handle_vgic_vcpu_fault, NULL);
-    // int err = vm_map_reservation(vm, vgic_vcpu_reservation, vgic_vcpu_iterator, (void *)vm);
-    // if (err) {
-    //     free(vgic_dist->vgic);
-    //     return -1;
-    // }
-
-    return true;
-}
-
-// int handle_vgic_maintenance(int idx)
-// {
-//     /* STATE d) */
-//     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, 0);
-//     halt(vgic_vcpu);
-//     halt((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
-//     virq_handle_t *slot = &vgic_vcpu->lr_shadow[idx];
-//     halt(*slot);
-//     virq_handle_t lr_virq = *slot;
-//     *slot = NULL;
-//     /* Clear pending */
-//     DIRQ("Maintenance IRQ %d\n", lr_virq->virq);
-//     set_pending(vgic->dist, lr_virq->virq, false, vcpu->vcpu_id);
-//     virq_ack(vcpu, lr_virq);
-
-//     /* Check the overflow list for pending IRQs */
-//     struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu);
-//     if (virq) {
-//         return vgic_vcpu_load_list_reg(vgic, vcpu, idx, 0, virq);
-//     }
-
-//     return 0;
-// }
-
-bool handle_vgic_maintenance()
-{
-    int err;
-    int idx = sel4cp_mr_get(seL4_VGICMaintenance_IDX);
-    /* Currently not handling spurious IRQs */
-    // @ivanv: wtf, this comment seems irrelevant to the code.
-    halt(idx >= 0);
-
-    // int err = handle_vgic_maintenance(idx);
-    vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, VCPU_ID);
-    halt(vgic_vcpu);
-    halt((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
-    struct virq_handle *slot = &vgic_vcpu->lr_shadow[idx];
-    halt(*slot);
-    struct virq_handle lr_virq = *slot;
-    *slot = NULL;
-    /* Clear pending */
-    DIRQ("Maintenance IRQ %d\n", lr_virq->virq);
-    set_pending(vgic->dist, lr_virq->virq, false, VCPU_ID);
-    virq_ack(VCPU_ID, lr_virq);
-    /* Check the overflow list for pending IRQs */
-    struct virq_handle *virq = vgic_irq_dequeue(&vgic, VCPU_ID);
-    if (virq) {
-        err = vgic_vcpu_load_list_reg(&vgic, VCPU_ID, idx, 0, virq);
+    for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
+        vgic.vspis[i].virq = VIRQ_INVALID;
     }
-    if (!err) {
-        // seL4_MessageInfo_t reply;
-        // reply = sel4cp_msginfo_new(0, 0);
-        // seL4_Reply(reply);
-    } else {
-        ZF_LOGF("vGIC maintenance handler failed (error %d)", err);
-        return false;
+    for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
+        vgic.vgic_vcpu[VCPU_ID].local_virqs[i].virq = VIRQ_INVALID;
     }
-
-    return true;
+    for (int i = 0; i < NUM_LIST_REGS; i++) {
+        vgic.vgic_vcpu[VCPU_ID].lr_shadow[i].virq = VIRQ_INVALID;
+    }
+    vgic.registers = &dist;
+    vgic_dist_reset(vgic_get_dist(vgic.registers));
 }
+
