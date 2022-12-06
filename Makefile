@@ -25,6 +25,20 @@ $(error SYSTEM must be specified)
 endif
 
 TOOLCHAIN := aarch64-none-elf
+ARCH := aarch64
+
+ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
+	TOOLCHAIN = riscv64-unknown-elf
+    ARCH = riscv64
+endif
+
+# ifeq ($(ARCH),riscv64)
+# 	ifeq ($(strip $(OPENSBI)),)
+# 	$(error Path to OPENSBI source must be specified)
+# 	endif
+# endif
+
+OPENSBI := opensbi
 
 CPU := cortex-a53
 
@@ -43,6 +57,14 @@ else
 	VMM_OBJS += vgic_v2.o
 endif
 
+ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
+	VMM_OBJS = vmm_riscv.o printf.o util.o
+endif
+
+# @ivanv: create build dir if it doesn't exist
+# @ivanv: need to have a step for putting in the initrd node into the DTB,
+# 		  right now it is unfortunately hard-coded.
+
 # @ivanv: Have a list of supported boards to check with, if it's not one of those
 # have a helpful message that lists all the support boards.
 
@@ -51,24 +73,41 @@ SRC_DIR := src
 IMAGE_DIR := board/$(SEL4CP_BOARD)/images
 SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
 
-IMAGES := vmm.elf linux.dtb
+LINUX_IMAGES := linux.dtb
 
+# @ivanv: get rid of this
 ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
-	IMAGES += linux_v5.18.dtb
+	LINUX_IMAGES = linux_v5.18.dtb
 endif
 
+ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
+	LINUX_IMAGES = linux_yanyan.dtb
+endif
+
+IMAGES := vmm.elf $(LINUX_IMAGES)
+
 # @ivanv: no optimisation level for now, come back to this though
-CFLAGS := -mcpu=$(CPU) -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD)
+CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH)
+ifeq ($(ARCH),aarch64)
+	CFLAGS +=  -mcpu=$(CPU)
+endif
 LDFLAGS := -L$(SEL4CP_BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
+PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
-all: $(IMAGE_FILE)
+all: $(PAYLOAD_FILE) directories
 
-run: $(IMAGE_FILE)
-	qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
+directories:
+	$(info $(shell mkdir -p $(BUILD_DIR)))
+
+run: $(IMAGE_FILE) directories
+# 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
+# 		qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
+# 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
+	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
 $(BUILD_DIR)/%.dtb: $(IMAGE_DIR)/%.dts Makefile
 	# @ivanv: Shouldn't supress warnings
@@ -88,3 +127,7 @@ $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(SEL4CP_BOARD) --config $(SEL4CP_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+
+$(PAYLOAD_FILE): $(IMAGE_FILE)
+	make -C $(OPENSBI) -j12 PLATFORM=generic CROSS_COMPILE=riscv64-unknown-elf- FW_PAYLOAD_PATH=$(IMAGE_FILE) \
+	PLATFORM_RISCV_XLEN=64 PLATFORM_RISCV_ISA=rv64imac PLATFORM_RISCV_ABI=lp64 O=$(BUILD_DIR)
