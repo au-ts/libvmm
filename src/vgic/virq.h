@@ -207,7 +207,7 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, uint64_t vcpu_id, int i
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
 
     // @ivanv: why is the priority 0?
-    uint64_t err = sel4cp_vcpu_inject_irq(VM_ID, virq->virq, 0, group, idx);
+    uint64_t err = sel4cp_arm_vcpu_inject_irq(VM_ID, virq->virq, 0, group, idx);
     assert(err == seL4_NoError);
     if (err) {
         printf("VMM|ERROR: Failure loading vGIC list register (error %d)", err);

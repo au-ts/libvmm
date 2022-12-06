@@ -82,6 +82,7 @@ static uint64_t get_vmm_id(char *sel4cp_name)
 
 static void
 dump_ctx(seL4_UserContext *ctx) {
+#if defined(ARCH_aarch64)
     // I don't know if it's the best idea, but here we'll just dump the
     // registers in the same order they are defined in seL4_UserContext
     printf("TCB registers:\n");
@@ -122,4 +123,6 @@ dump_ctx(seL4_UserContext *ctx) {
     printf("    x27:  0x%016lx\n", ctx->x27);
     printf("    x28:  0x%016lx\n", ctx->x28);
     // TODO(ivanv): print out thread ID registers?
+#endif
+    // @ivanv: riscv64 print regs
 }
