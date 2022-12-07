@@ -30,6 +30,7 @@ From here, you can follow the instructions [here](https://github.com/BreakawayCo
 
 In addition to the SDK, you will need:
 
+* Make
 * dtc (Device tree compiler)
 * AArch64 cross compiler toolchain
     * While any AArch64 toolchain should work, the VMM has been developed only using `aarch64-none-elf` version 10.2-2020.11, there are instructions to acquire it in the SDK's README.
@@ -39,6 +40,8 @@ After acquiring this repository, run the following command:
 ```sh
 make BUILD_DIR=build SEL4CP_SDK=/path/to/sdk SEL4CP_CONFIG=debug SEL4CP_BOARD=qemu_arm_virt
 ```
+
+If you have built the SDK then the path to the SDK should look something like this: `sel4cp/release/sel4cp-sdk-1.2.6`.
 
 ## Running the VMM
 
