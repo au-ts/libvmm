@@ -10,10 +10,11 @@
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
+        <data_region path="linux_yanyan" vaddr="0x20000000" />
+        <data_region path="linux_yanyan.dtb" vaddr="0x24000000" />
+
+        <map mr="guest_ram" vaddr="0x80000000" perms="rw" />
         <virtual_machine name="linux" vm_id="1">
-            <program_image path="linux_yanyan" vaddr="0x80000000" />
-            <device_tree path="linux_yanyan.dtb" vaddr="0x84000000" />
-            <!-- <init_ram_disk path="rootfs.cpio.gz" vaddr="0x4d700000" /> -->
             <map mr="guest_ram" vaddr="0x80000000" perms="rwx"/>
         </virtual_machine>
     </protection_domain>
