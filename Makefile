@@ -105,7 +105,7 @@ all: $(PAYLOAD_FILE) directories
 directories:
 	$(info $(shell mkdir -p $(BUILD_DIR)))
 
-run: $(IMAGE_FILE) directories
+run: $(PAYLOAD_FILE) directories
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
 # 		qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
