@@ -24,6 +24,8 @@ ifeq ($(strip $(SYSTEM)),)
 $(error SYSTEM must be specified)
 endif
 
+# @ivanv: Check for dependencies and make sure they are installed/in the path
+
 TOOLCHAIN := aarch64-none-elf
 ARCH := aarch64
 
