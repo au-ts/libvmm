@@ -2,9 +2,7 @@
 
 This is an **experimental** VMM for 64-bit ARM platforms built on the seL4 Core Platform (seL4CP). It is (at least initially) a port of the [CAmkES VMM](https://github.com/sel4/camkes-vm-examples). See the bottom of the README for progress/planned features.
 
-Due to being a work-in-progress, expect frequent changes to the VMM as well as the virtualisation extension to seL4CP.
-
-Note that currently the VMM only runs on QEMU with the "virt" platform.
+Due to being a work-in-progress, expect frequent changes to the VMM as well as the SDK used by the VMM.
 
 ## Building the SDK
 
@@ -30,13 +28,21 @@ From here, you can follow the instructions [here](https://github.com/BreakawayCo
 
 In addition to the SDK, you will need:
 
+* Experimental seL4 Core Platform SDK
+    * Currently virtualisation support, RISC-V support and other patches that
+      the VMM requires are not part of mainline seL4 Core Platform. See below
+      for instructions on acquiring the SDK.
 * Make
 * dtc (Device tree compiler)
 * AArch64 cross compiler toolchain
     * While any AArch64 toolchain should work, the VMM has been developed only using `aarch64-none-elf` version 10.2-2020.11, there are instructions to acquire it in the SDK's README.
 * QEMU (if you wish to simulate the VMM).
 
-After acquiring this repository, run the following command:
+#### Acquiring the SDK
+
+For acquiring the SDK, you have two options.
+
+After acquiring this repository and all the dependencies, run the following command:
 ```sh
 make BUILD_DIR=build SEL4CP_SDK=/path/to/sdk SEL4CP_CONFIG=debug SEL4CP_BOARD=qemu_arm_virt
 ```
