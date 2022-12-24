@@ -2,29 +2,31 @@
 
 ## Linux kernel
 
-### Info
-* Image name: linux
-* Git remote: https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-* Tag: v5.18 (commit hash: 4b0986a3613c92f4ec1bdc7f60ec66fea135991f)
-* Config name: linux_config
-* Toolchain: aarch64-none-elf-
+### Details
+* Image name: `linux`
+* Config name: `linux_config`
+* Git remote: https://github.com/torvalds/linux.git
+* Tag: v5.18 (commit hash: `4b0986a3613c92f4ec1bdc7f60ec66fea135991f`)
+* Toolchain: `aarch64-none-elf`
+    * Version: GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16)) 10.2.1 20201103
 
 You can also get the Linux config used after booting by running the following
 command in userspace: `zcat /proc/config.gz`.
 
 ### Instructions for reproducing
-After you've acquired the Linux source and checkout out the right revision:
 ```
-make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- /path/to/linux_config menuconfig
-make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all [-j$(nproc)]
+git clone --depth 1 --branch v5.18 https://github.com/torvalds/linux.git
+make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- linux_config all -j$(nproc)
 ```
+
+The path to the image is: `linux/arm64/boot/Image`.
 
 ## Buildroot RootFS image
 
-### Info
-* Name: rootfs.cpio.gz
+### Details
+* Image name: `rootfs.cpio.gz`
+* Config name: `buildroot_config`
 * Version: 2022.08-rc2
-* Config: buildroot_config
 
 ### Instructions for reproducing
 
