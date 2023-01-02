@@ -4,6 +4,8 @@ This is an **experimental** VMM for 64-bit ARM platforms built on the seL4 Core 
 
 Due to being a work-in-progress, expect frequent changes to the VMM as well as the SDK used by the VMM.
 
+For supported platforms, please see [SUPPORT.md].
+
 ## Building the SDK
 
 You will need a custom seL4CP SDK. You can acquire it with the following commands:
@@ -73,3 +75,15 @@ The following is planned to be added to the VMM.
 * 64-bit x86 support
 
 Currently, there are no plans for 32-bit guests or 32-bit hosts.
+
+## TODOs
+
+* Support QEMU ARM "virt" with GICv3
+* Support QEMU ARM "virt" with other CPUs such as Cortex-A72
+* Fix up all the system files, add CI to make sure they all work
+* Make it easier to pass a system file and Linux images to the Makefile
+* Get Odroidc2 fully working
+* Get i.MX8MM fully working
+* Get RPi4B+ working
+
+

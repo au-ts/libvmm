@@ -63,7 +63,6 @@ ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 	VMM_OBJS = vmm_riscv.o printf.o util.o
 endif
 
-# @ivanv: create build dir if it doesn't exist
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
 # 		  right now it is unfortunately hard-coded.
 
@@ -88,7 +87,7 @@ endif
 
 IMAGES := vmm.elf $(LINUX_IMAGES)
 
-# @ivanv: no optimisation level for now, come back to this though
+# @ivanv: no optimisation level for now because I don't trust the compiler to not mess with the code
 CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH)
 ifeq ($(ARCH),aarch64)
 	CFLAGS +=  -mcpu=$(CPU)
@@ -100,16 +99,16 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
-all: $(PAYLOAD_FILE) directories
+all: $(IMAGE_FILE) directories
 
 directories:
 	$(info $(shell mkdir -p $(BUILD_DIR)))
 
-run: $(PAYLOAD_FILE) directories
+run: $(IMAGE_FILE) directories
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
-# 		qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
+	qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
+# 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
 $(BUILD_DIR)/%.dtb: $(IMAGE_DIR)/%.dts Makefile
 	# @ivanv: Shouldn't supress warnings
@@ -130,6 +129,6 @@ $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(SEL4CP_BOARD) --config $(SEL4CP_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-$(PAYLOAD_FILE): $(IMAGE_FILE)
-	make -C $(OPENSBI) -j12 PLATFORM=generic CROSS_COMPILE=riscv64-unknown-elf- FW_PAYLOAD_PATH=$(IMAGE_FILE) \
-	PLATFORM_RISCV_XLEN=64 PLATFORM_RISCV_ISA=rv64imac PLATFORM_RISCV_ABI=lp64 O=$(BUILD_DIR)
+# $(PAYLOAD_FILE): $(IMAGE_FILE)
+# 	make -C $(OPENSBI) -j12 PLATFORM=generic CROSS_COMPILE=riscv64-unknown-elf- FW_PAYLOAD_PATH=$(IMAGE_FILE) \
+# 	PLATFORM_RISCV_XLEN=64 PLATFORM_RISCV_ISA=rv64imac PLATFORM_RISCV_ABI=lp64 O=$(BUILD_DIR)

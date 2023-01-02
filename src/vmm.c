@@ -214,11 +214,12 @@ static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
 
 static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    printf("Acking IRQ: 0x%lx\n", irq);
 #if defined(BOARD_qemu_arm_virt)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 #elif defined(BOARD_odroidc2)
-    // sel4cp_irq_ack(SERIAL_IRQ_CH);
-    // vgic_inject_irq(vcpu_id, irq);
+    sel4cp_irq_ack(SERIAL_IRQ_CH);
+    vgic_inject_irq(VCPU_ID, SERIAL_IRQ_CH);
 #endif
 }
 
@@ -278,6 +279,7 @@ notified(sel4cp_channel ch)
 {
     switch (ch) {
         case SERIAL_IRQ_CH: {
+            printf("Got serial IRQ\n");
             bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
             if (!success) {
                 printf("VMM|ERROR: IRQ %d dropped on vCPU: 0x%lx\n", SERIAL_IRQ, VCPU_ID);
