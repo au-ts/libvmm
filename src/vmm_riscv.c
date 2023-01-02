@@ -16,22 +16,7 @@
 #error Need to define VM image address and DTB address
 #endif
 
-// @ivanv: sort this out
-// Structure of the kernel image header is from the documentation at:
-// https://www.kernel.org/doc/Documentation/arm64/booting.txt
-#define KERNEL_IMAGE_MAGIC 0x644d5241
-struct kernel_image_header {
-    uint32_t code0;                // Executable code
-    uint32_t code1;                // Executable code
-    uint64_t text_offset;          // Image load offset, little endian
-    uint64_t image_size;           // Effective Image size, little endian
-    uint64_t flags;                // kernel flags, little endian
-    uint64_t res2;            // reserved
-    uint64_t res3;            // reserved
-    uint64_t res4;            // reserved
-    uint32_t magic;   // Magic number, little endian, "ARM\x64"
-    uint32_t res5;                 // reserved (used for PE COFF offset
-};
+// @ivanv: https://www.kernel.org/doc/Documentation/riscv/boot-image-header.txt
 
 // #define SGI_RESCHEDULE_IRQ  0
 // #define SGI_FUNC_CALL       1
