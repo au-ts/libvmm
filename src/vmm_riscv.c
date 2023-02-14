@@ -4,7 +4,6 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <assert.h>
 #include <sel4cp.h>
 #include <stddef.h>
 #include "util/util.h"
