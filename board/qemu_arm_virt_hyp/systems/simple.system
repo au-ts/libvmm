@@ -8,7 +8,7 @@
     <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
     <!-- We have the guest memory at 0x40000000 as 512MiB is carved out in the DTS already.
          See seL4/src/plat/qemu-arm-virt/overlay-reserve-vm-memory.dts for details. -->
-    <memory_region name="guest_ram" size="0x10_000_000" />
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
     <!-- @ivanv Explain why this is necessary -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
