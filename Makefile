@@ -99,10 +99,10 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
+all: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
+
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
-
-all: directories $(IMAGE_FILE)
 
 run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
