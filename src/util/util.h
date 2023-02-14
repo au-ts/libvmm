@@ -28,8 +28,8 @@
 #define static_assert _Static_assert
 #endif
 
- __attribute__ ((__noreturn__))
-void __assert_func(const char *file, int line, const char *function, const char *str);
+//  __attribute__ ((__noreturn__))
+// void __assert_func(const char *file, int line, const char *function, const char *str);
 
 void _putchar(char character);
 
@@ -126,3 +126,29 @@ dump_ctx(seL4_UserContext *ctx) {
 #endif
     // @ivanv: riscv64 print regs
 }
+
+static void assert_fail(
+    const char  *assertion,
+    const char  *file,
+    unsigned int line,
+    const char  *function)
+{
+    printf("Failed assertion '");
+    printf(assertion);
+    printf("' at ");
+    printf(file);
+    printf(":");
+    put8(line);
+    printf(" in function ");
+    printf(function);
+    printf("\n");
+    while (1) {}
+}
+
+#define assert(expr) \
+    do { \
+        if (!(expr)) { \
+            assert_fail(#expr, __FILE__, __LINE__, __FUNCTION__); \
+        } \
+    } while(0)
+

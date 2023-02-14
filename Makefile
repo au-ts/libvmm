@@ -26,7 +26,7 @@ endif
 
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
-TOOLCHAIN := aarch64-none-elf
+TOOLCHAIN := aarch64-linux-gnu
 ARCH := aarch64
 
 ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
@@ -50,7 +50,7 @@ LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o
+VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
 
 # @ivanv: hack...
 ifeq ($(SEL4CP_BOARD),imx8mm_evk)
@@ -74,12 +74,12 @@ SRC_DIR := src
 IMAGE_DIR := board/$(SEL4CP_BOARD)/images
 SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
 
-LINUX_IMAGES := linux.dtb
+KERNEL_IMAGE := $(IMAGE_DIR)/linux
+DTB_SOURCE := $(IMAGE_DIR)/linux.dts
+DTB_IMAGE := linux.dtb
+INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 
-# @ivanv: get rid of this
-ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
-	LINUX_IMAGES = linux_v5.18.dtb
-endif
+LINUX_IMAGES := $(DTB_IMAGE)
 
 ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 	LINUX_IMAGES = linux_yanyan.dtb
@@ -99,20 +99,23 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
-all: $(IMAGE_FILE) directories
-
 directories:
-	$(info $(shell mkdir -p $(BUILD_DIR)))
+	$(shell mkdir -p $(BUILD_DIR))
 
-run: $(IMAGE_FILE) directories
-# 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt)
+all: directories $(IMAGE_FILE)
+
+run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
+# 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
 	qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 # 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
-$(BUILD_DIR)/%.dtb: $(IMAGE_DIR)/%.dts Makefile
+$(BUILD_DIR)/$(DTB_IMAGE): $(DTB_SOURCE)
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
+
+$(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S
+	$(CC) -c -g3 -x assembler-with-cpp -mcpu=$(CPU) -DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" -DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/linux.dtb\" -DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
