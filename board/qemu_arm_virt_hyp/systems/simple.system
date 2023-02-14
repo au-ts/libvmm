@@ -14,15 +14,12 @@
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
-        <!-- <map mr="guest_ram" vaddr="0x40000000" perms="r" /> -->
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         <virtual_machine name="linux" vm_id="1">
-            <program_image path="linux" vaddr="0x40080000" />
-            <device_tree path="linux.dtb" vaddr="0x4f000000" />
-            <init_ram_disk path="rootfs.cpio.gz" vaddr="0x4d700000" />
-            <map mr="serial" vaddr="0x9000000" perms="rw" />
-            <!-- <map mr="gic_vcpu" vaddr="0x8040000" perms="rw" /> -->
-            <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
             <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+
+            <map mr="serial" vaddr="0x9000000" perms="rw" />
+            <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
         </virtual_machine>
         <irq irq="33" id="1" />
     </protection_domain>
