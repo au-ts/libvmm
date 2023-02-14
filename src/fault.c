@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <assert.h>
 #include "fault.h"
 #include "util/util.h"
 
@@ -65,6 +64,8 @@ enum fault_width fault_get_width(uint64_t fsr)
     }
 
     assert(0);
+    // @ivanv: come back to
+    return 0;
 }
 
 uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)

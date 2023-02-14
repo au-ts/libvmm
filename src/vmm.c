@@ -4,9 +4,8 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <assert.h>
-#include <sel4cp.h>
 #include <stddef.h>
+#include <sel4cp.h>
 #include "util/util.h"
 #include "vgic/vgic.h"
 #include "smc.h"
@@ -15,17 +14,26 @@
 
 // @ivanv: do we print out an error if we can't read registers or should we just assert
 
-// uintptr_t shared_memory_vaddr;
+/* Data for the guest's kernel image. */
+extern char _guest_kernel_image[];
+extern char _guest_kernel_image_end[];
+/* Data for the device tree to be passed to the kernel. */
+extern char _guest_dtb_image[];
+extern char _guest_dtb_image_end[];
+/* Data for the initial RAM disk to be passed to the kernel. */
+extern char _guest_initrd_image[];
+extern char _guest_initrd_image_end[];
+/* seL4CP will set this variable to the start of the guest RAM memory region. */
+uintptr_t guest_ram_vaddr;
 
-#if defined(BOARD_qemu_arm_virt)
-#define VM_IMAGE_ENTRY_ADDR (0x40000000 + 0x80000)
-#define VM_DTB_ADDR 0x4f000000
+// @ivanv: ideally we would have none of these hardcoded values
+#if defined(BOARD_qemu_arm_virt_hyp)
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #elif defined(BOARD_odroidc2)
-#define VM_IMAGE_ENTRY_ADDR (0x20000000 + 0x80000)
-#define VM_DTB_ADDR 0x2f000000
+#define GUEST_DTB_VADDR 0x2f000000
 #elif defined(BOARD_imx8mm_evk)
-#define VM_IMAGE_ENTRY_ADDR (0x40000000 + 0x80000)
-#define VM_DTB_ADDR 0x4f000000
+#define GUEST_DTB_VADDR 0x4f000000
 #else
 #error Need to define VM image address and DTB address
 #endif
@@ -191,7 +199,7 @@ struct kernel_image_header {
 #define SGI_FUNC_CALL       1
 #define PPI_VTIMER_IRQ      27
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_arm_virt_hyp)
 #define SERIAL_IRQ_CH 1
 #define SERIAL_IRQ 33
 #elif defined(BOARD_odroidc2)
@@ -214,8 +222,7 @@ static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
 
 static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    printf("Acking IRQ: 0x%lx\n", irq);
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_arm_virt_hyp)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 #elif defined(BOARD_odroidc2)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
@@ -223,11 +230,33 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #endif
 }
 
+void *memcpy(void *restrict dest, const void *restrict src, size_t n)
+{
+    unsigned char *d = dest;
+    const unsigned char *s = src;
+    for (; n; n--) *d++ = *s++;
+    return dest;
+}
+
 void
 init(void)
 {
     // Initialise the VMM, the VCPU(s), and start the guest
     LOG_VMM("starting \"%s\"\n", sel4cp_name);
+    // Place all the binaries in the right locations before starting the guest
+    // Copy the guest kernel image into the right location
+    uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
+    LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", guest_ram_vaddr + 0x80000, kernel_image_size);
+    memcpy((char *)guest_ram_vaddr + 0x80000, _guest_kernel_image, kernel_image_size);
+    // Copy the guest device tree blob into the right location
+    uint64_t dtb_image_size = _guest_dtb_image_end - _guest_dtb_image;
+    LOG_VMM("Copying guest DTB to 0x%x (0x%x bytes)\n", GUEST_DTB_VADDR, dtb_image_size);
+    memcpy((char *)GUEST_DTB_VADDR, _guest_dtb_image, dtb_image_size);
+    // Copy the initial RAM disk into the right location
+    uint64_t initrd_image_size = _guest_initrd_image_end - _guest_initrd_image;
+    LOG_VMM("Copying guest initial RAM disk to 0x%x (0x%x bytes)\n", GUEST_INIT_RAM_DISK_VADDR, initrd_image_size);
+    memcpy((char *)GUEST_INIT_RAM_DISK_VADDR, _guest_initrd_image, initrd_image_size);
+
     // Initialise the virtual GIC driver
     vgic_init();
     LOG_VMM("initialised virtual GICv2 driver\n");
@@ -253,25 +282,25 @@ init(void)
     // @ivanv: comment why we ack it
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 
-    LOG_VMM("completed all initialisation\n");
-
     seL4_UserContext regs;
     memzero(&regs, sizeof(seL4_UserContext));
-    regs.x0 = VM_DTB_ADDR;
+    regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
-    regs.pc = VM_IMAGE_ENTRY_ADDR;
+    regs.pc = guest_ram_vaddr + 0x80000;
     // dump_ctx(&regs);
-    seL4_TCB_WriteRegisters(
+    err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + VM_ID,
-        false, // We'll explcitly start the VM below rather than in this call
+        false, // We'll explcitly start the guest below rather than in this call
         0, // No flags
         SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
         &regs
     );
+    assert(!err);
 
+    LOG_VMM("completed all initialisation\n");
     // Set the PC to the kernel image's entry point and start the thread.
-    LOG_VMM("starting VM at 0x%lx, DTB at 0x%lx\n", VM_IMAGE_ENTRY_ADDR, VM_DTB_ADDR);
-    sel4cp_vm_restart(VM_ID, VM_IMAGE_ENTRY_ADDR);
+    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", regs.pc, regs.x0);
+    sel4cp_vm_restart(VM_ID, regs.pc);
 }
 
 void
@@ -279,7 +308,6 @@ notified(sel4cp_channel ch)
 {
     switch (ch) {
         case SERIAL_IRQ_CH: {
-            printf("Got serial IRQ\n");
             bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
             if (!success) {
                 printf("VMM|ERROR: IRQ %d dropped on vCPU: 0x%lx\n", SERIAL_IRQ, VCPU_ID);

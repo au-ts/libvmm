@@ -5,7 +5,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <assert.h>
 #include <stdbool.h>
 #include "psci.h"
 #include "smc.h"
