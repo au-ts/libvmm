@@ -5,9 +5,11 @@ built on the seL4 Core Platform (seL4CP). It is (at least initially) a port of t
 [CAmkES VMM](https://github.com/sel4/camkes-vm-examples).
 See the bottom of the README for progress/planned features.
 
-Due to being a work-in-progress, expect frequent changes to the VMM as well as the SDK used by the VMM.
+Due to being a work-in-progress, expect frequent changes to the VMM as well as the
+SDK used by the VMM.
 
-For information on how to use the VMM, supported platforms, how to add your own platform etc, please see the [documentation](docs/README.md).
+For information on how to use the VMM, supported platforms, how to add your own
+platform etc, please see the [documentation](docs/README.md).
 
 ## Building the VMM
 
@@ -20,7 +22,10 @@ For information on how to use the VMM, supported platforms, how to add your own 
 
 Using `apt`:
 
-`sudo apt update && sudo apt install make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler`
+```sh
+sudo apt update
+sudo apt install make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler
+```
 
 Also, you'll need:
 * An experimental seL4 Core Platform SDK
@@ -46,21 +51,30 @@ cd sel4cp
 git checkout dev
 ```
 
-Note that you will also need a slightly modified seL4 kernel. You can acquire it with the following commands:
+Note that you will also need a slightly modified seL4 kernel. You can acquire it
+with the following commands:
 ```sh
 git clone https://github.com/Ivan-Velickovic/seL4.git
 cd seL4
 git checkout sel4cp-dev
 ```
 
-From here, you can follow the instructions [here](https://github.com/Ivan-Velickovic/sel4cp/tree/dev) to build the SDK.
+From here, you can follow the instructions
+[here](https://github.com/Ivan-Velickovic/sel4cp/tree/dev) to build the SDK.
 
-After acquiring this repository and all the dependencies, we can simulate a basic system with a single guest OS:
+After acquiring this repository and all the dependencies, we can simulate a basic
+system with a single guest OS:
 ```sh
-make BUILD_DIR=build SEL4CP_SDK=/path/to/sdk SEL4CP_CONFIG=debug SEL4CP_BOARD=qemu_arm_virt_hyp SYSTEM=simple.system run
+make BUILD_DIR=build \
+     SEL4CP_SDK=/path/to/sdk \
+     SEL4CP_CONFIG=debug \
+     SEL4CP_BOARD=qemu_arm_virt_hyp \
+     SYSTEM=simple.system \
+     run
 ```
 
-If you have built the SDK then the path to the SDK should look something like this: `sel4cp/release/sel4cp-sdk-1.2.6`.
+If you have built the SDK then the path to the SDK should look something like
+this: `sel4cp/release/sel4cp-sdk-1.2.6`.
 
 ## Roadmap
 
@@ -74,8 +88,10 @@ The following is planned to be added to the VMM.
 * Get i.MX8MM fully working (partial support now)
 * Get RPi4B+ working
 * General improvements to the usability and extensibility of the VMM.
-    * This means that the VMM should allow you to easily create and use multiple VMs and be able to restart them.
-    * There is a lack of fragility. Configuring the VMs/VMM should not have significant friction.
+    * This means that the VMM should allow you to easily create and use multiple
+      VMs and be able to restart them.
+    * There is a lack of fragility. Configuring the VMs/VMM should not have
+      significant friction.
 * GICv4 support to allow for direct injection of vLPIs.
 * SMP support. This includes having one VM using multiple cores
   as well as placing separate VMs on separate cores.
