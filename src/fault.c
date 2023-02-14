@@ -180,7 +180,6 @@ uint64_t fault_emulate(seL4_UserContext *regs, uint64_t reg, uint64_t addr, uint
     uint64_t m, s;
     s = (addr & 0x3) * 8;
     m = fault_get_data_mask(addr, fsr);
-    // printf("s is 0x%lx, m is 0x%lx, reg is 0x%lx, reg_val is 0x%lx\n", s, m, reg, reg_val);
     if (fault_is_read(fsr)) {
         /* Read data must be shifted to lsb */
         return (reg & ~(m >> s)) | ((reg_val & m) >> s);
@@ -194,12 +193,9 @@ bool fault_advance(seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t
 {
     /* Get register opearand */
     int rt = get_rt(fsr);
-    // printf("rt is 0x%lx\n", rt);
 
     uint64_t *reg_ctx = decode_rt(rt, regs);
-    // printf("reg_ctx before fault_emulate is 0x%lx\n", *reg_ctx);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
-    // printf("reg_ctx is 0x%lx\n", *reg_ctx);
     // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
     //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
 

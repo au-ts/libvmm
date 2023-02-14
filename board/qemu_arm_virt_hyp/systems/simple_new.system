@@ -10,7 +10,6 @@
          See seL4/src/plat/qemu-arm-virt/overlay-reserve-vm-memory.dts for details. -->
     <!-- <memory_region name="guest_ram" size="0x10_000_000" /> -->
     <memory_region name="guest_ram" size="0x10_000_000" />
-    <!-- @ivanv Explain why this is necessary -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
     <protection_domain name="VMM" priority="254">

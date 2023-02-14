@@ -10,7 +10,6 @@
     <memory_region name="guest_ram-2" size="0x8_000_000" />
     <memory_region name="guest_ram-3" size="0x8_000_000" />
     <memory_region name="guest_ram-4" size="0x8_000_000" />
-    <!-- @ivanv Explain why this is necessary -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
     <protection_domain name="vmm-1" priority="254">
