@@ -1,10 +1,13 @@
 # VMM on the seL4 Core Platform
 
-This is an **experimental** VMM for 64-bit ARM platforms built on the seL4 Core Platform (seL4CP). It is (at least initially) a port of the [CAmkES VMM](https://github.com/sel4/camkes-vm-examples). See the bottom of the README for progress/planned features.
+This is an **experimental** Virtual Machine Monitor (VMM) for 64-bit ARM platforms
+built on the seL4 Core Platform (seL4CP). It is (at least initially) a port of the
+[CAmkES VMM](https://github.com/sel4/camkes-vm-examples).
+See the bottom of the README for progress/planned features.
 
 Due to being a work-in-progress, expect frequent changes to the VMM as well as the SDK used by the VMM.
 
-For supported platforms, or how to go about adding your own platform to the VMM, please see [SUPPORT.md].
+For information on how to use the VMM, supported platforms, how to add your own platform etc, please see the [documentation](docs/README.md).
 
 ## Building the VMM
 
@@ -16,6 +19,7 @@ For supported platforms, or how to go about adding your own platform to the VMM,
 * QEMU (if you wish to simulate the VMM)
 
 Using `apt`:
+
 `sudo apt update && sudo apt install make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler`
 
 Also, you'll need:
@@ -27,12 +31,13 @@ Also, you'll need:
 #### Acquiring the SDK
 
 For acquiring the SDK, you have two options.
-    1. Build the SDK yourself.
-    2. Download a pre-built SDK.
+
+1. Build the SDK yourself.
+2. Download a pre-built SDK.
 
 Option 2 is not available for now due to the SDK frequently changing.
 
-##### Building the SDK
+##### Option 1 - Building the SDK
 
 You will need a custom seL4CP SDK. You can acquire it with the following commands:
 ```sh
@@ -52,22 +57,10 @@ From here, you can follow the instructions [here](https://github.com/Ivan-Velick
 
 After acquiring this repository and all the dependencies, we can simulate a basic system with a single guest OS:
 ```sh
-make BUILD_DIR=build SEL4CP_SDK=/path/to/sdk SEL4CP_CONFIG=debug SEL4CP_BOARD=qemu_arm_virt_hyp SYSTEM=simple.system
+make BUILD_DIR=build SEL4CP_SDK=/path/to/sdk SEL4CP_CONFIG=debug SEL4CP_BOARD=qemu_arm_virt_hyp SYSTEM=simple.system run
 ```
 
 If you have built the SDK then the path to the SDK should look something like this: `sel4cp/release/sel4cp-sdk-1.2.6`.
-
-## Running the VMM
-
-After building the VMM, run it using the following command:
-```
-qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off \
-                    -cpu cortex-a53 \
-                    -serial mon:stdio \
-                    -device loader,file=build/loader.img,addr=0x70000000,cpu-num=0 \
-                    -m size=2G \
-                    -display none
-```
 
 ## Roadmap
 
