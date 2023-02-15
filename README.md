@@ -46,17 +46,13 @@ Option 2 is not available for now due to the SDK frequently changing.
 
 You will need a custom seL4CP SDK. You can acquire it with the following commands:
 ```sh
-git clone https://github.com/Ivan-Velickovic/sel4cp.git
-cd sel4cp
-git checkout dev
+git clone https://github.com/Ivan-Velickovic/sel4cp.git --branch dev
 ```
 
 Note that you will also need a slightly modified seL4 kernel. You can acquire it
 with the following commands:
 ```sh
-git clone https://github.com/Ivan-Velickovic/seL4.git
-cd seL4
-git checkout sel4cp-dev
+git clone https://github.com/Ivan-Velickovic/seL4.git --branch sel4cp-dev
 ```
 
 From here, you can follow the instructions
