@@ -23,3 +23,6 @@ jobs:
       - name: Build VMM examples
         run: ./ci/build_examples.sh sel4cp-sdk-1.2.6
         shell: bash
+      - name: Upload example artifacts
+        uses: actions/upload-artifact@v3
+        path: build_*/loader.img
