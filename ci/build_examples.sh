@@ -10,6 +10,6 @@ for example in ${examples[@]}; do
     echo "Building example: $example"
     BOARD=$(echo "$example" | cut -d "/" -f1)
     SYSTEM=$(echo "$example" | cut -d "/" -f3)
-    BUILD_DIR="build_${BOARD}_${SYSTEM}"
+    BUILD_DIR=$(basename "build_${BOARD}_${SYSTEM}" .system)
     make -B BUILD_DIR=$BUILD_DIR SEL4CP_SDK=$SDK_PATH SEL4CP_CONFIG=debug SEL4CP_BOARD=$BOARD SYSTEM=$SYSTEM
 done
