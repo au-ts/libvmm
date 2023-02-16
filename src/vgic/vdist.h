@@ -142,7 +142,6 @@ static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     if (!virq_data) {
         return;
     }
-    // printf("found virq_data for irq: %d\n", irq);
     if (virq_data->virq != VIRQ_INVALID) {
         /* STATE b) */
         if (!is_pending(vgic_get_dist(vgic->registers), virq_data->virq, vcpu_id)) {
@@ -451,7 +450,6 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->irq_group[reg_offset]);
         break;
     case RANGE32(GIC_DIST_ISENABLER0, GIC_DIST_ISENABLERN):
-        // printf("Attempting to write\n");
         data = fault_get_data(regs, fsr);
         /* Mask the data to write */
         data &= mask;
