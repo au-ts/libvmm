@@ -8,6 +8,8 @@
 #include <sel4cp.h>
 #include "util/util.h"
 #include "vgic/vgic.h"
+#include "virtio/virtio_mmio.h"
+#include "virtio/virtio_net_emul.h"
 #include "smc.h"
 #include "fault.h"
 #include "hsr.h"
@@ -160,6 +162,8 @@ static bool handle_vm_fault()
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
             return handle_vgic_redist_fault(VCPU_ID, addr, fsr, &regs);
 #endif
+        case VIRTIO_ADDRESS_START...VIRTIO_ADDRESS_END:
+            return handle_virtio_mmio_fault(VCPU_ID, addr, fsr, &regs);
         default: {
             uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
@@ -243,6 +247,15 @@ void guest_start(void) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
     // @ivanv: do we need to set the guest init pc?
     seL4_UserContext regs = {0};
+
+    // @jade: we need to be able to configure virtio devices in some system description instead of putting it here.
+    virtio_net_emul_init();
+
+    err = vgic_register_irq(VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
+    if (err) {
+        printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
+    }
+
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = guest_ram_vaddr + 0x80000;
@@ -291,6 +304,9 @@ init(void)
 
 int restart = 1;
 
+// @jade: not a good place, the header in temporary here until we figure out a build system
+#include "virtio/virtio_net_vswitch.h"
+
 void
 notified(sel4cp_channel ch)
 {
@@ -302,6 +318,11 @@ notified(sel4cp_channel ch)
             }
             break;
         }
+
+        // @jade: ideally there should be a way to register a callback for a channel
+        case VSWITCH_CONN_1_CH:
+            vswitch_rx(ch);
+            break;
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
