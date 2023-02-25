@@ -11,6 +11,16 @@
 #include <sel4cp.h>
 #include "printf.h"
 
+#define MIN(a,b) \
+    ({ typeof (a) _a = (a); \
+       typeof (b) _b = (b); \
+       _a < _b ? _a : _b; })
+
+#define MAX(a,b) \
+    ({ typeof (a) _a = (a); \
+       typeof (b) _b = (b); \
+       _a > _b ? _a : _b; })
+
 // @ivanv: these are here for convience, should not be here though
 #define VM_ID 1
 #define VCPU_ID 0
