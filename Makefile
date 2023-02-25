@@ -25,7 +25,7 @@ $(error SYSTEM must be specified)
 endif
 
 # @ivanv: Check for dependencies and make sure they are installed/in the path
-
+# TOOLCHAIN := aarch64-none-elf
 TOOLCHAIN := aarch64-linux-gnu
 ARCH := aarch64
 
@@ -52,7 +52,7 @@ LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
+VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o virtio_mmio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o global_data.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
@@ -75,7 +75,7 @@ IMAGE_DIR := board/$(SEL4CP_BOARD)/images
 SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
 
 KERNEL_IMAGE := $(IMAGE_DIR)/linux
-DTB_SOURCE := $(IMAGE_DIR)/linux.dts
+DTB_SOURCE := $(IMAGE_DIR)/linux_virtio.dts
 DTB_IMAGE := linux.dtb
 INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 
@@ -108,7 +108,7 @@ run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
 	# @ivanv: check that qemu exists
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
-	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=3G -nographic
+	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=4G -nographic
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 # 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
@@ -127,6 +127,12 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/libsharedringbuffer/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
