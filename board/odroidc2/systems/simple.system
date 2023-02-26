@@ -5,23 +5,22 @@
  SPDX-License-Identifier: BSD-2-Clause
 -->
 <system>
-    <!-- 256MiB of RAM for the guest -->
-    <memory_region name="guest_ram" size="0x10_000_000" />
+    <!-- We allocate 256MiB of RAM for the guest. -->
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+    <!-- We want to map in the serial to get input/output. -->
     <memory_region name="serial" size="0x1_000" phys_addr="0xc8100000" />
+    <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xc4306000" />
 
     <protection_domain name="VMM">
         <program_image path="vmm.elf" />
-        <irq irq="225" id="1" />
+        <map mr="guest_ram" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         <virtual_machine name="linux" vm_id="1">
-            <program_image path="linux" vaddr="0x20080000" />
-            <device_tree path="linux.dtb" vaddr="0x2f000000" />
-            <init_ram_disk path="rootfs.cpio.gz" vaddr="0x2d700000" />
-
             <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
-            <!-- Devices -->
             <map mr="serial" vaddr="0xc8100000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0xc4302000" perms="rw" cached="false" />
         </virtual_machine>
+        <!-- Serial IRQ -->
+        <irq irq="225" id="1" />
     </protection_domain>
 </system>
