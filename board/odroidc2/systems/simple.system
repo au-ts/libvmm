@@ -21,6 +21,6 @@
             <map mr="gic_vcpu" vaddr="0xc4302000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- Serial IRQ -->
-        <irq irq="225" id="1" />
+        <irq irq="225" id="1" trigger="edge" />
     </protection_domain>
 </system>

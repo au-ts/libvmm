@@ -252,7 +252,6 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 #elif defined(BOARD_odroidc2)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
-    vgic_inject_irq(VCPU_ID, SERIAL_IRQ_CH);
 #endif
 }
 
