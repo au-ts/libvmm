@@ -38,7 +38,7 @@ uintptr_t guest_ram_vaddr;
 #define GUEST_DTB_VADDR 0x5e000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x5d700000
 #define GUEST_RAM_SIZE 0x10000000
-#elif defined(BOARD_odroidc2)
+#elif defined(BOARD_odroidc2_hyp)
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #define GUEST_RAM_SIZE 0x10000000
@@ -226,7 +226,7 @@ struct kernel_image_header {
 #if defined(BOARD_qemu_arm_virt_hyp)
 #define SERIAL_IRQ_CH 1
 #define SERIAL_IRQ 33
-#elif defined(BOARD_odroidc2)
+#elif defined(BOARD_odroidc2_hyp)
 #define SERIAL_IRQ_CH 1
 #define SERIAL_IRQ 225
 #elif defined(BOARD_imx8mm_evk)
@@ -250,7 +250,7 @@ static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
 static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #if defined(BOARD_qemu_arm_virt_hyp)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
-#elif defined(BOARD_odroidc2)
+#elif defined(BOARD_odroidc2_hyp)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 #endif
 }

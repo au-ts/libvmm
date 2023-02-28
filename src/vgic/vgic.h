@@ -12,7 +12,7 @@
 #if defined(BOARD_qemu_arm_virt_hyp)
 #define GIC_DIST_PADDR      0x8000000
 #define GIC_DIST_SIZE       0x1000
-#elif defined(BOARD_odroidc2)
+#elif defined(BOARD_odroidc2_hyp)
 #define GIC_DIST_PADDR      0xc4301000
 #define GIC_DIST_SIZE       0x1000
 #elif defined(BOARD_imx8mm_evk)

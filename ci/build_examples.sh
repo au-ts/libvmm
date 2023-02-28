@@ -6,7 +6,7 @@ SDK_PATH=$1
 
 # @ivanv This is weird and needs to be done better. We should probably
 # just give a path to the makefile of the system file along with images
-examples=("qemu_arm_virt_hyp/systems/simple.system" "qemu_arm_virt_hyp/systems/two_vms.system" "odroidc2/systems/simple.system")
+examples=("qemu_arm_virt_hyp/systems/simple.system" "qemu_arm_virt_hyp/systems/two_vms.system" "odroidc2_hyp/systems/simple.system")
 
 for example in ${examples[@]}; do
     echo "Building example: $example"
