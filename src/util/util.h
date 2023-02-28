@@ -127,6 +127,21 @@ dump_ctx(seL4_UserContext *ctx) {
     // @ivanv: riscv64 print regs
 }
 
+static void *memcpy(void *restrict dest, const void *restrict src, size_t n)
+{
+    unsigned char *d = dest;
+    const unsigned char *s = src;
+    for (; n; n--) *d++ = *s++;
+    return dest;
+}
+
+static void *memset(void *dest, int c, size_t n)
+{
+    unsigned char *s = dest;
+    for (; n; n--, s++) *s = c;
+    return dest;
+}
+
 static void assert_fail(
     const char  *assertion,
     const char  *file,

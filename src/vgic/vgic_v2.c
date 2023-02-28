@@ -106,8 +106,16 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->component_id[3] = 0x000000b1; /* RO */
 }
 
+bool initialised = false;
+
 void vgic_init()
 {
+    if (initialised) {
+        printf("disabling irq 27\n");
+        vgic_dist_disable_irq(&vgic, VCPU_ID, 27);
+    }
+    initialised = true;
+    memset(&vgic, 0, sizeof(vgic_t));
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
@@ -117,7 +125,15 @@ void vgic_init()
     for (int i = 0; i < NUM_LIST_REGS; i++) {
         vgic.vgic_vcpu[VCPU_ID].lr_shadow[i].virq = VIRQ_INVALID;
     }
+    for (int i = 0; i < MAX_IRQ_QUEUE_LEN; i++) {
+        vgic.vgic_vcpu[VCPU_ID].irq_queue.irqs[i] = NULL;
+    }
+    for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
+        vgic.vspis[i].virq = VIRQ_INVALID;
+        vgic.vspis[i].ack_fn = NULL;
+        vgic.vspis[i].ack_data = NULL;
+    }
     vgic.registers = &dist;
+    memset(vgic.registers, 0, sizeof(struct gic_dist_map));
     vgic_dist_reset(vgic_get_dist(vgic.registers));
 }
-
