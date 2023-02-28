@@ -72,6 +72,14 @@ make BUILD_DIR=build \
 If you have built the SDK then the path to the SDK should look something like
 this: `sel4cp/release/sel4cp-sdk-1.2.6`.
 
+You should see Linux booting and be greeted with the buildroot prompt:
+```
+Welcome to Buildroot
+buildroot login:
+```
+
+The username to login is `root`. There is no password required.
+
 ## Roadmap
 
 The following is planned to be added to the VMM.
