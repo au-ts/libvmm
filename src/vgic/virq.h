@@ -139,7 +139,7 @@ static inline bool virq_sgi_ppi_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_
     assert((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
     struct virq_handle *slot = &vgic_vcpu->local_virqs[irq];
     if (slot->virq != VIRQ_INVALID) {
-        printf("VMM|ERROR: IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
+        LOG_VMM_ERR("IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
         return false;
     }
     *slot = *virq_data;
@@ -209,7 +209,7 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, uint64_t vcpu_id, int i
     uint64_t err = sel4cp_arm_vcpu_inject_irq(VM_ID, virq->virq, 0, group, idx);
     assert(err == seL4_NoError);
     if (err) {
-        printf("VMM|ERROR: Failure loading vGIC list register (error %d)", err);
+        LOG_VMM_ERR("Failure loading vGIC list register (error %d)", err);
         return false;
     }
 

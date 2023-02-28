@@ -37,7 +37,7 @@
 //     uint64_t err = sel4cp_vcpu_ack_vppi(VM_ID, irq);
 //     assert(err == seL4_NoError);
 //     if (err) {
-//         printf("VMM|ERROR: failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
+//         LOG_VMM_ERR("failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
 //     }
 // }
 
@@ -83,7 +83,7 @@ notified(sel4cp_channel ch)
     //     case SERIAL_IRQ_CH: {
     //         bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
     //         if (!success) {
-    //             printf("VMM|ERROR: IRQ %d dropped on vCPU: 0x%lx\n", SERIAL_IRQ, VCPU_ID);
+    //             LOG_VMM_ERR("IRQ %d dropped on vCPU: 0x%lx\n", SERIAL_IRQ, VCPU_ID);
     //         }
     //         break;
     //     }
@@ -109,7 +109,7 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
             handle_vcpu_fault(msginfo);
             break;
         default:
-            printf("VMM|ERROR: unknown fault, stopping VM %d\n", vm);
+            LOG_VMM_ERR("unknown fault, stopping VM %d\n", vm);
             sel4cp_vm_stop(vm);
             // @ivanv: print out the actual fault details
     }

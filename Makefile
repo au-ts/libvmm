@@ -87,8 +87,8 @@ endif
 
 IMAGES := vmm.elf $(LINUX_IMAGES)
 
-# @ivanv: no optimisation level for now because I don't trust the compiler to not mess with the code
-CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH)
+# @ivanv: compiling with -O3, the compiler complains about missing memset
+CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH) -DCONFIG_$(SEL4CP_CONFIG)
 ifeq ($(ARCH),aarch64)
 	CFLAGS +=  -mcpu=$(CPU)
 endif

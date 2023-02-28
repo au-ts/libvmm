@@ -89,7 +89,7 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
             break;
         default:
             /* Should never get here... Keep the compiler happy */
-            printf("VMM|ERROR: unknown width: 0x%lx, from FSR: 0x%lx\n", fault_get_width(fsr), fsr);
+            LOG_VMM_ERR("unknown width: 0x%lx, from FSR: 0x%lx\n", fault_get_width(fsr), fsr);
             assert(0);
             return 0;
     }

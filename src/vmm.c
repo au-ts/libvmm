@@ -70,7 +70,7 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
             LOG_VMM("Received NOP syscall\n");
             break;
         default:
-            printf("VMM|ERROR: Unknown syscall: syscall number: 0x%lx, PC: 0x%lx\n", syscall, fault_ip);
+            LOG_VMM_ERR("Unknown syscall: syscall number: 0x%lx, PC: 0x%lx\n", syscall, fault_ip);
             return false;
     }
     err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
@@ -87,14 +87,14 @@ static bool handle_vppi_event()
     bool success = vgic_inject_irq(VCPU_ID, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error
-        printf("VMM|ERROR: VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, VCPU_ID);
+        // LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, VCPU_ID);
         // Acknowledge to unmask it as our guest will not use the interrupt
         // @ivanv: We're going to assume that we only have one VCPU and that the
         // cap is the base one.
         uint64_t ack_err = sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
         assert(ack_err == seL4_NoError);
         if (ack_err) {
-            printf("VMM|ERROR: Failed to ACK VPPI\n");
+            LOG_VMM_ERR("Failed to ACK VPPI\n");
             return false;
         }
     }
@@ -117,7 +117,7 @@ static bool handle_vcpu_fault(sel4cp_msginfo msginfo)
             reply_to_fault();
             break;
         default:
-            printf("VMM|ERROR: unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
+            LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
             return false;
     }
 
@@ -129,7 +129,7 @@ static int handle_user_exception(sel4cp_msginfo msginfo)
     // @ivanv: print out VM name/vCPU id when we have multiple VMs
     uint64_t fault_ip = sel4cp_mr_get(seL4_UserException_FaultIP);
     uint64_t number = sel4cp_mr_get(seL4_UserException_Number);
-    printf("VMM|ERROR: Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
+    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
 
     // Dump registers
     seL4_UserContext regs;
@@ -169,7 +169,7 @@ static bool handle_vm_fault()
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
             // @ivanv: why does this have a U?
             uint64_t is_write = (fsr & (1U << 6)) != 0;
-            printf("VMM|ERROR: unexpected VM fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+            LOG_VMM_ERR("unexpected VM fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
             dump_ctx(&regs);
             assert(0);
         }
@@ -262,17 +262,17 @@ init(void)
     LOG_VMM("initialised virtual GICv2 driver\n");
     bool err = vgic_register_irq(VCPU_ID, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
     if (!err) {
-        printf("VMM|ERROR: Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
+        LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
         return;
     }
     err = vgic_register_irq(VCPU_ID, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
     if (!err) {
-        printf("VMM|ERROR: Failed to register vCPU SGI 0 IRQ");
+        LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
         return;
     }
     err = vgic_register_irq(VCPU_ID, SGI_FUNC_CALL, &sgi_ack, NULL);
     if (!err) {
-        printf("VMM|ERROR: Failed to register vCPU SGI 1 IRQ");
+        LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return;
     }
 
@@ -345,7 +345,7 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
             handle_vppi_event();
             break;
         default:
-            printf("VMM|ERROR: unknown fault, stopping VM %d\n", vm);
+            LOG_VMM_ERR("unknown fault, stopping VM %d\n", vm);
             sel4cp_vm_stop(vm);
             // @ivanv: print out the actual fault details
     }
