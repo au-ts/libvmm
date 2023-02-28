@@ -38,6 +38,8 @@ uintptr_t guest_ram_vaddr;
 #error Need to define VM image address and DTB address
 #endif
 
+int restarted = 0;
+
 // @ivanv: document where these come from
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
@@ -47,6 +49,8 @@ uintptr_t guest_ram_vaddr;
 #define HSR_EXCEPTION_CLASS_SHIFT   (26)
 #define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
 #define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
+
+static bool restarting_guest = false;
 
 static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 {
@@ -79,15 +83,26 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
     return true;
 }
 
+static bool got_ppi_event = false;
+
 static bool handle_vppi_event()
 {
     uint64_t ppi_irq = sel4cp_mr_get(seL4_VPPIEvent_IRQ);
+    if (!got_ppi_event) {
+        printf("FIRST PPI EVENT!\n\n");
+    }
+    got_ppi_event = true;
+    // if (restarted) {
+    //     sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
+    //     reply_to_fault();
+    //     return true;
+    // }
     // We directly inject the interrupt assuming it has been previously registered.
     // If not the interrupt will dropped by the VM.
     bool success = vgic_inject_irq(VCPU_ID, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error
-        // LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, VCPU_ID);
+        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, VCPU_ID);
         // Acknowledge to unmask it as our guest will not use the interrupt
         // @ivanv: We're going to assume that we only have one VCPU and that the
         // cap is the base one.
@@ -132,8 +147,7 @@ static int handle_user_exception(sel4cp_msginfo msginfo)
     LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
 
     // Dump registers
-    seL4_UserContext regs;
-    memzero(&regs, sizeof(seL4_UserContext));
+    seL4_UserContext regs = {0};
     seL4_Error ret = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     if (ret != seL4_NoError) {
         printf("Failure reading regs, error %d", ret);
@@ -212,10 +226,12 @@ struct kernel_image_header {
 
 static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 {
-    uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
-    assert(err == seL4_NoError);
-    if (err) {
-        printf("VMM|ERROR: failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
+    if (!restarting_guest) {
+        uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
+        assert(err == seL4_NoError);
+        if (err) {
+            LOG_VMM_ERR("failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
+        }
     }
 }
 
@@ -230,20 +246,7 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #endif
 }
 
-void *memcpy(void *restrict dest, const void *restrict src, size_t n)
-{
-    unsigned char *d = dest;
-    const unsigned char *s = src;
-    for (; n; n--) *d++ = *s++;
-    return dest;
-}
-
-void
-init(void)
-{
-    // Initialise the VMM, the VCPU(s), and start the guest
-    LOG_VMM("starting \"%s\"\n", sel4cp_name);
-    // Place all the binaries in the right locations before starting the guest
+void guest_copy_images() {
     // Copy the guest kernel image into the right location
     uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", guest_ram_vaddr + 0x80000, kernel_image_size);
@@ -256,10 +259,18 @@ init(void)
     uint64_t initrd_image_size = _guest_initrd_image_end - _guest_initrd_image;
     LOG_VMM("Copying guest initial RAM disk to 0x%x (0x%x bytes)\n", GUEST_INIT_RAM_DISK_VADDR, initrd_image_size);
     memcpy((char *)GUEST_INIT_RAM_DISK_VADDR, _guest_initrd_image, initrd_image_size);
+}
 
+void guest_init(uint64_t guest_init_pc, uint64_t guest_dtb_vaddr) {
     // Initialise the virtual GIC driver
     vgic_init();
+#if defined(GIC_V2)
     LOG_VMM("initialised virtual GICv2 driver\n");
+#elif defined(GIC_V3)
+    LOG_VMM("initialised virtual GICv3 driver\n");
+#else
+#error "Unsupported GIC version"
+#endif
     bool err = vgic_register_irq(VCPU_ID, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
     if (!err) {
         LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
@@ -275,19 +286,16 @@ init(void)
         LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return;
     }
-
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
     err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     // @ivanv: comment why we ack it
     sel4cp_irq_ack(SERIAL_IRQ_CH);
-
-    seL4_UserContext regs;
-    memzero(&regs, sizeof(seL4_UserContext));
-    regs.x0 = GUEST_DTB_VADDR;
+    // @ivanv: do we need to set the guest init pc?
+    seL4_UserContext regs = {0};
+    regs.x0 = guest_dtb_vaddr;
     regs.spsr = 5; // PMODE_EL1h
-    regs.pc = guest_ram_vaddr + 0x80000;
-    // dump_ctx(&regs);
+    regs.pc = guest_init_pc;
     err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + VM_ID,
         false, // We'll explcitly start the guest below rather than in this call
@@ -296,12 +304,46 @@ init(void)
         &regs
     );
     assert(!err);
+}
 
+void guest_restart(void) {
+    restarting_guest = true;
+    LOG_VMM("Attempting to restart guest\n");
+    // First, stop the guest
+    sel4cp_vm_stop(VM_ID);
+    LOG_VMM("Stopped guest\n");
+    // Then, we need to clear all of RAM
+    LOG_VMM("Clearing guest RAM\n");
+    memset((char *)guest_ram_vaddr, 0, GUEST_RAM_SIZE);
+    // Copy back the images into RAM
+    guest_copy_images();
+    // Now we need to re-initialise all the VMM state
+    uint64_t guest_init_pc = guest_ram_vaddr + 0x80000;
+    guest_init(guest_init_pc, GUEST_DTB_VADDR);
+    // Finally, we can to restart the VM.
+    LOG_VMM("restarting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
+    sel4cp_vm_restart(VM_ID, guest_init_pc);
+    restarting_guest = false;
+}
+
+void
+init(void)
+{
+    // Initialise the VMM, the VCPU(s), and start the guest
+    LOG_VMM("starting \"%s\"\n", sel4cp_name);
+    // Place all the binaries in the right locations before starting the guest
+    guest_copy_images();
+    // Initialise guest (setup VGIC, setup interrupts, TCB registers)
+    uint64_t guest_init_pc = guest_ram_vaddr + 0x80000;
+    guest_init(guest_init_pc, GUEST_DTB_VADDR);
     LOG_VMM("completed all initialisation\n");
     // Set the PC to the kernel image's entry point and start the thread.
-    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", regs.pc, regs.x0);
-    sel4cp_vm_restart(VM_ID, regs.pc);
+    // @ivanv: should probably log initrd addr as well.
+    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
+    sel4cp_vm_restart(VM_ID, guest_init_pc);
 }
+
+int restart = 1;
 
 void
 notified(sel4cp_channel ch)
@@ -310,7 +352,11 @@ notified(sel4cp_channel ch)
         case SERIAL_IRQ_CH: {
             bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
             if (!success) {
-                printf("VMM|ERROR: IRQ %d dropped on vCPU: 0x%lx\n", SERIAL_IRQ, VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, VCPU_ID);
+            }
+            if (restart && !restarted) {
+                restarted = 1;
+                // guest_restart();
             }
             break;
         }
