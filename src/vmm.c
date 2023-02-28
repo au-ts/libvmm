@@ -11,6 +11,7 @@
 #include "smc.h"
 #include "fault.h"
 #include "hsr.h"
+#include "vmm.h"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -24,32 +25,6 @@ extern char _guest_initrd_image_end[];
 /* seL4CP will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-// @ivanv: ideally we would have none of these hardcoded values
-// initrd, ram size come from the DTB
-// We can probably add a node for the DTB addr and then use that.
-// Part of the problem is that we might need multiple DTBs for the same example
-// e.g one DTB for VMM one, one DTB for VMM two. we should be able to hide all
-// of this in the build system to avoid doing any run-time DTB stuff.
-#if defined(BOARD_qemu_arm_virt_hyp)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
-#define GUEST_RAM_SIZE 0x10000000
-#elif defined(BOARD_rpi4b)
-#define GUEST_DTB_VADDR 0x5e000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x5d700000
-#define GUEST_RAM_SIZE 0x10000000
-#elif defined(BOARD_odroidc2_hyp)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#define GUEST_RAM_SIZE 0x10000000
-#elif defined(BOARD_imx8mm_evk)
-#define GUEST_DTB_VADDR 0x4f000000
-#else
-#error Need to define VM image address and DTB address
-#endif
-
-int restarted = 0;
-
 // @ivanv: document where these come from
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
@@ -59,8 +34,6 @@ int restarted = 0;
 #define HSR_EXCEPTION_CLASS_SHIFT   (26)
 #define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
 #define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
-
-static bool restarting_guest = false;
 
 static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 {
@@ -202,46 +175,16 @@ static bool handle_vm_fault()
     return false;
 }
 
-// @ivanv: sort this out
-// Structure of the kernel image header is from the documentation at:
-// https://www.kernel.org/doc/Documentation/arm64/booting.txt
-#define KERNEL_IMAGE_MAGIC 0x644d5241
-struct kernel_image_header {
-    uint32_t code0;       // Executable code
-    uint32_t code1;       // Executable code
-    uint64_t text_offset; // Image load offset, little endian
-    uint64_t image_size;  // Effective Image size, little endian
-    uint64_t flags;       // kernel flags, little endian
-    uint64_t res2;        // reserved
-    uint64_t res3;        // reserved
-    uint64_t res4;        // reserved
-    uint32_t magic;       // Magic number, little endian, "ARM\x64"
-    uint32_t res5;        // reserved (used for PE COFF offset
-};
-
 #define SGI_RESCHEDULE_IRQ  0
 #define SGI_FUNC_CALL       1
 #define PPI_VTIMER_IRQ      27
 
-#if defined(BOARD_qemu_arm_virt_hyp)
-#define SERIAL_IRQ_CH 1
-#define SERIAL_IRQ 33
-#elif defined(BOARD_odroidc2_hyp)
-#define SERIAL_IRQ_CH 1
-#define SERIAL_IRQ 225
-#elif defined(BOARD_imx8mm_evk)
-#define SERIAL_IRQ_CH 1
-#define SERIAL_IRQ 79
-#endif
-
 static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 {
-    if (!restarting_guest) {
-        uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
-        assert(err == seL4_NoError);
-        if (err) {
-            LOG_VMM_ERR("failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
-        }
+    uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
+    assert(err == seL4_NoError);
+    if (err) {
+        LOG_VMM_ERR("failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
     }
 }
 
@@ -255,7 +198,7 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #endif
 }
 
-void guest_copy_images() {
+void guest_copy_images(void) {
     // Copy the guest kernel image into the right location
     uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", guest_ram_vaddr + 0x80000, kernel_image_size);
@@ -270,7 +213,7 @@ void guest_copy_images() {
     memcpy((char *)GUEST_INIT_RAM_DISK_VADDR, _guest_initrd_image, initrd_image_size);
 }
 
-void guest_init(uint64_t guest_init_pc, uint64_t guest_dtb_vaddr) {
+void guest_start(void) {
     // Initialise the virtual GIC driver
     vgic_init();
 #if defined(GIC_V2)
@@ -302,9 +245,9 @@ void guest_init(uint64_t guest_init_pc, uint64_t guest_dtb_vaddr) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
     // @ivanv: do we need to set the guest init pc?
     seL4_UserContext regs = {0};
-    regs.x0 = guest_dtb_vaddr;
+    regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
-    regs.pc = guest_init_pc;
+    regs.pc = guest_ram_vaddr + 0x80000;
     err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + VM_ID,
         false, // We'll explcitly start the guest below rather than in this call
@@ -313,26 +256,28 @@ void guest_init(uint64_t guest_init_pc, uint64_t guest_dtb_vaddr) {
         &regs
     );
     assert(!err);
+    // Set the PC to the kernel image's entry point and start the thread.
+    // @ivanv: should probably log initrd addr as well.
+    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", regs.pc, regs.x0);
+    sel4cp_vm_restart(VM_ID, regs.pc);
 }
 
 void guest_restart(void) {
-    restarting_guest = true;
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
-    sel4cp_vm_stop(VM_ID);
-    LOG_VMM("Stopped guest\n");
+    // sel4cp_vm_stop(VM_ID);
+    // LOG_VMM("Stopped guest\n");
     // Then, we need to clear all of RAM
     LOG_VMM("Clearing guest RAM\n");
     memset((char *)guest_ram_vaddr, 0, GUEST_RAM_SIZE);
     // Copy back the images into RAM
     guest_copy_images();
     // Now we need to re-initialise all the VMM state
-    uint64_t guest_init_pc = guest_ram_vaddr + 0x80000;
-    guest_init(guest_init_pc, GUEST_DTB_VADDR);
+    guest_start();
     // Finally, we can to restart the VM.
+    uint64_t guest_init_pc = guest_ram_vaddr + 0x80000; // @ivanv: get rid of
     LOG_VMM("restarting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
     sel4cp_vm_restart(VM_ID, guest_init_pc);
-    restarting_guest = false;
 }
 
 void
@@ -342,14 +287,8 @@ init(void)
     LOG_VMM("starting \"%s\"\n", sel4cp_name);
     // Place all the binaries in the right locations before starting the guest
     guest_copy_images();
-    // Initialise guest (setup VGIC, setup interrupts, TCB registers)
-    uint64_t guest_init_pc = guest_ram_vaddr + 0x80000;
-    guest_init(guest_init_pc, GUEST_DTB_VADDR);
-    LOG_VMM("completed all initialisation\n");
-    // Set the PC to the kernel image's entry point and start the thread.
-    // @ivanv: should probably log initrd addr as well.
-    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
-    sel4cp_vm_restart(VM_ID, guest_init_pc);
+    // Initialise and start guest (setup VGIC, setup interrupts, TCB registers)
+    guest_start();
 }
 
 int restart = 1;
@@ -362,10 +301,6 @@ notified(sel4cp_channel ch)
             bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, VCPU_ID);
-            }
-            if (restart && !restarted) {
-                restarted = 1;
-                // guest_restart();
             }
             break;
         }
