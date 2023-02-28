@@ -154,18 +154,16 @@ static bool handle_vm_fault()
     uint64_t addr_page_aligned = addr & (~(0x1000 - 1));
     switch (addr_page_aligned) {
         case GIC_DIST_PADDR...GIC_DIST_PADDR + GIC_DIST_SIZE:
-            // dump_ctx(&regs);
-            // printf("Handling GIC dist fault!\n");
             return handle_vgic_dist_fault(VCPU_ID, addr, fsr, &regs);
 #if defined(GIC_V3)
+        /* Need to handle redistributor faults for GICv3 platforms. */
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
             return handle_vgic_redist_fault(VCPU_ID, addr, fsr, &regs);
 #endif
         default: {
             uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
-            // @ivanv: why does this have a U?
-            uint64_t is_write = (fsr & (1U << 6)) != 0;
+            uint64_t is_write = (fsr & (1 << 6)) != 0;
             LOG_VMM_ERR("unexpected VM fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
             dump_ctx(&regs);
             assert(0);
