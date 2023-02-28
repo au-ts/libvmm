@@ -44,6 +44,8 @@ OPENSBI := opensbi
 
 CPU := cortex-a53
 
+# @ivanv: check that all dependencies exist
+QEMU_AARCH64 := qemu-system-aarch64
 DTC := dtc
 CC := $(TOOLCHAIN)-gcc
 LD := $(TOOLCHAIN)-ld
@@ -53,19 +55,17 @@ SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
 
 # @ivanv: hack...
+# This step should be done based on the DTB
 ifeq ($(SEL4CP_BOARD),imx8mm_evk)
 	VMM_OBJS += vgic_v3.o
 else
 	VMM_OBJS += vgic_v2.o
 endif
 
-ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-	VMM_OBJS = vmm_riscv.o printf.o util.o
-endif
-
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
 # 		  right now it is unfortunately hard-coded.
 
+# @ivanv: check that the path of SDK_PATH/BOARD exists
 # @ivanv: Have a list of supported boards to check with, if it's not one of those
 # have a helpful message that lists all the support boards.
 
@@ -85,7 +85,7 @@ ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 	LINUX_IMAGES = linux_yanyan.dtb
 endif
 
-IMAGES := vmm.elf $(LINUX_IMAGES)
+IMAGES := $(LINUX_IMAGES) vmm.elf
 
 # @ivanv: compiling with -O3, the compiler complains about missing memset
 CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH) -DCONFIG_$(SEL4CP_CONFIG)
@@ -105,13 +105,16 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
+	# @ivanv: check that qemu exists
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
-	qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=2G -nographic
+	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
+	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=3G -nographic
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 # 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
 $(BUILD_DIR)/$(DTB_IMAGE): $(DTB_SOURCE)
 	# @ivanv: Shouldn't supress warnings
+	# @ivanv: check that dependency exists
 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S
