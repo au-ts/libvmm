@@ -19,6 +19,7 @@
             <map mr="serial" vaddr="0x9000000" perms="rw" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
         </virtual_machine>
+        <irq irq="33" id="1" />
     </protection_domain>
 
     <protection_domain name="VMM-2" priority="254">
