@@ -12,8 +12,6 @@
 #include "fault.h"
 #include "hsr.h"
 
-// @ivanv: do we print out an error if we can't read registers or should we just assert
-
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -27,9 +25,15 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 // @ivanv: ideally we would have none of these hardcoded values
+// initrd, ram size come from the DTB
+// We can probably add a node for the DTB addr and then use that.
+// Part of the problem is that we might need multiple DTBs for the same example
+// e.g one DTB for VMM one, one DTB for VMM two. we should be able to hide all
+// of this in the build system to avoid doing any run-time DTB stuff.
 #if defined(BOARD_qemu_arm_virt_hyp)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#define GUEST_RAM_SIZE 0x10000000
 #elif defined(BOARD_odroidc2)
 #define GUEST_DTB_VADDR 0x2f000000
 #elif defined(BOARD_imx8mm_evk)
@@ -197,16 +201,16 @@ static bool handle_vm_fault()
 // https://www.kernel.org/doc/Documentation/arm64/booting.txt
 #define KERNEL_IMAGE_MAGIC 0x644d5241
 struct kernel_image_header {
-    uint32_t code0;                // Executable code
-    uint32_t code1;                // Executable code
-    uint64_t text_offset;          // Image load offset, little endian
-    uint64_t image_size;           // Effective Image size, little endian
-    uint64_t flags;                // kernel flags, little endian
-    uint64_t res2;            // reserved
-    uint64_t res3;            // reserved
-    uint64_t res4;            // reserved
-    uint32_t magic;   // Magic number, little endian, "ARM\x64"
-    uint32_t res5;                 // reserved (used for PE COFF offset
+    uint32_t code0;       // Executable code
+    uint32_t code1;       // Executable code
+    uint64_t text_offset; // Image load offset, little endian
+    uint64_t image_size;  // Effective Image size, little endian
+    uint64_t flags;       // kernel flags, little endian
+    uint64_t res2;        // reserved
+    uint64_t res3;        // reserved
+    uint64_t res4;        // reserved
+    uint32_t magic;       // Magic number, little endian, "ARM\x64"
+    uint32_t res5;        // reserved (used for PE COFF offset
 };
 
 #define SGI_RESCHEDULE_IRQ  0

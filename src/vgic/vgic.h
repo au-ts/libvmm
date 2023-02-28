@@ -10,16 +10,16 @@
 #include <stdint.h>
 
 #if defined(BOARD_qemu_arm_virt_hyp)
-#define GIC_DIST_PADDR           0x8000000
-#define GIC_DIST_SIZE 0x1000
+#define GIC_DIST_PADDR      0x8000000
+#define GIC_DIST_SIZE       0x1000
 #elif defined(BOARD_odroidc2)
 #define GIC_DIST_PADDR      0xc4301000
-#define GIC_DIST_SIZE 0x1000
+#define GIC_DIST_SIZE       0x1000
 #elif defined(BOARD_imx8mm_evk)
-#define GIC_DIST_PADDR    0x38800000
-#define GIC_REDIST_PADDR  0x38880000
-#define GIC_DIST_SIZE 0x10000
-#define GIC_REDIST_SIZE 0xc0000
+#define GIC_DIST_PADDR      0x38800000
+#define GIC_REDIST_PADDR    0x38880000
+#define GIC_DIST_SIZE       0x10000
+#define GIC_REDIST_SIZE     0xc0000
 #else
 #error Need to define GIC addresses
 #endif
