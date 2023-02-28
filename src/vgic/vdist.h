@@ -178,7 +178,15 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     struct gic_dist_map *dist = vgic_get_dist(vgic->registers);
 
     if (virq_data->virq == VIRQ_INVALID || !vgic_dist_is_enabled(dist) || !is_enabled(dist, irq, vcpu_id)) {
-        LOG_DIST("IRQ not enabled (%d) on vcpu %d\n", irq, vcpu_id);
+        if (virq_data->virq == VIRQ_INVALID) {
+            LOG_DIST("vIRQ data could not be found\n");
+        }
+        if (!vgic_dist_is_enabled(dist)) {
+            LOG_DIST("vGIC distributor is not enabled\n");
+        }
+        if (!is_enabled(dist, irq, vcpu_id)) {
+            LOG_DIST("vIRQ is not enabled\n");
+        }
         return false;
     }
 
