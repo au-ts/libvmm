@@ -82,6 +82,30 @@ Before you can port the VMM to your desired platform you must have the following
 
 ### AArch64 platform
 
+#### Guest setup
+
+While in theory you should be able to run any guest, the VMM has only been tested
+with Linux.
+
+Required binaries:
+
+* Linux kernel image
+* Linux device tree
+* Initial RAM disk
+
+It is possible to package all of these up into one single binary, but the defualt
+Linux kernel configuration does not do this. You can look at some of the examples
+as to how they are setup. Currently, the VMM is expecting there to be three
+separate images, it is a TODO to fix this.
+
+Before attempting to get the VMM working, I strongly encourage you to make sure
+that these binaries work natively, as in, without being virtualised. If they do
+not, they probably will not work with the VMM either.
+
+### Add init RAM disk addr to device tree
+
+#### Generic Interrupt Controller (GIC)
+
 GIC version 2 and 3 are not fully virtualised by the hardware and therefore the
 interrupt controller is partially virtualised in the VMM. Check that your
 platform supports either GICv2 or GICv3.
