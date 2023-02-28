@@ -60,6 +60,7 @@ static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
 static_assert((MAX_IRQ_QUEUE_LEN & (MAX_IRQ_QUEUE_LEN - 1)) == 0,
               "IRQ ring buffer size must be power of two");
 
+// @ivanv: make a note of all datastructure invariants
 struct irq_queue {
     struct virq_handle *irqs[MAX_IRQ_QUEUE_LEN]; /* circular buffer */
     uint64_t head;
