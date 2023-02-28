@@ -106,15 +106,8 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->component_id[3] = 0x000000b1; /* RO */
 }
 
-bool initialised = false;
-
 void vgic_init()
 {
-    if (initialised) {
-        printf("disabling irq 27\n");
-        vgic_dist_disable_irq(&vgic, VCPU_ID, 27);
-    }
-    initialised = true;
     memset(&vgic, 0, sizeof(vgic_t));
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;

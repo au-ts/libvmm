@@ -10,7 +10,12 @@ On AArch64, the following platforms are supported:
 If your desired platform is not supported yet, please see the section on
 [adding your own platform support](#adding-platform-support).
 
-## Creating a virtual machine
+## Creating your own system
+
+All the existing systems are located in `board/$board/systems/`. This is
+where the Makefile will look when you pass the `SYSTEM` argument.
+
+### Specifying a virtual machine
 
 The first step before writing code is to have a system description that contains
 a virtual machine.
@@ -80,7 +85,7 @@ Before you can port the VMM to your desired platform you must have the following
 * A working port of the seL4 Core Platform where the kernel is built as a
   hypervisor
 
-### AArch64 platform
+### AArch64 platforms
 
 #### Guest setup
 

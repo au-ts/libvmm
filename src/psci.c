@@ -10,6 +10,7 @@
 #include "smc.h"
 #include "fault.h"
 #include "util/util.h"
+#include "vmm.h"
 
 bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint32_t hsr)
 {
@@ -43,7 +44,7 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
             break;
         case PSCI_SYSTEM_RESET:
-            // @ivanv: understand, I feel like we should restart the VM or something?
+            guest_restart();
             smc_set_return_value(regs, PSCI_SUCCESS);
             break;
         default:
