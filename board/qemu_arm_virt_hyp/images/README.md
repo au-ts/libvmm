@@ -16,7 +16,8 @@ command in userspace: `zcat /proc/config.gz`.
 ### Instructions for reproducing
 ```
 git clone --depth 1 --branch v5.18 https://github.com/torvalds/linux.git
-make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- linux_config all -j$(nproc)
+cp linux_config linux/.config
+make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- linux_config all -j$(nproc)
 ```
 
 The path to the image is: `linux/arm64/boot/Image`.
@@ -34,4 +35,13 @@ The path to the image is: `linux/arm64/boot/Image`.
 wget https://buildroot.org/downloads/buildroot-2022.08-rc2.tar.xz
 tar xvf buildroot-2022.08-rc2.tar.xz
 cd buildroot-2022.08-rc2
+cp linux_config buildroot-2022.08-rc2/.config
+make -C buildroot-2022.08-rc2
 ```
+
+The root filesystem will be located at: `buildroot-2022.08-rc2/output/images/rootfs.cpio.gz` along
+with the other buildroot artefacts.
+
+### Instructions for running raw Linux
+
+TODO: should I put instructions for *just* running the normal Linux imaage? WIthout sel4?

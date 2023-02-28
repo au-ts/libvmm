@@ -16,7 +16,7 @@ platform etc, please see the [documentation](docs/README.md).
 ### Dependencies
 
 * Make
-* dtc (Device tree compiler)
+* dtc (Device Tree Compiler)
 * AArch64 cross compiler toolchain
 * QEMU (if you wish to simulate the VMM)
 
@@ -59,7 +59,7 @@ From here, you can follow the instructions
 [here](https://github.com/Ivan-Velickovic/sel4cp/tree/dev) to build the SDK.
 
 After acquiring this repository and all the dependencies, we can simulate a basic
-system with a single guest OS:
+system with a single Linux guest:
 ```sh
 make BUILD_DIR=build \
      SEL4CP_SDK=/path/to/sdk \
