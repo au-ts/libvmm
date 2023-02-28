@@ -84,7 +84,7 @@ static bool handle_vgic_redist_read_fault(uint64_t vcpu_id, vgic_t *vgic, uint64
         reg = *reg_ptr;
         break;
     default:
-        printf("VMM|ERROR: Unknown register offset 0x%x\n", offset);
+        LOG_VMM_ERR("Unknown register offset 0x%x\n", offset);
         // @ivanv: used to be ignore_fault, double check this is right
         err = fault_advance_vcpu(regs);
         goto fault_return;
@@ -146,7 +146,7 @@ static bool handle_vgic_redist_write_fault(uint64_t vcpu_id, vgic_t *vgic, uint6
     case RANGE32(GICR_IPRIORITYR0, GICR_IPRIORITYRN):
         break;
     default:
-        printf("VMM|ERROR: Unknown register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
+        LOG_VMM_ERR("Unknown register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
     }
 
     int err = fault_advance_vcpu(regs);

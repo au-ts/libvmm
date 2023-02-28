@@ -70,7 +70,7 @@ uint64_t smc_get_arg(seL4_UserContext *u, uint64_t arg)
         case 5: return u->x5;
         case 6: return u->x6;
         default:
-            printf("VMM|ERROR: trying to get SMC arg: 0x%lx, SMC only has 6 argument registers\n", arg);
+            LOG_VMM_ERR("trying to get SMC arg: 0x%lx, SMC only has 6 argument registers\n", arg);
             // @ivanv: come back to this
             return 0;
     }
@@ -86,7 +86,7 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
         case 5: u->x5 = val; break;
         case 6: u->x6 = val; break;
         default:
-            printf("VMM|ERROR: trying to set SMC arg: 0x%lx, with val: 0x%lx, SMC only has 6 argument registers\n", arg, val);
+            LOG_VMM_ERR("trying to set SMC arg: 0x%lx, with val: 0x%lx, SMC only has 6 argument registers\n", arg, val);
     }
 }
 
@@ -107,10 +107,10 @@ bool handle_smc(uint32_t hsr)
                 // printf("VMM|INFO: handling PSCI\n");
                 return handle_psci(VCPU_ID, &regs, fn_number, hsr);
             }
-            printf("VMM|ERROR: Unhandled SMC: standard service call %lu\n", fn_number);
+            LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
             break;
         default:
-            printf("VMM|ERROR: Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
+            LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
             break;
     }
 

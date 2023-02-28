@@ -195,7 +195,7 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
      */
     int err = vgic_irq_enqueue(vgic, vcpu_id, virq_data);
     if (err) {
-        printf("VMM|ERROR: Failure enqueueing IRQ, increase MAX_IRQ_QUEUE_LEN");
+        LOG_VMM_ERR("Failure enqueueing IRQ, increase MAX_IRQ_QUEUE_LEN");
         assert(0);
         return false;
     }
@@ -385,7 +385,7 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
         break;
 #endif
     default:
-        printf("VMM|ERROR: Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
         // err = ignore_fault(fault);
         err = fault_advance_vcpu(regs);
         goto fault_return;
@@ -424,7 +424,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         } else if (data == 0) {
             vgic_dist_disable(gic_dist);
         } else {
-            printf("VMM|ERROR: Unknown enable register encoding");
+            LOG_VMM_ERR("Unknown enable register encoding");
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
@@ -551,7 +551,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
             target_list = (1 << vcpu_id);
             break;
         default:
-            printf("VMM|ERROR: Unknow SGIR Target List Filter mode");
+            LOG_VMM_ERR("Unknow SGIR Target List Filter mode");
             goto ignore_fault;
         }
         // @ivanv: Here we're making the assumption that there's only one vCPU, and
@@ -580,7 +580,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         break;
 #endif
     default:
-        printf("VMM|ERROR: Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
     }
 ignore_fault:
     // @ivanv: revisit

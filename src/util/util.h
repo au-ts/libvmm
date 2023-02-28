@@ -33,12 +33,12 @@
 
 void _putchar(char character);
 
-#define DEBUG_VMM
-
-#if defined(DEBUG_VMM)
+#if defined(CONFIG_debug)
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
+#define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 #else
 #define LOG_VMM(...) do{}while(0)
+#define LOG_VMM_ERR(...) do{}while(0)
 #endif
 
 #if defined(BOARD_imx8mm_evk)
