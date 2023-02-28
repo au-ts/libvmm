@@ -18,7 +18,10 @@
 	};
 
 	chosen {
-		stdout-path = "serial1:115200n8";
+		linux,initrd-end = <0x00000000 0x2f000000>;
+        linux,initrd-start = <0x00000000 0x2d000000>;
+		stdout-path = "/soc/serial@7e215040";
+		bootargs = "console=ttyS0,115200 earlycon=uart8250,mmio32,0xfe215040 8250.nr_uarts=1 rw debug loglevel=8 pci=nomsi initcall_debug initcall_blacklist=clk_disable_unused";
 	};
 
 	reserved-memory {
@@ -1605,7 +1608,8 @@
 
 	memory@0 {
 		device_type = "memory";
-		reg = <0x00 0x00 0x00>;
+		/* Tell Linux that only 256MiB of RAM is available. */
+		reg = <0x00 0x00 0x10000000>;
 	};
 
 	wifi-pwrseq {
