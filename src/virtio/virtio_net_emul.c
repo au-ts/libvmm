@@ -5,7 +5,7 @@
  */
 
 #include <stddef.h>
-#include <string.h>
+// #include <string.h>
 #include "virtio_mmio.h"
 // @jade: find a way to config which backend (vswitch/ethernet/guest driver) to include
 #include "virtio_net_vswitch.h"

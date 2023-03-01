@@ -26,7 +26,7 @@
  * currently we haven't figured out what to do.
  */
 
-#include <string.h>
+// #include <string.h>
 #include "include/config/virtio_net.h"
 #include "virtio_net_vswitch.h"
 #include "../util/util.h"

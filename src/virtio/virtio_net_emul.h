@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#define VIRTIO_NET_IRQ 74
+
 // @jade: random numbers that I picked
 #define VIRTIO_NET_ADDRESS_START    0x130000
 #define VIRTIO_NET_ADDRESS_END      0x140000
