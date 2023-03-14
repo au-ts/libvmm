@@ -255,27 +255,31 @@ void guest_start(void) {
         LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return;
     }
-    // @ivanv: Note that remove this line causes the VMM to fault if we
-    // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    // @ivanv: comment why we ack it
-    sel4cp_irq_ack(SERIAL_IRQ_CH);
     // @ivanv: do we need to set the guest init pc?
     seL4_UserContext regs = {0};
 
-    // @jade: we need to be able to configure virtio devices in some system description instead of putting it here.
-    virtio_net_emul_init();
+    // @jade: we need to be able to configure devices an irqs in some system description instead of putting them here.
+    if (get_vmm_id(sel4cp_name) <= 2) {
+        virtio_net_emul_init();
+        err = vgic_register_irq(VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
+        if (!err) {
+            printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
+        }
+    }
 
-    err = vgic_register_irq(VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
-    if (!err) {
-        printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
+    if (get_vmm_id(sel4cp_name) == 1) {
+        // @ivanv: Note that remove this line causes the VMM to fault if we
+        // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
+        err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+        // @ivanv: comment why we ack it
+        sel4cp_irq_ack(SERIAL_IRQ_CH);
+
+        err = vgic_register_irq(VCPU_ID, PASSTHROUGH_BLK_IRQ, &passthrough_device_ack, NULL);
+        if (!err) {
+            LOG_VMM_ERR("Failed to register virtio blk IRQ");
+            return;
+        }
     }
-    err = vgic_register_irq(VCPU_ID, PASSTHROUGH_BLK_IRQ, &passthrough_device_ack, NULL);
-    if (!err) {
-        LOG_VMM_ERR("Failed to register virtio blk IRQ");
-        return;
-    }
-    sel4cp_irq_ack(PASSTHROUGH_BLK_IRQ_CH);
 
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h

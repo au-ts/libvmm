@@ -74,10 +74,13 @@ SRC_DIR := src
 IMAGE_DIR := board/$(SEL4CP_BOARD)/images
 SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
 
+# KERNEL_IMAGE := $(IMAGE_DIR)/linux
 KERNEL_IMAGE := $(IMAGE_DIR)/new/linux
+# DTB_SOURCE := $(IMAGE_DIR)/linux.dts
 DTB_SOURCE := $(IMAGE_DIR)/linux_virtio.dts
 DTB_IMAGE := linux.dtb
-INITRD_IMAGE := $(IMAGE_DIR)/new/rootfs_2022.08.cpio.gz
+INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
+# INITRD_IMAGE := $(IMAGE_DIR)/new/rootfs_2022.08.cpio.gz
 
 LINUX_IMAGES := $(DTB_IMAGE)
 

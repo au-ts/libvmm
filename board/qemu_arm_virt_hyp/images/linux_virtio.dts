@@ -38,6 +38,13 @@
 		compatible = "qemu,platform\0simple-bus";
 	};
 
+	virtio_mmio@a003e00 {
+		dma-coherent;
+		interrupts = <0x00 0x2f 0x01>;
+		reg = <0x00 0xa003e00 0x00 0x200>;
+		compatible = "virtio,mmio";
+	};
+
 	pl011@9000000 {
 		clock-names = "uartclk\0apb_pclk";
 		clocks = <0x8000 0x8000>;
@@ -63,11 +70,11 @@
 		#interrupt-cells = <0x03>;
 	};
 
-	flash@0 {
-		bank-width = <0x04>;
-		reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
-		compatible = "cfi-flash";
-	};
+	// flash@0 {
+	// 	bank-width = <0x04>;
+	// 	reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
+	// 	compatible = "cfi-flash";
+	// };
 
 	cpus {
 		#size-cells = <0x00>;
@@ -96,7 +103,7 @@
 
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug loglevel=8 ip=192.168.1.1";
+		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug pci=nomsi loglevel=8 ip=192.168.1.1";
 		linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = "Mp\0";
 		linux,initrd-end = <0x4d7dedd9>;

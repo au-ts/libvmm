@@ -312,9 +312,10 @@ bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fs
     assert(fault_addr < VIRTIO_ADDRESS_END);
 
     if (!get_emul_handler_by_address(fault_addr)) {
-        printf("VIRTIO MMIO|INFO: no virtio backend registered for fault address 0x%x.", fault_addr);
+        printf("\"%s\"|VIRTIO MMIO|INFO: no virtio backend registered for fault address 0x%x.\n", sel4cp_name, fault_addr);
         int fault_err = fault_advance_vcpu(regs);
         assert(!fault_err);
+        return false;
     }
 
     if (fault_is_read(fsr)) {

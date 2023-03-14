@@ -235,6 +235,10 @@ static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *se
 // handle rx for the backend
 static int virtio_net_emul_handle_backend_rx(void *buf, uint32_t size)
 {
+    if (!vqs[RX_QUEUE].ready) {
+        // vq is not initialised, drop the packet
+        return 1;
+    }
     struct vring *vring = &vqs[RX_QUEUE].vring;
 
     /* grab the next receive chain */
