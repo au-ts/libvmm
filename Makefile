@@ -74,10 +74,10 @@ SRC_DIR := src
 IMAGE_DIR := board/$(SEL4CP_BOARD)/images
 SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
 
-KERNEL_IMAGE := $(IMAGE_DIR)/linux
+KERNEL_IMAGE := $(IMAGE_DIR)/new/linux
 DTB_SOURCE := $(IMAGE_DIR)/linux_virtio.dts
 DTB_IMAGE := linux.dtb
-INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
+INITRD_IMAGE := $(IMAGE_DIR)/new/rootfs_2022.08.cpio.gz
 
 LINUX_IMAGES := $(DTB_IMAGE)
 
@@ -108,7 +108,15 @@ run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
 	# @ivanv: check that qemu exists
 # 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
-	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=4G -nographic
+	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio \
+	-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=4G -nographic \
+	-nic none \
+	-drive id=disk,file=../misc/sel4cp-vmm.img,if=none \
+	-device virtio-blk-device,drive=disk
+
+# @jade: to create an image
+#	qemu-img create sel4cp-vmm.img 1G
+
 # 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
 # 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 

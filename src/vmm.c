@@ -181,6 +181,10 @@ static bool handle_vm_fault()
 #define SGI_FUNC_CALL       1
 #define PPI_VTIMER_IRQ      27
 
+// @jade: find a better place
+#define PASSTHROUGH_BLK_IRQ         79
+#define PASSTHROUGH_BLK_IRQ_CH      3
+
 static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 {
     uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
@@ -198,6 +202,17 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #elif defined(BOARD_odroidc2_hyp)
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 #endif
+}
+
+static void passthrough_device_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    switch (irq) {
+        case PASSTHROUGH_BLK_IRQ:
+        sel4cp_irq_ack(PASSTHROUGH_BLK_IRQ_CH);
+        break;
+
+        default:
+        break;
+    }
 }
 
 void guest_copy_images(void) {
@@ -252,9 +267,15 @@ void guest_start(void) {
     virtio_net_emul_init();
 
     err = vgic_register_irq(VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
-    if (err) {
+    if (!err) {
         printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
     }
+    err = vgic_register_irq(VCPU_ID, PASSTHROUGH_BLK_IRQ, &passthrough_device_ack, NULL);
+    if (!err) {
+        LOG_VMM_ERR("Failed to register virtio blk IRQ");
+        return;
+    }
+    sel4cp_irq_ack(PASSTHROUGH_BLK_IRQ_CH);
 
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
@@ -323,6 +344,15 @@ notified(sel4cp_channel ch)
         case VSWITCH_CONN_1_CH:
             vswitch_rx(ch);
             break;
+
+        case PASSTHROUGH_BLK_IRQ_CH: {
+            bool success = vgic_inject_irq(VCPU_ID, PASSTHROUGH_BLK_IRQ);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", PASSTHROUGH_BLK_IRQ, VCPU_ID);
+            }
+            break;
+        }
+
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
