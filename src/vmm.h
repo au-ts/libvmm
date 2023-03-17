@@ -31,7 +31,7 @@
 #if defined(BOARD_qemu_arm_virt_hyp)
 #define SERIAL_IRQ_CH 1
 #define SERIAL_IRQ 33
-#elif defined(BOARD_odroidc2_hyp)
+#elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4_hyp)
 #define SERIAL_IRQ_CH 1
 #define SERIAL_IRQ 225
 #elif defined(BOARD_rpi4b_hyp)

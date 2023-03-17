@@ -15,6 +15,9 @@
 #elif defined(BOARD_odroidc2_hyp)
 #define GIC_DIST_PADDR      0xc4301000
 #define GIC_DIST_SIZE       0x1000
+#elif defined(BOARD_odroidc4_hyp)
+#define GIC_DIST_PADDR      0xffc01000
+#define GIC_DIST_SIZE       0x1000
 #elif defined(BOARD_rpi4b_hyp)
 #define GIC_DIST_PADDR      0xff841000
 #define GIC_DIST_SIZE       0x1000
