@@ -21,7 +21,7 @@
 #elif defined(BOARD_rpi4b_hyp)
 #define GIC_DIST_PADDR      0xff841000
 #define GIC_DIST_SIZE       0x1000
-#elif defined(BOARD_imx8mm_evk)
+#elif defined(BOARD_imx8mm_evk_hyp)
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
 #define GIC_DIST_SIZE       0x10000
