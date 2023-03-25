@@ -8,7 +8,7 @@
 
 ## Intro
 
-This is a guide that aims to provide advice for those who are migrating applications from CAmkES to seL4CP. A basic understanding of CAmkES and seL4CP might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
+This is a document that aims to provide advice for those who are migrating applications from CAmkES to seL4CP. A basic understanding of CAmkES and seL4CP might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
 
 - [sDDF(seL4 Device Driver Framework)][sDDF]
     * [similar CAmkES version][camkes sDDF](no longer maintained)
@@ -16,7 +16,7 @@ This is a guide that aims to provide advice for those who are migrating applicat
 - [VirtIO Demo][VMM]
     * [similar CAmkES version][camkes VMM]
 
-In general, CAmkES is a higher-level tool than seL4CP. It provides features that seL4CP does not intend to provide, such as build systems and connectors. seL4CP is simple, it's up to the user to choose how to configure *protection domains* and how they interact with other *protection domains*. This guide will demonstrate the available 1-to-1 mappings between CAmkES concepts and seL4CP concepts, as well as potential ways to achieve similar results on seL4CP where seL4CP does not provide a feature.
+In general, CAmkES is a higher-level tool than seL4CP. It provides features that seL4CP does not intend to provide, such as build systems and connectors. seL4CP is simple, it intentionally doesn't prescribe a boiled system but provides an SDK that is designed to integrate with a build system of your choice. This guide will demonstrate the available 1-to-1 mappings between CAmkES concepts and seL4CP concepts, as well as potential ways to achieve similar results on seL4CP where seL4CP does not provide a feature.
 
 To avoid confusion between CAmkES and seL4CP, when referring to seL4CP terminologies, we always emphasize them with *italics*.
 
@@ -124,7 +124,7 @@ assembly {
 ```
 A CAmkES component are typically multithreaded, the keyword `control` means it will contain a main function and have an active thread of control. Each `interface` (see [CAmkES Interfaces](#iface)) the component interacts with induces another thread within the component.
 
-seL4CP *PDs* are single-threaded to keep the programming model and implementations simple. A *PD* provides one single thread of control.
+seL4CP *PDs* are single-threaded and event-driven to keep the programming model and implementations simple. A *PD* provides one single thread of control.
 
 The seL4CP way of adding a *protection domain*:
 ```xml
@@ -394,7 +394,7 @@ void notified(sel4cp_channel channel_id)
 
 seL4CP is build-system-agnostic, so setting up build flags as it is done on CAmkES using CMake is up to the build system you choose for your project.
 
-As we mentioned in [`attributes`, `configuration`](#attributes), CAmkES uses `attributes` that result in symbols being defined and available to the source of various components.  For example, in CAmkES VMM development, `attributes` are used heavily for describing the layout of the whole system and the feature of each VMM:
+As we mentioned in [`attributes`, `configuration`](#attributes), CAmkES uses `attributes` that result in symbols being defined and available to the source of various components.  For example, in CAmkES VMM development, `attributes` are used heavily for describing the layout of the whole system and the features of each VMM:
 ```c
 configuration {
     // telling the vswitch backend about the connections that VM0 likes to have
@@ -409,7 +409,7 @@ configuration {
    ];
 }
 ```
-Because seL4CP does not have a standard build system, it is up to you to ensure that, say, *channel* IDs specified in the `system` file match those specified in component code.  In existing seL4CP example systems, most of the variables and structures are hard-coded. It would be possible to have external build tools as a solution in the future, but more use cases are needed to determine what seL4CP actually needs to provide.
+seL4CP does not have a standard build system. In existing seL4CP example systems, most of these variables and structures are hard-coded. In addition, for parameters in the `.system` file, such as *channel* IDs and IRQs, it is up to you to ensure that they match those specified in the application's code. It would be possible to have external build tools as a solution in the future, but more use cases are needed to determine what seL4CP actually needs to provide.
 
 On CAmkES, you are also able to import components from other files or include header files for your `.camkes` file, which may not be necessary for seL4CP systems.
 
@@ -431,7 +431,7 @@ int m_unlock(void);
 ```
 which is not needed on seL4CP as *PDs* are single-threaded.
 
-There are no built-in inter-component synchronisation primitives for either CAmkES or seL4CP.
+There are no built-in inter-component synchronisation primitives for either CAmkES or seL4CP as seL4 system calls are sufficient.
 
 ### Allocator
 
@@ -439,9 +439,9 @@ CAmkES provides a [DMA allocator][dma alloc] to allocate and manage DMA buffers 
 
 Dynamic memory allocation in CAmkES is done by standard C library functions, which manipulate a static array that has been set up by CAmkES. The size of the array can be configured with the `heap_size` attribute in CAmkES components. On seL4CP, you can configure a *`memory region`* for this purpose, but you will also need to implement any allocators you need (at least for now).
 
-### Inter-component Transporting Mechanisms {#sharedring}
+### Inter-component Transport Mechanisms {#sharedring}
 
-The inter-component transporting mechanisms on CAmkES are a virtqueue-like [ring buffer library][camkes vq] and the corresponding connectors `VirtQueueInit` and `seL4VirtQueues`. The mechanisms are commonly used in client-server systems:
+The inter-component transport mechanisms on CAmkES are a virtqueue-like [ring buffer library][camkes vq] and the corresponding connectors `VirtQueueInit` and `seL4VirtQueues`. The mechanisms are commonly used in client-server systems:
 ```c
 component Comp {
     uses VirtQueueDev recv;
