@@ -9,7 +9,7 @@ TODOs:
 * Peter: more code snippets to show how to migrate the code that implements components, as well as the system file vs camkes file descriptions
 ~~* Gernot: VM examples~~
 ~~* Ivan: also more examples~~
-* Ivan: more references to the seL4CP manual
+~~* Ivan: more references to the seL4CP manual~~
 * maybe mention plans about what is going to be added in the future
  -->
 
@@ -17,10 +17,10 @@ TODOs:
 
 ## Intro
 
-The goal of this document is to act as a guide for migrating applications built using the CAmkES to the [seL4 Core Platform][seL4CP] (seL4CP). This is done by discussing the similarities and differences between the frameworks as well as providing various examples. A basic understanding of CAmkES and seL4CP might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
+The goal of this document is to act as a guide for migrating applications built using CAmkES to [the seL4 Core Platform][seL4CP] (seL4CP). This is done by discussing the similarities and differences between the frameworks as well as providing various examples. A basic understanding of CAmkES and seL4CP might be needed before reading this documentation. Most of the examples in this guide are taken from the [CAmkES Tutorial][camkes tut] and the following example systems:
 
-- [sDDF(seL4 Device Driver Framework)][sDDF]
-    * [similar CAmkES version][camkes sDDF](no longer maintained)
+- [seL4 Device Driver Framework(sDDF)][sDDF]
+    * [similar CAmkES version][camkes sDDF] (no longer maintained)
 
 - [VirtIO Demo][VMM demo]
     * [similar CAmkES version][camkes VMM example]
@@ -561,11 +561,13 @@ CAmkES VMM (distributed in various repositories, mainly [camkes-vm][camkesvm], [
 
 * `libcrossvm` that makes dataports and event interfaces available to the guest VM
 * VirtIO backends for virtio-net, virtio-block, virtio-console and virtio-vsocket
-* Virtual GICv2/v3 support
+* Virtual GICv2 support
 
 [seL4CP VMM][VMM] is an experimental VMM for 64-bit ARM platforms built on top of seL4CP. It currently has Virtual GICv2/v3 support and some VirtIO backends. There are plans to improve the VMM, including adding vhost support for Linux driver VMs, as well as the ability to restart a Guest VM.
 
-Both CAmkES VMM and seL4CP VMM support only one guest VM per instance of VMM.
+seL4CP VMM is subject to change as it is a work-in-progress. This document will be updated to adapte the changes, but this might not be done in a timely manner. Please always check the [seL4CP VMM Guide][sel4cp vmm guide] for latest changes.
+
+Both CAmkES VMM and seL4CP VMM support only one guest VM per instance of VMM. This is an intentional decision to maintain isolation between each VM/VMM.
 
 In this section, we are going to discuss how to migrate VM applications from CAmkES to seL4CP. We only focus on 64-bit ARM platforms as this is what seL4CP VMM currently supports. More platforms will be added in the future.
 
@@ -653,12 +655,12 @@ The members in a CAmkES VM component do not necessarily present in a correspondi
 1. Previously discussed in [`component` and *`protection domain`*](#component)
 2. Previously discussed in [CAmkES Interfaces](#iface)
 3. Will be discussed in [Device Passthrough](#passthrough)
-4. N/A in seL4CP VMM
-5. The ability to config the number of vCPUs as an [attribute](#attributes) and handles multiple vCPUs in CAmkES VMM. seL4CP VMM doesn't currently handle multiple vCPUs, but the feature will be added soon.
-6. N/A in seL4CP VMM
+4. N/A, as seL4CP is single-threaded.
+5. The ability to config the number of vCPUs as an [attribute](#attributes) and handles multiple vCPUs in CAmkES VMM. seL4CP VMM doesn't currently handle multiple vCPUs, but the feature will be added in the future.
+6. N/A in seL4CP VMM because all memory is described in the system description at build time. The VMM does not manage the guest's virtual address space at runtime.
 7. Attributes that describe the memory layout of the VM guest. In seL4CP, `linux_address_config` attributes are handled as *memory regions* that are mapped to the VM's virtual memory. `linux_image_config` attributes are not handled by seL4CP, however, some of the attributes (e.g., `linux_stdout` and `linux_bootcmdline`) are configurable in the VM's DTS file.
-8. Optional attributes that configure the connections the VM likes to have for the serial multiplexor. This is currently N/A in seL4CP VMM, but there are plans for adding a serial driver and a serial multiplexor on top of seL4CP.
-9. As a VMM, CAmkES VMM requires access to the actual hardware. CAmkES provides file server, serial server and time server etc. for such purposes, while seL4CP does not intend to. It's up to you to implement the functionalities, or potentially make use of the existing libraries on top of seL4CP.
+8. Optional attributes that configure the connections the VM likes to have for the serial multiplexor. This is currently N/A in seL4CP VMM, but there are plans for adding a serial driver and a serial multiplexor as external libraries on top of seL4CP.
+9. VMM requires access to the actual hardware. CAmkES provides a file server, a serial server and a time server etc. for such purposes. On seL4CP, it's up to you to implement these functionalities, or potentially make use of the existing external libraries on top of seL4CP.
 
 The approach from VMM development on top of seL4CP is quite different, most of the configurations are not done by seL4CP but by the seL4CP VMM and the external build system. Take `vm_multi` as an example:
 
@@ -795,7 +797,7 @@ A similar VM system on top of seL4CP may look like this:
 </system>
 ```
 
-This VM system defines the necessary *memory regions* `guest_ram-#` and `gic_vcpu` for the VMs and maps them into the virtual memory of the VMs by creating a `map` in the *virtual machine* element of the VMMs' *protection domains*. It also sets up the connections between two VMMs. Unlike CAmkES, as a minimal seL4 operating systems framework, seL4CP doesn't have a way to describe the properties of the VM guest. It's up to you to do the necessary configuration, e.g., `vswitch_layout` and `vswitch_mac_address`, for your seL4CP VM system.
+This VM system defines the necessary *memory regions* `guest_ram-#` and `gic_vcpu` for the VMs and maps them into the virtual memory of the VMs by creating a `map` in the *virtual machine* element of the VMMs' *protection domains*. It also sets up the connections between two VMMs, as well as shared memory regions for [Inter-component Transport Mechanisms](#sharedring) (which is done by `seL4VirtQueues` in the CAmkES example). Unlike CAmkES, as a minimal seL4 operating systems framework, seL4CP doesn't have a way to describe the properties of the VM guest. It's up to you to do the necessary configuration, e.g., `vswitch_layout` and `vswitch_mac_address`, for your seL4CP VM system.
 
 The examples are simplified for demonstration purposes, see the source code of [the CAmkES version][camkes VMM example] and the [seL4CP version][VMM demo] for details of the implementation.
 
@@ -803,7 +805,8 @@ The examples are simplified for demonstration purposes, see the source code of [
 
 CAmkES VMM provides default device trees for various platforms (see `projects/vm/components/VM_Arm/plat_include/<platform>/plat/vmlinux.h` files in [camkes-vm][camkesvm]), as well as ways to configure custom device trees and root file systems with CMake. It also allows you to add programs and kernel modules to the root filesystem of your Linux Guest VMs. See [CAmkES Linux][camkes VMM docs sort of] for more information.
 
-seL4CP VMM... thanks Ivan :)
+seL4CP VMM... TBD
+<!-- thanks Ivan :) -->
 
 ### Device Passthrough on 64-bit ARM platforms {#passthrough}
 
@@ -913,8 +916,8 @@ On seL4CP, device passthrough is done by mapping *memory regions* to the *virtua
 ```
 
 ## Potential Future Works for seL4CP
-
-also thanks Ivan :)
+TBD
+<!-- also thanks Ivan :) -->
 
 ## Reference
 1. [seL4CP manual][seL4CP]
@@ -938,6 +941,7 @@ also thanks Ivan :)
 [vmmplatsupport]: https://github.com/seL4/seL4_projects_libs/tree/master/libsel4vmmplatsupport
 [libsel4vm]: https://github.com/seL4/seL4_projects_libs/tree/master/libsel4vm
 [VMM]: https://github.com/Ivan-Velickovic/sel4cp_vmm
+[sel4cp vmm guide]: https://github.com/Ivan-Velickovic/sel4cp_vmm/blob/main/docs/README.md
 [camkes VMM docs sort of]: https://docs.sel4.systems/Tutorials/camkes-vm-linux.html
 [the truth]: https://github.com/sel4/camkes-vm/components/VM_Arm/configurations/vm.h
 [entry point]: https://github.com/Ivan-Velickovic/sel4cp/blob/dev/docs/manual.md#entry-points
