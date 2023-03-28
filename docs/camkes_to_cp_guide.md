@@ -4,6 +4,15 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
+<!--
+TODOs:
+* Peter: more code snippets to show how to migrate the code that implements components, as well as the system file vs camkes file descriptions
+* Gernot: VM examples
+* Ivan: also more examples
+* Ivan: more references to the seL4CP manual
+* maybe mention plans about what is going to be added in the future
+ -->
+
 # CAmkES to seL4CP Transition Guide
 
 ## Intro
@@ -16,9 +25,28 @@ This is a document that aims to provide advice for those who are migrating appli
 - [VirtIO Demo][VMM]
     * [similar CAmkES version][camkes VMM]
 
-In general, CAmkES is a higher-level tool than seL4CP. It provides features that seL4CP does not intend to provide, such as build systems and connectors. seL4CP is simple, it intentionally doesn't prescribe a boiled system but provides an SDK that is designed to integrate with a build system of your choice. This guide will demonstrate the available 1-to-1 mappings between CAmkES concepts and seL4CP concepts, as well as potential ways to achieve similar results on seL4CP where seL4CP does not provide a feature.
-
 To avoid confusion between CAmkES and seL4CP, when referring to seL4CP terminologies, we always emphasize them with *italics*.
+
+CAmkES and seL4CP are both designed for building systems with a static architecture (while seL4CP aims to have limited dynamicism). In general, CAmkES is a higher-level tool than seL4CP, it provides:
+
+* a language to describe component interfaces, components, and the whole systems
+* a collection of reusable CAmkES components and interfaces
+* full integration in the seL4 build system (i.e., CMake)
+* templates and a code generator to combine programmer-provided component code with generated scaffolding and glue code to build a system image
+* runtime libraries ([`libsel4camkes`][libsel4camkes]) that provide various supports, including memory allocators, a subset of POSIX syscalls, inter-component transport mechanisms, interfaces for the CAmkES APIs etc...
+
+seL4CP is a minimal seL4 operating systems framework, it intentionally doesn't prescribe a boiled system but provides an SDK that is designed to integrate with a build system of your choice. It provides:
+
+* seL4CP tool that takes a programmer-provided system description as input and produces an appropriate system image
+* runtime libraries that provide the C runtime for the *protection domain*, along with interfaces for the sel4cp APIs
+
+And does not provide:
+* a build system. seL4CP allows (and forces) users to choose their own build systems
+* runtime libraries/tools for specific supports
+
+Note that seL4CP only supports MCS kernel.
+
+This guide will demonstrate the available 1-to-1 mappings between CAmkES concepts and seL4CP concepts, as well as potential ways to implement similar systems on top of seL4CP where seL4CP does not provide a feature.
 
 ## Overview
 
@@ -156,7 +184,9 @@ Note: The ability to configure the CPU affinity of a *PD* will be added in the f
 The configuration of hardware components however, will be covered in section [Hardware](#hardware).
 
 ### `attributes`, `configuration` {#attributes}
-CAmkES allows the programmer to configure custom attributes of components/connectors, such as the details of the device's MMIO and IRQ for a driver component. Those attributes are accessible as global variables in the application's code.
+
+CAmkES allows the programmer to configure custom attributes of components/connectors, such as the details of the device's MMIO and IRQ for a driver component. Those attributes are accessible as global variables in the component code:
+
 ```c
 component Ethdriver {
     // some cool stuff
@@ -179,6 +209,8 @@ assembly {
         component Mycomponent c;
     }
     configuration {
+        c.period = 300;
+        c.budge = 160;
         c.priority = 42;
         c.affinity = 1;
     }
@@ -188,11 +220,11 @@ On seL4CP, thread attributes are part of the *PD* attributes (see [this example]
 
 ### `connectors`, `connections` and *`memory regions`*, *`channels`*
 
-CAmkES provides various `connectors` for communication (e.g., `seL4VirtQueues`) and shared memory (e.g., `seL4RPCDataport`) for different purposes. There are also connectors for specific types of servers (e.g., `seL4Ethdriver`). Some connectors (e.g., `seL4VMDTBPassthrough`), are even used as ways to hack the build system. In contrast, seL4CP provides strictly minimum supports for memory mapping with *`memory regions`* and IPCs/notifications with *`channels`*. With seL4CP, it is up to you to implement the mechanisms you need.
+CAmkES provides various `connectors` for communication (e.g., `seL4VirtQueues`) and shared memory (e.g., `seL4RPCDataport`) for different purposes. There are also connectors for specific types of servers (e.g., `seL4Ethdriver`). Some connectors (e.g., `seL4VMDTBPassthrough`), are even used as ways to hack the build system. In contrast, seL4CP provides strictly minimum supports for memory mapping with *`memory regions`* and IPCs/notifications with *`channels`*. With seL4CP, it is up to you to implement the specific mechanisms you need.
 
-With the help of *`memory regions`*, *`channels`* and potentially libraries that run on top of seL4CP (currently we only have a ready-to-merge [`libsharedringbuffer`][Lucy ShRingBuf] available), you might be able to implement similar features on seL4CP for most of the [standard `connectors`][std conn] and some of the [global `connectors`][glob conn].
+With the help of *`memory regions`*, *`channels`* and potentially libraries that run on top of seL4CP (such as the [`libsharedringbuffer`][Lucy ShRingBuf] library), you might be able to implement similar features on seL4CP for most of the [standard `connectors`][std conn] and some of the [global `connectors`][glob conn].
 
-An example of a global `connector` is `seL4RPCDataportSignal`, which combines a `dataport` and a seL4 notification channel. The following example is a common use case of this connector:
+An example of a global `connector` is `seL4RPCDataportSignal`, which combines a `dataport` and a seL4 notification object. The following example is a common use case of this connector:
 ```c
 procedure DriverInterface {
     // some cool APIs
@@ -219,6 +251,7 @@ assembly {
 ```
 
 On seL4CP, a similar functionality can be implemented thus:
+
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 
@@ -232,7 +265,8 @@ On seL4CP, a similar functionality can be implemented thus:
 
     <protection_domain name="myclient" priority="42">
         <program_image path="myclient.elf" />
-        <map mr="sharedbuf" vaddr="0x3000000" perms="w" cached="false" setvar_vaddr="driverbuf" />
+        <!-- can't have a write only page on aarch64 seL4 -->
+        <map mr="sharedbuf" vaddr="0x3000000" perms="rw" cached="false" setvar_vaddr="driverbuf" />
     </protection_domain>
 
     <channel>
@@ -241,9 +275,11 @@ On seL4CP, a similar functionality can be implemented thus:
     </channel>
 </system>
 ```
+
 `sharedbuf` is a contiguous range of physical memory that's mapped into both *PDs* with the specified virtual address, caching attributes and permissions. The symbols `clientbuf` and `driverbuf` will be bound to the value `0x3000000` and are accessible in the application's code.
 
 You can also set the physical address and the page size for a *`memory region`*:
+
 ```xml
 <!-- physical memory for UART -->
 <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
@@ -251,11 +287,13 @@ You can also set the physical address and the page size for a *`memory region`*:
 <!-- RAM for a VM guest -->
 <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
 ```
+
 These are particularly useful for VMM and driver development.
 
 Hardware connectors will be covered in [Hardware](#hardware).
 
 ### CAmkES Interfaces and *`channels`* {#iface}
+
 CAmkES provides interfaces as abstract exposed interaction points of a component. Examples of interfaces are `dataports` (port interface), `emits`/`uses` (event interface) and `Ethdriver` (procedure interface). CAmkES sDDF makes use of the `Ethdriver` interface:
 ```c
 // the definition of `Ethdriver` in Ethdriver.idl4
@@ -278,7 +316,8 @@ assembly {
 }
 ```
 
-This gives component `lwipserver` the ability to transmit data to component `ethdriver` by calling `ethdriver_tx`. On seL4CP, however, there are no built-in mechanisms for Ethdrivers (or any other kind of drivers). What you might do instead, is to register *channels* for all methods you need:
+This gives component `lwipserver` the ability to transmit data to component `ethdriver` by calling `ethdriver_tx`. On seL4CP, however, there are no built-in mechanisms for Ethernet drivers (or any other kind of drivers). What you might do instead, is to register *channels* for all methods you need:
+
 ```xml
 <system>
     <!-- some cool configs for shared buffers -->
@@ -340,26 +379,31 @@ void notified(sel4cp_channel channel_id)
     }
 }
 ```
+`notified` is an [entry point][entry point] understanded by `libsel4cp`, the other entry points are `init` and `protected` (optional).
+
 Port interfaces and event interfaces can also be implemented in similar ways.
 
 ## Hardware {#hardware}
 
 A hardware component represents an interface to hardware in the form of a component. A hardware component may look like this:
+
 ```c
 component Device {
-  hardware;
+    hardware;
 
-  provides IOPort io_port; // IA32
-  emits Interrupt irq;
-  dataport Buf mem;
+    // seL4CP does not currently support x86
+    // provides IOPort io_port;
+
+    emits Interrupt irq;
+    dataport Buf mem;
 }
 ```
 
 seL4CP doesn't have an abstraction for hardware. To allow a *PD* to access a particular device, the physical memory of the device needs to be mapped into the *PD*. You may also need to register the IRQ for it.
+
 ```xml
 <system>
     <memory_region name="device_mem" size="0x10_000" phys_addr="0x30890000" />
-    <memory_region name="device_ioport" size="0x200" phys_addr="0x308a0000" />
     <!-- other cool stuff -->
 
     <protection_domain name="driver" priority="42">
@@ -373,6 +417,7 @@ seL4CP doesn't have an abstraction for hardware. To allow a *PD* to access a par
 ```
 
 To handle the IRQ, add an entry in the handler for *channels*.
+
 ```c
 void notified(sel4cp_channel channel_id)
 {
@@ -394,7 +439,8 @@ void notified(sel4cp_channel channel_id)
 
 seL4CP is build-system-agnostic, so setting up build flags as it is done on CAmkES using CMake is up to the build system you choose for your project.
 
-As we mentioned in [`attributes`, `configuration`](#attributes), CAmkES uses `attributes` that result in symbols being defined and available to the source of various components.  For example, in CAmkES VMM development, `attributes` are used heavily for describing the layout of the whole system and the features of each VMM:
+As we mentioned in [`attributes`, `configuration`](#attributes), CAmkES uses `attributes` that result in symbols being defined and available to the component code. For example, in CAmkES VMM development, `attributes` are used heavily for describing the layout of the whole system and the features of each VMM:
+
 ```c
 configuration {
     // telling the vswitch backend about the connections that VM0 likes to have
@@ -409,6 +455,7 @@ configuration {
    ];
 }
 ```
+
 seL4CP does not have a standard build system. In existing seL4CP example systems, most of these variables and structures are hard-coded. In addition, for parameters in the `.system` file, such as *channel* IDs and IRQs, it is up to you to ensure that they match those specified in the application's code. It would be possible to have external build tools as a solution in the future, but more use cases are needed to determine what seL4CP actually needs to provide.
 
 On CAmkES, you are also able to import components from other files or include header files for your `.camkes` file, which may not be necessary for seL4CP systems.
@@ -441,7 +488,8 @@ Dynamic memory allocation in CAmkES is done by standard C library functions, whi
 
 ### Inter-component Transport Mechanisms {#sharedring}
 
-The inter-component transport mechanisms on CAmkES are a virtqueue-like [ring buffer library][camkes vq] and the corresponding connectors `VirtQueueInit` and `seL4VirtQueues`. The mechanisms are commonly used in client-server systems:
+The inter-component transport mechanisms on CAmkES are a virtqueue-like [ring buffer library][camkes vq] and the corresponding connectors `VirtQueueInit` and `seL4VirtQueues`. The mechanisms are commonly used in client-server systems and inter-VMM communications, e.g.:
+
 ```c
 component Comp {
     uses VirtQueueDev recv;
@@ -465,7 +513,9 @@ assembly {
     }
 }
 ```
+
 There is an external library [ring buffer library][Lucy ShRingBuf] available for seL4CP that achieves the same goal. An example configuration for the ring buffers looks like this:
+
 ```xml
 <system>
     <!-- shared memory for ring buffer mechanism -->
@@ -507,13 +557,21 @@ There is an external library [ring buffer library][Lucy ShRingBuf] available for
     </channel>
 </system>
 ```
+
 A good example of how to set up and use the ring buffer is [sDDF][sDDF].
+
+## VMM development
+TBD
+
+## Potential Future Works for seL4CP
+TBD
 
 ## Reference
 1. [seL4CP manual](https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md)
-2. [CAmkES manual](https://docs.sel4.systems/projects/camkes/manual.html)
-3. [libsel4camkes manual](https://github.com/seL4/camkes-tool/pull/82) (the best version I can find)
+2. [CAmkES manual][camkes tut]
+3. [libsel4camkes manual][libsel4camkes] (the best version I can find)
 
+[libsel4camkes]: https://github.com/seL4/camkes-tool/pull/82
 [camkes tut]: https://docs.sel4.systems/projects/camkes/manual.html
 [sDDF]: https://github.com/lucypa/sDDF/blob/main/echo_server/eth.system
 [camkes sDDF]: https://github.com/seL4/camkes/pull/25
@@ -525,3 +583,5 @@ A good example of how to set up and use the ring buffer is [sDDF][sDDF].
 [dma alloc]: https://github.com/seL4/camkes-tool/blob/master/libsel4camkes/include/camkes/dma.h
 [obj alloc]: https://github.com/seL4/camkes-tool/blob/master/libsel4camkes/include/camkes/allocator.h
 [camkes vq]: https://github.com/seL4/camkes-tool/blob/master/libsel4camkes/include/camkes/virtqueue.h
+
+[entry point]: https://github.com/Ivan-Velickovic/sel4cp/blob/dev/docs/manual.md#entry-points
