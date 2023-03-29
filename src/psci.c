@@ -45,12 +45,12 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             break;
         case PSCI_SYSTEM_RESET: {
             bool success = guest_restart();
-            if (!success) {
+            if (success) {
                 LOG_VMM_ERR("Failed to restart guest\n");
                 smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
-                break;
+            } else {
+                smc_set_return_value(regs, PSCI_SUCCESS);
             }
-            smc_set_return_value(regs, PSCI_SUCCESS);
             break;
         }
         default:
