@@ -250,11 +250,14 @@ void guest_start(void) {
     err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     // @ivanv: comment why we ack it
     sel4cp_irq_ack(SERIAL_IRQ_CH);
-    // @ivanv: do we need to set the guest init pc?
     seL4_UserContext regs = {0};
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
-    regs.pc = guest_ram_vaddr + 0x80000;
+    // Read the entry point and set it to the program counter
+    struct linux_image_header *image_header = (struct linux_image_header *) &_guest_kernel_image;
+    uint64_t kernel_image_vaddr = guest_ram_vaddr + image_header->text_offset;
+    regs.pc = kernel_image_vaddr;
+    // Set all the TCB registers
     err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + VM_ID,
         false, // We'll explcitly start the guest below rather than in this call
@@ -275,8 +278,8 @@ void guest_start(void) {
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
                                            and IC IVAU in AArch64 state   */
-// #define SCTLR_EL1_C         (1 << 2)      /* Enable data and unified caches */
-// #define SCTLR_EL1_I         (1 << 12)     /* Enable instruction cache       */
+#define SCTLR_EL1_C         (1 << 2)      /* Enable data and unified caches */
+#define SCTLR_EL1_I         (1 << 12)     /* Enable instruction cache       */
 #define SCTLR_EL1_CP15BEN   (1 << 5)      /* AArch32 CP15 barrier enable    */
 #define SCTLR_EL1_UTC       (1 << 15)     /* Enable EL0 access to CTR_EL0   */
 #define SCTLR_EL1_NTWI      (1 << 16)     /* WFI executed as normal         */
@@ -287,8 +290,8 @@ void guest_start(void) {
 #define SCTLR_EL1_RES      0x30d00800   /* Reserved value */
 #define SCTLR_EL1          ( SCTLR_EL1_RES | SCTLR_EL1_CP15BEN | SCTLR_EL1_UTC \
                            | SCTLR_EL1_NTWI | SCTLR_EL1_NTWE )
-// #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
-#define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_UCI)
+#define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
+// #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
 bool guest_restart(void) {
