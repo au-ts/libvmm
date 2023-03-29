@@ -26,13 +26,22 @@ endif
 
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
+# @ivanv: check that all dependencies exist
+SHELL=/bin/bash
+QEMU := qemu-system-aarch64
 TOOLCHAIN := aarch64-linux-gnu
+DTC := dtc
+CC := $(TOOLCHAIN)-gcc
+LD := $(TOOLCHAIN)-ld
+AS := $(TOOLCHAIN)-as
+SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
+
 ARCH := aarch64
 
-ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-	TOOLCHAIN = riscv64-unknown-elf
-    ARCH = riscv64
-endif
+# ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
+# 	TOOLCHAIN = riscv64-unknown-elf
+#     ARCH = riscv64
+# endif
 
 # ifeq ($(ARCH),riscv64)
 # 	ifeq ($(strip $(OPENSBI)),)
@@ -43,14 +52,6 @@ endif
 OPENSBI := opensbi
 
 CPU := cortex-a53
-
-# @ivanv: check that all dependencies exist
-QEMU_AARCH64 := qemu-system-aarch64
-DTC := dtc
-CC := $(TOOLCHAIN)-gcc
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
-SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
 
@@ -81,10 +82,6 @@ INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 
 LINUX_IMAGES := $(DTB_IMAGE)
 
-ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-	LINUX_IMAGES = linux_yanyan.dtb
-endif
-
 IMAGES := $(LINUX_IMAGES) vmm.elf
 
 # @ivanv: compiling with -O3, the compiler complains about missing memset
@@ -99,26 +96,32 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
 
-all: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
+# @ivanv: incremental building with the IMAGE_DIR set does not work.
+all: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE) $(KERNEL_IMAGE) $(INITRD_IMAGE)
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
-	# @ivanv: check that qemu exists
-# 	ifeq ($(SEL4CP_BOARD),qemu_arm_virt_hyp)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
-	$(QEMU_AARCH64) -machine virt,virtualization=on,highmem=off,secure=off -cpu $(CPU) -serial mon:stdio -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 -m size=3G -nographic
-# 	else ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-# 	qemu-system-riscv64 -machine virt -cpu rv64 -nographic -serial mon:stdio -m size=3072M -bios $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
+	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
+			-cpu $(CPU) \
+			-serial mon:stdio \
+			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
+			-m size=2G \
+			-nographic
 
 $(BUILD_DIR)/$(DTB_IMAGE): $(DTB_SOURCE)
+	if ! command -v $(DTC) &> /dev/null; then echo "You need a Device Tree Compiler (dtc) installed"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
-	# @ivanv: check that dependency exists
 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S
-	$(CC) -c -g3 -x assembler-with-cpp -mcpu=$(CPU) -DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" -DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/linux.dtb\" -DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" $< -o $@
+	$(CC) -c -g3 -x assembler-with-cpp -mcpu=$(CPU) \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
+					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/linux.dtb\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					$< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
