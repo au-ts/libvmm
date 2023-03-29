@@ -12,6 +12,7 @@
 #include "fault.h"
 #include "hsr.h"
 #include "vmm.h"
+#include "arch/aarch64/linux.h"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -197,11 +198,27 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 #endif
 }
 
-void guest_copy_images(void) {
+bool guest_init_images(void) {
+    // For this we currently assume a Linux kernel guest.
+    struct linux_image_header *image_header = (struct linux_image_header *) &_guest_kernel_image;
+    assert(image_header->magic == LINUX_IMAGE_MAGIC);
+    if (image_header->magic != LINUX_IMAGE_MAGIC) {
+        LOG_VMM_ERR("Linux kernel image magic check failed\n");
+        return false;
+    }
     // Copy the guest kernel image into the right location
     uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
-    LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", guest_ram_vaddr + 0x80000, kernel_image_size);
-    memcpy((char *)guest_ram_vaddr + 0x80000, _guest_kernel_image, kernel_image_size);
+    uint64_t kernel_image_vaddr = guest_ram_vaddr + image_header->text_offset;
+    // This check is because the Linux kernel image requires to be placed at text_offset of
+    // a 2MB aligned base address anywhere in usable system RAM and called there.
+    // In this case, we place the image at the text_offset of the start of the guest's RAM,
+    // so we need to make sure that the start of guest RAM is 2MB aligned.
+    //
+    // @ivanv: Ideally this check would be done at build time, we have all the information
+    // we need at build time to enforce this.
+    assert((guest_ram_vaddr & ((1 << 20) - 1)) == 0);
+    LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", kernel_image_vaddr, kernel_image_size);
+    memcpy((char *)kernel_image_vaddr, _guest_kernel_image, kernel_image_size);
     // Copy the guest device tree blob into the right location
     uint64_t dtb_image_size = _guest_dtb_image_end - _guest_dtb_image;
     LOG_VMM("Copying guest DTB to 0x%x (0x%x bytes)\n", GUEST_DTB_VADDR, dtb_image_size);
@@ -210,6 +227,8 @@ void guest_copy_images(void) {
     uint64_t initrd_image_size = _guest_initrd_image_end - _guest_initrd_image;
     LOG_VMM("Copying guest initial RAM disk to 0x%x (0x%x bytes)\n", GUEST_INIT_RAM_DISK_VADDR, initrd_image_size);
     memcpy((char *)GUEST_INIT_RAM_DISK_VADDR, _guest_initrd_image, initrd_image_size);
+
+    return true;
 }
 
 void guest_start(void) {
@@ -283,7 +302,7 @@ void guest_start(void) {
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
-void guest_restart(void) {
+bool guest_restart(void) {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
     sel4cp_vm_stop(VM_ID);
@@ -292,7 +311,11 @@ void guest_restart(void) {
     LOG_VMM("Clearing guest RAM\n");
     memset((char *)guest_ram_vaddr, 0, GUEST_RAM_SIZE);
     // Copy back the images into RAM
-    guest_copy_images();
+    bool success = guest_init_images();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        return false;
+    }
     // Reset registers
     print_vcpu_regs(VM_ID);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SCTLR, SCTLR_DEFAULT);
@@ -335,6 +358,7 @@ void guest_restart(void) {
     // uint64_t guest_init_pc = guest_ram_vaddr + 0x80000; // @ivanv: get rid of
     // LOG_VMM("restarting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
     // sel4cp_vm_restart(VM_ID, guest_init_pc);
+    return true;
 }
 
 void
@@ -343,7 +367,11 @@ init(void)
     // Initialise the VMM, the VCPU(s), and start the guest
     LOG_VMM("starting \"%s\"\n", sel4cp_name);
     // Place all the binaries in the right locations before starting the guest
-    guest_copy_images();
+    bool success = guest_init_images();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        assert(0);
+    }
     // Initialise and start guest (setup VGIC, setup interrupts, TCB registers)
     guest_start();
 }
