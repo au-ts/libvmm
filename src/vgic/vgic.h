@@ -30,9 +30,9 @@
 #error Need to define GIC addresses
 #endif
 
+/* Uncomment these defines for more verbose logging in the GIC driver. */
 // #define DEBUG_IRQ
 // #define DEBUG_DIST
-
 #if defined(DEBUG_IRQ)
 #define LOG_IRQ(...) do{ printf("VGIC|IRQ: "); printf(__VA_ARGS__); }while(0)
 #else
