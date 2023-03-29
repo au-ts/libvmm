@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: Build VMM examples
+    name: Build and run VMM examples
     # Don't want any forks or PRs to run this workflow
     if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
     runs-on: ubuntu-latest
@@ -20,8 +20,8 @@ jobs:
         run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
       - name: Install VMM dependencies (via apt)
         run: sudo apt update && sudo apt install -y make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler expect
-      - name: Build VMM examples
-        run: ./ci/build_examples.sh sel4cp-sdk-1.2.6
+      - name: Build and run VMM examples
+        run: ./ci/examples.sh sel4cp-sdk-1.2.6
         shell: bash
       - name: Upload built system images
         uses: actions/upload-artifact@v3
