@@ -79,12 +79,7 @@ static bool handle_vppi_event()
         // Acknowledge to unmask it as our guest will not use the interrupt
         // @ivanv: We're going to assume that we only have one VCPU and that the
         // cap is the base one.
-        uint64_t ack_err = sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
-        assert(ack_err == seL4_NoError);
-        if (ack_err) {
-            LOG_VMM_ERR("Failed to ACK VPPI\n");
-            return false;
-        }
+        sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
     }
 
     reply_to_fault();
@@ -170,11 +165,7 @@ static bool handle_vm_fault()
 
 static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 {
-    uint64_t err = sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
-    assert(err == seL4_NoError);
-    if (err) {
-        LOG_VMM_ERR("failed to ACK VPPI, vCPU: 0x%lx, IRQ: 0x%lx\n", vcpu_id, irq);
-    }
+    sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
 }
 
 static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
