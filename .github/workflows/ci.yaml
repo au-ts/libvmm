@@ -19,7 +19,7 @@ jobs:
       - name: Extract seL4CP SDK
         run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
       - name: Install VMM dependencies (via apt)
-        run: sudo apt update && sudo apt install -y make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler
+        run: sudo apt update && sudo apt install -y make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler expect
       - name: Build VMM examples
         run: ./ci/build_examples.sh sel4cp-sdk-1.2.6
         shell: bash

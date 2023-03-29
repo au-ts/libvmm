@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+
+set IMAGE [lindex $argv 0]
+
+# Wait enough (forever) until a long-time boot
+set timeout 30
+
+# Start QEMU
+spawn qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu cortex-a53 -serial mon:stdio -device loader,file=$IMAGE,addr=0x70000000,cpu-num=0 -m size=2G -nographic
+
+expect "buildroot login: "
+send "root\n"
+
+expect "# "
+send "\x21"; send "x"
