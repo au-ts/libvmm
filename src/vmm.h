@@ -46,4 +46,4 @@
 #error Need to define serial interrupt
 #endif
 
-void guest_restart();
+bool guest_restart(void);

@@ -43,10 +43,16 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
         case PSCI_FEATURES:
             smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
             break;
-        case PSCI_SYSTEM_RESET:
-            guest_restart();
+        case PSCI_SYSTEM_RESET: {
+            bool success = guest_restart();
+            if (!success) {
+                LOG_VMM_ERR("Failed to restart guest\n");
+                smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
+                break;
+            }
             smc_set_return_value(regs, PSCI_SUCCESS);
             break;
+        }
         default:
             LOG_VMM_ERR("Unhandled PSCI function ID 0x%lx\n", fn_number);
             return false;
