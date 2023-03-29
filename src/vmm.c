@@ -67,20 +67,9 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
     return true;
 }
 
-static bool got_ppi_event = false;
-
 static bool handle_vppi_event()
 {
     uint64_t ppi_irq = sel4cp_mr_get(seL4_VPPIEvent_IRQ);
-    if (!got_ppi_event) {
-        printf("FIRST PPI EVENT!\n\n");
-    }
-    got_ppi_event = true;
-    // if (restarted) {
-    //     sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
-    //     reply_to_fault();
-    //     return true;
-    // }
     // We directly inject the interrupt assuming it has been previously registered.
     // If not the interrupt will dropped by the VM.
     bool success = vgic_inject_irq(VCPU_ID, ppi_irq);
