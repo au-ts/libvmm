@@ -104,7 +104,6 @@ bool handle_smc(uint32_t hsr)
     switch (service) {
         case SMC_CALL_STD_SERVICE:
             if (fn_number < PSCI_MAX) {
-                // printf("VMM|INFO: handling PSCI\n");
                 return handle_psci(VCPU_ID, &regs, fn_number, hsr);
             }
             LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
