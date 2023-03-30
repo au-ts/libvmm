@@ -177,7 +177,9 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
 }
 
 bool guest_init_images(void) {
-    // For this we currently assume a Linux kernel guest.
+    // First we inspect the kernel image header to confirm it is a valid image
+    // and to determine where in memory to place the image. Currently this
+    // process assumes the guest is the Linux kernel.
     struct linux_image_header *image_header = (struct linux_image_header *) &_guest_kernel_image;
     assert(image_header->magic == LINUX_IMAGE_MAGIC);
     if (image_header->magic != LINUX_IMAGE_MAGIC) {
@@ -188,9 +190,9 @@ bool guest_init_images(void) {
     uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
     uint64_t kernel_image_vaddr = guest_ram_vaddr + image_header->text_offset;
     // This check is because the Linux kernel image requires to be placed at text_offset of
-    // a 2MB aligned base address anywhere in usable system RAM and called there.
+    // a 2MiB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,
-    // so we need to make sure that the start of guest RAM is 2MB aligned.
+    // so we need to make sure that the start of guest RAM is 2MiB aligned.
     //
     // @ivanv: Ideally this check would be done at build time, we have all the information
     // we need at build time to enforce this.
