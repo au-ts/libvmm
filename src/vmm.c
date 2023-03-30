@@ -136,7 +136,7 @@ static int handle_user_exception(sel4cp_msginfo msginfo)
         printf("Failure reading regs, error %d", ret);
         return false;
     } else {
-        dump_ctx(&regs);
+        print_tcb_regs(&regs);
     }
 
     return true;
@@ -165,8 +165,8 @@ static bool handle_vm_fault()
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
             uint64_t is_write = (fsr & (1 << 6)) != 0;
             LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-            dump_ctx(&regs);
-            dump_vcpu_regs(VM_ID);
+            print_tcb_regs(&regs);
+            print_vcpu_regs(VM_ID);
             assert(0);
         }
     }
@@ -259,6 +259,10 @@ void guest_start(void) {
     // @ivanv: should probably log initrd addr as well.
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", regs.pc, regs.x0);
     sel4cp_vm_restart(VM_ID, regs.pc);
+    // print_vcpu_regs(VM_ID);
+    // seL4_UserContext read_regs = {0};
+    // seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
+    // print_tcb_regs(&read_regs);
 }
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
@@ -290,40 +294,40 @@ void guest_restart(void) {
     // Copy back the images into RAM
     guest_copy_images();
     // Reset registers
-    dump_vcpu_regs(VM_ID);
+    print_vcpu_regs(VM_ID);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SCTLR, SCTLR_DEFAULT);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR0, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR1, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TCR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_MAIR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AMAIR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CIDR, 0);
-    // /* other system registers EL1 */
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ACTLR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CPACR, 0);
-    // /* exception handling registers EL1 */
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR0, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR1, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ESR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_FAR, 0);
-    // sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ISR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_MAIR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AMAIR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CIDR, 0);
+    /* other system registers EL1 */
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ACTLR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CPACR, 0);
+    /* exception handling registers EL1 */
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR0, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR1, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ESR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_FAR, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ISR, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_VBAR, 0);
     /* thread pointer/ID registers EL0/EL1 */
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TPIDR_EL1, 0);
-// #if CONFIG_MAX_NUM_NODES > 1
-//     /* Virtualisation Multiprocessor ID Register */
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_VMPIDR_EL2, 0);
-// #endif /* CONFIG_MAX_NUM_NODES > 1 */
-//     /* general registers x0 to x30 have been saved by traps.S */
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SP_EL1, 0);
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ELR_EL1, 0);
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SPSR_EL1, 0); // 32-bit
-//     /* generic timer registers, to be completed */
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CTL, 0);
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CVAL, 0);
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTVOFF, 0);
-//     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTKCTL_EL1, 0);
-    dump_vcpu_regs(VM_ID);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TPIDR_EL1, 0);
+#if CONFIG_MAX_NUM_NODES > 1
+    /* Virtualisation Multiprocessor ID Register */
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_VMPIDR_EL2, 0);
+#endif /* CONFIG_MAX_NUM_NODES > 1 */
+    /* general registers x0 to x30 have been saved by traps.S */
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SP_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ELR_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SPSR_EL1, 0); // 32-bit
+    /* generic timer registers, to be completed */
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CTL, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CVAL, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTVOFF, 0);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTKCTL_EL1, 0);
+    print_vcpu_regs(VM_ID);
     // Now we need to re-initialise all the VMM state
     guest_start();
     LOG_VMM("Restarted guest\n");

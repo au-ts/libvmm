@@ -81,7 +81,7 @@ static uint64_t get_vmm_id(char *sel4cp_name)
 }
 
 static void
-dump_ctx(seL4_UserContext *ctx) {
+print_tcb_regs(seL4_UserContext *ctx) {
 #if defined(ARCH_aarch64)
     // I don't know if it's the best idea, but here we'll just dump the
     // registers in the same order they are defined in seL4_UserContext
@@ -128,7 +128,7 @@ dump_ctx(seL4_UserContext *ctx) {
 }
 
 static void
-dump_vcpu_regs(uint64_t vcpu_id) {
+print_vcpu_regs(uint64_t vcpu_id) {
     printf("VMM|INFO: VCPU registers: \n");
     /* VM control registers EL1 */
     printf("    SCTLR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SCTLR));
