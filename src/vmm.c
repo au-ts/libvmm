@@ -152,11 +152,9 @@ static bool handle_vm_fault()
             LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
             print_tcb_regs(&regs);
             print_vcpu_regs(VM_ID);
-            assert(0);
+            return false;
         }
     }
-
-    return false;
 }
 
 #define SGI_RESCHEDULE_IRQ  0
@@ -380,31 +378,37 @@ notified(sel4cp_channel ch)
 void
 fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
 {
-    // Decode the fault and call the appropriate handler
+    // This is the primary fault handler for the guest, all faults that come
+    // from seL4 regarding the guest will need to be handled here.
     uint64_t label = sel4cp_msginfo_get_label(msginfo);
-    // @ivanv: should be checking the results of the handlers
+    bool success = false;
     switch (label) {
         case seL4_Fault_VMFault:
-            handle_vm_fault();
+            success = handle_vm_fault();
             break;
         case seL4_Fault_UnknownSyscall:
-            handle_unknown_syscall(msginfo);
+            success = handle_unknown_syscall(msginfo);
             break;
         case seL4_Fault_UserException:
-            handle_user_exception(msginfo);
+            success = handle_user_exception(msginfo);
             break;
         case seL4_Fault_VGICMaintenance:
-            handle_vgic_maintenance();
+            success = handle_vgic_maintenance();
             break;
         case seL4_Fault_VCPUFault:
-            handle_vcpu_fault(msginfo);
+            success = handle_vcpu_fault(msginfo);
             break;
         case seL4_Fault_VPPIEvent:
-            handle_vppi_event();
+            success = handle_vppi_event();
             break;
         default:
             LOG_VMM_ERR("unknown fault, stopping VM %d\n", vm);
             sel4cp_vm_stop(vm);
+            return;
             // @ivanv: print out the actual fault details
+    }
+
+    if (!success) {
+        LOG_VMM_ERR("Failed to handle fault\n");
     }
 }

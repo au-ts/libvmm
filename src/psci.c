@@ -61,5 +61,5 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
     int err = fault_advance_vcpu(regs);
     assert(!err);
 
-    return err;
+    return err == 0;
 }
