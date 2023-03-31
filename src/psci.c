@@ -17,21 +17,24 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
     // @ivanv: write a note about what convention we assume, should we be checking
     // the convention?
     switch (fn_number) {
-        case PSCI_VERSION:
-            // @ivanv: where does this value come from?
-            smc_set_return_value(regs, 0x00010000); /* version 1 */
+        case PSCI_VERSION: {
+            // We support PSCI version 1.2
+            uint32_t version = PSCI_MAJOR_VERSION(1) | PSCI_MINOR_VERSION(2);
+            smc_set_return_value(regs, version);
             break;
+        }
         case PSCI_CPU_ON: {
             uintptr_t target_cpu = smc_get_arg(regs, 1);
             // Right now we only have one vCPU and so any fault for a target vCPU
-            // that isn't the one that's already on we consider a failure.
+            // that isn't the one that's already on we consider an error on the
+            // guest's side.
             // @ivanv: adapt for starting other vCPUs
-            if (target_cpu == VCPU_ID) {
+            if (target_cpu == vcpu_id) {
                 smc_set_return_value(regs, PSCI_ALREADY_ON);
             } else {
-                // @ivanv: is this really an internal failure? This seems like
-                // the fault of the guest to me, not of the VMM.
-                smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
+                // The guest has requested to turn on a virtual CPU that does
+                // not exist.
+                smc_set_return_value(regs, PSCI_INVALID_PARAMETERS);
             }
             break;
         }
