@@ -48,11 +48,20 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             break;
         case PSCI_SYSTEM_RESET: {
             bool success = guest_restart();
-            if (success) {
+            if (!success) {
                 LOG_VMM_ERR("Failed to restart guest\n");
                 smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
             } else {
-                smc_set_return_value(regs, PSCI_SUCCESS);
+                /*
+                 * If we've successfully restarted the guest, all we want to do
+                 * is reply to the fault that caused us to handle the PSCI call
+                 * so that the guest can continue executing. We do not need to
+                 * advance the vCPU program counter as we typically do when
+                 * handling a fault since the correct PC has been set when we
+                 * call guest_restart().
+                 */
+                reply_to_fault();
+                return true;
             }
             break;
         }
