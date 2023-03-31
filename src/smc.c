@@ -50,12 +50,12 @@ static smc_call_id_t smc_get_call(uintptr_t func_id)
     }
 }
 
-static uint64_t smc_get_function_number(seL4_UserContext *regs)
+static inline uint64_t smc_get_function_number(seL4_UserContext *regs)
 {
     return regs->x0 & SMC_FUNC_ID_MASK;
 }
 
-void smc_set_return_value(seL4_UserContext *u, uint64_t val)
+inline void smc_set_return_value(seL4_UserContext *u, uint64_t val)
 {
     u->x0 = val;
 }

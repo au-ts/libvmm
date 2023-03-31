@@ -12,8 +12,20 @@
 
 #define GIC_ENABLED 1
 
-// @ivanv: comment about how this is a virtual device, why we need NUM_VCPUS and why the addresses aren't "correct"
-/* Memory map for GIC distributor */
+/*
+ * This the memory map for the GIC distributor.
+ *
+ * You will note that some of these registers in the memory map are actually
+ * arrays with the length of the number of virtual CPUs that the guest has.
+ * The reason for this has to do with the fact that we are virtualising the GIC
+ * distributor. In actual hardware, these registers would be banked, meaning
+ * that the value of each register depends on the CPU that is accessing it.
+ * However, since we are dealing with virutal CPUs, we have to make the
+ * registers appear as if they are banked. You should note that the commented
+ * address offsets listed on the right of each register are the offset from the
+ * *guest's* perspective.
+ *
+ */
 struct gic_dist_map {
     uint32_t ctlr;                          /* 0x000 */
     uint32_t typer;                         /* 0x004 */

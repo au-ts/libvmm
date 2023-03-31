@@ -15,8 +15,6 @@
 #error Need to define VM image address and DTB address
 #endif
 
-// @ivanv: https://www.kernel.org/doc/Documentation/riscv/boot-image-header.txt
-
 // #define SGI_RESCHEDULE_IRQ  0
 // #define SGI_FUNC_CALL       1
 // #define PPI_VTIMER_IRQ      27
@@ -97,7 +95,6 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
 {
     // Decode the fault and call the appropriate handler
     uint64_t label = sel4cp_msginfo_get_label(msginfo);
-    // @ivanv: should be checking the results of the handlers
     switch (label) {
         case seL4_Fault_VMFault:
             handle_vm_fault();
@@ -111,6 +108,5 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
         default:
             LOG_VMM_ERR("unknown fault, stopping VM %d\n", vm);
             sel4cp_vm_stop(vm);
-            // @ivanv: print out the actual fault details
     }
 }

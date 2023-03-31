@@ -82,8 +82,11 @@ The username to login is `root`. There is no password required.
 
 ## Roadmap
 
-The following is planned to be added to the VMM.
+The following is work planned to be done, there is currently no strict timeline
+for any of this. If you would like something to be added that is not in this list
+or have any other queries, feel free to open a GitHub issue..
 
+* A performance evaluation
 * Support QEMU ARM "virt" with GICv3
 * Support QEMU ARM "virt" with other CPUs such as Cortex-A72
 * Fix up all the system files, add CI to make sure they all work
