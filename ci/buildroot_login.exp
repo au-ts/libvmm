@@ -6,10 +6,23 @@ set IMAGE [lindex $argv 0]
 set timeout 30
 
 # Start QEMU
-spawn qemu-system-aarch64 -machine virt,virtualization=on,highmem=off,secure=off -cpu cortex-a53 -serial mon:stdio -device loader,file=$IMAGE,addr=0x70000000,cpu-num=0 -m size=2G -nographic
+spawn qemu-system-aarch64 \
+        -machine virt,virtualization=on,highmem=off,secure=off \
+        -cpu cortex-a53 \
+        -serial mon:stdio \
+        -device loader,file=$IMAGE,addr=0x70000000,cpu-num=0 \
+        -m size=2G \
+        -nographic
 
+# Login
 expect "buildroot login: "
 send "root\n"
-
 expect "# "
+
+# Attempt to reboot the guest, make sure we can login again
+send "reboot\n"
+expect "buildroot login: "
+send "root\n"
+expect "# "
+
 send "\x21"; send "x"
