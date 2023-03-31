@@ -10,8 +10,16 @@
 /* Values in this file are taken from the:
  * ARM Power State Coordination Interface
  * Platform Design Document
- * Issue D
+ * Issue E (PSCI version 1.2)
  */
+
+/*
+ * The PSCI version is represented by a 32-bit unsigned integer.
+ * The upper 15 bits represent the major version.
+ * The lower 16 bits represent the minor version.
+*/
+#define PSCI_MAJOR_VERSION(v) ((v) << 16)
+#define PSCI_MINOR_VERSION(v) ((v) & ((1 << 16) - 1))
 
 /* PSCI return codes */
 #define PSCI_SUCCESS 0
@@ -25,7 +33,7 @@
 #define PSCI_DISABLED -8
 #define PSCI_INVALID_ADDRESS -9
 
-// PSCI function IDs
+/* PSCI function IDs */
 typedef enum psci {
     PSCI_VERSION = 0x0,
     PSCI_CPU_SUSPEND = 0x1,
