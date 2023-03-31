@@ -41,12 +41,12 @@ seL4CP is a minimal seL4 operating systems framework, it intentionally doesn't p
 * runtime libraries that provide the C runtime for the *protection domain*, along with interfaces for the sel4cp APIs
 
 And does not provide:
-* a build system. seL4CP allows (and forces) users to choose their own build systems
+* a build system.  seL4CP allows (and forces) users to choose their own build systems
 * runtime libraries/tools for specific supports
 
-Note that seL4CP only supports MCS kernel.
+Note that seL4CP only supports the MCS kernel.
 
-This guide will demonstrate the available 1-to-1 mappings between CAmkES concepts and seL4CP concepts, as well as potential ways to implement similar systems on top of seL4CP where seL4CP does not provide a feature.
+This guide will demonstrate  1-to-1 mappings between CAmkES concepts and seL4CP concepts where they exist, as well as potential ways to implement similar systems on top of seL4CP where seL4CP does not provide a feature.
 
 ## Overview
 
@@ -150,7 +150,7 @@ assembly {
     }
 }
 ```
-A CAmkES component are typically multithreaded, the keyword `control` means it will contain a main function and have an active thread of control. Each `interface` (see [CAmkES Interfaces](#iface)) the component interacts with induces another thread within the component.
+A CAmkES component is typically multithreaded. The keyword `control` means it will contain a main function and have an active thread of control. Each `interface` (see [CAmkES Interfaces](#iface)) the component interacts with uses another thread within the component.
 
 seL4CP *PDs* are single-threaded and event-driven to keep the programming model and implementations simple. A *PD* provides one single thread of control.
 
@@ -165,7 +165,7 @@ The seL4CP way of adding a *protection domain*:
 </system>
 ```
 
-Unlike components, it is mandatory to specify the priority of the *PD*. You may also want to specify other thread attributes, including *`passive`*. A *PD* of a passive server may look like this:
+Unlike CAmkES components, it is mandatory to specify the priority of the *PD*. You may also want to specify other thread attributes, including *`passive`*. A *PD* of a passive server may look like this:
 
 ```xml {#pd_config}
 <protection_domain name="eth" priority="101" budget="160" period="300" passive="true" pp="true">
@@ -173,7 +173,7 @@ Unlike components, it is mandatory to specify the priority of the *PD*. You may 
 </protection_domain>
 ```
 
-budget and period are thread attributes for the scheduler of the MCS kernel. On camkes, you should be able to configure them as attributes (see [thread attributes](#thread_attr)).
+_budget_ and _period_ are thread attributes for the scheduler of the MCS kernel. On CAmkES, you should be able to configure them as attributes (see [thread attributes](#thread_attr)).
 
 *`passive`* means this is an event-driven *protection domain*, that has no continuously running thread of its own. After it has initialised itself, its scheduling context is revoked, and it runs on the scheduling contexts of its invokers or a notification.
 
@@ -383,6 +383,8 @@ void notified(sel4cp_channel channel_id)
 
 Port interfaces and event interfaces can also be implemented in similar ways.
 
+Each pair of protection domains can have only one channel between them.
+
 ## Hardware {#hardware}
 
 A hardware component represents an interface to hardware in the form of a component. A hardware component may look like this:
@@ -565,7 +567,7 @@ CAmkES VMM (distributed in various repositories, mainly [camkes-vm][camkesvm], [
 
 [seL4CP VMM][VMM] is an experimental VMM for 64-bit ARM platforms built on top of seL4CP. It currently has Virtual GICv2/v3 support and some VirtIO backends. There are plans to improve the VMM, including adding vhost support for Linux driver VMs, as well as the ability to restart a Guest VM.
 
-seL4CP VMM is subject to change as it is a work-in-progress. This document will be updated to adapte the changes, but this might not be done in a timely manner. Please always check the [seL4CP VMM Guide][sel4cp vmm guide] for latest changes.
+seL4CP VMM is subject to change as it is a work-in-progress. This document will be updated to adapt to the changes, but this might not be done in a timely manner. Please always check the [seL4CP VMM Guide][sel4cp vmm guide] for latest changes.
 
 Both CAmkES VMM and seL4CP VMM support only one guest VM per instance of VMM. This is an intentional decision to maintain isolation between each VM/VMM.
 
@@ -662,7 +664,7 @@ The members in a CAmkES VM component do not necessarily present in a correspondi
 8. Optional attributes that configure the connections the VM likes to have for the serial multiplexor. This is currently N/A in seL4CP VMM, but there are plans for adding a serial driver and a serial multiplexor as external libraries on top of seL4CP.
 9. VMM requires access to the actual hardware. CAmkES provides a file server, a serial server and a time server etc. for such purposes. On seL4CP, it's up to you to implement these functionalities, or potentially make use of the existing external libraries on top of seL4CP.
 
-The approach from VMM development on top of seL4CP is quite different, most of the configurations are not done by seL4CP but by the seL4CP VMM and the external build system. Take `vm_multi` as an example:
+The approach for VMM development on top of seL4CP is quite different.  Most of the configuration is not done by seL4CP but by the seL4CP VMM and the external build system. Take `vm_multi` as an example:
 
 ```c
 
