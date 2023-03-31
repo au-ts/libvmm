@@ -258,13 +258,11 @@ void guest_start(void) {
     );
     assert(!err);
     // Set the PC to the kernel image's entry point and start the thread.
-    // @ivanv: should probably log initrd addr as well.
-    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx\n", regs.pc, regs.x0);
+    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
+        regs.pc, regs.x0, GUEST_INIT_RAM_DISK_VADDR);
+    seL4_UserContext read_regs = {0};
+    seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
     sel4cp_vm_restart(VM_ID, regs.pc);
-    // print_vcpu_regs(VM_ID);
-    // seL4_UserContext read_regs = {0};
-    // seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
-    // print_tcb_regs(&read_regs);
 }
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
@@ -282,7 +280,6 @@ void guest_start(void) {
 #define SCTLR_EL1          ( SCTLR_EL1_RES | SCTLR_EL1_CP15BEN | SCTLR_EL1_UTC \
                            | SCTLR_EL1_NTWI | SCTLR_EL1_NTWE )
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
-// #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
 bool guest_restart(void) {
@@ -300,8 +297,7 @@ bool guest_restart(void) {
         return false;
     }
     // Reset registers
-    print_vcpu_regs(VM_ID);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SCTLR, SCTLR_DEFAULT);
+    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SCTLR, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR0, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR1, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TCR, 0);
@@ -333,7 +329,6 @@ bool guest_restart(void) {
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CVAL, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTVOFF, 0);
     sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTKCTL_EL1, 0);
-    print_vcpu_regs(VM_ID);
     // Now we need to re-initialise all the VMM state
     guest_start();
     LOG_VMM("Restarted guest\n");
