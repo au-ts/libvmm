@@ -5,6 +5,7 @@ const std = @import("std");
 
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
+    qemu_virt_riscv64,
     odroidc4,
     maaxboard,
 };
@@ -20,6 +21,15 @@ const targets = [_]Target {
         .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+   .{
+        .board = MicrokitBoard.qemu_virt_riscv64,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -96,6 +106,7 @@ pub fn build(b: *std.Build) void {
     const arm_vgic_version: usize = switch (microkit_board_option.?) {
         .qemu_virt_aarch64, .odroidc4 => 2,
         .maaxboard => 3,
+        .qemu_virt_riscv64 => 0,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -205,8 +216,8 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     if (std.mem.eql(u8, microkit_board, "qemu_virt_aarch64")) {
+        const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
@@ -223,6 +234,23 @@ pub fn build(b: *std.Build) void {
         });
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");
+        simulate_step.dependOn(&qemu_cmd.step);
+    } else if (std.mem.eql(u8, microkit_board, "qemu_virt_riscv64")) {
+        // @ivanv: this assumes rv64
+        const qemu_cmd = b.addSystemCommand(&[_][]const u8{
+            "qemu-system-riscv64",
+            "-machine",
+            "virt",
+            "-serial",
+            "mon:stdio",
+            "-kernel",
+            final_image_dest,
+            "-m",
+            "3G",
+            "-nographic",
+        });
+        qemu_cmd.step.dependOn(b.default_step);
+        const simulate_step = b.step("qemu", "Simulate the image via QEMU");
         simulate_step.dependOn(&qemu_cmd.step);
     }
 }
