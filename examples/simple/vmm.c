@@ -10,8 +10,14 @@
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+#if defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#endif
+#if defined(CONFIG_ARCH_RISCV)
+#include <libvmm/arch/riscv/linux.h>
+#include <libvmm/arch/riscv/fault.h>
+#endif
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -23,6 +29,9 @@
 #if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_qemu_virt_riscv64)
+#define GUEST_DTB_VADDR 0x8f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x8d700000
 #elif defined(BOARD_rpi4b_hyp)
 #define GUEST_DTB_VADDR 0x2e000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
@@ -45,6 +54,8 @@
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
+#elif defined(BOARD_qemu_virt_riscv64)
+#define SERIAL_IRQ 10
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
 #define SERIAL_IRQ 225
 #elif defined(BOARD_rpi4b_hyp)
