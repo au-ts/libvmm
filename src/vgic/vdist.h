@@ -528,7 +528,9 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         /* Reserved */
         break;
     case RANGE32(GIC_DIST_ICFGR0, GIC_DIST_ICFGRN):
-        /* Not supported */
+        // @jade: look at to spce and see what needs to be handled if we allow the guest to set trigger modes
+        reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICFGR0);
+        emulate_reg_write_access(regs, addr, fsr, &gic_dist->config[reg_offset]);
         break;
     case RANGE32(0xD00, 0xDE4):
         break;
