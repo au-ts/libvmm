@@ -124,6 +124,7 @@
 	secure-monitor {
 		compatible = "amlogic,meson-gxbb-sm";
 		phandle = <0x04>;
+		status = "disabled";
 	};
 
 	soc {
@@ -2043,7 +2044,6 @@
 			#address-cells = <0x02>;
 			#size-cells = <0x02>;
 			ranges = <0x00 0x00 0x00 0xff800000 0x00 0x100000>;
-			status = "disabled";
 
 			sys-ctrl@0 {
 				compatible = "amlogic,meson-gx-ao-sysctrl\0simple-mfd\0syscon";
