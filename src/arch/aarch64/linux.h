@@ -16,5 +16,5 @@ struct linux_image_header {
     uint64_t res3;        // reserved
     uint64_t res4;        // reserved
     uint32_t magic;       // Magic number, little endian, "ARM\x64"
-    uint32_t res5;        // reserved (used for PE COFF offset
+    uint32_t res5;        // reserved (used for PE COFF offset)
 };

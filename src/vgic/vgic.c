@@ -19,7 +19,7 @@ extern vgic_t vgic;
 bool handle_vgic_maintenance()
 {
     // @ivanv: reivist, also inconsistency between int and bool
-    int err;
+    bool success = true;
     int idx = sel4cp_mr_get(seL4_VGICMaintenance_IDX);
     /* Currently not handling spurious IRQs */
     // @ivanv: wtf, this comment seems irrelevant to the code.
@@ -51,12 +51,12 @@ bool handle_vgic_maintenance()
 #endif
 
     if (virq) {
-        err = vgic_vcpu_load_list_reg(&vgic, VCPU_ID, idx, group, virq);
+        success = vgic_vcpu_load_list_reg(&vgic, VCPU_ID, idx, group, virq);
     }
-    if (!err) {
+    if (success) {
         reply_to_fault();
     } else {
-        printf("VGIC|ERROR: maintenance handler failed (error %d)", err);
+        printf("VGIC|ERROR: maintenance handler failed\n");
         assert(0);
         return false;
     }

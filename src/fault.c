@@ -25,47 +25,43 @@ bool fault_advance_vcpu(seL4_UserContext *regs) {
     // For now we just ignore it and continue
     // Assume 64-bit instruction
     regs->pc += 4;
-    // @ivanv: should this be true or false?
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + VM_ID, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
     /* Reply to thread */
     reply_to_fault();
 
-    return (err != 0);
+    return (err == seL4_NoError);
 }
 
 enum fault_width {
-    WIDTH_DOUBLEWORD,
-    WIDTH_WORD,
-    WIDTH_HALFWORD,
-    WIDTH_BYTE
+    WIDTH_DOUBLEWORD = 0,
+    WIDTH_WORD = 1,
+    WIDTH_HALFWORD = 2,
+    WIDTH_BYTE = 3,
 };
 
-enum fault_width fault_get_width(uint64_t fsr)
+static enum fault_width fault_get_width(uint64_t fsr)
 {
-    // @ivanv: what is HSR syndrome??
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         switch (HSR_SYNDROME_WIDTH(fsr)) {
-        case 0: return WIDTH_BYTE;
-        case 1: return WIDTH_HALFWORD;
-        case 2: return WIDTH_WORD;
-        case 3: return WIDTH_DOUBLEWORD;
-        default:
-            // @ivanv: reviist
-            // print_fault(f);
-            assert(0);
-            return 0;
+            case 0: return WIDTH_BYTE;
+            case 1: return WIDTH_HALFWORD;
+            case 2: return WIDTH_WORD;
+            case 3: return WIDTH_DOUBLEWORD;
+            default:
+                // @ivanv: reviist
+                // print_fault(f);
+                assert(0);
+                return 0;
         }
     } else {
+        LOG_VMM_ERR("Received invalid FSR: 0x%lx\n", fsr);
         // @ivanv: reviist
         // int rt;
         // rt = decode_instruction(f);
         // assert(rt >= 0);
+        return -1;
     }
-
-    assert(0);
-    // @ivanv: come back to
-    return 0;
 }
 
 uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
@@ -88,8 +84,8 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
             mask = ~mask;
             break;
         default:
-            /* Should never get here... Keep the compiler happy */
-            LOG_VMM_ERR("unknown width: 0x%lx, from FSR: 0x%lx\n", fault_get_width(fsr), fsr);
+            LOG_VMM_ERR("unknown width: 0x%lx, from FSR: 0x%lx, addr: 0x%lx\n",
+                fault_get_width(fsr), fsr, addr);
             assert(0);
             return 0;
     }
@@ -158,6 +154,7 @@ static int get_rt(uint64_t fsr)
         rt = HSR_SYNDROME_RT(fsr);
     } else {
         printf("decode_insturction for arm64 not implemented\n");
+        assert(0);
         // @ivanv: implement decode instruction for aarch64
         // rt = decode_instruction(f);
     }

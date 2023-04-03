@@ -16,4 +16,6 @@ bool handle_smc(uint32_t hsr);
 
 // Helper functions
 void smc_set_return_value(seL4_UserContext *u, uint64_t val);
+
+/* Gets the value of x1-x6 */
 uint64_t smc_get_arg(seL4_UserContext *u, uint64_t arg);
