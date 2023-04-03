@@ -42,11 +42,6 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
     uint64_t syscall = sel4cp_mr_get(seL4_UnknownSyscall_Syscall);
     uint64_t fault_ip = sel4cp_mr_get(seL4_UnknownSyscall_FaultIP);
 
-    seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(!err);
-    regs.pc += 4;
-
     LOG_VMM("Received syscall 0x%lx\n", syscall);
     switch (syscall) {
         case SYSCALL_PA_TO_IPA:
@@ -61,10 +56,12 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
             LOG_VMM_ERR("Unknown syscall: syscall number: 0x%lx, PC: 0x%lx\n", syscall, fault_ip);
             return false;
     }
-    err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+
+    seL4_UserContext regs;
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(!err);
 
-    return true;
+    return fault_advance_vcpu(&regs);
 }
 
 static bool handle_vppi_event()
@@ -89,8 +86,7 @@ static bool handle_vppi_event()
 
 static bool handle_vcpu_fault(sel4cp_msginfo msginfo)
 {
-    // @ivanv: should this be uint32_t?
-    uint64_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
+    uint32_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
     switch (hsr_ec_class) {
         case HSR_SMC_64_EXCEPTION:
@@ -98,13 +94,11 @@ static bool handle_vcpu_fault(sel4cp_msginfo msginfo)
         case HSR_WFx_EXCEPTION:
             // If we get a WFI exception, we just do nothing in the VMM.
             reply_to_fault();
-            break;
+            return true;
         default:
             LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
             return false;
     }
-
-    return true;
 }
 
 static int handle_user_exception(sel4cp_msginfo msginfo)
@@ -239,7 +233,8 @@ void guest_start(void) {
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
     err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    // @ivanv: comment why we ack it
+    // Just in case there is already an interrupt available to handle, we ack it here.
+    // @ivanv: not sure if this is necessary? is this the right place to do this
     sel4cp_irq_ack(SERIAL_IRQ_CH);
     seL4_UserContext regs = {0};
     regs.x0 = GUEST_DTB_VADDR;
@@ -332,10 +327,6 @@ bool guest_restart(void) {
     // Now we need to re-initialise all the VMM state
     guest_start();
     LOG_VMM("Restarted guest\n");
-    // Finally, we can to restart the VM.
-    // uint64_t guest_init_pc = guest_ram_vaddr + 0x80000; // @ivanv: get rid of
-    // LOG_VMM("restarting guest at 0x%lx, DTB at 0x%lx\n", guest_init_pc, GUEST_DTB_VADDR);
-    // sel4cp_vm_restart(VM_ID, guest_init_pc);
     return true;
 }
 

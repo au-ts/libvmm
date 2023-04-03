@@ -242,7 +242,7 @@ static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, uint32_t vcpu_i
 
 static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
-    int err = 0;
+    bool success = false;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     uint32_t reg = 0;
     int reg_offset = 0;
@@ -395,20 +395,17 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
     default:
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
         // err = ignore_fault(fault);
-        err = fault_advance_vcpu(regs);
+        success = !fault_advance_vcpu(regs);
         goto fault_return;
     }
     uint32_t mask = fault_get_data_mask(GIC_DIST_PADDR + offset, fsr);
     // fault_set_data(fault, reg & mask);
     // @ivanv: interesting, when we don't call fault_Set_data in the CAmkES VMM, everything works fine?...
-    err = fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
+    success = !fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
 
 fault_return:
     // @ivanv: revisit, also make fault_return consistint. it's called something else in vgic_dist_reg_write
-    if (err) {
-        return false;
-    }
-    return true;
+    return success;
 }
 
 static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint32_t *reg)

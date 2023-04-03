@@ -16,7 +16,9 @@
 #define VCPU_ID 0
 #define NUM_VCPUS 1
 // Note that this is AArch64 specific
-#define SEL4_USER_CONTEXT_SIZE 0x24
+#if defined(CONFIG_ARCH_AARCH64)
+    #define SEL4_USER_CONTEXT_SIZE 0x24
+#endif
 
 #define PAGE_SIZE_4K 4096
 
