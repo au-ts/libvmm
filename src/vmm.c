@@ -163,11 +163,11 @@ static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
 
 static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
-#if defined(BOARD_qemu_arm_virt_hyp)
+    /*
+     * For now we by default simply ack the serial IRQ, we have not
+     * come across a case yet where more than this needs to be done.
+     */
     sel4cp_irq_ack(SERIAL_IRQ_CH);
-#elif defined(BOARD_odroidc2_hyp)
-    sel4cp_irq_ack(SERIAL_IRQ_CH);
-#endif
 }
 
 bool guest_init_images(void) {
