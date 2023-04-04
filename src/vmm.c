@@ -30,11 +30,7 @@ uintptr_t guest_ram_vaddr;
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
 
-#define HSR_SMC_64_EXCEPTION        (0x17)
-#define HSR_MAX_EXCEPTION           (0x3f)
-#define HSR_EXCEPTION_CLASS_SHIFT   (26)
-#define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
-#define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
+// @ivanv: fuck need to get rid of "failed to handle fault" errors.
 
 static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 {
@@ -344,8 +340,6 @@ init(void)
     // Initialise and start guest (setup VGIC, setup interrupts, TCB registers)
     guest_start();
 }
-
-int restart = 1;
 
 void
 notified(sel4cp_channel ch)

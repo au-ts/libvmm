@@ -129,6 +129,7 @@ print_tcb_regs(seL4_UserContext *ctx) {
     // @ivanv: riscv64 print regs
 }
 
+// @ivanv: this should have the same foramtting as the TCB registers
 static void
 print_vcpu_regs(uint64_t vcpu_id) {
     printf("VMM|INFO: VCPU registers: \n");
@@ -140,11 +141,9 @@ print_vcpu_regs(uint64_t vcpu_id) {
     printf("    MAIR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_MAIR));
     printf("    AMAIR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AMAIR));
     printf("    CIDR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CIDR));
-
     /* other system registers EL1 */
     printf("    ACTLR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ACTLR));
     printf("    CPACR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CPACR));
-
     /* exception handling registers EL1 */
     printf("    AFSR0: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR0));
     printf("    AFSR1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR1));
@@ -152,20 +151,16 @@ print_vcpu_regs(uint64_t vcpu_id) {
     printf("    FAR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_FAR));
     printf("    ISR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ISR));
     printf("    VBAR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VBAR));
-
     /* thread pointer/ID registers EL0/EL1 */
     printf("    TPIDR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1));
-
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
     printf("    VMPIDR_EL2: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2));
 #endif
-
     /* general registers x0 to x30 have been saved by traps.S */
     printf("    SP_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SP_EL1));
     printf("    ELR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ELR_EL1));
-    printf("    SPSR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SPSR_EL1)); // 32-bit
-
+    printf("    SPSR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SPSR_EL1)); // 32-bit // @ivanv what
     /* generic timer registers, to be completed */
     printf("    CNTV_CTL: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CTL));
     printf("    CNTV_CVAL: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CVAL));
