@@ -24,3 +24,6 @@ make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- linux_config all -j$(np
 The path to the image will be: `linux/arm64/boot/Image`.
 
 ## Buildroot RootFS image
+
+Note that buildoot currently does not list a configuration for OdroidC4 so we just
+use the OdroidC2 configuration.
