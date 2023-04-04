@@ -1,5 +1,8 @@
 // @ivanv, where do these come from?
 // @ivanv: license
+#define HSR_EXCEPTION_CLASS_SHIFT   (26)
+#define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
+#define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
 
 /* HSR Exception Value */
 #define HSR_UNKNOWN_EXCEPTION       (0x0)
@@ -39,3 +42,4 @@
 #define HSW_VECTOR_32_EXCEPTION     (0x3a)
 #define HSR_SWBRK_64_EXCEPTION      (0x3c)
 /* Remaining values (0x3d - 0x3f) are reserved */
+#define HSR_MAX_EXCEPTION           (0x3f)

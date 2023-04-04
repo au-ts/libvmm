@@ -128,6 +128,8 @@ static inline bool virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
             return true;
         }
     }
+
+    LOG_VMM_ERR("Could not add SPI IRQ (0x%lx), ran out of slots.\n", virq_data->virq);
     return false;
 }
 
