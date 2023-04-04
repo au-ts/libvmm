@@ -60,9 +60,9 @@ static inline bool is_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_i
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_pending(gic_dist, irq, vcpu_id);
-
+    } else {
+        return is_spi_pending(gic_dist, irq);
     }
-    return is_spi_pending(gic_dist, irq);
 }
 
 static inline void set_sgi_ppi_enable(struct gic_dist_map *gic_dist, int irq, bool set_enable, int vcpu_id)
@@ -91,9 +91,9 @@ static inline void set_enable(struct gic_dist_map *gic_dist, int irq, bool set_e
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         set_sgi_ppi_enable(gic_dist, irq, set_enable, vcpu_id);
-        return;
+    } else {
+        set_spi_enable(gic_dist, irq, set_enable);
     }
-    set_spi_enable(gic_dist, irq, set_enable);
 }
 
 static inline bool is_sgi_ppi_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
@@ -110,8 +110,9 @@ static inline bool is_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_i
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_enabled(gic_dist, irq, vcpu_id);
+    } else {
+        return is_spi_enabled(gic_dist, irq);
     }
-    return is_spi_enabled(gic_dist, irq);
 }
 
 static inline bool is_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
@@ -128,8 +129,9 @@ static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_active(gic_dist, irq, vcpu_id);
+    } else {
+        return is_spi_active(gic_dist, irq);
     }
-    return is_spi_active(gic_dist, irq);
 }
 
 static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
@@ -262,7 +264,7 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
         /* Reserved */
         break;
     case RANGE32(0x020, 0x03C):
-        /* Implementation defined */
+        /* IMPLEMENTATION DEFINED registers. */
         break;
     case RANGE32(0x040, 0x07C):
         /* Reserved */
@@ -343,8 +345,8 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
         reg = gic_dist->config[reg_offset];
         break;
 #if defined(GIC_V2)
-    // @ivanv: understand why this is GIC v2 specific and make a command so others can understand as well.
     case RANGE32(0xD00, 0xDE4):
+        /* IMPLEMENTATION DEFINED registers. */
         base_reg = (uintptr_t) & (gic_dist->spi[0]);
         reg_ptr = (uint32_t *)(base_reg + (offset - 0xD00));
         reg = *reg_ptr;
@@ -357,7 +359,7 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
         reg = gic_dist->sgir;
         break;
     case RANGE32(0xF04, 0xF0C):
-        /* Implementation defined */
+        /* Reserved */
         break;
     case RANGE32(GIC_DIST_CPENDSGIR0, GIC_DIST_CPENDSGIRN):
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_CPENDSGIR0);
@@ -433,16 +435,19 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
-        // @ivanv: why break?
+        /* TYPER provides information about the GIC configuration. */
+        // @ivanv: we don't do anything here but I reckon we should.
         break;
     case RANGE32(GIC_DIST_IIDR, GIC_DIST_IIDR):
-        // @ivanv: why break?
+        /* IIDR provides information about the distributor's implementation
+         * (e.g revision). Currently we don't do anything here. @ivanv
+         */
         break;
     case RANGE32(0x00C, 0x01C):
         /* Reserved */
         break;
     case RANGE32(0x020, 0x03C):
-        /* Implementation defined */
+        /* IMPLEMENTATION DEFINED registers. */
         break;
     case RANGE32(0x040, 0x07C):
         /* Reserved */
@@ -535,10 +540,10 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICFGR0);
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->config[reg_offset]);
         break;
-    case RANGE32(0xD00, 0xDE4):
+    case RANGE32(0xD00, 0xDFC):
+        /* IMPLEMENTATION DEFINED registers. */
         break;
-    case RANGE32(0xDE8, 0xEFC):
-        /* Reserved [0xDE8 - 0xE00) */
+    case RANGE32(0xE00, 0xEFC):
         /* GIC_DIST_NSACR [0xE00 - 0xF00) - Not supported */
         break;
     case RANGE32(GIC_DIST_SGIR, GIC_DIST_SGIR):
@@ -570,6 +575,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         err = vgic_inject_irq(VCPU_ID, virq);
         break;
     case RANGE32(0xF04, 0xF0C):
+        /* Reserved */
         break;
     case RANGE32(GIC_DIST_CPENDSGIR0, GIC_DIST_SPENDSGIRN):
         // @ivanv: come back to
