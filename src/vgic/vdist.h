@@ -435,12 +435,14 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
-        /* TYPER provides information about the GIC configuration. */
-        // @ivanv: we don't do anything here but I reckon we should.
+        /* TYPER provides information about the GIC configuration, we do not do
+         * anything here as there should be no reason for the guest to write to
+         * this register. */
         break;
     case RANGE32(GIC_DIST_IIDR, GIC_DIST_IIDR):
-        /* IIDR provides information about the distributor's implementation
-         * (e.g revision). Currently we don't do anything here. @ivanv
+        /* IIDR provides information about the distributor's implementation, we
+         * do not do anything here as there should be no reason for the guest
+         * to write to this register.
          */
         break;
     case RANGE32(0x00C, 0x01C):
