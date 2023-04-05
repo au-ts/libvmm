@@ -86,19 +86,16 @@ static bool handle_vgic_redist_read_fault(uint64_t vcpu_id, vgic_t *vgic, uint64
     default:
         LOG_VMM_ERR("Unknown register offset 0x%x\n", offset);
         // @ivanv: used to be ignore_fault, double check this is right
-        err = fault_advance_vcpu(regs);
+        success = fault_advance_vcpu(regs);
         goto fault_return;
     }
 
     uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
     uint32_t mask = fault_get_data_mask(fault_addr, fsr);
-    err = fault_advance(regs, fault_addr, fsr, reg & mask);
+    success = fault_advance(regs, fault_addr, fsr, reg & mask);
 
 fault_return:
-    if (err) {
-        return false;
-    }
-    return true;
+    return success;
 }
 
 

@@ -30,8 +30,6 @@ uintptr_t guest_ram_vaddr;
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
 
-// @ivanv: fuck need to get rid of "failed to handle fault" errors.
-
 static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 {
     // @ivanv: should print out the name of the VM the fault came from.
@@ -273,6 +271,12 @@ void guest_start(void) {
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
+void guest_stop(void) {
+    LOG_VMM("Stopping guest\n");
+    sel4cp_vm_stop(VM_ID);
+    LOG_VMM("Stopped guest\n");
+}
+
 bool guest_restart(void) {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
@@ -357,6 +361,18 @@ notified(sel4cp_channel ch)
     }
 }
 
+char *fault_to_string(uint64_t label) {
+    switch (label) {
+        case seL4_Fault_VMFault: return "virtual memory";
+        case seL4_Fault_UnknownSyscall: return "unknown syscall";
+        case seL4_Fault_UserException: return "user exception";
+        case seL4_Fault_VGICMaintenance: return "VGIC maintenance";
+        case seL4_Fault_VCPUFault: return "VCPU fault";
+        case seL4_Fault_VPPIEvent: return "VPPI event";
+        default: return "unknown fault";
+    }
+}
+
 void
 fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
 {
@@ -367,6 +383,9 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
     switch (label) {
         case seL4_Fault_VMFault:
             success = handle_vm_fault();
+            if (!success) {
+                printf("vm fault!\n");
+            }
             break;
         case seL4_Fault_UnknownSyscall:
             success = handle_unknown_syscall(msginfo);
@@ -391,6 +410,6 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
     }
 
     if (!success) {
-        LOG_VMM_ERR("Failed to handle fault\n");
+        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
     }
 }
