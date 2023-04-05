@@ -157,7 +157,7 @@ static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *
     return virq_spi_add(vgic, virq_handle);
 }
 
-static inline int vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_handle *irq)
+static inline bool vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_handle *irq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
@@ -165,13 +165,13 @@ static inline int vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_h
 
     // @ivanv: add "unlikely" call
     if (IRQ_QUEUE_NEXT(q->tail) == q->head) {
-        return -1;
+        return false;
     }
 
     q->irqs[q->tail] = irq;
     q->tail = IRQ_QUEUE_NEXT(q->tail);
 
-    return 0;
+    return true;
 }
 
 static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, uint64_t vcpu_id)

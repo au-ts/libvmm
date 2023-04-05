@@ -203,8 +203,8 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     /* Enqueueing an IRQ and dequeueing it right after makes little sense
      * now, but in the future this is needed to support IRQ priorities.
      */
-    int err = vgic_irq_enqueue(vgic, vcpu_id, virq_data);
-    if (err) {
+    bool success = vgic_irq_enqueue(vgic, vcpu_id, virq_data);
+    if (!success) {
         LOG_VMM_ERR("Failure enqueueing IRQ, increase MAX_IRQ_QUEUE_LEN");
         assert(0);
         return false;
@@ -397,15 +397,18 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
     default:
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
         // err = ignore_fault(fault);
-        success = !fault_advance_vcpu(regs);
+        success = fault_advance_vcpu(regs);
         goto fault_return;
     }
     uint32_t mask = fault_get_data_mask(GIC_DIST_PADDR + offset, fsr);
     // fault_set_data(fault, reg & mask);
     // @ivanv: interesting, when we don't call fault_Set_data in the CAmkES VMM, everything works fine?...
-    success = !fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
+    success = fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
 
 fault_return:
+    if (!success) {
+        printf("reg read success is false\n");
+    }
     // @ivanv: revisit, also make fault_return consistint. it's called something else in vgic_dist_reg_write
     return success;
 }
@@ -417,7 +420,7 @@ static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t add
 
 static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
-    int err = 0;
+    bool success = false;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     uint64_t addr = GIC_DIST_PADDR + offset;
     uint32_t mask = fault_get_data_mask(addr, fsr);
@@ -432,12 +435,14 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
             vgic_dist_disable(gic_dist);
         } else {
             LOG_VMM_ERR("Unknown enable register encoding");
+            // @ivanv: goto ignore fault?
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
         /* TYPER provides information about the GIC configuration, we do not do
          * anything here as there should be no reason for the guest to write to
-         * this register. */
+         * this register.
+         */
         break;
     case RANGE32(GIC_DIST_IIDR, GIC_DIST_IIDR):
         /* IIDR provides information about the distributor's implementation, we
@@ -568,13 +573,13 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
             target_list = (1 << vcpu_id);
             break;
         default:
-            LOG_VMM_ERR("Unknow SGIR Target List Filter mode");
+            LOG_VMM_ERR("Unknown SGIR Target List Filter mode");
             goto ignore_fault;
         }
         // @ivanv: Here we're making the assumption that there's only one vCPU, and
         // we're also blindly injectnig the given IRQ to that vCPU.
         // @ivanv: come back to this, do we have two writes to the TCB registers?
-        err = vgic_inject_irq(VCPU_ID, virq);
+        success = vgic_inject_irq(VCPU_ID, virq);
         break;
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */
@@ -586,8 +591,9 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
     case RANGE32(0xF30, 0xFBC):
         /* Reserved */
         break;
-    case RANGE32(0xFC0, 0xFFB):
-        // @ivanv: explain why we don't handle it
+    case RANGE32(0xFC0, 0xFFC):
+        // @ivanv: GICv2 specific, GICv3 has different range for impl defined registers.
+        /* IMPLEMENTATION DEFINED registers. */
         break;
 #if defined(GIC_V3)
     // @ivanv: explain GICv3 specific stuff, and also don't use the hardcoded valuees
@@ -601,12 +607,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
     }
 ignore_fault:
-    // @ivanv: revisit
-    // return fault_advance_vcpu(regs);
-    err = fault_advance_vcpu(regs);
-    if (err) {
-        return false;
-    }
-    return true;
+    success = fault_advance_vcpu(regs);
+    return success;
 }
 

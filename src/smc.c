@@ -90,6 +90,7 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
     }
 }
 
+// @ivanv: print out which SMC call as a string we can't handle.
 bool handle_smc(uint32_t hsr)
 {
     // @ivanv: An optimisation to be made is to store the TCB registers so we don't

@@ -18,7 +18,7 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
     // the convention?
     switch (fn_number) {
         case PSCI_VERSION: {
-            // We support PSCI version 1.2
+            /* We support PSCI version 1.2 */
             uint32_t version = PSCI_MAJOR_VERSION(1) | PSCI_MINOR_VERSION(2);
             smc_set_return_value(regs, version);
             break;
@@ -39,11 +39,16 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             break;
         }
         case PSCI_MIGRATE_INFO_TYPE:
-            /* trusted OS does not require migration */
-            // @ivanv: why the is this "2"
+            /*
+             * There are multiple possible return values for MIGRATE_INFO_TYPE.
+             * In this case returning 2 will tell the guest that this is a
+             * system that does not use a "Trusted OS" as the PSCI
+             * specification says.
+             */
             smc_set_return_value(regs, 2);
             break;
         case PSCI_FEATURES:
+            // @ivanv: seems weird that we just return nothing here.
             smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
             break;
         case PSCI_SYSTEM_RESET: {
@@ -65,6 +70,10 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             }
             break;
         }
+        case PSCI_SYSTEM_OFF:
+            guest_stop();
+            reply_to_fault();
+            return true;
         default:
             LOG_VMM_ERR("Unhandled PSCI function ID 0x%lx\n", fn_number);
             return false;
