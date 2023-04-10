@@ -12,12 +12,12 @@ ifeq ($(strip $(SEL4CP_SDK)),)
 $(error SEL4CP_SDK must be specified)
 endif
 
-ifeq ($(strip $(SEL4CP_BOARD)),)
-$(error SEL4CP_BOARD must be specified)
+ifeq ($(strip $(BOARD)),)
+$(error BOARD must be specified)
 endif
 
-ifeq ($(strip $(SEL4CP_CONFIG)),)
-$(error SEL4CP_CONFIG must be specified)
+ifeq ($(strip $(CONFIG)),)
+$(error CONFIG must be specified)
 endif
 
 ifeq ($(strip $(SYSTEM)),)
@@ -27,37 +27,25 @@ endif
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
 # @ivanv: check that all dependencies exist
+# Specify that we use bash for all shell commands
 SHELL=/bin/bash
+# All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
-TOOLCHAIN := aarch64-linux-gnu
 DTC := dtc
+TOOLCHAIN := aarch64-linux-gnu
 CC := $(TOOLCHAIN)-gcc
 LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-ARCH := aarch64
-
-# ifeq ($(SEL4CP_BOARD),qemu_riscv_virt)
-# 	TOOLCHAIN = riscv64-unknown-elf
-#     ARCH = riscv64
-# endif
-
-# ifeq ($(ARCH),riscv64)
-# 	ifeq ($(strip $(OPENSBI)),)
-# 	$(error Path to OPENSBI source must be specified)
-# 	endif
-# endif
-
-OPENSBI := opensbi
-
 CPU := cortex-a53
 
+# @ivanv: should only compile printf.o in debug
 VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
-ifeq ($(SEL4CP_BOARD),imx8mm_evk)
+ifeq ($(BOARD),imx8mm_evk)
 	VMM_OBJS += vgic_v3.o
 else
 	VMM_OBJS += vgic_v2.o
@@ -70,39 +58,32 @@ endif
 # @ivanv: Have a list of supported boards to check with, if it's not one of those
 # have a helpful message that lists all the support boards.
 
-SEL4CP_BOARD_DIR := $(SEL4CP_SDK)/board/$(SEL4CP_BOARD)/$(SEL4CP_CONFIG)
+# @ivanv: incremental builds don't work with IMAGE_DIR changing
+
+BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
 SRC_DIR := src
-IMAGE_DIR := board/$(SEL4CP_BOARD)/images
-SYSTEM_DESCRIPTION := board/$(SEL4CP_BOARD)/systems/$(SYSTEM)
+SYSTEM_DESCRIPTION := board/$(BOARD)/systems/$(SYSTEM)
 
+IMAGE_DIR := board/$(BOARD)/images
 KERNEL_IMAGE := $(IMAGE_DIR)/linux
-DTB_SOURCE := $(IMAGE_DIR)/linux.dts
-DTB_IMAGE := linux.dtb
+DTS := $(IMAGE_DIR)/linux.dts
+DTB_IMAGE := $(BUILD_DIR)/linux.dtb
 INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
+IMAGES := vmm.elf
+IMAGE_FILE = $(BUILD_DIR)/loader.img
+REPORT_FILE = $(BUILD_DIR)/report.txt
 
-LINUX_IMAGES := $(DTB_IMAGE)
-
-IMAGES := $(LINUX_IMAGES) vmm.elf
-
-# @ivanv: compiling with -O3, the compiler complains about missing memset
-CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -Wall -Wno-unused-function -Werror -I$(SEL4CP_BOARD_DIR)/include -DBOARD_$(SEL4CP_BOARD) -DARCH_$(ARCH) -DCONFIG_$(SEL4CP_CONFIG)
+# Toolchain flags
+CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-function -Werror -I$(BOARD_DIR)/include -DBOARD_$(BOARD) -DCONFIG_$(CONFIG)
 ifeq ($(ARCH),aarch64)
 	CFLAGS +=  -mcpu=$(CPU)
 endif
-LDFLAGS := -L$(SEL4CP_BOARD_DIR)/lib
+LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
-IMAGE_FILE = $(BUILD_DIR)/loader.img
-REPORT_FILE = $(BUILD_DIR)/report.txt
-PAYLOAD_FILE = $(BUILD_DIR)/platform/generic/firmware/fw_payload.elf
+all: directories $(IMAGE_FILE)
 
-# @ivanv: incremental building with the IMAGE_DIR set does not work.
-all: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE) $(KERNEL_IMAGE) $(INITRD_IMAGE)
-
-directories:
-	$(shell mkdir -p $(BUILD_DIR))
-
-run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
+run: directories $(IMAGE_FILE)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
 			-cpu $(CPU) \
@@ -111,15 +92,19 @@ run: directories $(BUILD_DIR)/$(DTB_IMAGE) $(IMAGE_FILE)
 			-m size=2G \
 			-nographic
 
-$(BUILD_DIR)/$(DTB_IMAGE): $(DTB_SOURCE)
+directories:
+	$(shell mkdir -p $(BUILD_DIR))
+
+
+$(DTB_IMAGE): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "You need a Device Tree Compiler (dtc) installed"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
-$(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S
+$(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S $(IMAGE_DIR) $(KERNEL_IMAGE) $(INITRD_IMAGE) $(DTB_IMAGE)
 	$(CC) -c -g3 -x assembler-with-cpp -mcpu=$(CPU) \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
-					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/linux.dtb\" \
+					-DVM_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
 					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
 					$< -o $@
 
@@ -135,9 +120,5 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION)
-	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(SEL4CP_BOARD) --config $(SEL4CP_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
-
-# $(PAYLOAD_FILE): $(IMAGE_FILE)
-# 	make -C $(OPENSBI) -j12 PLATFORM=generic CROSS_COMPILE=riscv64-unknown-elf- FW_PAYLOAD_PATH=$(IMAGE_FILE) \
-# 	PLATFORM_RISCV_XLEN=64 PLATFORM_RISCV_ISA=rv64imac PLATFORM_RISCV_ABI=lp64 O=$(BUILD_DIR)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
+	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#pragma once // @ivanv: actually understand if this is having an effect
+#pragma once
 
 #include <stdint.h>
 #include <sel4cp.h>
@@ -35,19 +35,8 @@
 
 void _putchar(char character);
 
-#if defined(CONFIG_debug)
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
-#else
-#define LOG_VMM(...) do{}while(0)
-#define LOG_VMM_ERR(...) do{}while(0)
-#endif
-
-#if defined(BOARD_imx8mm_evk)
-#define GIC_V3
-#else
-#define GIC_V2
-#endif
 
 static char
 decchar(unsigned int v) {
