@@ -383,9 +383,6 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
     switch (label) {
         case seL4_Fault_VMFault:
             success = handle_vm_fault();
-            if (!success) {
-                printf("vm fault!\n");
-            }
             break;
         case seL4_Fault_UnknownSyscall:
             success = handle_unknown_syscall(msginfo);
