@@ -12,9 +12,9 @@
 #include "printf.h"
 
 // @ivanv: these are here for convience, should not be here though
-#define VM_ID 1
-#define VCPU_ID 0
-#define NUM_VCPUS 1
+#define GUEST_ID 0
+#define GUEST_VCPU_ID 0
+#define GUEST_NUM_VCPUS 1
 // Note that this is AArch64 specific
 #if defined(CONFIG_ARCH_AARCH64)
     #define SEL4_USER_CONTEXT_SIZE 0x24

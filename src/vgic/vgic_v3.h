@@ -30,25 +30,25 @@ struct gic_dist_map {
     uint32_t res4;                /* 0x0054 */
     uint32_t clrspi_sr;           /* 0x0058 */
     uint32_t res5[9];             /* [0x005C, 0x0080) */
-    uint32_t irq_group0[NUM_VCPUS];          /* [0x080, 0x84) */
+    uint32_t irq_group0[GUEST_NUM_VCPUS];          /* [0x080, 0x84) */
     uint32_t irq_group[31];                             /* [0x084, 0x100) */
-    uint32_t enable_set0[NUM_VCPUS];         /* [0x100, 0x104) */
+    uint32_t enable_set0[GUEST_NUM_VCPUS];         /* [0x100, 0x104) */
     uint32_t enable_set[31];                            /* [0x104, 0x180) */
-    uint32_t enable_clr0[NUM_VCPUS];         /* [0x180, 0x184) */
+    uint32_t enable_clr0[GUEST_NUM_VCPUS];         /* [0x180, 0x184) */
     uint32_t enable_clr[31];                            /* [0x184, 0x200) */
-    uint32_t pending_set0[NUM_VCPUS];        /* [0x200, 0x204) */
+    uint32_t pending_set0[GUEST_NUM_VCPUS];        /* [0x200, 0x204) */
     uint32_t pending_set[31];                           /* [0x204, 0x280) */
-    uint32_t pending_clr0[NUM_VCPUS];        /* [0x280, 0x284) */
+    uint32_t pending_clr0[GUEST_NUM_VCPUS];        /* [0x280, 0x284) */
     uint32_t pending_clr[31];                           /* [0x284, 0x300) */
-    uint32_t active0[NUM_VCPUS];             /* [0x300, 0x304) */
+    uint32_t active0[GUEST_NUM_VCPUS];             /* [0x300, 0x304) */
     uint32_t active[31];                                /* [0x300, 0x380) */
-    uint32_t active_clr0[NUM_VCPUS];         /* [0x380, 0x384) */
+    uint32_t active_clr0[GUEST_NUM_VCPUS];         /* [0x380, 0x384) */
     uint32_t active_clr[31];                            /* [0x384, 0x400) */
-    uint32_t priority0[NUM_VCPUS][8];        /* [0x400, 0x420) */
+    uint32_t priority0[GUEST_NUM_VCPUS][8];        /* [0x400, 0x420) */
     uint32_t priority[247];                             /* [0x420, 0x7FC) */
     uint32_t res6;                  /* 0x7FC */
 
-    uint32_t targets0[NUM_VCPUS][8];         /* [0x800, 0x820) */
+    uint32_t targets0[GUEST_NUM_VCPUS][8];         /* [0x800, 0x820) */
     uint32_t targets[247];                              /* [0x820, 0xBFC) */
     uint32_t res7;                  /* 0xBFC */
 
@@ -57,8 +57,8 @@ struct gic_dist_map {
     uint32_t nsacr[64];             /* [0xE00, 0xF00) */
     uint32_t sgir;                  /* 0xF00 */
     uint32_t res8[3];               /* [0xF00, 0xF10) */
-    uint32_t sgi_pending_clr[NUM_VCPUS][4];  /* [0xF10, 0xF20) */
-    uint32_t sgi_pending_set[NUM_VCPUS][4];  /* [0xF20, 0xF30) */
+    uint32_t sgi_pending_clr[GUEST_NUM_VCPUS][4];  /* [0xF10, 0xF20) */
+    uint32_t sgi_pending_set[GUEST_NUM_VCPUS][4];  /* [0xF20, 0xF30) */
     uint32_t res9[5235];            /* [0x0F30, 0x6100) */
 
     uint64_t irouter[960];          /* [0x6100, 0x7F00) */

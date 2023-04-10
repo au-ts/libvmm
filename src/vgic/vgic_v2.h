@@ -27,54 +27,54 @@
  *
  */
 struct gic_dist_map {
-    uint32_t ctlr;                          /* 0x000 */
-    uint32_t typer;                         /* 0x004 */
-    uint32_t iidr;                          /* 0x008 */
+    uint32_t ctlr;                                  /* 0x000 */
+    uint32_t typer;                                 /* 0x004 */
+    uint32_t iidr;                                  /* 0x008 */
 
-    uint32_t res1[29];                      /* [0x00C, 0x080) */
+    uint32_t res1[29];                              /* [0x00C, 0x080) */
 
-    uint32_t irq_group0[NUM_VCPUS];         /* [0x080, 0x84) */
-    uint32_t irq_group[31];                 /* [0x084, 0x100) */
-    uint32_t enable_set0[NUM_VCPUS];        /* [0x100, 0x104) */
-    uint32_t enable_set[31];                /* [0x104, 0x180) */
-    uint32_t enable_clr0[NUM_VCPUS];        /* [0x180, 0x184) */
-    uint32_t enable_clr[31];                /* [0x184, 0x200) */
-    uint32_t pending_set0[NUM_VCPUS];       /* [0x200, 0x204) */
-    uint32_t pending_set[31];               /* [0x204, 0x280) */
-    uint32_t pending_clr0[NUM_VCPUS];       /* [0x280, 0x284) */
-    uint32_t pending_clr[31];               /* [0x284, 0x300) */
-    uint32_t active0[NUM_VCPUS];            /* [0x300, 0x304) */
-    uint32_t active[31];                    /* [0x300, 0x380) */
-    uint32_t active_clr0[NUM_VCPUS];        /* [0x380, 0x384) */
-    uint32_t active_clr[31];                /* [0x384, 0x400) */
-    uint32_t priority0[NUM_VCPUS][8];       /* [0x400, 0x420) */
-    uint32_t priority[247];                 /* [0x420, 0x7FC) */
-    uint32_t res3;                          /* 0x7FC */
+    uint32_t irq_group0[GUEST_NUM_VCPUS];           /* [0x080, 0x84) */
+    uint32_t irq_group[31];                         /* [0x084, 0x100) */
+    uint32_t enable_set0[GUEST_NUM_VCPUS];          /* [0x100, 0x104) */
+    uint32_t enable_set[31];                        /* [0x104, 0x180) */
+    uint32_t enable_clr0[GUEST_NUM_VCPUS];          /* [0x180, 0x184) */
+    uint32_t enable_clr[31];                        /* [0x184, 0x200) */
+    uint32_t pending_set0[GUEST_NUM_VCPUS];         /* [0x200, 0x204) */
+    uint32_t pending_set[31];                       /* [0x204, 0x280) */
+    uint32_t pending_clr0[GUEST_NUM_VCPUS];         /* [0x280, 0x284) */
+    uint32_t pending_clr[31];                       /* [0x284, 0x300) */
+    uint32_t active0[GUEST_NUM_VCPUS];              /* [0x300, 0x304) */
+    uint32_t active[31];                            /* [0x300, 0x380) */
+    uint32_t active_clr0[GUEST_NUM_VCPUS];          /* [0x380, 0x384) */
+    uint32_t active_clr[31];                        /* [0x384, 0x400) */
+    uint32_t priority0[GUEST_NUM_VCPUS][8];         /* [0x400, 0x420) */
+    uint32_t priority[247];                         /* [0x420, 0x7FC) */
+    uint32_t res3;                                  /* 0x7FC */
 
-    uint32_t targets0[NUM_VCPUS][8];        /* [0x800, 0x820) */
-    uint32_t targets[247];                  /* [0x820, 0xBFC) */
-    uint32_t res4;                          /* 0xBFC */
+    uint32_t targets0[GUEST_NUM_VCPUS][8];          /* [0x800, 0x820) */
+    uint32_t targets[247];                          /* [0x820, 0xBFC) */
+    uint32_t res4;                                  /* 0xBFC */
 
-    uint32_t config[64];                    /* [0xC00, 0xD00) */
+    uint32_t config[64];                            /* [0xC00, 0xD00) */
 
-    uint32_t spi[32];                       /* [0xD00, 0xD80) */
-    uint32_t res5[20];                      /* [0xD80, 0xDD0) */
-    uint32_t res6;                          /* 0xDD0 */
-    uint32_t legacy_int;                    /* 0xDD4 */
-    uint32_t res7[2];                       /* [0xDD8, 0xDE0) */
-    uint32_t match_d;                       /* 0xDE0 */
-    uint32_t enable_d;                      /* 0xDE4 */
-    uint32_t res8[70];                      /* [0xDE8, 0xF00) */
+    uint32_t spi[32];                               /* [0xD00, 0xD80) */
+    uint32_t res5[20];                              /* [0xD80, 0xDD0) */
+    uint32_t res6;                                  /* 0xDD0 */
+    uint32_t legacy_int;                            /* 0xDD4 */
+    uint32_t res7[2];                               /* [0xDD8, 0xDE0) */
+    uint32_t match_d;                               /* 0xDE0 */
+    uint32_t enable_d;                              /* 0xDE4 */
+    uint32_t res8[70];                              /* [0xDE8, 0xF00) */
 
-    uint32_t sgir;                          /* 0xF00 */
-    uint32_t res9[3];                       /* [0xF04, 0xF10) */
+    uint32_t sgir;                                  /* 0xF00 */
+    uint32_t res9[3];                               /* [0xF04, 0xF10) */
 
-    uint32_t sgi_pending_clr[NUM_VCPUS][4]; /* [0xF10, 0xF20) */
-    uint32_t sgi_pending_set[NUM_VCPUS][4]; /* [0xF20, 0xF30) */
-    uint32_t res10[40];                     /* [0xF30, 0xFC0) */
+    uint32_t sgi_pending_clr[GUEST_NUM_VCPUS][4];   /* [0xF10, 0xF20) */
+    uint32_t sgi_pending_set[GUEST_NUM_VCPUS][4];   /* [0xF20, 0xF30) */
+    uint32_t res10[40];                             /* [0xF30, 0xFC0) */
 
-    uint32_t periph_id[12];                 /* [0xFC0, 0xFF0) */
-    uint32_t component_id[4];               /* [0xFF0, 0xFFF] */
+    uint32_t periph_id[12];                         /* [0xFC0, 0xFF0) */
+    uint32_t component_id[4];                       /* [0xFF0, 0xFFF] */
 };
 
 /*

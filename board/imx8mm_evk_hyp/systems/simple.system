@@ -24,7 +24,7 @@
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
-        <virtual_machine name="linux" id="1">
+        <virtual_machine name="linux" id="0">
             <map mr="guest_ram" vaddr="0x40000000" perms="rwx" cached="true" />
             <map mr="serial" vaddr="0x30890000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0x38802000" perms="rw" cached="false" />

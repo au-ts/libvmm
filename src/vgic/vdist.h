@@ -565,7 +565,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
             break;
         case GIC_DIST_SGI_TARGET_LIST_OTHERS:
             /* Forward virq to all VCPUs except the requesting VCPU */
-            target_list = (1 << NUM_VCPUS) - 1;
+            target_list = (1 << GUEST_NUM_VCPUS) - 1;
             target_list = target_list & ~(1 << vcpu_id);
             break;
         case GIC_DIST_SGI_TARGET_SELF:
@@ -579,7 +579,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         // @ivanv: Here we're making the assumption that there's only one vCPU, and
         // we're also blindly injectnig the given IRQ to that vCPU.
         // @ivanv: come back to this, do we have two writes to the TCB registers?
-        success = vgic_inject_irq(VCPU_ID, virq);
+        success = vgic_inject_irq(vcpu_id, virq);
         break;
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */

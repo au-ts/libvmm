@@ -23,7 +23,7 @@
 /* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
 extern vgic_t vgic;
 
-bool handle_vgic_maintenance()
+bool handle_vgic_maintenance(uint64_t vcpu_id)
 {
     // @ivanv: reivist, also inconsistency between int and bool
     bool success = true;
@@ -33,7 +33,7 @@ bool handle_vgic_maintenance()
     assert(idx >= 0);
 
     // @ivanv: Revisit and make sure it's still correct.
-    vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(&vgic, VCPU_ID);
+    vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(&vgic, vcpu_id);
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     struct virq_handle *slot = &vgic_vcpu->lr_shadow[idx];
@@ -44,10 +44,10 @@ bool handle_vgic_maintenance()
     slot->ack_data = NULL;
     /* Clear pending */
     LOG_IRQ("Maintenance IRQ %d\n", lr_virq.virq);
-    set_pending(vgic_get_dist(vgic.registers), lr_virq.virq, false, VCPU_ID);
-    virq_ack(VCPU_ID, &lr_virq);
+    set_pending(vgic_get_dist(vgic.registers), lr_virq.virq, false, vcpu_id);
+    virq_ack(vcpu_id, &lr_virq);
     /* Check the overflow list for pending IRQs */
-    struct virq_handle *virq = vgic_irq_dequeue(&vgic, VCPU_ID);
+    struct virq_handle *virq = vgic_irq_dequeue(&vgic, vcpu_id);
 
 #if defined(GIC_V2)
     int group = 0;
@@ -58,7 +58,7 @@ bool handle_vgic_maintenance()
 #endif
 
     if (virq) {
-        success = vgic_vcpu_load_list_reg(&vgic, VCPU_ID, idx, group, virq);
+        success = vgic_vcpu_load_list_reg(&vgic, vcpu_id, idx, group, virq);
     }
     if (success) {
         reply_to_fault();

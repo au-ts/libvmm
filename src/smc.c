@@ -91,12 +91,12 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
 }
 
 // @ivanv: print out which SMC call as a string we can't handle.
-bool handle_smc(uint32_t hsr)
+bool handle_smc(uint64_t vcpu_id, uint32_t hsr)
 {
     // @ivanv: An optimisation to be made is to store the TCB registers so we don't
     // end up reading them multiple times
     seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
 
     uint64_t fn_number = smc_get_function_number(&regs);
@@ -105,7 +105,7 @@ bool handle_smc(uint32_t hsr)
     switch (service) {
         case SMC_CALL_STD_SERVICE:
             if (fn_number < PSCI_MAX) {
-                return handle_psci(VCPU_ID, &regs, fn_number, hsr);
+                return handle_psci(vcpu_id, &regs, fn_number, hsr);
             }
             LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
             break;

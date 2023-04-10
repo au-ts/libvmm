@@ -47,7 +47,7 @@ guest on AArch64:
 <protection_domain name="VMM" priority="254">
     <program_image path="vmm.elf" />
     <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
-    <virtual_machine name="linux" id="1">
+    <virtual_machine name="linux" id="0">
         <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
         <map mr="serial" vaddr="0x9000000" perms="rw" />
         <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
