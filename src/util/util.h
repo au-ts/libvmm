@@ -126,7 +126,6 @@ print_tcb_regs(seL4_UserContext *ctx) {
     printf("    x28:  0x%016lx\n", ctx->x28);
     // TODO(ivanv): print out thread ID registers?
 #endif
-    // @ivanv: riscv64 print regs
 }
 
 // @ivanv: this should have the same foramtting as the TCB registers
