@@ -7,16 +7,10 @@ you have not inadvertently broken something unrelated.
 
 ## Running the CI locally
 
-I have tried my best to make the CI avaiable to run locally. This is done with
-two scripts:
+Make sure you have the dependencies listed in the top-level README, you will
+also need the `expect` program installed (`sudo apt install expect`).
 
-1. `acquire_sdk.sh`
-2. `build_examples.sh`
-
-The first script is not necessary and is primarily for getting the GitHub CI
-to download a pre-built seL4CP SDK. You can manually downlod a pre-built SDK
-or build it yourself and then pass the path to the second script like the
-following:
+You can then run the CI like so:
 ```sh
-    $ ./build_examples.sh /path/to/sdk
+    $ ./examples.sh /path/to/sdk
 ```
