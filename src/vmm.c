@@ -361,6 +361,7 @@ notified(sel4cp_channel ch)
     }
 }
 
+// @ivanv: find a better place for this?
 char *fault_to_string(uint64_t label) {
     switch (label) {
         case seL4_Fault_VMFault: return "virtual memory";
@@ -374,8 +375,12 @@ char *fault_to_string(uint64_t label) {
 }
 
 void
-fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
+fault(sel4cp_id id, sel4cp_msginfo msginfo)
 {
+    if (id != VM_ID) {
+        LOG_VMM_ERR("Unexpected faulting PD/VM with id %d\n", id);
+        return;
+    }
     // This is the primary fault handler for the guest, all faults that come
     // from seL4 regarding the guest will need to be handled here.
     uint64_t label = sel4cp_msginfo_get_label(msginfo);
@@ -400,8 +405,8 @@ fault(sel4cp_vm vm, sel4cp_msginfo msginfo)
             success = handle_vppi_event();
             break;
         default:
-            LOG_VMM_ERR("unknown fault, stopping VM %d\n", vm);
-            sel4cp_vm_stop(vm);
+            LOG_VMM_ERR("unknown fault, stopping VM with ID %d\n", id);
+            sel4cp_vm_stop(id);
             return;
             // @ivanv: print out the actual fault details
     }

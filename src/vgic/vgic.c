@@ -1,14 +1,21 @@
+/* @ivanv double check
+ * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2022, UNSW (ABN 57 195 873 179)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 #include <sel4cp.h>
 #include "vgic.h"
 #include "virq.h"
 #include "../util/util.h"
 #include "../fault.h"
 
-// @ivanv: TEMP!
 #if defined(GIC_V2)
 #include "vgic_v2.h"
 #elif defined(GIC_V3)
 #include "vgic_v3.h"
+#else
+#error "Unknown GIC version"
 #endif
 
 #include "vdist.h"
@@ -94,24 +101,11 @@ bool vgic_inject_irq(uint64_t vcpu_id, int irq)
 // @ivanv: revisit this whole function
 bool handle_vgic_dist_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
 {
-    // @ivanv: revisit this comment
-    /* There is a fault object per VCPU with much more context, the parameters
-     * fault_addr and fault_length are no longer used.
-     */
-    // fault_t *fault = vcpu->vcpu_arch.fault;
-    // assert(fault);
-    // assert(fault_addr == fault_get_address(vcpu->vcpu_arch.fault));
-
-    // assert(cookie);
-    // struct vgic_dist_device *d = (typeof(d))cookie;
-    // vgic_t *vgic = d->vgic;
-    // assert(vgic->dist);
-
+    /* Make sure that the fault address actually lies within the GIC distributor region. */
     assert(fault_addr >= GIC_DIST_PADDR);
-    uint64_t offset = fault_addr - GIC_DIST_PADDR;
-    // @ivanv: this isn't necessarily one page?
-    // assert(offset < PAGE_SIZE_4K);
+    assert(fault_addr - GIC_DIST_PADDR < GIC_DIST_SIZE);
 
+    uint64_t offset = fault_addr - GIC_DIST_PADDR;
     if (fault_is_read(fsr)) {
         // printf("VGIC|INFO: Read dist\n");
         return vgic_dist_reg_read(vcpu_id, &vgic, offset, fsr, regs);
