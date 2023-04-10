@@ -52,7 +52,7 @@ static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
     }
 
     seL4_UserContext regs;
-    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(!err);
 
     return fault_advance_vcpu(&regs);
@@ -63,14 +63,14 @@ static bool handle_vppi_event()
     uint64_t ppi_irq = sel4cp_mr_get(seL4_VPPIEvent_IRQ);
     // We directly inject the interrupt assuming it has been previously registered.
     // If not the interrupt will dropped by the VM.
-    bool success = vgic_inject_irq(VCPU_ID, ppi_irq);
+    bool success = vgic_inject_irq(GUEST_VCPU_ID, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error
-        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, VCPU_ID);
+        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, GUEST_VCPU_ID);
         // Acknowledge to unmask it as our guest will not use the interrupt
         // @ivanv: We're going to assume that we only have one VCPU and that the
         // cap is the base one.
-        sel4cp_arm_vcpu_ack_vppi(VM_ID, ppi_irq);
+        sel4cp_arm_vcpu_ack_vppi(GUEST_ID, ppi_irq);
     }
 
     reply_to_fault();
@@ -78,13 +78,13 @@ static bool handle_vppi_event()
     return true;
 }
 
-static bool handle_vcpu_fault(sel4cp_msginfo msginfo)
+static bool handle_vcpu_fault(sel4cp_msginfo msginfo, uint64_t vcpu_id)
 {
     uint32_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
     switch (hsr_ec_class) {
         case HSR_SMC_64_EXCEPTION:
-            return handle_smc(hsr);
+            return handle_smc(vcpu_id, hsr);
         case HSR_WFx_EXCEPTION:
             // If we get a WFI exception, we just do nothing in the VMM.
             reply_to_fault();
@@ -104,7 +104,7 @@ static int handle_user_exception(sel4cp_msginfo msginfo)
 
     // Dump registers
     seL4_UserContext regs = {0};
-    seL4_Error ret = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    seL4_Error ret = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     if (ret != seL4_NoError) {
         printf("Failure reading regs, error %d", ret);
         return false;
@@ -121,17 +121,17 @@ static bool handle_vm_fault()
     uint64_t fsr = sel4cp_mr_get(seL4_VMFault_FSR);
 
     seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
 
     uint64_t addr_page_aligned = addr & (~(0x1000 - 1));
     switch (addr_page_aligned) {
         case GIC_DIST_PADDR...GIC_DIST_PADDR + GIC_DIST_SIZE:
-            return handle_vgic_dist_fault(VCPU_ID, addr, fsr, &regs);
+            return handle_vgic_dist_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #if defined(GIC_V3)
         /* Need to handle redistributor faults for GICv3 platforms. */
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
-            return handle_vgic_redist_fault(VCPU_ID, addr, fsr, &regs);
+            return handle_vgic_redist_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #endif
         default: {
             uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
@@ -139,7 +139,7 @@ static bool handle_vm_fault()
             uint64_t is_write = (fsr & (1 << 6)) != 0;
             LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n", addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
             print_tcb_regs(&regs);
-            print_vcpu_regs(VM_ID);
+            print_vcpu_regs(GUEST_ID);
             return false;
         }
     }
@@ -151,7 +151,7 @@ static bool handle_vm_fault()
 
 static void vppi_event_ack(uint64_t vcpu_id, int irq, void *cookie)
 {
-    sel4cp_arm_vcpu_ack_vppi(VM_ID, irq);
+    sel4cp_arm_vcpu_ack_vppi(GUEST_ID, irq);
 }
 
 static void sgi_ack(uint64_t vcpu_id, int irq, void *cookie) {}
@@ -209,24 +209,24 @@ void guest_start(void) {
 #else
 #error "Unsupported GIC version"
 #endif
-    bool err = vgic_register_irq(VCPU_ID, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
+    bool err = vgic_register_irq(GUEST_VCPU_ID, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
     if (!err) {
         LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
         return;
     }
-    err = vgic_register_irq(VCPU_ID, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
+    err = vgic_register_irq(GUEST_VCPU_ID, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
     if (!err) {
         LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
         return;
     }
-    err = vgic_register_irq(VCPU_ID, SGI_FUNC_CALL, &sgi_ack, NULL);
+    err = vgic_register_irq(GUEST_VCPU_ID, SGI_FUNC_CALL, &sgi_ack, NULL);
     if (!err) {
         LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return;
     }
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    err = vgic_register_irq(VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    err = vgic_register_irq(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     // Just in case there is already an interrupt available to handle, we ack it here.
     // @ivanv: not sure if this is necessary? is this the right place to do this
     sel4cp_irq_ack(SERIAL_IRQ_CH);
@@ -239,7 +239,7 @@ void guest_start(void) {
     regs.pc = kernel_image_vaddr;
     // Set all the TCB registers
     err = seL4_TCB_WriteRegisters(
-        BASE_VM_TCB_CAP + VM_ID,
+        BASE_VM_TCB_CAP + GUEST_ID,
         false, // We'll explcitly start the guest below rather than in this call
         0, // No flags
         SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
@@ -250,8 +250,8 @@ void guest_start(void) {
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, GUEST_INIT_RAM_DISK_VADDR);
     seL4_UserContext read_regs = {0};
-    seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + VM_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
-    sel4cp_vm_restart(VM_ID, regs.pc);
+    seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
+    sel4cp_vm_restart(GUEST_ID, regs.pc);
 }
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
@@ -273,14 +273,14 @@ void guest_start(void) {
 
 void guest_stop(void) {
     LOG_VMM("Stopping guest\n");
-    sel4cp_vm_stop(VM_ID);
+    sel4cp_vm_stop(GUEST_ID);
     LOG_VMM("Stopped guest\n");
 }
 
 bool guest_restart(void) {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
-    sel4cp_vm_stop(VM_ID);
+    sel4cp_vm_stop(GUEST_ID);
     LOG_VMM("Stopped guest\n");
     // Then, we need to clear all of RAM
     LOG_VMM("Clearing guest RAM\n");
@@ -292,38 +292,38 @@ bool guest_restart(void) {
         return false;
     }
     // Reset registers
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SCTLR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR0, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TTBR1, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TCR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_MAIR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AMAIR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CIDR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_SCTLR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_TTBR0, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_TTBR1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_TCR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_MAIR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_AMAIR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CIDR, 0);
     /* other system registers EL1 */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ACTLR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CPACR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_ACTLR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CPACR, 0);
     /* exception handling registers EL1 */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR0, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_AFSR1, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ESR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_FAR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ISR, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_VBAR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_AFSR0, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_AFSR1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_ESR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_FAR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_ISR, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_VBAR, 0);
     /* thread pointer/ID registers EL0/EL1 */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_TPIDR_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_TPIDR_EL1, 0);
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_VMPIDR_EL2, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_VMPIDR_EL2, 0);
 #endif /* CONFIG_MAX_NUM_NODES > 1 */
     /* general registers x0 to x30 have been saved by traps.S */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SP_EL1, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_ELR_EL1, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_SPSR_EL1, 0); // 32-bit
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_SP_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_ELR_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_SPSR_EL1, 0); // 32-bit
     /* generic timer registers, to be completed */
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CTL, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTV_CVAL, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTVOFF, 0);
-    sel4cp_arm_vcpu_write_reg(VM_ID, seL4_VCPUReg_CNTKCTL_EL1, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CNTV_CTL, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CNTV_CVAL, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CNTVOFF, 0);
+    sel4cp_arm_vcpu_write_reg(GUEST_ID, seL4_VCPUReg_CNTKCTL_EL1, 0);
     // Now we need to re-initialise all the VMM state
     guest_start();
     LOG_VMM("Restarted guest\n");
@@ -350,9 +350,9 @@ notified(sel4cp_channel ch)
 {
     switch (ch) {
         case SERIAL_IRQ_CH: {
-            bool success = vgic_inject_irq(VCPU_ID, SERIAL_IRQ);
+            bool success = vgic_inject_irq(GUEST_VCPU_ID, SERIAL_IRQ);
             if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
             }
             break;
         }
@@ -377,7 +377,7 @@ char *fault_to_string(uint64_t label) {
 void
 fault(sel4cp_id id, sel4cp_msginfo msginfo)
 {
-    if (id != VM_ID) {
+    if (id != GUEST_ID) {
         LOG_VMM_ERR("Unexpected faulting PD/VM with id %d\n", id);
         return;
     }
@@ -396,10 +396,10 @@ fault(sel4cp_id id, sel4cp_msginfo msginfo)
             success = handle_user_exception(msginfo);
             break;
         case seL4_Fault_VGICMaintenance:
-            success = handle_vgic_maintenance();
+            success = handle_vgic_maintenance(GUEST_VCPU_ID);
             break;
         case seL4_Fault_VCPUFault:
-            success = handle_vcpu_fault(msginfo);
+            success = handle_vcpu_fault(msginfo, GUEST_VCPU_ID);
             break;
         case seL4_Fault_VPPIEvent:
             success = handle_vppi_event();
