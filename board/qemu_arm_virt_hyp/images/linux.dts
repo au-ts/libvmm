@@ -93,7 +93,7 @@
 		stdout-path = "/pl011@9000000";
 		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug loglevel=8";
 		linux,stdout-path = "/pl011@9000000";
-		linux,initrd-start = "Mp\0";
-		linux,initrd-end = <0x4d7dedd9>;
+		linux,initrd-start = <0x4d700000>;
+		linux,initrd-end = <0x4d800000>;
 	};
 };
