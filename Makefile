@@ -38,8 +38,6 @@ LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-CPU := cortex-a53
-
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
 
@@ -74,10 +72,11 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # Toolchain flags
+# FIXME: For optimisation we should consider providing the flag -mcpu.
+# FIXME: We should also consider whether -mgeneral-regs-only should be
+# used to avoid the use of the FPU and therefore seL4 does not have to
+# context switch the FPU.
 CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-function -Werror -I$(BOARD_DIR)/include -DBOARD_$(BOARD) -DCONFIG_$(CONFIG)
-ifeq ($(ARCH),aarch64)
-	CFLAGS +=  -mcpu=$(CPU)
-endif
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
@@ -85,8 +84,9 @@ all: directories $(IMAGE_FILE)
 
 run: directories $(IMAGE_FILE)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
+	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependenyc: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu $(CPU) \
+			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
@@ -95,14 +95,13 @@ run: directories $(IMAGE_FILE)
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-
 $(DTB_IMAGE): $(DTS)
-	if ! command -v $(DTC) &> /dev/null; then echo "You need a Device Tree Compiler (dtc) installed"; exit 1; fi
+	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S $(IMAGE_DIR) $(KERNEL_IMAGE) $(INITRD_IMAGE) $(DTB_IMAGE)
-	$(CC) -c -g3 -x assembler-with-cpp -mcpu=$(CPU) \
+	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
 					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
