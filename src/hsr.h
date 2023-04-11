@@ -4,6 +4,11 @@
 #define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
 #define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
 
+#define HSR_SYNDROME_VALID         (1 << 24)
+#define HSR_IS_SYNDROME_VALID(hsr) ((hsr) & HSR_SYNDROME_VALID)
+#define HSR_SYNDROME_WIDTH(x)      (((x) >> 22) & 0x3)
+#define HSR_SYNDROME_RT(x)         (((x) >> 16) & 0x1f)
+
 /* HSR Exception Value */
 #define HSR_UNKNOWN_EXCEPTION       (0x0)
 #define HSR_WFx_EXCEPTION           (0x1)

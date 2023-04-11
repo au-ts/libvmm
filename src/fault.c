@@ -5,15 +5,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "fault.h"
+#include "hsr.h"
 #include "util/util.h"
+#include "fault.h"
 
-#define CPSR_THUMB                 (1 << 5)
-#define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
-#define HSR_SYNDROME_VALID         (1 << 24)
-#define HSR_IS_SYNDROME_VALID(hsr) ((hsr) & HSR_SYNDROME_VALID)
-#define HSR_SYNDROME_WIDTH(x)      (((x) >> 22) & 0x3)
-#define HSR_SYNDROME_RT(x)         (((x) >> 16) & 0x1f)
+// #define CPSR_THUMB                 (1 << 5)
+// #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
 
 // int fault_is_32bit_instruction(seL4_UserContext *regs)
 // {
