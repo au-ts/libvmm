@@ -31,13 +31,13 @@ where the Makefile will look when you pass the `SYSTEM` argument.
 
 ### Specifying a virtual machine
 
+<!-- @ivanv: Explain <virtual_machine> options etc more. -->
+
 The first step before writing code is to have a system description that contains
-a virtual machine.
+a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
 [the QEMU example system](../board/qemu_arm_virt_hyp/systems/simple.system),
-it is a fairly minimal system description to have a VMM start and execute a
-guest on AArch64:
 
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" />
@@ -55,14 +55,12 @@ guest on AArch64:
 </protection_domain>
 ```
 
-I will now explain each part of this so that you too can understand why it is
-necessary.
+First we create a VMM as a root PD that contains a virtual machine (VM).
+This hierarchy is necessary as the VMM needs to be able to access the guest's
+TCB registers and VCPU registers for initialising the guest, delivering virtual
+interrupts to the guest and restarting the guest.
 
-First we create a VMM as a root PD. It is a root PD as we need the ability to be
-able to start (and potentially stop and restart) the guest once we have
-initialised the system.
-
-You will see that three memory regions (MRs) exist in the system.
+You will also see that three memory regions (MRs) exist in the system.
 1. `guest_ram` for the guest's RAM region
 2. `serial` for the UART
 3. `gic_vcpu` for the Generic Interrupt Controller VCPU interface
@@ -70,7 +68,7 @@ You will see that three memory regions (MRs) exist in the system.
 ### Guest RAM region
 
 Since the guest does not necessarily know it is being virtualised, it will
-expect some view of contigious RAM that it can use. In this example system, we
+expect some view of contiguous RAM that it can use. In this example system, we
 decide to give the guest 256MiB to use as "RAM", however you can provide
 however much is necessary for your guest. At a bare minimum, there needs to be
 enough memory to place the kernel image and any other associated binaries. How
@@ -96,7 +94,15 @@ trapping into the seL4 kernel/VMM. This is done for performance and simplicity
 so that the VMM does not have to emulate accesses to the UART device. Note that
 this will work since nothing else is concurrently accessing the device.
 
-### GIC VCPU interface region
+### GIC virtual CPU interface region
+
+The GIC VCPU interface region is a hardware device region passed through to the
+guest. The device is at a certain physical address, which is then mapped into
+the guest at the address of the GIC CPU interface that the guest expects. In the
+case of the example above, the GIC VCPU interface is at `0x8040000`, and we map
+this into the guest physical address of `0x8010000`, which is where the guest
+expects the CPU interface to be. The rest of the GIC is virtualised in the VGIC
+driver in the VMM. Like the UART, the address of the GIC is platform specific.
 
 ### Running the system
 
@@ -114,8 +120,8 @@ make BUILD_DIR=build \
 
 Before you can port the VMM to your desired platform you must have the following:
 
-* A working port of the seL4 kernel in hypervisor mode.
-* A working port of the seL4 Core Platform where the kernel is built as a
+* A working platform port of the seL4 kernel in hypervisor mode.
+* A working platform port of the seL4 Core Platform where the kernel is built as a
   hypervisor.
 
 ### Guest setup
@@ -134,7 +140,7 @@ instructions on how to reproduce the images used if you would like to see
 examples of how other example systems are setup.
 
 Before attempting to get the VMM working, I strongly encourage you to make sure
-that these binaries work natively, as in, without being virtualised. If they do
+that these binaries work naively, as in, without being virtualised. If they do
 not, they likely will not work with the VMM either.
 
 You can either add these images into `board/$BOARD/images/` or specify the
@@ -151,17 +157,25 @@ VMM to allow this functionality.
 The VMM also (for now) does not have the ability to generate a FDT, therefore
 requiring the Device Tree Source at build time.
 
-## Add init RAM disk addr to device tree
-
 ### Generic Interrupt Controller (GIC)
 
 GIC version 2 and 3 are not fully virtualised by the hardware and therefore the
-interrupt controller is partially virtualised in the VMM. Check that your
-platform supports either GICv2 or GICv3.
+interrupt controller is partially virtualised in the VMM. Confirm that your
+ARM platform supports either GICv2 or GICv3, as those are the versions that the
+VMM supports.
 
-As stated above, the GIC VCPU interface needs to be mapped into the guest, so
-you will first have to know the address of that. The VMM code will also need
-this address, however, it will look at the DTS (Device Tree Source) provided to
-the build system find it.
+### Add platform to VMM source code
 
-The rest is TODO, sorry :)
+<!-- @ivanv: These instructions could be improved -->
+
+Lastly, there are some hard-coded values that the VMM needs to support a platform.
+There are three files that need to be changed:
+
+* `src/vmm.h`
+* `src/vgic/vgic.h`
+* For Linux, the device tree needs to contain the location of the initial RAM disk,
+  see `board/qemu_arm_virt_hyp/images/linux.dts`.
+
+As you can probably tell, all this information that needs to be added is known at
+build-time, the plan is to auto-generate these values that the VMM needs to make it
+easier to add platform support (and in general make the VMM less fragile).
