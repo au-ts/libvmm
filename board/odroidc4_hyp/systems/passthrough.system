@@ -37,6 +37,6 @@
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- Serial IRQ -->
-        <irq irq="225" id="0" trigger="edge" />
+        <irq irq="225" id="1" trigger="edge" />
     </protection_domain>
 </system>
