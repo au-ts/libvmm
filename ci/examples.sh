@@ -35,7 +35,7 @@ for EXAMPLE in ${EXAMPLES[@]}; do
         BUILD_DIR="build_${SYSTEM_NAME}_${BOARD}_${CONFIG}"
         # For now we will only do runtime tests via simulation
         if [[ $BOARD == "qemu_arm_virt_hyp" ]]; then
-            echo "Running EXAMPLE: $EXAMPLE"
+            echo "Running example: $BOARD $CONFIG $SYSTEM"
             IMAGE="$BUILD_DIR/loader.img"
             ./ci/buildroot_login.exp $IMAGE
         fi
