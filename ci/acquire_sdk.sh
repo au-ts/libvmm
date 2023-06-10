@@ -22,7 +22,7 @@ ARTIFACT_ID=`curl \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer ${GITHUB_TOKEN}"\
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  https://api.github.com/repos/$SEL4CP_REPO/actions/artifacts | jq '.artifacts[0].id'`
+  https://api.github.com/repos/$SEL4CP_REPO/actions/artifacts | jq '.artifacts[2].id'`
 
 echo "Downloading SDK with artifact ID: ${ARTIFACT_ID}"
 curl \
