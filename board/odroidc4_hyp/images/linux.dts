@@ -19,11 +19,11 @@
 		#address-cells = <0x02>;
 		#size-cells = <0x02>;
 		ranges;
-        linux,stdout-path = "serial0:115200n8";
-        stdout-path = "serial0:115200n8";
+        linux,stdout-path = "/soc/bus@ff800000/serial@3000";
+        stdout-path = "/soc/bus@ff800000/serial@3000";
 		linux,initrd-end = <0x00000000 0x2e000000>;
         linux,initrd-start = <0x00000000 0x2d700000>;
-        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1 initcall_debug";
+        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
 
 		framebuffer-cvbs {
 			compatible = "amlogic,simple-framebuffer\0simple-framebuffer";
@@ -187,7 +187,6 @@
 			reg = <0x00 0xff600000 0x00 0x200000>;
 			#address-cells = <0x02>;
 			#size-cells = <0x02>;
-			status = "disabled";
 			ranges = <0x00 0x00 0x00 0xff600000 0x00 0x200000>;
 
 			hdmi-tx@0 {
