@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 if ! command -v jq &> /dev/null
 then
     echo "jq could not be found, it must be available to run the script."
