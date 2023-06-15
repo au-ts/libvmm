@@ -398,12 +398,14 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
         // err = ignore_fault(fault);
         success = fault_advance_vcpu(regs);
+        assert(success);
         goto fault_return;
     }
     uint32_t mask = fault_get_data_mask(GIC_DIST_PADDR + offset, fsr);
     // fault_set_data(fault, reg & mask);
     // @ivanv: interesting, when we don't call fault_Set_data in the CAmkES VMM, everything works fine?...
     success = fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
+    assert(success);
 
 fault_return:
     if (!success) {
@@ -420,7 +422,7 @@ static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t add
 
 static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
-    bool success = false;
+    bool success = true;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     uint64_t addr = GIC_DIST_PADDR + offset;
     uint32_t mask = fault_get_data_mask(addr, fsr);
@@ -580,6 +582,7 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
         // we're also blindly injectnig the given IRQ to that vCPU.
         // @ivanv: come back to this, do we have two writes to the TCB registers?
         success = vgic_inject_irq(vcpu_id, virq);
+        assert(success);
         break;
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */
@@ -605,9 +608,17 @@ static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset,
 #endif
     default:
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
+        assert(0);
     }
 ignore_fault:
+    assert(success);
+    if (!success) {
+        return false;
+    }
+
     success = fault_advance_vcpu(regs);
+    assert(success);
+
     return success;
 }
 
