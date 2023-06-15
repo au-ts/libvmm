@@ -10,7 +10,7 @@ in
         gnumake
 		dtc
 		expect
-        cross.buildPackages.gcc10
+        cross.buildPackages.gcc
     ];
 }
 
