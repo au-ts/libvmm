@@ -13,6 +13,8 @@ platform, etc, please see the [manual](docs/MANUAL.md).
 
 ## Getting started
 
+The VMM is intended to be built on Linux and macOS.
+
 ### Dependencies
 
 * Make
@@ -25,6 +27,15 @@ Using `apt`:
 ```sh
 sudo apt update
 sudo apt install make gcc-aarch64-linux-gnu qemu-system-arm device-tree-compiler
+```
+
+Using Homebrew:
+
+```sh
+# Homebrew does not provide ARM cross compilers by default, so we use
+# this repository (https://github.com/messense/homebrew-macos-cross-toolchains).
+brew tap messense/macos-cross-toolchains
+brew install make qemu aarch64-unknown-linux-gnu dtc
 ```
 
 Finally, you will need an experimental seL4 Core Platform SDK.
