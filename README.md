@@ -1,7 +1,9 @@
 # VMM on the seL4 Core Platform
 
 This is a Virtual Machine Monitor (VMM) built on the seL4 Core Platform (seL4CP).
-It is (at least initially) a port of the
+The purpose of the VMM is to make it easy to run virtual machines on top of the seL4 microkernel.
+
+It is (at least initially) a port of the already existing
 [CAmkES VMM](https://github.com/sel4/camkes-vm-examples). See the bottom of the
 README for progress/planned features.
 
@@ -17,8 +19,8 @@ This project is able to be compiled on Linux x86-64, macOS x86-64 and
 macOS AArch64.
 
 However, it should be noted that while the examples in the VMM can be reproduced
-on macOS, if you need to do anything such as compile the Linux kernel or your own
-root file system, you will probably have less friction on a Linux machine.
+on macOS, if you need to do anything such as compile a custom Linux kernel image
+or a guest root file system, you will probably have less friction on a Linux machine.
 
 ### Dependencies
 
