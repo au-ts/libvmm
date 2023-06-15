@@ -38,6 +38,12 @@ brew tap messense/macos-cross-toolchains
 brew install make qemu aarch64-unknown-linux-gnu dtc
 ```
 
+Using [Nix](https://nixos.org/):
+```sh
+# In the root of the repository
+nix-shell --pure
+```
+
 Finally, you will need an experimental seL4 Core Platform SDK.
 
 * Currently virtualisation support and other patches that the VMM requires are
