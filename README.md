@@ -13,7 +13,12 @@ platform, etc, please see the [manual](docs/MANUAL.md).
 
 ## Getting started
 
-The VMM is intended to be built on Linux and macOS.
+This project is able to be compiled on Linux x86-64, macOS x86-64 and
+macOS AArch64.
+
+However, it should be noted that while the examples in the VMM can be reproduced
+on macOS, if you need to do anything such as compile the Linux kernel or your own
+root file system, you will probably have less friction on a Linux machine.
 
 ### Dependencies
 
