@@ -33,12 +33,18 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Linux)
-	TOOLCHAIN := aarch64-linux-gnu
-endif
-ifeq ($(UNAME_S),Darwin)
-	TOOLCHAIN := aarch64-unknown-linux-gnu
+ifndef TOOLCHAIN
+	# Get whether the common toolchain triples exist
+	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+	# Then check if they are defined and select the appropriate one
+	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+		TOOLCHAIN := aarch64-linux-gnu
+	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+		TOOLCHAIN := aarch64-unknown-linux-gnu
+	else
+		$(error "Could not find an AArch64 cross-compiler")
+	endif
 endif
 
 CC := $(TOOLCHAIN)-gcc
