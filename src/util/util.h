@@ -177,15 +177,7 @@ static void assert_fail(
     unsigned int line,
     const char  *function)
 {
-    printf("Failed assertion '");
-    printf(assertion);
-    printf("' at ");
-    printf(file);
-    printf(":");
-    put8(line);
-    printf(" in function ");
-    printf(function);
-    printf("\n");
+    printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
     while (1) {}
 }
 
