@@ -32,7 +32,15 @@ SHELL=/bin/bash
 # All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
 DTC := dtc
-TOOLCHAIN := aarch64-linux-gnu
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	TOOLCHAIN := aarch64-linux-gnu
+endif
+ifeq ($(UNAME_S),Darwin)
+	TOOLCHAIN := aarch64-unknown-linux-gnu
+endif
+
 CC := $(TOOLCHAIN)-gcc
 LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
