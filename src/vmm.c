@@ -358,19 +358,6 @@ notified(sel4cp_channel ch)
     }
 }
 
-// @ivanv: find a better place for this?
-char *fault_to_string(uint64_t label) {
-    switch (label) {
-        case seL4_Fault_VMFault: return "virtual memory";
-        case seL4_Fault_UnknownSyscall: return "unknown syscall";
-        case seL4_Fault_UserException: return "user exception";
-        case seL4_Fault_VGICMaintenance: return "VGIC maintenance";
-        case seL4_Fault_VCPUFault: return "VCPU fault";
-        case seL4_Fault_VPPIEvent: return "VPPI event";
-        default: return "unknown fault";
-    }
-}
-
 void
 fault(sel4cp_id id, sel4cp_msginfo msginfo)
 {
