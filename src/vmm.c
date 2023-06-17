@@ -73,8 +73,6 @@ static bool handle_vppi_event()
         sel4cp_arm_vcpu_ack_vppi(GUEST_ID, ppi_irq);
     }
 
-    reply_to_fault();
-
     return true;
 }
 
@@ -87,7 +85,6 @@ static bool handle_vcpu_fault(sel4cp_msginfo msginfo, uint64_t vcpu_id)
             return handle_smc(vcpu_id, hsr);
         case HSR_WFx_EXCEPTION:
             // If we get a WFI exception, we just do nothing in the VMM.
-            reply_to_fault();
             return true;
         default:
             LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
@@ -413,5 +410,8 @@ fault(sel4cp_id id, sel4cp_msginfo msginfo)
 
     if (!success) {
         LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
+    } else {
+        /* Now that we have handled the fault, we reply to it so that the guest can resume execution. */
+        reply_to_fault();
     }
 }

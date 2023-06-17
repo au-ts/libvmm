@@ -24,8 +24,6 @@ bool fault_advance_vcpu(seL4_UserContext *regs) {
     regs->pc += 4;
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + GUEST_ID, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
-    /* Reply to thread */
-    reply_to_fault();
 
     return (err == seL4_NoError);
 }
