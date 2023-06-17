@@ -28,6 +28,18 @@ bool fault_advance_vcpu(seL4_UserContext *regs) {
     return (err == seL4_NoError);
 }
 
+char *fault_to_string(seL4_Word fault_label) {
+    switch (fault_label) {
+        case seL4_Fault_VMFault: return "virtual memory";
+        case seL4_Fault_UnknownSyscall: return "unknown syscall";
+        case seL4_Fault_UserException: return "user exception";
+        case seL4_Fault_VGICMaintenance: return "VGIC maintenance";
+        case seL4_Fault_VCPUFault: return "VCPU fault";
+        case seL4_Fault_VPPIEvent: return "VPPI event";
+        default: return "unknown fault";
+    }
+}
+
 enum fault_width {
     WIDTH_DOUBLEWORD = 0,
     WIDTH_WORD = 1,
