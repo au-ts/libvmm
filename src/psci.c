@@ -65,14 +65,12 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
                  * handling a fault since the correct PC has been set when we
                  * call guest_restart().
                  */
-                reply_to_fault();
                 return true;
             }
             break;
         }
         case PSCI_SYSTEM_OFF:
             guest_stop();
-            reply_to_fault();
             return true;
         default:
             LOG_VMM_ERR("Unhandled PSCI function ID 0x%lx\n", fn_number);

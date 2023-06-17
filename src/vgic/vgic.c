@@ -60,15 +60,13 @@ bool handle_vgic_maintenance(uint64_t vcpu_id)
     if (virq) {
         success = vgic_vcpu_load_list_reg(&vgic, vcpu_id, idx, group, virq);
     }
-    if (success) {
-        reply_to_fault();
-    } else {
+
+    if (!success) {
         printf("VGIC|ERROR: maintenance handler failed\n");
         assert(0);
-        return false;
     }
 
-    return true;
+    return success;
 }
 
 // @ivanv: maybe this shouldn't be here?
