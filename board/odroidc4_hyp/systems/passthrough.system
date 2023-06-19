@@ -6,9 +6,11 @@
 -->
 <system>
     <!-- We allocate 256MiB of RAM for the guest. -->
-    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
-    <!-- We want to map in the serial to get input/output. -->
+    <!-- @jade: explain why we need the paddr -->
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" phys_addr="0x20_000_000" />
+
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
+    <!-- this bus contains the serial device -->
     <memory_region name="bus2" size="0x100000" phys_addr="0xff800000" />
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
 
@@ -18,6 +20,9 @@
 
     <memory_region name="sd" size="0x1000" phys_addr="0xffe05000" />
     <memory_region name="mmc" size="0x1000" phys_addr="0xffe07000" />
+    <memory_region name="gpu" size="0x40000" phys_addr="0xffe40000" />
+    <memory_region name="vpu" size="0x100000" phys_addr="0xff900000" />
+    <memory_region name="eth" size="0x10000" phys_addr="0xff3f0000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
 
@@ -34,9 +39,43 @@
             <map mr="usb2" vaddr="0xff500000" perms="rw" cached="false" />
             <map mr="sd" vaddr="0xffe05000" perms="rw" cached="false" />
             <map mr="mmc" vaddr="0xffe07000" perms="rw" cached="false" />
+            <map mr="gpu" vaddr="0xffe40000" perms="rw" cached="false" />
+            <map mr="vpu" vaddr="0xff900000" perms="rw" cached="false" />
+            <map mr="eth" vaddr="0xff3f0000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- Serial IRQ -->
         <irq irq="225" id="1" trigger="edge" />
+        <!-- sd -->
+        <irq irq="222" id="2" />
+        <!-- mmc -->
+        <irq irq="223" id="3" />
+        <!-- adc -->
+        <irq irq="232" id="4" trigger="edge" />
+        <!-- eth -->
+        <irq irq="40" id="5" />
+        <!-- vpu -->
+        <irq irq="35" id="15" trigger="edge" />
+
+        <!-- phy -->
+        <irq irq="96" id="6" />
+        <!-- panfrost-gpu -->
+        <irq irq="192" id="7" />
+        <!-- panfrost-mmu -->
+        <irq irq="193" id="8" />
+        <!-- panfrost-job -->
+        <irq irq="194" id="9" />
+        <!-- i2c -->
+        <irq irq="53" id="10" />
+        <!-- ir -->
+        <irq irq="228" id="11" />
+        <!-- usb -->
+        <irq irq="63" id="12" />
+        <!-- usb -->
+        <irq irq="62" id="13" />
+        <!-- usb -->
+        <irq irq="48" id="16" />
+        <!-- hdmi -->
+        <irq irq="89" id="14" trigger="edge" />
     </protection_domain>
 </system>
