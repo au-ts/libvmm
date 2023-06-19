@@ -49,6 +49,7 @@ int handle_virtio_mmio_set_status_flag(virtio_emul_handler_t *emul_handler, uint
     int success = 1;
 
     // we only care about the new status
+    emul_handler->data.Status &= reg;
     reg ^= emul_handler->data.Status;
     // printf("VIRTIO MMIO|INFO: set status flag 0x%x.\n", reg);
 
