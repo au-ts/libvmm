@@ -26,6 +26,10 @@ extern char _guest_initrd_image_end[];
 /* seL4CP will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+uintptr_t uio_map0;
+uintptr_t uio_map1;
+uintptr_t uio_map2;
+
 /* @jade: find a better number */
 #define MAX_IRQ_CH 32
 int passthrough_irq_map[MAX_IRQ_CH];
@@ -33,6 +37,10 @@ int passthrough_irq_map[MAX_IRQ_CH];
 // @ivanv: document where these come from
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
+
+#define UIO_SIZE        0x1000
+#define UIO_0_START     0xffe50000
+
 
 static bool handle_unknown_syscall(sel4cp_msginfo msginfo)
 {
@@ -168,6 +176,10 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 }
 
+static void uio_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    printf("uio_ack!!!!!!!!!!\n");
+}
+
 static void passthrough_device_ack(uint64_t vcpu_id, int irq, void *cookie) {
     sel4cp_channel irq_ch = (sel4cp_channel)(int64_t)cookie;
     sel4cp_irq_ack(irq_ch);
@@ -246,8 +258,31 @@ void guest_start(void) {
         return;
     }
 
-    // Register the IRQ for the passthrough serial
-    register_passthrough_irq(SERIAL_IRQ, SERIAL_IRQ_CH);
+    // @jade: absolutely a hack
+    if (get_vmm_id(sel4cp_name) == 2) {
+        register_passthrough_irq(225, 1);
+        register_passthrough_irq(222, 2);
+        register_passthrough_irq(223, 3);
+        register_passthrough_irq(232, 4);
+
+        register_passthrough_irq(40, 5);
+        register_passthrough_irq(35, 15);
+
+        register_passthrough_irq(96, 6);
+        register_passthrough_irq(192, 7);
+        register_passthrough_irq(193, 8);
+        register_passthrough_irq(194, 9);
+        register_passthrough_irq(53, 10);
+        register_passthrough_irq(228, 11);
+        register_passthrough_irq(63, 12);
+        register_passthrough_irq(62, 13);
+        register_passthrough_irq(48, 16);
+        register_passthrough_irq(89, 14);
+        // @jade: this should not be necessary. Investigation required.
+        register_passthrough_irq(5, 17);
+
+        vgic_register_irq(GUEST_VCPU_ID, 42, &uio_ack, NULL);
+    }
 
     seL4_UserContext regs = {0};
     regs.x0 = GUEST_DTB_VADDR;
