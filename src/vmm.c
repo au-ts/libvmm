@@ -26,6 +26,10 @@ extern char _guest_initrd_image_end[];
 /* seL4CP will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+/* @jade: find a better number */
+#define MAX_IRQ_CH 32
+int passthrough_irq_map[MAX_IRQ_CH];
+
 // @ivanv: document where these come from
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
@@ -164,6 +168,23 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 }
 
+static void passthrough_device_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    sel4cp_channel irq_ch = (sel4cp_channel)(int64_t)cookie;
+    sel4cp_irq_ack(irq_ch);
+}
+
+static void register_passthrough_irq(int irq, sel4cp_channel irq_ch) {
+    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
+    assert(irq_ch < MAX_IRQ_CH);
+    passthrough_irq_map[irq_ch] = irq;
+
+    int err = vgic_register_irq(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
+    if (!err) {
+        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
+        return;
+    }
+}
+
 bool guest_init_images(void) {
     // First we inspect the kernel image header to confirm it is a valid image
     // and to determine where in memory to place the image. Currently this
@@ -224,12 +245,10 @@ void guest_start(void) {
         LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return;
     }
-    // @ivanv: Note that remove this line causes the VMM to fault if we
-    // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    err = vgic_register_irq(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    // Just in case there is already an interrupt available to handle, we ack it here.
-    // @ivanv: not sure if this is necessary? is this the right place to do this
-    sel4cp_irq_ack(SERIAL_IRQ_CH);
+
+    // Register the IRQ for the passthrough serial
+    register_passthrough_irq(SERIAL_IRQ, SERIAL_IRQ_CH);
+
     seL4_UserContext regs = {0};
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
@@ -357,6 +376,13 @@ notified(sel4cp_channel ch)
             break;
         }
         default:
+            if (passthrough_irq_map[ch]) {
+                bool success = vgic_inject_irq(GUEST_VCPU_ID, passthrough_irq_map[ch]);
+                if (!success) {
+                    LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
+                }
+                break;
+            }
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
