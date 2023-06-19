@@ -8,6 +8,12 @@
 #include <sel4cp.h>
 #include "util/util.h"
 #include "vgic/vgic.h"
+// @jade: not a good place, the header in temporary here until we figure out a build system
+#ifdef VIRTIO_NET
+#include "virtio/virtio_mmio.h"
+#include "virtio/virtio_net_emul.h"
+#include "virtio/virtio_net_vswitch.h"
+#endif
 #include "smc.h"
 #include "fault.h"
 #include "hsr.h"
@@ -133,6 +139,10 @@ static bool handle_vm_fault()
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
             return handle_vgic_redist_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #endif
+#ifdef VIRTIO_NET
+        case VIRTIO_ADDRESS_START...VIRTIO_ADDRESS_END:
+            return handle_virtio_mmio_fault(GUEST_VCPU_ID, addr, fsr, &regs);
+#endif
         default: {
             uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
@@ -231,6 +241,16 @@ void guest_start(void) {
     // @ivanv: not sure if this is necessary? is this the right place to do this
     sel4cp_irq_ack(SERIAL_IRQ_CH);
     seL4_UserContext regs = {0};
+
+    // @jade: we need to be able to configure devices an irqs in some system description instead of putting them here.
+#ifdef VIRTIO_NET
+    virtio_net_emul_init();
+    err = vgic_register_irq(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
+    if (!err) {
+        printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
+    }
+#endif
+
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
     // Read the entry point and set it to the program counter
@@ -356,6 +376,11 @@ notified(sel4cp_channel ch)
             }
             break;
         }
+#ifdef VIRTIO_NET
+        case VSWITCH_CONN_CH_1:
+            vswitch_rx(ch);
+            break;
+#endif
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
