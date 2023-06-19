@@ -1,0 +1,40 @@
+
+/ {
+
+	soc {
+		/delete-node/ ethernet@ff3f0000;
+		/delete-node/ bus@ff600000;
+		/delete-node/ bus@ff800000;
+		/delete-node/ bus@ffd00000;
+		/delete-node/ usb@ffe09000;
+
+		ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+		bus@ff600000 {
+            status = "disabled";
+        };
+
+		bus@ff800000 {
+			serial@3000 {
+				compatible = "amlogic,meson-gx-uart\0amlogic,meson-ao-uart";
+				reg = <0x00 0x3000 0x00 0x18>;
+				interrupts = <0x00 0xc1 0x01>;
+				clocks = <0x11 0x19 0x04 0x11>;
+				clock-names = "xtal\0pclk\0baud";
+				status = "okay";
+				pinctrl-0 = <0x1e>;
+				pinctrl-names = "default";
+			};
+        };
+
+		bus@ffd00000 {
+            status = "disabled";
+        };
+
+		usb@ffe09000 {
+            status = "disabled";
+        };
+    };
+};
