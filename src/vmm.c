@@ -246,8 +246,6 @@ void guest_start(void) {
     // Set the PC to the kernel image's entry point and start the thread.
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, GUEST_INIT_RAM_DISK_VADDR);
-    seL4_UserContext read_regs = {0};
-    seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &read_regs);
     sel4cp_vm_restart(GUEST_ID, regs.pc);
 }
 
