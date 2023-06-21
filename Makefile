@@ -31,6 +31,7 @@ endif
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
+QEMU_SIZE := 2G
 DTC := dtc
 
 ifndef TOOLCHAIN
@@ -94,6 +95,13 @@ CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-func
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
+ifdef VIRTIO_NET
+VMM_OBJS += virtio_mmio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
+DTS := $(IMAGE_DIR)/linux_virtio.dts
+QEMU_SIZE := 4G
+CFLAGS += -DVIRTIO_NET
+endif
+
 all: directories $(IMAGE_FILE)
 
 run: directories $(IMAGE_FILE)
@@ -103,7 +111,7 @@ run: directories $(IMAGE_FILE)
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
-			-m size=2G \
+			-m size=$(QEMU_SIZE) \
 			-nographic
 
 directories:
@@ -129,6 +137,14 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/util/%.c Makefile
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
+
+ifdef VIRTIO_NET
+$(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/libsharedringbuffer/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+endif
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
