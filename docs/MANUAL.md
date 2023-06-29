@@ -1,37 +1,63 @@
-# libvmm manual
+---
+title: libvmm User Manual (v0.1)
+papersize:
+- a4
+fontsize:
+- 11pt
+geometry:
+- margin=2cm
+fontfamily:
+- charter
+header-includes:
+- \usepackage{titlesec}
+- \newcommand{\sectionbreak}{\clearpage}
+subparagraph: yes
+numbersections: yes
+colorlinks: true
+---
+
+\maketitle
+\thispagestyle{empty}
+\clearpage
+\tableofcontents
+\pagenumbering{roman}
+\clearpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+# Introduction
 
 This document aims to describe the VMM and how to use it. If you feel there is
 something missing from this document or the VMM itself, feel free to let us
 know by [opening an issue on the GitHub repository](https://github.com/au-ts/libvmm).
 
-## Supported platforms
+## Supported architectures and platforms
 
-On AArch64, the following platforms are currently supported:
-* QEMU ARM virt
-* Odroid-C2
-* Odroid-C4
-* i.MX8MM-EVK
+Currently only AArch64 is supported in libvmm. Support for RISC-V is in progress,
+with x86 to be potentially added in the future.
 
-Support for other architectures is in-progress (RISC-V) and planned (x86).
+libvmm aims to be architecture-dependent, but not platform dependent.
 
-Existing example systems built on these platforms can be found in the
-repository under `board/$BOARD/systems/`.
+Example systems that make use of libvmm can be found in `examples/`. Each example
+has support for certain platforms. See the README of each example for what platforms
+are supported and instructions for building and running the example.
 
-If your desired platform is not supported yet, please see the section on
+If your desired platform is not supported by any examples, please see the section on
 [adding your own platform support](#adding-platform-support).
 
-## Creating a system
+# Creating a system using Microkit
 
 The goal of this section is to give a detailed introduction into making a
-system using the VMM. This is done by explaining one of the example QEMU ARM
-virt systems that boots up a simple Linux guest.
+system using libvmm with the [seL4 Microkit](https://github.com/seL4/microkit).
+This is done by explaining one of the example QEMU ARM virt systems that boots
+up a simple Linux guest.
 
 All the existing systems are located in `board/$BOARD/systems/`. This is
 where the Makefile will look when you pass the `SYSTEM` argument.
 
-### Specifying a virtual machine
+## Specifying a virtual machine
 
-<!-- @ivanv: Explain <virtual_machine> options etc more. -->
+<!-- @ivanv: point to Microkit manual for all options on virtual_machine elements. -->
 
 The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
@@ -41,7 +67,7 @@ The following is essentially what is in
 
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" />
-<memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
+<memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
 <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
 <protection_domain name="VMM" priority="254">
@@ -49,7 +75,7 @@ The following is essentially what is in
     <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
     <virtual_machine name="linux" id="0">
         <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
-        <map mr="serial" vaddr="0x9000000" perms="rw" />
+        <map mr="uart" vaddr="0x9000000" perms="rw" />
         <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
     </virtual_machine>
 </protection_domain>
@@ -62,10 +88,10 @@ interrupts to the guest and restarting the guest.
 
 You will also see that three memory regions (MRs) exist in the system.
 1. `guest_ram` for the guest's RAM region
-2. `serial` for the UART
+2. `uart` for the UART serial device
 3. `gic_vcpu` for the Generic Interrupt Controller VCPU interface
 
-### Guest RAM region
+## Guest RAM region
 
 Since the guest does not necessarily know it is being virtualised, it will
 expect some view of contiguous RAM that it can use. In this example system, we
@@ -87,14 +113,14 @@ the VMM as well as the guest physical address of the guest RAM to be the same.
 This is done for simplicity at the moment, but could be changed in the future
 if someone had a strong desire for the two values to not be coupled.
 
-### Serial region
+## UART device region
 
-The UART device is passed through to the VM so that it can access it without
+The UART device is passed through to the guest so that it can access it without
 trapping into the seL4 kernel/VMM. This is done for performance and simplicity
 so that the VMM does not have to emulate accesses to the UART device. Note that
 this will work since nothing else is concurrently accessing the device.
 
-### GIC virtual CPU interface region
+## GIC virtual CPU interface region
 
 The GIC VCPU interface region is a hardware device region passed through to the
 guest. The device is at a certain physical address, which is then mapped into
@@ -104,27 +130,64 @@ this into the guest physical address of `0x8010000`, which is where the guest
 expects the CPU interface to be. The rest of the GIC is virtualised in the VGIC
 driver in the VMM. Like the UART, the address of the GIC is platform specific.
 
-### Running the system
+# Passthrough
 
-An example Make command looks something like this:
-```sh
-make BUILD_DIR=build \
-     MICROKIT_SDK=/path/to/sdk \
-     CONFIG=debug \
-     BOARD=qemu_arm_virt \
-     SYSTEM=simple.system \
-     run
-```
+This section describes what is generally referred to as "passthrough". Passthrough
+is for when you want to have a guest have full, unmanaged control over some device
+or memory. Since the guest has full access to the device/memory, when it does a read
+or a write it essentially "passes through" the hypervisor.
 
-## Adding platform support
+## Concept
 
-Before you can port the VMM to your desired platform you must have the following:
+It is necessary to understand passthrough conceptually (in an seL4 context) before
+being able to use it with libvmm.
+
+The diagram above below shows an example of passing through an ethernet device to
+a guest.
+
+![Example of ethernet passthrough](./assets/passthrough.svg){#id .class width=300}
+
+You will see here there are multiple stages involved. When there is some event from
+the hardware, seL4 recieves an interrupt from the hardware. seL4 then delivers this
+IRQ as a notification to the VMM. The VMM associates this notification with the IRQ
+that the virtual IRQ that the guest is expecting to recieve. The VMM then "injects"
+a virtual IRQ into the guest, emulating the behaviour of hardware interrupting the guest
+kernel if it wasn't being virtualised.
+
+## Example within Microkit
+
+## Interrupt passthrough on ARM
+
+A common mistake when passing through the interrupts for a device on ARM platforms
+is making the reasonable assumption that the device tree (or the platform's manual)
+contains the actual information you want. When registering the interrupt to be delivered to the VMM,
+you want the *software observable* interrupt number. The number that you see in
+device trees for example with something like `interrupts = <0x00 0x08 0x04>;`
+is the interrupt number from the *hardware's* perspective.
+
+On ARM, shared peripheral interrupts (SPIs) which are delivered by devices such as
+ethernet need to be offset by 32. So in the example above, the device tree listed interrupt
+is `0x08`, but the interrupt number you want to register with seL4 is `0x28` (0x28 is 40 in decimal).
+For more information on ARM interrupts, see the official ARM documentation on the Generic Interrupt
+Controller (GIC).
+
+The Linux kernel documentation has more information on how interrupts are specified
+in the device tree. See device tree bindings documentation for the platform's
+interrupt controller (e.g the GIC) or for the specific device you are trying to use.
+Note that not all devices encode interrupts the same.
+
+# Adding platform support
+
+This section will describe how to add support for a new platform to the `simple`
+example which contains a VMM that boots a Linux guest with a simple command-line-interface
+via the serial connection.
+
+Before you can get a guest working on your desired platform you must have the following:
 
 * A working platform port of the seL4 kernel in hypervisor mode.
-* A working platform port of the seL4 Microkit where the kernel is built as a
-  hypervisor.
+* A working platform port of the seL4 Microkit where the kernel is configured in hypervisor mode.
 
-### Guest setup
+## Guest setup
 
 While in theory you should be able to run any guest, the VMM has only been tested
 with Linux and hence the following instructions are somewhat Linux specific.
@@ -143,28 +206,39 @@ Before attempting to get the VMM working, I strongly encourage you to make sure
 that these binaries work natively, as in, without being virtualised. If they do
 not, they likely will not work with the VMM either.
 
-You can either add these images into `board/$BOARD/images/` or specify the
+Add these images to the `board/$BOARD/` directory or specify the
 `IMAGE_DIR` argument when building the system which points to the directory
 that contains all of the files.
 
-#### Implementation notes
+### Implementation notes
 
-Currently, the VMM is expecting there to be three separate images although it
-is possible to package all of these up into one single image, but the default
-Linux kernel configuration does not do this. It would be possible to change the
-VMM to allow this functionality.
+Currently the VMM expects three separate images, the guest kernel image, the
+Device Tree Blob (DTB), and the initial RAM disk. Despite it being possible to
+package all of these into one single image for a guest such as Linux, there has
+currently been no benefit to do this. It would be trivial to change the VMM to
+allow a different combination of guest images. If you need this behaviour, please
+open a GitHub issue or pull request.
 
-The VMM also (for now) does not have the ability to generate a DTB, therefore
-requiring the Device Tree Source at build time.
+The VMM also (for now) does not have the ability to generate a DTB at runtime,
+therefore requiring the Device Tree Source at build time.
 
-### Generic Interrupt Controller (GIC)
+## Generic Interrupt Controller (GIC)
 
-GIC version 2 and 3 are not fully virtualised by the hardware and therefore the
-interrupt controller is partially virtualised in the VMM. Confirm that your
-ARM platform supports either GICv2 or GICv3, as those are the versions that the
-VMM supports.
+On ARM architectures, there is a hardware device called the Generic Interrupt
+Controller (GIC). This device is responsible for managing interrupts between
+the hardware devices (e.g serial or ethernet) and software. Driving this device
+is necessary for any kind of guest operating system.
 
-### Add platform to VMM source code
+Version 2, 3, and 4 of the GIC device is not fully virtualised by the hardware.
+This means that the parts that are not virtualised by the hardware must be instead
+emulated by the VMM.
+
+The VMM currently supports GIC version 2 and 3. GIC version 4 is a super-set of
+GIC version so if you see that your platform supports GIC version 4, it should
+still work with the VMM. If your platform does not support the GIC versions listed
+then the GIC emulation will need to be changed before your platform can be supported.
+
+## Add platform to VMM source code
 
 <!-- @ivanv: These instructions could be improved -->
 
@@ -179,3 +253,80 @@ There are three files that need to be changed:
 As you can probably tell, all this information that needs to be added is known at
 build-time, the plan is to auto-generate these values that the VMM needs to make it
 easier to add platform support (and in general make the VMM less fragile).
+
+## Getting the guest image to boot
+
+Getting your guest image to boot without any issues is most likely going to be
+platform dependent. This part of the manual aims to provide some guidance for
+what to do when your guest image is failing to boot.
+
+### Virtual memory faults
+
+A very common issue with booting a guest kernel, such as Linux, is that it unexpectedly
+has a virtual memory fault in a location that the VMM was not expecting. In Linux, this
+usually happens as it is starting up drivers for the various devices on the platform and
+the guest does not have access to the location of the device.
+
+There are three options to resolve this.
+
+1. Give the guest access to the region of memory it is trying to access.
+2. Disable the device in the node for the device in the Device Tree Source.
+3. Configure the guest image without the device driver, so that it does not
+try to access it.
+
+#### Option 1 - give the guest access to the memory
+
+See the section on [passthrough devices](#passthrough).
+
+#### Option 2 - disabling the device in the device tree
+
+Assuming the guest is being passed a device tree and initialising devices
+based on the device tree passed, it is quite simple to disable the device.
+
+Here is an example of how you would change the Device Tree Source to
+disable the PL011 UART node for the QEMU ARM virt platform:
+```diff
+pl011@9000000 {
+    clock-names = "uartclk\0apb_pclk";
+    clocks = <0x8000 0x8000>;
+    interrupts = <0x00 0x01 0x04>;
+    reg = <0x00 0x9000000 0x00 0x1000>;
+    compatible = "arm,pl011\0arm,primecell";
++   status = "disabled";
+};
+```
+
+#### Option 3 - configure the guest without the device driver
+
+We will look at Linux for specific examples of how to configure the device
+drivers it will use.
+
+A default and generic Linux image (for AArch64) can be built with the following
+commands:
+```sh
+# Configure the kernel based on the default architecture config
+make ARCH=arm64 CROSS_COMPILE=<CROSS_COMPILER_PREFIX> defconfig
+# Compile the kernel
+make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf -j<NUM_THREADS>
+```
+
+This will package in a lot of drivers (and perhaps a lot more than you need)
+as it is a generic image supposed to work on any AArch64 platform. If you
+see that Linux is faulting because it is initialising a particular device,
+look in the menu configuration and try to find the enabled option, and
+disable it.
+
+To open the menuconfig, run:
+```sh
+make ARCH=arm64 menuconfig
+```
+
+If you are compiling for a different architecture, then replace `arm64` with
+your architecture.
+
+If you are unsure or cannot find the configuration option for the device driver,
+first find the node for the device in the Device Tree Source. You will see it
+has a compatible field such as `compatible = "amlogic,meson-gx-uart"`.
+
+By searching for the value of the compatible field in the Linux source code (e.g `grep -ri 'amlogic,meson-gx-uart'`),
+you will find the corresponding driver source code.
