@@ -43,4 +43,5 @@
 #define DEVICE_ID_VIRTIO_NET          1
 #define DEVICE_ID_VIRTIO_BLOCK        2
 #define DEVICE_ID_VIRTIO_CONSOLE      3
+#define DEVICE_ID_VIRTIO_GPU          16
 #define DEVICE_ID_VIRTIO_VSOCK        19

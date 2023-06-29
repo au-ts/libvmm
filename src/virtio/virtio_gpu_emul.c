@@ -1,0 +1,91 @@
+/*
+ * Copyright 2023, UNSW (ABN 57 195 873 179)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <stddef.h>
+#include "virtio_mmio.h"
+#include "virtio_gpu_emul.h"
+#include "include/config/virtio_gpu.h"
+#include "include/config/virtio_config.h"
+#include "../vgic/vgic.h"
+
+// virtio gpu mmio emul interface
+
+// @jade, @ivanv: need to be able to get it from vgic
+#define VCPU_ID 0
+
+#define BIT_LOW(n) (1ul<<(n))
+#define BIT_HIGH(n) (1ul<<(n - 32 ))
+
+#define CONTROL_QUEUE 0
+#define CURSOR_QUEUE 1
+
+#define BUF_SIZE 0x1000
+
+#define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
+
+// emul handler for an instance of virtio gpu
+virtio_emul_handler_t gpu_emul_handler;
+
+// the list of virtqueue handlers for an instance of virtio gpu
+virtqueue_t vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
+
+void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
+    // nothing needs to be done
+}
+
+virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
+{
+    // san check in case somebody wants to get the handler of an uninitialised backend
+    if (gpu_emul_handler.data.VendorID != VIRTIO_MMIO_DEV_VENDOR_ID) {
+        return NULL;
+    }
+    return &gpu_emul_handler;
+}
+
+static void virtio_gpu_emul_reset(virtio_emul_handler_t *self)
+{
+    
+}
+
+static int virtio_gpu_emul_get_device_features(virtio_emul_handler_t *self, uint32_t *features)
+{
+}
+
+static int virtio_gpu_emul_set_driver_features(virtio_emul_handler_t *self, uint32_t features)
+{
+}
+
+static int virtio_gpu_emul_get_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t *ret_val)
+{
+
+}
+
+static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t val)
+{
+}
+
+static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
+{
+}
+
+virtio_emul_funs_t emul_funs = {
+    .device_reset = virtio_gpu_emul_reset,
+    .get_device_features = virtio_gpu_emul_get_device_features,
+    .set_driver_features = virtio_gpu_emul_set_driver_features,
+    .get_device_config = virtio_gpu_emul_get_device_config,
+    .set_device_config = virtio_gpu_emul_set_device_config,
+    .queue_notify = virtio_gpu_emul_handle_queue_notify,
+};
+
+void virtio_gpu_emul_init(void)
+{
+    gpu_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_GPU;
+    gpu_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    gpu_emul_handler.funs = &emul_funs;
+
+    gpu_emul_handler.vqs = vqs;
+}

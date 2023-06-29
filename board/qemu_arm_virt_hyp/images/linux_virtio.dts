@@ -30,6 +30,12 @@
 		interrupts = <0x00 42 0x04>;
 	};
 
+	virtio_gpu@0140000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x140000 0x00 0x200>;
+		interrupts = <0x00 43 0x04>;
+	};
+
 	platform@c000000 {
 		interrupt-parent = <0x8001>;
 		ranges = <0x00 0x00 0xc000000 0x2000000>;
