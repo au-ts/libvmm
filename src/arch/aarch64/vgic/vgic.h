@@ -29,6 +29,9 @@
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
+#elif defined(BOARD_zcu102)
+#define GIC_V2
+#define GIC_DIST_PADDR      0xf9010000
 #else
 #error Need to define GIC addresses
 #endif
