@@ -14,6 +14,9 @@
 #include "virtio/virtio_net_emul.h"
 #include "virtio/virtio_net_vswitch.h"
 #endif
+#ifdef VIRTIO_GPU
+#include "virtio/virtio_gpu_emul.h"
+#endif
 #include "smc.h"
 #include "fault.h"
 #include "hsr.h"
@@ -245,6 +248,14 @@ void guest_start(void) {
     err = vgic_register_irq(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
     if (!err) {
         printf("VMM|ERROR: Failed to register VirtIO Net IRQ\n");
+    }
+#endif
+
+#ifdef VIRTIO_GPU
+    virtio_gpu_emul_init();
+    err = vgic_register_irq(GUEST_VCPU_ID, VIRTIO_GPU_IRQ, &virtio_gpu_ack, NULL);
+    if (!err) {
+        printf("VMM|ERROR: Failed to register VirtIO GPU IRQ\n");
     }
 #endif
 
