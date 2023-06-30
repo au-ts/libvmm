@@ -95,11 +95,13 @@ CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-func
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
-ifdef VIRTIO_NET
+ifdef VIRTIO_MMIO
 VMM_OBJS += virtio_mmio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
 DTS := $(IMAGE_DIR)/linux_virtio.dts
 QEMU_SIZE := 4G
 CFLAGS += -DVIRTIO_NET
+
+VMM_OBJS += virtio_gpu_emul.o
 endif
 
 all: directories $(IMAGE_FILE)
@@ -107,7 +109,7 @@ all: directories $(IMAGE_FILE)
 run: directories $(IMAGE_FILE)
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
 	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependenyc: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
+	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
@@ -138,7 +140,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/util/%.c Makefile
 $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-ifdef VIRTIO_NET
+ifdef VIRTIO_MMIO
 $(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 

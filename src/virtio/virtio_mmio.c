@@ -23,8 +23,8 @@ virtio_emul_handler_t *get_emul_handler_by_address(uint64_t addr)
     case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
         return get_virtio_net_emul_handler();
     case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
+        printf("VIRTIO MMIO|INFO: VMM trapped to VIRTIO_GPU address range\n");
         return get_virtio_gpu_emul_handler();
-
     default:
         return NULL;
     }
@@ -32,7 +32,7 @@ virtio_emul_handler_t *get_emul_handler_by_address(uint64_t addr)
 
 struct vring *get_current_vring_by_handler(virtio_emul_handler_t *emul_handler)
 {
-    // assert(emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE);
+    assert(emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE);
     return &emul_handler->vqs[emul_handler->data.QueueSel].vring;
 }
 
@@ -139,7 +139,10 @@ static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
-            reg = emul_handler->vqs[emul_handler->data.QueueSel].ready;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                reg = emul_handler->vqs[emul_handler->data.QueueSel].ready;
+            }
+            // simply ignore wrong queue number
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_STATUS, REG_VIRTIO_MMIO_INTERRUPT_ACK):
@@ -211,8 +214,11 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NUM, REG_VIRTIO_MMIO_QUEUE_READY):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            vring->num = (unsigned int)data;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                vring->num = (unsigned int)data;
+            }
+            // simply ignore wrong queue number
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
@@ -235,48 +241,61 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_DESC_LOW, REG_VIRTIO_MMIO_QUEUE_DESC_HIGH):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->desc;
-            ptr |= data;
-            vring->desc = (struct vring_desc *)ptr;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->desc;
+                ptr |= data;
+                vring->desc = (struct vring_desc *)ptr;
+            }
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_DESC_HIGH, REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->desc;
-            ptr |= (uint64_t)data << 32;
-            vring->desc = (struct vring_desc *)ptr;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->desc;
+                ptr |= (uint64_t)data << 32;
+                vring->desc = (struct vring_desc *)ptr;
+            }
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW, REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->avail;
-            ptr |= data;
-            vring->avail = (struct vring_avail *)ptr;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->avail;
+                ptr |= data;
+                vring->avail = (struct vring_avail *)ptr;
+            }
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH, REG_VIRTIO_MMIO_QUEUE_USED_LOW):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->avail;
-            ptr |= (uint64_t)data << 32;
-            vring->avail = (struct vring_avail *)ptr;
-            // printf("VIRTIO MMIO|INFO: vring avail 0x%lx\n.", ptr);
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->avail;
+                ptr |= (uint64_t)data << 32;
+                vring->avail = (struct vring_avail *)ptr;
+                // printf("VIRTIO MMIO|INFO: vring avail 0x%lx\n.", ptr);
+            }
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_LOW, REG_VIRTIO_MMIO_QUEUE_USED_HIGH):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->used;
-            ptr |= data;
-            vring->used = (struct vring_used *)ptr;
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->used;
+                ptr |= data;
+                vring->used = (struct vring_used *)ptr;
+            }
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_HIGH, REG_VIRTIO_MMIO_CONFIG_GENERATION):
-            struct vring *vring = get_current_vring_by_handler(emul_handler);
-            uint64_t ptr = (uint64_t)vring->used;
-            ptr |= (uint64_t)data << 32;
-            vring->used = (struct vring_used *)ptr;
-            // printf("VIRTIO MMIO|INFO: vring used 0x%lx\n.", ptr);
+            if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
+                struct vring *vring = get_current_vring_by_handler(emul_handler);
+                uint64_t ptr = (uint64_t)vring->used;
+                ptr |= (uint64_t)data << 32;
+                vring->used = (struct vring_used *)ptr;
+                // printf("VIRTIO MMIO|INFO: vring used 0x%lx\n.", ptr);
+            }
             break;
+
         case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
             success = emul_handler->funs->set_device_config(emul_handler, offset, data);
             break;
