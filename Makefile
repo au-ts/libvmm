@@ -141,10 +141,13 @@ $(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S $(IMAGE_DIR) $(KERNEL_IMAGE
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/%.o: $(SRC_DIR)/util/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-ifdef VIRTIO_MMIO:
+ifdef VIRTIO_MMIO
 $(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
