@@ -95,15 +95,18 @@ CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-func
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
-ifdef VIRTIO_NET
-VMM_OBJS += virtio_mmio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
-DTS := $(IMAGE_DIR)/linux_virtio.dts
+ifdef VIRTIO_MMIO
+VMM_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
+CFLAGS += -DVIRTIO_MMIO
 QEMU_SIZE := 4G
+endif
+
+ifdef VIRTIO_NET
+DTS := $(IMAGE_DIR)/linux_virtio_net.dts
 CFLAGS += -DVIRTIO_NET
 endif
 
 ifdef VIRTIO_GPU
-VMM_OBJS += virtio_gpu_emul.o
 DTS := $(IMAGE_DIR)/linux_virtio_gpu.dts
 CFLAGS += -DVIRTIO_GPU
 endif
@@ -141,7 +144,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-ifdef VIRTIO_NET
+ifdef VIRTIO_MMIO:
 $(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 

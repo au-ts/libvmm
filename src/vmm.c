@@ -9,8 +9,10 @@
 #include "util/util.h"
 #include "vgic/vgic.h"
 // @jade: not a good place, the header in temporary here until we figure out a build system
-#ifdef VIRTIO_NET
+#ifdef VIRTIO_MMIO
 #include "virtio/virtio_mmio.h"
+#endif
+#ifdef VIRTIO_NET
 #include "virtio/virtio_net_emul.h"
 #include "virtio/virtio_net_vswitch.h"
 #endif
@@ -139,7 +141,7 @@ static bool handle_vm_fault()
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
             return handle_vgic_redist_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #endif
-#ifdef VIRTIO_NET
+#ifdef VIRTIO_MMIO
         case VIRTIO_ADDRESS_START...VIRTIO_ADDRESS_END:
             return handle_virtio_mmio_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #endif
