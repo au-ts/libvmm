@@ -30,6 +30,18 @@ virtio_emul_handler_t *get_emul_handler_by_address(uint64_t addr)
     }
 }
 
+static uint32_t get_device_offset(uint64_t addr)
+{
+    switch(addr) {
+    case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
+        return VIRTIO_NET_ADDRESS_START;
+    case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
+        return VIRTIO_GPU_ADDRESS_START;
+    default:
+        return -1;
+    }
+}
+
 struct vring *get_current_vring_by_handler(virtio_emul_handler_t *emul_handler)
 {
     assert(emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE);
@@ -107,8 +119,9 @@ static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_
 
     uint32_t reg = 0;
     int success = 1;
-    uint32_t offset = fault_addr - VIRTIO_ADDRESS_START;
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", sel4cp_name, offset);
+    // Need to find out which device it is when calculating the offset
+    uint32_t offset = fault_addr - get_device_offset(fault_addr);
+    printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", sel4cp_name, offset);
 
     virtio_emul_handler_t *emul_handler = get_emul_handler_by_address(fault_addr);
     assert(emul_handler);
@@ -185,7 +198,8 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
 {
 
     int success = 1;
-    uint32_t offset = fault_addr - VIRTIO_ADDRESS_START;
+    // Need to find out which device it is when calculating the offset
+    uint32_t offset = fault_addr - get_device_offset(fault_addr);
     uint32_t data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(fault_addr, fsr);
     /* Mask the data to write */
@@ -323,8 +337,10 @@ bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fs
     }
 
     if (fault_is_read(fsr)) {
+        printf("FAULT_ADDR=0x%x\n", fault_addr);
         return handle_virtio_mmio_reg_read(fault_addr, fsr, regs);
     } else {
+        printf("FAULT_ADDR=0x%x\n", fault_addr);
         return handle_virtio_mmio_reg_write(fault_addr, fsr, regs);
     }
 }

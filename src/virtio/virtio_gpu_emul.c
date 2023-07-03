@@ -34,7 +34,7 @@ virtqueue_t gpu_vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
 
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
     // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
-    // nothing needs to be done
+    // nothing needs to be done here
 }
 
 virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
@@ -43,6 +43,7 @@ virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
     if (gpu_emul_handler.data.VendorID != VIRTIO_MMIO_DEV_VENDOR_ID) {
         return NULL;
     }
+
     return &gpu_emul_handler;
 }
 
