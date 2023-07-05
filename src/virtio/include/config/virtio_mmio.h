@@ -34,6 +34,14 @@
 #define REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH	0x094
 #define REG_VIRTIO_MMIO_QUEUE_USED_LOW	    0x0a0
 #define REG_VIRTIO_MMIO_QUEUE_USED_HIGH	    0x0a4
+// from virtio1.2 reference: https://docs.oasis-open.org/virtio/virtio/v1.2/virtio-v1.2.html
+#define REG_VIRTIO_MMIO_SHM_SEL             0x0ac
+#define REG_VIRTIO_MMIO_SHM_LEN_LOW         0x0b0
+#define REG_VIRTIO_MMIO_SHM_LEN_HIGH        0x0b4
+#define REG_VIRTIO_MMIO_SHM_BASE_LOW        0x0b8
+#define REG_VIRTIO_MMIO_SHM_BASE_HIGH       0x0bc
+#define REG_VIRTIO_MMIO_QUEUE_RESET         0x0c0
+// 
 #define REG_VIRTIO_MMIO_CONFIG_GENERATION	0x0fc
 #define REG_VIRTIO_MMIO_CONFIG		        0x100
 

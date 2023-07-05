@@ -23,7 +23,6 @@ virtio_emul_handler_t *get_emul_handler_by_address(uint64_t addr)
     case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
         return get_virtio_net_emul_handler();
     case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
-        printf("VIRTIO MMIO|INFO: VMM trapped to VIRTIO_GPU address range\n");
         return get_virtio_gpu_emul_handler();
     default:
         return NULL;
@@ -36,6 +35,7 @@ static uint32_t get_device_offset(uint64_t addr)
     case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
         return VIRTIO_NET_ADDRESS_START;
     case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
+        // printf("VIRTIO MMIO|INFO: VMM trapped to VIRTIO_GPU address range\n");
         return VIRTIO_GPU_ADDRESS_START;
     default:
         return -1;
@@ -56,6 +56,7 @@ struct vring *get_current_vring_by_handler(virtio_emul_handler_t *emul_handler)
 int handle_virtio_mmio_get_status_flag(virtio_emul_handler_t *emul_handler, uint32_t *retreg)
 {
     *retreg = emul_handler->data.Status;
+    printf("VIRTIO MMIO|INFO: Status is 0x%x.\n", emul_handler->data.Status);
     return 1;
 }
 
@@ -166,6 +167,25 @@ static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_
             success = handle_virtio_mmio_get_status_flag(emul_handler, &reg);
             break;
 
+        case REG_RANGE(REG_VIRTIO_MMIO_SHM_LEN_LOW, REG_VIRTIO_MMIO_SHM_LEN_HIGH):
+            // To disable support for shared memory region (SHM) set the length to -1 (for both low and high registers). 
+            // Reference: https://patchew.org/QEMU/20201220163539.2255963-1-laurent@vivier.eu/
+            reg = (uint32_t)-1;
+            break;
+
+        case REG_RANGE(REG_VIRTIO_MMIO_SHM_LEN_HIGH, REG_VIRTIO_MMIO_SHM_BASE_LOW):
+            reg = (uint32_t)-1;
+            break;
+
+        case REG_RANGE(REG_VIRTIO_MMIO_SHM_BASE_LOW, REG_VIRTIO_MMIO_SHM_BASE_HIGH):
+            break;
+
+        case REG_RANGE(REG_VIRTIO_MMIO_SHM_BASE_HIGH, REG_VIRTIO_MMIO_QUEUE_RESET):
+            break;
+
+        case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_RESET, REG_VIRTIO_MMIO_CONFIG_GENERATION):
+            break;
+
         case REG_RANGE(REG_VIRTIO_MMIO_CONFIG_GENERATION, REG_VIRTIO_MMIO_CONFIG):
             /* ConfigGeneration will need to be update every time when the backend changes any of
              * the device config. Currently we only have virtio net backend that doesn't do any update
@@ -205,7 +225,7 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
     /* Mask the data to write */
     data &= mask;
 
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
+    printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
 
     virtio_emul_handler_t *emul_handler = get_emul_handler_by_address(fault_addr);
     assert(emul_handler);
@@ -300,7 +320,7 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
             }
             break;
 
-        case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_HIGH, REG_VIRTIO_MMIO_CONFIG_GENERATION):
+        case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_HIGH, REG_VIRTIO_MMIO_SHM_SEL):
             if (emul_handler->data.QueueSel < VIRTIO_MMIO_NET_NUM_VIRTQUEUE) {
                 struct vring *vring = get_current_vring_by_handler(emul_handler);
                 uint64_t ptr = (uint64_t)vring->used;
@@ -308,6 +328,15 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
                 vring->used = (struct vring_used *)ptr;
                 // printf("VIRTIO MMIO|INFO: vring used 0x%lx\n.", ptr);
             }
+            break;
+
+        case REG_RANGE(REG_VIRTIO_MMIO_SHM_SEL, REG_VIRTIO_MMIO_SHM_LEN_LOW):
+            // printf("VIRTIO MMIO|INFO: SHM_SEL is 0x%x.\n", data);
+            // Not supporting SHM
+            break;
+        
+        case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_RESET, REG_VIRTIO_MMIO_CONFIG_GENERATION):
+            // Not sure what this is needed for yet.
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
@@ -337,10 +366,8 @@ bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fs
     }
 
     if (fault_is_read(fsr)) {
-        printf("FAULT_ADDR=0x%x\n", fault_addr);
         return handle_virtio_mmio_reg_read(fault_addr, fsr, regs);
     } else {
-        printf("FAULT_ADDR=0x%x\n", fault_addr);
         return handle_virtio_mmio_reg_write(fault_addr, fsr, regs);
     }
 }

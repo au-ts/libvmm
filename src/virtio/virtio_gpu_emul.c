@@ -53,12 +53,49 @@ static void virtio_gpu_emul_reset(virtio_emul_handler_t *self)
 
 static int virtio_gpu_emul_get_device_features(virtio_emul_handler_t *self, uint32_t *features)
 {
+    if (self->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+        printf("VIRTIO GPU|WARNING: driver somehow wants to read device features after FEATURES_OK\n");
+    }
+
+    switch (self->data.DeviceFeaturesSel) {
+        // feature bits 0 to 31
+        case 0:
+            break;
+        // features bits 32 to 63
+        case 1:
+            *features = BIT_HIGH(VIRTIO_F_VERSION_1);
+            break;
+        default:
+            printf("VIRTIO GPU|INFO: driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DeviceFeaturesSel);
+            return 0;
+    }
     return 1;
 }
 
 static int virtio_gpu_emul_set_driver_features(virtio_emul_handler_t *self, uint32_t features)
 {
-    return 1;
+    int success = 1;
+
+    switch (self->data.DriverFeaturesSel) {
+        // feature bits 0 to 31
+        case 0:
+            // The device initialisation protocol says the driver should read device feature bits,
+            // and write the subset of feature bits understood by the OS and driver to the device.
+            break;
+
+        // features bits 32 to 63
+        case 1:
+            success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
+            break;
+
+        default:
+            printf("VIRTIO GPU|INFO: driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DriverFeaturesSel);
+            success = 0;
+    }
+    if (success) {
+        self->data.features_happy = 1;
+    }
+    return success;
 }
 
 static int virtio_gpu_emul_get_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t *ret_val)
