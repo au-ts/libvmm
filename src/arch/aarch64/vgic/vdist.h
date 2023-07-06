@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "../util/util.h"
-#include "../fault.h"
+#include "fault.h"
+#include "../../util/util.h"
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))
@@ -234,7 +234,7 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     return vgic_vcpu_load_list_reg(vgic, vcpu_id, idx, group, virq);
 }
 
-static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, uint32_t vcpu_id, int irq)
+static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, size_t vcpu_id, int irq)
 {
     LOG_DIST("Clear pending IRQ %d\n", irq);
     set_pending(dist, irq, false, vcpu_id);
@@ -242,7 +242,7 @@ static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, uint32_t vcpu_i
     // @ivanv
 }
 
-static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_dist_reg_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     bool success = false;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
@@ -397,14 +397,14 @@ static bool vgic_dist_reg_read(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, 
     default:
         LOG_VMM_ERR("Unknown register offset 0x%x", offset);
         // err = ignore_fault(fault);
-        success = fault_advance_vcpu(regs);
+        success = fault_advance_vcpu(vcpu_id, regs);
         assert(success);
         goto fault_return;
     }
     uint32_t mask = fault_get_data_mask(GIC_DIST_PADDR + offset, fsr);
     // fault_set_data(fault, reg & mask);
     // @ivanv: interesting, when we don't call fault_Set_data in the CAmkES VMM, everything works fine?...
-    success = fault_advance(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
+    success = fault_advance(vcpu_id, regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
     assert(success);
 
 fault_return:
@@ -420,7 +420,7 @@ static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t add
     *reg = fault_emulate(regs, *reg, addr, fsr, fault_get_data(regs, fsr));
 }
 
-static bool vgic_dist_reg_write(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     bool success = true;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
@@ -616,7 +616,7 @@ ignore_fault:
         return false;
     }
 
-    success = fault_advance_vcpu(regs);
+    success = fault_advance_vcpu(vcpu_id, regs);
     assert(success);
 
     return success;

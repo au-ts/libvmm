@@ -7,7 +7,7 @@
 
 #include "smc.h"
 #include "psci.h"
-#include "util/util.h"
+#include "../../util/util.h"
 
 // Values in this file are taken from:
 // SMC CALLING CONVENTION
@@ -76,7 +76,7 @@ uint64_t smc_get_arg(seL4_UserContext *u, uint64_t arg)
     }
 }
 
-static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
+static void smc_set_arg(seL4_UserContext *u, size_t arg, size_t val)
 {
     switch (arg) {
         case 1: u->x1 = val; break;
@@ -91,15 +91,15 @@ static void smc_set_arg(seL4_UserContext *u, uint64_t arg, uint64_t val)
 }
 
 // @ivanv: print out which SMC call as a string we can't handle.
-bool handle_smc(uint64_t vcpu_id, uint32_t hsr)
+bool handle_smc(size_t vcpu_id, uint32_t hsr)
 {
     // @ivanv: An optimisation to be made is to store the TCB registers so we don't
     // end up reading them multiple times
     seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + GUEST_ID, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
 
-    uint64_t fn_number = smc_get_function_number(&regs);
+    size_t fn_number = smc_get_function_number(&regs);
     smc_call_id_t service = smc_get_call(regs.x0);
 
     switch (service) {

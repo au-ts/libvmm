@@ -52,17 +52,6 @@ LD := $(TOOLCHAIN)-ld
 AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
-# @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
-
-# @ivanv: hack...
-# This step should be done based on the DTB
-ifeq ($(BOARD),imx8mm_evk)
-	VMM_OBJS += vgic_v3.o
-else
-	VMM_OBJS += vgic_v2.o
-endif
-
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
 # 		  right now it is unfortunately hard-coded.
 
@@ -74,6 +63,7 @@ endif
 
 BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
 SRC_DIR := src
+ARCH_DIR := $(SRC_DIR)/arch/aarch64
 SYSTEM_DESCRIPTION := board/$(BOARD)/systems/$(SYSTEM)
 
 IMAGE_DIR := board/$(BOARD)/images
@@ -85,18 +75,29 @@ IMAGES := vmm.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
+# @ivanv: should only compile printf.o in debug
+VMM_OBJS := vmm.o printf.o virq.o guest.o psci.o smc.o fault.o util.o vgic.o global_data.o
+
+# @ivanv: hack...
+# This step should be done based on the DTB
+ifeq ($(BOARD),imx8mm_evk)
+	VMM_OBJS += vgic_v3.o
+else
+	VMM_OBJS += vgic_v2.o
+endif
+
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
 # FIXME: We should also consider whether -mgeneral-regs-only should be
 # used to avoid the use of the FPU and therefore seL4 does not have to
 # context switch the FPU.
-CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-function -Werror -I$(BOARD_DIR)/include -DBOARD_$(BOARD) -DCONFIG_$(CONFIG)
+CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-function -Werror -I$(SRC_DIR)/arch/aarch64 -I$(BOARD_DIR)/include -DBOARD_$(BOARD) -DCONFIG_$(CONFIG)
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
 all: directories $(IMAGE_FILE)
 
-run: directories $(IMAGE_FILE)
+run: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
 	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependenyc: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
@@ -116,9 +117,9 @@ $(DTB_IMAGE): $(DTS)
 
 $(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S $(IMAGE_DIR) $(KERNEL_IMAGE) $(INITRD_IMAGE) $(DTB_IMAGE)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
-					-DVM_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
-					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
 					$< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
@@ -127,7 +128,10 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SRC_DIR)/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/vgic/%.c Makefile
+$(BUILD_DIR)/%.o: $(ARCH_DIR)/vgic/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(ARCH_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))

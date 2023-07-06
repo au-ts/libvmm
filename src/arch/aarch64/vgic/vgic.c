@@ -7,8 +7,8 @@
 #include <sel4cp.h>
 #include "vgic.h"
 #include "virq.h"
-#include "../util/util.h"
-#include "../fault.h"
+#include "fault.h"
+#include "../../util/util.h"
 
 #if defined(GIC_V2)
 #include "vgic_v2.h"
@@ -81,7 +81,7 @@ bool vgic_register_irq(uint64_t vcpu_id, int virq_num, irq_ack_fn_t ack_fn, void
     return virq_add(vcpu_id, &vgic, &virq);
 }
 
-bool vgic_inject_irq(uint64_t vcpu_id, int irq)
+bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
     LOG_IRQ("Injecting IRQ %d\n", irq);
 

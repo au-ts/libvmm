@@ -8,7 +8,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "../util/util.h"
+#include "../../util/util.h"
 
 #define GIC_ENABLED 1
 
