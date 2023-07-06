@@ -48,8 +48,8 @@
 #include "vgic_v2.h"
 #include "virq.h"
 #include "vdist.h"
-#include "../util/util.h"
-#include "../fault.h"
+#include "../../util/util.h"
+#include "fault.h"
 
 vgic_t vgic;
 struct gic_dist_map dist;

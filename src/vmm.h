@@ -45,6 +45,3 @@
 #else
 #error Need to define serial interrupt
 #endif
-
-bool guest_restart(void);
-void guest_stop(void);

@@ -9,10 +9,30 @@
 #include "psci.h"
 #include "smc.h"
 #include "fault.h"
-#include "util/util.h"
-#include "vmm.h"
+#include "../../util/util.h"
+#include "../../guest.h"
 
-bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint32_t hsr)
+/*
+ * The PSCI version is represented by a 32-bit unsigned integer.
+ * The upper 15 bits represent the major version.
+ * The lower 16 bits represent the minor version.
+*/
+#define PSCI_MAJOR_VERSION(v) ((v) << 16)
+#define PSCI_MINOR_VERSION(v) ((v) & ((1 << 16) - 1))
+
+/* PSCI return codes */
+#define PSCI_SUCCESS 0
+#define PSCI_NOT_SUPPORTED -1
+#define PSCI_INVALID_PARAMETERS -2
+#define PSCI_DENIED -3
+#define PSCI_ALREADY_ON -4
+#define PSCI_ON_PENDING -5
+#define PSCI_INTERNAL_FAILURE -6
+#define PSCI_NOT_PRESENT -7
+#define PSCI_DISABLED -8
+#define PSCI_INVALID_ADDRESS -9
+
+bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint32_t hsr)
 {
     // @ivanv: write a note about what convention we assume, should we be checking
     // the convention?
@@ -52,32 +72,35 @@ bool handle_psci(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, u
             smc_set_return_value(regs, PSCI_NOT_SUPPORTED);
             break;
         case PSCI_SYSTEM_RESET: {
-            bool success = guest_restart();
-            if (!success) {
-                LOG_VMM_ERR("Failed to restart guest\n");
-                smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
-            } else {
-                /*
-                 * If we've successfully restarted the guest, all we want to do
-                 * is reply to the fault that caused us to handle the PSCI call
-                 * so that the guest can continue executing. We do not need to
-                 * advance the vCPU program counter as we typically do when
-                 * handling a fault since the correct PC has been set when we
-                 * call guest_restart().
-                 */
-                return true;
-            }
+            // @refactor come back to
+            // bool success = guest_restart();
+            // if (!success) {
+            //     LOG_VMM_ERR("Failed to restart guest\n");
+            //     smc_set_return_value(regs, PSCI_INTERNAL_FAILURE);
+            // } else {
+                
+            //      * If we've successfully restarted the guest, all we want to do
+            //      * is reply to the fault that caused us to handle the PSCI call
+            //      * so that the guest can continue executing. We do not need to
+            //      * advance the vCPU program counter as we typically do when
+            //      * handling a fault since the correct PC has been set when we
+            //      * call guest_restart().
+                 
+            //     return true;
+            // }
             break;
         }
         case PSCI_SYSTEM_OFF:
-            guest_stop();
+            // @refactor, is it guaranteed that the CPU that does the vCPU request
+            // is the boot vcpu?
+            guest_stop(vcpu_id);
             return true;
         default:
             LOG_VMM_ERR("Unhandled PSCI function ID 0x%lx\n", fn_number);
             return false;
     }
 
-    bool success = fault_advance_vcpu(regs);
+    bool success = fault_advance_vcpu(vcpu_id, regs);
     assert(success);
 
     return success;

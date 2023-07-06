@@ -6,7 +6,11 @@
  */
 
 #include "hsr.h"
-#include "util/util.h"
+#include "../../util/util.h"
+#include "smc.h"
+#include "vgic/vgic.h"
+#include "tcb.h"
+#include "vcpu.h"
 #include "fault.h"
 
 // #define CPSR_THUMB                 (1 << 5)
@@ -18,11 +22,11 @@
 //     return !CPSR_IS_THUMB(regs->spsr);
 // }
 
-bool fault_advance_vcpu(seL4_UserContext *regs) {
+bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
     // Assume 64-bit instruction
     regs->pc += 4;
-    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + GUEST_ID, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
+    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
@@ -193,7 +197,7 @@ uint64_t fault_emulate(seL4_UserContext *regs, uint64_t reg, uint64_t addr, uint
     }
 }
 
-bool fault_advance(seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t reg_val)
+bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t reg_val)
 {
     /* Get register opearand */
     int rt = get_rt(fsr);
@@ -203,5 +207,124 @@ bool fault_advance(seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t
     // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
     //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
 
-    return fault_advance_vcpu(regs);
+    return fault_advance_vcpu(vcpu_id, regs);
+}
+
+bool handle_vcpu_fault(size_t vcpu_id)
+{
+    uint32_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
+    uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
+    switch (hsr_ec_class) {
+        case HSR_SMC_64_EXCEPTION:
+            return handle_smc(vcpu_id, hsr);
+        case HSR_WFx_EXCEPTION:
+            // If we get a WFI exception, we just do nothing in the VMM.
+            return true;
+        default:
+            LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
+            return false;
+    }
+}
+
+bool handle_vppi_event(size_t vcpu_id)
+{
+    uint64_t ppi_irq = sel4cp_mr_get(seL4_VPPIEvent_IRQ);
+    // We directly inject the interrupt assuming it has been previously registered.
+    // If not the interrupt will dropped by the VM.
+    bool success = vgic_inject_irq(vcpu_id, ppi_irq);
+    if (!success) {
+        // @ivanv, make a note that when having a lot of printing on it can cause this error
+        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
+        // Acknowledge to unmask it as our guest will not use the interrupt
+        sel4cp_arm_vcpu_ack_vppi(vcpu_id, ppi_irq);
+    }
+
+    return true;
+}
+
+bool handle_user_exception(size_t vcpu_id)
+{
+    // @ivanv: print out VM name/vCPU id when we have multiple VMs
+    size_t fault_ip = sel4cp_mr_get(seL4_UserException_FaultIP);
+    size_t number = sel4cp_mr_get(seL4_UserException_Number);
+    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
+
+    // Dump registers
+    seL4_UserContext regs;
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(err == seL4_NoError);
+    if (err != seL4_NoError) {
+        LOG_VMM_ERR("Failure reading TCB registers when handling user exception, error %d", err);
+        return false;
+    } else {
+        tcb_print_regs(&regs);
+    }
+
+    return true;
+}
+
+// @ivanv: document where these come from
+#define SYSCALL_PA_TO_IPA 65
+#define SYSCALL_NOP 67
+
+bool handle_unknown_syscall(size_t vcpu_id)
+{
+    // @ivanv: should print out the name of the VM the fault came from.
+    size_t syscall = sel4cp_mr_get(seL4_UnknownSyscall_Syscall);
+    size_t fault_ip = sel4cp_mr_get(seL4_UnknownSyscall_FaultIP);
+
+    LOG_VMM("Received syscall 0x%lx\n", syscall);
+    switch (syscall) {
+        case SYSCALL_PA_TO_IPA:
+            // @ivanv: why do we not do anything here?
+            // @ivanv, how to get the physical address to translate?
+            LOG_VMM("Received PA translation syscall\n");
+            break;
+        case SYSCALL_NOP:
+            LOG_VMM("Received NOP syscall\n");
+            break;
+        default:
+            LOG_VMM_ERR("Unknown syscall: syscall number: 0x%lx, PC: 0x%lx\n", syscall, fault_ip);
+            return false;
+    }
+
+    seL4_UserContext regs;
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(err == seL4_NoError);
+    if (err != seL4_NoError) {
+        LOG_VMM_ERR("Failure reading TCB registers when handling unknown syscall, error %d", err);
+        return false;
+    }
+
+    return fault_advance_vcpu(vcpu_id, &regs);
+}
+
+bool handle_vm_fault(size_t vcpu_id)
+{
+    size_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
+    size_t fsr = sel4cp_mr_get(seL4_VMFault_FSR);
+
+    seL4_UserContext regs;
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(err == seL4_NoError);
+
+    switch (addr) {
+        case GIC_DIST_PADDR...GIC_DIST_PADDR + GIC_DIST_SIZE:
+            return handle_vgic_dist_fault(vcpu_id, addr, fsr, &regs);
+#if defined(GIC_V3)
+        /* Need to handle redistributor faults for GICv3 platforms. */
+        case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
+            return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
+#endif
+        default: {
+            uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
+            uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+            bool is_write = fault_is_write(fsr);
+            LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
+                addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+            tcb_print_regs(&regs);
+            vcpu_print_regs(vcpu_id);
+            return false;
+        }
+    }
 }
