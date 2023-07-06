@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../util/util.h"
+#include "../../util/util.h"
 
 /* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
  * state, 8 - 15 for secure state), 16 PPIs (interrupt 16 - 31) and 988 SPIs
@@ -30,11 +30,11 @@
 
 #define VIRQ_INVALID -1
 
-typedef void (*irq_ack_fn_t)(uint64_t vcpu_id, int irq, void *cookie);
+typedef void (*irq_ack_fn_t)(size_t vcpu_id, int irq, void *cookie);
 
 struct virq_handle {
     int virq;
-    irq_ack_fn_t ack_fn;
+    virq_ack_fn_t ack_fn;
     void *ack_data;
 };
 
@@ -189,7 +189,7 @@ static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, uint64_t vcpu_i
     return virq;
 }
 
-static inline int vgic_find_empty_list_reg(vgic_t *vgic, uint64_t vcpu_id)
+static inline int vgic_find_empty_list_reg(vgic_t *vgic, size_t vcpu_id)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
@@ -202,13 +202,13 @@ static inline int vgic_find_empty_list_reg(vgic_t *vgic, uint64_t vcpu_id)
     return -1;
 }
 
-static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, uint64_t vcpu_id, int idx, int group, struct virq_handle *virq)
+static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx, int group, struct virq_handle *virq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     // @ivanv: why is the priority 0?
-    sel4cp_arm_vcpu_inject_irq(GUEST_ID, virq->virq, 0, group, idx);
+    sel4cp_arm_vcpu_inject_irq(vcpu_id, virq->virq, 0, group, idx);
     vgic_vcpu->lr_shadow[idx] = *virq;
 
     return true;

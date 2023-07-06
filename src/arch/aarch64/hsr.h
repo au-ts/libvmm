@@ -1,5 +1,12 @@
+/*
+ * Copyright 2023, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#pragma once
+
 // @ivanv, where do these come from?
-// @ivanv: license
 #define HSR_EXCEPTION_CLASS_SHIFT   (26)
 #define HSR_EXCEPTION_CLASS_MASK    (HSR_MAX_EXCEPTION << HSR_EXCEPTION_CLASS_SHIFT)
 #define HSR_EXCEPTION_CLASS(hsr)    (((hsr) & HSR_EXCEPTION_CLASS_MASK) >> HSR_EXCEPTION_CLASS_SHIFT)
