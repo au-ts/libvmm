@@ -27,10 +27,12 @@
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
 // emul handler for an instance of virtio gpu
-virtio_emul_handler_t gpu_emul_handler;
+static virtio_emul_handler_t gpu_emul_handler;
 
 // the list of virtqueue handlers for an instance of virtio gpu
-virtqueue_t gpu_vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
+static virtqueue_t vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
+
+static struct virtio_gpu_config gpu_config;
 
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
     // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
@@ -60,6 +62,7 @@ static int virtio_gpu_emul_get_device_features(virtio_emul_handler_t *self, uint
     switch (self->data.DeviceFeaturesSel) {
         // feature bits 0 to 31
         case 0:
+            // No GPU specific features supported
             break;
         // features bits 32 to 63
         case 1:
@@ -81,6 +84,7 @@ static int virtio_gpu_emul_set_driver_features(virtio_emul_handler_t *self, uint
         case 0:
             // The device initialisation protocol says the driver should read device feature bits,
             // and write the subset of feature bits understood by the OS and driver to the device.
+            // But no GPU specific features supported.
             break;
 
         // features bits 32 to 63
@@ -100,11 +104,19 @@ static int virtio_gpu_emul_set_driver_features(virtio_emul_handler_t *self, uint
 
 static int virtio_gpu_emul_get_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t *ret_val)
 {
+    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
+    *ret_val = *config_field_addr;
+    // printf("VIRTIO GPU|INFO: get_device_config_field config_field_address 0x%x returns retval %d\n", config_field_addr, *ret_val);
     return 1;
 }
 
 static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t val)
 {
+    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
+    *config_field_addr = val;
+    // printf("VIRTIO GPU|INFO: set_device_config_field set 0x%x to %d\n", config_field_addr, val);
     return 1;
 }
 
@@ -113,7 +125,7 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
     return 1;
 }
 
-virtio_emul_funs_t gpu_emul_funs = {
+static virtio_emul_funs_t gpu_emul_funs = {
     .device_reset = virtio_gpu_emul_reset,
     .get_device_features = virtio_gpu_emul_get_device_features,
     .set_driver_features = virtio_gpu_emul_set_driver_features,
@@ -122,11 +134,20 @@ virtio_emul_funs_t gpu_emul_funs = {
     .queue_notify = virtio_gpu_emul_handle_queue_notify,
 };
 
+static void virtio_gpu_config_init(void) {
+    gpu_config.events_read = 0;
+    gpu_config.events_clear = 0;
+    gpu_config.num_scanouts = 1;
+    gpu_config.num_capsets = 0;
+}
+
 void virtio_gpu_emul_init(void)
 {
+    virtio_gpu_config_init();
+    
     gpu_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_GPU;
     gpu_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     gpu_emul_handler.funs = &gpu_emul_funs;
 
-    gpu_emul_handler.vqs = gpu_vqs;
+    gpu_emul_handler.vqs = vqs;
 }
