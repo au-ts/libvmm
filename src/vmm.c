@@ -175,20 +175,30 @@ bool guest_init_images(void) {
     uint64_t kernel_image_size = _guest_kernel_image_end - _guest_kernel_image;
     uint64_t kernel_image_vaddr = guest_ram_vaddr + image_header->text_offset;
     // This check is because the Linux kernel image requires to be placed at text_offset of
-    // a 2MiB aligned base address anywhere in usable system RAM and called there.
+    // a 2MB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,
     // so we need to make sure that the start of guest RAM is 2MiB aligned.
-    //
-    // @ivanv: Ideally this check would be done at build time, we have all the information
-    // we need at build time to enforce this.
     assert((guest_ram_vaddr & ((1 << 20) - 1)) == 0);
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", kernel_image_vaddr, kernel_image_size);
     memcpy((char *)kernel_image_vaddr, _guest_kernel_image, kernel_image_size);
     // Copy the guest device tree blob into the right location
     uint64_t dtb_image_size = _guest_dtb_image_end - _guest_dtb_image;
+    // Linux does not allow the DTB to be greater than 2 megabytes in size.
+    assert(dtb_image_size <= (1 << 21));
+    if (dtb_image_size > (1 << 21)) {
+        LOG_VMM_ERR("Linux expects size of DTB to be less than 2MB, DTB size is 0x%lx bytes\n", dtb_image_size);
+        return false;
+    }
+    // Linux expects the address of the DTB to be on an 8-byte boundary.
+    assert(GUEST_DTB_VADDR % 0x8 == 0);
+    if (GUEST_DTB_VADDR % 0x8) {
+        LOG_VMM_ERR("Linux expects DTB address to be on an 8-byte boundary, DTB address is 0x%lx\n", GUEST_DTB_VADDR);
+        return false;
+    }
     LOG_VMM("Copying guest DTB to 0x%x (0x%x bytes)\n", GUEST_DTB_VADDR, dtb_image_size);
     memcpy((char *)GUEST_DTB_VADDR, _guest_dtb_image, dtb_image_size);
     // Copy the initial RAM disk into the right location
+    // @ivanv: add checks for initrd according to Linux docs
     uint64_t initrd_image_size = _guest_initrd_image_end - _guest_initrd_image;
     LOG_VMM("Copying guest initial RAM disk to 0x%x (0x%x bytes)\n", GUEST_INIT_RAM_DISK_VADDR, initrd_image_size);
     memcpy((char *)GUEST_INIT_RAM_DISK_VADDR, _guest_initrd_image, initrd_image_size);
