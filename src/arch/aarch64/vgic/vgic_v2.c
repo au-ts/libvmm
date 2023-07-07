@@ -41,7 +41,6 @@
  */
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <sel4cp.h>
 
 #include "vgic.h"
