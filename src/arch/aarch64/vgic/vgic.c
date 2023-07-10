@@ -70,7 +70,7 @@ bool handle_vgic_maintenance(size_t vcpu_id)
 }
 
 // @ivanv: maybe this shouldn't be here?
-bool vgic_register_irq(uint64_t vcpu_id, int virq_num, irq_ack_fn_t ack_fn, void *ack_data) {
+bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void *ack_data) {
     assert(virq_num >= 0 && virq_num != VIRQ_INVALID);
     struct virq_handle virq = {
         .virq = virq_num,

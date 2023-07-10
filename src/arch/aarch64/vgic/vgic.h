@@ -8,8 +8,11 @@
 #include <sel4cp.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "../../../virq.h"
 
 // @ivanv: this should all come from the DTS!
+// @ivanv: either this should all be compile time or all runtime
+// as in initialising the vgic should depend on the runtime values
 #if defined(BOARD_qemu_arm_virt_hyp)
 #define GIC_V2
 #define GIC_DIST_PADDR      0x8000000
@@ -54,8 +57,6 @@
 #else
 #define LOG_DIST(...) do{}while(0)
 #endif
-
-typedef void (*virq_ack_fn_t)(uint64_t vcpu_id, int irq, void *cookie);
 
 void vgic_init();
 bool handle_vgic_maintenance(size_t vcpu_id);

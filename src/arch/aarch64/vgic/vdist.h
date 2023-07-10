@@ -6,7 +6,7 @@
  */
 
 #include "fault.h"
-#include "../../util/util.h"
+#include "util.h"
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))

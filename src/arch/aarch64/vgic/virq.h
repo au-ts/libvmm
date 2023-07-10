@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "../../util/util.h"
+#include "util.h"
 
 /* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
  * state, 8 - 15 for secure state), 16 PPIs (interrupt 16 - 31) and 988 SPIs
@@ -29,8 +29,6 @@
 #define NUM_SLOTS_SPI_VIRQ      200
 
 #define VIRQ_INVALID -1
-
-typedef void (*irq_ack_fn_t)(size_t vcpu_id, int irq, void *cookie);
 
 struct virq_handle {
     int virq;
