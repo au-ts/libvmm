@@ -248,17 +248,8 @@ bool handle_user_exception(size_t vcpu_id)
     size_t fault_ip = sel4cp_mr_get(seL4_UserException_FaultIP);
     size_t number = sel4cp_mr_get(seL4_UserException_Number);
     LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
-
-    // Dump registers
-    seL4_UserContext regs;
-    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
-    if (err != seL4_NoError) {
-        LOG_VMM_ERR("Failure reading TCB registers when handling user exception, error %d", err);
-        return false;
-    } else {
-        tcb_print_regs(&regs);
-    }
+    /* All we do is dump the TCB registers. */
+    tcb_print_regs(vcpu_id);
 
     return true;
 }
