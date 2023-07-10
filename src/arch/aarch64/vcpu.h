@@ -27,6 +27,7 @@
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
 static void vcpu_reset(size_t vcpu_id) {
+    // @ivanv this is an incredible amount of system calls
     // Reset registers
     // @ivanv: double check, shouldn't we be setting sctlr?
     sel4cp_arm_vcpu_write_reg(vcpu_id, seL4_VCPUReg_SCTLR, 0);
@@ -63,41 +64,41 @@ static void vcpu_reset(size_t vcpu_id) {
     sel4cp_arm_vcpu_write_reg(vcpu_id, seL4_VCPUReg_CNTKCTL_EL1, 0);
 }
 
-// @ivanv: this should have the same foramtting as the TCB registers
 static void vcpu_print_regs(size_t vcpu_id) {
-    LOG_VMM("VCPU registers:\n");
+    // @ivanv this is an incredible amount of system calls
+    LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     /* VM control registers EL1 */
-    printf("    SCTLR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SCTLR));
-    printf("    TTBR0: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TTBR0));
-    printf("    TTBR1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TTBR1));
-    printf("    TCR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TCR));
-    printf("    MAIR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_MAIR));
-    printf("    AMAIR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AMAIR));
-    printf("    CIDR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CIDR));
+    printf("    sctlr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SCTLR));
+    printf("    ttbr0: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TTBR0));
+    printf("    ttbr1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TTBR1));
+    printf("    tcr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TCR));
+    printf("    mair: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_MAIR));
+    printf("    amair: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AMAIR));
+    printf("    cidr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CIDR));
     /* other system registers EL1 */
-    printf("    ACTLR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ACTLR));
-    printf("    CPACR: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CPACR));
+    printf("    actlr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ACTLR));
+    printf("    cpacr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CPACR));
     /* exception handling registers EL1 */
-    printf("    AFSR0: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR0));
-    printf("    AFSR1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR1));
-    printf("    ESR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ESR));
-    printf("    FAR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_FAR));
-    printf("    ISR:   0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ISR));
-    printf("    VBAR:  0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VBAR));
+    printf("    afsr0: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR0));
+    printf("    afsr1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_AFSR1));
+    printf("    esr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ESR));
+    printf("    far: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_FAR));
+    printf("    isr: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ISR));
+    printf("    vbar: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VBAR));
     /* thread pointer/ID registers EL0/EL1 */
-    printf("    TPIDR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1));
+    printf("    tpidr_el1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1));
     // @ivanv: I think thins might not be the correct ifdef
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
-    printf("    VMPIDR_EL2: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2));
+    printf("    vmpidr_el2: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2));
 #endif
     /* general registers x0 to x30 have been saved by traps.S */
-    printf("    SP_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SP_EL1));
-    printf("    ELR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ELR_EL1));
-    printf("    SPSR_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SPSR_EL1)); // 32-bit // @ivanv what
+    printf("    sp_el1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SP_EL1));
+    printf("    elr_el1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_ELR_EL1));
+    printf("    spsr_el1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_SPSR_EL1)); // 32-bit // @ivanv what
     /* generic timer registers, to be completed */
-    printf("    CNTV_CTL: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CTL));
-    printf("    CNTV_CVAL: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CVAL));
-    printf("    CNTVOFF: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTVOFF));
-    printf("    CNTKCTL_EL1: 0x%lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTKCTL_EL1));
+    printf("    cntv_ctl: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CTL));
+    printf("    cntv_cval: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CVAL));
+    printf("    cntvoff: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTVOFF));
+    printf("    cntkctl_el1: 0x%016lx\n", sel4cp_arm_vcpu_read_reg(vcpu_id, seL4_VCPUReg_CNTKCTL_EL1));
 }
