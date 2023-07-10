@@ -16,6 +16,7 @@ static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 bool virq_controller_init(size_t boot_vcpu_id) {
     vgic_init();
+    // @ivanv: todo, do this dynamically instead of compile time?
 #if defined(GIC_V2)
     LOG_VMM("initialised virtual GICv2 driver\n");
 #elif defined(GIC_V3)
