@@ -32,7 +32,7 @@ typedef enum {
     SMC_CALL_RESERVED = 64,
 } smc_call_id_t;
 
-static smc_call_id_t smc_get_call(uintptr_t func_id)
+static smc_call_id_t smc_get_call(size_t func_id)
 {
     uint64_t service = ((func_id >> SMC_SERVICE_CALL_SHIFT) & SMC_SERVICE_CALL_MASK);
     assert(service >= 0 && service <= 0xFFFF);
