@@ -47,7 +47,7 @@
 
 vgic_t vgic;
 
-static bool handle_vgic_redist_read_fault(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool handle_vgic_redist_read_fault(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     int err = 0;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
@@ -99,7 +99,7 @@ fault_return:
 }
 
 
-static bool handle_vgic_redist_write_fault(uint64_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     // @ivanv: why is this not reading from the redist?
     uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
@@ -155,7 +155,7 @@ static bool handle_vgic_redist_write_fault(uint64_t vcpu_id, vgic_t *vgic, uint6
     return true;
 }
 
-bool handle_vgic_redist_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs) {
+bool handle_vgic_redist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs) {
     assert(fault_addr >= GIC_REDIST_PADDR);
     uint64_t offset = fault_addr - GIC_REDIST_PADDR;
     assert(offset < GIC_REDIST_SIZE);

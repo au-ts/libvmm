@@ -39,7 +39,7 @@ struct virq_handle {
 };
 
 // @ivanv: revisit
-static inline void virq_ack(uint64_t vcpu_id, struct virq_handle *irq)
+static inline void virq_ack(size_t vcpu_id, struct virq_handle *irq)
 {
     // printf("VGIC|INFO: Acking for vIRQ %d\n", irq->virq);
     assert(irq->ack_fn);
@@ -94,7 +94,7 @@ static inline vgic_vcpu_t *get_vgic_vcpu(vgic_t *vgic, int vcpu_id)
     return &(vgic->vgic_vcpu[vcpu_id]);
 }
 
-static inline struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, uint64_t vcpu_id, int virq)
+static inline struct virq_handle *virq_get_sgi_ppi(vgic_t *vgic, size_t vcpu_id, int virq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
@@ -112,7 +112,7 @@ static inline struct virq_handle *virq_find_spi_irq_data(struct vgic *vgic, int 
     return NULL;
 }
 
-static inline struct virq_handle *virq_find_irq_data(struct vgic *vgic, uint64_t vcpu_id, int virq)
+static inline struct virq_handle *virq_find_irq_data(struct vgic *vgic, size_t vcpu_id, int virq)
 {
     if (virq < NUM_VCPU_LOCAL_VIRQS)  {
         return virq_get_sgi_ppi(vgic, vcpu_id, virq);
@@ -133,7 +133,7 @@ static inline bool virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
     return false;
 }
 
-static inline bool virq_sgi_ppi_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
+static inline bool virq_sgi_ppi_add(size_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_data)
 {
     // @ivanv: revisit
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
@@ -149,7 +149,7 @@ static inline bool virq_sgi_ppi_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_
     return true;
 }
 
-static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_handle)
+static inline bool virq_add(size_t vcpu_id, vgic_t *vgic, struct virq_handle *virq_handle)
 {
     if (virq_handle->virq < NUM_VCPU_LOCAL_VIRQS) {
         return virq_sgi_ppi_add(vcpu_id, vgic, virq_handle);
@@ -157,7 +157,7 @@ static inline bool virq_add(uint64_t vcpu_id, vgic_t *vgic, struct virq_handle *
     return virq_spi_add(vgic, virq_handle);
 }
 
-static inline bool vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_handle *irq)
+static inline bool vgic_irq_enqueue(vgic_t *vgic, size_t vcpu_id, struct virq_handle *irq)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
@@ -174,7 +174,7 @@ static inline bool vgic_irq_enqueue(vgic_t *vgic, uint64_t vcpu_id, struct virq_
     return true;
 }
 
-static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, uint64_t vcpu_id)
+static inline struct virq_handle *vgic_irq_dequeue(vgic_t *vgic, size_t vcpu_id)
 {
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);

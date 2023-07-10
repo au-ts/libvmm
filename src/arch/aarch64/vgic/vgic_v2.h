@@ -142,7 +142,7 @@ struct gic_dist_map {
 
 #define GIC_DIST_SGI_INTID_MASK                 0xF
 
-bool vgic_inject_irq(uint64_t vcpu_id, int irq);
+bool vgic_inject_irq(size_t vcpu_id, int irq);
 
 typedef struct gic_dist_map vgic_reg_t;
 

@@ -134,7 +134,7 @@ static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id
     }
 }
 
-static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
+static void vgic_dist_enable_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 {
     LOG_DIST("Enabling IRQ %d\n", irq);
     set_enable(vgic_get_dist(vgic->registers), irq, true, vcpu_id);
@@ -154,7 +154,7 @@ static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     }
 }
 
-static void vgic_dist_disable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
+static void vgic_dist_disable_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 {
     /* STATE g)
      *
@@ -170,7 +170,7 @@ static void vgic_dist_disable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
     }
 }
 
-static bool vgic_dist_set_pending_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
+static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 {
     // @ivanv: I believe this function causes a fault in the VMM if the IRQ has not
     // been registered. This is not good.
