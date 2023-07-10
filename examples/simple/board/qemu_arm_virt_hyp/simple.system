@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
- Copyright 2022, UNSW (ABN 57 195 873 179)
+ Copyright 2023, UNSW
 
  SPDX-License-Identifier: BSD-2-Clause
 -->
@@ -35,7 +35,7 @@
             starting address of RAM is 0x40000000, so we map in the guest RAM
             at the same address in the VMMs virutal address space.
         -->
-        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" />
         <virtual_machine name="linux" id="0">
             <!--
              The device tree given to Linux specifies that RAM will start

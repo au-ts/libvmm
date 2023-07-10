@@ -1,3 +1,5 @@
 build/
 *.pdf
+zig-out/
+zig-cache/
 
