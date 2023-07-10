@@ -38,14 +38,6 @@ void _putchar(char character);
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: sort this out...
-static void
-reply_to_fault()
-{
-    sel4cp_msginfo msg = sel4cp_msginfo_new(0, 0);
-    seL4_Send(4, msg);
-}
-
 static uint64_t get_vmm_id(char *sel4cp_name)
 {
     // @ivanv: Absolute hack
