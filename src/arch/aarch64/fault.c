@@ -292,7 +292,7 @@ bool handle_unknown_syscall(size_t vcpu_id)
 
 bool handle_vm_fault(size_t vcpu_id)
 {
-    size_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
+    uintptr_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
     size_t fsr = sel4cp_mr_get(seL4_VMFault_FSR);
 
     seL4_UserContext regs;
@@ -308,12 +308,14 @@ bool handle_vm_fault(size_t vcpu_id)
             return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
 #endif
         default: {
-            uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
-            uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+            /* If we receive a fault at a location we do not expect, print out as much information
+             * as possible for debugging. */
+            size_t ip = sel4cp_mr_get(seL4_VMFault_IP);
+            size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
             bool is_write = fault_is_write(fsr);
             LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
                 addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-            tcb_print_regs(&regs);
+            tcb_print_regs(vcpu_id);
             vcpu_print_regs(vcpu_id);
             return false;
         }
