@@ -18,6 +18,7 @@
 #endif
 #ifdef VIRTIO_GPU
 #include "virtio/virtio_gpu_emul.h"
+#include "virtio/virtio_gpu_uio.h"
 #endif
 #include "smc.h"
 #include "fault.h"
@@ -389,6 +390,11 @@ notified(sel4cp_channel ch)
 #ifdef VIRTIO_NET
         case VSWITCH_CONN_CH_1:
             vswitch_rx(ch);
+            break;
+#endif
+#ifdef VIRTIO_GPU
+        case VIRTIO_GPU_CH:
+            virtio_gpu_notified(ch);
             break;
 #endif
         default:

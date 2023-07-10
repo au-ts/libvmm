@@ -96,7 +96,7 @@ LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
 ifdef VIRTIO_MMIO
-VMM_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
+VMM_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_gpu_uio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
 CFLAGS += -DVIRTIO_MMIO
 QEMU_SIZE := 4G
 endif

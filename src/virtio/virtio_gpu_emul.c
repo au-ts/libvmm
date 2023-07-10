@@ -122,6 +122,7 @@ static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, u
 
 static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
 {
+    sel4cp_notify(VIRTIO_GPU_CH);
     return 1;
 }
 

@@ -30,4 +30,9 @@
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
         </virtual_machine>
     </protection_domain>
+
+    <channel>
+        <end pd="VMM-1" id="2" />
+        <end pd="VMM-2" id="2" />
+    </channel>
 </system>
