@@ -23,7 +23,7 @@
 /* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
 extern vgic_t vgic;
 
-bool handle_vgic_maintenance(uint64_t vcpu_id)
+bool handle_vgic_maintenance(size_t vcpu_id)
 {
     // @ivanv: reivist, also inconsistency between int and bool
     bool success = true;
@@ -97,7 +97,7 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 }
 
 // @ivanv: revisit this whole function
-bool handle_vgic_dist_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
+bool handle_vgic_dist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
 {
     /* Make sure that the fault address actually lies within the GIC distributor region. */
     assert(fault_addr >= GIC_DIST_PADDR);
