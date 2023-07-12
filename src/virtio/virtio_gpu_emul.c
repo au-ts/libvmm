@@ -35,8 +35,8 @@ static virtqueue_t vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
 static struct virtio_gpu_config gpu_config;
 
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
-    // nothing needs to be done here
+    printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
+    // sel4cp_irq_ack(vcpu_id, irq);
 }
 
 virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
@@ -51,6 +51,8 @@ virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
 
 static void virtio_gpu_emul_reset(virtio_emul_handler_t *self)
 {
+    printf("\"%s\"|VIRTIO GPU|INFO: device has been reset\n", sel4cp_name);
+
 }
 
 static int virtio_gpu_emul_get_device_features(virtio_emul_handler_t *self, uint32_t *features)
@@ -104,7 +106,7 @@ static int virtio_gpu_emul_set_driver_features(virtio_emul_handler_t *self, uint
 
 static int virtio_gpu_emul_get_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t *ret_val)
 {
-    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    void * config_base_addr = (void *)&gpu_config;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
     *ret_val = *config_field_addr;
     // printf("VIRTIO GPU|INFO: get_device_config_field config_field_address 0x%x returns retval %d\n", config_field_addr, *ret_val);
@@ -113,16 +115,74 @@ static int virtio_gpu_emul_get_device_config(struct virtio_emul_handler *self, u
 
 static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t val)
 {
-    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    void * config_base_addr = (void *)&gpu_config;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
     *config_field_addr = val;
     // printf("VIRTIO GPU|INFO: set_device_config_field set 0x%x to %d\n", config_field_addr, val);
     return 1;
 }
 
+// notify the guest that their avail buffer has been used
+static void virtio_gpu_emul_handle_used_buffer_notif(struct virtio_emul_handler *self, uint16_t desc_head)
+{
+        // set IRQ reason as used buffer notification (set bit 0 to 1)
+        self->data.InterruptStatus = BIT_LOW(0);
+
+        bool success = vgic_inject_irq(VCPU_ID, VIRTIO_GPU_IRQ);
+        // we can't inject irqs?? panic.
+        assert(success);
+
+        // add to used ring
+        struct vring *vring = &vqs[CONTROL_QUEUE].vring;
+
+        struct vring_used_elem used_elem = {desc_head, 0};
+        uint16_t guest_idx = vring->used->idx;
+
+        vring->used->ring[guest_idx % vring->num] = used_elem;
+        vring->used->idx++;       
+}
+
+
 static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
 {
-    sel4cp_notify(VIRTIO_GPU_CH);
+    struct vring *vring = &vqs[CONTROL_QUEUE].vring;
+
+    /* read the current guest index */
+    uint16_t guest_idx = vring->avail->idx;
+    uint16_t idx = vqs[CONTROL_QUEUE].last_idx;
+    
+    for (; idx != guest_idx; idx++) {
+        uint16_t desc_head = vring->avail->ring[idx % vring->num];
+
+        uint16_t curr_desc_head = desc_head;
+
+        struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
+        printf("\"%s\"|VIRTIO GPU|INFO: Notified, buffer header is 0x%x\n", sel4cp_name, header->type);
+        
+        do {
+            printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is 0x%x, Descriptor flags are: 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags);
+            
+            curr_desc_head = vring->desc[curr_desc_head].next;
+        } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
+
+        printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is 0x%x, Descriptor flags are: 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags);
+
+        struct virtio_gpu_ctrl_hdr *response_header = (void *)vring->desc[curr_desc_head].addr;
+
+        switch (header->type) {
+            case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:
+                response_header->type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
+                break;
+            default:
+                response_header->type = VIRTIO_GPU_RESP_OK_NODATA;
+                break;
+        }
+
+        // virtio_gpu_emul_handle_used_buffer_notif(self, desc_head);
+    }
+    
+    vqs[CONTROL_QUEUE].last_idx = idx;
+    // sel4cp_notify(VIRTIO_GPU_CH);
     return 1;
 }
 
@@ -136,6 +196,7 @@ static virtio_emul_funs_t gpu_emul_funs = {
 };
 
 static void virtio_gpu_config_init(void) {
+    // Hard coded values, need to retrieve these from device.
     gpu_config.events_read = 0;
     gpu_config.events_clear = 0;
     gpu_config.num_scanouts = 1;

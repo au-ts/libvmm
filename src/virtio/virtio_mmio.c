@@ -56,7 +56,7 @@ struct vring *get_current_vring_by_handler(virtio_emul_handler_t *emul_handler)
 int handle_virtio_mmio_get_status_flag(virtio_emul_handler_t *emul_handler, uint32_t *retreg)
 {
     *retreg = emul_handler->data.Status;
-    printf("\"%s\"|VIRTIO MMIO|INFO: Status is 0x%x.\n", sel4cp_name, emul_handler->data.Status);
+    // printf("\"%s\"|VIRTIO MMIO|INFO: Status is 0x%x.\n", sel4cp_name, emul_handler->data.Status);
     return 1;
 }
 

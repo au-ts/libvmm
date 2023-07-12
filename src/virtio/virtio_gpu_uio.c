@@ -11,5 +11,6 @@
 
 void virtio_gpu_notified(sel4cp_channel ch) {
     printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_notified\n", sel4cp_name);
+    // printf("\"%s\"|VIRTIO GPU|INFO: \n", sel4cp_name);
 }
 
