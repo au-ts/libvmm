@@ -123,6 +123,7 @@ static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, u
 }
 
 // notify the guest that their avail buffer has been used
+// this is not called ever in the code base, left here in case it is needed in the future
 static void virtio_gpu_emul_handle_used_buffer_notif(struct virtio_emul_handler *self, uint16_t desc_head)
 {
         // set IRQ reason as used buffer notification (set bit 0 to 1)
@@ -159,25 +160,46 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
         struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
         printf("\"%s\"|VIRTIO GPU|INFO: Notified, buffer header is 0x%x\n", sel4cp_name, header->type);
         
+        // Parse different commands
+        switch (header->type) {
+            // case RESOURCE_ATTACH_BACKING:
+
+            // case 
+        }
+        
+        // This loop brings curr_desc_head to the final descriptor in the chain, if it is not already at it,
+        // which is where you write the response from device back to driver.
         do {
             printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is 0x%x, Descriptor flags are: 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags);
             
             curr_desc_head = vring->desc[curr_desc_head].next;
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
 
-        printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is 0x%x, Descriptor flags are: 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags);
+        printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is 0x%x, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
 
-        struct virtio_gpu_ctrl_hdr *response_header = (void *)vring->desc[curr_desc_head].addr;
-
+        // Return the proper response to the driver
         switch (header->type) {
-            case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:
-                response_header->type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
+            case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:            
+                struct virtio_gpu_resp_display_info *display_info = (void *)vring->desc[curr_desc_head].addr;
+                
+                display_info->hdr.type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
+                
+                display_info->pmodes[0].r.width = 1024; // vu7a+ screen size
+                display_info->pmodes[0].r.height = 600;
+                display_info->pmodes[0].r.x = 0;
+                display_info->pmodes[0].r.y = 0;
+
+                display_info->pmodes[0].enabled = 1;
+
+                display_info->pmodes[0].flags = 0; // what even is this? spec does not say.
                 break;
             default:
+                struct virtio_gpu_ctrl_hdr *response_header = (void *)vring->desc[curr_desc_head].addr;
                 response_header->type = VIRTIO_GPU_RESP_OK_NODATA;
                 break;
         }
 
+        // Apparently, linux kernel is not expecting an interrupt for the response?
         // virtio_gpu_emul_handle_used_buffer_notif(self, desc_head);
     }
     
