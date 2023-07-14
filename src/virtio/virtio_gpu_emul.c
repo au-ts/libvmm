@@ -157,14 +157,28 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
 
         uint16_t curr_desc_head = desc_head;
 
+        // Print out what the command type is
         struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
         printf("\"%s\"|VIRTIO GPU|INFO: Notified, buffer header is 0x%x\n", sel4cp_name, header->type);
         
         // Parse different commands
         switch (header->type) {
-            // case RESOURCE_ATTACH_BACKING:
+            case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
+                struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", sel4cp_name, request->resource_id);
+                break;
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: {
+                struct virtio_gpu_resource_attach_backing *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: number of guest pages for backing is %d\n", sel4cp_name, request->nr_entries);
+                printf("\"%s\"|VIRTIO GPU|INFO: attaching resource ID %d\n", sel4cp_name, request->resource_id);
 
-            // case 
+                struct virtio_gpu_mem_entry *mem_entries = (void *)((uint8_t *)vring->desc[curr_desc_head].addr + sizeof(struct virtio_gpu_resource_attach_backing));
+                printf("\"%s\"|VIRTIO GPU|INFO: address of memory entry is 0x%x\n", sel4cp_name, mem_entries->addr);
+                printf("\"%s\"|VIRTIO GPU|INFO: length of memory entry is %d\n", sel4cp_name, mem_entries->length);
+                printf("\"%s\"|VIRTIO GPU|INFO: request has address %p and mem_entries has address %p\n", sel4cp_name, request, mem_entries); // Confirmed to be 32 bytes apart
+                break;
+            }
         }
         
         // This loop brings curr_desc_head to the final descriptor in the chain, if it is not already at it,
@@ -179,7 +193,7 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
 
         // Return the proper response to the driver
         switch (header->type) {
-            case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:            
+            case VIRTIO_GPU_CMD_GET_DISPLAY_INFO: {
                 struct virtio_gpu_resp_display_info *display_info = (void *)vring->desc[curr_desc_head].addr;
                 
                 display_info->hdr.type = VIRTIO_GPU_RESP_OK_DISPLAY_INFO;
@@ -193,10 +207,12 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
 
                 display_info->pmodes[0].flags = 0; // what even is this? spec does not say.
                 break;
-            default:
+            }
+            default: {
                 struct virtio_gpu_ctrl_hdr *response_header = (void *)vring->desc[curr_desc_head].addr;
                 response_header->type = VIRTIO_GPU_RESP_OK_NODATA;
                 break;
+            }
         }
 
         // Apparently, linux kernel is not expecting an interrupt for the response?
@@ -204,6 +220,7 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
     }
     
     vqs[CONTROL_QUEUE].last_idx = idx;
+    // Will need to notify host VM eventually, somewhere
     // sel4cp_notify(VIRTIO_GPU_CH);
     return 1;
 }
