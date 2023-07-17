@@ -78,9 +78,16 @@ SRC_DIR := src
 SYSTEM_DESCRIPTION := board/$(BOARD)/systems/$(SYSTEM)
 
 IMAGE_DIR := board/$(BOARD)/images
-KERNEL_IMAGE := $(IMAGE_DIR)/linux_uio_hdmi_eth
-DTB_SOURCE := $(IMAGE_DIR)/linux.dts
+KERNEL_IMAGE_1 := board/qemu_arm_virt_hyp/images/linux
+KERNEL_IMAGE_2 := board/odroidc4_hyp/images/linux_uio_hdmi_eth
+ifeq ($(BOARD),odroidc4_hyp)
+DTB_SOURCE_2 := $(IMAGE_DIR)/linux.dts
 DTB_OVERLAY := $(IMAGE_DIR)/vmm1_overlay.dts
+endif
+ifeq ($(BOARD),qemu_arm_virt_hyp)
+DTB_SOURCE_1 := $(IMAGE_DIR)/linux_virtio_gpu.dts
+DTB_SOURCE_2 := $(IMAGE_DIR)/linux.dts
+endif
 INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 IMAGES_VMM1 := vmm1_linux.dtb vmm1.elf
 IMAGES_VMM2 := vmm2_linux.dtb vmm2.elf
@@ -127,7 +134,8 @@ run: directories $(IMAGE_FILE)
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE) $(DTB_OVERLAY)
+ifeq ($(BOARD),odroidc4_hyp)
+$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE_2) $(DTB_OVERLAY)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	cat $^ > $(BUILD_DIR)/tem.dts
 	# @ivanv: Shouldn't supress warnings
@@ -135,22 +143,49 @@ $(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE) $(DTB_OVERLAY)
 
 $(BUILD_DIR)/vmm1_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_1)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm1_linux.dtb\" \
 					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
 					$< -o $@
 
-$(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE)
+$(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE_2)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(BUILD_DIR)/vmm2_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_2)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm2_linux.dtb\" \
 					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
 					$< -o $@
+endif
+
+ifeq ($(BOARD),qemu_arm_virt_hyp)
+$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE_1)
+	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+	# @ivanv: Shouldn't supress warnings
+	$(DTC) -q -I dts -O dtb $< > $@
+
+$(BUILD_DIR)/vmm1_global_data.o: $(SRC_DIR)/global_data.S
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_1)\" \
+					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm1_linux.dtb\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					$< -o $@
+
+$(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE_2)
+	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+	# @ivanv: Shouldn't supress warnings
+	$(DTC) -q -I dts -O dtb $< > $@
+
+$(BUILD_DIR)/vmm2_global_data.o: $(SRC_DIR)/global_data.S
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_2)\" \
+					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm2_linux.dtb\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					$< -o $@
+endif
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
