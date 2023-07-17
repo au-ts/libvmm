@@ -23,13 +23,12 @@
         stdout-path = "/soc/bus@ff800000/serial@3000";
 		linux,initrd-end = <0x00000000 0x2e000000>;
         linux,initrd-start = <0x00000000 0x2d700000>;
-        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi maxcpus=1 clk_ignore_unused uio_pdrv_genirq.of_id=generic-uio earlyprintk=serial";
 
 		framebuffer-cvbs {
 			compatible = "amlogic,simple-framebuffer\0simple-framebuffer";
 			amlogic,pipeline = "vpu-cvbs";
 			clocks = <0x02 0xa8 0x02 0x35 0x02 0x3a>;
-			status = "disabled";
 			power-domains = <0x03 0x00>;
 		};
 
@@ -37,7 +36,6 @@
 			compatible = "amlogic,simple-framebuffer\0simple-framebuffer";
 			amlogic,pipeline = "vpu-hdmi";
 			clocks = <0x02 0xa8 0x02 0x35 0x02 0x3a>;
-			status = "disabled";
 			power-domains = <0x03 0x00>;
 		};
 	};
@@ -166,7 +164,7 @@
 			clock-names = "stmmaceth\0clkin0\0clkin1\0timing-adjustment";
 			rx-fifo-depth = <0x1000>;
 			tx-fifo-depth = <0x800>;
-			status = "disabled";
+			status = "okay";
 			power-domains = <0x03 0x06>;
 			pinctrl-0 = <0x07 0x08>;
 			pinctrl-names = "default";
@@ -2493,7 +2491,6 @@
 			#size-cells = <0x00>;
 			amlogic,canvas = <0x20>;
 			power-domains = <0x03 0x00>;
-			status = "disabled";
 
 			port@0 {
 				reg = <0x00>;
@@ -2632,7 +2629,6 @@
 
 			i2c@1f000 {
 				compatible = "amlogic,meson-axg-i2c";
-				status = "disabled";
 				reg = <0x00 0x1f000 0x00 0x20>;
 				interrupts = <0x00 0x15 0x01>;
 				#address-cells = <0x01>;
@@ -2687,7 +2683,7 @@
 		sd@ffe05000 {
 			compatible = "amlogic,meson-axg-mmc";
 			reg = <0x00 0xffe05000 0x00 0x800>;
-			interrupts = <0x00 0xbe 0x01>;
+			interrupts = <0x00 0xbe 0x04>;
 			status = "okay";
 			clocks = <0x02 0x22 0x02 0x3d 0x02 0x02>;
 			clock-names = "core\0clkin0\0clkin1";
@@ -2711,7 +2707,7 @@
 		mmc@ffe07000 {
 			compatible = "amlogic,meson-axg-mmc";
 			reg = <0x00 0xffe07000 0x00 0x800>;
-			interrupts = <0x00 0xbf 0x01>;
+			interrupts = <0x00 0xbf 0x04>;
 			status = "okay";
 			clocks = <0x02 0x23 0x02 0x3e 0x02 0x02>;
 			clock-names = "core\0clkin0\0clkin1";
@@ -3017,6 +3013,12 @@
 	memory@0 {
 		device_type = "memory";
 		reg = <0x00 0x20000000 0x00 0x10000000>;
+	};
+
+	uio {
+		compatible = "generic-uio\0uio";
+		reg = <0x00 0x30000000 0x00 0x2000 0x00 0x30002000 0x00 0x2000 0x00 0x30004000 0x00 0x2000>;
+		interrupts = <0x00 0x0a 0x04>;
 	};
 
 	emmc-pwrseq {

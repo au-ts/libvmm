@@ -54,7 +54,7 @@ AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o global_data.o
+VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
@@ -78,11 +78,12 @@ SRC_DIR := src
 SYSTEM_DESCRIPTION := board/$(BOARD)/systems/$(SYSTEM)
 
 IMAGE_DIR := board/$(BOARD)/images
-KERNEL_IMAGE := $(IMAGE_DIR)/linux
-DTS := $(IMAGE_DIR)/linux.dts
-DTB_IMAGE := $(BUILD_DIR)/linux.dtb
+KERNEL_IMAGE := $(IMAGE_DIR)/linux_uio_hdmi_eth
+DTB_SOURCE := $(IMAGE_DIR)/linux.dts
+DTB_OVERLAY := $(IMAGE_DIR)/vmm1_overlay.dts
 INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
-IMAGES := vmm.elf
+IMAGES_VMM1 := vmm1_linux.dtb vmm1.elf
+IMAGES_VMM2 := vmm2_linux.dtb vmm2.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
@@ -126,15 +127,28 @@ run: directories $(IMAGE_FILE)
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(DTB_IMAGE): $(DTS)
+$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE) $(DTB_OVERLAY)
+	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+	cat $^ > $(BUILD_DIR)/tem.dts
+	# @ivanv: Shouldn't supress warnings
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/tem.dts > $@
+
+$(BUILD_DIR)/vmm1_global_data.o: $(SRC_DIR)/global_data.S
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
+					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm1_linux.dtb\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					$< -o $@
+
+$(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
-$(BUILD_DIR)/global_data.o: $(SRC_DIR)/global_data.S $(IMAGE_DIR) $(KERNEL_IMAGE) $(INITRD_IMAGE) $(DTB_IMAGE)
+$(BUILD_DIR)/vmm2_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
-					-DVM_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
+					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm2_linux.dtb\" \
 					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
 					$< -o $@
 
@@ -155,8 +169,11 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/libsharedringbuffer/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 endif
 
-$(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
+$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS) vmm1_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
+$(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS) vmm2_global_data.o)
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM2) $(IMAGES_VMM1)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
