@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#define VIRTIO_GPU_IRQ 73
+#define VIRTIO_GPU_IRQ 75
 
 #define VIRTIO_GPU_ADDRESS_START    0x140000
 #define VIRTIO_GPU_ADDRESS_END      0x150000

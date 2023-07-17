@@ -122,7 +122,7 @@ static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_
     int success = 1;
     // Need to find out which device it is when calculating the offset
     uint32_t offset = fault_addr - get_device_offset(fault_addr);
-    printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", sel4cp_name, offset);
+    // printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", sel4cp_name, offset);
 
     virtio_emul_handler_t *emul_handler = get_emul_handler_by_address(fault_addr);
     assert(emul_handler);
@@ -225,7 +225,7 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
     /* Mask the data to write */
     data &= mask;
 
-    printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
+    // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
 
     virtio_emul_handler_t *emul_handler = get_emul_handler_by_address(fault_addr);
     assert(emul_handler);
@@ -271,6 +271,7 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_STATUS, REG_VIRTIO_MMIO_QUEUE_DESC_LOW):
+            // printf("DATA IS 0x%x\n", data);
             success = handle_virtio_mmio_set_status_flag(emul_handler, data);
             break;
 

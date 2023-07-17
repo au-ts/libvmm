@@ -177,6 +177,10 @@ static void serial_ack(uint64_t vcpu_id, int irq, void *cookie) {
     sel4cp_irq_ack(SERIAL_IRQ_CH);
 }
 
+static void dummy_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    sel4cp_irq_ack(irq);
+}
+
 bool guest_init_images(void) {
     // First we inspect the kernel image header to confirm it is a valid image
     // and to determine where in memory to place the image. Currently this
@@ -261,6 +265,11 @@ void guest_start(void) {
         printf("VMM|ERROR: Failed to register VirtIO GPU IRQ\n");
     }
 #endif
+
+    err = vgic_register_irq(GUEST_VCPU_ID, 5, &dummy_ack, NULL);
+    if (!err) {
+        printf("VMM|ERROR: Failed to register dummy IRQ\n");
+    }
 
     regs.x0 = GUEST_DTB_VADDR;
     regs.spsr = 5; // PMODE_EL1h
