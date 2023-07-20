@@ -11,11 +11,11 @@
 #include <sel4cp.h>
 
 /* Fault-handling functions */
-bool handle_vcpu_fault(size_t vcpu_id);
-bool handle_vppi_event(size_t vcpu_id);
-bool handle_user_exception(size_t vcpu_id);
-bool handle_unknown_syscall(size_t vcpu_id);
-bool handle_vm_fault(size_t vcpu_id);
+bool fault_handle_vcpu_exception(size_t vcpu_id);
+bool fault_handle_vppi_event(size_t vcpu_id);
+bool fault_handle_user_exception(size_t vcpu_id);
+bool fault_handle_unknown_syscall(size_t vcpu_id);
+bool fault_handle_vm_exception(size_t vcpu_id);
 
 /* Helpers for emulating the fault and getting fault details */
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs);
