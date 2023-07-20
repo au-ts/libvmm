@@ -152,22 +152,22 @@ void fault(sel4cp_id id, sel4cp_msginfo msginfo) {
     bool success = false;
     switch (label) {
         case seL4_Fault_VMFault:
-            success = handle_vm_fault(id);
+            success = fault_handle_vm_exception(id);
             break;
         case seL4_Fault_UnknownSyscall:
-            success = handle_unknown_syscall(id);
+            success = fault_handle_unknown_syscall(id);
             break;
         case seL4_Fault_UserException:
-            success = handle_user_exception(id);
+            success = fault_handle_user_exception(id);
             break;
         case seL4_Fault_VGICMaintenance:
-            success = handle_vgic_maintenance(id);
+            success = fault_handle_vgic_maintenance(id);
             break;
         case seL4_Fault_VCPUFault:
-            success = handle_vcpu_fault(id);
+            success = fault_handle_vcpu_exception(id);
             break;
         case seL4_Fault_VPPIEvent:
-            success = handle_vppi_event(id);
+            success = fault_handle_vppi_event(id);
             break;
         default:
             /* We have reached a genuinely unexpected case, stop the guest. */

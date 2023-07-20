@@ -210,7 +210,7 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
     return fault_advance_vcpu(vcpu_id, regs);
 }
 
-bool handle_vcpu_fault(size_t vcpu_id)
+bool fault_handle_vcpu_exception(size_t vcpu_id)
 {
     uint32_t hsr = sel4cp_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
@@ -226,7 +226,7 @@ bool handle_vcpu_fault(size_t vcpu_id)
     }
 }
 
-bool handle_vppi_event(size_t vcpu_id)
+bool fault_handle_vppi_event(size_t vcpu_id)
 {
     uint64_t ppi_irq = sel4cp_mr_get(seL4_VPPIEvent_IRQ);
     // We directly inject the interrupt assuming it has been previously registered.
@@ -242,7 +242,7 @@ bool handle_vppi_event(size_t vcpu_id)
     return true;
 }
 
-bool handle_user_exception(size_t vcpu_id)
+bool fault_handle_user_exception(size_t vcpu_id)
 {
     // @ivanv: print out VM name/vCPU id when we have multiple VMs
     size_t fault_ip = sel4cp_mr_get(seL4_UserException_FaultIP);
@@ -258,7 +258,7 @@ bool handle_user_exception(size_t vcpu_id)
 #define SYSCALL_PA_TO_IPA 65
 #define SYSCALL_NOP 67
 
-bool handle_unknown_syscall(size_t vcpu_id)
+bool fault_handle_unknown_syscall(size_t vcpu_id)
 {
     // @ivanv: should print out the name of the VM the fault came from.
     size_t syscall = sel4cp_mr_get(seL4_UnknownSyscall_Syscall);
@@ -290,7 +290,7 @@ bool handle_unknown_syscall(size_t vcpu_id)
     return fault_advance_vcpu(vcpu_id, &regs);
 }
 
-bool handle_vm_fault(size_t vcpu_id)
+bool fault_handle_vm_exception(size_t vcpu_id)
 {
     uintptr_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
     size_t fsr = sel4cp_mr_get(seL4_VMFault_FSR);
