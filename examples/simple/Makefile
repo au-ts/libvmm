@@ -70,7 +70,7 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o package_guest_images.o
+VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o package_guest_images.o tcb.o vcpu.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
@@ -91,7 +91,7 @@ CFLAGS := -mstrict-align \
 		  -ffreestanding \
 		  -nostdlib \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
