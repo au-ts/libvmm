@@ -39,6 +39,8 @@ pub fn build(b: *std.Build) void {
         vmm_src_arch_dir ++ "smc.c",
         vmm_src_arch_dir ++ "virq.c",
         vmm_src_arch_dir ++ "linux.c",
+        vmm_src_arch_dir ++ "tcb.c",
+        vmm_src_arch_dir ++ "vcpu.c",
     }, &.{
         "-Wall",
         "-Werror",

@@ -4,10 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#pragma once
-
-#include <stdint.h>
 #include <sel4cp.h>
+#include "util.h"
+#include "vcpu.h"
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
                                            and IC IVAU in AArch64 state   */
@@ -26,7 +25,7 @@
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
-static void vcpu_reset(size_t vcpu_id) {
+void vcpu_reset(size_t vcpu_id) {
     // @ivanv this is an incredible amount of system calls
     // Reset registers
     // @ivanv: double check, shouldn't we be setting sctlr?
@@ -64,7 +63,7 @@ static void vcpu_reset(size_t vcpu_id) {
     sel4cp_arm_vcpu_write_reg(vcpu_id, seL4_VCPUReg_CNTKCTL_EL1, 0);
 }
 
-static void vcpu_print_regs(size_t vcpu_id) {
+void vcpu_print_regs(size_t vcpu_id) {
     // @ivanv this is an incredible amount of system calls
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     /* VM control registers EL1 */
