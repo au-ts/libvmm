@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#pragma once
-
-#include <stdint.h>
 #include <sel4cp.h>
+#include "util.h"
+#include "tcb.h"
 
 // @ivanv: should we have a header-only file or have tcb.c and vcpu.c as well?
-static void tcb_print_regs(size_t vcpu_id) {
+void tcb_print_regs(size_t vcpu_id) {
     /*
      * While we are potentially doing an extra system call in order to read the
      * TCB registers (as the VMM may have already read the TCB registers before
