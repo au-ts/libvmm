@@ -23,7 +23,7 @@
 /* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
 extern vgic_t vgic;
 
-bool handle_vgic_maintenance(size_t vcpu_id)
+bool fault_handle_vgic_maintenance(size_t vcpu_id)
 {
     // @ivanv: reivist, also inconsistency between int and bool
     bool success = true;
