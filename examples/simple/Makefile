@@ -20,10 +20,6 @@ ifeq ($(strip $(CONFIG)),)
 $(error CONFIG must be specified)
 endif
 
-ifeq ($(strip $(SYSTEM)),)
-$(error SYSTEM must be specified)
-endif
-
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
 # @ivanv: check that all dependencies exist
@@ -63,7 +59,7 @@ SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
 VMM_SRC_DIR := ../../src
-SYSTEM_DESCRIPTION := board/$(BOARD)/$(SYSTEM)
+SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
 
 IMAGE_DIR := board/$(BOARD)
 KERNEL_IMAGE := $(IMAGE_DIR)/linux
