@@ -30,9 +30,6 @@
 #define static_assert _Static_assert
 #endif
 
-//  __attribute__ ((__noreturn__))
-// void __assert_func(const char *file, int line, const char *function, const char *str);
-
 void _putchar(char character);
 
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
