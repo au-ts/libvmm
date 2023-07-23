@@ -29,23 +29,22 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-ifndef TOOLCHAIN
-	# Get whether the common toolchain triples exist
-	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-	# Then check if they are defined and select the appropriate one
-	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-		TOOLCHAIN := aarch64-linux-gnu
-	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-		TOOLCHAIN := aarch64-unknown-linux-gnu
-	else
-		$(error "Could not find an AArch64 cross-compiler")
-	endif
-endif
+# ifndef TOOLCHAIN
+# 	# Get whether the common toolchain triples exist
+# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+# 	# Then check if they are defined and select the appropriate one
+# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+# 		TOOLCHAIN := aarch64-linux-gnu
+# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+# 		TOOLCHAIN := aarch64-unknown-linux-gnu
+# 	else
+# 		$(error "Could not find an AArch64 cross-compiler")
+# 	endif
+# endif
 
-CC := $(TOOLCHAIN)-gcc
-LD := $(TOOLCHAIN)-ld
-AS := $(TOOLCHAIN)-as
+CC := clang
+LD := ld.lld
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -86,7 +85,17 @@ endif
 # FIXME: We should also consider whether -mgeneral-regs-only should be
 # used to avoid the use of the FPU and therefore seL4 does not have to
 # context switch the FPU.
-CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-function -Werror -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include -DBOARD_$(BOARD) -DCONFIG_$(CONFIG)
+CFLAGS := -mstrict-align \
+		  -g3 \
+		  -O3 \
+		  -ffreestanding \
+		  -nostdlib \
+		  -Wall -Wno-unused-function -Werror \
+		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -DBOARD_$(BOARD) \
+		  -DCONFIG_$(CONFIG) \
+		  -target aarch64-none-elf
+
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
@@ -115,6 +124,7 @@ $(BUILD_DIR)/package_guest_images.o: package_guest_images.S $(IMAGE_DIR) $(KERNE
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-target aarch64-none-elf \
 					$< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
