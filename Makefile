@@ -81,12 +81,12 @@ IMAGE_DIR := board/$(BOARD)/images
 KERNEL_IMAGE_1 := board/qemu_arm_virt_hyp/images/linux
 KERNEL_IMAGE_2 := board/odroidc4_hyp/images/linux_uio_hdmi_eth
 ifeq ($(BOARD),odroidc4_hyp)
-DTB_SOURCE_2 := $(IMAGE_DIR)/linux.dts
+DTB_SOURCE_2 := $(IMAGE_DIR)/linux_virtio_gpu.dts
 DTB_OVERLAY := $(IMAGE_DIR)/vmm1_overlay.dts
 endif
 ifeq ($(BOARD),qemu_arm_virt_hyp)
 DTB_SOURCE_1 := $(IMAGE_DIR)/linux_virtio_gpu.dts
-DTB_SOURCE_2 := $(IMAGE_DIR)/linux.dts
+DTB_SOURCE_2 := $(IMAGE_DIR)/linux_uio.dts
 endif
 INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 IMAGES_VMM1 := vmm1_linux.dtb vmm1.elf

@@ -5,6 +5,7 @@
  */
 
 #include <stddef.h>
+#include "../util/util.h"
 #include "virtio_mmio.h"
 #include "virtio_gpu_emul.h"
 #include "include/config/virtio_gpu.h"
@@ -35,8 +36,7 @@ static virtqueue_t vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
 static struct virtio_gpu_config gpu_config;
 
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
-    // sel4cp_irq_ack(vcpu_id, irq);
+    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
 }
 
 virtio_emul_handler_t *get_virtio_gpu_emul_handler(void)
@@ -132,9 +132,6 @@ static int virtio_gpu_emul_set_device_config(struct virtio_emul_handler *self, u
 // notify the guest that their avail buffer has been used
 static void virtio_gpu_emul_handle_used_buffer_notif(struct virtio_emul_handler *self, uint16_t desc_head)
 {
-    // set IRQ reason as used buffer notification (set bit 0 to 1)
-    self->data.InterruptStatus = BIT_LOW(0);
-
     // add to used ring
     struct vring *vring = &vqs[CONTROL_QUEUE].vring;
 
@@ -154,36 +151,39 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
     uint16_t guest_idx = vring->avail->idx;
     uint16_t idx = vqs[CONTROL_QUEUE].last_idx;
 
-    printf("\"%s\"|VIRTIO GPU|INFO: ------------- Driver notified device -------------\n", sel4cp_name);
+    // printf("\"%s\"|VIRTIO GPU|INFO: ------------- Driver notified device -------------\n", sel4cp_name);
     
     for (; idx != guest_idx; idx++) {
         uint16_t desc_head = vring->avail->ring[idx % vring->num];
 
         uint16_t curr_desc_head = desc_head;
 
+        // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
+
         // Print out what the command type is
         struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
-        printf("\"%s\"|VIRTIO GPU|INFO: >>>>>>>>>> Buffer header is 0x%x <<<<<<<<<<\n", sel4cp_name, header->type);
+        // printf("\"%s\"|VIRTIO GPU|INFO: ----- Buffer header is 0x%x -----\n", sel4cp_name, header->type);
         
         // Parse different commands
         switch (header->type) {
             case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
-                struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
-                printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", sel4cp_name, request->resource_id);
+                // struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
+                // printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", sel4cp_name, request->resource_id);
                 break;
             }
             case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: { // This chain has two descriptors, the first one is header, second one is mem_entries 
-                struct virtio_gpu_resource_attach_backing *request = (void *)vring->desc[curr_desc_head].addr;
-                printf("\"%s\"|VIRTIO GPU|INFO: number of guest pages for backing is %d\n", sel4cp_name, request->nr_entries);
-                printf("\"%s\"|VIRTIO GPU|INFO: attaching resource ID %d\n", sel4cp_name, request->resource_id);
+                // struct virtio_gpu_resource_attach_backing *request = (void *)vring->desc[curr_desc_head].addr;
+                // printf("\"%s\"|VIRTIO GPU|INFO: number of guest pages for backing is %d\n", sel4cp_name, request->nr_entries);
+                // printf("\"%s\"|VIRTIO GPU|INFO: attaching resource ID %d\n", sel4cp_name, request->resource_id);
 
-                printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
-                curr_desc_head = vring->desc[curr_desc_head].next;
+                // curr_desc_head = vring->desc[curr_desc_head].next;
+                // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
 
-                struct virtio_gpu_mem_entry *mem_entries = (void *)vring->desc[curr_desc_head].addr;
-                printf("\"%s\"|VIRTIO GPU|INFO: address of memory entry is 0x%x\n", sel4cp_name, mem_entries[0].addr);
-                printf("\"%s\"|VIRTIO GPU|INFO: length of memory entry is %d\n", sel4cp_name, mem_entries[0].length);
+                // struct virtio_gpu_mem_entry *mem_entries = (void *)vring->desc[curr_desc_head].addr;
+                // printf("\"%s\"|VIRTIO GPU|INFO: address of memory entry is 0x%x\n", sel4cp_name, mem_entries[0].addr);
+                // printf("\"%s\"|VIRTIO GPU|INFO: length of memory entry is %d\n", sel4cp_name, mem_entries[0].length);
 
+                // memcpy
                 break;
             }
         }
@@ -191,7 +191,7 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
         // This loop brings curr_desc_head to the final descriptor in the chain, if it is not already at it,
         // which is where you write the response from device back to driver.
         do {
-            printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
+            // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
             curr_desc_head = vring->desc[curr_desc_head].next;
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
 
@@ -226,13 +226,14 @@ static int virtio_gpu_emul_handle_queue_notify(struct virtio_emul_handler *self)
                 break;
             }
         }
-
-        // Will need to notify host VM eventually, somewhere
-        // sel4cp_notify(VIRTIO_GPU_CH);
-
+        // set IRQ reason as used buffer notification (set bit 0 to 1)
+        self->data.InterruptStatus = BIT_LOW(0);
+        // Notify driver VM
+        sel4cp_notify(VIRTIO_GPU_CH);
         virtio_gpu_emul_handle_used_buffer_notif(self, desc_head);
     }
-    
+
+    // Tell guest that driver vm is done with buffers
     bool success = vgic_inject_irq(VCPU_ID, VIRTIO_GPU_IRQ);
     // we can't inject irqs?? panic.
     assert(success);

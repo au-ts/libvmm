@@ -10,7 +10,7 @@
 #define VIRTIO_GPU_ADDRESS_START    0x140000
 #define VIRTIO_GPU_ADDRESS_END      0x150000
 
-#define VIRTIO_GPU_CH               50   // @ericc: Put somewhere else in the future, probably should not be here
+#define VIRTIO_GPU_CH               55   // @ericc: Put somewhere else in the future, probably should not be here
 
 // the amount of virtqueues
 // 0: control q

@@ -32,7 +32,7 @@
     </protection_domain>
 
     <channel>
-        <end pd="VMM-1" id="50" />
-        <end pd="VMM-2" id="50" />
+        <end pd="VMM-1" id="40" />
+        <end pd="VMM-2" id="63" />
     </channel>
 </system>
