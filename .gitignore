@@ -1,5 +1,6 @@
 build/
-*.pdf
 zig-out/
 zig-cache/
+*.pdf
+*.dtb
 
