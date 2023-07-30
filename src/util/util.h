@@ -30,8 +30,6 @@
 #define static_assert _Static_assert
 #endif
 
-void _putchar(char character);
-
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 
