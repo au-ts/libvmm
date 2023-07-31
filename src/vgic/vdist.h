@@ -138,7 +138,7 @@ static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id
 
 static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
 {
-    LOG_VMM("Enabling IRQ %d\n", irq);
+    LOG_DIST("Enabling IRQ %d\n", irq);
     set_enable(vgic_get_dist(vgic->registers), irq, true, vcpu_id);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu_id, irq);
     // assert(virq_data != NULL);
@@ -153,10 +153,6 @@ static void vgic_dist_enable_irq(vgic_t *vgic, uint64_t vcpu_id, int irq)
         }
     } else {
         LOG_DIST("Enabled IRQ %d has no handle\n", irq);
-    }
-
-    if (irq == 50) {
-        sel4cp_notify(56);
     }
 }
 
