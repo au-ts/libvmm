@@ -54,14 +54,17 @@ AS := $(TOOLCHAIN)-as
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o psci.o smc.o fault.o util.o vgic.o
+VMM_DRIVER_OBJS := vmm_driver.o printf.o psci.o smc.o fault.o util.o vgic.o
+VMM_GUEST_OBJS := vmm_guest.o printf.o psci.o smc.o fault.o util.o vgic.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
 ifeq ($(BOARD),imx8mm_evk)
-	VMM_OBJS += vgic_v3.o
+	VMM_DRIVER_OBJS += vgic_v3.o
+	VMM_GUEST_OBJS += vgic_v3.o
 else
-	VMM_OBJS += vgic_v2.o
+	VMM_DRIVER_OBJS += vgic_v2.o
+	VMM_GUEST_OBJS += vgic_v2.o
 endif
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -104,7 +107,8 @@ LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
 ifdef VIRTIO_MMIO
-VMM_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_gpu_uio.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
+VMM_DRIVER_OBJS += uio_gpu.o
+VMM_GUEST_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_gpu_device.o virtio_gpu_sddf_driver.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
 CFLAGS += -DVIRTIO_MMIO
 QEMU_SIZE := 4G
 endif
@@ -202,12 +206,15 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/virtio/%.c Makefile
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/libsharedringbuffer/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/uio/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
 endif
 
-$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS) vmm1_global_data.o)
+$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_GUEST_OBJS) vmm1_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS) vmm2_global_data.o)
+$(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM_DRIVER_OBJS) vmm2_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM2) $(IMAGES_VMM1)) $(SYSTEM_DESCRIPTION)

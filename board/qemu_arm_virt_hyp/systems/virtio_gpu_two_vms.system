@@ -9,11 +9,14 @@
     <memory_region name="guest_ram-1" size="0x10_000_000" page_size="0x200_000" />
     <memory_region name="guest_ram-2" size="0x10_000_000" page_size="0x200_000" />
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
+    <memory_region name="uio_map0" size="0x20000" />
 
     <protection_domain name="VMM-1" priority="254">
         <program_image path="vmm1.elf" />
         <map mr="guest_ram-1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="uio_map0" vaddr="0x30000000" perms="rw" cached="false" />
         <virtual_machine name="linux-2" id="0">
+            <map mr="uio_map0" vaddr="0x30000000" perms="rw" cached="false" />
             <map mr="guest_ram-1" vaddr="0x40000000" perms="rwx" />
             <map mr="serial" vaddr="0x9000000" perms="rw" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
@@ -23,7 +26,9 @@
     <protection_domain name="VMM-2" priority="254">
         <program_image path="vmm2.elf" />
         <map mr="guest_ram-2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="uio_map0" vaddr="0x30000000" perms="rw" cached="false" />
         <virtual_machine name="linux-1" id="0">
+            <map mr="uio_map0" vaddr="0x30000000" perms="rw" cached="false" />
             <map mr="guest_ram-2" vaddr="0x40000000" perms="rwx" />
             <map mr="serial" vaddr="0x9000000" perms="rw" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
@@ -32,7 +37,7 @@
     </protection_domain>
 
     <channel>
-        <end pd="VMM-1" id="40" />
-        <end pd="VMM-2" id="63" />
+        <end pd="VMM-1" id="55" />
+        <end pd="VMM-2" id="56" />
     </channel>
 </system>

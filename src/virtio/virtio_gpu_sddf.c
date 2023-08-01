@@ -10,7 +10,7 @@
 #include "virtio_mmio.h"
 #include "virtio_gpu_emul.h"
 #include "virtio_gpu_device.h"
-#include "virtio_gpu_sddf_driver.h"
+#include "virtio_gpu_sddf.h"
 
 
 void gpu_virtqueue_to_sddf(uio_map_t *uio_map, virtqueue_t *vq) {

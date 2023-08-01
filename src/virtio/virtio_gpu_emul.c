@@ -13,7 +13,7 @@
 #include "virtio_mmio.h"
 #include "virtio_gpu_emul.h"
 #include "virtio_gpu_device.h"
-#include "virtio_gpu_sddf_driver.h"
+#include "virtio_gpu_sddf.h"
 
 // virtio gpu mmio emul interface
 
