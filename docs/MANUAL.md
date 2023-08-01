@@ -140,7 +140,7 @@ instructions on how to reproduce the images used if you would like to see
 examples of how other example systems are setup.
 
 Before attempting to get the VMM working, I strongly encourage you to make sure
-that these binaries work naively, as in, without being virtualised. If they do
+that these binaries work natively, as in, without being virtualised. If they do
 not, they likely will not work with the VMM either.
 
 You can either add these images into `board/$BOARD/images/` or specify the
