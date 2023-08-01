@@ -62,12 +62,39 @@ Finally, you will need an experimental seL4 Core Platform SDK.
 
 For acquiring the SDK, you have two options.
 
-1. Build the SDK yourself.
-2. Download a pre-built SDK.
+1. Download a pre-built SDK (recommended)
+2. Build the SDK yourself.
 
-Option 2 is not available for now due to the SDK frequently changing.
+##### Option 1 - Download pre-built SDK
 
-##### Option 1 - Building the SDK
+For Linux x86-64:
+```sh
+wget https://sel4.ivanvelickovic.com/downloads/sel4cp-sdk-dev-bf06734-linux-x86-64.tar.gz
+# Check that the SDK hash is correct
+echo "f4cee94bf0296084c123419644c8780e25fdb7610a4357d78765544a959c2b7b sel4cp-sdk-dev-bf06734-linux-x86-64.tar.gz" | sha256sum -c
+# Untar the SDK
+tar xf sel4cp-sdk-dev-bf06734-linux-x86-64.tar.gz
+```
+
+For macOS x86-64:
+```sh
+wget https://sel4.ivanvelickovic.com/downloads/sel4cp-sdk-dev-bf06734-macos-x86-64.tar.gz
+# Check that the SDK hash is correct
+echo "f7cb671661bdabdac7055a21d508bf6029553fc3726f9ad0a30c6667a16c2825 sel4cp-sdk-dev-bf06734-macos-x86-64.tar.gz" | sha256sum -c
+# Untar the SDK
+tar xf sel4cp-sdk-dev-bf06734-macos-x86-64.tar.gz
+```
+
+For macOS AArch64:
+```sh
+wget https://sel4.ivanvelickovic.com/downloads/sel4cp-sdk-dev-bf06734-macos-aarch64.tar.gz
+# Check that the SDK hash is correct
+echo "987cdea178456c3db0c6bfd7a4b5c3dd878c39697f6ec2563d1eedc6c934eb85 sel4cp-sdk-dev-bf06734-macos-aarch64.tar.gz" | sha256sum -c
+# Untar the SDK
+tar xf sel4cp-sdk-dev-bf06734-macos-aarch64.tar.gz
+```
+
+##### Option 2 - Building the SDK
 
 You will need a custom seL4CP SDK. You can acquire it with the following commands:
 ```sh
