@@ -154,7 +154,7 @@ is possible to package all of these up into one single image, but the default
 Linux kernel configuration does not do this. It would be possible to change the
 VMM to allow this functionality.
 
-The VMM also (for now) does not have the ability to generate a FDT, therefore
+The VMM also (for now) does not have the ability to generate a DTB, therefore
 requiring the Device Tree Source at build time.
 
 ### Generic Interrupt Controller (GIC)
