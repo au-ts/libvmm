@@ -101,9 +101,9 @@ LIBS := -lsel4cp -Tsel4cp.ld
 
 all: directories $(IMAGE_FILE)
 
-run: all
+simulate: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
-	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependenyc: qemu-system-aarch64"; exit 1; fi
+	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
