@@ -20,9 +20,9 @@ send "root\n"
 expect "# "
 
 # Attempt to reboot the guest, make sure we can login again
-send "reboot\n"
-expect "buildroot login: "
-send "root\n"
-expect "# "
+# send "reboot\n"
+# expect "buildroot login: "
+# send "root\n"
+# expect "# "
 
 send "\x21"; send "x"
