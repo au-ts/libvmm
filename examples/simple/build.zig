@@ -125,7 +125,7 @@ pub fn build(b: *std.Build) void {
     // which we only want to do when we have a board that we can actually simulate.
     // @ivanv we should try get renode working as well
     if (std.mem.eql(u8, board, "qemu_arm_virt_hyp")) {
-        const simulate_cmd = b.addSystemCommand(&[_][]const u8{
+        const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
             "virt,virtualization=on,highmem=off,secure=off",
@@ -139,8 +139,8 @@ pub fn build(b: *std.Build) void {
             "2G",
             "-nographic",
         });
-        simulate_cmd.step.dependOn(b.default_step);
-        const simulate_step = b.step("simulate", "Simulate the image via QEMU");
-        simulate_step.dependOn(&simulate_cmd.step);
+        qemu_cmd.step.dependOn(b.default_step);
+        const simulate_step = b.step("qemu", "Simulate the image via QEMU");
+        simulate_step.dependOn(&qemu_cmd.step);
     }
 }
