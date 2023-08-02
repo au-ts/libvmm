@@ -4,9 +4,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-ifeq ($(strip $(BUILD_DIR)),)
-$(error BUILD_DIR must be specified)
-endif
 
 ifeq ($(strip $(SEL4CP_SDK)),)
 $(error SEL4CP_SDK must be specified)
@@ -16,9 +13,10 @@ ifeq ($(strip $(BOARD)),)
 $(error BOARD must be specified)
 endif
 
-ifeq ($(strip $(CONFIG)),)
-$(error CONFIG must be specified)
-endif
+# Default build directory, pass BUILD_DIR=<dir> to override
+BUILD_DIR ?= build
+# Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
+CONFIG ?= debug
 
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
@@ -61,11 +59,13 @@ VMM_SRC_DIR := ../../src
 SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
 
 IMAGE_DIR := board/$(BOARD)
-KERNEL_IMAGE := $(IMAGE_DIR)/linux
+LINUX := $(IMAGE_DIR)/linux
 DTS := $(IMAGE_DIR)/linux.dts
-DTB_IMAGE := $(BUILD_DIR)/linux.dtb
-INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
-IMAGES := vmm.elf
+DTB := $(BUILD_DIR)/linux.dtb
+INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
+
+ELFS := vmm.elf
+
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
@@ -114,16 +114,16 @@ simulate: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(DTB_IMAGE): $(DTS)
+$(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
-$(BUILD_DIR)/package_guest_images.o: package_guest_images.S $(IMAGE_DIR) $(KERNEL_IMAGE) $(INITRD_IMAGE) $(DTB_IMAGE)
+$(BUILD_DIR)/package_guest_images.o: package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(DTB_IMAGE)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
@@ -145,5 +145,5 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
