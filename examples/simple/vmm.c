@@ -6,15 +6,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sel4cp.h>
-// @ivanv: sort these include lines out!
-#include "../../src/util/util.h"
-#include "../../src/arch/aarch64/vgic/vgic.h"
-#include "../../src/arch/aarch64/linux.h"
-#include "../../src/arch/aarch64/fault.h"
-#include "../../src/guest.h"
-#include "../../src/virq.h"
-#include "../../src/tcb.h"
-#include "../../src/vcpu.h"
+#include "util/util.h"
+#include "arch/aarch64/vgic/vgic.h"
+#include "arch/aarch64/linux.h"
+#include "arch/aarch64/fault.h"
+#include "guest.h"
+#include "virq.h"
+#include "tcb.h"
+#include "vcpu.h"
 
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
