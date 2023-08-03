@@ -85,11 +85,14 @@ endif
 # FIXME: We should also consider whether -mgeneral-regs-only should be
 # used to avoid the use of the FPU and therefore seL4 does not have to
 # context switch the FPU.
+# Note we only need -Wno-unused-command-line-argument because in Nix
+# passes an extra `--gcc-toolchain` flag which we do not need.
 CFLAGS := -mstrict-align \
 		  -g3 \
 		  -O3 \
 		  -ffreestanding \
 		  -nostdlib \
+		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
