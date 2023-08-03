@@ -33,5 +33,9 @@ For educational purposes, you can also build and run this example using the
 You will first need Zig version 0.11.0, which can be downloaded here: [TODO]().
 
 ```sh
+# TODO @ivanv fix this command to also include board
 zig build -Dtarget="aarch64-freestanding" -Doptimize=ReleaseFast simualte
 ```
+
+[A known issue]() is that compiling the example without optimisations does not
+cause the example to function correctly.
