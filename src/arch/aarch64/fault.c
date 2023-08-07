@@ -164,7 +164,7 @@ static int get_rt(uint64_t fsr)
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         rt = HSR_SYNDROME_RT(fsr);
     } else {
-        printf("decode_insturction for arm64 not implemented\n");
+        printf("decode_insturction for AArch64 not implemented\n");
         assert(0);
         // @ivanv: implement decode instruction for aarch64
         // rt = decode_instruction(f);
