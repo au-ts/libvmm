@@ -10,6 +10,7 @@
     <!-- We want to map in the serial to get input/output. -->
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
     <memory_region name="bus2" size="0x200000" phys_addr="0xff800000" />
+    <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
 
@@ -20,6 +21,7 @@
             <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
             <map mr="bus1" vaddr="0xff600000" perms="rw" cached="false" />
             <map mr="bus2" vaddr="0xff800000" perms="rw" cached="false" />
+            <map mr="bus3" vaddr="0xffd00000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- Serial IRQ -->
