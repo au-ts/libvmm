@@ -23,12 +23,18 @@ ARCHIVE_FORMAT="zip"
 
 if [[ $SDK_TARGET == "macos-x86-64" ]]; then
     ARTIFACT_INDEX=0
+elif [[ $SDK_TARGET == "macos-aarch64" ]]; then
+    ARTIFACT_INDEX=1
 elif [[ $SDK_TARGET == "linux-x86-64" ]]; then
     ARTIFACT_INDEX=2
 else
     echo "Unknown SDK_TARGET: $SDK_TARGET"
     exit 1
 fi
+
+# @ivanv: should assert that the SDK target matches what we expect after
+# we actually get the artifact. Or, even better, we find a way to extract
+# the artifact ID that matches our target
 
 ARTIFACT_ID=`curl \
   -H "Accept: application/vnd.github+json" \
