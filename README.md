@@ -96,15 +96,9 @@ tar xf sel4cp-sdk-dev-bf06734-macos-aarch64.tar.gz
 
 ##### Option 2 - Building the SDK
 
-You will need a custom seL4CP SDK. You can acquire it with the following commands:
+You will need a development version of the seL4CP SDK source code. You can acquire it with the following command:
 ```sh
 git clone https://github.com/Ivan-Velickovic/sel4cp.git --branch dev
-```
-
-Note that you will also need a slightly modified seL4 kernel. You can acquire it
-with the following commands:
-```sh
-git clone https://github.com/Ivan-Velickovic/seL4.git --branch sel4cp-dev
 ```
 
 From here, you can follow the instructions
@@ -119,12 +113,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command. We want to run the `simple` example system in a `debug`
 configuration for the QEMU ARM virt system.
 ```sh
-make BUILD_DIR=build \
-     SEL4CP_SDK=/path/to/sdk \
-     CONFIG=debug \
-     BOARD=qemu_arm_virt_hyp \
-     SYSTEM=simple.system \
-     run
+make BOARD=qemu_arm_virt_hyp SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
 ```
 
 You should see Linux booting and be greeted with the buildroot prompt:
