@@ -12,5 +12,6 @@ in
         # completeness
         expect
     ];
+    hardeningDisable = [ "all" ];
 }
 
