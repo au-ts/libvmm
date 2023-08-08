@@ -1,19 +1,55 @@
 const std = @import("std");
 
+var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+const gpa = general_purpose_allocator.allocator();
+
+fn concatStr(strings: []const []const u8) []const u8 {
+    return std.mem.concat(gpa, u8, strings) catch "";
+}
+
+const configOptions = enum {
+    debug,
+    release,
+    benchmark
+};
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     // @ivanv: need to somehow relate sel4cp config with this optimisation level?
     const optimize = b.standardOptimizeOption(.{});
 
+    // Getting the path to the seL4CP SDK before doing anything else
+    const sel4cp_sdk = b.option([]const u8, "sdk", "Path to seL4CP SDK") orelse null;
+    if (sel4cp_sdk == null) {
+        std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
+        std.os.exit(1);
+    }
+
+    const sel4cp_config_option = b.option(configOptions, "config", "seL4CP config to build for")
+                                 orelse configOptions.debug;
+    const sel4cp_config_str = @tagName(sel4cp_config_option);
+
+    // Get the seL4CP SDK board we want to target
+    const sel4cp_board = b.option([]const u8, "board", "seL4CP board to target")
+                                 orelse null;
+    if (sel4cp_board == null) {
+        std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
+        std.os.exit(1);
+    }
+
     // @ivanv sort out
-    const sdk_path = "/Users/ivanv/ts/sel4cp_dev/release/sel4cp-sdk-1.2.6";
     const board = "qemu_arm_virt_hyp";
     const config = "debug";
+
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = sdk_path ++ "/board/" ++ board ++ "/" ++ config;
+    const sdk_board_dir = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/board/", sel4cp_board.?, "/", sel4cp_config_str });
+    const sdk_tool = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/bin/sel4cp" });
+    const libsel4cp = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/libsel4cp.a" });
+    const libsel4cp_linker_script = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/sel4cp.ld" });
+    const sdk_board_include_dir = concatStr(&[_][]const u8{ sdk_board_dir, "/include" });
 
-    const vmmlib = b.addStaticLibrary(.{
+    const vmm_lib = b.addStaticLibrary(.{
         .name = "vmm",
         .target = target,
         .optimize = optimize,
@@ -28,7 +64,7 @@ pub fn build(b: *std.Build) void {
     const vmm_src_dir = "../../src/";
     // @ivanv: obviously for other archs we want a different dir
     const vmm_src_arch_dir = vmm_src_dir ++ "arch/aarch64/";
-    vmmlib.addCSourceFiles(&.{
+    vmm_lib.addCSourceFiles(&.{
         vmm_src_dir ++ "guest.c",
         vmm_src_dir ++ "util/util.c",
         vmm_src_dir ++ "util/printf.c",
@@ -49,13 +85,13 @@ pub fn build(b: *std.Build) void {
         "-DBOARD_qemu_arm_virt_hyp",
     });
 
-    vmmlib.addIncludePath(vmm_src_dir);
-    vmmlib.addIncludePath(vmm_src_dir ++ "util/");
-    vmmlib.addIncludePath(vmm_src_arch_dir);
-    vmmlib.addIncludePath(vmm_src_arch_dir ++ "vgic/");
-    vmmlib.addIncludePath(sdk_board_dir ++ "/include");
+    vmm_lib.addIncludePath(.{ .path = vmm_src_dir });
+    vmm_lib.addIncludePath(.{ .path = vmm_src_dir ++ "util/" });
+    vmm_lib.addIncludePath(.{ .path = vmm_src_arch_dir });
+    vmm_lib.addIncludePath(.{ .path = vmm_src_arch_dir ++ "vgic/" });
+    vmm_lib.addIncludePath(.{ .path = sdk_board_include_dir });
 
-    b.installArtifact(vmmlib);
+    b.installArtifact(vmm_lib);
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
@@ -64,15 +100,15 @@ pub fn build(b: *std.Build) void {
     });
 
     // Add sel4cp.h to be used by the API wrapper.
-    exe.addIncludePath(sdk_board_dir ++ "/include");
-    exe.addIncludePath(vmm_src_dir);
-    exe.addIncludePath(vmm_src_arch_dir);
+    exe.addIncludePath(.{ .path = sdk_board_include_dir });
+    exe.addIncludePath(.{ .path = vmm_src_dir });
+    exe.addIncludePath(.{ .path = vmm_src_arch_dir });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(sdk_board_dir ++ "/lib/libsel4cp.a");
-    exe.linkLibrary(vmmlib);
+    exe.addObjectFile(.{ .path = libsel4cp });
+    exe.linkLibrary(vmm_lib);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .path = sdk_board_dir ++ "/lib/sel4cp.ld"});
+    exe.setLinkerScriptPath(.{ .path = libsel4cp_linker_script });
 
     exe.addCSourceFiles(&.{"vmm.c"}, &.{
         "-Wall",
@@ -101,7 +137,7 @@ pub fn build(b: *std.Build) void {
 
     const system_description_path = "board/" ++ board ++ "/simple.system";
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
-       sdk_path ++ "/bin/sel4cp",
+       sdk_tool,
        system_description_path,
        "--search-path",
        "zig-out/bin",
@@ -121,9 +157,8 @@ pub fn build(b: *std.Build) void {
     sel4cp_step.dependOn(&sel4cp_tool_cmd.step);
     b.default_step = sel4cp_step;
 
-    // This is setting up a `simulate` command for running the system via QEMU,
+    // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    // @ivanv we should try get renode working as well
     if (std.mem.eql(u8, board, "qemu_arm_virt_hyp")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
