@@ -23,8 +23,6 @@ jobs:
           path: MANUAL.pdf
   build_linux_x86_64:
     name: Build and run VMM examples (Linux x86-64)
-    # Don't want any forks or PRs to run this workflow
-    if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout seL4CP VMM repository
@@ -47,8 +45,6 @@ jobs:
           path: build_*/loader.img
   build_macos_x86_64:
     name: Build and run VMM examples (macOS x86-64)
-    # Don't want any forks or PRs to run this workflow
-    if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
     runs-on: macos-12
     steps:
       - name: Checkout seL4CP VMM repository
@@ -72,8 +68,6 @@ jobs:
           path: build_*/loader.img
   build_linux_x86_64_nix:
     name: Build and run VMM examples (Linux x86-64 via Nix)
-    # Don't want any forks or PRs to run this workflow
-    if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout seL4CP VMM repository
@@ -95,8 +89,6 @@ jobs:
           path: build_*/loader.img
   build_macos_x86_64_nix:
     name: Build and run VMM examples (macOS x86-64 via Nix)
-    # Don't want any forks or PRs to run this workflow
-    if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
     runs-on: macos-12
     steps:
       - name: Checkout seL4CP VMM repository
