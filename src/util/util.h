@@ -33,12 +33,6 @@
 #define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
 
-static uint64_t get_vmm_id(char *sel4cp_name)
-{
-    // @ivanv: Absolute hack
-    return sel4cp_name[4] - '0';
-}
-
 static void *memcpy(void *restrict dest, const void *restrict src, size_t n)
 {
     unsigned char *d = dest;
