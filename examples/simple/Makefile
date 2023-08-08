@@ -70,15 +70,7 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o package_guest_images.o tcb.o vcpu.o
-
-# @ivanv: hack...
-# This step should be done based on the DTB
-ifeq ($(BOARD),imx8mm_evk)
-	VMM_OBJS += vgic_v3.o
-else
-	VMM_OBJS += vgic_v2.o
-endif
+VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
