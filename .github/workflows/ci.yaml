@@ -84,7 +84,7 @@ jobs:
       - name: Extract seL4CP SDK
         run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
       - name: Install Nix
-        uses: cachix/install-nix-action@v18
+        uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run VMM examples
@@ -107,7 +107,7 @@ jobs:
       - name: Extract seL4CP SDK
         run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
       - name: Install Nix
-        uses: cachix/install-nix-action@v18
+        uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run VMM examples
