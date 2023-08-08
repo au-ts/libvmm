@@ -4,6 +4,10 @@ This example is a minimal VMM that supports Linux guests and a basic
 buildroot/BusyBox root file system. This gives a basic command-line with some
 utilities.
 
+The example currently works on the following platforms:
+* Hardkernel Odroid-C4
+* QEMU ARM virt
+
 ## Building with Make
 
 ```sh
@@ -34,7 +38,7 @@ You will first need Zig version 0.11.0, which can be downloaded here: [TODO]().
 
 ```sh
 # TODO @ivanv fix this command to also include board
-zig build -Dtarget="aarch64-freestanding" -Doptimize=ReleaseFast simulate
+zig build -Dtarget="aarch64-freestanding" -Doptimize=ReleaseFast qemu
 ```
 
 [A known issue]() is that compiling the example without optimisations does not
