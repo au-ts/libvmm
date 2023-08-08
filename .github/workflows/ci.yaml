@@ -93,3 +93,26 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           path: build_*/loader.img
+  build_macos_x86_64_nix:
+    name: Build and run VMM examples (macOS x86-64 via Nix)
+    # Don't want any forks or PRs to run this workflow
+    if: ${{ github.repository_owner == 'Ivan-Velickovic' }}
+    runs-on: macos-12
+    steps:
+      - name: Checkout seL4CP VMM repository
+        uses: actions/checkout@v3
+      - name: Download seL4CP SDK
+        run: ./ci/acquire_sdk.sh sel4cp-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
+        shell: bash
+      - name: Extract seL4CP SDK
+        run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
+      - name: Install Nix
+        uses: cachix/install-nix-action@v18
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Build and run VMM examples
+        run: nix-shell --pure --run "./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6"
+      - name: Upload built system images
+        uses: actions/upload-artifact@v3
+        with:
+          path: build_*/loader.img
