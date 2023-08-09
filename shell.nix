@@ -3,6 +3,7 @@ let
 in
   pkgs.mkShell {
     buildInputs = with pkgs.buildPackages; [
+        zig_0_11
         qemu
         gnumake
         dtc
