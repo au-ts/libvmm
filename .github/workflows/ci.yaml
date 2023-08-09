@@ -1,5 +1,7 @@
 name: CI
 
+# @ivanv: TODO, should minisign Zig downloads
+
 on:
   pull_request:
   push:
@@ -35,6 +37,11 @@ jobs:
       - name: Install VMM dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld qemu-system-arm device-tree-compiler expect
+      - name: Install Zig
+        run: |
+          wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz
+          tar xf zig-linux-x86_64-0.11.0.tar.xz
+          echo "${PWD}/zig-linux-x86_64-0.11.0/bin:$PATH" >> $GITHUB_PATH
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
@@ -59,6 +66,11 @@ jobs:
         run: |
           brew install llvm qemu dtc make expect
           echo "/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_PATH
+      - name: Install Zig
+        run: |
+          wget https://ziglang.org/download/0.11.0/zig-macos-x86_64-0.11.0.tar.xz
+          tar xf zig-macos-x86_64-0.11.0.tar.xz
+          echo "${PWD}/zig-macos-x86_64-0.11.0/bin:$PATH" >> $GITHUB_PATH
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
