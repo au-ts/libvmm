@@ -3,6 +3,9 @@ const std = @import("std");
 var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = general_purpose_allocator.allocator();
 
+const build_dir = "zig-out";
+const bin_dir = "zig-out/bin";
+
 fn concatStr(strings: []const []const u8) []const u8 {
     return std.mem.concat(gpa, u8, strings) catch "";
 }
@@ -37,10 +40,6 @@ pub fn build(b: *std.Build) void {
         std.os.exit(1);
     }
 
-    // @ivanv sort out
-    const board = "qemu_arm_virt_hyp";
-    const config = "debug";
-
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
     const sdk_board_dir = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/board/", sel4cp_board.?, "/", sel4cp_config_str });
@@ -49,34 +48,28 @@ pub fn build(b: *std.Build) void {
     const libsel4cp_linker_script = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/sel4cp.ld" });
     const sdk_board_include_dir = concatStr(&[_][]const u8{ sdk_board_dir, "/include" });
 
-    const vmm_lib = b.addStaticLibrary(.{
+    const libvmm = b.addStaticLibrary(.{
         .name = "vmm",
         .target = target,
         .optimize = optimize,
     });
 
-    // The paths are required to have quotes around them
-    const linux_image_path = "\"board/" ++ board ++ "/linux\"";
-    // @ivanv: come back to
-    const dtb_image_path = "\"build/linux.dtb\"";
-    const initrd_image_path = "\"board/" ++ board ++ "/rootfs.cpio.gz\"";
-
-    const vmm_src_dir = "../../src/";
-    // @ivanv: obviously for other archs we want a different dir
-    const vmm_src_arch_dir = vmm_src_dir ++ "arch/aarch64/";
-    vmm_lib.addCSourceFiles(&.{
-        vmm_src_dir ++ "guest.c",
-        vmm_src_dir ++ "util/util.c",
-        vmm_src_dir ++ "util/printf.c",
-        vmm_src_arch_dir ++ "vgic/vgic.c",
-        vmm_src_arch_dir ++ "vgic/vgic_v2.c",
-        vmm_src_arch_dir ++ "fault.c",
-        vmm_src_arch_dir ++ "psci.c",
-        vmm_src_arch_dir ++ "smc.c",
-        vmm_src_arch_dir ++ "virq.c",
-        vmm_src_arch_dir ++ "linux.c",
-        vmm_src_arch_dir ++ "tcb.c",
-        vmm_src_arch_dir ++ "vcpu.c",
+    const libvmm_src = "../../src/";
+    // Right now we only support AArch64 so this is a safe assumption.
+    const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
+    libvmm.addCSourceFiles(&.{
+        libvmm_src ++ "guest.c",
+        libvmm_src ++ "util/util.c",
+        libvmm_src ++ "util/printf.c",
+        libvmm_src_arch ++ "vgic/vgic.c",
+        libvmm_src_arch ++ "vgic/vgic_v2.c",
+        libvmm_src_arch ++ "fault.c",
+        libvmm_src_arch ++ "psci.c",
+        libvmm_src_arch ++ "smc.c",
+        libvmm_src_arch ++ "virq.c",
+        libvmm_src_arch ++ "linux.c",
+        libvmm_src_arch ++ "tcb.c",
+        libvmm_src_arch ++ "vcpu.c",
     }, &.{
         "-Wall",
         "-Werror",
@@ -85,13 +78,13 @@ pub fn build(b: *std.Build) void {
         "-DBOARD_qemu_arm_virt_hyp",
     });
 
-    vmm_lib.addIncludePath(.{ .path = vmm_src_dir });
-    vmm_lib.addIncludePath(.{ .path = vmm_src_dir ++ "util/" });
-    vmm_lib.addIncludePath(.{ .path = vmm_src_arch_dir });
-    vmm_lib.addIncludePath(.{ .path = vmm_src_arch_dir ++ "vgic/" });
-    vmm_lib.addIncludePath(.{ .path = sdk_board_include_dir });
+    libvmm.addIncludePath(.{ .path = libvmm_src });
+    libvmm.addIncludePath(.{ .path = libvmm_src ++ "util/" });
+    libvmm.addIncludePath(.{ .path = libvmm_src_arch });
+    libvmm.addIncludePath(.{ .path = libvmm_src_arch ++ "vgic/" });
+    libvmm.addIncludePath(.{ .path = sdk_board_include_dir });
 
-    b.installArtifact(vmm_lib);
+    b.installArtifact(libvmm);
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
@@ -99,14 +92,27 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // For actually compiling the DTS into a DTB
+    const dts_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/linux.dts" });
+    // @ivanv: find a better place, need to figure out zig build scripts more
+    const dtb_image_path = "linux.dtb";
+    const dtc_command = b.addSystemCommand(&[_][]const u8{
+        "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o", dtb_image_path
+    });
+    exe.step.dependOn(&dtc_command.step);
+
+    const linux_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/linux" });
+    const initrd_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/rootfs.cpio.gz" });
+
     // Add sel4cp.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
-    exe.addIncludePath(.{ .path = vmm_src_dir });
-    exe.addIncludePath(.{ .path = vmm_src_arch_dir });
+    // The VMM code will include 
+    exe.addIncludePath(.{ .path = libvmm_src });
+    exe.addIncludePath(.{ .path = libvmm_src_arch });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .path = libsel4cp });
-    exe.linkLibrary(vmm_lib);
+    exe.linkLibrary(libvmm);
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .path = libsel4cp_linker_script });
 
@@ -124,10 +130,13 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const kernel_image_arg = concatStr(&[_][]const u8{ "-DGUEST_KERNEL_IMAGE_PATH=", "\"", linux_image_path, "\"" });
+    const dtb_image_arg = concatStr(&[_][]const u8{ "-DGUEST_DTB_IMAGE_PATH=", "\"", dtb_image_path, "\"" });
+    const initrd_image_arg = concatStr(&[_][]const u8{ "-DGUEST_INITRD_IMAGE_PATH=", "\"", initrd_image_path, "\"" });
     guest_images.addCSourceFiles(&.{"package_guest_images.S"}, &.{
-        "-DGUEST_KERNEL_IMAGE_PATH=" ++ linux_image_path,
-        "-DGUEST_DTB_IMAGE_PATH=" ++ dtb_image_path,
-        "-DGUEST_INITRD_IMAGE_PATH=" ++ initrd_image_path,
+        kernel_image_arg,
+        dtb_image_arg,
+        initrd_image_arg,
         "-x",
         "assembler-with-cpp",
     });
@@ -135,20 +144,21 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = "board/" ++ board ++ "/simple.system";
+    const system_description_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/simple.system" });
+    const final_image_path = bin_dir ++ "/loader.img";
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_tool,
        system_description_path,
        "--search-path",
-       "zig-out/bin",
+       bin_dir,
        "--board",
-       board,
+       sel4cp_board.?,
        "--config",
-       config,
+       sel4cp_config_str,
        "-o",
-       "zig-out/bin/loader.img",
+       final_image_path,
        "-r",
-       "zig-out/report.txt",
+       build_dir ++ "/report.txt",
     });
     // Running the seL4CP tool depends on 
     sel4cp_tool_cmd.step.dependOn(b.getInstallStep());
@@ -159,7 +169,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    if (std.mem.eql(u8, board, "qemu_arm_virt_hyp")) {
+    if (std.mem.eql(u8, sel4cp_board.?, "qemu_arm_virt_hyp")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
@@ -169,7 +179,7 @@ pub fn build(b: *std.Build) void {
             "-serial",
             "mon:stdio",
             "-device",
-            "loader,file=zig-out/bin/loader.img,addr=0x70000000,cpu-num=0",
+            "loader,file=" ++ final_image_path ++ ",addr=0x70000000,cpu-num=0",
             "-m",
             "2G",
             "-nographic",
