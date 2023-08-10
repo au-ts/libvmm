@@ -10,14 +10,55 @@ fn concatStr(strings: []const []const u8) []const u8 {
     return std.mem.concat(gpa, u8, strings) catch "";
 }
 
-const configOptions = enum {
+const CorePlatformBoard = enum {
+    qemu_arm_virt_hyp,
+    odroidc4_hyp
+};
+
+const Target = struct {
+    board: CorePlatformBoard,
+    zig_target: std.zig.CrossTarget,
+};
+
+const targets = [_]Target {
+    .{
+        .board = CorePlatformBoard.qemu_arm_virt_hyp,
+        .zig_target = std.zig.CrossTarget{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+    .{
+        .board = CorePlatformBoard.odroidc4_hyp,
+        .zig_target = std.zig.CrossTarget{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    }
+};
+
+fn findTarget(board: CorePlatformBoard) std.zig.CrossTarget {
+    for (targets) |target| {
+        if (board == target.board) {
+            return target.zig_target;
+        }
+    }
+
+    std.log.err("Board '{}' is not supported\n", .{ board });
+    std.os.exit(1);
+}
+
+const ConfigOptions = enum {
     debug,
     release,
     benchmark
 };
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{});
     // @ivanv: need to somehow relate sel4cp config with this optimisation level?
     const optimize = b.standardOptimizeOption(.{});
 
@@ -28,21 +69,24 @@ pub fn build(b: *std.Build) void {
         std.os.exit(1);
     }
 
-    const sel4cp_config_option = b.option(configOptions, "config", "seL4CP config to build for")
-                                 orelse configOptions.debug;
-    const sel4cp_config_str = @tagName(sel4cp_config_option);
+    const sel4cp_config_option = b.option(ConfigOptions, "config", "seL4CP config to build for")
+                                 orelse ConfigOptions.debug;
+    const sel4cp_config = @tagName(sel4cp_config_option);
 
     // Get the seL4CP SDK board we want to target
-    const sel4cp_board = b.option([]const u8, "board", "seL4CP board to target")
-                                 orelse null;
-    if (sel4cp_board == null) {
+    const sel4cp_board_option = b.option(CorePlatformBoard, "board", "seL4CP board to target")
+                                  orelse null;
+    if (sel4cp_board_option == null) {
         std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
         std.os.exit(1);
     }
 
+    const target = findTarget(sel4cp_board_option.?);
+    const sel4cp_board = @tagName(sel4cp_board_option.?);
+
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/board/", sel4cp_board.?, "/", sel4cp_config_str });
+    const sdk_board_dir = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/board/", sel4cp_board, "/", sel4cp_config });
     const sdk_tool = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/bin/sel4cp" });
     const libsel4cp = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/libsel4cp.a" });
     const libsel4cp_linker_script = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/sel4cp.ld" });
@@ -93,7 +137,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // For actually compiling the DTS into a DTB
-    const dts_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/linux.dts" });
+    const dts_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/linux.dts" });
     // @ivanv: find a better place, need to figure out zig build scripts more
     const dtb_image_path = "linux.dtb";
     const dtc_command = b.addSystemCommand(&[_][]const u8{
@@ -101,8 +145,8 @@ pub fn build(b: *std.Build) void {
     });
     exe.step.dependOn(&dtc_command.step);
 
-    const linux_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/linux" });
-    const initrd_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/rootfs.cpio.gz" });
+    const linux_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/linux" });
+    const initrd_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/rootfs.cpio.gz" });
 
     // Add sel4cp.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -144,7 +188,7 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = concatStr(&[_][]const u8{ "board/", sel4cp_board.?, "/simple.system" });
+    const system_description_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/simple.system" });
     const final_image_path = bin_dir ++ "/loader.img";
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_tool,
@@ -152,9 +196,9 @@ pub fn build(b: *std.Build) void {
        "--search-path",
        bin_dir,
        "--board",
-       sel4cp_board.?,
+       sel4cp_board,
        "--config",
-       sel4cp_config_str,
+       sel4cp_config,
        "-o",
        final_image_path,
        "-r",
@@ -169,7 +213,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    if (std.mem.eql(u8, sel4cp_board.?, "qemu_arm_virt_hyp")) {
+    if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt_hyp")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",

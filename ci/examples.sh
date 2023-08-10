@@ -26,16 +26,10 @@ build_simple_zig() {
     # directory structure
     EXAMPLE_DIR="${PWD}/examples/simple"
     pushd ${EXAMPLE_DIR}
-    # @ivanv: for some reason Zig compiling the C VMM only
-    # works with ReleaseFast optimisations, debug does not work
-    # and causes a fault to happen during Linux booting. More
-    # investigation required.... sigh
     zig build \
-        -Dtarget="aarch64-freestanding" \
         -Dsdk=${SDK_PATH} \
         -Dboard=${BOARD} \
-        -Dconfig=${CONFIG} \
-        -Doptimize=ReleaseFast
+        -Dconfig=${CONFIG}
     popd
 }
 
