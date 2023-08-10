@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
 
     // @ivanv sort out
     const sdk_path = "/home/ivanv/ts/sel4cp/release/sel4cp-sdk-1.2.6";
-    const board = "qemu_arm_virt_hyp";
+    const board = "qemu_arm_virt";
     const config = "debug";
     // const sel4cp_build_dir = "build";
     // Since we are relying on Zig to produce the final ELF, it needs to do the
@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
-        "-DBOARD_qemu_arm_virt_hyp",
+        "-DBOARD_qemu_arm_virt",
         "-nostdlib",
         "-ffreestanding",
         "-mcpu=cortex-a53",

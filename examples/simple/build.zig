@@ -11,8 +11,8 @@ fn concatStr(strings: []const []const u8) []const u8 {
 }
 
 const CorePlatformBoard = enum {
-    qemu_arm_virt_hyp,
-    odroidc4_hyp
+    qemu_arm_virt,
+    odroidc4
 };
 
 const Target = struct {
@@ -22,7 +22,7 @@ const Target = struct {
 
 const targets = [_]Target {
     .{
-        .board = CorePlatformBoard.qemu_arm_virt_hyp,
+        .board = CorePlatformBoard.qemu_arm_virt,
         .zig_target = std.zig.CrossTarget{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
@@ -31,7 +31,7 @@ const targets = [_]Target {
         },
     },
     .{
-        .board = CorePlatformBoard.odroidc4_hyp,
+        .board = CorePlatformBoard.odroidc4,
         .zig_target = std.zig.CrossTarget{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
@@ -119,7 +119,7 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
-        "-DBOARD_qemu_arm_virt_hyp",
+        "-DBOARD_qemu_arm_virt",
     });
 
     libvmm.addIncludePath(.{ .path = libvmm_src });
@@ -165,7 +165,7 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
-        "-DBOARD_qemu_arm_virt_hyp",
+        "-DBOARD_qemu_arm_virt",
     });
 
     const guest_images = b.addObject(.{
@@ -213,7 +213,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt_hyp")) {
+    if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
