@@ -2,7 +2,7 @@
 
 This example is a minimal VMM that supports Linux guests and a basic
 buildroot/BusyBox root file system. This gives a basic command-line with some
-utilities.
+common Linux utilities.
 
 The example currently works on the following platforms:
 * Hardkernel Odroid-C4
@@ -47,6 +47,5 @@ Where `<BOARD>` is one of:
 
 You can view other options by doing:
 ```sh
-# @ivanv: doesn't work right now since -Dsdk is required
-zig build --help
+zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> -h
 ```
