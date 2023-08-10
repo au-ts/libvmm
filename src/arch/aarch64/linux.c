@@ -29,32 +29,6 @@ struct linux_image_header {
     uint32_t res5;        // reserved (used for PE COFF offset)
 };
 
-// bool linux_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd) {
-//     seL4_UserContext regs = {0};
-//     regs.x0 = GUEST_DTB_VADDR;
-//     regs.spsr = 5; // PMODE_EL1h
-//     regs.pc = kernel_pc;
-//     // Set all the TCB registers
-//     seL4_Word err = seL4_TCB_WriteRegisters(
-//         BASE_VM_TCB_CAP + boot_vcpu_id,
-//         false, // We'll explcitly start the guest below rather than in this call
-//         0, // No flags
-//         SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
-//         &regs
-//     );
-//     assert(err == seL4_NoError);
-//     if (err != seL4_NoError) {
-//         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", boot_vcpu_id, err);
-//         return false;
-//     }
-//     // Set the PC to the kernel image's entry point and start the thread.
-//     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
-//         regs.pc, regs.x0, initrd);
-//     sel4cp_vm_restart(boot_vcpu_id, regs.pc);
-
-//     return true;
-// }
-
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t kernel,
                              size_t kernel_size,
