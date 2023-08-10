@@ -38,7 +38,7 @@ You will first need Zig version 0.11.x (e.g 0.11.0 or 0.11.1), which can be
 downloaded from [here](https://ziglang.org/download/).
 
 ```sh
-zig build -Dtarget="aarch64-freestanding" -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> -Doptimize=ReleaseFast
+zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD>
 ```
 
 Where `<BOARD>` is one of:
