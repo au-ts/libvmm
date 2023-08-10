@@ -63,3 +63,5 @@ build_simple_make "odroidc4_hyp" "release"
 
 build_simple_zig "odroidc4_hyp" "debug"
 build_simple_zig "odroidc4_hyp" "release"
+
+echo "Passed all VMM tests"
