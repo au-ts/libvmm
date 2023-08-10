@@ -48,20 +48,20 @@ simulate_simple_make() {
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
-build_simple_make "qemu_arm_virt_hyp" "debug"
-simulate_simple_make "qemu_arm_virt_hyp" "debug"
-build_simple_make "qemu_arm_virt_hyp" "release"
-simulate_simple_make "qemu_arm_virt_hyp" "release"
+build_simple_make "qemu_arm_virt" "debug"
+simulate_simple_make "qemu_arm_virt" "debug"
+build_simple_make "qemu_arm_virt" "release"
+simulate_simple_make "qemu_arm_virt" "release"
 
-build_simple_zig "qemu_arm_virt_hyp" "debug"
-simulate_simple_zig "qemu_arm_virt_hyp" "debug"
-build_simple_zig "qemu_arm_virt_hyp" "release"
-simulate_simple_zig "qemu_arm_virt_hyp" "release"
+build_simple_zig "qemu_arm_virt" "debug"
+simulate_simple_zig "qemu_arm_virt" "debug"
+build_simple_zig "qemu_arm_virt" "release"
+simulate_simple_zig "qemu_arm_virt" "release"
 
-build_simple_make "odroidc4_hyp" "debug"
-build_simple_make "odroidc4_hyp" "release"
+build_simple_make "odroidc4" "debug"
+build_simple_make "odroidc4" "release"
 
-build_simple_zig "odroidc4_hyp" "debug"
-build_simple_zig "odroidc4_hyp" "release"
+build_simple_zig "odroidc4" "debug"
+build_simple_zig "odroidc4" "release"
 
 echo "Passed all VMM tests"
