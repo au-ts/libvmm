@@ -15,7 +15,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // @ivanv sort out
-    const sdk_path = "/Users/ivanv/ts/sel4cp_dev/release/sel4cp-sdk-1.2.6";
+    const sdk_path = "/home/ivanv/ts/sel4cp/release/sel4cp-sdk-1.2.6";
     const board = "qemu_arm_virt_hyp";
     const config = "debug";
     // const sel4cp_build_dir = "build";
@@ -29,8 +29,8 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    zig_libsel4cp.addIncludePath("src/");
-    zig_libsel4cp.addIncludePath(sdk_board_dir ++ "/include");
+    zig_libsel4cp.addIncludePath(.{ .path = "src/" });
+    zig_libsel4cp.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
 
     const vmmlib = b.addStaticLibrary(.{
         .name = "vmm",
@@ -62,11 +62,11 @@ pub fn build(b: *std.Build) void {
         "-mcpu=cortex-a53",
     });
 
-    vmmlib.addIncludePath("../../src/");
-    vmmlib.addIncludePath("../../src/util/");
-    vmmlib.addIncludePath("../../src/arch/aarch64/");
-    vmmlib.addIncludePath("../../src/arch/aarch64/vgic/");
-    vmmlib.addIncludePath(sdk_board_dir ++ "/include");
+    vmmlib.addIncludePath(.{ .path = "../../src/" });
+    vmmlib.addIncludePath(.{ .path = "../../src/util/" });
+    vmmlib.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
+    vmmlib.addIncludePath(.{ .path = "../../src/arch/aarch64/vgic/" });
+    vmmlib.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
 
     b.installArtifact(vmmlib);
 
@@ -78,20 +78,20 @@ pub fn build(b: *std.Build) void {
     });
 
     // Add sel4cp.h to be used by the API wrapper.
-    exe.addIncludePath(sdk_board_dir ++ "/include");
-    exe.addIncludePath("../../src/");
-    exe.addIncludePath("../../src/util/");
-    exe.addIncludePath("../../src/arch/aarch64/");
+    exe.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
+    exe.addIncludePath(.{ .path = "../../src/" });
+    exe.addIncludePath(.{ .path = "../../src/util/" });
+    exe.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(sdk_board_dir ++ "/lib/libsel4cp.a");
+    exe.addObjectFile(.{ .path = sdk_board_dir ++ "/lib/libsel4cp.a" });
     exe.linkLibrary(vmmlib);
     exe.addObject(zig_libsel4cp);
     // exe.linkLibrary(libsel4);
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .path = sdk_board_dir ++ "/lib/sel4cp.ld"});
 
-    exe.addIncludePath("src/");
+    exe.addIncludePath(.{ .path = "src/" });
 
     b.installArtifact(exe);
 
@@ -116,7 +116,7 @@ pub fn build(b: *std.Build) void {
     sel4cp_step.dependOn(&sel4cp_tool_cmd.step);
     b.default_step = sel4cp_step;
 
-    // This is setting up a `simulate` command for running the system via QEMU,
+    // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
     // @ivanv we should try get renode working as well
     const qemu_cmd = b.addSystemCommand(&[_][]const u8{
