@@ -45,6 +45,11 @@ Where `<BOARD>` is one of:
 * `qemu_arm_virt_hyp`
 * `odroidc4_hyp`
 
+If you are building for QEMU then you can also run QEMU by doing:
+```sh
+zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> qemu
+```
+
 You can view other options by doing:
 ```sh
 zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> -h
