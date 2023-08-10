@@ -113,7 +113,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command. We want to run the `simple` example system in a `debug`
 configuration for the QEMU ARM virt system.
 ```sh
-make BOARD=qemu_arm_virt_hyp SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make BOARD=qemu_arm_virt SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
 ```
 
 You should see Linux booting and be greeted with the buildroot prompt:

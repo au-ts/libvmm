@@ -37,7 +37,7 @@ The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
-[the QEMU example system](../board/qemu_arm_virt_hyp/systems/simple.system),
+[the QEMU example system](../board/qemu_arm_virt/systems/simple.system),
 
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" />
@@ -111,7 +111,7 @@ An example Make command looks something like this:
 make BUILD_DIR=build \
      SEL4CP_SDK=/path/to/sdk \
      CONFIG=debug \
-     BOARD=qemu_arm_virt_hyp \
+     BOARD=qemu_arm_virt \
      SYSTEM=simple.system \
      run
 ```
@@ -174,7 +174,7 @@ There are three files that need to be changed:
 * `src/vmm.h`
 * `src/vgic/vgic.h`
 * For Linux, the device tree needs to contain the location of the initial RAM disk,
-  see the `chosen` node of `board/qemu_arm_virt_hyp/images/linux.dts` as an example.
+  see the `chosen` node of `board/qemu_arm_virt/images/linux.dts` as an example.
 
 As you can probably tell, all this information that needs to be added is known at
 build-time, the plan is to auto-generate these values that the VMM needs to make it

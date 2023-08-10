@@ -15,15 +15,15 @@ make BOARD=<BOARD> SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6
 ```
 
 Where `<BOARD>` is one of:
-* `qemu_arm_virt_hyp`
-* `odroidc4_hyp`
+* `qemu_arm_virt`
+* `odroidc4`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt_hyp SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make BOARD=qemu_arm_virt SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
@@ -42,8 +42,8 @@ zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD>
 ```
 
 Where `<BOARD>` is one of:
-* `qemu_arm_virt_hyp`
-* `odroidc4_hyp`
+* `qemu_arm_virt`
+* `odroidc4`
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
