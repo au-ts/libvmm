@@ -63,7 +63,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Getting the path to the seL4CP SDK before doing anything else
-    const sel4cp_sdk = b.option([]const u8, "sdk", "Path to seL4CP SDK") orelse null;
+    const sel4cp_sdk = b.option([]const u8, "sdk", "Path to seL4CP SDK");
     if (sel4cp_sdk == null) {
         std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
         std.os.exit(1);
@@ -74,13 +74,12 @@ pub fn build(b: *std.Build) void {
     const sel4cp_config = @tagName(sel4cp_config_option);
 
     // Get the seL4CP SDK board we want to target
-    const sel4cp_board_option = b.option(CorePlatformBoard, "board", "seL4CP board to target")
-                                  orelse null;
+    const sel4cp_board_option = b.option(CorePlatformBoard, "board", "seL4CP board to target");
+
     if (sel4cp_board_option == null) {
         std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
         std.os.exit(1);
     }
-
     const target = findTarget(sel4cp_board_option.?);
     const sel4cp_board = @tagName(sel4cp_board_option.?);
 
