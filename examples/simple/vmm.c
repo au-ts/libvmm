@@ -141,48 +141,10 @@ void notified(sel4cp_channel ch) {
  * the VMM to handle.
  */
 void fault(sel4cp_id id, sel4cp_msginfo msginfo) {
-    if (id != GUEST_VCPU_ID) {
-        LOG_VMM_ERR("Unexpected fault from entity with ID 0x%lx\n", id);
-        return;
-    }
-
-    size_t label = sel4cp_msginfo_get_label(msginfo);
-    bool success = false;
-    switch (label) {
-        case seL4_Fault_VMFault:
-            success = fault_handle_vm_exception(id);
-            break;
-        case seL4_Fault_UnknownSyscall:
-            success = fault_handle_unknown_syscall(id);
-            break;
-        case seL4_Fault_UserException:
-            success = fault_handle_user_exception(id);
-            break;
-        case seL4_Fault_VGICMaintenance:
-            success = fault_handle_vgic_maintenance(id);
-            break;
-        case seL4_Fault_VCPUFault:
-            success = fault_handle_vcpu_exception(id);
-            break;
-        case seL4_Fault_VPPIEvent:
-            success = fault_handle_vppi_event(id);
-            break;
-        default:
-            /* We have reached a genuinely unexpected case, stop the guest. */
-            LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, id);
-            sel4cp_vm_stop(id);
-            /* Dump the TCB and vCPU registers to hopefully get information as
-             * to what has gone wrong. */
-            tcb_print_regs(id);
-            vcpu_print_regs(id);
-            return;
-    }
-
+    bool success = fault_handle(id, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
         sel4cp_fault_reply(sel4cp_msginfo_new(0, 0));
-    } else {
-        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
     }
 }
