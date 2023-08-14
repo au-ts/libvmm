@@ -321,3 +321,42 @@ bool fault_handle_vm_exception(size_t vcpu_id)
         }
     }
 }
+
+bool fault_handle(size_t vcpu_id, sel4cp_msginfo msginfo) {
+    size_t label = sel4cp_msginfo_get_label(msginfo);
+    bool success = false;
+    switch (label) {
+        case seL4_Fault_VMFault:
+            success = fault_handle_vm_exception(vcpu_id);
+            break;
+        case seL4_Fault_UnknownSyscall:
+            success = fault_handle_unknown_syscall(vcpu_id);
+            break;
+        case seL4_Fault_UserException:
+            success = fault_handle_user_exception(vcpu_id);
+            break;
+        case seL4_Fault_VGICMaintenance:
+            success = fault_handle_vgic_maintenance(vcpu_id);
+            break;
+        case seL4_Fault_VCPUFault:
+            success = fault_handle_vcpu_exception(vcpu_id);
+            break;
+        case seL4_Fault_VPPIEvent:
+            success = fault_handle_vppi_event(vcpu_id);
+            break;
+        default:
+            /* We have reached a genuinely unexpected case, stop the guest. */
+            LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
+            sel4cp_vm_stop(vcpu_id);
+            /* Dump the TCB and vCPU registers to hopefully get information as
+             * to what has gone wrong. */
+            tcb_print_regs(vcpu_id);
+            vcpu_print_regs(vcpu_id);
+    }
+
+    if (!success) {
+        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
+    }
+
+    return success;
+}
