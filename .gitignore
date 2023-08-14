@@ -3,4 +3,4 @@ zig-out/
 zig-cache/
 *.pdf
 *.dtb
-
+rust/target/
