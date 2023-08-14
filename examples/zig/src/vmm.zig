@@ -11,9 +11,6 @@ const c = @cImport({
 });
 const sel4cp = @import("libsel4cp.zig");
 
-// extern const sel4cp_name: []const u8;
-const sel4cp_name = "test";
-
 const GUEST_BOOT_VCPU_ID = 0;
 const GUEST_RAM_VADDR: usize = 0x40000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
@@ -22,11 +19,19 @@ const GUEST_RAM_SIZE: usize = 0x10000000;
 
 const guest_image_path = "images/";
 // Data for the guest's kernel image.
-const guest_kernel_image = @embedFile(guest_image_path ++ "linux");
+const guest_kernel_image = blk: {
+    const arr align(@alignOf(c.linux_image_header)) = @embedFile(guest_image_path ++ "linux").*;
+    break :blk &arr;
+};
 // Data for the device tree to be passed to the kernel.
 const guest_dtb_image = @embedFile(guest_image_path ++ "linux.dtb");
 // Data for the initial RAM disk to be passed to the kernel.
 const guest_initrd_image = @embedFile(guest_image_path ++ "rootfs.cpio.gz");
+
+const LinuxKernelImage = extern struct {
+    header: c.linux_image_header,
+    bytes: *u8
+};
 
 // In Zig the standard library comes with printf-like functionality with the
 // ability to provide your own function to ouput the characters. This is
@@ -35,12 +40,10 @@ const guest_initrd_image = @embedFile(guest_image_path ++ "rootfs.cpio.gz");
 // printing functionality that ends up calling to sel4cp_dbg_puts which then
 // outputs to the platform's serial connection.
 //
-// In a production system you mighrt want to instead hook up the logger to a
+// In a production system you might want to instead hook up the logger to a
 // user-level UART driver, but for the example we only need logging for debug
 // mode.
 const log = struct {
-    // Here we set up a printf-like writer from the standard library by providing
-    // a way to output via the UART.
     const Writer = std.io.Writer(u32, error{}, debug_uart_put_str);
     const debug_uart = Writer { .context = 0 };
 
@@ -68,9 +71,11 @@ fn serial_ack(_: usize, irq: c_int, _: ?*anyopaque) callconv(.C) void {
 
 export fn init() callconv(.C) void {
     // Initialise the VMM, the VCPU(s), and start the guest
-    log.info("starting \"{s}\"\n", .{ sel4cp_name });
+    log.info("starting \"{s}\"\n", .{ sel4cp.sel4cp_name });
     // Place all the binaries in the right locations before starting the guest
     // @ivanv: should all the vmm functions be prefixed with "vmm_"?
+    // var linux_kernel_image: *LinuxKernelImage = @alignCast(@constCast(@ptrCast(guest_kernel_image)));
+    // log.info("addr of linux_kernel_image: {*}", .{ linux_kernel_image });
     const kernel_pc = c.linux_setup_images(
                 GUEST_RAM_VADDR,
                 @intFromPtr(guest_kernel_image),
@@ -132,6 +137,7 @@ export fn fault(id: sel4cp.sel4cp_id, msginfo: sel4cp.sel4cp_msginfo) callconv(.
     // This is the primary fault handler for the guest, all faults that come
     // from seL4 regarding the guest will need to be handled here.
     const label = sel4cp.sel4cp_msginfo_get_label(msginfo);
+    log.info("fault label: {}", .{ label });
     const success = switch (label) {
         sel4cp.seL4_Fault_VMFault => fault_handle_vm_exception(id),
         sel4cp.seL4_Fault_UnknownSyscall => fault_handle_unknown_syscall(id),
