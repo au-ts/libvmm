@@ -5,7 +5,7 @@ buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
-* Hardkernel Odroid-C4
+* HardKernel Odroid-C4
 * QEMU ARM virt
 
 ## Building with Make
@@ -34,7 +34,7 @@ system running the whole system.
 For educational purposes, you can also build and run this example using the
 [Zig](https://ziglang.org/) build system.
 
-You will first need Zig version 0.11.x (e.g 0.11.0 or 0.11.1), which can be
+You will first need Zig version 0.11.x (e.g 0.11.0 or 0.11.1) which can be
 downloaded from [here](https://ziglang.org/download/).
 
 ```sh
@@ -54,3 +54,4 @@ You can view other options by doing:
 ```sh
 zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> -h
 ```
+
