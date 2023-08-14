@@ -95,7 +95,7 @@ pub fn build(b: *std.Build) void {
 
     b.installArtifact(exe);
 
-    const system_description_path = "zig.system";
+    const system_description_path = "zig_vmm.system";
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_path ++ "/bin/sel4cp",
        system_description_path,
