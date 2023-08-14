@@ -48,7 +48,7 @@ extern "C" fn uart_irq_ack(_: usize, _: i32, _: *const c_void) {
 }
 
 #[protection_domain]
-fn init() -> ThisHandler {
+fn init() -> VmmHandler {
     debug_println!("VMM|INFO: starting Rust VMM");
     // Thankfully Rust comes with a simple macro that allows us to package
     // binaries locally and placing them in the final binary that we load
@@ -75,12 +75,12 @@ fn init() -> ThisHandler {
         guest_start(GUEST_VCPU_ID, guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     }
 
-    ThisHandler {}
+    VmmHandler {}
 }
 
-struct ThisHandler {}
+struct VmmHandler {}
 
-impl Handler for ThisHandler {
+impl Handler for VmmHandler {
     type Error = !;
 
     fn notified(&mut self, channel: Channel) -> Result<(), Self::Error> {
