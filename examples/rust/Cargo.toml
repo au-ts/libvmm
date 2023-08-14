@@ -1,0 +1,13 @@
+[package]
+name = "vmm"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ivan Velickovic <i.velickovic@unsw.edu.au>"]
+license = "BSD-2-Clause"
+
+[[bin]]
+name = "vmm"
+path = "src/vmm.rs"
+
+[dependencies.sel4cp]
+path = "rust-seL4/crates/sel4cp"
