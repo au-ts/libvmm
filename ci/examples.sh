@@ -91,4 +91,5 @@ simulate_rust "debug"
 # build_rust "release"
 # simulate_rust "release"
 
-echo "\nCI|INFO: Passed all VMM tests"
+echo ""
+echo "CI|INFO: Passed all VMM tests"
