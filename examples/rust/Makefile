@@ -75,7 +75,7 @@ CFLAGS := -mstrict-align \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
-RUST_TARGET_PATH := support/targets
+RUST_TARGET_PATH := .
 RUST_SEL4CP_TARGET := aarch64-sel4cp-minimal
 TARGET_DIR := $(BUILD_DIR)/target
 
