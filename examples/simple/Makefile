@@ -55,7 +55,9 @@ SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 
 BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
-VMM_SRC_DIR := ../../src
+VMM := ../../
+VMM_TOOLS := $(VMM)/tools
+VMM_SRC_DIR := $(VMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
 
 IMAGE_DIR := board/$(BOARD)
@@ -114,7 +116,7 @@ $(DTB): $(DTS)
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
-$(BUILD_DIR)/package_guest_images.o: package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
+$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
