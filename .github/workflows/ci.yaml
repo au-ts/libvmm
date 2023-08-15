@@ -44,12 +44,6 @@ jobs:
           echo "${PWD}/zig-linux-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - name: Checkout rust-seL4 project (temporary step)
-        uses: actions/checkout@v3
-        with:
-          repository: Ivan-Velickovic/rust-seL4
-          ref: dev
-          path: examples/rust/rust-seL4
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
@@ -81,12 +75,6 @@ jobs:
           echo "${PWD}/zig-macos-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - name: Checkout rust-seL4 project (temporary step)
-        uses: actions/checkout@v3
-        with:
-          repository: Ivan-Velickovic/rust-seL4
-          ref: dev
-          path: examples/rust/rust-seL4
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
@@ -109,12 +97,6 @@ jobs:
         uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      - name: Checkout rust-seL4 project (temporary step)
-        uses: actions/checkout@v3
-        with:
-          repository: Ivan-Velickovic/rust-seL4
-          ref: dev
-          path: examples/rust/rust-seL4
       - name: Build and run VMM examples
         run: nix-shell --pure --run "./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6"
       - name: Upload built system images
@@ -136,12 +118,6 @@ jobs:
         uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      - name: Checkout rust-seL4 project (temporary step)
-        uses: actions/checkout@v3
-        with:
-          repository: Ivan-Velickovic/rust-seL4
-          ref: dev
-          path: examples/rust/rust-seL4
       - name: Build and run VMM examples
         run: nix-shell --pure --run "./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6"
       - name: Upload built system images
