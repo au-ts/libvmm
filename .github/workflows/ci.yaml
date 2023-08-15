@@ -36,7 +36,7 @@ jobs:
         run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
       - name: Install VMM dependencies (via apt)
         # 'expect' is only a dependency for CI testing
-        run: sudo apt update && sudo apt install -y make clang lld qemu-system-arm device-tree-compiler expect
+        run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect
       - name: Install Zig
         run: |
           wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz
