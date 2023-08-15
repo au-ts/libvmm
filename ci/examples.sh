@@ -10,6 +10,7 @@ SDK_PATH=$1
 build_simple_make() {
     BOARD=$1
     CONFIG=$2
+    echo "CI|INFO: building simple example via Make with board: $BOARD and config: $CONFIG"
     BUILD_DIR="${PWD}/build/simple/make/${BOARD}/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/simple -B \
@@ -22,6 +23,7 @@ build_simple_make() {
 build_simple_zig() {
     BOARD=$1
     CONFIG=$2
+    echo "CI|INFO: building simple example via Zig with board: $BOARD and config: $CONFIG"
     # @ivanv Ideally we'd have Makefile and Zig output in same
     # directory structure
     EXAMPLE_DIR="${PWD}/examples/simple"
@@ -34,6 +36,7 @@ build_simple_zig() {
 }
 
 build_rust() {
+    echo "CI|INFO: building Rust example with config: $1"
     CONFIG=$1
     BUILD_DIR="${PWD}/examples/rust/build"
     mkdir -p ${BUILD_DIR}
@@ -43,6 +46,7 @@ build_rust() {
 }
 
 simulate_rust() {
+    echo "CI|INFO: simulating Rust example"
     BUILD_DIR="${PWD}/examples/rust/build"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
@@ -50,6 +54,7 @@ simulate_rust() {
 simulate_simple_zig() {
     BOARD=$1
     CONFIG=$2
+    echo "CI|INFO: simulating simple example via Zig with board: $BOARD and config: $CONFIG"
     EXAMPLE_DIR="${PWD}/examples/simple"
     BUILD_DIR="${EXAMPLE_DIR}/zig-out/bin"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
@@ -58,6 +63,7 @@ simulate_simple_zig() {
 simulate_simple_make() {
     BOARD=$1
     CONFIG=$2
+    echo "CI|INFO: simulating simple example via Make with board: $BOARD and config: $CONFIG"
     BUILD_DIR="${PWD}/build/simple/make/${BOARD}/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
@@ -84,4 +90,4 @@ simulate_rust "debug"
 # build_rust "release"
 # simulate_rust "release"
 
-echo "Passed all VMM tests"
+echo "\nCI|INFO: Passed all VMM tests"
