@@ -33,6 +33,20 @@ build_simple_zig() {
     popd
 }
 
+build_rust() {
+    CONFIG=$1
+    BUILD_DIR="${PWD}/examples/rust/build"
+    mkdir -p ${BUILD_DIR}
+    make -C examples/rust -B \
+        CONFIG=${CONFIG} \
+        SEL4CP_SDK=${SDK_PATH}
+}
+
+simulate_rust() {
+    BUILD_DIR="${PWD}/examples/rust/build"
+    ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
+}
+
 simulate_simple_zig() {
     BOARD=$1
     CONFIG=$2
@@ -63,5 +77,11 @@ build_simple_make "odroidc4" "release"
 
 build_simple_zig "odroidc4" "debug"
 build_simple_zig "odroidc4" "release"
+
+build_rust "debug"
+simulate_rust "debug"
+# @ivanv: TODO get Rust in with release version of seL4CP working
+# build_rust "release"
+# simulate_rust "release"
 
 echo "Passed all VMM tests"

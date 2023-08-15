@@ -42,6 +42,8 @@ jobs:
           wget https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz
           tar xf zig-linux-x86_64-0.11.0.tar.xz
           echo "${PWD}/zig-linux-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
+      - name: Install Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
@@ -71,6 +73,8 @@ jobs:
           wget https://ziglang.org/download/0.11.0/zig-macos-x86_64-0.11.0.tar.xz
           tar xf zig-macos-x86_64-0.11.0.tar.xz
           echo "${PWD}/zig-macos-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
+      - name: Install Rust
+        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run VMM examples
         run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
         shell: bash
