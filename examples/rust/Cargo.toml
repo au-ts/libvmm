@@ -10,4 +10,7 @@ name = "vmm"
 path = "src/vmm.rs"
 
 [dependencies.sel4cp]
-path = "rust-seL4/crates/sel4cp"
+# Temporarily use fork of rust-seL4 until all the changes
+# we need are upstreamed
+git = "https://github.com/Ivan-Velickovic/rust-seL4"
+branch = "dev"
