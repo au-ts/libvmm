@@ -23,7 +23,7 @@ QEMU := qemu-system-aarch64
 DTC := dtc
 CC := clang
 LD := ld.lld
-AR := aarch64-none-elf-ar
+AR := llvm-ar
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
