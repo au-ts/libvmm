@@ -4,8 +4,8 @@ fn main() {
         Err(e) => println!("Could not get environment variable 'BOARD_DIR': {e}"),
     }
 
-    match std::env::var("VMM_BUILD_DIR") {
+    match std::env::var("BUILD_DIR") {
         Ok(build_dir) => println!("cargo:rustc-link-search={build_dir}"),
-        Err(e) => println!("Could not get environment variable 'VMM_BUILD_DIR': {e}"),
+        Err(e) => println!("Could not get environment variable 'BUILD_DIR': {e}"),
     }
 }

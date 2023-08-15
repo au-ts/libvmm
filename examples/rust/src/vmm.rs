@@ -56,9 +56,10 @@ fn init() -> VmmHandler {
     // Thankfully Rust comes with a simple macro that allows us to package
     // binaries locally and placing them in the final binary that we load
     // onto our platform, in this case the QEMU ARM virt board.
-    let linux = include_bytes!("../images/linux");
-    let dtb = include_bytes!("../build/linux.dtb");
-    let initrd = include_bytes!("../images/rootfs.cpio.gz");
+    // @ivanv: the way this include works right now is undefined behaviour!
+    let linux = include_bytes!(concat!(env!("IMAGE_DIR"), "/linux"));
+    let dtb = include_bytes!(concat!(env!("BUILD_DIR"), "/linux.dtb"));
+    let initrd = include_bytes!(concat!(env!("IMAGE_DIR"), "/rootfs.cpio.gz"));
     // The VMM library does not understand slices like Rust, so we have to
     // turn this slices of u8 into raw addresses.
     let linux_addr = linux.as_ptr() as usize;
