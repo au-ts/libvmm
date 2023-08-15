@@ -97,7 +97,9 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const libvmm_src = "../../src/";
+    const libvmm_path = "../..";
+    const libvmm_tools = libvmm_path ++ "/tools/";
+    const libvmm_src = libvmm_path ++ "/src/";
     // Right now we only support AArch64 so this is a safe assumption.
     const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
     libvmm.addCSourceFiles(&.{
@@ -176,7 +178,7 @@ pub fn build(b: *std.Build) void {
     const kernel_image_arg = concatStr(&[_][]const u8{ "-DGUEST_KERNEL_IMAGE_PATH=", "\"", linux_image_path, "\"" });
     const dtb_image_arg = concatStr(&[_][]const u8{ "-DGUEST_DTB_IMAGE_PATH=", "\"", dtb_image_path, "\"" });
     const initrd_image_arg = concatStr(&[_][]const u8{ "-DGUEST_INITRD_IMAGE_PATH=", "\"", initrd_image_path, "\"" });
-    guest_images.addCSourceFiles(&.{"package_guest_images.S"}, &.{
+    guest_images.addCSourceFiles(&.{ libvmm_tools ++ "package_guest_images.S" }, &.{
         kernel_image_arg,
         dtb_image_arg,
         initrd_image_arg,
