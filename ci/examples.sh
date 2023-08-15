@@ -38,7 +38,7 @@ build_simple_zig() {
 build_rust() {
     echo "CI|INFO: building Rust example with config: $1"
     CONFIG=$1
-    BUILD_DIR="${PWD}/examples/rust/build/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/rust/qemu_arm_virt/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/rust -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -48,7 +48,7 @@ build_rust() {
 
 simulate_rust() {
     echo "CI|INFO: simulating Rust example with config: $1"
-    BUILD_DIR="${PWD}/examples/rust/build/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/rust/qemu_arm_virt/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
