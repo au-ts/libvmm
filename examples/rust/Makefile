@@ -81,7 +81,9 @@ TARGET_DIR := $(BUILD_DIR)/target
 
 RUST_ENV := \
 	RUST_TARGET_PATH=$(abspath $(RUST_TARGET_PATH)) \
-	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include)
+	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include) \
+	SEL4CP_BOARD_DIR=$(abspath $(BOARD_DIR)) \
+	VMM_BUILD_DIR=$(abspath $(BUILD_DIR)) \
 
 RUST_OPTIONS := \
 	-Z unstable-options \

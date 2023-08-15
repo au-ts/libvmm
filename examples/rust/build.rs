@@ -1,5 +1,11 @@
 fn main() {
-    println!("cargo:rustc-link-search=/home/ivanv/ts/sel4cp/release/sel4cp-sdk-1.2.6/board/qemu_arm_virt/debug/lib/");
-    println!("cargo:rustc-link-search=/home/ivanv/ts/sel4cp_vmm/examples/rust/build");
-}
+    match std::env::var("SEL4CP_BOARD_DIR") {
+        Ok(sel4cp_board_dir) => println!("cargo:rustc-link-search={sel4cp_board_dir}/lib"),
+        Err(e) => println!("Could not get environment variable 'BOARD_DIR': {e}"),
+    }
 
+    match std::env::var("VMM_BUILD_DIR") {
+        Ok(build_dir) => println!("cargo:rustc-link-search={build_dir}"),
+        Err(e) => println!("Could not get environment variable 'VMM_BUILD_DIR': {e}"),
+    }
+}
