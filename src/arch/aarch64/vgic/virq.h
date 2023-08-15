@@ -41,7 +41,7 @@ static inline void virq_ack(size_t vcpu_id, struct virq_handle *irq)
 {
     // printf("VGIC|INFO: Acking for vIRQ %d\n", irq->virq);
     assert(irq->ack_fn);
-    irq->ack_fn(vcpu_id, irq->virq, NULL);
+    irq->ack_fn(vcpu_id, irq->virq, irq->ack_data);
 }
 
 /* TODO: A typical number of list registers supported by GIC is four, but not
