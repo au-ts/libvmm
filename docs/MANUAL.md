@@ -75,7 +75,7 @@ enough memory to place the kernel image and any other associated binaries. How
 much memory is required for it to function depends on what you intend to do
 with the guest.
 
-This region is mapped into the VMM so that is can copy in the kernel image and
+This region is mapped into the VMM so that it can copy in the kernel image and
 any other binaries and is of course also mapped into the virtual machine so
 that it has access to its own RAM.
 
