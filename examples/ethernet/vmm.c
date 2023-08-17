@@ -25,6 +25,9 @@
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_odroidc4)
+#define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #else
 #error Need to define VM image address and DTB address
 #endif
@@ -33,10 +36,15 @@
  * across platforms. */
 #define SERIAL_IRQ_CH 1
 #define ETHERNET_IRQ_CH 2
+#define ETHERNET_PHY_IRQ_CH 3
 
 #if defined(BOARD_qemu_arm_virt)
 #define SERIAL_IRQ 33
 #define ETHERNET_IRQ 79
+#elif defined(BOARD_odroidc4)
+#define SERIAL_IRQ 225
+#define ETHERNET_IRQ 40
+#define ETHERNET_PHY_IRQ 96
 #else
 #error Need to define serial interrupt
 #endif
@@ -63,6 +71,10 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
 
 static void ethernet_ack(size_t vcpu_id, int irq, void *cookie) {
     sel4cp_irq_ack(ETHERNET_IRQ_CH);
+}
+
+static void ethernet_phy_ack(size_t vcpu_id, int irq, void *cookie) {
+    sel4cp_irq_ack(ETHERNET_PHY_IRQ_CH);
 }
 
 void init(void) {
@@ -96,6 +108,9 @@ void init(void) {
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     success = virq_register(GUEST_VCPU_ID, ETHERNET_IRQ, &ethernet_ack, NULL);
+#if defined(BOARD_odroidc4)
+    success = virq_register(GUEST_VCPU_ID, ETHERNET_PHY_IRQ, &ethernet_phy_ack, NULL);
+#endif
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     sel4cp_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
@@ -111,6 +126,15 @@ void notified(sel4cp_channel ch) {
             }
             break;
         }
+#if defined(BOARD_odroidc4)
+        case ETHERNET_PHY_IRQ_CH: {
+            bool success = virq_inject(GUEST_VCPU_ID, ETHERNET_PHY_IRQ);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", ETHERNET_PHY_IRQ, GUEST_VCPU_ID);
+            }
+            break;
+        }
+#endif
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
             if (!success) {
