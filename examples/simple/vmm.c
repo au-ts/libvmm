@@ -74,8 +74,7 @@ extern char _guest_dtb_image_end[];
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* seL4CP will set this variable to the start of the guest RAM memory region. */
-// @ivanv come back to
-uintptr_t guest_ram_vaddr = 0x40000000;
+uintptr_t guest_ram_vaddr;
 
 static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     /*
