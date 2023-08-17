@@ -137,12 +137,10 @@ pub fn build(b: *std.Build) void {
 
     // For actually compiling the DTS into a DTB
     const dts_path = fmtPrint("board/{s}/linux.dts", .{ sel4cp_board });
-    // @ivanv: find a better place, need to figure out zig build scripts more
-    const dtb_image_path = "linux.dtb";
     const dtc_command = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o", dtb_image_path
+        "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o"
     });
-    exe.step.dependOn(&dtc_command.step);
+    const dtb_image_path = dtc_command.addOutputFileArg("linux.dtb");
 
     // Add sel4cp.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -161,7 +159,7 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
-        "-DBOARD_qemu_arm_virt",
+        "-DBOARD_qemu_arm_virt", // @ivanv: shouldn't be needed as the library should not depend on the board
     });
 
     const guest_images = b.addObject(.{
@@ -169,13 +167,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    dtb_image_path.addStepDependencies(&guest_images.step);
 
     const linux_image_path = fmtPrint("board/{s}/linux", .{ sel4cp_board });
     const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
 
-    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path });
     const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ sel4cp_board });
     const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
+    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path.getPath(b) });
     guest_images.addCSourceFiles(&.{ libvmm_tools ++ "package_guest_images.S" }, &.{
         kernel_image_arg,
         dtb_image_arg,
