@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 // @ivanv: this should all come from the DTS!
-#if defined(BOARD_qemu_arm_virt_hyp)
+#if defined(BOARD_qemu_arm_virt)
 #define GIC_V2
 #define GIC_DIST_PADDR      0x8000000
 #elif defined(BOARD_odroidc2_hyp)

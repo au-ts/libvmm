@@ -28,10 +28,17 @@
 // emul handler for an instance of virtio gpu
 static virtio_emul_handler_t gpu_emul_handler;
 
+// virtio-gpu config values
 static struct virtio_gpu_config gpu_config;
 
 // the list of virtqueue handlers for an instance of virtio gpu
 static virtqueue_t vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
+
+// list of created resource ids
+// static uint32_t resource_ids[MAX_RESOURCE];
+
+// 2D array of memory entries, indexed with [resource_id][max]
+// static struct virtio_gpu_mem_entry mem_entries[MAX_RESOURCE][MAX_MEM_ENTRIES];
 
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
     // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
@@ -157,6 +164,7 @@ static void virtio_gpu_config_init(void) {
 void virtio_gpu_emul_init(void)
 {
     virtio_gpu_config_init();
+    // virtio_gpu
     
     gpu_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_GPU;
     gpu_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;

@@ -6,17 +6,19 @@
 
 #include <sel4cp.h>
 #include "../util/util.h"
-#include "uio_gpu.h"
 #include "../vgic/vgic.h"
+#include "uio_gpu.h"
+
 
 #define VCPU_ID 0
 
 void uio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    // Do nothing
     // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_uio_ack %d\n", sel4cp_name, irq);
 }
 
 void uio_gpu_notified(sel4cp_channel ch) {
-    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_uio_notified\n", sel4cp_name);
+    printf("\"%s\"|UIO|INFO: uio_gpu_notified\n", sel4cp_name);
     bool success = vgic_inject_irq(VCPU_ID, UIO_GPU_IRQ);
     // assert(success);
     printf(success ? "UIO interrupt success\n" : "UIO interrupt failure\n");

@@ -5,6 +5,6 @@
  */
 #pragma once
 
-void gpu_virtqueue_to_sddf(uio_map_t *uio_map, virtqueue_t *vq);
+int gpu_virtqueue_to_sddf(uio_map_t *uio_map, virtqueue_t *vq);
 
-void gpu_sddf_to_virtqueue(uio_map_t *uio_map, virtqueue_t *vq);
+int gpu_sddf_to_virtqueue(virtqueue_t *vq, uio_map_t *uio_map);

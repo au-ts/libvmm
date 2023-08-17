@@ -139,6 +139,15 @@ static bool handle_vm_fault()
         case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
             return handle_vgic_redist_fault(GUEST_VCPU_ID, addr, fsr, &regs);
 #endif      
+        case (0x300000)...(0x300004): {
+            sel4cp_notify(58); //Notify rectangle to draw
+            if (fault_is_read(fsr)) {
+                fault_advance_vcpu(&regs);
+                return true;
+            } else {
+                return false;
+            }
+        }
         default: {
             uint64_t ip = sel4cp_mr_get(seL4_VMFault_IP);
             uint64_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
@@ -270,8 +279,16 @@ void guest_start(void) {
     // @jade: this should not be necessary. Investigation required.
     register_passthrough_irq(5, 17);
 
-    // virtio-gpu uio
-    vgic_register_irq(GUEST_VCPU_ID, UIO_GPU_IRQ, &uio_gpu_ack, NULL);
+    // UIO for virtio-gpu
+    err = vgic_register_irq(GUEST_VCPU_ID, UIO_GPU_IRQ, &uio_gpu_ack, NULL);
+    if (!err) {
+        printf("\"%s\"|ERROR: Failed to register uio for virtio-gpu IRQ\n", sel4cp_name);
+    }
+
+    err = vgic_register_irq(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    if (!err) {
+        printf("\"%s\"|ERROR: Failed to register serial IRQ\n", sel4cp_name);
+    }
 
     seL4_UserContext regs = {0};
 
@@ -386,7 +403,7 @@ init(void)
         assert(0);
     }
     // Initialise and start guest (setup VGIC, setup interrupts, TCB registers)
-    // guest_start();
+    guest_start();
 }
 
 void
@@ -401,7 +418,12 @@ notified(sel4cp_channel ch)
             break;
         }
         case UIO_GPU_CH: {
-            uio_gpu_notified(ch);
+            printf("uio notified!!!!!\n");
+            bool success = vgic_inject_irq(0, UIO_GPU_IRQ); //VCPU_ID
+            // assert(success);
+            printf(success ? "UIO interrupt success\n" : "UIO interrupt failure\n");
+            // uio_gpu_notified(ch);
+            // printf("uio gpu notification handler completed\n");
             break;
         }
         default:

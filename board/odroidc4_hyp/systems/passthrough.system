@@ -27,7 +27,7 @@
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
 
     <protection_domain name="VMM" priority="254">
-        <program_image path="vmm.elf" />
+        <program_image path="vmm2.elf" />
         <map mr="guest_ram" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         <virtual_machine name="linux" id="0">
             <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
@@ -77,5 +77,7 @@
         <irq irq="48" id="16" />
         <!-- hdmi -->
         <irq irq="89" id="14" trigger="edge" />
+        <!-- IRQ work interrupts -->
+        <irq irq="5" id="17" />
     </protection_domain>
 </system>

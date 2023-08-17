@@ -14,6 +14,16 @@
 #define CURSOR_QUEUE                1
 #define VIRTIO_MMIO_GPU_NUM_VIRTQUEUE   2
 
+#define MAX_RESOURCE 64
+#define MAX_MEM_ENTRIES 512
+
+// typedef struct virtio_gpu {
+//     virtio_emul_handler_t handler;
+//     // struct virtio_gpu_config config;
+//     uint32_t *resource_ids;
+//     struct virtio_gpu_mem_entry **mem_entries;
+// } virtio_gpu_t;
+
 void virtio_gpu_ack(uint64_t vcpu_id, int irq, void *cookie);
 
 virtio_emul_handler_t *get_virtio_gpu_emul_handler(void);

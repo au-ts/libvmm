@@ -55,16 +55,16 @@ SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: should only compile printf.o in debug
 VMM_DRIVER_OBJS := vmm_driver.o printf.o psci.o smc.o fault.o util.o vgic.o
-VMM_GUEST_OBJS := vmm_guest.o printf.o psci.o smc.o fault.o util.o vgic.o
+VMM_CLIENT_OBJS := vmm_client.o printf.o psci.o smc.o fault.o util.o vgic.o
 
 # @ivanv: hack...
 # This step should be done based on the DTB
 ifeq ($(BOARD),imx8mm_evk)
 	VMM_DRIVER_OBJS += vgic_v3.o
-	VMM_GUEST_OBJS += vgic_v3.o
+	VMM_CLIENT_OBJS += vgic_v3.o
 else
 	VMM_DRIVER_OBJS += vgic_v2.o
-	VMM_GUEST_OBJS += vgic_v2.o
+	VMM_CLIENT_OBJS += vgic_v2.o
 endif
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -75,23 +75,27 @@ endif
 # have a helpful message that lists all the support boards.
 
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
-
 BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
 SRC_DIR := src
 SYSTEM_DESCRIPTION := board/$(BOARD)/systems/$(SYSTEM)
 
 IMAGE_DIR := board/$(BOARD)/images
-KERNEL_IMAGE_1 := board/qemu_arm_virt_hyp/images/linux
-KERNEL_IMAGE_2 := board/odroidc4_hyp/images/linux_uio_hdmi_eth
 ifeq ($(BOARD),odroidc4_hyp)
-DTB_SOURCE_2 := $(IMAGE_DIR)/linux_virtio_gpu.dts
-DTB_OVERLAY := $(IMAGE_DIR)/vmm1_overlay.dts
+KERNEL_IMAGE_1 := $(IMAGE_DIR)/linux_virtiogpu
+KERNEL_IMAGE_2 := $(IMAGE_DIR)/linux_uio_hdmi_eth
+DTB_SOURCE_1 := $(IMAGE_DIR)/linux_uio_virtiogpu.dts $(IMAGE_DIR)/vmm1_virtiogpu_overlay.dts
+DTB_SOURCE_2 := $(IMAGE_DIR)/linux_uio_virtiogpu.dts
+INITRD_IMAGE_1 := $(IMAGE_DIR)/rootfs.cpio.gz
+INITRD_IMAGE_2 := $(IMAGE_DIR)/rootfs.cpio.gz
 endif
-ifeq ($(BOARD),qemu_arm_virt_hyp)
+ifeq ($(BOARD),qemu_arm_virt)
+KERNEL_IMAGE_1 := $(IMAGE_DIR)/linux_virtiogpu
+KERNEL_IMAGE_2 := $(IMAGE_DIR)/linux_uio_hdmi_eth
 DTB_SOURCE_1 := $(IMAGE_DIR)/linux_virtio_gpu.dts
 DTB_SOURCE_2 := $(IMAGE_DIR)/linux_uio.dts
+INITRD_IMAGE_1 := $(IMAGE_DIR)/rootfs.cpio.gz
+INITRD_IMAGE_2 := $(IMAGE_DIR)/rootfs.cpio.gz
 endif
-INITRD_IMAGE := $(IMAGE_DIR)/rootfs.cpio.gz
 IMAGES_VMM1 := vmm1_linux.dtb vmm1.elf
 IMAGES_VMM2 := vmm2_linux.dtb vmm2.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -106,9 +110,10 @@ CFLAGS := -mstrict-align -nostdlib -ffreestanding -g3 -O3 -Wall -Wno-unused-func
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
-ifdef VIRTIO_MMIO
 VMM_DRIVER_OBJS += uio_gpu.o
-VMM_GUEST_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_gpu_device.o virtio_gpu_sddf_driver.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
+
+ifdef VIRTIO_MMIO
+VMM_CLIENT_OBJS += virtio_mmio.o virtio_gpu_emul.o virtio_gpu_device.o virtio_gpu_sddf.o virtio_net_emul.o virtio_net_vswitch.o shared_ringbuffer.o
 CFLAGS += -DVIRTIO_MMIO
 QEMU_SIZE := 4G
 endif
@@ -139,7 +144,7 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 ifeq ($(BOARD),odroidc4_hyp)
-$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE_2) $(DTB_OVERLAY)
+$(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE_1)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	cat $^ > $(BUILD_DIR)/tem.dts
 	# @ivanv: Shouldn't supress warnings
@@ -149,7 +154,7 @@ $(BUILD_DIR)/vmm1_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_1)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm1_linux.dtb\" \
-					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE_1)\" \
 					$< -o $@
 
 $(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE_2)
@@ -161,11 +166,11 @@ $(BUILD_DIR)/vmm2_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_2)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm2_linux.dtb\" \
-					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE_2)\" \
 					$< -o $@
 endif
 
-ifeq ($(BOARD),qemu_arm_virt_hyp)
+ifeq ($(BOARD),qemu_arm_virt)
 $(BUILD_DIR)/vmm1_linux.dtb: $(DTB_SOURCE_1)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
@@ -175,7 +180,7 @@ $(BUILD_DIR)/vmm1_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_1)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm1_linux.dtb\" \
-					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE_1)\" \
 					$< -o $@
 
 $(BUILD_DIR)/vmm2_linux.dtb: $(DTB_SOURCE_2)
@@ -187,7 +192,7 @@ $(BUILD_DIR)/vmm2_global_data.o: $(SRC_DIR)/global_data.S
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DVM_KERNEL_IMAGE_PATH=\"$(KERNEL_IMAGE_2)\" \
 					-DVM_DTB_IMAGE_PATH=\"$(BUILD_DIR)/vmm2_linux.dtb\" \
-					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE)\" \
+					-DVM_INITRD_IMAGE_PATH=\"$(INITRD_IMAGE_2)\" \
 					$< -o $@
 endif
 
@@ -211,11 +216,27 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/uio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 endif
 
-$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_GUEST_OBJS) vmm1_global_data.o)
+$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_CLIENT_OBJS) vmm1_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM_DRIVER_OBJS) vmm2_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM2) $(IMAGES_VMM1)) $(SYSTEM_DESCRIPTION)
+ifdef RECTANGLE
+$(BUILD_DIR)/rectangle.elf: $(BUILD_DIR)/rectangle.o $(BUILD_DIR)/util.o $(BUILD_DIR)/printf.o
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+endif
+
+ifdef DRIVER_ONLY
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+else ifdef CLIENT_ONLY
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM1)) $(SYSTEM_DESCRIPTION)
+	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+else ifdef RECTANGLE
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, rectangle.elf $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
+	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+else
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM1) $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
+	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+endif

@@ -22,23 +22,22 @@ uio_map_t *get_uio_map() {
 }
 
 void virtio_gpu_notified() {
-    // do nothing
     // Populate virtio stuff
     // vgic inject
 }
 
-// // notify the guest that their avail buffer has been used
-// static void virtio_gpu_emul_handle_used_buffer_notif(struct virtio_emul_handler *self, uint16_t desc_head)
-// {
-//     // add to used ring
-//     struct vring *vring = &vqs[CONTROL_QUEUE].vring;
+// notify the guest that their avail buffer has been used
+static void virtio_gpu_emul_handle_used_buffer_notif(struct virtio_emul_handler *self, uint16_t desc_head)
+{
+    // add to used ring
+    struct vring *vring = &self->vqs[CONTROL_QUEUE].vring;
 
-//     struct vring_used_elem used_elem = {desc_head, 0};
-//     uint16_t guest_idx = vring->used->idx;
+    struct vring_used_elem used_elem = {desc_head, 0};
+    uint16_t guest_idx = vring->used->idx;
 
-//     vring->used->ring[guest_idx % vring->num] = used_elem;
-//     vring->used->idx++;
-// }
+    vring->used->ring[guest_idx % vring->num] = used_elem;
+    vring->used->idx++;
+}
 
 // // Tell guest that driver vm is done with buffers
 //     bool success = vgic_inject_irq(VCPU_ID, VIRTIO_GPU_IRQ);
