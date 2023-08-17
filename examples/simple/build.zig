@@ -3,8 +3,8 @@ const std = @import("std");
 var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = general_purpose_allocator.allocator();
 
-fn concatStr(strings: []const []const u8) []const u8 {
-    return std.mem.concat(gpa, u8, strings) catch "";
+fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
+    return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
 }
 
 const CorePlatformBoard = enum {
@@ -60,11 +60,12 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // Getting the path to the seL4CP SDK before doing anything else
-    const sel4cp_sdk = b.option([]const u8, "sdk", "Path to seL4CP SDK");
-    if (sel4cp_sdk == null) {
+    const sel4cp_sdk_arg = b.option([]const u8, "sdk", "Path to seL4CP SDK");
+    if (sel4cp_sdk_arg == null) {
         std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
         std.os.exit(1);
     }
+    const sel4cp_sdk = sel4cp_sdk_arg.?;
 
     const sel4cp_config_option = b.option(ConfigOptions, "config", "seL4CP config to build for")
                                  orelse ConfigOptions.debug;
@@ -82,11 +83,11 @@ pub fn build(b: *std.Build) void {
 
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/board/", sel4cp_board, "/", sel4cp_config });
-    const sdk_tool = concatStr(&[_][]const u8{ sel4cp_sdk.?, "/bin/sel4cp" });
-    const libsel4cp = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/libsel4cp.a" });
-    const libsel4cp_linker_script = concatStr(&[_][]const u8{ sdk_board_dir, "/lib/sel4cp.ld" });
-    const sdk_board_include_dir = concatStr(&[_][]const u8{ sdk_board_dir, "/include" });
+    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ sel4cp_sdk, sel4cp_board, sel4cp_config });
+    const sdk_tool = fmtPrint("{s}/bin/sel4cp", .{ sel4cp_sdk });
+    const libsel4cp = fmtPrint("{s}/lib/libsel4cp.a", .{ sdk_board_dir });
+    const libsel4cp_linker_script = fmtPrint("{s}/lib/sel4cp.ld", .{ sdk_board_dir });
+    const sdk_board_include_dir = fmtPrint("{s}/include", .{ sdk_board_dir });
 
     const libvmm = b.addStaticLibrary(.{
         .name = "vmm",
@@ -135,16 +136,13 @@ pub fn build(b: *std.Build) void {
     });
 
     // For actually compiling the DTS into a DTB
-    const dts_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/linux.dts" });
+    const dts_path = fmtPrint("board/{s}/linux.dts", .{ sel4cp_board });
     // @ivanv: find a better place, need to figure out zig build scripts more
     const dtb_image_path = "linux.dtb";
     const dtc_command = b.addSystemCommand(&[_][]const u8{
         "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o", dtb_image_path
     });
     exe.step.dependOn(&dtc_command.step);
-
-    const linux_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/linux" });
-    const initrd_image_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/rootfs.cpio.gz" });
 
     // Add sel4cp.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -172,9 +170,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const kernel_image_arg = concatStr(&[_][]const u8{ "-DGUEST_KERNEL_IMAGE_PATH=", "\"", linux_image_path, "\"" });
-    const dtb_image_arg = concatStr(&[_][]const u8{ "-DGUEST_DTB_IMAGE_PATH=", "\"", dtb_image_path, "\"" });
-    const initrd_image_arg = concatStr(&[_][]const u8{ "-DGUEST_INITRD_IMAGE_PATH=", "\"", initrd_image_path, "\"" });
+    const linux_image_path = fmtPrint("board/{s}/linux", .{ sel4cp_board });
+    const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
+
+    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path });
+    const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ sel4cp_board });
+    const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
     guest_images.addCSourceFiles(&.{ libvmm_tools ++ "package_guest_images.S" }, &.{
         kernel_image_arg,
         dtb_image_arg,
@@ -186,7 +187,7 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/simple.system" });
+    const system_description_path = fmtPrint("board/{s}/simple.system", .{ sel4cp_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_tool,
@@ -211,7 +212,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    const loader_arg = concatStr(&[_][]const u8{ "loader,file=", final_image_dest, ",addr=0x70000000,cpu-num=0" });
+    const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
