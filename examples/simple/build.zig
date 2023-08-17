@@ -3,9 +3,6 @@ const std = @import("std");
 var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = general_purpose_allocator.allocator();
 
-const build_dir = "zig-out";
-const bin_dir = "zig-out/bin";
-
 fn concatStr(strings: []const []const u8) []const u8 {
     return std.mem.concat(gpa, u8, strings) catch "";
 }
@@ -190,20 +187,20 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const system_description_path = concatStr(&[_][]const u8{ "board/", sel4cp_board, "/simple.system" });
-    const final_image_path = bin_dir ++ "/loader.img";
+    const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_tool,
        system_description_path,
        "--search-path",
-       bin_dir,
+       b.getInstallPath(.bin, ""),
        "--board",
        sel4cp_board,
        "--config",
        sel4cp_config,
        "-o",
-       final_image_path,
+       final_image_dest,
        "-r",
-       build_dir ++ "/report.txt",
+       b.getInstallPath(.prefix, "./report.txt")
     });
     // Running the seL4CP tool depends on 
     sel4cp_tool_cmd.step.dependOn(b.getInstallStep());
@@ -214,6 +211,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
+    const loader_arg = concatStr(&[_][]const u8{ "loader,file=", final_image_dest, ",addr=0x70000000,cpu-num=0" });
     if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
@@ -224,7 +222,7 @@ pub fn build(b: *std.Build) void {
             "-serial",
             "mon:stdio",
             "-device",
-            "loader,file=" ++ final_image_path ++ ",addr=0x70000000,cpu-num=0",
+            loader_arg,
             "-m",
             "2G",
             "-nographic",
