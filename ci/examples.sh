@@ -11,7 +11,7 @@ build_simple_make() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building simple example via Make with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/simple/make/${BOARD}/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/simple/make/${BOARD}/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/simple -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -24,14 +24,14 @@ build_simple_zig() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building simple example via Zig with board: $BOARD and config: $CONFIG"
-    # @ivanv Ideally we'd have Makefile and Zig output in same
-    # directory structure
+    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}"
     EXAMPLE_DIR="${PWD}/examples/simple"
     pushd ${EXAMPLE_DIR}
     zig build \
         -Dsdk=${SDK_PATH} \
         -Dboard=${BOARD} \
-        -Dconfig=${CONFIG}
+        -Dconfig=${CONFIG} \
+        -p ${BUILD_DIR}
     popd
 }
 
@@ -56,16 +56,15 @@ simulate_simple_zig() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: simulating simple example via Zig with board: $BOARD and config: $CONFIG"
-    EXAMPLE_DIR="${PWD}/examples/simple"
-    BUILD_DIR="${EXAMPLE_DIR}/zig-out/bin"
-    ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
+    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}"
+    ./ci/buildroot_login.exp ${BUILD_DIR}/bin/loader.img
 }
 
 simulate_simple_make() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: simulating simple example via Make with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/simple/make/${BOARD}/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/simple/make/${BOARD}/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
