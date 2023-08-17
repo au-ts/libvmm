@@ -6,7 +6,7 @@
 * Image name: `linux`
 * Config name: `linux_config`
 * Git remote: https://github.com/torvalds/linux.git
-* Tag: v5.18 (commit hash: `4b0986a3613c92f4ec1bdc7f60ec66fea135991f`)
+* Tag: v6.1 (commit hash: `830b3c68c1fb1e9176028d02ef86f3cf76aa2476`)
 * Toolchain: `aarch64-none-elf`
     * Version: GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16)) 10.2.1 20201103
 
@@ -15,7 +15,7 @@ command in userspace: `zcat /proc/config.gz`.
 
 ### Instructions for reproducing
 ```
-git clone --depth 1 --branch v5.18 https://github.com/torvalds/linux.git
+git clone --depth 1 --branch v6.1 https://github.com/torvalds/linux.git
 cp linux_config linux/.config
 make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all -j$(nproc)
 ```
@@ -27,16 +27,16 @@ The path to the image is: `linux/arch/arm64/boot/Image`.
 ### Details
 * Image name: `rootfs.cpio.gz`
 * Config name: `buildroot_config`
-* Version: 2022.08-rc2
+* Version: 2023.02.3
 
 ### Instructions for reproducing
 
 ```
-wget https://buildroot.org/downloads/buildroot-2022.08-rc2.tar.xz
-tar xvf buildroot-2022.08-rc2.tar.xz
-cp buildroot_config buildroot-2022.08-rc2/.config
-make -C buildroot-2022.08-rc2
+wget https://buildroot.org/downloads/buildroot-2023.02.3.tar.gz
+tar xf buildroot-2023.02.3.tar.gz
+cp buildroot_config buildroot-2023.02.3/.config
+make -C buildroot-2023.02.3
 ```
 
-The root filesystem will be located at: `buildroot-2022.08-rc2/output/images/rootfs.cpio.gz` along
+The root filesystem will be located at: `buildroot-2023.02.3/output/images/rootfs.cpio.gz` along
 with the other buildroot artefacts.
