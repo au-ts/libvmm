@@ -43,7 +43,7 @@ uintptr_t guest_ram_vaddr;
 #define MAX_IRQ_CH 63
 int passthrough_irq_map[MAX_IRQ_CH];
 
-static void passthrough_device_ack(uint64_t vcpu_id, int irq, void *cookie) {
+static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
     sel4cp_channel irq_ch = (sel4cp_channel)(int64_t)cookie;
     sel4cp_irq_ack(irq_ch);
 }

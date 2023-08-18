@@ -24,6 +24,7 @@ void fbwrite() {
         for (int x = 100; x < 300; x++) {
 
             uint64_t location = (x * (BPP/8)) + (y * LINE_LEN);
+            printf("UIO location: 0x%lx\n", location);
 
             *(uio_map0 + location) = 100;        // Some blue
             *(uio_map0 + location + 1) = 15+(x-100)/2;     // A little green

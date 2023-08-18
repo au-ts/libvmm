@@ -104,8 +104,8 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
     return mask;
 }
 
-static uint64_t wzr = 0;
-uint64_t *decode_rt(uint64_t reg, seL4_UserContext *regs)
+static seL4_Word wzr = 0;
+seL4_Word *decode_rt(uint64_t reg, seL4_UserContext *regs)
 {
     switch (reg) {
         case 0: return &regs->x0;
@@ -202,7 +202,7 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
     /* Get register opearand */
     int rt = get_rt(fsr);
 
-    uint64_t *reg_ctx = decode_rt(rt, regs);
+    seL4_Word *reg_ctx = decode_rt(rt, regs);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
     // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
     //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
