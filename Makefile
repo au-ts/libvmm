@@ -222,19 +222,11 @@ $(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM_CLIENT_OBJS) vmm1_global
 $(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM_DRIVER_OBJS) vmm2_global_data.o)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-ifdef RECTANGLE
-$(BUILD_DIR)/rectangle.elf: $(BUILD_DIR)/rectangle.o $(BUILD_DIR)/util.o $(BUILD_DIR)/printf.o
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-endif
-
 ifdef DRIVER_ONLY
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 else ifdef CLIENT_ONLY
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM1)) $(SYSTEM_DESCRIPTION)
-	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
-else ifdef RECTANGLE
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, rectangle.elf $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
 	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 else
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(IMAGES_VMM1) $(IMAGES_VMM2)) $(SYSTEM_DESCRIPTION)
