@@ -290,6 +290,59 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     return fault_advance_vcpu(vcpu_id, &regs);
 }
 
+struct vm_exception_handler {
+    uintptr_t base;
+    uintptr_t end;
+    vm_exception_handler_t callback;
+};
+#define MAX_VM_EXCEPTION_HANDLERS 16
+struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
+size_t vm_exception_handler_index = 0;
+
+bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback) {
+    // @ivanv audit necessary here since this code was written very quickly. Other things to check such
+    // as the region of memory is not overlapping with other regions, also should have GIC_DIST regions
+    // use this API.
+    if (vm_exception_handler_index == MAX_VM_EXCEPTION_HANDLERS - 1) {
+        return false;
+    }
+
+    // @ivanv: use a define for page size? preMAture GENeraliZAATION
+    if (base % 0x1000 != 0) {
+        return false;
+    }
+
+    registered_vm_exception_handlers[vm_exception_handler_index] = (struct vm_exception_handler) {
+        .base = base,
+        .end = base + size,
+        .callback = callback,
+    };
+    vm_exception_handler_index += 1;
+
+    return true;
+}
+
+static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr) {
+    for (int i = 0; i < MAX_VM_EXCEPTION_HANDLERS; i++) {
+        uintptr_t base = registered_vm_exception_handlers[i].base;
+        uintptr_t end = registered_vm_exception_handlers[i].end;
+        if (addr >= base && addr < end) {
+            bool success = registered_vm_exception_handlers[i].callback(vcpu_id, addr);
+            if (!success) {
+                // @ivanv: improve error message
+                LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base, end, addr);
+            }
+            /* Whether or not the callback actually successfully handled the
+             * exception, we return true to say that we at least found a handler
+             * for the faulting address. */
+            return true;
+        }
+    }
+
+    /* We could not find a handler for the faulting address. */
+    return false;
+}
+
 bool fault_handle_vm_exception(size_t vcpu_id)
 {
     uintptr_t addr = sel4cp_mr_get(seL4_VMFault_Addr);
@@ -308,16 +361,28 @@ bool fault_handle_vm_exception(size_t vcpu_id)
             return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
 #endif
         default: {
-            /* If we receive a fault at a location we do not expect, print out as much information
-             * as possible for debugging. */
-            size_t ip = sel4cp_mr_get(seL4_VMFault_IP);
-            size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
-            bool is_write = fault_is_write(fsr);
-            LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
-                addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-            tcb_print_regs(vcpu_id);
-            vcpu_print_regs(vcpu_id);
-            return false;
+            LOG_VMM("calling fault handle vm exception\n");
+            bool success = fault_handle_registered_vm_exceptions(vcpu_id ,addr);
+            if (!success) {
+                /*
+                 * We could not find a registered handler for the address, meaning that the fault
+                 * is genuinely unexpected. Surprise!
+                 * Now we print out as much information relating to the fault as we can, hopefully
+                 * the programmer can figure out what went wrong.
+                 */
+                size_t ip = sel4cp_mr_get(seL4_VMFault_IP);
+                size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+                bool is_write = fault_is_write(fsr);
+                LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
+                    addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+                tcb_print_regs(vcpu_id);
+                vcpu_print_regs(vcpu_id);
+            } else {
+                /* @ivanv, is it correct to unconditionally advance the CPU here? */
+                fault_advance_vcpu(vcpu_id, &regs);
+            }
+
+            return success;
         }
     }
 }
