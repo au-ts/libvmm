@@ -41,8 +41,8 @@ DTC := dtc
 # 	endif
 # endif
 
-CC := clang
-LD := ld.lld
+CC := zig cc
+LD := $(CC)
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -75,7 +75,7 @@ REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-SEND_RECTANGLE_OBJS = send_rectangle.o
+SEND_RECTANGLE_OBJS = send_rectangle.o printf.o util.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -94,9 +94,9 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-none-elf
+		  -target aarch64-freestanding
 
-LDFLAGS := -L$(BOARD_DIR)/lib
+LDFLAGS := -L$(BOARD_DIR)/lib -target aarch64-freestanding
 LIBS := -lsel4cp -Tsel4cp.ld
 
 all: directories $(IMAGE_FILE)
@@ -124,7 +124,7 @@ $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-target aarch64-none-elf \
+					-target aarch64-freestanding \
 					$< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
