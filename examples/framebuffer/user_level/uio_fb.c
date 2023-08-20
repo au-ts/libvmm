@@ -8,6 +8,13 @@
 #include <string.h>
 #include "../uio.h"
 
+void signal_ready_to_vmm() {
+    printf("UIO FB|INFO: ready to receive data, faulting on VMM buffer\n");
+    char command_str[64] = {0};
+    sprintf(command_str, "devmem %d", UIO_INIT_ADDRESS);
+    system(command_str);
+}
+
 int main() {
     /*****************************************************************************/
     // Get address of map0 from UIO device
@@ -109,6 +116,7 @@ int main() {
     printf("UIO FB|INFO: opened /dev/fb0\n");
 
     void *fbmap = mmap(NULL, FB_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fp, 0);
+    printf("UIO FB|INFO: FB_SIZE: 0x%lx\n", FB_SIZE);
     if (fbmap == MAP_FAILED) {
         printf("UIO FB|ERROR: failed to mmap frame buffer: %s\n", strerror(errno));
         return -1;
@@ -142,12 +150,9 @@ int main() {
         perror("Error writing to uio0");
         close(uio_fp);
         return 13;
-    } 
+    }
 
-    printf("UIO FB|INFO: ready to receive data, faulting on VMM buffer\n");
-    char command_str[64] = {0};
-    sprintf(command_str, "devmem %d", UIO_INIT_ADDRESS);
-    system(command_str);
+    signal_ready_to_vmm();
 
     // Read from device, this blocks until interrupt
     int32_t read_value;
@@ -168,6 +173,7 @@ int main() {
             close(uio_fp);
             return 14;
         }
+        signal_ready_to_vmm();
     }
 
     close(uio_fp);
