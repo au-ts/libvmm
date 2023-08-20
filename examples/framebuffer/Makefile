@@ -109,7 +109,7 @@ qemu: all
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic
+			-device virtio-gpu-pci
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
