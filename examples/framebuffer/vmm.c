@@ -17,12 +17,15 @@
 /* Specific to the framebuffer example */
 #include "uio.h"
 
+#if defined(BOARD_qemu_arm_virt)
+#define GUEST_RAM_SIZE 0x10000000
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_odroidc4)
 #define GUEST_RAM_SIZE 0x10000000
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-
-#define SERIAL_IRQ_CH 1
-#define SERIAL_IRQ 225
+#endif
 
 #define UIO_GPU_IRQ 50
 /* For when we get notified from the send_rectangle program */
@@ -98,6 +101,10 @@ void init(void) {
         return;
     }
 
+#if defined(BOARD_qemu_arm_virt)
+    register_passthrough_irq(33, 1);
+    register_passthrough_irq(79, 2);
+#elif defined(BOARD_odroidc4)
     // // @ivanv minimise
     register_passthrough_irq(225, 1);
     register_passthrough_irq(222, 2);
@@ -117,6 +124,7 @@ void init(void) {
     register_passthrough_irq(89, 14);
     // // @jade: this should not be necessary. Investigation required.
     register_passthrough_irq(5, 17);
+#endif
 
     /* Setting up the UIO region for the framebuffer */
     virq_register(GUEST_VCPU_ID, UIO_GPU_IRQ, &uio_gpu_ack, NULL);
@@ -128,13 +136,6 @@ void init(void) {
 
 void notified(sel4cp_channel ch) {
     switch (ch) {
-        case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
-            }
-            break;
-        }
         case UIO_PD_CH: {
             LOG_VMM("Got message from UIO PD, injecting IRQ\n");
             bool success = virq_inject(GUEST_VCPU_ID, UIO_GPU_IRQ);
