@@ -11,7 +11,7 @@
 
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
     <!-- this bus contains the serial device -->
-    <memory_region name="bus2" size="0x100000" phys_addr="0xff800000" />
+    <memory_region name="bus2" size="0x3000" phys_addr="0xff800000" />
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
 
     <memory_region name="usb" size="0x1000" phys_addr="0xffe09000" />
