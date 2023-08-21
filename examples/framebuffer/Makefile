@@ -27,22 +27,22 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-# ifndef TOOLCHAIN
-# 	# Get whether the common toolchain triples exist
-# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-# 	# Then check if they are defined and select the appropriate one
-# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-# 		TOOLCHAIN := aarch64-linux-gnu
-# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-# 		TOOLCHAIN := aarch64-unknown-linux-gnu
-# 	else
-# 		$(error "Could not find an AArch64 cross-compiler")
-# 	endif
-# endif
+ifndef TOOLCHAIN
+ 	# Get whether the common toolchain triples exist
+ 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+ 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+	# Then check if they are defined and select the appropriate one
+	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+		TOOLCHAIN := aarch64-linux-gnu
+	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+		TOOLCHAIN := aarch64-unknown-linux-gnu
+	else
+		$(error "Could not find an AArch64 cross-compiler")
+	endif
+endif
 
-CC := zig cc
-LD := $(CC)
+CC := $(TOOLCHAIN)-gcc
+LD := $(TOOLCHAIN)-ld
 SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -93,8 +93,7 @@ CFLAGS := -mstrict-align \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
-		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-freestanding
+		  -DCONFIG_$(CONFIG)
 
 LDFLAGS := -L$(BOARD_DIR)/lib -target aarch64-freestanding
 LIBS := -lsel4cp -Tsel4cp.ld
@@ -104,7 +103,7 @@ all: directories $(IMAGE_FILE)
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
 	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
+	$(QEMU) -machine virt,virtualization=on \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
@@ -124,14 +123,13 @@ $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-target aarch64-freestanding \
 					$< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/uio_fb.elf: $(USER_LEVEL_UIO)
-	zig cc --target=aarch64-linux-musl $(USER_LEVEL_UIO) -o $(BUILD_DIR)/uio_fb.elf
+	$(CC) $(USER_LEVEL_UIO) -o $(BUILD_DIR)/uio_fb.elf
 
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
