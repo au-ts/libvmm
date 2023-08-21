@@ -95,7 +95,7 @@ CFLAGS := -mstrict-align \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG)
 
-LDFLAGS := -L$(BOARD_DIR)/lib -target aarch64-freestanding
+LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lsel4cp -Tsel4cp.ld
 
 all: directories $(IMAGE_FILE)
