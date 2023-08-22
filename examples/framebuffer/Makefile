@@ -108,7 +108,9 @@ qemu: all
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-device virtio-gpu-pci
+			-device virtio-gpu-pci \
+			-netdev user,id=mynet0 \
+			-device virtio-net-device,netdev=mynet0,mac=52:55:00:d1:55:01
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))

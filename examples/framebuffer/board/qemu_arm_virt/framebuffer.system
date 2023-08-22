@@ -38,7 +38,7 @@
         </virtual_machine>
         <!-- For the pass-through UART -->
         <irq irq="33" id="1" />
-        <!-- For the pass-through virtIO GPU -->
+        <!-- For the pass-through ethernet -->
         <irq irq="79" id="2" trigger="edge" />
     </protection_domain>
 
