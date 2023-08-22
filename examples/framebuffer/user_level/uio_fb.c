@@ -116,7 +116,7 @@ int main() {
     printf("UIO FB|INFO: opened /dev/fb0\n");
 
     void *fbmap = mmap(NULL, FB_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fp, 0);
-    printf("UIO FB|INFO: FB_SIZE: 0x%lx\n", FB_SIZE);
+    printf("UIO FB|INFO: FB_SIZE: 0x%x\n", FB_SIZE);
     if (fbmap == MAP_FAILED) {
         printf("UIO FB|ERROR: failed to mmap frame buffer: %s\n", strerror(errno));
         return -1;
