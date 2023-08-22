@@ -18,8 +18,6 @@
     <memory_region name="usb1" size="0x40000" phys_addr="0xff400000" />
     <memory_region name="usb2" size="0x100000" phys_addr="0xff500000" />
 
-    <memory_region name="sd" size="0x1000" phys_addr="0xffe05000" />
-    <memory_region name="mmc" size="0x1000" phys_addr="0xffe07000" />
     <memory_region name="gpu" size="0x40000" phys_addr="0xffe40000" />
     <memory_region name="vpu" size="0x100000" phys_addr="0xff900000" />
     <memory_region name="eth" size="0x10000" phys_addr="0xff3f0000" />
@@ -46,8 +44,6 @@
             <map mr="usb" vaddr="0xffe09000" perms="rw" cached="false" />
             <map mr="usb1" vaddr="0xff400000" perms="rw" cached="false" />
             <map mr="usb2" vaddr="0xff500000" perms="rw" cached="false" />
-            <map mr="sd" vaddr="0xffe05000" perms="rw" cached="false" />
-            <map mr="mmc" vaddr="0xffe07000" perms="rw" cached="false" />
             <map mr="gpu" vaddr="0xffe40000" perms="rw" cached="false" />
             <map mr="vpu" vaddr="0xff900000" perms="rw" cached="false" />
             <map mr="eth" vaddr="0xff3f0000" perms="rw" cached="false" />
@@ -55,10 +51,7 @@
             <map mr="ir" vaddr="0xff808000" perms="rw" cached="false" />
             <map mr="adc" vaddr="0xff809000" perms="rw" cached="false" />
         </virtual_machine>
-        <!-- sd -->
-        <irq irq="222" id="2" />
-        <!-- mmc -->
-        <irq irq="223" id="3" />
+
         <!-- adc -->
         <irq irq="232" id="4" trigger="edge" />
         <!-- eth -->
