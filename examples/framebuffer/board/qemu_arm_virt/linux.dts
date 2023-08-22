@@ -371,9 +371,15 @@
 		compatible = "fixed-clock";
 	};
 
+	uio {
+		compatible = "generic-uio\0uio";
+		reg = <0x00 0x30000000 0x00 0x1800000>;
+		interrupts = <0x00 0x12 0x04>;
+	};
+
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug loglevel=8";
+		bootargs = "earlycon=pl011,0x9000000 pci=nomsi uio_pdrv_genirq.of_id=generic-uio earlyprintk=serial debug loglevel=8 no_msi=";
 		linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = <0x5d700000>;
 		linux,initrd-end = <0x60000000>;

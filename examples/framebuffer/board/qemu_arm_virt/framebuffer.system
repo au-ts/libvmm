@@ -40,6 +40,7 @@
         <irq irq="33" id="1" />
         <!-- For the pass-through ethernet -->
         <irq irq="79" id="2" trigger="edge" />
+        <irq irq="36" id="3" />
     </protection_domain>
 
     <channel>
