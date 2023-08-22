@@ -6,12 +6,12 @@
 -->
 <system>
     <!-- We allocate 256MiB of RAM for the guest. -->
-    <!-- @jade: explain why we need the paddr -->
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" phys_addr="0x20_000_000" />
 
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
-    <!-- this bus contains the serial device -->
     <memory_region name="bus2" size="0x3000" phys_addr="0xff800000" />
+    <memory_region name="ir" size="0x1000" phys_addr="0xff808000" />
+    <memory_region name="adc" size="0x1000" phys_addr="0xff809000" />
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
 
     <memory_region name="usb" size="0x1000" phys_addr="0xffe09000" />
@@ -52,9 +52,9 @@
             <map mr="vpu" vaddr="0xff900000" perms="rw" cached="false" />
             <map mr="eth" vaddr="0xff3f0000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
+            <map mr="ir" vaddr="0xff808000" perms="rw" cached="false" />
+            <map mr="adc" vaddr="0xff809000" perms="rw" cached="false" />
         </virtual_machine>
-        <!-- Serial IRQ -->
-        <irq irq="225" id="1" trigger="edge" />
         <!-- sd -->
         <irq irq="222" id="2" />
         <!-- mmc -->
