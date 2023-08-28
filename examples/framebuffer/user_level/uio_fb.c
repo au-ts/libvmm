@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <linux/fb.h>
+#include <sys/ioctl.h>
 #include "../uio.h"
 
 void signal_ready_to_vmm() {
@@ -15,7 +17,7 @@ void signal_ready_to_vmm() {
     system(command_str);
 }
 
-int main() {
+int get_uio_map_addr(char *path, void **addr) {
     /*****************************************************************************/
     // Get address of map0 from UIO device
     size_t addr_fp = open("/sys/class/uio/uio0/maps/map0/addr", O_RDONLY);
@@ -42,9 +44,12 @@ int main() {
     addr_str[addr_str_values_read] = '\0'; // Null-terminate the string to be safe
     unsigned long long addr_val; // Use this to hold the actual address value
     sscanf(addr_str, "%llx", &addr_val);
-    void *addr = (void *)addr_val;
+    *addr = (void *)addr_val;
 
     close(addr_fp);
+}
+
+int get_uio_map_size(char *path, size_t *size) {
     /*****************************************************************************/
     // Get size of map0 from UIO device
     size_t size_fp = open("/sys/class/uio/uio0/maps/map0/size", O_RDONLY);
@@ -68,14 +73,15 @@ int main() {
         return 6;
     }
 
-    unsigned long long size;
     size_str[size_str_values_read] = '\0'; // Null-terminate the string to be safe
-    sscanf(size_str, "%llx", &size);
+    sscanf(size_str, "%llx", size);
 
     close(size_fp);
+}
+
+int get_uio_map_offset(char *path, size_t *offset) {
     /*****************************************************************************/
     // Get offset of map0 from UIO device
-    unsigned long long offset;
     size_t offset_fp = open("/sys/class/uio/uio0/maps/map0/offset", O_RDONLY);
     if (offset_fp == -1) {
         perror("Error opening file");
@@ -98,16 +104,28 @@ int main() {
     }
 
     offset_str[offset_str_values_read] = '\0'; // Null-terminate the string to be safe
-    sscanf(offset_str, "%llx", &offset);
+    sscanf(offset_str, "%llx", offset);
 
     close(offset_fp);
-    /*****************************************************************************/
+}
+
+int main() {
+    void *addr;
+    size_t size;
+    size_t offset;
+    
+    get_uio_map_addr("/sys/class/uio/uio0/maps/map0/addr", &addr);
+    get_uio_map_size("/sys/class/uio/uio0/maps/map0/size", &size);
+    get_uio_map_offset("/sys/class/uio/uio0/maps/map0/offset", &offset);
+
     printf("addr: %p\n", addr);
     printf("size: 0x%llx\n", size);
     printf("offset: 0x%llx\n", offset);
-    /*****************************************************************************/ 
+    /*****************************************************************************/
+    struct fb_var_screeninfo vinfo;
+    long int screensize = 0;
 
-    // Open /dev/fb0 device to allow mmap
+    // Open /dev/fb0 device to read config info and allow mmap
     int fb_fp = open("/dev/fb0", O_RDWR);
     if (fb_fp == -1) {
         perror("Error opening file");
@@ -115,25 +133,37 @@ int main() {
     }
     printf("UIO FB|INFO: opened /dev/fb0\n");
 
-    void *fbmap = mmap(NULL, FB_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fp, 0);
-    printf("UIO FB|INFO: FB_SIZE: 0x%x\n", FB_SIZE);
+    // Get variable screen information
+    if (ioctl(fb_fp, FBIOGET_VSCREENINFO, &vinfo) == -1) {
+        perror("Error reading variable information");
+        return 21;
+    }
+
+    // Figure out the size of the screen in bytes
+    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
+
+    if (screensize > size) {
+        printf("UIO FB|ERROR: screensize is larger than size of uio map0\n");
+        return 22;
+    }
+
+    void *fbmap = mmap(NULL, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fp, 0);
+    printf("UIO FB|INFO: screensize: 0x%x\n", screensize);
     if (fbmap == MAP_FAILED) {
         printf("UIO FB|ERROR: failed to mmap frame buffer: %s\n", strerror(errno));
         return -1;
     }
     printf("UIO FB|INFO: mmaped /dev/fb0\n");
 
-    // iocrtl(fb_fp, ,)
-
     close(fb_fp);
-
+    /*****************************************************************************/
     // Open UIO device to allow read write and mmap
     int uio_fp = open("/dev/uio0", O_RDWR);
     if (uio_fp == -1) {
         perror("Error opening uio0");
         return 11;
     }
-    printf("UIO FB|INFO: opened /dev/ui0\n");
+    printf("UIO FB|INFO: opened /dev/uio0\n");
 
     void *map0 = mmap(addr, size, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fp, offset);
 
@@ -144,6 +174,18 @@ int main() {
 
     printf("map0: %p\n", map0);
 
+    /*****************************************************************************/
+    // Initialise framebuffer config
+    fb_config_t config = {
+        .yres = vinfo.yres,
+        .xres = vinfo.xres,
+        .bpp = vinfo.bits_per_pixel,
+    };
+
+    *(fb_config_t *)map0 = config;
+
+    void *fb_base = (uint8_t *)map0 + sizeof(fb_config_t);
+    /*****************************************************************************/
     uint32_t enable_uio_value = 1; // 4-byte integer value to write to file
     // Enable UIO interrupts first, incase it is already disabled
     if (write(uio_fp, &enable_uio_value, sizeof(uint32_t)) != sizeof(uint32_t)) {
@@ -161,8 +203,10 @@ int main() {
         if (read_value >= irq_count) {
             // Copy contents of map0 into fbmap
             printf("UIO FB|INFO: Copying from map0 to fbmap\n");
-            memcpy(fbmap, map0, FB_SIZE);
+            memcpy(fbmap, fb_base, screensize);
             printf("UIO FB|INFO: finished copying\n");
+            msync(fbmap, screensize, MS_SYNC);
+            printf("UIO FB|INFO: finished msyncing fbmap\n");
         }
 
         irq_count = read_value;
@@ -173,6 +217,7 @@ int main() {
             close(uio_fp);
             return 14;
         }
+
         signal_ready_to_vmm();
     }
 
