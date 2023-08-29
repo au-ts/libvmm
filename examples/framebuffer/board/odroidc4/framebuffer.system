@@ -24,7 +24,7 @@
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
     <!-- uio framebuffer -->
-    <memory_region name="uio_map0" size="0x1800000" />
+    <memory_region name="uio_map0" size="0x2000000" />
 
     <protection_domain name="send_rectangle" priority="254">
         <program_image path="send_rectangle.elf" />
