@@ -18,13 +18,9 @@ void init() {
     sel4cp_dbg_puts("SEND RECTANGLE|INFO: starting!\n");
 }
 
-fb_config_t config = {
-    .xres = 1024,
-    .yres = 768,
-    .bpp = 32
-};
+fb_config_t *config;
 uint8_t *fb_base;
-unsigned long line_len;
+uint64_t line_len;
 
 size_t num_draws = 0;
 
@@ -35,15 +31,15 @@ void fbwrite() {
     for (int y = start; y < end; y++) {
         for (int x = start; x < end; x++) {
 
-            uint64_t location = (x * (config.bpp/8)) + (y * line_len);
+            uint64_t location = (x * (config->bpp/8)) + (y * line_len);
             // printf("UIO location: 0x%lx\n", location);
 
-            if (x == 100 && y == 100) {
-                printf("RECT|INFO: first location: 0x%lx\n", location);
-            }
-            if (x == 299 && y == 299) {
-                printf("RECT|INFO: final location: 0x%lx\n", location);
-            }
+            // if (x == 100 && y == 100) {
+            //     printf("RECT|INFO: first location: 0x%lx\n", location);
+            // }
+            // if (x == 299 && y == 299) {
+            //     printf("RECT|INFO: final location: 0x%lx\n", location);
+            // }
 
             *(fb_base + location) = 100;        // Some blue
             *(fb_base + location + 1) = 15+(x-100)/2;     // A little green
@@ -55,10 +51,11 @@ void fbwrite() {
 }
 
 void readconfig() {
-    config = *(fb_config_t *)uio_map0;
-    printf("RECT|INFO: xres: %d, yres: %d, bpp: %d\n", config.xres, config.yres, config.bpp);
-    fb_base = (uint8_t *)uio_map0 + sizeof(fb_config_t);
-    line_len = config.xres * (config.bpp/8);
+    get_config_base_addr(uio_map0, &config);
+    get_fb_base_addr(uio_map0, (void **)&fb_base);
+
+    printf("RECT|INFO: xres: %d, yres: %d, bpp: %d\n", config->xres, config->yres, config->bpp);
+    line_len = config->xres * (config->bpp/8);
 }
 
 void notified(sel4cp_channel ch) {
