@@ -182,9 +182,12 @@ int main() {
         .bpp = vinfo.bits_per_pixel,
     };
 
-    *(fb_config_t *)map0 = config;
+    fb_config_t *config_base_addr;
+    get_config_base_addr(map0, &config_base_addr);
+    *config_base_addr = config;
 
-    void *fb_base = (uint8_t *)map0 + sizeof(fb_config_t);
+    void *fb_base;
+    get_fb_base_addr(map0, &fb_base);
     /*****************************************************************************/
     uint32_t enable_uio_value = 1; // 4-byte integer value to write to file
     // Enable UIO interrupts first, incase it is already disabled
