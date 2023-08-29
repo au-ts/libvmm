@@ -51,8 +51,16 @@ void fbwrite() {
 }
 
 void readconfig() {
-    get_config_base_addr(uio_map0, &config);
+    config = get_fb_config(uio_map0);
+    if (config == NULL) {
+        printf("RECT|ERROR: config is NULL\n");
+        return;
+    }
     get_fb_base_addr(uio_map0, (void **)&fb_base);
+    if (fb_base == NULL) {
+        printf("RECT|ERROR: fb_base is NULL\n");
+        return;
+    }
 
     printf("RECT|INFO: xres: %d, yres: %d, bpp: %d\n", config->xres, config->yres, config->bpp);
     line_len = config->xres * (config->bpp/8);

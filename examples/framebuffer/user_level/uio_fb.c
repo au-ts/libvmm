@@ -181,10 +181,7 @@ int main() {
         .xres = vinfo.xres,
         .bpp = vinfo.bits_per_pixel,
     };
-
-    fb_config_t *config_base_addr;
-    get_config_base_addr(map0, &config_base_addr);
-    *config_base_addr = config;
+    set_fb_config(map0, config);
 
     void *fb_base;
     get_fb_base_addr(map0, &fb_base);
