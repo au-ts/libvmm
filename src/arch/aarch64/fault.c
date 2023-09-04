@@ -290,16 +290,16 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     return fault_advance_vcpu(vcpu_id, &regs);
 }
 
-struct vm_exception_handler {
+typedef struct vm_exception_handler {
     uintptr_t base;
     uintptr_t end;
-    vm_exception_handler_t callback;
-};
+    vm_exception_callback_t callback;
+} vm_exception_handler_t;
 #define MAX_VM_EXCEPTION_HANDLERS 16
-struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
+vm_exception_handler_t registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
 size_t vm_exception_handler_index = 0;
 
-bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback) {
+bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_callback_t callback) {
     // @ivanv audit necessary here since this code was written very quickly. Other things to check such
     // as the region of memory is not overlapping with other regions, also should have GIC_DIST regions
     // use this API.
@@ -312,35 +312,44 @@ bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_excepti
         return false;
     }
 
-    registered_vm_exception_handlers[vm_exception_handler_index] = (struct vm_exception_handler) {
+    registered_vm_exception_handlers[vm_exception_handler_index] = (vm_exception_handler_t) {
         .base = base,
         .end = base + size,
-        .callback = callback,
+        .callback = callback
     };
     vm_exception_handler_index += 1;
 
     return true;
 }
 
-static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr) {
+static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs) {
+    vm_exception_handler_t handler = {0};
+    
+    bool handler_found = false;
     for (int i = 0; i < MAX_VM_EXCEPTION_HANDLERS; i++) {
         uintptr_t base = registered_vm_exception_handlers[i].base;
         uintptr_t end = registered_vm_exception_handlers[i].end;
         if (addr >= base && addr < end) {
-            bool success = registered_vm_exception_handlers[i].callback(vcpu_id, addr);
-            if (!success) {
-                // @ivanv: improve error message
-                LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base, end, addr);
-            }
-            /* Whether or not the callback actually successfully handled the
-             * exception, we return true to say that we at least found a handler
-             * for the faulting address. */
-            return true;
+            handler = registered_vm_exception_handlers[i];
+            handler_found = true;
+            break;
         }
     }
 
-    /* We could not find a handler for the faulting address. */
-    return false;
+    if (!handler_found) { 
+        /* We could not find a handler for the faulting address. */
+        LOG_VMM_ERR("No registered handler for faulting address: 0x%lx\n", addr);
+        return false;
+    }
+
+    if (!handler.callback(vcpu_id, addr, fsr, regs)) {
+        /* Callback from registered handler failed. */
+        LOG_VMM_ERR("Registered handler failed to handle faulting address: 0x%lx\n", addr);
+        return false;
+    }
+
+    /* Fault is advanced by callback */
+    return true;
 }
 
 bool fault_handle_vm_exception(size_t vcpu_id)
@@ -361,13 +370,19 @@ bool fault_handle_vm_exception(size_t vcpu_id)
             return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
 #endif
         default: {
+            /* @ericc: The handler for registered faulting addresses needs to handle both read and write faults,
+            * for the READ case we need to retrieve and pass read data from the handler befeore advancing the fault.
+            */
             LOG_VMM("calling fault handle vm exception\n");
-            bool success = fault_handle_registered_vm_exceptions(vcpu_id ,addr);
+            bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
             if (!success) {
                 /*
-                 * We could not find a registered handler for the address, meaning that the fault
-                 * is genuinely unexpected. Surprise!
-                 * Now we print out as much information relating to the fault as we can, hopefully
+                 * @ericc: We either:
+                 * 1. Could not find a registered handler for the address, meaning that the fault
+                 * is genuinely unexpected. 
+                 * 2. The handler failed on the callback, meaning that the fault is expected but
+                 * the handler failed to handle it.
+                 * Regardless, now we print out as much information relating to the fault as we can, hopefully
                  * the programmer can figure out what went wrong.
                  */
                 size_t ip = microkit_mr_get(seL4_VMFault_IP);
@@ -377,9 +392,6 @@ bool fault_handle_vm_exception(size_t vcpu_id)
                     addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
                 tcb_print_regs(vcpu_id);
                 vcpu_print_regs(vcpu_id);
-            } else {
-                /* @ivanv, is it correct to unconditionally advance the CPU here? */
-                fault_advance_vcpu(vcpu_id, &regs);
             }
 
             return success;
