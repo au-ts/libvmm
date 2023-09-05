@@ -8,7 +8,7 @@
 #include "../util/util.h"
 #include "virtio_mmio.h"
 // @jade: find a way to config which backend (vswitch/ethernet/guest driver) to include
-#include "virtio_net_vswitch.h"
+#include "virtio_net_tt_vswitch.h"
 #include "virtio_net_emul.h"
 #include "include/config/virtio_net.h"
 #include "include/config/virtio_config.h"

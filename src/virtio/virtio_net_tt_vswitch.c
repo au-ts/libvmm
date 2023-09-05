@@ -27,7 +27,7 @@
  */
 
 #include "include/config/virtio_net.h"
-#include "virtio_net_vswitch.h"
+#include "virtio_net_tt_vswitch.h"
 #include "../util/util.h"
 
 #include "../libsharedringbuffer/include/shared_ringbuffer.h"
