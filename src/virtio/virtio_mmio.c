@@ -115,7 +115,7 @@ int handle_virtio_mmio_set_status_flag(virtio_emul_handler_t *emul_handler, uint
     return success;
 }
 
-static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
+static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
 {
 
     uint32_t reg = 0;
@@ -208,13 +208,13 @@ static bool handle_virtio_mmio_reg_read(uint64_t fault_addr, uint64_t fsr, seL4_
 
     // we are expected to reply even on error
     uint32_t mask = fault_get_data_mask(fault_addr, fsr);
-    int ret = fault_advance(regs, fault_addr, fsr, reg & mask);
+    int ret = fault_advance(vcpu_id, regs, fault_addr, fsr, reg & mask);
     assert(ret);
 
     return success;
 }
 
-static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
+static bool handle_virtio_mmio_reg_write(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
 {
 
     bool success = true;
@@ -348,10 +348,13 @@ static bool handle_virtio_mmio_reg_write(uint64_t fault_addr, uint64_t fsr, seL4
             success = false;
     }
 
+    int ret = fault_advance_vcpu(vcpu_id, regs);
+    assert(ret);
+
     return success;
 }
 
-bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
+bool handle_virtio_mmio_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
 {
     assert(fault_addr >= VIRTIO_ADDRESS_START);
     assert(fault_addr < VIRTIO_ADDRESS_END);
@@ -362,8 +365,8 @@ bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fs
     }
 
     if (fault_is_read(fsr)) {
-        return handle_virtio_mmio_reg_read(fault_addr, fsr, regs);
+        return handle_virtio_mmio_reg_read(vcpu_id, fault_addr, fsr, regs);
     } else {
-        return handle_virtio_mmio_reg_write(fault_addr, fsr, regs);
+        return handle_virtio_mmio_reg_write(vcpu_id, fault_addr, fsr, regs);
     }
 }

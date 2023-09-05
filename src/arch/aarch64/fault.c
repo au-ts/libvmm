@@ -373,7 +373,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
             /* @ericc: The handler for registered faulting addresses needs to handle both read and write faults,
             * for the READ case we need to retrieve and pass read data from the handler befeore advancing the fault.
             */
-            LOG_VMM("calling fault handle vm exception\n");
+            // LOG_VMM("calling fault handle vm exception\n");
             bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
             if (!success) {
                 /*

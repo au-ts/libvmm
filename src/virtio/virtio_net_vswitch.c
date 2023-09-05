@@ -241,6 +241,13 @@ uintptr_t tx_used;
 uintptr_t rx_shared_dma_vaddr;
 uintptr_t tx_shared_dma_vaddr;
 
+// Leaving this hack here for now, refactor in the future
+static uint64_t get_vmm_id(char *sel4cp_name)
+{
+    // @ivanv: Absolute hack
+    return sel4cp_name[4] - '0';
+}
+
 eth_driver_handler_t *vswitch_init(callback_fn_t cb)
 {
     // @jade: we don't have a good way to config connection layouts for the vswitch right now,

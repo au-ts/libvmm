@@ -84,4 +84,4 @@ typedef struct virtio_emul_handler {
  * @param fsr fault status register
  * @param regs registers
  */
-bool handle_virtio_mmio_fault(uint64_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs);
+bool handle_virtio_mmio_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs);
