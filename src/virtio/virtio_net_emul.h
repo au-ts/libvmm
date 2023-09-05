@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "virtio_mmio.h"
+
 #define VIRTIO_NET_IRQ 74
 
 // @jade: random numbers that I picked

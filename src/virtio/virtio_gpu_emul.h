@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "virtio_mmio.h"
+
 #define VIRTIO_GPU_ADDRESS_START    0x140000
 #define VIRTIO_GPU_ADDRESS_END      0x150000
 
