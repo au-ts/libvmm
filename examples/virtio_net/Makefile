@@ -66,14 +66,16 @@ DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
-ELFS := vmm.elf
+ELFS := vmm1.elf vmm2.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-VMM_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_vswitch.o
+VMM1_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+VMM1_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_vswitch.o
+
+VMM2_OBJS := $(VMM1_OBJS)
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -144,7 +146,10 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/libsharedringbuffer/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
+$(BUILD_DIR)/vmm1.elf: $(addprefix $(BUILD_DIR)/, $(VMM1_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/vmm2.elf: $(addprefix $(BUILD_DIR)/, $(VMM2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)

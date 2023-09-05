@@ -26,6 +26,14 @@
  * currently we haven't figured out what to do.
  */
 
+/* Memory regions. These all have to be here to keep compiler happy */
+uintptr_t rx_avail;
+uintptr_t rx_used;
+uintptr_t tx_avail;
+uintptr_t tx_used;
+uintptr_t rx_shared_dma_vaddr;
+uintptr_t tx_shared_dma_vaddr;
+
 #include "include/config/virtio_net.h"
 #include "virtio_net_tt_vswitch.h"
 #include "../util/util.h"
@@ -232,14 +240,6 @@ eth_driver_handler_t vswitch_handler = {
     .tx = vswitch_tx,
     .rx = vswitch_rx,
 };
-
-/* Memory regions. These all have to be here to keep compiler happy */
-uintptr_t rx_avail;
-uintptr_t rx_used;
-uintptr_t tx_avail;
-uintptr_t tx_used;
-uintptr_t rx_shared_dma_vaddr;
-uintptr_t tx_shared_dma_vaddr;
 
 // Leaving this hack here for now, refactor in the future
 static uint64_t get_vmm_id(char *sel4cp_name)

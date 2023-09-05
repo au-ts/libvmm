@@ -17,7 +17,7 @@
 /* Specific to the virtio_mmio example */
 #include "virtio/virtio_mmio.h"
 #include "virtio/virtio_net_emul.h"
-#include "virtio/virtio_net_vswitch.h"
+#include "virtio/virtio_net_tt_vswitch.h"
 
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_RAM_SIZE 0x10000000
@@ -61,10 +61,6 @@ static void register_passthrough_irq(int irq, sel4cp_channel irq_ch) {
     }
 }
 
-// bool register_virtio_mmio_device() {
-
-// }
-
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", sel4cp_name);
@@ -93,18 +89,13 @@ void init(void) {
         return;
     }
 
-    // SERIAL for qemu
-    register_passthrough_irq(33, 1);
-
     // Register virtio_mmio faults
     fault_register_vm_exception_handler(VIRTIO_ADDRESS_START, VIRTIO_ADDRESS_END - VIRTIO_ADDRESS_START, &handle_virtio_mmio_fault);
 
     // Register virtio_net device
     virtio_net_emul_init();
-    int err = vgic_register_irq(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
-    if (!err) {
-        printf("\"%s\"|ERROR: Failed to register VirtIO Net IRQ\n", sel4cp_name);
-    }
+    register_passthrough_irq(VIRTIO_NET_IRQ, 3);
+    // register_shmem()
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -117,7 +108,7 @@ void notified(sel4cp_channel ch) {
             break;
         default:
             if (passthrough_irq_map[ch]) {
-                bool success = vgic_inject_irq(GUEST_VCPU_ID, passthrough_irq_map[ch]);
+                bool success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
                 if (!success) {
                     LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
                 }
