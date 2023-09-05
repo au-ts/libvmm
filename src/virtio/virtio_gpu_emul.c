@@ -6,7 +6,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-// #include "../vgic/vgic.h"
 #include "../util/util.h"
 #include "include/config/virtio_gpu.h"
 #include "include/config/virtio_config.h"

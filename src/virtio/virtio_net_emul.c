@@ -12,7 +12,6 @@
 #include "virtio_net_emul.h"
 #include "include/config/virtio_net.h"
 #include "include/config/virtio_config.h"
-#include "../arch/aarch64/vgic/vgic.h"
 
 // @jade: add some giant comments about this file
 // virtio net mmio emul interface
@@ -163,7 +162,7 @@ static void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16
         // set the reason of the irq
         self->data.InterruptStatus = BIT_LOW(0);
 
-        bool success = vgic_inject_irq(VCPU_ID, VIRTIO_NET_IRQ);
+        bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
         // we can't inject irqs?? panic.
         assert(success);
 
@@ -329,7 +328,7 @@ static int virtio_net_emul_handle_backend_rx(void *buf, uint32_t size)
     handler->data.InterruptStatus = BIT_LOW(0);
 
     // notify the guest
-    bool success = vgic_inject_irq(VCPU_ID, VIRTIO_NET_IRQ);
+    bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
     // we can't inject irqs?? panic.
     assert(success);
 
