@@ -94,8 +94,7 @@ void init(void) {
 
     // Register virtio_net device
     virtio_net_emul_init();
-    register_passthrough_irq(VIRTIO_NET_IRQ, 3);
-    // register_shmem()
+    virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

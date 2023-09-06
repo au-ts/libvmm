@@ -18,10 +18,8 @@
 // virtio net mmio emul interface
 
 // @jade, @ivanv: need to be able to get it from vgic
+// Maybe global state in the future
 #define VCPU_ID 0
-
-// @jade: ideally should not be here
-#define VIRTIO_NET_IRQ 74
 
 #define BIT_LOW(n) (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
@@ -163,10 +161,6 @@ static void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16
         // set the reason of the irq
         self->data.InterruptStatus = BIT_LOW(0);
 
-        bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
-        // we can't inject irqs?? panic.
-        assert(success);
-
         //add to useds
         struct vring *vring = &vqs[TX_QUEUE].vring;
 
@@ -175,6 +169,10 @@ static void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16
 
         vring->used->ring[guest_idx % vring->num] = used_elem;
         vring->used->idx++;
+
+        bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
+        // we can't inject irqs?? panic.
+        assert(success);
 }
 
 // handle queue notify from the guest
@@ -345,7 +343,7 @@ virtio_emul_funs_t emul_funs = {
     .queue_notify = virtio_net_emul_handle_queue_notify_tx,
 };
 
-void virtio_net_emul_init(void)
+void virtio_net_emul_init()
 {
     backend_handler = vswitch_init(virtio_net_emul_handle_backend_rx);
     if (backend_handler == NULL) {

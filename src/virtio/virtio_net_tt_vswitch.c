@@ -26,6 +26,12 @@
  * currently we haven't figured out what to do.
  */
 
+#include "include/config/virtio_net.h"
+#include "virtio_net_tt_vswitch.h"
+#include "../util/util.h"
+
+#include "../libsharedringbuffer/include/shared_ringbuffer.h"
+
 /* Memory regions. These all have to be here to keep compiler happy */
 uintptr_t rx_avail;
 uintptr_t rx_used;
@@ -33,12 +39,6 @@ uintptr_t tx_avail;
 uintptr_t tx_used;
 uintptr_t rx_shared_dma_vaddr;
 uintptr_t tx_shared_dma_vaddr;
-
-#include "include/config/virtio_net.h"
-#include "virtio_net_tt_vswitch.h"
-#include "../util/util.h"
-
-#include "../libsharedringbuffer/include/shared_ringbuffer.h"
 
 #define SHMEM_NUM_BUFFERS 256
 #define SHMEM_BUF_SIZE 0x1000
