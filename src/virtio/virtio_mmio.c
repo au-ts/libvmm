@@ -8,8 +8,9 @@
 #include "../arch/aarch64/fault.h"
 #include "include/config/virtio_config.h"
 #include "virtio_mmio.h"
+#include "virtio_mem.h"
 #include "virtio_net_emul.h"
-#include "virtio_gpu_emul.h"
+// #include "virtio_gpu_emul.h"
 
 // @jade: add some giant comments about this file
 // generic virtio mmio emul interface
@@ -22,8 +23,8 @@ virtio_emul_handler_t *get_emul_handler_by_address(uint64_t addr)
     {
     case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
         return get_virtio_net_emul_handler();
-    case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
-        return get_virtio_gpu_emul_handler();
+    // case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
+    //     return get_virtio_gpu_emul_handler();
     default:
         return NULL;
     }
@@ -34,9 +35,8 @@ static uint32_t get_device_offset(uint64_t addr)
     switch(addr) {
     case REG_RANGE(VIRTIO_NET_ADDRESS_START, VIRTIO_NET_ADDRESS_END):
         return VIRTIO_NET_ADDRESS_START;
-    case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
-        // printf("VIRTIO MMIO|INFO: VMM trapped to VIRTIO_GPU address range\n");
-        return VIRTIO_GPU_ADDRESS_START;
+    // case REG_RANGE(VIRTIO_GPU_ADDRESS_START, VIRTIO_GPU_ADDRESS_END):
+    //     return VIRTIO_GPU_ADDRESS_START;
     default:
         return -1;
     }
@@ -50,7 +50,7 @@ struct vring *get_current_vring_by_handler(virtio_emul_handler_t *emul_handler)
 
 /*
  * Protocol for device status changing can be found in:
- * https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html,
+ * https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html,
  * 3.1 Device Initialization
 */
 int handle_virtio_mmio_get_status_flag(virtio_emul_handler_t *emul_handler, uint32_t *retreg)

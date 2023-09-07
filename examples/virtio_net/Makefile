@@ -73,10 +73,10 @@ REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
 VMM1_OBJS := vmm1.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-VMM1_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_tt_vswitch.o
+VMM1_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_net_emul.o virtio_net_tt_vswitch.o
 
 VMM2_OBJS := vmm2.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-VMM2_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_gpu_emul.o virtio_net_emul.o virtio_net_tt_vswitch.o
+VMM2_OBJS += shared_ringbuffer.o virtio_mmio.o virtio_net_emul.o virtio_net_tt_vswitch.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
