@@ -7,10 +7,11 @@
 #include <stddef.h>
 #include "../util/util.h"
 #include "../virq.h"
+#include "virtio_irq.h"
 #include "virtio_mmio.h"
 // @jade: find a way to config which backend (vswitch/ethernet/guest driver) to include
-#include "virtio_net_tt_vswitch.h"
 #include "virtio_net_emul.h"
+#include "virtio_net_interface.h"
 #include "include/config/virtio_net.h"
 #include "include/config/virtio_config.h"
 
@@ -35,14 +36,18 @@
 // emul handler of this instant of virtio net emul layer
 virtio_emul_handler_t net_emul_handler;
 
-// the handler of the backend that this instant of virtio net emul layer talks to
-eth_driver_handler_t *backend_handler;
+// interface needed to interact with tt layer
+virtio_net_tt_interface_t *net_tt_interface;
 
 // the list of virtqueue handlers for this instant of virtio net emul layer
 virtqueue_t vqs[VIRTIO_MMIO_NET_NUM_VIRTQUEUE];
 
-// temporary buffer to transmit buffer from this layer to the backend layer
+// temporary buffer to transmit buffer from this layer to the transport translate layer
 char temp_buf[BUF_SIZE];
+
+bool send_interrupt() {
+    return virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
+}
 
 void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
     // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", sel4cp_name, irq);
@@ -51,7 +56,7 @@ void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
 
 virtio_emul_handler_t *get_virtio_net_emul_handler(void)
 {
-    // san check in case somebody wants to get the handler of an uninitialised backend
+    // san check in case somebody wants to get the handler of an uninitialised emul layer
     if (net_emul_handler.data.VendorID != VIRTIO_MMIO_DEV_VENDOR_ID) {
         return NULL;
     }
@@ -126,7 +131,7 @@ static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, u
         case REG_RANGE(0x100, 0x104):
         {
             uint8_t mac[6];
-            backend_handler->get_mac(mac);
+            net_tt_interface->get_mac(mac);
             *ret_val = mac[0];
             *ret_val |= mac[1] << 8;
             *ret_val |= mac[2] << 16;
@@ -137,7 +142,7 @@ static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, u
         case REG_RANGE(0x104, 0x108):
         {
             uint8_t mac[6];
-            backend_handler->get_mac(mac);
+            net_tt_interface->get_mac(mac);
             *ret_val = mac[4];
             *ret_val |= mac[5] << 8;
             break;
@@ -156,24 +161,24 @@ static int virtio_net_emul_set_device_config(struct virtio_emul_handler *self, u
 }
 
 // notify the guest that we successfully deliver their packet
-static void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16_t desc_head)
+void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16_t desc_head)
 {
-        // set the reason of the irq
-        self->data.InterruptStatus = BIT_LOW(0);
+    // set the reason of the irq
+    self->data.InterruptStatus = BIT_LOW(0);
 
-        //add to useds
-        struct vring *vring = &vqs[TX_QUEUE].vring;
+    //add to useds
+    struct vring *vring = &vqs[TX_QUEUE].vring;
 
-        struct vring_used_elem used_elem = {desc_head, 0};
-        uint16_t guest_idx = vring->used->idx;
+    struct vring_used_elem used_elem = {desc_head, 0};
+    uint16_t guest_idx = vring->used->idx;
 
-        vring->used->ring[guest_idx % vring->num] = used_elem;
-        vring->used->idx++;
+    vring->used->ring[guest_idx % vring->num] = used_elem;
+    vring->used->idx++;
 
-        bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
-        // we can't inject irqs?? panic.
-        assert(success);
+    int success = send_interrupt();
+    assert(success);
 }
+
 
 // handle queue notify from the guest
 static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *self)
@@ -217,7 +222,7 @@ static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *se
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
 
         /* ship the buffer to the next layer */
-        int err = backend_handler->tx(temp_buf, written);
+        int err = net_tt_interface->tx(temp_buf, written);
         if (err) {
             printf("VIRTIO NET|WARNING: VirtIO Net failed to deliver packet for the guest\n.");
         }
@@ -230,8 +235,8 @@ static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *se
     return 1;
 }
 
-// handle rx for the backend
-static int virtio_net_emul_handle_backend_rx(void *buf, uint32_t size)
+// handle rx for the transport translate layer
+int handle_backend_rx(void *buf, uint32_t size)
 {
     if (!vqs[RX_QUEUE].ready) {
         // vq is not initialised, drop the packet
@@ -327,7 +332,7 @@ static int virtio_net_emul_handle_backend_rx(void *buf, uint32_t size)
     handler->data.InterruptStatus = BIT_LOW(0);
 
     // notify the guest
-    bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
+    int success = send_interrupt();
     // we can't inject irqs?? panic.
     assert(success);
 
@@ -343,13 +348,19 @@ virtio_emul_funs_t emul_funs = {
     .queue_notify = virtio_net_emul_handle_queue_notify_tx,
 };
 
+//interface implemented by this emul layer
+virtio_net_emul_interface_t global_net_emul_interface = {
+    .send_interrupt = send_interrupt,
+    .rx = handle_backend_rx,
+};
+
+virtio_net_emul_interface_t *get_virtio_net_emul_interface() {
+    return &global_net_emul_interface;
+}
+
 void virtio_net_emul_init()
 {
-    backend_handler = vswitch_init(virtio_net_emul_handle_backend_rx);
-    if (backend_handler == NULL) {
-        printf("VIRTIO NET|WARNING: VirtIO Net is initialised unsuccessfully\n.");
-        return;
-    }
+    net_tt_interface = get_virtio_net_tt_interface();
 
     net_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_NET;
     net_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;

@@ -15,9 +15,12 @@
 #include "tcb.h"
 #include "vcpu.h"
 /* Specific to the virtio_mmio example */
+#include "virtio/virtio_irq.h"
+#include "virtio/virtio_mem.h"
 #include "virtio/virtio_mmio.h"
 #include "virtio/virtio_net_emul.h"
 #include "virtio/virtio_net_tt_vswitch.h"
+#include "virtio/virtio_net_interface.h"
 
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_RAM_SIZE 0x10000000
@@ -94,6 +97,7 @@ void init(void) {
 
     // Register virtio_net device
     virtio_net_emul_init();
+    virtio_net_tt_vswitch_init();
     virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
 
     /* Finally start the guest */
@@ -103,7 +107,7 @@ void init(void) {
 void notified(sel4cp_channel ch) {
     switch (ch) {
         case VSWITCH_CONN_CH_1:
-            vswitch_rx(ch);
+            get_virtio_net_tt_interface()->rx(ch);
             break;
         default:
             if (passthrough_irq_map[ch]) {

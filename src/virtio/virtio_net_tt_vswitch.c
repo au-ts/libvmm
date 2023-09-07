@@ -26,9 +26,11 @@
  * currently we haven't figured out what to do.
  */
 
+#include "../util/util.h"
+
 #include "include/config/virtio_net.h"
 #include "virtio_net_tt_vswitch.h"
-#include "../util/util.h"
+#include "virtio_net_interface.h"
 
 #include "../libsharedringbuffer/include/shared_ringbuffer.h"
 
@@ -39,6 +41,9 @@ uintptr_t tx_avail;
 uintptr_t tx_used;
 uintptr_t rx_shared_dma_vaddr;
 uintptr_t tx_shared_dma_vaddr;
+
+// emul layer interface
+virtio_net_emul_interface_t *net_emul_interface;
 
 #define SHMEM_NUM_BUFFERS 256
 #define SHMEM_BUF_SIZE 0x1000
@@ -58,9 +63,6 @@ node_handler_t map[NUM_NODE];
 
 // @jade: should be able to get this from a build system in the future
 uint8_t vswitch_mac_address[6];
-
-// rx callback provided by the client
-callback_fn_t client_cb;
 
 #define PR_MAC802_ADDR  "%x:%x:%x:%x:%x:%x"
 
@@ -172,6 +174,8 @@ static int send_packet_to_node(void *buf, uint32_t size, node_handler_t *node)
     return 0;
 }
 
+
+
 // sent packet from this vmm to another
 int vswitch_tx(void *buf, uint32_t size)
 {
@@ -227,7 +231,7 @@ int vswitch_rx(sel4cp_channel channel)
         // RX used ring is empty, this is not suppose to happend!
         assert(!error);
 
-        client_cb((void *)addr, len);
+        net_emul_interface->rx((void *)addr, len);
 
         enqueue_avail(&node->rx_ring, addr, SHMEM_BUF_SIZE, NULL);
     }
@@ -235,21 +239,28 @@ int vswitch_rx(sel4cp_channel channel)
     return 0;
 }
 
-eth_driver_handler_t vswitch_handler = {
-    .get_mac = vswitch_get_mac,
-    .tx = vswitch_tx,
-    .rx = vswitch_rx,
-};
-
-// Leaving this hack here for now, refactor in the future
+// @ericc: Leaving this hack here for now, refactor in the future
 static uint64_t get_vmm_id(char *sel4cp_name)
 {
     // @ivanv: Absolute hack
     return sel4cp_name[4] - '0';
 }
 
-eth_driver_handler_t *vswitch_init(callback_fn_t cb)
+virtio_net_tt_interface_t global_net_tt_interface = {
+    .get_mac = vswitch_get_mac,
+    .tx = vswitch_tx,
+    .rx = vswitch_rx,
+};
+
+virtio_net_tt_interface_t *get_virtio_net_tt_interface(void)
 {
+    return &global_net_tt_interface;
+}
+
+void virtio_net_tt_vswitch_init()
+{
+    net_emul_interface = get_virtio_net_emul_interface();
+
     // @jade: we don't have a good way to config connection layouts for the vswitch right now,
     // so I'm just going to hard-code a node to get the vswitch working.
 
@@ -286,7 +297,5 @@ eth_driver_handler_t *vswitch_init(callback_fn_t cb)
         assert(ret == 0);
     }
 
-    client_cb = cb;
-
-    return &vswitch_handler;
+    return;
 }

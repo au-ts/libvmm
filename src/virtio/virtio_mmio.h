@@ -10,15 +10,6 @@
 #include "include/config/virtio_mmio.h"
 #include "include/vring/virtio_ring.h"
 
-/* Random numbers that I picked, if it overlaps with other memory regions,
- * change this to use another slot. You might also need to change:
- * 1. VIRTIO_<device name>_ADDRESS_START
- * 2. VIRTIO_<device name>_ADDRESS_END
- * 3. The virtio device entry in your DTS file
- */
-#define VIRTIO_ADDRESS_START    0x130000
-#define VIRTIO_ADDRESS_END      0x140000
-
 /* The maximum size (number of elements) of a virtqueue. It is set
  * to 128 because I copied it from the camkes virtio backend. If you find
  * out that the virtqueue gets full easily, increase the number.

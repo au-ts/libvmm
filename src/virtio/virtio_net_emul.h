@@ -7,12 +7,6 @@
 
 #include "virtio_mmio.h"
 
-#define VIRTIO_NET_IRQ 74
-
-// @jade: random numbers that I picked
-#define VIRTIO_NET_ADDRESS_START    0x130000
-#define VIRTIO_NET_ADDRESS_END      0x140000
-
 // the amount of virtqueues
 // it is set to 2 because the backend currently don't support VIRTIO_NET_F_MQ and VIRTIO_NET_F_CTRL_VQ,
 // we (@jade) might work on supporting them in the future
