@@ -5,26 +5,28 @@
  */
 
 /**
- * @brief virtio vswitch backend layer
+ * @brief virtio net backend
  *
- * The virtio vswitch backend has two layers, the emul layer and the backend layer.
- * This file is part of the backend layer, it's responsible for:
+ * The virtio net backend has two layers, the emul layer and the vswitch tt layer.
+ * This file is part of the tt layer, it's responsible for:
  *
  * - TX: receiving data from the emul layer and forwarding them to the destination
  *   VM using sharedringbuffer
  * - RX: receiving data from the source VM via sharedringbuffer and invoking the
  *   emul layer to handle the data
- * - virtio vswitch backend initialization
+ * - virtio vswitch tt initialization
  *
  * Data flow:
  *
  *          vq                      shringbuf                      vq
- *  src VM <--> (emul <-> backend) <---------> (backend <-> emul) <--> dest VM
+ *  src VM <--> (emul <-> tt) <-------------------> (tt <-> emul) <--> dest VM
  *                  src VMM                          dest VMM
  *
- * @todo This backend relies on a connection topology provided by maybe a build system,
+ * @todo This tt layer relies on a connection topology provided by maybe a build system,
  * currently we haven't figured out what to do.
  */
+
+#include <stdint.h>
 
 #include "../util/util.h"
 
@@ -34,19 +36,18 @@
 
 #include "../libsharedringbuffer/include/shared_ringbuffer.h"
 
-/* Memory regions. These all have to be here to keep compiler happy */
-uintptr_t rx_avail;
-uintptr_t rx_used;
-uintptr_t tx_avail;
-uintptr_t tx_used;
-uintptr_t rx_shared_dma_vaddr;
-uintptr_t tx_shared_dma_vaddr;
-
-// emul layer interface
-virtio_net_emul_interface_t *net_emul_interface;
-
-#define SHMEM_NUM_BUFFERS 256
+// @jade: this should be configurable
+#define SHMEM_NUM_BUFFERS 256 
 #define SHMEM_BUF_SIZE 0x1000
+
+virtio_net_tt_vswitch_t vswitch = {
+    .emul_interface = NULL,
+    .tt_interface = NULL,
+};
+
+virtio_net_tt_vswitch_t *get_virtio_net_tt_vswitch() {
+    return &vswitch;
+}
 
 typedef struct node_handler {
     ring_handle_t rx_ring;
@@ -231,7 +232,12 @@ int vswitch_rx(sel4cp_channel channel)
         // RX used ring is empty, this is not suppose to happend!
         assert(!error);
 
-        net_emul_interface->rx((void *)addr, len);
+        // Assert emul interface is initialised
+        if (vswitch.emul_interface == NULL) {
+            printf("\"%s\"|VSWITCH|INFO: tt not initialised\n", sel4cp_name);
+            return 1;
+        }
+        vswitch.emul_interface->rx((void *)addr, len);
 
         enqueue_avail(&node->rx_ring, addr, SHMEM_BUF_SIZE, NULL);
     }
@@ -246,7 +252,7 @@ static uint64_t get_vmm_id(char *sel4cp_name)
     return sel4cp_name[4] - '0';
 }
 
-virtio_net_tt_interface_t global_net_tt_interface = {
+virtio_net_tt_interface_t net_tt_interface = {
     .get_mac = vswitch_get_mac,
     .tx = vswitch_tx,
     .rx = vswitch_rx,
@@ -254,18 +260,26 @@ virtio_net_tt_interface_t global_net_tt_interface = {
 
 virtio_net_tt_interface_t *get_virtio_net_tt_interface(void)
 {
-    return &global_net_tt_interface;
+    return &net_tt_interface;
 }
 
-void virtio_net_tt_vswitch_init()
+void virtio_net_tt_vswitch_init(uintptr_t tx_avail, uintptr_t tx_used, uintptr_t tx_shared_dma_vaddr,
+                                uintptr_t rx_avail, uintptr_t rx_used, uintptr_t rx_shared_dma_vaddr)
 {
-    net_emul_interface = get_virtio_net_emul_interface();
+    vswitch.tx_avail = tx_avail;
+    vswitch.tx_used = tx_used;
+    vswitch.tx_shared_dma_vaddr = tx_shared_dma_vaddr;
+    vswitch.rx_avail = rx_avail;
+    vswitch.rx_used = rx_used;
+    vswitch.rx_shared_dma_vaddr = rx_shared_dma_vaddr;
+    vswitch.emul_interface = get_virtio_net_emul_interface();
+    vswitch.tt_interface = get_virtio_net_tt_interface();
 
     // @jade: we don't have a good way to config connection layouts for the vswitch right now,
     // so I'm just going to hard-code a node to get the vswitch working.
 
-    ring_init(&map[0].rx_ring, (ring_buffer_t *)rx_avail, (ring_buffer_t *)rx_used, NULL, 1);
-    ring_init(&map[0].tx_ring, (ring_buffer_t *)tx_avail, (ring_buffer_t *)tx_used, NULL, 0);
+    ring_init(&map[0].rx_ring, (ring_buffer_t *)vswitch.rx_avail, (ring_buffer_t *)vswitch.rx_used, NULL, 1);
+    ring_init(&map[0].tx_ring, (ring_buffer_t *)vswitch.tx_avail, (ring_buffer_t *)vswitch.tx_used, NULL, 0);
 
     map[0].macaddr[0] = 0x02;
     map[0].macaddr[1] = 0x00;
@@ -292,7 +306,7 @@ void virtio_net_tt_vswitch_init()
 
     // fill avail queue with empty buffers
     for (int i = 0; i < SHMEM_NUM_BUFFERS - 1; i++) {
-        uintptr_t addr = rx_shared_dma_vaddr + (SHMEM_BUF_SIZE * i);
+        uintptr_t addr = vswitch.rx_shared_dma_vaddr + (SHMEM_BUF_SIZE * i);
         int ret = enqueue_avail(&map[0].rx_ring, addr, SHMEM_BUF_SIZE, NULL);
         assert(ret == 0);
     }

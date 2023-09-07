@@ -33,26 +33,24 @@
 
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
-// emul handler of this instant of virtio net emul layer
-virtio_emul_handler_t net_emul_handler;
-
-// interface needed to interact with tt layer
-virtio_net_tt_interface_t *net_tt_interface;
-
 // the list of virtqueue handlers for this instant of virtio net emul layer
 virtqueue_t vqs[VIRTIO_MMIO_NET_NUM_VIRTQUEUE];
 
 // temporary buffer to transmit buffer from this layer to the transport translate layer
 char temp_buf[BUF_SIZE];
 
-bool send_interrupt() {
-    return virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
+virtio_net_emul_t virtio_net = {
+    .handler = NULL,
+    .emul_interface = NULL,
+    .tt_interface = NULL,
+};
+
+virtio_net_emul_t *get_virtio_net_emul() {
+    return &virtio_net;
 }
 
-void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", sel4cp_name, irq);
-    // nothing needs to be done
-}
+// generic emul handler for net
+virtio_emul_handler_t net_emul_handler;
 
 virtio_emul_handler_t *get_virtio_net_emul_handler(void)
 {
@@ -61,6 +59,15 @@ virtio_emul_handler_t *get_virtio_net_emul_handler(void)
         return NULL;
     }
     return &net_emul_handler;
+}
+
+void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
+    // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", sel4cp_name, irq);
+    // nothing needs to be done
+}
+
+static bool send_interrupt() {
+    return virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
 }
 
 static void virtio_net_emul_reset(virtio_emul_handler_t *self)
@@ -131,7 +138,11 @@ static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, u
         case REG_RANGE(0x100, 0x104):
         {
             uint8_t mac[6];
-            net_tt_interface->get_mac(mac);
+            if (virtio_net.tt_interface == NULL) {
+                printf("VIRTIO NET|WARNING: virtio net emul layer is not initialised\n");
+                return 0;
+            }
+            virtio_net.tt_interface->get_mac(mac);
             *ret_val = mac[0];
             *ret_val |= mac[1] << 8;
             *ret_val |= mac[2] << 16;
@@ -142,7 +153,11 @@ static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, u
         case REG_RANGE(0x104, 0x108):
         {
             uint8_t mac[6];
-            net_tt_interface->get_mac(mac);
+            if (virtio_net.tt_interface == NULL) {
+                printf("VIRTIO NET|WARNING: virtio net emul layer is not initialised\n");
+                return 0;
+            }
+            virtio_net.tt_interface->get_mac(mac);
             *ret_val = mac[4];
             *ret_val |= mac[5] << 8;
             break;
@@ -222,7 +237,11 @@ static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *se
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
 
         /* ship the buffer to the next layer */
-        int err = net_tt_interface->tx(temp_buf, written);
+        if (virtio_net.tt_interface == NULL) {
+            printf("VIRTIO NET|WARNING: virtio net emul layer is not initialised\n");
+            return 0;
+        }
+        int err = virtio_net.tt_interface->tx(temp_buf, written);
         if (err) {
             printf("VIRTIO NET|WARNING: VirtIO Net failed to deliver packet for the guest\n.");
         }
@@ -348,19 +367,21 @@ virtio_emul_funs_t emul_funs = {
     .queue_notify = virtio_net_emul_handle_queue_notify_tx,
 };
 
-//interface implemented by this emul layer
-virtio_net_emul_interface_t global_net_emul_interface = {
+// interface implemented by this emul layer
+virtio_net_emul_interface_t net_emul_interface = {
     .send_interrupt = send_interrupt,
     .rx = handle_backend_rx,
 };
 
 virtio_net_emul_interface_t *get_virtio_net_emul_interface() {
-    return &global_net_emul_interface;
+    return &net_emul_interface;
 }
 
 void virtio_net_emul_init()
 {
-    net_tt_interface = get_virtio_net_tt_interface();
+    virtio_net.handler = get_virtio_net_emul_handler();
+    virtio_net.tt_interface = get_virtio_net_tt_interface();
+    virtio_net.emul_interface = get_virtio_net_emul_interface();
 
     net_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_NET;
     net_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;

@@ -64,6 +64,14 @@ static void register_passthrough_irq(int irq, sel4cp_channel irq_ch) {
     }
 }
 
+/* sDDF memory regions for virtio net */
+uintptr_t rx_avail;
+uintptr_t rx_used;
+uintptr_t tx_avail;
+uintptr_t tx_used;
+uintptr_t rx_shared_dma_vaddr;
+uintptr_t tx_shared_dma_vaddr;
+
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", sel4cp_name);
@@ -99,7 +107,7 @@ void init(void) {
 
     // Register virtio_net device
     virtio_net_emul_init();
-    virtio_net_tt_vswitch_init();
+    virtio_net_tt_vswitch_init(tx_avail, tx_used, tx_shared_dma_vaddr, rx_avail, rx_used, rx_shared_dma_vaddr);
     virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
 
     /* Finally start the guest */
