@@ -5,16 +5,15 @@
  */
 
 /**
- * @brief virtio net backend
+ * @brief virtio net vswitch translate transport layer
  *
- * The virtio net backend has two layers, the emul layer and the vswitch tt layer.
- * This file is part of the tt layer, it's responsible for:
+ * The virtio net backend has two layers, the emul layer and the vswitch implementation of the transport translate (tt) layer.
+ * This file is part of the tt layer, responsible for:
  *
  * - TX: receiving data from the emul layer and forwarding them to the destination
  *   VM using sharedringbuffer
  * - RX: receiving data from the source VM via sharedringbuffer and invoking the
  *   emul layer to handle the data
- * - virtio vswitch tt initialization
  *
  * Data flow:
  *
@@ -36,7 +35,7 @@
 
 #include "../libsharedringbuffer/include/shared_ringbuffer.h"
 
-// @jade: this should be configurable
+// @jade, @ericc: specific to sDDF, these should be obtained from configuration file instead of defined here
 #define SHMEM_NUM_BUFFERS 256 
 #define SHMEM_BUF_SIZE 0x1000
 
@@ -246,6 +245,7 @@ int vswitch_rx(sel4cp_channel channel)
 }
 
 // @ericc: Leaving this hack here for now, refactor in the future
+// This is specfic to the vswitch, we need to know which vmm we are
 static uint64_t get_vmm_id(char *sel4cp_name)
 {
     // @ivanv: Absolute hack

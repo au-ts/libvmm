@@ -100,8 +100,10 @@ void init(void) {
         return;
     }
 
+    register_passthrough_irq(33, 1);
+
     // Register virtio_mmio faults
-    fault_register_vm_exception_handler(VIRTIO_ADDRESS_START, VIRTIO_ADDRESS_END - VIRTIO_ADDRESS_START, &handle_virtio_mmio_fault);
+    fault_register_vm_exception_handler(VIRTIO_ADDRESS_START, VIRTIO_ADDRESS_END - VIRTIO_ADDRESS_START, &virtio_mmio_handle_fault);
 
     // Register virtio_net device
     virtio_net_emul_init();

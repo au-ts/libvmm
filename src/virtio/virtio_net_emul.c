@@ -16,7 +16,6 @@
 #include "include/config/virtio_config.h"
 
 // @jade: add some giant comments about this file
-// virtio net mmio emul interface
 
 // @jade, @ivanv: need to be able to get it from vgic
 // Maybe global state in the future
@@ -33,32 +32,33 @@
 
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
+// emul struct for virtio net
+virtio_net_emul_t virtio_net = {
+    .mmio_handler = NULL,
+    .emul_interface = NULL,
+    .tt_interface = NULL,
+};
+
+// generic mmio emul handler for net
+virtio_mmio_emul_handler_t mmio_emul_handler;
+
 // the list of virtqueue handlers for this instant of virtio net emul layer
 virtqueue_t vqs[VIRTIO_MMIO_NET_NUM_VIRTQUEUE];
 
 // temporary buffer to transmit buffer from this layer to the transport translate layer
 char temp_buf[BUF_SIZE];
 
-virtio_net_emul_t virtio_net = {
-    .handler = NULL,
-    .emul_interface = NULL,
-    .tt_interface = NULL,
-};
-
 virtio_net_emul_t *get_virtio_net_emul() {
     return &virtio_net;
 }
 
-// generic emul handler for net
-virtio_emul_handler_t net_emul_handler;
-
-virtio_emul_handler_t *get_virtio_net_emul_handler(void)
+virtio_mmio_emul_handler_t *get_virtio_net_mmio_emul_handler(void)
 {
     // san check in case somebody wants to get the handler of an uninitialised emul layer
-    if (net_emul_handler.data.VendorID != VIRTIO_MMIO_DEV_VENDOR_ID) {
+    if (mmio_emul_handler.data.VendorID != VIRTIO_MMIO_DEV_VENDOR_ID) {
         return NULL;
     }
-    return &net_emul_handler;
+    return &mmio_emul_handler;
 }
 
 void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
@@ -70,7 +70,7 @@ static bool send_interrupt() {
     return virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
 }
 
-static void virtio_net_emul_reset(virtio_emul_handler_t *self)
+static void virtio_net_emul_reset(virtio_mmio_emul_handler_t *self)
 {
     vqs[RX_QUEUE].ready = 0;
     vqs[RX_QUEUE].last_idx = 1;
@@ -79,7 +79,7 @@ static void virtio_net_emul_reset(virtio_emul_handler_t *self)
     vqs[TX_QUEUE].last_idx = 0;
 }
 
-static int virtio_net_emul_get_device_features(virtio_emul_handler_t *self, uint32_t *features)
+static int virtio_net_emul_get_device_features(virtio_mmio_emul_handler_t *self, uint32_t *features)
 {
     if (self->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         printf("VIRTIO NET|WARNING: driver somehow wants to read device features after FEATURES_OK\n");
@@ -101,7 +101,7 @@ static int virtio_net_emul_get_device_features(virtio_emul_handler_t *self, uint
     return 1;
 }
 
-static int virtio_net_emul_set_driver_features(virtio_emul_handler_t *self, uint32_t features)
+static int virtio_net_emul_set_driver_features(virtio_mmio_emul_handler_t *self, uint32_t features)
 {
     int success = 1;
 
@@ -129,7 +129,7 @@ static int virtio_net_emul_set_driver_features(virtio_emul_handler_t *self, uint
     return success;
 }
 
-static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t *ret_val)
+static int virtio_net_emul_get_device_config(virtio_mmio_emul_handler_t *self, uint32_t offset, uint32_t *ret_val)
 {
     // @jade: this function might need a refactor when the virtio net backend starts to
     // support more features
@@ -169,14 +169,14 @@ static int virtio_net_emul_get_device_config(struct virtio_emul_handler *self, u
     return 1;
 }
 
-static int virtio_net_emul_set_device_config(struct virtio_emul_handler *self, uint32_t offset, uint32_t val)
+static int virtio_net_emul_set_device_config(virtio_mmio_emul_handler_t *self, uint32_t offset, uint32_t val)
 {
     printf("VIRTIO NET|WARNING: driver attempts to set device config but virtio net only has driver-read-only configuration fields\n");
     return 0;
 }
 
-// notify the guest that we successfully deliver their packet
-void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16_t desc_head)
+// notify the guest VM that we successfully deliver their packet
+static void virtio_net_emul_tx_complete(virtio_mmio_emul_handler_t *self, uint16_t desc_head)
 {
     // set the reason of the irq
     self->data.InterruptStatus = BIT_LOW(0);
@@ -194,9 +194,8 @@ void virtio_net_emul_tx_complete(struct virtio_emul_handler *self, uint16_t desc
     assert(success);
 }
 
-
-// handle queue notify from the guest
-static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *self)
+// handle queue notify from the guest VM
+static int virtio_net_emul_handle_queue_notify_tx(virtio_mmio_emul_handler_t *self)
 {
     struct vring *vring = &vqs[TX_QUEUE].vring;
 
@@ -254,7 +253,7 @@ static int virtio_net_emul_handle_queue_notify_tx(struct virtio_emul_handler *se
     return 1;
 }
 
-// handle rx for the transport translate layer
+// handle rx coming from transport translate layer
 int handle_backend_rx(void *buf, uint32_t size)
 {
     if (!vqs[RX_QUEUE].ready) {
@@ -346,9 +345,9 @@ int handle_backend_rx(void *buf, uint32_t size)
     vqs[RX_QUEUE].last_idx++;
 
     // set the reason of the irq
-    struct virtio_emul_handler *handler = get_virtio_net_emul_handler();
-    assert(handler);
-    handler->data.InterruptStatus = BIT_LOW(0);
+    virtio_mmio_emul_handler_t *mmio_handler = get_virtio_net_mmio_emul_handler();
+    assert(mmio_handler);
+    mmio_handler->data.InterruptStatus = BIT_LOW(0);
 
     // notify the guest
     int success = send_interrupt();
@@ -358,7 +357,7 @@ int handle_backend_rx(void *buf, uint32_t size)
     return 0;
 }
 
-virtio_emul_funs_t emul_funs = {
+virtio_mmio_emul_funs_t mmio_emul_funs = {
     .device_reset = virtio_net_emul_reset,
     .get_device_features = virtio_net_emul_get_device_features,
     .set_driver_features = virtio_net_emul_set_driver_features,
@@ -369,7 +368,6 @@ virtio_emul_funs_t emul_funs = {
 
 // interface implemented by this emul layer
 virtio_net_emul_interface_t net_emul_interface = {
-    .send_interrupt = send_interrupt,
     .rx = handle_backend_rx,
 };
 
@@ -379,16 +377,16 @@ virtio_net_emul_interface_t *get_virtio_net_emul_interface() {
 
 void virtio_net_emul_init()
 {
-    virtio_net.handler = get_virtio_net_emul_handler();
-    virtio_net.tt_interface = get_virtio_net_tt_interface();
-    virtio_net.emul_interface = get_virtio_net_emul_interface();
-
-    net_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_NET;
-    net_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
-    net_emul_handler.funs = &emul_funs;
+    mmio_emul_handler.data.DeviceID = DEVICE_ID_VIRTIO_NET;
+    mmio_emul_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    mmio_emul_handler.funs = &mmio_emul_funs;
 
     /* must keep this or the driver complains */
     vqs[RX_QUEUE].last_idx = 1;
 
-    net_emul_handler.vqs = vqs;
+    mmio_emul_handler.vqs = vqs;
+
+    virtio_net.mmio_handler = &mmio_emul_handler;
+    virtio_net.tt_interface = get_virtio_net_tt_interface();
+    virtio_net.emul_interface = &net_emul_interface;
 }
