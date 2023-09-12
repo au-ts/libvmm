@@ -123,7 +123,7 @@ static int vswitch_tx(void *buf, uint32_t size);
 
 static void vswitch_init(void);
 
-void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie) {
+void virtio_net_mmio_ack(uint64_t vcpu_id, int irq, void *cookie) {
     // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", sel4cp_name, irq);
     // nothing needs to be done
 }

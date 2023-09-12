@@ -105,7 +105,7 @@ void init(void) {
 
     // Register virtio_net device
     virtio_net_mmio_init(net_tx_avail, net_tx_used, net_tx_shared_dma_vaddr, net_rx_avail, net_rx_used, net_rx_shared_dma_vaddr);
-    virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
+    virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_mmio_ack, NULL);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

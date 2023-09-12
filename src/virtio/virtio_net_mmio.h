@@ -15,11 +15,11 @@
 // we (@jade) might work on supporting them in the future
 #define VIRTIO_NET_MMIO_NUM_VIRTQUEUE   2
 
-void virtio_net_ack(uint64_t vcpu_id, int irq, void *cookie);
+void virtio_net_mmio_ack(uint64_t vcpu_id, int irq, void *cookie);
 
 virtio_mmio_handler_t *get_virtio_net_mmio_handler(void);
 
 int vswitch_rx(sel4cp_channel channel);
 
-void virtio_net_mmio_init(uintptr_t tx_avail, uintptr_t tx_used, uintptr_t tx_shared_dma_vaddr,
-                          uintptr_t rx_avail, uintptr_t rx_used, uintptr_t rx_shared_dma_vaddr);
+void virtio_net_mmio_init(uintptr_t net_tx_avail, uintptr_t net_tx_used, uintptr_t net_tx_shared_dma_vaddr,
+                          uintptr_t net_rx_avail, uintptr_t net_rx_used, uintptr_t net_rx_shared_dma_vaddr);
