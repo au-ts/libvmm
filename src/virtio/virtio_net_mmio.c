@@ -77,21 +77,21 @@
 #define PR_MAC802_SRC_ADDR_ARGS(a) PR_MAC802_ADDR_ARGS(a, src)
 
 // mmio handler of this instance of virtio net layer
-virtio_mmio_handler_t net_mmio_handler;
+static virtio_mmio_handler_t net_mmio_handler;
 
 // the list of virtqueue handlers for this instance of virtio net layer
-virtqueue_t vqs[VIRTIO_NET_MMIO_NUM_VIRTQUEUE];
+static virtqueue_t vqs[VIRTIO_NET_MMIO_NUM_VIRTQUEUE];
 
 // temporary buffer to transmit buffer from this layer to the backend layer
-char temp_buf[TMP_BUF_SIZE];
+static char temp_buf[TMP_BUF_SIZE];
 
 // sDDF memory regions, initialised by the virtio net mmio init function
-uintptr_t rx_avail;
-uintptr_t rx_used;
-uintptr_t tx_avail;
-uintptr_t tx_used;
-uintptr_t rx_shared_dma_vaddr;
-uintptr_t tx_shared_dma_vaddr;
+static uintptr_t rx_avail;
+static uintptr_t rx_used;
+static uintptr_t tx_avail;
+static uintptr_t tx_used;
+static uintptr_t rx_shared_dma_vaddr;
+static uintptr_t tx_shared_dma_vaddr;
 
 typedef struct node_handler {
     ring_handle_t rx_ring;
@@ -101,10 +101,10 @@ typedef struct node_handler {
 } node_handler_t;
 
 // handler of the connections
-node_handler_t map[NUM_NODE];
+static node_handler_t map[NUM_NODE];
 
 // @jade: should be able to get this from a build system in the future
-uint8_t vswitch_mac_address[6];
+static uint8_t vswitch_mac_address[6];
 
 /* This is a name for the 96 bit ethernet addresses available on many
    systems.  */
@@ -137,7 +137,7 @@ virtio_mmio_handler_t *get_virtio_net_mmio_handler(void)
     return &net_mmio_handler;
 }
 
-void virtio_net_mmio_reset(virtio_mmio_handler_t *self)
+void virtio_net_mmio_reset(void)
 {
     vqs[RX_QUEUE].ready = 0;
     vqs[RX_QUEUE].last_idx = 1;
@@ -146,13 +146,13 @@ void virtio_net_mmio_reset(virtio_mmio_handler_t *self)
     vqs[TX_QUEUE].last_idx = 0;
 }
 
-int virtio_net_mmio_get_device_features(virtio_mmio_handler_t *self, uint32_t *features)
+int virtio_net_mmio_get_device_features(uint32_t *features)
 {
-    if (self->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (net_mmio_handler.data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         printf("VIRTIO NET|WARNING: driver somehow wants to read device features after FEATURES_OK\n");
     }
 
-    switch (self->data.DeviceFeaturesSel) {
+    switch (net_mmio_handler.data.DeviceFeaturesSel) {
         // feature bits 0 to 31
         case 0:
             *features = BIT_LOW(VIRTIO_NET_F_MAC);
@@ -162,17 +162,17 @@ int virtio_net_mmio_get_device_features(virtio_mmio_handler_t *self, uint32_t *f
             *features = BIT_HIGH(VIRTIO_F_VERSION_1);
             break;
         default:
-            printf("VIRTIO NET|INFO: driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DeviceFeaturesSel);
+            printf("VIRTIO NET|INFO: driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", net_mmio_handler.data.DeviceFeaturesSel);
             return 0;
     }
     return 1;
 }
 
-int virtio_net_mmio_set_driver_features(virtio_mmio_handler_t *self, uint32_t features)
+int virtio_net_mmio_set_driver_features(uint32_t features)
 {
     int success = 1;
 
-    switch (self->data.DriverFeaturesSel) {
+    switch (net_mmio_handler.data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
             // The device initialisation protocol says the driver should read device feature bits,
@@ -187,16 +187,16 @@ int virtio_net_mmio_set_driver_features(virtio_mmio_handler_t *self, uint32_t fe
             break;
 
         default:
-            printf("VIRTIO NET|INFO: driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DriverFeaturesSel);
+            printf("VIRTIO NET|INFO: driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", net_mmio_handler.data.DriverFeaturesSel);
             success = 0;
     }
     if (success) {
-        self->data.features_happy = 1;
+        net_mmio_handler.data.features_happy = 1;
     }
     return success;
 }
 
-int virtio_net_mmio_get_device_config(virtio_mmio_handler_t *self, uint32_t offset, uint32_t *ret_val)
+int virtio_net_mmio_get_device_config(uint32_t offset, uint32_t *ret_val)
 {
     // @jade: this function might need a refactor when the virtio net backend starts to
     // support more features
@@ -228,17 +228,17 @@ int virtio_net_mmio_get_device_config(virtio_mmio_handler_t *self, uint32_t offs
     return 1;
 }
 
-int virtio_net_mmio_set_device_config(virtio_mmio_handler_t *self, uint32_t offset, uint32_t val)
+int virtio_net_mmio_set_device_config(uint32_t offset, uint32_t val)
 {
     printf("VIRTIO NET|WARNING: driver attempts to set device config but virtio net only has driver-read-only configuration fields\n");
     return 0;
 }
 
 // notify the guest VM that we successfully delivered their packet
-static void virtio_net_mmio_tx_complete(virtio_mmio_handler_t *self, uint16_t desc_head)
+static void virtio_net_mmio_tx_complete(uint16_t desc_head)
 {
         // set the reason of the irq
-        self->data.InterruptStatus = BIT_LOW(0);
+        net_mmio_handler.data.InterruptStatus = BIT_LOW(0);
 
         bool success = virq_inject(VCPU_ID, VIRTIO_NET_IRQ);
         // we can't inject irqs?? panic.
@@ -255,7 +255,7 @@ static void virtio_net_mmio_tx_complete(virtio_mmio_handler_t *self, uint16_t de
 }
 
 // handle queue notify from the guest VM
-static int virtio_net_mmio_handle_queue_notify_tx(virtio_mmio_handler_t *self)
+static int virtio_net_mmio_handle_queue_notify_tx()
 {
     struct vring *vring = &vqs[TX_QUEUE].vring;
 
@@ -301,7 +301,7 @@ static int virtio_net_mmio_handle_queue_notify_tx(virtio_mmio_handler_t *self)
             printf("VIRTIO NET|WARNING: VirtIO Net failed to deliver packet for the guest\n.");
         }
 
-        virtio_net_mmio_tx_complete(self, desc_head);
+        virtio_net_mmio_tx_complete(desc_head);
     }
 
     vqs[TX_QUEUE].last_idx = idx;
@@ -413,7 +413,7 @@ static int virtio_net_mmio_handle_vswitch_rx(void *buf, uint32_t size)
     return 0;
 }
 
-virtio_mmio_funs_t mmio_funs = {
+static virtio_mmio_funs_t mmio_funs = {
     .device_reset = virtio_net_mmio_reset,
     .get_device_features = virtio_net_mmio_get_device_features,
     .set_driver_features = virtio_net_mmio_set_driver_features,

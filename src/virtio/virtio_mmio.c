@@ -52,13 +52,6 @@ static struct vring *get_current_vring_by_handler(virtio_mmio_handler_t *mmio_ha
  * https://docs.oasis-open.org/virtio/virtio/v1.2/csd01/virtio-v1.2-csd01.html,
  * 3.1 Device Initialization
 */
-static int handle_virtio_mmio_get_status_flag(virtio_mmio_handler_t *mmio_handler, uint32_t *retreg)
-{
-    *retreg = mmio_handler->data.Status;
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Status is 0x%x.\n", sel4cp_name, mmio_handler->data.Status);
-    return 1;
-}
-
 static int handle_virtio_mmio_set_status_flag(virtio_mmio_handler_t *mmio_handler, uint32_t reg)
 {
     int success = 1;
@@ -71,7 +64,7 @@ static int handle_virtio_mmio_set_status_flag(virtio_mmio_handler_t *mmio_handle
     switch (reg) {
         case VIRTIO_CONFIG_S_RESET:
             mmio_handler->data.Status = 0;
-            mmio_handler->funs->device_reset(mmio_handler);
+            mmio_handler->funs->device_reset();
             break;
 
         case VIRTIO_CONFIG_S_ACKNOWLEDGE:
@@ -144,7 +137,7 @@ static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uin
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_DEVICE_FEATURES, REG_VIRTIO_MMIO_DEVICE_FEATURES_SEL):
-            success = mmio_handler->funs->get_device_features(mmio_handler, &reg);
+            success = mmio_handler->funs->get_device_features(&reg);
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NUM_MAX, REG_VIRTIO_MMIO_QUEUE_NUM):
@@ -161,7 +154,7 @@ static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uin
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_STATUS, REG_VIRTIO_MMIO_QUEUE_DESC_LOW):
-            success = handle_virtio_mmio_get_status_flag(mmio_handler, &reg);
+            reg = mmio_handler->data.Status;
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_SHM_LEN_LOW, REG_VIRTIO_MMIO_SHM_LEN_HIGH):
@@ -192,7 +185,7 @@ static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uin
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
-            success = mmio_handler->funs->get_device_config(mmio_handler, offset, &reg);
+            success = mmio_handler->funs->get_device_config(offset, &reg);
 
             // uint32_t mask = fault_get_data_mask(fault_addr, fsr);
             // printf("\"%s\"|VIRTIO MMIO|INFO: device config offset 0x%x, value 0x%x, mask 0x%x\n", sel4cp_name, offset, reg & mask, mask);
@@ -233,7 +226,7 @@ static bool handle_virtio_mmio_reg_write(size_t vcpu_id, uint64_t fault_addr, ui
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_DRIVER_FEATURES, REG_VIRTIO_MMIO_DRIVER_FEATURES_SEL):
-            success = mmio_handler->funs->set_driver_features(mmio_handler, data);
+            success = mmio_handler->funs->set_driver_features(data);
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_DRIVER_FEATURES_SEL, REG_VIRTIO_MMIO_QUEUE_SEL):
@@ -258,7 +251,7 @@ static bool handle_virtio_mmio_reg_write(size_t vcpu_id, uint64_t fault_addr, ui
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NOTIFY, REG_VIRTIO_MMIO_INTERRUPT_STATUS):
-            success = mmio_handler->funs->queue_notify(mmio_handler);
+            success = mmio_handler->funs->queue_notify();
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_ACK, REG_VIRTIO_MMIO_STATUS):
@@ -330,7 +323,7 @@ static bool handle_virtio_mmio_reg_write(size_t vcpu_id, uint64_t fault_addr, ui
             break;
 
         case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
-            success = mmio_handler->funs->set_device_config(mmio_handler, offset, data);
+            success = mmio_handler->funs->set_device_config(offset, data);
             break;
         default:
             printf("VIRTIO MMIO|INFO: unknown register 0x%x.", offset);

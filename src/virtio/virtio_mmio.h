@@ -32,16 +32,16 @@ struct virtio_mmio_handler;
 
 // functions provided by the generic mmio layer to a device specific layer
 typedef struct virtio_mmio_funs {
-    void (*device_reset)(struct virtio_mmio_handler *self);
+    void (*device_reset)(void);
 
     // REG_VIRTIO_MMIO_DEVICE_FEATURES related operations
-    int (*get_device_features)(struct virtio_mmio_handler *self, uint32_t *features);
-    int (*set_driver_features)(struct virtio_mmio_handler *self, uint32_t features);
+    int (*get_device_features)(uint32_t *features);
+    int (*set_driver_features)(uint32_t features);
 
     // REG_VIRTIO_MMIO_CONFIG related operations
-    int (*get_device_config)(struct virtio_mmio_handler *self, uint32_t offset, uint32_t *ret_val);
-    int (*set_device_config)(struct virtio_mmio_handler *self, uint32_t offset, uint32_t val);
-    int (*queue_notify)(struct virtio_mmio_handler *self);
+    int (*get_device_config)(uint32_t offset, uint32_t *ret_val);
+    int (*set_device_config)(uint32_t offset, uint32_t val);
+    int (*queue_notify)(void);
 } virtio_mmio_funs_t;
 
 // infomation you need for manipulating MMIO Device Register Layout
