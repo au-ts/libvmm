@@ -52,11 +52,11 @@ virtio_mmio_handler_t *get_virtio_gpu_mmio_handler(void)
     return &gpu_mmio_handler;
 }
 
-static void virtio_gpu_mmio_reset(virtio_mmio_handler_t *self)
+static void virtio_gpu_mmio_reset(void)
 {
     printf("\"%s\"|VIRTIO GPU|INFO: device has been reset\n", sel4cp_name);
     
-    self->data.Status = 0;
+    gpu_mmio_handler.data.Status = 0;
     
     vqs[CONTROL_QUEUE].last_idx = 0;
     vqs[CONTROL_QUEUE].ready = 0;
@@ -65,13 +65,13 @@ static void virtio_gpu_mmio_reset(virtio_mmio_handler_t *self)
     vqs[CURSOR_QUEUE].ready = 0;
 }
 
-static int virtio_gpu_mmio_get_device_features(virtio_mmio_handler_t *self, uint32_t *features)
+static int virtio_gpu_mmio_get_device_features(uint32_t *features)
 {
-    if (self->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (gpu_mmio_handler.data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         printf("VIRTIO GPU|WARNING: driver somehow wants to read device features after FEATURES_OK\n");
     }
 
-    switch (self->data.DeviceFeaturesSel) {
+    switch (gpu_mmio_handler.data.DeviceFeaturesSel) {
         // feature bits 0 to 31
         case 0:
             // No GPU specific features supported
@@ -81,17 +81,17 @@ static int virtio_gpu_mmio_get_device_features(virtio_mmio_handler_t *self, uint
             *features = BIT_HIGH(VIRTIO_F_VERSION_1);
             break;
         default:
-            printf("VIRTIO GPU|INFO: driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DeviceFeaturesSel);
+            printf("VIRTIO GPU|INFO: driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", gpu_mmio_handler.data.DeviceFeaturesSel);
             return 0;
     }
     return 1;
 }
 
-static int virtio_gpu_mmio_set_driver_features(virtio_mmio_handler_t *self, uint32_t features)
+static int virtio_gpu_mmio_set_driver_features(uint32_t features)
 {
     int success = 1;
 
-    switch (self->data.DriverFeaturesSel) {
+    switch (gpu_mmio_handler.data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
             // The device initialisation protocol says the driver should read device feature bits,
@@ -105,16 +105,16 @@ static int virtio_gpu_mmio_set_driver_features(virtio_mmio_handler_t *self, uint
             break;
 
         default:
-            printf("VIRTIO GPU|INFO: driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", self->data.DriverFeaturesSel);
+            printf("VIRTIO GPU|INFO: driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", gpu_mmio_handler.data.DriverFeaturesSel);
             success = 0;
     }
     if (success) {
-        self->data.features_happy = 1;
+        gpu_mmio_handler.data.features_happy = 1;
     }
     return success;
 }
 
-static int virtio_gpu_mmio_get_device_config(struct virtio_mmio_handler *self, uint32_t offset, uint32_t *ret_val)
+static int virtio_gpu_mmio_get_device_config(uint32_t offset, uint32_t *ret_val)
 {
     void * config_base_addr = (void *)&gpu_config;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
@@ -123,7 +123,7 @@ static int virtio_gpu_mmio_get_device_config(struct virtio_mmio_handler *self, u
     return 1;
 }
 
-static int virtio_gpu_mmio_set_device_config(struct virtio_mmio_handler *self, uint32_t offset, uint32_t val)
+static int virtio_gpu_mmio_set_device_config(uint32_t offset, uint32_t val)
 {
     void * config_base_addr = (void *)&gpu_config;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
@@ -132,7 +132,7 @@ static int virtio_gpu_mmio_set_device_config(struct virtio_mmio_handler *self, u
     return 1;
 }
 
-static int virtio_gpu_mmio_handle_queue_notify(struct virtio_mmio_handler *self)
+static int virtio_gpu_mmio_handle_queue_notify()
 {
     virtqueue_t *vq = &vqs[CONTROL_QUEUE];
     struct vring *vring = &vq->vring;
