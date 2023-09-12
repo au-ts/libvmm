@@ -6,4 +6,4 @@
 #pragma once
 
 #define VIRTIO_NET_IRQ      74
-// #define VIRTIO_GPU_CH       55
+#define VIRTIO_GPU_IRQ      55
