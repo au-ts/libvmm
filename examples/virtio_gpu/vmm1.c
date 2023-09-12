@@ -21,7 +21,7 @@
 #include "virtio/virtio_gpu_mmio.h"
 
 #if defined(BOARD_qemu_arm_virt)
-#define GUEST_RAM_SIZE 0x10000000
+#define GUEST_RAM_SIZE 0x8000000
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
 #elif defined(BOARD_odroidc4)
