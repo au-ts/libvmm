@@ -24,13 +24,13 @@
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
 // emul handler for an instance of virtio gpu
-virtio_mmio_handler_t gpu_mmio_handler;
+static virtio_mmio_handler_t gpu_mmio_handler;
 
 // virtio-gpu config values
-struct virtio_gpu_config gpu_config;
+static struct virtio_gpu_config gpu_config;
 
 // the list of virtqueue handlers for an instance of virtio gpu
-virtqueue_t gpu_vqs[VIRTIO_GPU_MMIO_NUM_VIRTQUEUE];
+static virtqueue_t vqs[VIRTIO_GPU_MMIO_NUM_VIRTQUEUE];
 
 // list of created resource ids
 // static uint32_t resource_ids[MAX_RESOURCE];
@@ -58,11 +58,11 @@ static void virtio_gpu_mmio_reset(virtio_mmio_handler_t *self)
     
     self->data.Status = 0;
     
-    gpu_vqs[CONTROL_QUEUE].last_idx = 0;
-    gpu_vqs[CONTROL_QUEUE].ready = 0;
+    vqs[CONTROL_QUEUE].last_idx = 0;
+    vqs[CONTROL_QUEUE].ready = 0;
 
-    gpu_vqs[CURSOR_QUEUE].last_idx = 0;
-    gpu_vqs[CURSOR_QUEUE].ready = 0;
+    vqs[CURSOR_QUEUE].last_idx = 0;
+    vqs[CURSOR_QUEUE].ready = 0;
 }
 
 static int virtio_gpu_mmio_get_device_features(virtio_mmio_handler_t *self, uint32_t *features)
@@ -134,7 +134,7 @@ static int virtio_gpu_mmio_set_device_config(struct virtio_mmio_handler *self, u
 
 static int virtio_gpu_mmio_handle_queue_notify(struct virtio_mmio_handler *self)
 {
-    virtqueue_t *vq = &gpu_vqs[CONTROL_QUEUE];
+    virtqueue_t *vq = &vqs[CONTROL_QUEUE];
     struct vring *vring = &vq->vring;
 
     /* read the current guest index */
@@ -254,6 +254,6 @@ void virtio_gpu_mmio_init(uintptr_t gpu_tx_avail, uintptr_t gpu_tx_used, uintptr
     gpu_mmio_handler.data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     gpu_mmio_handler.funs = &gpu_mmio_funs;
 
-    gpu_mmio_handler.vqs = gpu_vqs;
+    gpu_mmio_handler.vqs = vqs;
 }
 
