@@ -30,7 +30,7 @@ virtio_mmio_handler_t gpu_mmio_handler;
 struct virtio_gpu_config gpu_config;
 
 // the list of virtqueue handlers for an instance of virtio gpu
-virtqueue_t gpu_vqs[VIRTIO_MMIO_GPU_NUM_VIRTQUEUE];
+virtqueue_t gpu_vqs[VIRTIO_GPU_MMIO_NUM_VIRTQUEUE];
 
 // list of created resource ids
 // static uint32_t resource_ids[MAX_RESOURCE];

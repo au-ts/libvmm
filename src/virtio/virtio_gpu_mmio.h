@@ -7,7 +7,7 @@
 
 #define CONTROL_QUEUE               0
 #define CURSOR_QUEUE                1
-#define VIRTIO_MMIO_GPU_NUM_VIRTQUEUE   2
+#define VIRTIO_GPU_MMIO_NUM_VIRTQUEUE   2
 
 #define MAX_RESOURCE 64
 #define MAX_MEM_ENTRIES 512
