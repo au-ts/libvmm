@@ -28,24 +28,24 @@ typedef struct v_queue {
     bool ready;         /* is this vring fully initialised? */
 } virtqueue_t;
 
-struct virtio_mmio_emul_handler;
+struct virtio_mmio_handler;
 
-// functions provided by the emul (device) layer for the emul (mmio) layer
-typedef struct virtio_mmio_emul_funs {
-    void (*device_reset)(struct virtio_mmio_emul_handler *self);
+// functions provided by the generic mmio layer to a device specific layer
+typedef struct virtio_mmio_funs {
+    void (*device_reset)(struct virtio_mmio_handler *self);
 
     // REG_VIRTIO_MMIO_DEVICE_FEATURES related operations
-    int (*get_device_features)(struct virtio_mmio_emul_handler *self, uint32_t *features);
-    int (*set_driver_features)(struct virtio_mmio_emul_handler *self, uint32_t features);
+    int (*get_device_features)(struct virtio_mmio_handler *self, uint32_t *features);
+    int (*set_driver_features)(struct virtio_mmio_handler *self, uint32_t features);
 
     // REG_VIRTIO_MMIO_CONFIG related operations
-    int (*get_device_config)(struct virtio_mmio_emul_handler *self, uint32_t offset, uint32_t *ret_val);
-    int (*set_device_config)(struct virtio_mmio_emul_handler *self, uint32_t offset, uint32_t val);
-    int (*queue_notify)(struct virtio_mmio_emul_handler *self);
-} virtio_mmio_emul_funs_t;
+    int (*get_device_config)(struct virtio_mmio_handler *self, uint32_t offset, uint32_t *ret_val);
+    int (*set_device_config)(struct virtio_mmio_handler *self, uint32_t offset, uint32_t val);
+    int (*queue_notify)(struct virtio_mmio_handler *self);
+} virtio_mmio_funs_t;
 
 // infomation you need for manipulating MMIO Device Register Layout
-typedef struct virtio_mmio_emul_info {
+typedef struct virtio_mmio_info {
     uint32_t DeviceID;
     uint32_t VendorID;
 
@@ -61,16 +61,16 @@ typedef struct virtio_mmio_emul_info {
     uint32_t Status;
 
     // uint32_t ConfigGeneration;
-} virtio_mmio_emul_info_t;
+} virtio_mmio_info_t;
 
-// should only contain guest-emul information
-typedef struct virtio_mmio_emul_handler {
-    virtio_mmio_emul_info_t data;
-    virtio_mmio_emul_funs_t *funs;
+// should only contain guest information
+typedef struct virtio_mmio_handler {
+    virtio_mmio_info_t data;
+    virtio_mmio_funs_t *funs;
 
     // pointer to a list of virtqueues, the length of the list is depended on the type of the virtio device
     virtqueue_t *vqs;
-} virtio_mmio_emul_handler_t;
+} virtio_mmio_handler_t;
 
 /**
  * Handles MMIO Device Register Layout I/O for VirtIO MMIO

@@ -18,9 +18,7 @@
 #include "virtio/virtio_irq.h"
 #include "virtio/virtio_mem.h"
 #include "virtio/virtio_mmio.h"
-#include "virtio/virtio_net_emul.h"
-#include "virtio/virtio_net_tt_vswitch.h"
-#include "virtio/virtio_net_interface.h"
+#include "virtio/virtio_net_mmio.h"
 
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_RAM_SIZE 0x10000000
@@ -65,12 +63,12 @@ static void register_passthrough_irq(int irq, sel4cp_channel irq_ch) {
 }
 
 /* sDDF memory regions for virtio net */
-uintptr_t rx_avail;
-uintptr_t rx_used;
-uintptr_t tx_avail;
-uintptr_t tx_used;
-uintptr_t rx_shared_dma_vaddr;
-uintptr_t tx_shared_dma_vaddr;
+uintptr_t net_rx_avail;
+uintptr_t net_rx_used;
+uintptr_t net_tx_avail;
+uintptr_t net_tx_used;
+uintptr_t net_rx_shared_dma_vaddr;
+uintptr_t net_tx_shared_dma_vaddr;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -104,8 +102,7 @@ void init(void) {
     fault_register_vm_exception_handler(VIRTIO_ADDRESS_START, VIRTIO_ADDRESS_END - VIRTIO_ADDRESS_START, &virtio_mmio_handle_fault);
 
     // Register virtio_net device
-    virtio_net_emul_init();
-    virtio_net_tt_vswitch_init(tx_avail, tx_used, tx_shared_dma_vaddr, rx_avail, rx_used, rx_shared_dma_vaddr);
+    virtio_net_mmio_init(net_tx_avail, net_tx_used, net_tx_shared_dma_vaddr, net_rx_avail, net_rx_used, net_rx_shared_dma_vaddr);
     virq_register(GUEST_VCPU_ID, VIRTIO_NET_IRQ, &virtio_net_ack, NULL);
 
     /* Finally start the guest */
@@ -115,7 +112,7 @@ void init(void) {
 void notified(sel4cp_channel ch) {
     switch (ch) {
         case VSWITCH_CONN_CH_1:
-            get_virtio_net_tt_interface()->rx(ch);
+            vswitch_rx(ch);
             break;
         default:
             if (passthrough_irq_map[ch]) {
