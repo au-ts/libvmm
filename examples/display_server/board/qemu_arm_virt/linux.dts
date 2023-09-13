@@ -373,7 +373,7 @@
 
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug pci=nomsi loglevel=8";
+		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug pci=nomsi loglevel=8 ip=192.168.1.1";
 		linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = <0x5d700000>;
 		linux,initrd-end = <0x60000000>;
