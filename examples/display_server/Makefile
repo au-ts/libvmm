@@ -112,7 +112,12 @@ qemu: all
 			-device virtio-gpu-pci \
 			-device virtio-keyboard-pci \
 			-netdev user,id=mynet0 \
-			-device virtio-net-device,netdev=mynet0,mac=52:55:00:d1:55:01
+			-device virtio-net-device,netdev=mynet0,mac=52:55:00:d1:55:01 \
+			-device virtio-serial-pci                                             \
+			-spice port=5930,disable-ticketing=on                                 \
+			-device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0  \
+			-chardev spicevmc,id=spicechannel0,name=vdagent                       \
+			-display spice-app
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))

@@ -41,8 +41,13 @@
         </virtual_machine>
         <!-- serial irq -->
         <irq irq="33" id="1" />
+        <!-- net -->
         <irq irq="79" id="2" trigger="edge" />
+        <!-- graphics -->
         <irq irq="36" id="3" />
+        <!-- keyboard -->
         <irq irq="37" id="4" />
+        <!-- ?? required after spice, need investigation -->
+        <irq irq="38" id="5" />
     </protection_domain>
 </system>

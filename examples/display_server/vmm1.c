@@ -85,13 +85,16 @@ void init(void) {
         return;
     }
 
+    // serial
     register_passthrough_irq(33, 1);
     // Net
     register_passthrough_irq(79, 2);
     // GPU
     register_passthrough_irq(36, 3);
-    // virtio input
+    // keyboard
     register_passthrough_irq(37, 4);
+    // ?? required after spice, need investigation
+    register_passthrough_irq(38, 5);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
