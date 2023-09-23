@@ -45,7 +45,9 @@ extern "C" fn uart_irq_ack(_: usize, _: i32, _: *const c_void) {
     match UART_CH.irq_ack() {
         // Do nothing if there's no problem
         Ok(()) => {}
-        Err(e) => debug_println!("VMM|ERROR: received ack from guest, but could not ack UART IRQ channel: {e}"),
+        Err(e) => {
+            debug_println!("VMM|ERROR: received ack from guest, but could not ack UART IRQ channel: {e}");
+        }
     }
 }
 
@@ -76,7 +78,9 @@ fn init() -> VmmHandler {
         _ = virq_register(GUEST_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
         match UART_CH.irq_ack() {
             Ok(()) => {}
-            Err(e) => debug_println!("VMM|ERROR: could not ack UART IRQ channel: {e}"),
+            Err(e) => {
+                debug_println!("VMM|ERROR: could not ack UART IRQ channel: {e}");
+            }
         }
         guest_start(GUEST_VCPU_ID, guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     }
