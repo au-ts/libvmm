@@ -128,7 +128,7 @@ $(BUILD_DIR)/%.o: $(LIBVMM)/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/libvmm.a: $(addprefix $(BUILD_DIR)/, $(LIBVMM_OBJS))
-	$(AR) -rv $@ $^
+	$(AR) -crv $@ $^
 
 $(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a $(LINUX) $(INITRD) $(DTB)
 	$(RUST_ENV) \
