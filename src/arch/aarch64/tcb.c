@@ -8,7 +8,6 @@
 #include "util.h"
 #include "tcb.h"
 
-// @ivanv: should we have a header-only file or have tcb.c and vcpu.c as well?
 void tcb_print_regs(size_t vcpu_id) {
     /*
      * While we are potentially doing an extra system call in order to read the
