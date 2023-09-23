@@ -86,9 +86,8 @@ build_simple_zig "odroidc4" "release"
 
 build_rust "debug"
 simulate_rust "debug"
-# @ivanv: TODO get Rust in with release version of Microkit working
-# build_rust "release"
-# simulate_rust "release"
+build_rust "release"
+simulate_rust "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"
