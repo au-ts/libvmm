@@ -25,7 +25,7 @@ intended to simply boot a Linux guest that has serial input and output.
 * Make
 * dtc (Device Tree Compiler)
 * Clang, LLD, and `llvm-ar`
-* QEMU (if you wish to simulate the VMM)
+* QEMU (for simulating the example)
 * Microkit SDK
 
 It should be noted that while the examples in the VMM can be reproduced
