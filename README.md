@@ -44,12 +44,9 @@ Using Homebrew on macOS:
 If you do not have Homebrew installed, you can do so [here](https://brew.sh/).
 
 ```sh
-# Homebrew does not provide ARM cross compilers by default, so we use
-# this repository (https://github.com/messense/homebrew-macos-cross-toolchains).
-brew tap messense/macos-cross-toolchains
 # Note that make sure that the LLVM tools are in your path after install, Homebrew
 # does not do it automatically but does print out a message on how to do it.
-brew install make qemu aarch64-unknown-linux-gnu dtc llvm
+brew install make qemu dtc llvm
 ```
 
 Using [Nix](https://nixos.org/):
