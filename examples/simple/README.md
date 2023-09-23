@@ -47,7 +47,7 @@ Where `<BOARD>` is one of:
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> qemu
+zig build -Dsdk=/path/to/sdk -Dboard=qemu_arm_virt qemu
 ```
 
 You can view other options by doing:
