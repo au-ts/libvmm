@@ -18,7 +18,7 @@ For information on the project and how to use it, please see the [manual](docs/M
 ## Getting started
 
 To quickly show off the project, we will run the `simple` example. This example is
-intended to simply boot a Linux guest that has serial output and input.
+intended to simply boot a Linux guest that has serial input and output.
 
 ### Dependencies
 
@@ -26,6 +26,7 @@ intended to simply boot a Linux guest that has serial output and input.
 * dtc (Device Tree Compiler)
 * Clang, LLD, and `llvm-ar`
 * QEMU (if you wish to simulate the VMM)
+* Microkit SDK
 
 It should be noted that while the examples in the VMM can be reproduced
 on macOS, if you need to do anything such as compile a custom Linux kernel image
@@ -38,7 +39,9 @@ Using `apt`:
 sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
 ```
 
-Using Homebrew:
+Using Homebrew on macOS:
+
+If you do not have Homebrew installed, you can do so [here](https://brew.sh/).
 
 ```sh
 # Homebrew does not provide ARM cross compilers by default, so we use
@@ -74,6 +77,7 @@ For acquiring the SDK, you have two options.
 Go to this page: https://github.com/Ivan-Velickovic/microkit/actions/runs/6257526318 and scroll to the bottom.
 
 Click on the artefact that matches the system you will be using the SDK on (e.g Linux x86-64 or macOS AArch64).
+You will then have to unzip and untar it (unfortunately GitHub zips the archive no matter what).
 
 ##### Option 2 - Building the SDK
 
