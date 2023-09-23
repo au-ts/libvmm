@@ -17,7 +17,7 @@ For information on the project and how to use it, please see the [manual](docs/M
 
 ## Getting started
 
-To quickly show off the project, we will build the `simple` example. This example is
+To quickly show off the project, we will run the `simple` example. This example is
 intended to simply boot a Linux guest that has serial output and input.
 
 ### Dependencies
