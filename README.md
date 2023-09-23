@@ -92,7 +92,7 @@ From here, you can follow the instructions
 If you have built the SDK then the path to the SDK should look something like
 this: `microkit/release/microkit-sdk-1.2.6`.
 
-## Building the example system
+### Building and running
 
 Finally, we can simulate a basic system with a single Linux guest with the
 following command. We want to run the `simple` example system in a `debug`
