@@ -56,37 +56,37 @@ const ConfigOptions = enum {
 };
 
 pub fn build(b: *std.Build) void {
-    // @ivanv: need to somehow relate sel4cp config with this optimisation level?
+    // @ivanv: need to somehow relate Microkit config with this optimisation level?
     const optimize = b.standardOptimizeOption(.{});
 
-    // Getting the path to the seL4CP SDK before doing anything else
-    const sel4cp_sdk_arg = b.option([]const u8, "sdk", "Path to seL4CP SDK");
-    if (sel4cp_sdk_arg == null) {
+    // Getting the path to the Microkit SDK before doing anything else
+    const microkit_sdk_arg = b.option([]const u8, "sdk", "Path to Microkit SDK");
+    if (microkit_sdk_arg == null) {
         std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
         std.os.exit(1);
     }
-    const sel4cp_sdk = sel4cp_sdk_arg.?;
+    const microkit_sdk = microkit_sdk_arg.?;
 
-    const sel4cp_config_option = b.option(ConfigOptions, "config", "seL4CP config to build for")
+    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for")
                                  orelse ConfigOptions.debug;
-    const sel4cp_config = @tagName(sel4cp_config_option);
+    const microkit_config = @tagName(microkit_config_option);
 
-    // Get the seL4CP SDK board we want to target
-    const sel4cp_board_option = b.option(CorePlatformBoard, "board", "seL4CP board to target");
+    // Get the Microkit SDK board we want to target
+    const microkit_board_option = b.option(CorePlatformBoard, "board", "Microkit board to target");
 
-    if (sel4cp_board_option == null) {
+    if (microkit_board_option == null) {
         std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
         std.os.exit(1);
     }
-    const target = findTarget(sel4cp_board_option.?);
-    const sel4cp_board = @tagName(sel4cp_board_option.?);
+    const target = findTarget(microkit_board_option.?);
+    const microkit_board = @tagName(microkit_board_option.?);
 
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ sel4cp_sdk, sel4cp_board, sel4cp_config });
-    const sdk_tool = fmtPrint("{s}/bin/sel4cp", .{ sel4cp_sdk });
-    const libsel4cp = fmtPrint("{s}/lib/libsel4cp.a", .{ sdk_board_dir });
-    const libsel4cp_linker_script = fmtPrint("{s}/lib/sel4cp.ld", .{ sdk_board_dir });
+    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const sdk_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
+    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ sdk_board_dir });
+    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ sdk_board_dir });
     const sdk_board_include_dir = fmtPrint("{s}/include", .{ sdk_board_dir });
 
     const libvmm = b.addStaticLibrary(.{
@@ -136,23 +136,23 @@ pub fn build(b: *std.Build) void {
     });
 
     // For actually compiling the DTS into a DTB
-    const dts_path = fmtPrint("board/{s}/linux.dts", .{ sel4cp_board });
+    const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
     const dtc_command = b.addSystemCommand(&[_][]const u8{
         "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o"
     });
     const dtb_image_path = dtc_command.addOutputFileArg("linux.dtb");
 
-    // Add sel4cp.h to be used by the API wrapper.
+    // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
     // The VMM code will include 
     exe.addIncludePath(.{ .path = libvmm_src });
     exe.addIncludePath(.{ .path = libvmm_src_arch });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(.{ .path = libsel4cp });
+    exe.addObjectFile(.{ .path = libmicrokit });
     exe.linkLibrary(libvmm);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .path = libsel4cp_linker_script });
+    exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
 
     exe.addCSourceFiles(&.{"vmm.c"}, &.{
         "-Wall",
@@ -169,10 +169,10 @@ pub fn build(b: *std.Build) void {
     });
     dtb_image_path.addStepDependencies(&guest_images.step);
 
-    const linux_image_path = fmtPrint("board/{s}/linux", .{ sel4cp_board });
+    const linux_image_path = fmtPrint("board/{s}/linux", .{ microkit_board });
     const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
 
-    const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ sel4cp_board });
+    const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ microkit_board });
     const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
     const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path.getPath(b) });
     guest_images.addCSourceFiles(&.{ libvmm_tools ++ "package_guest_images.S" }, &.{
@@ -186,33 +186,33 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = fmtPrint("board/{s}/simple.system", .{ sel4cp_board });
+    const system_description_path = fmtPrint("board/{s}/simple.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
-    const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
+    const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
        sdk_tool,
        system_description_path,
        "--search-path",
        b.getInstallPath(.bin, ""),
        "--board",
-       sel4cp_board,
+       microkit_board,
        "--config",
-       sel4cp_config,
+       microkit_config,
        "-o",
        final_image_dest,
        "-r",
        b.getInstallPath(.prefix, "./report.txt")
     });
-    // Running the seL4CP tool depends on 
-    sel4cp_tool_cmd.step.dependOn(b.getInstallStep());
-    // Add the "sel4cp" step, and make it the default step when we execute `zig build`>
-    const sel4cp_step = b.step("sel4cp", "Compile and build the final bootable image");
-    sel4cp_step.dependOn(&sel4cp_tool_cmd.step);
-    b.default_step = sel4cp_step;
+    // Running the Microkit tool depends on 
+    microkit_tool_cmd.step.dependOn(b.getInstallStep());
+    // Add the "microkit" step, and make it the default step when we execute `zig build`>
+    const microkit_step = b.step("microkit", "Compile and build the final bootable image");
+    microkit_step.dependOn(&microkit_tool_cmd.step);
+    b.default_step = microkit_step;
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
     const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
-    if (std.mem.eql(u8, sel4cp_board, "qemu_arm_virt")) {
+    if (std.mem.eql(u8, microkit_board, "qemu_arm_virt")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",

@@ -5,7 +5,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
-#include <sel4cp.h>
+#include <microkit.h>
 #include "util/util.h"
 #include "arch/aarch64/vgic/vgic.h"
 #include "arch/aarch64/linux.h"
@@ -73,7 +73,7 @@ extern char _guest_dtb_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
-/* seL4CP will set this variable to the start of the guest RAM memory region. */
+/* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
 static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
@@ -81,12 +81,12 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
      * For now we by default simply ack the serial IRQ, we have not
      * come across a case yet where more than this needs to be done.
      */
-    sel4cp_irq_ack(SERIAL_IRQ_CH);
+    microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
-    LOG_VMM("starting \"%s\"\n", sel4cp_name);
+    LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -115,12 +115,12 @@ void init(void) {
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    sel4cp_irq_ack(SERIAL_IRQ_CH);
+    microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-void notified(sel4cp_channel ch) {
+void notified(microkit_channel ch) {
     switch (ch) {
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
@@ -139,11 +139,11 @@ void notified(sel4cp_channel ch) {
  * whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
-void fault(sel4cp_id id, sel4cp_msginfo msginfo) {
+void fault(microkit_id id, microkit_msginfo msginfo) {
     bool success = fault_handle(id, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
-        sel4cp_fault_reply(sel4cp_msginfo_new(0, 0));
+        microkit_fault_reply(microkit_msginfo_new(0, 0));
     }
 }

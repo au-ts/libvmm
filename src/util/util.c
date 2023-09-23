@@ -11,5 +11,5 @@
    in the VMM. */
 void _putchar(char character)
 {
-    sel4cp_dbg_putc(character);
+    microkit_dbg_putc(character);
 }

@@ -15,7 +15,7 @@ are sufficient.
 
 It should also be noted that this example makes use of the
 [rust-seL4](https://github.com/coliasgroup/rust-seL4/) project's support for
-seL4CP, which is subject to change.
+Microkit, which is subject to change.
 
 ## Building the example
 
@@ -23,12 +23,12 @@ You will first need to have Rust installed, the instructions for this are [here]
 
 From here, you build the example with:
 ```sh
-make SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6
+make MICROKIT_SDK=/path/to/sdk
 ```
 
 ## Running the example
 
 You can build and run the example in a single command with:
 ```sh
-make SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make MICROKIT_SDK=/path/to/sdk qemu
 ```

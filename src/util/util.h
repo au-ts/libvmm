@@ -8,7 +8,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <sel4cp.h>
+#include <microkit.h>
 #include "printf.h"
 
 // @ivanv: these are here for convience, should not be here though
@@ -30,8 +30,8 @@
 #define static_assert _Static_assert
 #endif
 
-#define LOG_VMM(...) do{ printf("%s|INFO: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
-#define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", sel4cp_name); printf(__VA_ARGS__); }while(0)
+#define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", microkit_name); printf(__VA_ARGS__); }while(0)
 
 static void *memcpy(void *restrict dest, const void *restrict src, size_t n)
 {

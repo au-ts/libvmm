@@ -15,22 +15,22 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     // @ivanv sort out
-    const sdk_path = "/home/ivanv/ts/sel4cp/release/sel4cp-sdk-1.2.6";
+    const sdk_path = "microkit-sdk-1.2.6";
     const board = "qemu_arm_virt";
     const config = "debug";
-    // const sel4cp_build_dir = "build";
+    // const microkit_build_dir = "build";
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
     const sdk_board_dir = sdk_path ++ "/board/" ++ board ++ "/" ++ config;
 
-    const zig_libsel4cp = b.addObject(.{
-        .name = "zig_libsel4cp",
-        .root_source_file = .{ .path = "src/libsel4cp.c" },
+    const zig_libmicrokit = b.addObject(.{
+        .name = "zig_libmicrokit",
+        .root_source_file = .{ .path = "src/libmicrokit.c" },
         .target = target,
         .optimize = optimize,
     });
-    zig_libsel4cp.addIncludePath(.{ .path = "src/" });
-    zig_libsel4cp.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
+    zig_libmicrokit.addIncludePath(.{ .path = "src/" });
+    zig_libmicrokit.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
 
     const vmmlib = b.addStaticLibrary(.{
         .name = "vmm",
@@ -77,27 +77,27 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    // Add sel4cp.h to be used by the API wrapper.
+    // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
     exe.addIncludePath(.{ .path = "../../src/" });
     exe.addIncludePath(.{ .path = "../../src/util/" });
     exe.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(.{ .path = sdk_board_dir ++ "/lib/libsel4cp.a" });
+    exe.addObjectFile(.{ .path = sdk_board_dir ++ "/lib/libmicrokit.a" });
     exe.linkLibrary(vmmlib);
-    exe.addObject(zig_libsel4cp);
+    exe.addObject(zig_libmicrokit);
     // exe.linkLibrary(libsel4);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .path = sdk_board_dir ++ "/lib/sel4cp.ld"});
+    exe.setLinkerScriptPath(.{ .path = sdk_board_dir ++ "/lib/microkit.ld"});
 
     exe.addIncludePath(.{ .path = "src/" });
 
     b.installArtifact(exe);
 
     const system_description_path = "zig_vmm.system";
-    const sel4cp_tool_cmd = b.addSystemCommand(&[_][]const u8{
-       sdk_path ++ "/bin/sel4cp",
+    const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
+       sdk_path ++ "/bin/microkit",
        system_description_path,
        "--search-path",
        "zig-out/bin",
@@ -110,11 +110,11 @@ pub fn build(b: *std.Build) void {
        "-r",
        "zig-out/report.txt",
     });
-    sel4cp_tool_cmd.step.dependOn(b.getInstallStep());
-    // Add the "sel4cp" step, and make it the default step when we execute `zig build`>
-    const sel4cp_step = b.step("sel4cp", "Compile and build the final bootable image");
-    sel4cp_step.dependOn(&sel4cp_tool_cmd.step);
-    b.default_step = sel4cp_step;
+    microkit_tool_cmd.step.dependOn(b.getInstallStep());
+    // Add the "microkit" step, and make it the default step when we execute `zig build`>
+    const microkit_step = b.step("microkit", "Compile and build the final bootable image");
+    microkit_step.dependOn(&microkit_tool_cmd.step);
+    b.default_step = microkit_step;
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.

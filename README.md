@@ -1,6 +1,6 @@
-# VMM on the seL4 Core Platform
+# libvmm
 
-This is a Virtual Machine Monitor (VMM) built on the seL4 Core Platform (seL4CP).
+This is a Virtual Machine Monitor (VMM) built on the [seL4 Microkit](https://github.com/seL4/microkit).
 The purpose of the VMM is to make it easy to run virtual machines on top of the seL4 microkernel.
 
 It is (at least initially) a port of the already existing
@@ -51,10 +51,10 @@ Using [Nix](https://nixos.org/):
 nix-shell --pure
 ```
 
-Finally, you will need an experimental seL4 Core Platform SDK.
+Finally, you will need an experimental Microkit SDK.
 
 * Currently virtualisation support and other patches that the VMM requires are
-  not part of mainline seL4 Core Platform. See below for instructions on
+  not part of mainline Microkit. See below for instructions on
   acquiring the SDK.
 * Upstreaming the required changes is in-progress.
 
@@ -96,16 +96,16 @@ tar xf sel4cp-sdk-dev-bf06734-macos-aarch64.tar.gz
 
 ##### Option 2 - Building the SDK
 
-You will need a development version of the seL4CP SDK source code. You can acquire it with the following command:
+You will need a development version of the Microkit SDK source code. You can acquire it with the following command:
 ```sh
-git clone https://github.com/Ivan-Velickovic/sel4cp.git --branch dev
+git clone https://github.com/Ivan-Velickovic/microkit.git --branch dev
 ```
 
 From here, you can follow the instructions
-[here](https://github.com/Ivan-Velickovic/sel4cp/tree/dev) to build the SDK.
+[here](https://github.com/Ivan-Velickovic/microkit/tree/dev) to build the SDK.
 
 If you have built the SDK then the path to the SDK should look something like
-this: `sel4cp/release/sel4cp-sdk-1.2.6`.
+this: `microkit/release/microkit-sdk-1.2.6`.
 
 ## Building the example system
 
@@ -113,7 +113,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command. We want to run the `simple` example system in a `debug`
 configuration for the QEMU ARM virt system.
 ```sh
-make BOARD=qemu_arm_virt SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 You should see Linux booting and be greeted with the buildroot prompt:

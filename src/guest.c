@@ -1,4 +1,4 @@
-#include <sel4cp.h>
+#include <microkit.h>
 #include "util/util.h"
 #include "vcpu.h"
 #include "guest.h"
@@ -30,21 +30,21 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, initrd);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
-    sel4cp_vm_restart(boot_vcpu_id, regs.pc);
+    microkit_vm_restart(boot_vcpu_id, regs.pc);
 
     return true;
 }
 
 void guest_stop(size_t boot_vcpu_id) {
     LOG_VMM("Stopping guest\n");
-    sel4cp_vm_stop(boot_vcpu_id);
+    microkit_vm_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
 }
 
 bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr, size_t guest_ram_size) {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
-    sel4cp_vm_stop(boot_vcpu_id);
+    microkit_vm_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
     // Then, we need to clear all of RAM
     LOG_VMM("Clearing guest RAM\n");
