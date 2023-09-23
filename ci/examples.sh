@@ -73,11 +73,10 @@ simulate_simple_make "qemu_arm_virt" "debug"
 build_simple_make "qemu_arm_virt" "release"
 simulate_simple_make "qemu_arm_virt" "release"
 
-# @ivanv: re-enable
-# build_simple_zig "qemu_arm_virt" "debug"
-# simulate_simple_zig "qemu_arm_virt" "debug"
-# build_simple_zig "qemu_arm_virt" "release"
-# simulate_simple_zig "qemu_arm_virt" "release"
+build_simple_zig "qemu_arm_virt" "debug"
+simulate_simple_zig "qemu_arm_virt" "debug"
+build_simple_zig "qemu_arm_virt" "release"
+simulate_simple_zig "qemu_arm_virt" "release"
 
 build_simple_make "odroidc4" "debug"
 build_simple_make "odroidc4" "release"
