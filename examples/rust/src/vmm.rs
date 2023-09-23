@@ -7,7 +7,7 @@ use core::ffi::{c_void};
 
 use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, debug_println};
 
-const guest_ram_vaddr: usize = 0x40000000;
+const GUEST_RAM_VADDR: usize = 0x40000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
 const GUEST_VCPU_ID: usize = 0;
@@ -45,8 +45,8 @@ extern "C" fn uart_irq_ack(_: usize, _: i32, _: *const c_void) {
     match UART_CH.irq_ack() {
         // Do nothing if there's no problem
         Ok(()) => {}
-        Err(e) => {
-            debug_println!("VMM|ERROR: received ack from guest, but could not ack UART IRQ channel: {e}");
+        Err(_e) => {
+            debug_println!("VMM|ERROR: received ack from guest, but could not ack UART IRQ channel: {_e}");
         }
     }
 }
@@ -68,7 +68,7 @@ fn init() -> VmmHandler {
     let initrd_addr = initrd.as_ptr() as usize;
 
     unsafe {
-        let guest_pc = linux_setup_images(guest_ram_vaddr,
+        let guest_pc = linux_setup_images(GUEST_RAM_VADDR,
                                             linux_addr, linux.len(),
                                             dtb_addr, GUEST_DTB_VADDR, dtb.len(),
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
@@ -78,8 +78,8 @@ fn init() -> VmmHandler {
         _ = virq_register(GUEST_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
         match UART_CH.irq_ack() {
             Ok(()) => {}
-            Err(e) => {
-                debug_println!("VMM|ERROR: could not ack UART IRQ channel: {e}");
+            Err(_e) => {
+                debug_println!("VMM|ERROR: could not ack UART IRQ channel: {_e}");
             }
         }
         guest_start(GUEST_VCPU_ID, guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
