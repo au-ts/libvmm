@@ -25,7 +25,7 @@ If you are using the Nix shell then you will already have it installed.
 
 You can then run the CI like so:
 ```sh
-    $ ./examples.sh /path/to/sdk
+    $ ./ci/examples.sh /path/to/sdk
 ```
 
 You should then get the `Passed all VMM tests` message.
