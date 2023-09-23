@@ -44,8 +44,9 @@ Using Homebrew on macOS:
 If you do not have Homebrew installed, you can do so [here](https://brew.sh/).
 
 ```sh
-# Note that make sure that the LLVM tools are in your path after install, Homebrew
-# does not do it automatically but does print out a message on how to do it.
+# Note that you should make sure that the LLVM tools are in your path after running
+# the install command. Homebrew does not do it automatically but does print out a
+# message on how to do it.
 brew install make qemu dtc llvm
 ```
 
