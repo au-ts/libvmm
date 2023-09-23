@@ -5,7 +5,7 @@ set -e
 SDK_PATH=$1
 
 [[ -z $SDK_PATH ]] && echo "usage: examples.sh [PATH TO SDK]" && exit 1
-[[ ! -d $SDK_PATH ]] && echo "The path to SDK provided does not exist: '$SDK_PATH'" && exit 1
+[[ ! -d $SDK_PATH ]] && echo "The path to the SDK provided does not exist: '$SDK_PATH'" && exit 1
 
 build_simple_make() {
     BOARD=$1
