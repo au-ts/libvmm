@@ -9,7 +9,7 @@ license = "BSD-2-Clause"
 name = "vmm"
 path = "src/vmm.rs"
 
-[dependencies.sel4cp]
+[dependencies.sel4-microkit]
 # Temporarily use fork of rust-seL4 until all the changes
 # we need are upstreamed
 git = "https://github.com/Ivan-Velickovic/rust-seL4"

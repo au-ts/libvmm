@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-ifeq ($(strip $(SEL4CP_SDK)),)
-$(error SEL4CP_SDK must be specified)
+ifeq ($(strip $(MICROKIT_SDK)),)
+$(error MICROKIT_SDK must be specified)
 endif
 
 # Default build directory, pass BUILD_DIR=<dir> to override
@@ -24,9 +24,9 @@ DTC := dtc
 CC := clang
 LD := ld.lld
 AR := llvm-ar
-SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
+MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
-BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
+BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 LIBVMM := ../../src
 SYSTEM_DESCRIPTION := rust_vmm.system
 
@@ -73,16 +73,16 @@ CFLAGS := -mstrict-align \
 		  -target aarch64-none-elf
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lsel4cp -Tsel4cp.ld
+LIBS := -lmicrokit -Tmicrokit.ld
 
 RUST_TARGET_PATH := .
-RUST_SEL4CP_TARGET := aarch64-sel4cp-minimal
+RUST_MICROKIT_TARGET := aarch64-microkit-minimal
 TARGET_DIR := $(BUILD_DIR)/target
 
 RUST_ENV := \
 	RUST_TARGET_PATH=$(abspath $(RUST_TARGET_PATH)) \
 	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include) \
-	SEL4CP_BOARD_DIR=$(abspath $(BOARD_DIR)) \
+	MICROKIT_BOARD_DIR=$(abspath $(BOARD_DIR)) \
 	BUILD_DIR=$(abspath $(BUILD_DIR)) \
 	IMAGE_DIR=$(abspath $(IMAGE_DIR)) \
 
@@ -92,7 +92,7 @@ RUST_OPTIONS := \
 	-Z build-std-features=compiler-builtins-mem \
 	-Z bindeps \
 	--release \
-	--target $(RUST_SEL4CP_TARGET) \
+	--target $(RUST_MICROKIT_TARGET) \
 	--target-dir $(abspath $(TARGET_DIR)) \
 	--out-dir $(abspath $(BUILD_DIR)) \
 
@@ -135,4 +135,4 @@ $(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a $(LINUX) $(INITRD) $(DTB)
 		cargo build $(RUST_OPTIONS)
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
-	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

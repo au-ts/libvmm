@@ -1,4 +1,4 @@
-#include "libsel4cp.h";
+#include "libmicrokit.h";
 
 void zig_arm_sys_send(seL4_Word sys, seL4_Word dest, seL4_Word info_arg, seL4_Word mr0, seL4_Word mr1,
                                 seL4_Word mr2, seL4_Word mr3)

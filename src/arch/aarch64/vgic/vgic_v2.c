@@ -41,7 +41,7 @@
  */
 
 #include <stdint.h>
-#include <sel4cp.h>
+#include <microkit.h>
 
 #include "vgic.h"
 #include "vgic_v2.h"

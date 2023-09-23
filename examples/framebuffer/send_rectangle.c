@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <sel4cp.h>
+#include <microkit.h>
 #include "util/util.h"
 #include <stddef.h>
 #include "uio.h"
@@ -15,7 +15,7 @@ uint8_t *uio_map0;
 
 void init() {
     // Initialising rectangle PD
-    sel4cp_dbg_puts("SEND RECTANGLE|INFO: starting!\n");
+    microkit_dbg_puts("SEND RECTANGLE|INFO: starting!\n");
 }
 
 fb_config_t *config;
@@ -66,7 +66,7 @@ void readconfig() {
     line_len = config->xres * (config->bpp/8);
 }
 
-void notified(sel4cp_channel ch) {
+void notified(microkit_channel ch) {
     switch (ch) {
         case VMM_CH: {
             // Draw triangle
@@ -74,7 +74,7 @@ void notified(sel4cp_channel ch) {
             readconfig();
             printf("RECT|INFO: writing to uio_map0\n");
             fbwrite();
-            sel4cp_notify(VMM_CH);
+            microkit_notify(VMM_CH);
             break;
         }
         default:

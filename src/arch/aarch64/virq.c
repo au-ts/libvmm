@@ -1,4 +1,4 @@
-#include <sel4cp.h>
+#include <microkit.h>
 #include "vgic/vgic.h"
 #include "../../util/util.h"
 #include "../../virq.h"
@@ -9,7 +9,7 @@
 
 static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 {
-    sel4cp_arm_vcpu_ack_vppi(vcpu_id, irq);
+    microkit_arm_vcpu_ack_vppi(vcpu_id, irq);
 }
 
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}

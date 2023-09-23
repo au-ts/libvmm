@@ -9,10 +9,10 @@ on:
 
 jobs:
   build_manual:
-    name: Build VMM manual
+    name: Build manual
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout seL4CP VMM repository
+      - name: Checkout VMM repository
         uses: actions/checkout@v3
       - name: Install pandoc/latex via apt
         run: sudo apt update && sudo apt install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-formats-extra
@@ -27,13 +27,13 @@ jobs:
     name: Build and run VMM examples (Linux x86-64)
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout seL4CP VMM repository
+      - name: Checkout VMM repository
         uses: actions/checkout@v3
-      - name: Download seL4CP SDK
-        run: ./ci/acquire_sdk.sh sel4cp-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
+      - name: Download Microkit SDK
+        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
         shell: bash
-      - name: Extract seL4CP SDK
-        run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
+      - name: Extract Microkit SDK
+        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
       - name: Install VMM dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect
@@ -45,7 +45,7 @@ jobs:
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run VMM examples
-        run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
         shell: bash
       - name: Upload built system images
         uses: actions/upload-artifact@v3
@@ -56,13 +56,13 @@ jobs:
     name: Build and run VMM examples (macOS x86-64)
     runs-on: macos-12
     steps:
-      - name: Checkout seL4CP VMM repository
+      - name: Checkout VMM repository
         uses: actions/checkout@v3
-      - name: Download seL4CP SDK
-        run: ./ci/acquire_sdk.sh sel4cp-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
+      - name: Download Microkit SDK
+        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
         shell: bash
-      - name: Extract seL4CP SDK
-        run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
+      - name: Extract Microkit SDK
+        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
       - name: Install VMM dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
@@ -76,7 +76,7 @@ jobs:
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run VMM examples
-        run: ./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
         shell: bash
       - name: Upload built system images
         uses: actions/upload-artifact@v3
@@ -86,19 +86,19 @@ jobs:
     name: Build and run VMM examples (Linux x86-64 via Nix)
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout seL4CP VMM repository
+      - name: Checkout VMM repository
         uses: actions/checkout@v3
-      - name: Download seL4CP SDK
-        run: ./ci/acquire_sdk.sh sel4cp-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
+      - name: Download Microkit SDK
+        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
         shell: bash
-      - name: Extract seL4CP SDK
-        run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
+      - name: Extract Microkit SDK
+        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
       - name: Install Nix
         uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run VMM examples
-        run: nix-shell --pure --run "./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6"
+        run: nix-shell --pure --run "./ci/examples.sh ${PWD}/microkit-sdk-1.2.6"
       - name: Upload built system images
         uses: actions/upload-artifact@v3
         with:
@@ -107,13 +107,13 @@ jobs:
     name: Build and run VMM examples (macOS x86-64 via Nix)
     runs-on: macos-12
     steps:
-      - name: Checkout seL4CP VMM repository
+      - name: Checkout VMM repository
         uses: actions/checkout@v3
-      - name: Download seL4CP SDK
-        run: ./ci/acquire_sdk.sh sel4cp-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
+      - name: Download Microkit SDK
+        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
         shell: bash
-      - name: Extract seL4CP SDK
-        run: unzip sel4cp-sdk.zip && tar -xf sel4cp-sdk-1.2.6.tar.gz
+      - name: Extract Microkit SDK
+        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
       - name: Install Nix
         uses: cachix/install-nix-action@v22
         with:
@@ -121,7 +121,7 @@ jobs:
       - name: Update Nix channel
         run: nix-channel --update
       - name: Build and run VMM examples
-        run: nix-shell --pure --run "./ci/examples.sh ${PWD}/sel4cp-sdk-1.2.6"
+        run: nix-shell --pure --run "./ci/examples.sh ${PWD}/microkit-sdk-1.2.6"
       - name: Upload built system images
         uses: actions/upload-artifact@v3
         with:

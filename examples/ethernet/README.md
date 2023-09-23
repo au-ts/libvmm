@@ -9,7 +9,7 @@ The example currently works on the following platforms:
 ## Building with Make
 
 ```sh
-make BOARD=<BOARD> SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6
+make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<BOARD>` is one of:
@@ -20,7 +20,7 @@ and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a

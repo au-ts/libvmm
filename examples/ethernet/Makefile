@@ -5,8 +5,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-ifeq ($(strip $(SEL4CP_SDK)),)
-$(error SEL4CP_SDK must be specified)
+ifeq ($(strip $(MICROKIT_SDK)),)
+$(error MICROKIT_SDK must be specified)
 endif
 
 ifeq ($(strip $(BOARD)),)
@@ -43,7 +43,7 @@ endif
 
 CC := $(TOOLCHAIN)-gcc
 LD := $(TOOLCHAIN)-ld
-SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
+MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
 # 		  right now it is unfortunately hard-coded.
@@ -54,7 +54,7 @@ SEL4CP_TOOL ?= $(SEL4CP_SDK)/bin/sel4cp
 
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 
-BOARD_DIR := $(SEL4CP_SDK)/board/$(BOARD)/$(CONFIG)
+BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
@@ -93,7 +93,7 @@ CFLAGS := -mstrict-align \
 		  -DCONFIG_$(CONFIG) \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lsel4cp -Tsel4cp.ld
+LIBS := -lmicrokit -Tmicrokit.ld
 
 all: directories $(IMAGE_FILE)
 
@@ -143,4 +143,4 @@ $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
-	$(SEL4CP_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

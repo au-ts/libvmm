@@ -17,7 +17,7 @@ build_simple_make() {
         BUILD_DIR=${BUILD_DIR} \
         CONFIG=${CONFIG} \
         BOARD=${BOARD} \
-        SEL4CP_SDK=${SDK_PATH}
+        MICROKIT_SDK=${SDK_PATH}
 }
 
 build_simple_zig() {
@@ -43,7 +43,7 @@ build_rust() {
     make -C examples/rust -B \
         BUILD_DIR=${BUILD_DIR} \
         CONFIG=${CONFIG} \
-        SEL4CP_SDK=${SDK_PATH}
+        MICROKIT_SDK=${SDK_PATH}
 }
 
 simulate_rust() {
@@ -88,7 +88,7 @@ build_simple_make "odroidc4" "release"
 
 build_rust "debug"
 simulate_rust "debug"
-# @ivanv: TODO get Rust in with release version of seL4CP working
+# @ivanv: TODO get Rust in with release version of Microkit working
 # build_rust "release"
 # simulate_rust "release"
 

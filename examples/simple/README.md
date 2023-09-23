@@ -11,7 +11,7 @@ The example currently works on the following platforms:
 ## Building with Make
 
 ```sh
-make BOARD=<BOARD> SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6
+make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<BOARD>` is one of:
@@ -23,7 +23,7 @@ and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt SEL4CP_SDK=/path/to/sel4cp-sdk-1.2.6 qemu
+make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
@@ -38,7 +38,7 @@ You will first need Zig version 0.11.x (e.g 0.11.0 or 0.11.1) which can be
 downloaded from [here](https://ziglang.org/download/).
 
 ```sh
-zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD>
+zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
 ```
 
 Where `<BOARD>` is one of:
@@ -47,11 +47,11 @@ Where `<BOARD>` is one of:
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
-zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> qemu
+zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> qemu
 ```
 
 You can view other options by doing:
 ```sh
-zig build -Dsdk=/path/to/sel4cp-sdk-1.2.6 -Dboard=<BOARD> -h
+zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> -h
 ```
 

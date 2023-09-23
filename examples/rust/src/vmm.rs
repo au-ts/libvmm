@@ -5,8 +5,7 @@
 use core::{include_bytes};
 use core::ffi::{c_void};
 
-use sel4cp::message::{MessageInfo};
-use sel4cp::{protection_domain, Channel, Child, Handler, debug_println};
+use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, debug_println};
 
 const guest_ram_vaddr: usize = 0x40000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
@@ -29,7 +28,7 @@ const UART_CH: Channel = Channel::new(1);
 // or even creating your own "Rust-like" bindings for the VMM library to make it
 // nicer to use (or closer to feeling like a Rust crate), or both!
 #[link(name = "vmm", kind = "static")]
-#[link(name = "sel4cp", kind = "static")]
+#[link(name = "microkit", kind = "static")]
 extern "C" {
     fn linux_setup_images(ram_start: usize,
                           kernel: usize, kernel_size: usize,
