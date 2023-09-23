@@ -81,9 +81,8 @@ simulate_simple_zig "qemu_arm_virt" "release"
 build_simple_make "odroidc4" "debug"
 build_simple_make "odroidc4" "release"
 
-# @ivanv: re-enable
-# build_simple_zig "odroidc4" "debug"
-# build_simple_zig "odroidc4" "release"
+build_simple_zig "odroidc4" "debug"
+build_simple_zig "odroidc4" "release"
 
 build_rust "debug"
 simulate_rust "debug"
