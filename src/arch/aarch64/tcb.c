@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <sel4cp.h>
+#include <microkit.h>
 #include "util.h"
 #include "tcb.h"
 

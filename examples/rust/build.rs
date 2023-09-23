@@ -1,6 +1,6 @@
 fn main() {
-    match std::env::var("SEL4CP_BOARD_DIR") {
-        Ok(sel4cp_board_dir) => println!("cargo:rustc-link-search={sel4cp_board_dir}/lib"),
+    match std::env::var("MICROKIT_BOARD_DIR") {
+        Ok(microkit_board_dir) => println!("cargo:rustc-link-search={microkit_board_dir}/lib"),
         Err(e) => println!("Could not get environment variable 'BOARD_DIR': {e}"),
     }
 

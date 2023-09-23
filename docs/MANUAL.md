@@ -1,8 +1,8 @@
-# seL4CP VMM manual
+# libvmm manual
 
 This document aims to describe the VMM and how to use it. If you feel there is
 something missing from this document or the VMM itself, feel free to let us
-know by [opening an issue on the GitHub repository](https://github.com/au-ts/sel4cp_vmm).
+know by [opening an issue on the GitHub repository](https://github.com/au-ts/libvmm).
 
 ## Supported platforms
 
@@ -109,7 +109,7 @@ driver in the VMM. Like the UART, the address of the GIC is platform specific.
 An example Make command looks something like this:
 ```sh
 make BUILD_DIR=build \
-     SEL4CP_SDK=/path/to/sdk \
+     MICROKIT_SDK=/path/to/sdk \
      CONFIG=debug \
      BOARD=qemu_arm_virt \
      SYSTEM=simple.system \
@@ -121,7 +121,7 @@ make BUILD_DIR=build \
 Before you can port the VMM to your desired platform you must have the following:
 
 * A working platform port of the seL4 kernel in hypervisor mode.
-* A working platform port of the seL4 Core Platform where the kernel is built as a
+* A working platform port of the seL4 Microkit where the kernel is built as a
   hypervisor.
 
 ### Guest setup

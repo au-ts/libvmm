@@ -1,5 +1,5 @@
-const libsel4cp = @cImport({
-    @cInclude("libsel4cp.h");
+const libmicrokit = @cImport({
+    @cInclude("libmicrokit.h");
 });
 
 pub const __builtin_bswap16 = @import("std").zig.c_builtins.__builtin_bswap16;
@@ -3869,7 +3869,7 @@ pub fn seL4_SetCapReceivePath(arg_receiveCNode: seL4_CPtr, arg_receiveIndex: seL
 pub fn seL4_Send(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(.C) void {
     var dest = arg_dest;
     var msgInfo = arg_msgInfo;
-    libsel4cp.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
+    libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
 }
 pub fn seL4_Recv(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
@@ -3899,7 +3899,7 @@ pub fn seL4_Call(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(
     var msg1: seL4_Word = seL4_GetMR(@as(c_int, 1));
     var msg2: seL4_Word = seL4_GetMR(@as(c_int, 2));
     var msg3: seL4_Word = seL4_GetMR(@as(c_int, 3));
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysCall))), dest, &dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysCall))), dest, &dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
     seL4_SetMR(@as(c_int, 2), msg2);
@@ -3909,7 +3909,7 @@ pub fn seL4_Call(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(
 pub fn seL4_NBSend(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(.C) void {
     var dest = arg_dest;
     var msgInfo = arg_msgInfo;
-    libsel4cp.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
+    libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
 }
 pub fn seL4_ReplyRecv(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
@@ -3926,7 +3926,7 @@ pub fn seL4_ReplyRecv(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_s
     msg1 = seL4_GetMR(@as(c_int, 1));
     msg2 = seL4_GetMR(@as(c_int, 2));
     msg3 = seL4_GetMR(@as(c_int, 3));
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysReplyRecv))), src, &badge, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysReplyRecv))), src, &badge, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
     seL4_SetMR(@as(c_int, 2), msg2);
@@ -4064,7 +4064,7 @@ pub fn seL4_DebugPutChar(arg_c: u8) callconv(.C) void {
     var unused3: seL4_Word = 0;
     var unused4: seL4_Word = 0;
     var unused5: seL4_Word = 0;
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugPutChar))), @as(seL4_Word, @bitCast(@as(c_ulong, c))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugPutChar))), @as(seL4_Word, @bitCast(@as(c_ulong, c))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_DebugDumpScheduler() callconv(.C) void {
     var unused0: seL4_Word = 0;
@@ -4073,7 +4073,7 @@ pub fn seL4_DebugDumpScheduler() callconv(.C) void {
     var unused3: seL4_Word = 0;
     var unused4: seL4_Word = 0;
     var unused5: seL4_Word = 0;
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugDumpScheduler))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugDumpScheduler))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_DebugHalt() callconv(.C) void {
     arm_sys_null(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugHalt))));
@@ -4087,7 +4087,7 @@ pub fn seL4_DebugCapIdentify(arg_cap: seL4_CPtr) callconv(.C) seL4_Uint32 {
     var unused2: seL4_Word = 0;
     var unused3: seL4_Word = 0;
     var unused4: seL4_Word = 0;
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugCapIdentify))), cap, &cap, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, &unused1, &unused2, &unused3, &unused4, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugCapIdentify))), cap, &cap, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, &unused1, &unused2, &unused3, &unused4, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     return @as(seL4_Uint32, @bitCast(@as(c_uint, @truncate(cap))));
 }
 pub fn seL4_DebugNameThread(arg_tcb: seL4_CPtr, arg_name: [*c]const u8) callconv(.C) void {
@@ -4100,7 +4100,7 @@ pub fn seL4_DebugNameThread(arg_tcb: seL4_CPtr, arg_name: [*c]const u8) callconv
     var unused3: seL4_Word = 0;
     var unused4: seL4_Word = 0;
     var unused5: seL4_Word = 0;
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugNameThread))), tcb, &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugNameThread))), tcb, &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 } // ./sel4/sel4_arch/syscalls.h:71:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
 // ./sel4/sel4_arch/syscalls.h:57:20: warning: unable to translate function, demoted to extern
 pub extern fn arm_sys_send(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_info_arg: seL4_Word, arg_mr0: seL4_Word, arg_mr1: seL4_Word, arg_mr2: seL4_Word, arg_mr3: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:109:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
@@ -4121,7 +4121,7 @@ pub fn seL4_SendWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, ar
     var mr1 = arg_mr1;
     var mr2 = arg_mr2;
     var mr3 = arg_mr3;
-    libsel4cp.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_NBSendWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) void {
     var dest = arg_dest;
@@ -4130,7 +4130,7 @@ pub fn seL4_NBSendWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, 
     var mr1 = arg_mr1;
     var mr2 = arg_mr2;
     var mr3 = arg_mr3;
-    libsel4cp.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_RecvWithMRs(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
@@ -4188,7 +4188,7 @@ pub fn seL4_CallWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, ar
     if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))))) {
         msg3 = mr3.*;
     }
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysCall))), dest, &dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysCall))), dest, &dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     if (mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) {
         mr0.* = msg0;
     }
@@ -4230,7 +4230,7 @@ pub fn seL4_ReplyRecvWithMRs(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t
     if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))))) {
         msg3 = mr3.*;
     }
-    libsel4cp.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysReplyRecv))), src, &badge, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
+    libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysReplyRecv))), src, &badge, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
     if (mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) {
         mr0.* = msg0;
     }
@@ -6337,19 +6337,19 @@ pub fn seL4_CapData_Guard_new(arg_guard: seL4_Word, arg_bits: seL4_Word) callcon
     var bits = arg_bits;
     return seL4_CNode_CapData_new(guard, bits).words[@as(c_uint, @intCast(@as(c_int, 0)))];
 }
-pub const sel4cp_channel = c_uint;
-pub const sel4cp_id = c_uint;
-pub const sel4cp_msginfo = seL4_MessageInfo_t;
+pub const microkit_channel = c_uint;
+pub const microkit_id = c_uint;
+pub const microkit_msginfo = seL4_MessageInfo_t;
 pub extern fn init() void;
-pub extern fn notified(ch: sel4cp_channel) void;
-pub extern fn protected(ch: sel4cp_channel, msginfo: sel4cp_msginfo) sel4cp_msginfo;
-pub extern fn fault(ch: sel4cp_channel, msginfo: sel4cp_msginfo) void;
-pub extern var sel4cp_name: [16]u8;
+pub extern fn notified(ch: microkit_channel) void;
+pub extern fn protected(ch: microkit_channel, msginfo: microkit_msginfo) microkit_msginfo;
+pub extern fn fault(ch: microkit_channel, msginfo: microkit_msginfo) void;
+pub extern var microkit_name: [16]u8;
 pub extern var have_signal: bool;
 pub extern var signal: seL4_CPtr;
 pub extern var signal_msg: seL4_MessageInfo_t;
-pub extern fn sel4cp_dbg_putc(c: c_int) void;
-pub extern fn sel4cp_dbg_puts(s: [*c]const u8) void;
+pub extern fn microkit_dbg_putc(c: c_int) void;
+pub extern fn microkit_dbg_puts(s: [*c]const u8) void;
 pub fn memzero(arg_s: ?*anyopaque, arg_n: c_ulong) callconv(.C) void {
     var s = arg_s;
     var n = arg_n;
@@ -6369,145 +6369,145 @@ pub fn memzero(arg_s: ?*anyopaque, arg_n: c_ulong) callconv(.C) void {
         }
     }
 }
-pub fn sel4cp_internal_crash(arg_err: seL4_Error) callconv(.C) void {
+pub fn microkit_internal_crash(arg_err: seL4_Error) callconv(.C) void {
     var err = arg_err;
     var x: [*c]c_int = @as([*c]c_int, @ptrFromInt(@as(usize, @bitCast(@as(c_ulong, err)))));
     x.* = 0;
 }
-pub fn sel4cp_notify(arg_ch: sel4cp_channel) callconv(.C) void {
+pub fn microkit_notify(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
-    seL4_Signal(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(sel4cp_channel, @bitCast(@as(c_int, 10))) +% ch))));
+    seL4_Signal(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 10))) +% ch))));
 }
-pub fn sel4cp_irq_ack(arg_ch: sel4cp_channel) callconv(.C) void {
+pub fn microkit_irq_ack(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
-    _ = seL4_IRQHandler_Ack(@as(seL4_IRQHandler, @bitCast(@as(c_ulong, @as(sel4cp_channel, @bitCast(@as(c_int, 138))) +% ch))));
+    _ = seL4_IRQHandler_Ack(@as(seL4_IRQHandler, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 138))) +% ch))));
 }
-pub fn sel4cp_notify_delayed(arg_ch: sel4cp_channel) callconv(.C) void {
+pub fn microkit_notify_delayed(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
     have_signal = @as(c_int, 1) != 0;
     signal_msg = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
-    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(sel4cp_channel, @bitCast(@as(c_int, 10))) +% ch)));
+    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 10))) +% ch)));
 }
-pub fn sel4cp_irq_ack_delayed(arg_ch: sel4cp_channel) callconv(.C) void {
+pub fn microkit_irq_ack_delayed(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
     have_signal = @as(c_int, 1) != 0;
     signal_msg = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQAckIRQ))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
-    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(sel4cp_channel, @bitCast(@as(c_int, 138))) +% ch)));
+    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 138))) +% ch)));
 }
-pub fn sel4cp_pd_restart(arg_pd: sel4cp_id, arg_entry_point: usize) callconv(.C) void {
+pub fn microkit_pd_restart(arg_pd: microkit_id, arg_entry_point: usize) callconv(.C) void {
     var pd = arg_pd;
     var entry_point = arg_entry_point;
     var err: seL4_Error = undefined;
     var ctxt: seL4_UserContext = undefined;
     memzero(@as(?*anyopaque, @ptrCast(&ctxt)), @sizeOf(seL4_UserContext));
     ctxt.pc = entry_point;
-    err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 202))) +% pd))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
+    err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 202))) +% pd))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_pd_restart: error writing TCB registers\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_pd_restart: error writing TCB registers\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_pd_stop(arg_pd: sel4cp_id) callconv(.C) void {
+pub fn microkit_pd_stop(arg_pd: microkit_id) callconv(.C) void {
     var pd = arg_pd;
     var err: seL4_Error = undefined;
-    err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 202))) +% pd))));
+    err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 202))) +% pd))));
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_pd_stop: error suspending TCB\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_pd_stop: error suspending TCB\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_fault_reply(arg_msginfo: sel4cp_msginfo) callconv(.C) void {
+pub fn microkit_fault_reply(arg_msginfo: microkit_msginfo) callconv(.C) void {
     var msginfo = arg_msginfo;
     seL4_Send(@as(seL4_CPtr, @bitCast(@as(c_long, @as(c_int, 4)))), msginfo);
 }
-pub fn sel4cp_ppcall(arg_ch: sel4cp_channel, arg_msginfo: sel4cp_msginfo) callconv(.C) sel4cp_msginfo {
+pub fn microkit_ppcall(arg_ch: microkit_channel, arg_msginfo: microkit_msginfo) callconv(.C) microkit_msginfo {
     var ch = arg_ch;
     var msginfo = arg_msginfo;
-    return seL4_Call(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(sel4cp_channel, @bitCast(@as(c_int, 74))) +% ch))), msginfo);
+    return seL4_Call(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 74))) +% ch))), msginfo);
 }
-pub fn sel4cp_msginfo_new(arg_label: u64, arg_count: u16) callconv(.C) sel4cp_msginfo {
+pub fn microkit_msginfo_new(arg_label: u64, arg_count: u16) callconv(.C) microkit_msginfo {
     var label = arg_label;
     var count = arg_count;
     return seL4_MessageInfo_new(label, @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_ulong, count))));
 }
-pub fn sel4cp_msginfo_get_label(arg_msginfo: sel4cp_msginfo) callconv(.C) u64 {
+pub fn microkit_msginfo_get_label(arg_msginfo: microkit_msginfo) callconv(.C) u64 {
     var msginfo = arg_msginfo;
     return seL4_MessageInfo_get_label(msginfo);
 }
-pub fn sel4cp_mr_set(arg_mr: u8, arg_value: u64) callconv(.C) void {
+pub fn microkit_mr_set(arg_mr: u8, arg_value: u64) callconv(.C) void {
     var mr = arg_mr;
     var value = arg_value;
     seL4_SetMR(@as(c_int, @bitCast(@as(c_uint, mr))), value);
 }
-pub fn sel4cp_mr_get(arg_mr: u8) callconv(.C) u64 {
+pub fn microkit_mr_get(arg_mr: u8) callconv(.C) u64 {
     var mr = arg_mr;
     return seL4_GetMR(@as(c_int, @bitCast(@as(c_uint, mr))));
 }
-pub fn sel4cp_vm_restart(arg_vm: sel4cp_id, arg_entry_point: usize) callconv(.C) void {
+pub fn microkit_vm_restart(arg_vm: microkit_id, arg_entry_point: usize) callconv(.C) void {
     var vm = arg_vm;
     var entry_point = arg_entry_point;
     var err: seL4_Error = undefined;
     var ctxt: seL4_UserContext = undefined;
     memzero(@as(?*anyopaque, @ptrCast(&ctxt)), @sizeOf(seL4_UserContext));
     ctxt.pc = entry_point;
-    err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 266))) +% vm))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
+    err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 266))) +% vm))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_vm_restart: error writing registers\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_vm_restart: error writing registers\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_vm_stop(arg_vm: sel4cp_id) callconv(.C) void {
+pub fn microkit_vm_stop(arg_vm: microkit_id) callconv(.C) void {
     var vm = arg_vm;
     var err: seL4_Error = undefined;
-    err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 266))) +% vm))));
+    err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 266))) +% vm))));
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_vm_stop: error suspending TCB\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_vm_stop: error suspending TCB\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_arm_vcpu_inject_irq(arg_vm: sel4cp_id, arg_irq: u16, arg_priority: u8, arg_group: u8, arg_index: u8) callconv(.C) void {
+pub fn microkit_arm_vcpu_inject_irq(arg_vm: microkit_id, arg_irq: u16, arg_priority: u8, arg_group: u8, arg_index: u8) callconv(.C) void {
     var vm = arg_vm;
     var irq = arg_irq;
     var priority = arg_priority;
     var group = arg_group;
     var index = arg_index;
     var err: seL4_Error = undefined;
-    err = seL4_ARM_VCPU_InjectIRQ(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 330))) +% vm))), irq, priority, group, index);
+    err = seL4_ARM_VCPU_InjectIRQ(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), irq, priority, group, index);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_arm_vcpu_inject_irq: error injecting IRQ\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_arm_vcpu_inject_irq: error injecting IRQ\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_arm_vcpu_ack_vppi(arg_vm: sel4cp_id, arg_irq: u64) callconv(.C) void {
+pub fn microkit_arm_vcpu_ack_vppi(arg_vm: microkit_id, arg_irq: u64) callconv(.C) void {
     var vm = arg_vm;
     var irq = arg_irq;
     var err: seL4_Error = undefined;
-    err = seL4_ARM_VCPU_AckVPPI(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 330))) +% vm))), irq);
+    err = seL4_ARM_VCPU_AckVPPI(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), irq);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_arm_vcpu_ack_vppi: error acking VPPI\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_arm_vcpu_ack_vppi: error acking VPPI\n");
+        microkit_internal_crash(err);
     }
 }
-pub fn sel4cp_arm_vcpu_read_reg(arg_vm: sel4cp_id, arg_reg: u64) callconv(.C) seL4_Word {
+pub fn microkit_arm_vcpu_read_reg(arg_vm: microkit_id, arg_reg: u64) callconv(.C) seL4_Word {
     var vm = arg_vm;
     var reg = arg_reg;
     var ret: seL4_ARM_VCPU_ReadRegs_t = undefined;
-    ret = seL4_ARM_VCPU_ReadRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 330))) +% vm))), reg);
+    ret = seL4_ARM_VCPU_ReadRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), reg);
     if (ret.@"error" != seL4_NoError) {
-        sel4cp_dbg_puts("sel4cp_arm_vcpu_read_reg: error reading VCPU register\n");
-        sel4cp_internal_crash(@as(c_uint, @bitCast(ret.@"error")));
+        microkit_dbg_puts("microkit_arm_vcpu_read_reg: error reading VCPU register\n");
+        microkit_internal_crash(@as(c_uint, @bitCast(ret.@"error")));
     }
     return ret.value;
 }
-pub fn sel4cp_arm_vcpu_write_reg(arg_vm: sel4cp_id, arg_reg: u64, arg_value: u64) callconv(.C) void {
+pub fn microkit_arm_vcpu_write_reg(arg_vm: microkit_id, arg_reg: u64, arg_value: u64) callconv(.C) void {
     var vm = arg_vm;
     var reg = arg_reg;
     var value = arg_value;
     var err: seL4_Error = undefined;
-    err = seL4_ARM_VCPU_WriteRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(sel4cp_id, @bitCast(@as(c_int, 330))) +% vm))), reg, value);
+    err = seL4_ARM_VCPU_WriteRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), reg, value);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
-        sel4cp_dbg_puts("sel4cp_arm_vcpu_write_reg: error VPPI\n");
-        sel4cp_internal_crash(err);
+        microkit_dbg_puts("microkit_arm_vcpu_write_reg: error VPPI\n");
+        microkit_internal_crash(err);
     }
 }
 pub const __INTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):80:9
@@ -7203,7 +7203,7 @@ pub const BASE_IRQ_CAP = @as(c_int, 138);
 pub const BASE_TCB_CAP = @as(c_int, 202);
 pub const BASE_VM_TCB_CAP = @as(c_int, 266);
 pub const BASE_VCPU_CAP = @as(c_int, 330);
-pub const SEL4CP_MAX_CHANNELS = @as(c_int, 63);
+pub const MICROKIT_MAX_CHANNELS = @as(c_int, 63);
 pub const seL4_UserContext_ = struct_seL4_UserContext_;
 pub const seL4_Fault = struct_seL4_Fault;
 pub const seL4_Fault_tag = enum_seL4_Fault_tag;

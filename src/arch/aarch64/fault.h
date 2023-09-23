@@ -8,10 +8,10 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <sel4cp.h>
+#include <microkit.h>
 
 /* Fault-handling functions */
-bool fault_handle(size_t vcpu_id, sel4cp_msginfo msginfo);
+bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
 bool fault_handle_vcpu_exception(size_t vcpu_id);
 bool fault_handle_vppi_event(size_t vcpu_id);

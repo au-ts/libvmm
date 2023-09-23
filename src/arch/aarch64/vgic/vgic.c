@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <sel4cp.h>
+#include <microkit.h>
 #include "vgic.h"
 #include "virq.h"
 #include "fault.h"
@@ -27,7 +27,7 @@ bool fault_handle_vgic_maintenance(size_t vcpu_id)
 {
     // @ivanv: reivist, also inconsistency between int and bool
     bool success = true;
-    int idx = sel4cp_mr_get(seL4_VGICMaintenance_IDX);
+    int idx = microkit_mr_get(seL4_VGICMaintenance_IDX);
     /* Currently not handling spurious IRQs */
     // @ivanv: wtf, this comment seems irrelevant to the code.
     assert(idx >= 0);
