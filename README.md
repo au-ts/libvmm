@@ -10,7 +10,7 @@ This project contains three parts:
 
 This project is currently in-development and is frequently changing. It is not ready for
 production use. The project also depends on the [seL4 Microkit](https://github.com/seL4/microkit)
-SDK and expects to be used in a Microkit environment, however this may change such that the VMM
+SDK and expects to be used in a Microkit environment, in the future this may change such that the VMM
 library itself is environment agnostic.
 
 For information on the project and how to use it, please see the [manual](docs/MANUAL.md).
