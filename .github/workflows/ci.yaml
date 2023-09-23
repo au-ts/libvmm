@@ -24,7 +24,7 @@ jobs:
           name: MANUAL
           path: MANUAL.pdf
   build_linux_x86_64:
-    name: Build and run VMM examples (Linux x86-64)
+    name: Build and run examples (Linux x86-64)
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout VMM repository
@@ -44,7 +44,7 @@ jobs:
           echo "${PWD}/zig-linux-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - name: Build and run VMM examples
+      - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
         shell: bash
       - name: Upload built system images
@@ -53,7 +53,7 @@ jobs:
           # @ivanv: this needs to be fixed for the restructure
           path: build_*/loader.img
   build_macos_x86_64:
-    name: Build and run VMM examples (macOS x86-64)
+    name: Build and run examples (macOS x86-64)
     runs-on: macos-12
     steps:
       - name: Checkout VMM repository
@@ -75,7 +75,7 @@ jobs:
           echo "${PWD}/zig-macos-x86_64-0.11.0/:$PATH" >> $GITHUB_PATH
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-      - name: Build and run VMM examples
+      - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
         shell: bash
       - name: Upload built system images
@@ -83,7 +83,7 @@ jobs:
         with:
           path: build_*/loader.img
   build_linux_x86_64_nix:
-    name: Build and run VMM examples (Linux x86-64 via Nix)
+    name: Build and run examples (Linux x86-64 via Nix)
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout VMM repository
@@ -97,14 +97,14 @@ jobs:
         uses: cachix/install-nix-action@v22
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      - name: Build and run VMM examples
+      - name: Build and run examples
         run: nix-shell --pure --run "./ci/examples.sh ${PWD}/microkit-sdk-1.2.6"
       - name: Upload built system images
         uses: actions/upload-artifact@v3
         with:
           path: build_*/loader.img
   build_macos_x86_64_nix:
-    name: Build and run VMM examples (macOS x86-64 via Nix)
+    name: Build and run examples (macOS x86-64 via Nix)
     runs-on: macos-12
     steps:
       - name: Checkout VMM repository
@@ -120,7 +120,7 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Update Nix channel
         run: nix-channel --update
-      - name: Build and run VMM examples
+      - name: Build and run examples
         run: nix-shell --pure --run "./ci/examples.sh ${PWD}/microkit-sdk-1.2.6"
       - name: Upload built system images
         uses: actions/upload-artifact@v3
