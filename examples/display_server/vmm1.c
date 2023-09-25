@@ -93,7 +93,7 @@ void init(void) {
     register_passthrough_irq(36, 3);
     // keyboard
     register_passthrough_irq(37, 4);
-    // ?? required after spice, need investigation
+    // mouse
     register_passthrough_irq(38, 5);
 
     /* Finally start the guest */

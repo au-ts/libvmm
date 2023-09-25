@@ -395,9 +395,9 @@ BR2_INIT_BUSYBOX=y
 #
 # BR2_INIT_NONE is not set
 # BR2_ROOTFS_DEVICE_CREATION_STATIC is not set
-BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS=y
+# BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_DEVTMPFS is not set
 # BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_MDEV is not set
-# BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV is not set
+BR2_ROOTFS_DEVICE_CREATION_DYNAMIC_EUDEV=y
 BR2_ROOTFS_DEVICE_TABLE="system/device_table.txt"
 # BR2_ROOTFS_DEVICE_TABLE_SUPPORTS_EXTENDED_ATTRIBUTES is not set
 # BR2_ROOTFS_MERGED_USR is not set
@@ -904,6 +904,7 @@ BR2_PACKAGE_QT6_ARCH_SUPPORTS=y
 #
 # weston needs udev and a toolchain w/ locale, threads, dynamic library, headers >= 3.0
 #
+# BR2_PACKAGE_WESTON is not set
 BR2_PACKAGE_XORG7=y
 
 #
@@ -986,7 +987,7 @@ BR2_PACKAGE_XLIB_XTRANS=y
 # BR2_PACKAGE_XAPP_RSTART is not set
 # BR2_PACKAGE_XAPP_SCRIPTS is not set
 BR2_PACKAGE_XAPP_SESSREG=y
-# BR2_PACKAGE_XAPP_SETXKBMAP is not set
+BR2_PACKAGE_XAPP_SETXKBMAP=y
 # BR2_PACKAGE_XAPP_SHOWFONT is not set
 # BR2_PACKAGE_XAPP_SMPROXY is not set
 BR2_PACKAGE_XAPP_TWM=y
@@ -1023,13 +1024,13 @@ BR2_PACKAGE_XAPP_XEYES=y
 # BR2_PACKAGE_XAPP_XGC is not set
 # BR2_PACKAGE_XAPP_XHOST is not set
 BR2_PACKAGE_XAPP_XINIT=y
-# BR2_PACKAGE_XAPP_XINPUT is not set
+BR2_PACKAGE_XAPP_XINPUT=y
 # BR2_PACKAGE_XAPP_XINPUT_CALIBRATOR is not set
 BR2_PACKAGE_XAPP_XKBCOMP=y
 # BR2_PACKAGE_XAPP_XKBEVD is not set
 # BR2_PACKAGE_XAPP_XKBPRINT is not set
 # BR2_PACKAGE_XAPP_XKBUTILS is not set
-# BR2_PACKAGE_XAPP_XKILL is not set
+BR2_PACKAGE_XAPP_XKILL=y
 # BR2_PACKAGE_XAPP_XLOAD is not set
 # BR2_PACKAGE_XAPP_XLOGO is not set
 # BR2_PACKAGE_XAPP_XLSATOMS is not set
@@ -1061,16 +1062,10 @@ BR2_PACKAGE_XAPP_XRDB=y
 #
 # X11R7 Drivers
 #
-
-#
-# xf86-input-evdev requires udev to be enabled
-#
+BR2_PACKAGE_XDRIVER_XF86_INPUT_EVDEV=y
 # BR2_PACKAGE_XDRIVER_XF86_INPUT_JOYSTICK is not set
 BR2_PACKAGE_XDRIVER_XF86_INPUT_KEYBOARD=y
-
-#
-# xf86-input-libinput needs udev /dev management
-#
+BR2_PACKAGE_XDRIVER_XF86_INPUT_LIBINPUT=y
 BR2_PACKAGE_XDRIVER_XF86_INPUT_MOUSE=y
 # BR2_PACKAGE_XDRIVER_XF86_INPUT_SYNAPTICS is not set
 # BR2_PACKAGE_XDRIVER_XF86_INPUT_TSLIB is not set
@@ -1217,9 +1212,9 @@ BR2_PACKAGE_XKEYBOARD_CONFIG=y
 #
 # X window managers
 #
-BR2_PACKAGE_FLUXBOX=y
+# BR2_PACKAGE_FLUXBOX is not set
 # BR2_PACKAGE_MATCHBOX is not set
-# BR2_PACKAGE_OPENBOX is not set
+BR2_PACKAGE_OPENBOX=y
 # BR2_PACKAGE_RATPOISON is not set
 
 #
@@ -1251,14 +1246,8 @@ BR2_PACKAGE_FLUXBOX=y
 # BR2_PACKAGE_ALTERA_STAPL is not set
 # BR2_PACKAGE_APCUPSD is not set
 # BR2_PACKAGE_AVRDUDE is not set
-
-#
-# bcache-tools needs udev /dev management
-#
-
-#
-# brickd needs udev /dev management, a toolchain w/ threads, wchar
-#
+# BR2_PACKAGE_BCACHE_TOOLS is not set
+# BR2_PACKAGE_BRICKD is not set
 # BR2_PACKAGE_BRLTTY is not set
 # BR2_PACKAGE_CC_TOOL is not set
 # BR2_PACKAGE_CDRKIT is not set
@@ -1284,10 +1273,7 @@ BR2_PACKAGE_CPUBURN_ARM_ARCH_SUPPORTS=y
 # BR2_PACKAGE_DFU_UTIL is not set
 # BR2_PACKAGE_DMIDECODE is not set
 # BR2_PACKAGE_DMRAID is not set
-
-#
-# dt-utils needs udev /dev management
-#
+# BR2_PACKAGE_DT_UTILS is not set
 
 #
 # dtbocfg needs a Linux kernel to be built
@@ -1301,10 +1287,10 @@ BR2_PACKAGE_CPUBURN_ARM_ARCH_SUPPORTS=y
 #
 # edid-decode needs a toolchain w/ C++, gcc >= 4.7
 #
-
-#
-# eudev needs eudev /dev management
-#
+BR2_PACKAGE_EUDEV=y
+BR2_PACKAGE_PROVIDES_UDEV="eudev"
+# BR2_PACKAGE_EUDEV_RULES_GEN is not set
+BR2_PACKAGE_EUDEV_ENABLE_HWDB=y
 # BR2_PACKAGE_EVEMU is not set
 # BR2_PACKAGE_EVTEST is not set
 # BR2_PACKAGE_FAN_CTRL is not set
@@ -1438,31 +1424,19 @@ BR2_PACKAGE_SEDUTIL_ARCH_SUPPORTS=y
 #
 # uccp420wlan needs a Linux kernel >= 4.2 to be built
 #
-
-#
-# udisks needs udev /dev management
-#
+BR2_PACKAGE_HAS_UDEV=y
 
 #
 # udisks needs a toolchain with dynamic library, locale, wchar, threads, gcc >= 7
 #
 # BR2_PACKAGE_UHUBCTL is not set
 # BR2_PACKAGE_UMTPRD is not set
-
-#
-# upower needs udev /dev management
-#
+# BR2_PACKAGE_UPOWER is not set
 # BR2_PACKAGE_USB_MODESWITCH is not set
 # BR2_PACKAGE_USB_MODESWITCH_DATA is not set
 # BR2_PACKAGE_USBGUARD is not set
-
-#
-# usbmount requires udev to be enabled
-#
-
-#
-# usbutils needs udev /dev management and toolchain w/ threads, gcc >= 4.9
-#
+# BR2_PACKAGE_USBMOUNT is not set
+# BR2_PACKAGE_USBUTILS is not set
 # BR2_PACKAGE_W_SCAN is not set
 
 #
@@ -1711,7 +1685,14 @@ BR2_PACKAGE_ROCKSDB_ARCH_SUPPORTS=y
 BR2_PACKAGE_BAYER2RGB_NEON_ARCH_SUPPORTS=y
 # BR2_PACKAGE_BAYER2RGB_NEON is not set
 # BR2_PACKAGE_BULLET is not set
-# BR2_PACKAGE_CAIRO is not set
+BR2_PACKAGE_CAIRO=y
+# BR2_PACKAGE_CAIRO_PS is not set
+# BR2_PACKAGE_CAIRO_PDF is not set
+# BR2_PACKAGE_CAIRO_PNG is not set
+# BR2_PACKAGE_CAIRO_SCRIPT is not set
+# BR2_PACKAGE_CAIRO_SVG is not set
+# BR2_PACKAGE_CAIRO_TEE is not set
+# BR2_PACKAGE_CAIRO_XML is not set
 # BR2_PACKAGE_CAIROMM is not set
 
 #
@@ -1736,7 +1717,7 @@ BR2_PACKAGE_FREETYPE=y
 #
 # gtkmm3 needs libgtk3 and a toolchain w/ C++, wchar, threads, gcc >= 7
 #
-# BR2_PACKAGE_HARFBUZZ is not set
+BR2_PACKAGE_HARFBUZZ=y
 # BR2_PACKAGE_IJS is not set
 # BR2_PACKAGE_IMLIB2 is not set
 
@@ -1811,7 +1792,7 @@ BR2_PACKAGE_LIBDRM_HAS_ATOMIC=y
 # BR2_PACKAGE_OPENCV3 is not set
 # BR2_PACKAGE_OPENCV4 is not set
 # BR2_PACKAGE_OPENJPEG is not set
-# BR2_PACKAGE_PANGO is not set
+BR2_PACKAGE_PANGO=y
 # BR2_PACKAGE_PANGOMM is not set
 BR2_PACKAGE_PIXMAN=y
 # BR2_PACKAGE_POPPLER is not set
@@ -1851,38 +1832,23 @@ BR2_PACKAGE_WPEWEBKIT_ARCH_SUPPORTS=y
 BR2_PACKAGE_GNU_EFI_ARCH_SUPPORTS=y
 # BR2_PACKAGE_GNU_EFI is not set
 # BR2_PACKAGE_HACKRF is not set
-
-#
-# hidapi needs udev /dev management and a toolchain w/ NPTL, threads, gcc >= 4.9
-#
+# BR2_PACKAGE_HIDAPI is not set
 # BR2_PACKAGE_JITTERENTROPY_LIBRARY is not set
 # BR2_PACKAGE_LCDAPI is not set
 # BR2_PACKAGE_LET_ME_CREATE is not set
 # BR2_PACKAGE_LIBAIO is not set
-
-#
-# libatasmart requires udev to be enabled
-#
-
-#
-# libblockdev needs udev /dev management and a toolchain w/ wchar, threads, dynamic library
-#
+# BR2_PACKAGE_LIBATASMART is not set
+# BR2_PACKAGE_LIBBLOCKDEV is not set
 # BR2_PACKAGE_LIBCEC is not set
 # BR2_PACKAGE_LIBFREEFARE is not set
 # BR2_PACKAGE_LIBFTDI is not set
 # BR2_PACKAGE_LIBFTDI1 is not set
 # BR2_PACKAGE_LIBGPHOTO2 is not set
 # BR2_PACKAGE_LIBGPIOD is not set
-
-#
-# libgudev needs udev /dev handling and a toolchain w/ wchar, threads
-#
+# BR2_PACKAGE_LIBGUDEV is not set
 # BR2_PACKAGE_LIBHID is not set
 # BR2_PACKAGE_LIBIIO is not set
-
-#
-# libinput needs udev /dev management
-#
+BR2_PACKAGE_LIBINPUT=y
 # BR2_PACKAGE_LIBIQRF is not set
 # BR2_PACKAGE_LIBLLCP is not set
 # BR2_PACKAGE_LIBMBIM is not set
@@ -1915,7 +1881,7 @@ BR2_PACKAGE_LIBPCIACCESS=y
 # BR2_PACKAGE_LIBXKBCOMMON is not set
 BR2_PACKAGE_MRAA_ARCH_SUPPORTS=y
 # BR2_PACKAGE_MRAA is not set
-# BR2_PACKAGE_MTDEV is not set
+BR2_PACKAGE_MTDEV=y
 BR2_PACKAGE_NE10_ARCH_SUPPORTS=y
 # BR2_PACKAGE_NE10 is not set
 # BR2_PACKAGE_NEARDAL is not set
@@ -1964,7 +1930,7 @@ BR2_PACKAGE_EXPAT=y
 # BR2_PACKAGE_LIBJSON is not set
 # BR2_PACKAGE_LIBROXML is not set
 # BR2_PACKAGE_LIBUCL is not set
-# BR2_PACKAGE_LIBXML2 is not set
+BR2_PACKAGE_LIBXML2=y
 # BR2_PACKAGE_LIBXMLPP is not set
 # BR2_PACKAGE_LIBXMLRPC is not set
 # BR2_PACKAGE_LIBXSLT is not set
@@ -2297,14 +2263,14 @@ BR2_PACKAGE_LIBEASTL_ARCH_SUPPORTS=y
 # BR2_PACKAGE_LIBEASTL is not set
 # BR2_PACKAGE_LIBEE is not set
 # BR2_PACKAGE_LIBEV is not set
-# BR2_PACKAGE_LIBEVDEV is not set
+BR2_PACKAGE_LIBEVDEV=y
 # BR2_PACKAGE_LIBEVENT is not set
 # BR2_PACKAGE_LIBEXECINFO is not set
-# BR2_PACKAGE_LIBFFI is not set
+BR2_PACKAGE_LIBFFI=y
 # BR2_PACKAGE_LIBFUTILS is not set
 # BR2_PACKAGE_LIBGEE is not set
 # BR2_PACKAGE_LIBGEOS is not set
-# BR2_PACKAGE_LIBGLIB2 is not set
+BR2_PACKAGE_LIBGLIB2=y
 # BR2_PACKAGE_LIBGLOB is not set
 # BR2_PACKAGE_LIBICAL is not set
 # BR2_PACKAGE_LIBITE is not set
@@ -2414,8 +2380,9 @@ BR2_PACKAGE_PROTOBUF_ARCH_SUPPORTS=y
 # BR2_PACKAGE_LIBEDIT is not set
 # BR2_PACKAGE_LIBENCA is not set
 # BR2_PACKAGE_LIBESTR is not set
-# BR2_PACKAGE_LIBFRIBIDI is not set
-# BR2_PACKAGE_LIBICONV is not set
+BR2_PACKAGE_LIBFRIBIDI=y
+BR2_PACKAGE_LIBICONV=y
+# BR2_PACKAGE_LIBICONV_EXTRA_ENCODINGS is not set
 # BR2_PACKAGE_LIBUNISTRING is not set
 # BR2_PACKAGE_LINENOISE is not set
 BR2_PACKAGE_NCURSES=y
@@ -2424,7 +2391,11 @@ BR2_PACKAGE_NCURSES=y
 BR2_PACKAGE_NCURSES_ADDITIONAL_TERMINFO=""
 # BR2_PACKAGE_NEWT is not set
 # BR2_PACKAGE_ONIGURUMA is not set
-# BR2_PACKAGE_PCRE is not set
+BR2_PACKAGE_PCRE=y
+# BR2_PACKAGE_PCRE_16 is not set
+# BR2_PACKAGE_PCRE_32 is not set
+BR2_PACKAGE_PCRE_UTF=y
+BR2_PACKAGE_PCRE_UCP=y
 # BR2_PACKAGE_PCRE2 is not set
 # BR2_PACKAGE_POPT is not set
 # BR2_PACKAGE_RE2 is not set
@@ -2963,17 +2934,14 @@ BR2_PACKAGE_INITSCRIPTS=y
 # jailhouse needs a Linux kernel to be built
 #
 # BR2_PACKAGE_KEYUTILS is not set
-# BR2_PACKAGE_KMOD is not set
+BR2_PACKAGE_KMOD=y
 
 #
 # kvmtool needs a glibc or musl toolchain w/ dynamic library
 #
 # BR2_PACKAGE_LIBOSTREE is not set
 BR2_PACKAGE_LIBVIRT_ARCH_SUPPORTS=y
-
-#
-# libvirt needs udev /dev management, a toolchain w/ threads, dynamic library, wchar, kernel headers >= 3.12 (4.11 for AArch64)
-#
+# BR2_PACKAGE_LIBVIRT is not set
 
 #
 # lxc needs a glibc or musl toolchain w/ threads, headers >= 3.0, dynamic library, gcc >= 4.7
@@ -2988,10 +2956,7 @@ BR2_PACKAGE_MAKEDUMPFILE_ARCH_SUPPORTS=y
 # moby-buildkit needs a glibc or musl toolchain w/ threads
 #
 # BR2_PACKAGE_MONIT is not set
-
-#
-# multipath-tools needs udev and a uClibc or glibc toolchain w/ threads, dynamic library
-#
+# BR2_PACKAGE_MULTIPATH_TOOLS is not set
 # BR2_PACKAGE_NCDU is not set
 
 #
@@ -3058,7 +3023,8 @@ BR2_PACKAGE_SYSTEMD_BOOTCHART_ARCH_SUPPORTS=y
 # unscd needs a glibc toolchain
 #
 BR2_PACKAGE_UTIL_LINUX=y
-# BR2_PACKAGE_UTIL_LINUX_LIBBLKID is not set
+BR2_PACKAGE_UTIL_LINUX_LIBS=y
+BR2_PACKAGE_UTIL_LINUX_LIBBLKID=y
 # BR2_PACKAGE_UTIL_LINUX_LIBFDISK is not set
 # BR2_PACKAGE_UTIL_LINUX_LIBMOUNT is not set
 # BR2_PACKAGE_UTIL_LINUX_LIBSMARTCOLS is not set
@@ -3252,6 +3218,7 @@ BR2_PACKAGE_HOST_E2FSPROGS=y
 # BR2_PACKAGE_HOST_E2TOOLS is not set
 # BR2_PACKAGE_HOST_ENVIRONMENT_SETUP is not set
 # BR2_PACKAGE_HOST_EROFS_UTILS is not set
+BR2_PACKAGE_HOST_EUDEV=y
 # BR2_PACKAGE_HOST_EXFATPROGS is not set
 # BR2_PACKAGE_HOST_F2FS_TOOLS is not set
 # BR2_PACKAGE_HOST_FAKETIME is not set

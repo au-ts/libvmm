@@ -47,7 +47,7 @@
         <irq irq="36" id="3" />
         <!-- keyboard -->
         <irq irq="37" id="4" />
-        <!-- ?? required after spice, need investigation -->
+        <!-- mouse -->
         <irq irq="38" id="5" />
     </protection_domain>
 </system>
