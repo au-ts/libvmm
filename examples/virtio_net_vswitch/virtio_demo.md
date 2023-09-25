@@ -11,21 +11,21 @@
 <!-- @jade: update the description -->
 Documentation about the VirtIO demo systems. The system contains two VMMs that are connected by a vswitch. Both VMs have a passthrough serial. It currently only support QEMU.
 
-This example system is to provide a comparison between VM applications on top of sel4cp VMM and CAmkES VMM, the corresponding example on CAmkES can be found in here:
+This example system is to provide a comparison between VM applications on top of microkit VMM and CAmkES VMM, the corresponding example on CAmkES can be found in here:
 
 https://github.com/seL4/camkes-vm-examples/blob/master/apps/Arm/vm_multi
 
 # Issue
 
-1. We don't yet have a serial multiplexor on sel4cp VMM, so only one VM gets to have the passthrough serial device and be able to do serial I/O.
+1. We don't yet have a serial multiplexor on microkit VMM, so only one VM gets to have the passthrough serial device and be able to do serial I/O.
 
-2. Due to the current limitation of the build system, some hacks are used in this system to bypass the configuration, see [more information](https://github.com/au-ts/camkes_to_sel4cp_guide/blob/main/guide.md)
+2. Due to the current limitation of the build system, some hacks are used in this system to bypass the configuration, see [more information](https://github.com/au-ts/camkes_to_microkit_guide/blob/main/guide.md)
 
 # Usage
 
 Build and run the example:
 ```
-make -B BUILD_DIR=<your build dir> SEL4CP_SDK=<your sdk dir> CONFIG=debug BOARD=qemu_arm_virt qemu
+make -B BUILD_DIR=<your build dir> microkit_SDK=<your sdk dir> CONFIG=debug BOARD=qemu_arm_virt qemu
 ```
 
 # Testing virtIO vswitch
@@ -57,4 +57,4 @@ round-trip min/avg/max = 2.258/5.369/17.897 ms
 3. support odroidc4
 
 # Reference
-1. sel4cp manual: https://github.com/BreakawayConsulting/sel4cp/blob/main/docs/manual.md
+1. microkit manual: https://github.com/BreakawayConsulting/microkit/blob/main/docs/manual.md

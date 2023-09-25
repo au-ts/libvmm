@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <sel4cp.h>
+#include <microkit.h>
 #include "../util/util.h"
 #include "../arch/aarch64/fault.h"
 #include "include/config/virtio_config.h"
@@ -114,7 +114,7 @@ static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uin
     int success = 1;
     // Need to find out which device it is when calculating the offset
     uint32_t offset = fault_addr - get_device_offset(fault_addr);
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", sel4cp_name, offset);
+    // printf("\"%s\"|VIRTIO MMIO|INFO: Read from 0x%x.\n", microkit_name, offset);
 
     virtio_mmio_handler_t *mmio_handler = get_mmio_handler_by_address(fault_addr);
     assert(mmio_handler);
@@ -188,7 +188,7 @@ static bool handle_virtio_mmio_reg_read(size_t vcpu_id, uint64_t fault_addr, uin
             success = mmio_handler->funs->get_device_config(offset, &reg);
 
             // uint32_t mask = fault_get_data_mask(fault_addr, fsr);
-            // printf("\"%s\"|VIRTIO MMIO|INFO: device config offset 0x%x, value 0x%x, mask 0x%x\n", sel4cp_name, offset, reg & mask, mask);
+            // printf("\"%s\"|VIRTIO MMIO|INFO: device config offset 0x%x, value 0x%x, mask 0x%x\n", microkit_name, offset, reg & mask, mask);
             break;
 
         default:
@@ -215,7 +215,7 @@ static bool handle_virtio_mmio_reg_write(size_t vcpu_id, uint64_t fault_addr, ui
     /* Mask the data to write */
     data &= mask;
 
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
+    // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", microkit_name, offset);
 
     virtio_mmio_handler_t *mmio_handler = get_mmio_handler_by_address(fault_addr);
     assert(mmio_handler);
@@ -342,7 +342,7 @@ bool virtio_mmio_handle_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr,
     assert(fault_addr < VIRTIO_ADDRESS_END);
 
     if (!get_mmio_handler_by_address(fault_addr)) {
-        printf("\"%s\"|VIRTIO MMIO|INFO: no virtio backend registered for fault address 0x%x.\n", sel4cp_name, fault_addr);
+        printf("\"%s\"|VIRTIO MMIO|INFO: no virtio backend registered for fault address 0x%x.\n", microkit_name, fault_addr);
         return false;
     }
 

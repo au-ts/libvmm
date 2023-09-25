@@ -97,7 +97,7 @@ typedef struct node_handler {
     ring_handle_t rx_ring;
     ring_handle_t tx_ring;
     uint8_t macaddr[6];
-    sel4cp_channel channel;
+    microkit_channel channel;
 } node_handler_t;
 
 // handler of the connections
@@ -124,7 +124,7 @@ static int vswitch_tx(void *buf, uint32_t size);
 static void vswitch_init(void);
 
 void virtio_net_mmio_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", sel4cp_name, irq);
+    // printf("\"%s\"|VIRTIO NET|INFO: virtio_net_ack %d\n", microkit_name, irq);
     // nothing needs to be done
 }
 
@@ -323,7 +323,7 @@ static int virtio_net_mmio_handle_vswitch_rx(void *buf, uint32_t size)
     uint16_t idx = vqs[RX_QUEUE].last_idx;
 
     if (idx == guest_idx) {
-        printf("\"%s\"|VIRTIO NET|WARNING: queue is full, drop the packet\n", sel4cp_name);
+        printf("\"%s\"|VIRTIO NET|WARNING: queue is full, drop the packet\n", microkit_name);
         return 1;
     }
 
@@ -487,7 +487,7 @@ static node_handler_t *get_node_by_mac(uint8_t *addr)
     return NULL;
 }
 
-static node_handler_t *get_node_by_channel(sel4cp_channel ch)
+static node_handler_t *get_node_by_channel(microkit_channel ch)
 {
     for (int i = 0; i < NUM_NODE; i++) {
         if (map[i].channel == ch) {
@@ -508,7 +508,7 @@ static int send_packet_to_node(void *buf, uint32_t size, node_handler_t *node)
     // get a buffer from the avail ring
     int error = dequeue_avail(&node->tx_ring, &addr, &len, &cookie);
     if (error) {
-        printf("\"%s\"|VSWITCH|INFO: avail ring is empty\n", sel4cp_name);
+        printf("\"%s\"|VSWITCH|INFO: avail ring is empty\n", microkit_name);
         return 1;
     }
     assert(size <= len);
@@ -519,13 +519,13 @@ static int send_packet_to_node(void *buf, uint32_t size, node_handler_t *node)
     /* insert into the used ring */
     error = enqueue_used(&node->tx_ring, addr, size, NULL);
     if (error) {
-        printf("\"%s\"|VSWITCH|INFO: TX used ring full\n", sel4cp_name);
+        printf("\"%s\"|VSWITCH|INFO: TX used ring full\n", microkit_name);
         enqueue_avail(&node->tx_ring, addr, len, NULL);
         return 1;
     }
 
     /* notify the other end of the node */
-    sel4cp_notify(node->channel);
+    microkit_notify(node->channel);
 
     return 0;
 }
@@ -539,14 +539,14 @@ static int vswitch_tx(void *buf, uint32_t size)
 
     // san check
     if (!mac802_addr_eq(macaddr->ether_src_addr_octet, vswitch_mac_address)) {
-        printf("\"%s\"|VSWITCH|INFO: incorrect src MAC: "PR_MAC802_ADDR"\n", sel4cp_name, PR_MAC802_SRC_ADDR_ARGS(macaddr));
+        printf("\"%s\"|VSWITCH|INFO: incorrect src MAC: "PR_MAC802_ADDR"\n", microkit_name, PR_MAC802_SRC_ADDR_ARGS(macaddr));
         return 1;
     }
 
     int error = 0;
 
     // printf("\"%s\"|VSWITCH|INFO: transmitting, dest MAC: "PR_MAC802_ADDR", src MAC: "PR_MAC802_ADDR"\n",
-    //         sel4cp_name, PR_MAC802_DEST_ADDR_ARGS(macaddr), PR_MAC802_SRC_ADDR_ARGS(macaddr));
+    //         microkit_name, PR_MAC802_DEST_ADDR_ARGS(macaddr), PR_MAC802_SRC_ADDR_ARGS(macaddr));
 
     // if the mac address is broadcast of ipv6 milticast, sent the packet to everyone
     if (mac802_addr_eq_bcast(macaddr->ether_dest_addr_octet) || mac802_addr_eq_ipv6_mcast(macaddr->ether_dest_addr_octet)) {
@@ -566,7 +566,7 @@ static int vswitch_tx(void *buf, uint32_t size)
     return error;
 }
 
-int vswitch_rx(sel4cp_channel channel)
+int vswitch_rx(microkit_channel channel)
 {
     uintptr_t addr;
     unsigned int len;
@@ -574,7 +574,7 @@ int vswitch_rx(sel4cp_channel channel)
 
     // struct ether_addr *macaddr = (struct ether_addr *)addr;
     // printf("\"%s\"|VIRTIO MMIO|INFO: incoming, dest MAC: "PR_MAC802_ADDR", src MAC: "PR_MAC802_ADDR"\n",
-    //         sel4cp_name, PR_MAC802_DEST_ADDR_ARGS(macaddr), PR_MAC802_SRC_ADDR_ARGS(macaddr));
+    //         microkit_name, PR_MAC802_DEST_ADDR_ARGS(macaddr), PR_MAC802_SRC_ADDR_ARGS(macaddr));
 
     node_handler_t *node = get_node_by_channel(channel);
     assert(node);
@@ -595,10 +595,10 @@ int vswitch_rx(sel4cp_channel channel)
 
 // @ericc: Leaving this hack here for now, refactor in the future
 // This is specfic to the vswitch, we need to know which vmm we are
-static uint64_t get_vmm_id(char *sel4cp_name)
+static uint64_t get_vmm_id(char *microkit_name)
 {
     // @ivanv: Absolute hack
-    return sel4cp_name[4] - '0';
+    return microkit_name[4] - '0';
 }
 
 static void vswitch_init()
@@ -620,7 +620,7 @@ static void vswitch_init()
     vswitch_mac_address[3] = 0x00;
     vswitch_mac_address[4] = 0xaa;
 
-    if (get_vmm_id(sel4cp_name) == 1) {
+    if (get_vmm_id(microkit_name) == 1) {
         map[0].macaddr[5] = 0x02;
         vswitch_mac_address[5] = 0x01;
 

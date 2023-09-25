@@ -19,7 +19,7 @@ void virtio_net_mmio_ack(uint64_t vcpu_id, int irq, void *cookie);
 
 virtio_mmio_handler_t *get_virtio_net_mmio_handler(void);
 
-int vswitch_rx(sel4cp_channel channel);
+int vswitch_rx(microkit_channel channel);
 
 void virtio_net_mmio_init(uintptr_t net_tx_avail, uintptr_t net_tx_used, uintptr_t net_tx_shared_dma_vaddr,
                           uintptr_t net_rx_avail, uintptr_t net_rx_used, uintptr_t net_rx_shared_dma_vaddr);

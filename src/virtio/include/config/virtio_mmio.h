@@ -47,7 +47,7 @@
 
 // section 5
 // The following device IDs are used to identify different types of virtio devices,
-// only devices that sel4cp VMM currently supports are listed
+// only devices that microkit VMM currently supports are listed
 #define DEVICE_ID_VIRTIO_NET          1
 #define DEVICE_ID_VIRTIO_BLOCK        2
 #define DEVICE_ID_VIRTIO_CONSOLE      3
