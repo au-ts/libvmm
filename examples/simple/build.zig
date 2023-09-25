@@ -7,19 +7,19 @@ fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
     return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
 }
 
-const CorePlatformBoard = enum {
+const MicrokitBoard = enum {
     qemu_arm_virt,
     odroidc4
 };
 
 const Target = struct {
-    board: CorePlatformBoard,
+    board: MicrokitBoard,
     zig_target: std.zig.CrossTarget,
 };
 
 const targets = [_]Target {
     .{
-        .board = CorePlatformBoard.qemu_arm_virt,
+        .board = MicrokitBoard.qemu_arm_virt,
         .zig_target = std.zig.CrossTarget{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
@@ -28,7 +28,7 @@ const targets = [_]Target {
         },
     },
     .{
-        .board = CorePlatformBoard.odroidc4,
+        .board = MicrokitBoard.odroidc4,
         .zig_target = std.zig.CrossTarget{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
@@ -38,7 +38,7 @@ const targets = [_]Target {
     }
 };
 
-fn findTarget(board: CorePlatformBoard) std.zig.CrossTarget {
+fn findTarget(board: MicrokitBoard) std.zig.CrossTarget {
     for (targets) |target| {
         if (board == target.board) {
             return target.zig_target;
@@ -72,7 +72,7 @@ pub fn build(b: *std.Build) void {
     const microkit_config = @tagName(microkit_config_option);
 
     // Get the Microkit SDK board we want to target
-    const microkit_board_option = b.option(CorePlatformBoard, "board", "Microkit board to target");
+    const microkit_board_option = b.option(MicrokitBoard, "board", "Microkit board to target");
 
     if (microkit_board_option == null) {
         std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
