@@ -67,10 +67,13 @@ void uio_gpu_ack(size_t vcpu_id, int irq, void *cookie) {
     // Do nothing, there is no actual IRQ to ack since UIO IRQs are virtual!
 }
 
-bool uio_init_handler(size_t vcpu_id, uintptr_t addr) {
+bool uio_init_handler(size_t vcpu_id, uintptr_t addr, uint64_t fsr, seL4_UserContext *regs) {
     LOG_VMM("sending notification to UIO PD!\n");
     microkit_notify(UIO_PD_CH);
-    return true;
+
+    int ret = fault_advance_vcpu(vcpu_id, regs);
+    assert(ret);
+    return ret;
 }
 
 void init(void) {
