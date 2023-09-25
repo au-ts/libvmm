@@ -39,7 +39,7 @@ static virtqueue_t vqs[VIRTIO_GPU_MMIO_NUM_VIRTQUEUE];
 // static struct virtio_gpu_mem_entry mem_entries[MAX_RESOURCE][MAX_MEM_ENTRIES];
 
 void virtio_gpu_mmio_ack(uint64_t vcpu_id, int irq, void *cookie) {
-    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", sel4cp_name, irq);
+    // printf("\"%s\"|VIRTIO GPU|INFO: virtio_gpu_ack %d\n", microkit_name, irq);
 }
 
 virtio_mmio_handler_t *get_virtio_gpu_mmio_handler(void)
@@ -54,7 +54,7 @@ virtio_mmio_handler_t *get_virtio_gpu_mmio_handler(void)
 
 static void virtio_gpu_mmio_reset(void)
 {
-    printf("\"%s\"|VIRTIO GPU|INFO: device has been reset\n", sel4cp_name);
+    printf("\"%s\"|VIRTIO GPU|INFO: device has been reset\n", microkit_name);
     
     gpu_mmio_handler.data.Status = 0;
     
@@ -141,38 +141,38 @@ static int virtio_gpu_mmio_handle_queue_notify()
     uint16_t guest_idx = vring->avail->idx;
     uint16_t idx = vq->last_idx;
 
-    // printf("\"%s\"|VIRTIO GPU|INFO: ------------- Driver notified device -------------\n", sel4cp_name);
+    // printf("\"%s\"|VIRTIO GPU|INFO: ------------- Driver notified device -------------\n", microkit_name);
 
     for (; idx != guest_idx; idx++) {
         uint16_t desc_head = vring->avail->ring[idx % vring->num];
 
         uint16_t curr_desc_head = desc_head;
 
-        // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
+        // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
 
         // Print out what the command type is
         struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
-        printf("\"%s\"|VIRTIO GPU|INFO: ----- Buffer header is 0x%x -----\n", sel4cp_name, header->type);
+        printf("\"%s\"|VIRTIO GPU|INFO: ----- Buffer header is 0x%x -----\n", microkit_name, header->type);
         
         // Parse different commands
         switch (header->type) {
             case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
                 // struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
-                // printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", sel4cp_name, request->resource_id);
+                // printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", microkit_name, request->resource_id);
                 break;
             }
             case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: { 
                 // This chain has two descriptors, the first one is header, second one is mem_entries 
                 // struct virtio_gpu_resource_attach_backing *request = (void *)vring->desc[curr_desc_head].addr;
-                // printf("\"%s\"|VIRTIO GPU|INFO: number of guest pages for backing is %d\n", sel4cp_name, request->nr_entries);
-                // printf("\"%s\"|VIRTIO GPU|INFO: attaching resource ID %d\n", sel4cp_name, request->resource_id);
+                // printf("\"%s\"|VIRTIO GPU|INFO: number of guest pages for backing is %d\n", microkit_name, request->nr_entries);
+                // printf("\"%s\"|VIRTIO GPU|INFO: attaching resource ID %d\n", microkit_name, request->resource_id);
 
                 curr_desc_head = vring->desc[curr_desc_head].next;
-                // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
+                // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
 
                 struct virtio_gpu_mem_entry *mem_entries = (void *)vring->desc[curr_desc_head].addr;
-                printf("\"%s\"|VIRTIO GPU|INFO: address of memory entry is 0x%x\n", sel4cp_name, mem_entries[0].addr);
-                printf("\"%s\"|VIRTIO GPU|INFO: length of memory entry is %d\n", sel4cp_name, mem_entries[0].length);
+                printf("\"%s\"|VIRTIO GPU|INFO: address of memory entry is 0x%x\n", microkit_name, mem_entries[0].addr);
+                printf("\"%s\"|VIRTIO GPU|INFO: length of memory entry is %d\n", microkit_name, mem_entries[0].length);
 
                 // memcpy((void *)uio_map0, (void *)mem_entries[0].addr, mem_entries[0].length);
                 // // Check whats inside the memory                
@@ -186,7 +186,7 @@ static int virtio_gpu_mmio_handle_queue_notify()
         // This loop brings curr_desc_head to the final descriptor in the chain, if it is not already at it,
         // which is where you write the response from device back to driver.
         do {
-            // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", sel4cp_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
+            // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
             curr_desc_head = vring->desc[curr_desc_head].next;
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
 
