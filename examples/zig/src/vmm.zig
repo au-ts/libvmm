@@ -62,11 +62,11 @@ const log = struct {
 };
 
 const SERIAL_IRQ_CH: microkit.microkit_channel = 1;
-const SERIAL_IRQ: i32 = 79;
+const SERIAL_IRQ: i32 = 33;
 
-fn serial_ack(_: usize, irq: c_int, _: ?*anyopaque) callconv(.C) void {
+fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.C) void {
     // Nothing else needs to be done other than acking the IRQ.
-    microkit.microkit_irq_ack(@intCast(irq));
+    microkit.microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
 export fn init() callconv(.C) void {
@@ -120,47 +120,13 @@ export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
     }
 }
 
-// @ivanv deal with
-extern fn fault_handle_vm_exception(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_handle_unknown_syscall(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_handle_user_exception(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_handle_vgic_maintenance(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_handle_vcpu_exception(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_handle_vppi_event(vcpu_id: usize) callconv(.C) bool;
-extern fn fault_to_string(fault_label: usize) callconv(.C) [*c]u8;
+extern fn fault_handle(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
 
 export fn fault(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) void {
-    if (id != GUEST_BOOT_VCPU_ID) {
-        log.err("Unexpected faulting PD/VM with ID {}\n", .{ id });
-        return;
-    }
-    // This is the primary fault handler for the guest, all faults that come
-    // from seL4 regarding the guest will need to be handled here.
-    const label = microkit.microkit_msginfo_get_label(msginfo);
-    log.info("fault label: {}", .{ label });
-    const success = switch (label) {
-        microkit.seL4_Fault_VMFault => fault_handle_vm_exception(id),
-        microkit.seL4_Fault_UnknownSyscall => fault_handle_unknown_syscall(id),
-        microkit.seL4_Fault_UserException => fault_handle_user_exception(id),
-        microkit.seL4_Fault_VGICMaintenance => fault_handle_vgic_maintenance(id),
-        microkit.seL4_Fault_VCPUFault => fault_handle_vcpu_exception(id),
-        microkit.seL4_Fault_VPPIEvent => fault_handle_vppi_event(id),
-        else => {
-            // We have reached a genuinely unexpected case, stop the guest.
-            log.err("unknown fault label {x}, stopping guest with ID {x}", .{ label, id });
-            microkit.microkit_vm_stop(id);
-            // Dump the TCB and vCPU registers to hopefully get information as
-            // to what has gone wrong.
-            c.tcb_print_regs(id);
-            c.vcpu_print_regs(id);
-            return;
-        }
-    };
-
-    if (success) {
+    if (fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
         microkit.microkit_fault_reply(microkit.microkit_msginfo_new(0, 0));
     } else {
-        log.err("Failed to handle {s} fault\n", .{ fault_to_string(label) });
+        log.err("Failed to handle fault\n", .{});
     }
 }
