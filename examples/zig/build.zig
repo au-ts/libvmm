@@ -1,5 +1,12 @@
 const std = @import("std");
 
+var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+const gpa = general_purpose_allocator.allocator();
+
+fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
+    return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
+}
+
 // For this example we hard-code the target to AArch64 and the platform to QEMU ARM virt
 // since the main point of this example is to show off using the VMM library in another
 // systems programming language.
@@ -14,14 +21,25 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{ .default_target = example_target });
     const optimize = b.standardOptimizeOption(.{});
 
+    // Getting the path to the Microkit SDK before doing anything else
+    const microkit_sdk_arg = b.option([]const u8, "sdk", "Path to Microkit SDK");
+    if (microkit_sdk_arg == null) {
+        std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
+        std.os.exit(1);
+    }
+    const microkit_sdk = microkit_sdk_arg.?;
+
     // @ivanv sort out
-    const sdk_path = "microkit-sdk-1.2.6";
-    const board = "qemu_arm_virt";
-    const config = "debug";
+    const microkit_board = "qemu_arm_virt";
+    const microkit_config = "debug";
     // const microkit_build_dir = "build";
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = sdk_path ++ "/board/" ++ board ++ "/" ++ config;
+    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const microkit_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
+    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ sdk_board_dir });
+    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ sdk_board_dir });
+    const sdk_board_include_dir = fmtPrint("{s}/include", .{ sdk_board_dir });
 
     const zig_libmicrokit = b.addObject(.{
         .name = "zig_libmicrokit",
@@ -30,45 +48,46 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     zig_libmicrokit.addIncludePath(.{ .path = "src/" });
-    zig_libmicrokit.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
+    zig_libmicrokit.addIncludePath(.{ .path = sdk_board_include_dir });
 
-    const vmmlib = b.addStaticLibrary(.{
+    const libvmm = b.addStaticLibrary(.{
         .name = "vmm",
         .target = target,
         .optimize = optimize,
     });
 
-    vmmlib.addCSourceFiles(&.{
-        "../../src/guest.c",
-        "../../src/util/util.c",
-        "../../src/util/printf.c",
-        "../../src/arch/aarch64/vgic/vgic.c",
-        "../../src/arch/aarch64/vgic/vgic_v2.c",
-        "../../src/arch/aarch64/fault.c",
-        "../../src/arch/aarch64/psci.c",
-        "../../src/arch/aarch64/smc.c",
-        "../../src/arch/aarch64/virq.c",
-        "../../src/arch/aarch64/linux.c",
-        "../../src/arch/aarch64/vcpu.c",
-        "../../src/arch/aarch64/tcb.c",
+    const libvmm_path = "../..";
+    const libvmm_src = libvmm_path ++ "/src/";
+    // Right now we only support AArch64 so this is a safe assumption.
+    const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
+    libvmm.addCSourceFiles(&.{
+        libvmm_src ++ "guest.c",
+        libvmm_src ++ "util/util.c",
+        libvmm_src ++ "util/printf.c",
+        libvmm_src_arch ++ "vgic/vgic.c",
+        libvmm_src_arch ++ "vgic/vgic_v2.c",
+        libvmm_src_arch ++ "fault.c",
+        libvmm_src_arch ++ "psci.c",
+        libvmm_src_arch ++ "smc.c",
+        libvmm_src_arch ++ "virq.c",
+        libvmm_src_arch ++ "linux.c",
+        libvmm_src_arch ++ "tcb.c",
+        libvmm_src_arch ++ "vcpu.c",
     }, &.{
         "-Wall",
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
         "-DBOARD_qemu_arm_virt",
-        "-nostdlib",
-        "-ffreestanding",
-        "-mcpu=cortex-a53",
     });
 
-    vmmlib.addIncludePath(.{ .path = "../../src/" });
-    vmmlib.addIncludePath(.{ .path = "../../src/util/" });
-    vmmlib.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
-    vmmlib.addIncludePath(.{ .path = "../../src/arch/aarch64/vgic/" });
-    vmmlib.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
+    libvmm.addIncludePath(.{ .path = libvmm_src });
+    libvmm.addIncludePath(.{ .path = libvmm_src ++ "util/" });
+    libvmm.addIncludePath(.{ .path = libvmm_src_arch });
+    libvmm.addIncludePath(.{ .path = libvmm_src_arch ++ "vgic/" });
+    libvmm.addIncludePath(.{ .path = sdk_board_include_dir });
 
-    b.installArtifact(vmmlib);
+    b.installArtifact(libvmm);
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
@@ -78,18 +97,18 @@ pub fn build(b: *std.Build) void {
     });
 
     // Add microkit.h to be used by the API wrapper.
-    exe.addIncludePath(.{ .path = sdk_board_dir ++ "/include" });
+    exe.addIncludePath(.{ .path = sdk_board_include_dir });
     exe.addIncludePath(.{ .path = "../../src/" });
     exe.addIncludePath(.{ .path = "../../src/util/" });
     exe.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(.{ .path = sdk_board_dir ++ "/lib/libmicrokit.a" });
-    exe.linkLibrary(vmmlib);
+    exe.addObjectFile(.{ .path = libmicrokit });
+    exe.linkLibrary(libvmm);
     exe.addObject(zig_libmicrokit);
     // exe.linkLibrary(libsel4);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .path = sdk_board_dir ++ "/lib/microkit.ld"});
+    exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
 
     exe.addIncludePath(.{ .path = "src/" });
 
@@ -97,14 +116,14 @@ pub fn build(b: *std.Build) void {
 
     const system_description_path = "zig_vmm.system";
     const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
-       sdk_path ++ "/bin/microkit",
+       microkit_tool,
        system_description_path,
        "--search-path",
        "zig-out/bin",
        "--board",
-       board,
+       microkit_board,
        "--config",
-       config,
+       microkit_config,
        "-o",
        "zig-out/bin/loader.img",
        "-r",
@@ -135,22 +154,4 @@ pub fn build(b: *std.Build) void {
     qemu_cmd.step.dependOn(b.default_step);
     const simulate_step = b.step("qemu", "Simulate the image using QEMU");
     simulate_step.dependOn(&qemu_cmd.step);
-
-    // const renode_cmd = b.addSystemCommand(&[_][]const u8{
-    //     "qemu-system-aarch64",
-    //     "-machine",
-    //     "virt,virtualization=on,highmem=off,secure=off",
-    //     "-cpu",
-    //     "cortex-a53",
-    //     "-serial",
-    //     "mon:stdio",
-    //     "-device",
-    //     "loader,file=zig-out/bin/loader.img,addr=0x70000000,cpu-num=0",
-    //     "-m",
-    //     "2G",
-    //     "-nographic",
-    // });
-    // renode_cmd.step.dependOn(b.default_step);
-    // const simulate_step = b.step("renode", "Simulate the image using Renode");
-    // simulate_step.dependOn(&renode_cmd.step);
 }
