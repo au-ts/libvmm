@@ -56,14 +56,13 @@ On [Nix](https://nixos.org/):
 nix-shell --pure
 ```
 
+#### Acquiring the SDK
+
 Finally, you will need an experimental Microkit SDK.
 
 * Currently virtualisation support and other patches that the VMM requires are
-  not part of mainline Microkit. See below for instructions on
-  acquiring the SDK.
+  not part of mainline Microkit.
 * Upstreaming the required changes is in-progress.
-
-#### Acquiring the SDK
 
 For acquiring the SDK, you have two options.
 
