@@ -46,6 +46,22 @@ build_rust() {
         MICROKIT_SDK=${SDK_PATH}
 }
 
+build_zig() {
+    echo "CI|INFO: building Zig example with config: $1, Zig optimize is: $2"
+    CONFIG=$1
+    ZIG_OPTIMIZE=$2
+    BUILD_DIR="${PWD}/build/examples/zig/qemu_arm_virt/${CONFIG}/${ZIG_OPTIMIZE}"
+    EXAMPLE_DIR="${PWD}/examples/zig"
+    mkdir -p ${BUILD_DIR}
+    pushd ${EXAMPLE_DIR}
+    zig build \
+        -Dsdk=${SDK_PATH} \
+        -Dconfig=${CONFIG} \
+        -Doptimize=${ZIG_OPTIMIZE} \
+        -p ${BUILD_DIR}
+    popd
+}
+
 simulate_rust() {
     echo "CI|INFO: simulating Rust example with config: $1"
     BUILD_DIR="${PWD}/build/examples/rust/qemu_arm_virt/${CONFIG}"
@@ -81,11 +97,18 @@ build_virtio() {
         MICROKIT_SDK=${SDK_PATH}
 }
 
+simulate_zig() {
+    echo "CI|INFO: simulating Zig example with config: $1"
+    BUILD_DIR="${PWD}/build/examples/zig/qemu_arm_virt/${CONFIG}/${ZIG_OPTIMIZE}"
+    ./ci/buildroot_login.exp ${BUILD_DIR}/bin/loader.img
+}
+
 build_simple_make "qemu_arm_virt" "debug"
 simulate_simple_make "qemu_arm_virt" "debug"
 build_simple_make "qemu_arm_virt" "release"
 simulate_simple_make "qemu_arm_virt" "release"
 
+# @ivanv: we should incorporate the zig optimisation levels as well
 build_simple_zig "qemu_arm_virt" "debug"
 simulate_simple_zig "qemu_arm_virt" "debug"
 build_simple_zig "qemu_arm_virt" "release"
@@ -101,6 +124,22 @@ build_rust "debug"
 simulate_rust "debug"
 build_rust "release"
 simulate_rust "release"
+
+# Here there are two kinds of configuration that we need to test. There is the
+# configuration of Microkit itself for which we test debug and release. This
+# also dictates the configuration of seL4 that is used.
+# There is also the optimisations that Zig applies to the VMM code, Zig has
+# three optimisation levels (other than debug), that realistically would be
+# used with the "release" configuration of Microkit. For details on each
+# optimisation level, see the Zig documentation.
+build_zig "debug" "Debug"
+simulate_zig "debug" "Debug"
+build_zig "release" "ReleaseFast"
+simulate_zig "release" "ReleaseFast"
+build_zig "release" "ReleaseSafe"
+simulate_zig "release" "ReleaseSafe"
+build_zig "release" "ReleaseSmall"
+simulate_zig "release" "ReleaseSmall"
 
 build_virtio "qemu_arm_virt" "debug"
 build_virtio "qemu_arm_virt" "release"
