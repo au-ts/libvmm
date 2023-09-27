@@ -73,9 +73,6 @@ export fn init() callconv(.C) void {
     // Initialise the VMM, the VCPU(s), and start the guest
     log.info("starting \"{s}\"\n", .{ microkit.microkit_name });
     // Place all the binaries in the right locations before starting the guest
-    // @ivanv: should all the vmm functions be prefixed with "vmm_"?
-    // var linux_kernel_image: *LinuxKernelImage = @alignCast(@constCast(@ptrCast(guest_kernel_image)));
-    // log.info("addr of linux_kernel_image: {*}", .{ linux_kernel_image });
     const kernel_pc = c.linux_setup_images(
                 GUEST_RAM_VADDR,
                 @intFromPtr(guest_kernel_image),
