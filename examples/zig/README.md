@@ -32,3 +32,17 @@ To also run the example via QEMU, run the following command:
 ```sh
 zig build -Dsdk=/path/to/sdk qemu
 ```
+
+You should see the following output after a couple of seconds:
+```
+Welcome to Buildroot
+buildroot login:
+```
+
+The login is `root`. There is no password necessary. After logging in, you will
+see the console prompt where you can input commands:
+```
+Welcome to Buildroot
+buildroot login: root
+#
+```
