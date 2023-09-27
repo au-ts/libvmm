@@ -17,6 +17,12 @@ const example_target = std.zig.CrossTarget{
     .abi = .none,
 };
 
+const ConfigOptions = enum {
+    debug,
+    release,
+    benchmark
+};
+
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{ .default_target = example_target });
     const optimize = b.standardOptimizeOption(.{});
@@ -31,8 +37,9 @@ pub fn build(b: *std.Build) void {
 
     // @ivanv sort out
     const microkit_board = "qemu_arm_virt";
-    const microkit_config = "debug";
-    // const microkit_build_dir = "build";
+    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for")
+                             orelse ConfigOptions.debug;
+    const microkit_config = @tagName(microkit_config_option);
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
     const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
@@ -78,7 +85,8 @@ pub fn build(b: *std.Build) void {
         "-Werror",
         "-Wno-unused-function",
         "-mstrict-align",
-        "-DBOARD_qemu_arm_virt",
+        "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
+        // "-fno-sanitize=undefined",
     });
 
     libvmm.addIncludePath(.{ .path = libvmm_src });
@@ -115,19 +123,20 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     const system_description_path = "zig_vmm.system";
+    const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
        microkit_tool,
        system_description_path,
        "--search-path",
-       "zig-out/bin",
+       b.getInstallPath(.bin, ""),
        "--board",
        microkit_board,
        "--config",
        microkit_config,
        "-o",
-       "zig-out/bin/loader.img",
+       final_image_dest,
        "-r",
-       "zig-out/report.txt",
+       b.getInstallPath(.prefix, "./report.txt")
     });
     microkit_tool_cmd.step.dependOn(b.getInstallStep());
     // Add the "microkit" step, and make it the default step when we execute `zig build`>
@@ -137,6 +146,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system via QEMU,
     // which we only want to do when we have a board that we can actually simulate.
+    const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     const qemu_cmd = b.addSystemCommand(&[_][]const u8{
         "qemu-system-aarch64",
         "-machine",
@@ -146,7 +156,7 @@ pub fn build(b: *std.Build) void {
         "-serial",
         "mon:stdio",
         "-device",
-        "loader,file=zig-out/bin/loader.img,addr=0x70000000,cpu-num=0",
+        loader_arg,
         "-m",
         "2G",
         "-nographic",
