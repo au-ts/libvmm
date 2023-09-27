@@ -11,7 +11,11 @@ const c = @cImport({
 });
 const microkit = @import("libmicrokit.zig");
 
+// In this example we only have one virtual CPU
 const GUEST_BOOT_VCPU_ID = 0;
+// There are the hard-coded addresses that both the VMM and Linux guest need
+// to be aware of. For example the address of the DTB and initial RAM disk are
+// passed to Linux when booting it.
 const GUEST_RAM_VADDR: usize = 0x40000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
@@ -84,25 +88,28 @@ export fn init() callconv(.C) void {
                 GUEST_INIT_RAM_DISK_VADDR,
                 guest_initrd_image.len
             );
-
     if (kernel_pc == 0) {
         log.err("Failed to initialise guest images\n", .{});
         return;
     }
-    // Initialise the virtual GIC driver
-    var success = c.virq_controller_init(GUEST_BOOT_VCPU_ID);
-    if (!success) {
-        log.err("Failed to initialise emulated interrupt controller\n", .{});
+    // Initialise the virtual interrupt controller
+    if (!c.virq_controller_init(GUEST_BOOT_VCPU_ID)) {
+        log.err("Failed to initialise virtual interrupt controller\n", .{});
         return;
     }
-    // @ivanv: Note that remove this line causes the VMM to fault if we
-    // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    success = c.virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, null);
-    // Just in case there is already an interrupt available to handle, we ack it here.
+    // Register the interrupt for the UART with the virtual interrupt controller
+    if (!c.virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, null)) {
+        log.err("Failed to register serial IRQ\n", .{});
+        return;
+    }
+    // Just in case there is already an interrupt from the UART available to
+    // handle, we ack it here.
     microkit.microkit_irq_ack(SERIAL_IRQ_CH);
-    // Finally start the guest
-    success = c.guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
-    std.debug.assert(success);
+    // Finally we can start the guest
+    if (!c.guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR)) {
+        log.err("Failed to start guest\n", .{});
+        return;
+    }
 }
 
 export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
