@@ -33,15 +33,15 @@ on macOS, if you need to do anything such as compile a custom Linux kernel image
 or a guest root file system for developing your own system, you will probably have
 less friction on a Linux machine.
 
-Using `apt`:
+On Ubuntu/Debian:
 
 ```sh
 sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
 ```
 
-Using Homebrew on macOS:
+On macOS:
 
-If you do not have Homebrew installed, you can do so [here](https://brew.sh/).
+If you do not have Homebrew installed, you can install it [here](https://brew.sh/).
 
 ```sh
 # Note that you should make sure that the LLVM tools are in your path after running
@@ -50,7 +50,7 @@ If you do not have Homebrew installed, you can do so [here](https://brew.sh/).
 brew install make qemu dtc llvm
 ```
 
-Using [Nix](https://nixos.org/):
+On [Nix](https://nixos.org/):
 ```sh
 # In the root of the repository
 nix-shell --pure
