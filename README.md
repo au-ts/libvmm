@@ -4,7 +4,7 @@ The purpose of this project is to make it easy to run virtual machines on top of
 
 This project contains three parts:
 * `src/`: The VMM library, for creating and managing virtual machines on seL4.
-* `examples/`: Examples for using the VMM library
+* `examples/`: Examples for using the VMM library.
 * `tools/`: Tools that are useful when developing systems using virtual machines, but are not
   necessary for using the library.
 
@@ -66,7 +66,7 @@ Finally, you will need an experimental Microkit SDK.
 
 For acquiring the SDK, you have two options.
 
-1. Download a pre-built SDK (recommended)
+1. Download a pre-built SDK (recommended).
 2. Build the SDK yourself.
 
 ##### Option 1 - Download pre-built SDK
