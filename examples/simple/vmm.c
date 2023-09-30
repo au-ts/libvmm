@@ -45,7 +45,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #else
-#error Need to define VM image address and DTB address
+#error Need to define guest kernel image address and DTB address
 #endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
