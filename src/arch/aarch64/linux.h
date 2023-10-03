@@ -31,6 +31,9 @@ struct linux_image_header {
     uint32_t res5;        // reserved (used for PE COFF offset)
 };
 
+// Note that this function assumes that the `kernel` parameter is aligned
+// to at least the alignment of `struct linux_image_header`. The `dtb_src`
+// paramter must be aligned to at least the alignment of `struct dtb_header`.
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t kernel,
                              size_t kernel_size,
