@@ -582,7 +582,11 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
         // we're also blindly injectnig the given IRQ to that vCPU.
         // @ivanv: come back to this, do we have two writes to the TCB registers?
         success = vgic_inject_irq(vcpu_id, virq);
-        assert(success);
+        if (!success) {
+            LOG_VMM_ERR("Failed to inject vIRQ 0x%lx into vGIC on vCPU 0x%lx\n", virq, vcpu_id);
+        }
+        success = true;
+        // assert(success);
         break;
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */
