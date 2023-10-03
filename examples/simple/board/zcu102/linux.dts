@@ -831,7 +831,7 @@
 
 		ethernet@ff0e0000 {
 			compatible = "cdns,zynqmp-gem\0cdns,gem";
-			status = "okay";
+			status = "disabled";
 			interrupt-parent = <0x04>;
 			interrupts = <0x00 0x3f 0x04 0x00 0x3f 0x04>;
 			reg = <0x00 0xff0e0000 0x00 0x1000>;
@@ -1515,7 +1515,7 @@
 
 		mmc@ff170000 {
 			compatible = "xlnx,zynqmp-8.9a\0arasan,sdhci-8.9a";
-			status = "okay";
+			status = "disabled";
 			interrupt-parent = <0x04>;
 			interrupts = <0x00 0x31 0x04>;
 			reg = <0x00 0xff170000 0x00 0x1000>;
@@ -1627,7 +1627,7 @@
 
 		serial@ff010000 {
 			compatible = "xlnx,zynqmp-uart\0cdns,uart-r1p12";
-			status = "okay";
+			status = "disabled";
 			interrupt-parent = <0x04>;
 			interrupts = <0x00 0x16 0x04>;
 			reg = <0x00 0xff010000 0x00 0x1000>;
