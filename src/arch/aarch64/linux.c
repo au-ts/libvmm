@@ -5,6 +5,7 @@
  */
 
 #include "../../util/util.h"
+#include "dtb.h"
 #include "linux.h"
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
@@ -17,7 +18,6 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t initrd_dest,
                              size_t initrd_size)
 {
-    // @ivanv: is there a DTB magic to check?
     // @ivanv: is there a initrd magic to check?
     // First we inspect the kernel image header to confirm it is a valid image
     // and to determine where in memory to place the image.
@@ -37,6 +37,13 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", kernel_dest, kernel_size);
     memcpy((char *)kernel_dest, (char *)kernel, kernel_size);
     // Copy the guest device tree blob into the right location
+    // First check that the DTB given is actually a DTB!
+    struct dtb_header *dtb_header = (struct dtb_header *) dtb_src;
+    assert(dtb_check_magic(dtb_header));
+    if (!dtb_check_magic(dtb_header)) {
+        LOG_VMM_ERR("Given DTB does not match DTB magic.\n");
+        return 0;
+    }
     // Linux does not allow the DTB to be greater than 2 megabytes in size.
     assert(dtb_size <= (1 << 21));
     if (dtb_size > (1 << 21)) {
