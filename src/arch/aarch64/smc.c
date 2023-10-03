@@ -7,6 +7,7 @@
 
 #include "smc.h"
 #include "psci.h"
+#include "fault.h"
 #include "../../util/util.h"
 
 // Values in this file are taken from:
@@ -31,6 +32,29 @@ typedef enum {
     SMC_CALL_TRUSTED_OS = 50,
     SMC_CALL_RESERVED = 64,
 } smc_call_id_t;
+
+#if defined(CONFIG_ALLOW_SMC_CALLS)
+/* Service handlers for services that require "physical" access to EL3 components
+   (vs emulation) are listed here.
+
+   'Active' handler is a pointer to fucntion that actually will be invoked;
+   by default active handlers are set to NULL. Application should assign to an active handler
+   wheither a default handler that unconditionally forwards calls to Secure Monitor:
+
+   extern handle_service_type handle_xxx;
+   handle_service_type handle_xxx = default_handle_service;
+
+   or assign a custom handler impelemntating some forwarding policy:
+
+   extern handle_service_type handle_xxx;
+   handle_service_type handle_xxx = wary_handle_service;
+
+   Note: application code should include smc.h
+*/
+
+/* 'handle_sip()' is an active handler of SiP Service calls */
+handle_service_type handle_sip = NULL;
+#endif
 
 static smc_call_id_t smc_get_call(size_t func_id)
 {
@@ -109,10 +133,44 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
             }
             LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
             break;
+#if defined(CONFIG_ALLOW_SMC_CALLS)
+        case SMC_CALL_SIP_SERVICE:
+            return handle_sip(vcpu_id, &regs, fn_number);
+#endif
         default:
             LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
             break;
     }
 
     return false;
+}
+
+
+/* Default handler of calls to a Service (group of Functions) running at Secure Monitor level;
+  forwards all the calls without applying any policy
+*/
+bool default_handle_service(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
+{
+
+    seL4_CPtr smc_cap = SMC_CAP;
+    seL4_ARM_SMCContext request;
+    seL4_ARM_SMCContext response;
+
+    request.x0 = regs->x0; request.x1 = regs->x1;
+    request.x2 = regs->x2; request.x3 = regs->x3;
+    request.x4 = regs->x4; request.x5 = regs->x5;
+    request.x6 = regs->x6; request.x7 = regs->x7;
+
+    seL4_ARM_SMC_Call(smc_cap, &request, &response);
+
+    regs->x0 = response.x0; regs->x1 = response.x1;
+    regs->x2 = response.x2; regs->x3 = response.x3;
+    regs->x4 = response.x4; regs->x5 = response.x5;
+    regs->x6 = response.x6; regs->x7 = response.x7;
+
+
+    bool success = fault_advance_vcpu(vcpu_id, regs);
+    assert(success);
+
+    return success;
 }

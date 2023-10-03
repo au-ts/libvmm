@@ -20,3 +20,12 @@ void smc_set_return_value(seL4_UserContext *u, uint64_t val);
 
 /* Gets the value of x1-x6 */
 uint64_t smc_get_arg(seL4_UserContext *u, uint64_t arg);
+
+/* Default handler of calls to a SMC Service */
+bool default_handle_service(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number);
+
+/* Service handler type */
+typedef bool (* handle_service_type)(uint64_t, seL4_UserContext *, uint64_t);
+
+/* Default handler of SiP service calls */
+bool default_handle_sip(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number);
