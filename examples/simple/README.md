@@ -5,8 +5,9 @@ buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
-* HardKernel Odroid-C4
 * QEMU ARM virt
+* HardKernel Odroid-C4
+* Xilinx ZCU102 Evaluation Kit
 
 ## Building with Make
 
@@ -17,6 +18,7 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+* `zcu102`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -47,6 +49,7 @@ zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+* `zcu102`
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
