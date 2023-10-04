@@ -103,6 +103,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    // Microkit expects and requires the symbol table to exist in the ELF,
+    // this means that even when building for release mode, we want to tell
+    // Zig not to strip symbols from the binary.
+    exe.strip = false;
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
