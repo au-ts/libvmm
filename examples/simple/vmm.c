@@ -59,7 +59,7 @@
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
 #elif defined(BOARD_imx8mm_evk)
-#define SERIAL_IRQ 79
+#define SERIAL_IRQ 59
 #else
 #error Need to define serial interrupt
 #endif
