@@ -2,7 +2,8 @@ const std = @import("std");
 
 const MicrokitBoard = enum {
     qemu_arm_virt,
-    odroidc4
+    odroidc4,
+    maaxboard,
 };
 
 const Target = struct {
@@ -28,7 +29,16 @@ const targets = [_]Target {
             .os_tag = .freestanding,
             .abi = .none,
         },
-    }
+    },
+    .{
+        .board = MicrokitBoard.maaxboard,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
 };
 
 fn findTarget(board: MicrokitBoard) std.Target.Query {
@@ -99,12 +109,19 @@ pub fn build(b: *std.Build) void {
         .strip = false,
     });
 
+    const base_dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
+    const overlay = b.fmt("board/{s}/overlay.dts", .{ microkit_board });
+    const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
+        "sh", "../../tools/dtscat", base_dts_path, overlay
+    });
+    const final_dts = dts_cat_cmd.captureStdOut();
+
     // For actually compiling the DTS into a DTB
-    const dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
     const dtc_cmd = b.addSystemCommand(&[_][]const u8{
         "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
-    dtc_cmd.addFileArg(b.path(dts_path));
+    dtc_cmd.addFileArg(.{ .cwd_relative = b.getInstallPath(.prefix, "final.dts") });
+    dtc_cmd.step.dependOn(&b.addInstallFileWithDir(final_dts, .prefix, "final.dts").step);
     const dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
