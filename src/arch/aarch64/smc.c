@@ -34,27 +34,67 @@ typedef enum {
 } smc_call_id_t;
 
 #if defined(CONFIG_ALLOW_SMC_CALLS)
+/* SMC Call Cap that the library makes SMC calls on; passed from an application */
+seL4_CPtr smc_cap_current;
+
+/* Set SMC Call Cap to use by the library API;
+   should be called before an application starts
+   handling exceptions from a VM thread
+*/
+bool smc_set_cap(seL4_CPtr smcccap)
+{
+    if (!smcccap)
+    {
+        LOG_VMM_ERR("SMC forwarding: attempted to set zero SMC Call cap\n");
+        return false;
+    }
+    smc_cap_current = smcccap;
+    return true;
+}
+#endif /*CONFIG_ALLOW_SMC_CALLS*/
+
+#if defined(CONFIG_ALLOW_SMC_CALLS)
+
 /* Service handlers for services that require "physical" access to EL3 components
    (vs emulation) are listed here.
 
-   'Active' handler is a pointer to fucntion that actually will be invoked;
+   'Active' handler is a pointer to a fucntion that actually will be invoked;
    by default active handlers are set to NULL. Application should assign to an active handler
    wheither a default handler that unconditionally forwards calls to Secure Monitor:
 
-   extern handle_service_type handle_xxx;
-   handle_service_type handle_xxx = default_handle_service;
+        smc_set_handler_xxx_service(smc_default_handle_service);
 
-   or assign a custom handler impelemntating some forwarding policy:
+   or assign a custom handler impelemnting some forwarding policy:
 
-   extern handle_service_type handle_xxx;
-   handle_service_type handle_xxx = wary_handle_service;
+        smc_set_handler_xxx_service(wary_handle_service);
+
+   To remove active handler invoke:
+
+        smc_set_handler_xxx_service(NULL);
 
    Note: application code should include smc.h
 */
 
-/* 'handle_sip()' is an active handler of SiP Service calls */
-handle_service_type handle_sip = NULL;
-#endif
+/* 'smc_handle_sip()' is an active handler of SiP Service calls */
+smc_handle_service_type smc_handle_sip = NULL;
+
+/* 'smc_set_handler_sip_service()' assigns/removes active SiP Service handler;
+   NULL is a valid value to remove an earlier assigned handler;
+   function returns 'True' if handler was initialized with pointer to a function,
+   and 'False' if a handler was removed */
+bool smc_set_handler_sip_service (smc_handle_service_type handler_func)
+{
+    if (handler_func == NULL)
+    {
+        smc_handle_sip = NULL;
+        return false;
+    }
+    else
+        smc_handle_sip = handler_func;
+
+    return true;
+}
+#endif /*CONFIG_ALLOW_SMC_CALLS*/
 
 static smc_call_id_t smc_get_call(size_t func_id)
 {
@@ -135,7 +175,7 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
             break;
 #if defined(CONFIG_ALLOW_SMC_CALLS)
         case SMC_CALL_SIP_SERVICE:
-            return handle_sip(vcpu_id, &regs, fn_number);
+            return smc_handle_sip(vcpu_id, &regs, fn_number);
 #endif
         default:
             LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
@@ -145,14 +185,13 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
     return false;
 }
 
-
+#if defined(CONFIG_ALLOW_SMC_CALLS)
 /* Default handler of calls to a Service (group of Functions) running at Secure Monitor level;
   forwards all the calls without applying any policy
 */
-bool default_handle_service(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
+bool smc_default_handle_service(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number)
 {
 
-    seL4_CPtr smc_cap = SMC_CAP;
     seL4_ARM_SMCContext request;
     seL4_ARM_SMCContext response;
 
@@ -161,7 +200,7 @@ bool default_handle_service(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t f
     request.x4 = regs->x4; request.x5 = regs->x5;
     request.x6 = regs->x6; request.x7 = regs->x7;
 
-    seL4_ARM_SMC_Call(smc_cap, &request, &response);
+    seL4_ARM_SMC_Call(smc_cap_current, &request, &response);
 
     regs->x0 = response.x0; regs->x1 = response.x1;
     regs->x2 = response.x2; regs->x3 = response.x3;
@@ -174,3 +213,4 @@ bool default_handle_service(uint64_t vcpu_id, seL4_UserContext *regs, uint64_t f
 
     return success;
 }
+#endif /*CONFIG_ALLOW_SMC_CALLS*/
