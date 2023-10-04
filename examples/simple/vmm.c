@@ -133,8 +133,8 @@ void notified(microkit_channel ch) {
 }
 
 /*
- * The primary purpose of the VMM after initialisation is to act as a fault-handler,
- * whenever our guest causes an exception, it gets delivered to this entry point for
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {
