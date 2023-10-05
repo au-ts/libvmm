@@ -1763,7 +1763,7 @@
 		stdout-path = "/soc@0/bus@30800000/serial@30860000";
         linux,initrd-start = <0x00000000 0x4d700000>;
 		linux,initrd-end = <0x00000000 0x4e000000>;
-        bootargs = "console=ttymxc1,115200 earlycon=ec_imx6q,0x30860000,115200 root=/dev/ram0 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 root=/dev/ram0 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
 	};
 
 	memory@40000000 {
