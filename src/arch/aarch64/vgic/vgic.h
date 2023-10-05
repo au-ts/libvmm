@@ -29,6 +29,10 @@
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
+#elif defined(BOARD_imx8mq_evk)
+#define GIC_V3
+#define GIC_DIST_PADDR      0x38800000
+#define GIC_REDIST_PADDR    0x38880000
 #else
 #error Need to define GIC addresses
 #endif
