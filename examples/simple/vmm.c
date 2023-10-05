@@ -44,6 +44,9 @@
 #elif defined(BOARD_imx8mm_evk)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_imx8mq_evk)
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -60,6 +63,8 @@
 #define SERIAL_IRQ 57
 #elif defined(BOARD_imx8mm_evk)
 #define SERIAL_IRQ 59
+#elif defined(BOARD_imx8mq_evk)
+#define SERIAL_IRQ 58
 #else
 #error Need to define serial interrupt
 #endif
