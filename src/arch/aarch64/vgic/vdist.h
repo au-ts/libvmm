@@ -545,14 +545,29 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
     case RANGE32(0xBFC, 0xBFC):
         /* Reserved */
         break;
-    case RANGE32(GIC_DIST_ICFGR0, GIC_DIST_ICFGRN):
+    case RANGE32(GIC_DIST_ICFGR0, GIC_DIST_ICFGR1):
+        /* All SGIs are edge triggered, thus ICFGR0 read-only. Setting
+         * configuration for PPIs is IMPLEMENTATION DEFINED, so ignore writes
+         * to ICFGR1. */
+        break;
+    case RANGE32(GIC_DIST_ICFGR2, GIC_DIST_ICFGRN): {
         /*
          * Emulate accesses to interrupt configuration registers to set the IRQ
          * to be edge-triggered or level-sensitive.
          */
+        uint32_t config_mask = 0xAAAAAAAA;
+        uint32_t before;
+
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICFGR0);
+        before = gic_dist->config[reg_offset];
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->config[reg_offset]);
+
+        /* Allow changes only to Int_config[1] */
+        gic_dist->config[reg_offset] &= config_mask;
+        /* Retain Int_config[0] */
+        gic_dist->config[reg_offset] |= (before & ~config_mask);
         break;
+    }
     case RANGE32(0xD00, 0xDFC):
         /* IMPLEMENTATION DEFINED registers. */
         break;
