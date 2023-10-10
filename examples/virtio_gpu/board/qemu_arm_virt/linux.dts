@@ -20,7 +20,7 @@
 	};
 
 	memory@40000000 {
-		reg = <0x00 0x40000000 0x00 0x8000000>;
+		reg = <0x00 0x40000000 0x00 0x16000000>;
 		device_type = "memory";
 	};
 
@@ -92,7 +92,7 @@
 		stdout-path = "/pl011@9000000";
 		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug pci=nomsi loglevel=8 ip=192.168.1.1";
 		linux,stdout-path = "/pl011@9000000";
-		linux,initrd-start = <0x46000000>;
-		linux,initrd-end = <0x46100000>;
+		linux,initrd-start = <0x53000000>;
+		linux,initrd-end = <0x55000000>;
 	};
 };

@@ -12,6 +12,7 @@
 #include "include/config/virtio_config.h"
 #include "virtio_mmio.h"
 #include "virtio_gpu_mmio.h"
+#include "virtio_irq.h"
 
 // virtio gpu mmio emul interface
 
@@ -221,6 +222,21 @@ static int virtio_gpu_mmio_handle_queue_notify()
                 break;
             }
         }
+
+        // set the reason of the irq
+        gpu_mmio_handler.data.InterruptStatus = BIT_LOW(0);
+
+        // add to used ring
+        struct vring *vring = &vqs[CONTROL_QUEUE].vring;
+
+        struct vring_used_elem used_elem = {desc_head, 0};
+        uint16_t guest_idx = vring->used->idx;
+
+        vring->used->ring[guest_idx % vring->num] = used_elem;
+        vring->used->idx++;
+
+        bool success = virq_inject(VCPU_ID, VIRTIO_GPU_IRQ);
+        assert(success);
     }
 
     vq->last_idx = idx;
