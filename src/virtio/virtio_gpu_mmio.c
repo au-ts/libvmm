@@ -158,8 +158,9 @@ static int virtio_gpu_mmio_handle_queue_notify()
         // Parse different commands
         switch (header->type) {
             case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: {
-                // struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
-                // printf("\"%s\"|VIRTIO GPU|INFO: initialised resource ID %d\n", microkit_name, request->resource_id);
+                struct virtio_gpu_resource_create_2d *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: created resource ID %d with width %d and height %d, and format %d\n", 
+                        microkit_name, request->resource_id, request->width, request->height, request->format);
                 break;
             }
             case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: { 
@@ -180,6 +181,29 @@ static int virtio_gpu_mmio_handle_queue_notify()
                 // for (int i = 0; i < mem_entries[0].length; i++) {
                 //     printf("%x", (uint8_t *)mem_entries[0].addr + i);
                 // }
+                break;
+            }
+            case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: {
+                struct virtio_gpu_transfer_to_host_2d *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: transfer to host resource ID %d with offset %d and rect(x %d y %d width %d height %d)\n",
+                        microkit_name, request->resource_id, request->offset, request->r.x, request->r.y, request->r.width, request->r.height);
+                break;
+            }
+            case VIRTIO_GPU_CMD_SET_SCANOUT: {
+                struct virtio_gpu_set_scanout *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: set scanout resource ID %d with scanout id %d and rect(x %d y %d width %d height %d)\n",
+                        microkit_name, request->resource_id, request->scanout_id, request->r.x, request->r.y, request->r.width, request->r.height);
+                break;
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_FLUSH: {
+                struct virtio_gpu_resource_flush *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: flush resource ID %d with rect(x %d y %d width %d height %d)\n",
+                        microkit_name, request->resource_id, request->r.x, request->r.y, request->r.width, request->r.height);
+                break;
+            }
+            case VIRTIO_GPU_CMD_RESOURCE_UNREF: {
+                struct virtio_gpu_resource_unref *request = (void *)vring->desc[curr_desc_head].addr;
+                printf("\"%s\"|VIRTIO GPU|INFO: unref resource ID %d\n", microkit_name, request->resource_id);
                 break;
             }
         }
