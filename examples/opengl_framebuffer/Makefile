@@ -58,12 +58,12 @@ BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
-SYSTEM_DESCRIPTION := board/$(BOARD)/framebuffer.system
+SYSTEM_DESCRIPTION := board/$(BOARD)/vu7a.system
 
 IMAGE_DIR := board/$(BOARD)
 LINUX := $(IMAGE_DIR)/linux
 DTS := $(IMAGE_DIR)/linux.dts
-DTB := $(BUILD_DIR)/linux.dtb
+DTB := $(BUILD_DIR)/linux.dts
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
 # ericc: Can only compile this file on the setup on my machine, so I've commented it out for now

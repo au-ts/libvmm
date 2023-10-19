@@ -23,7 +23,7 @@
 #define GUEST_INIT_RAM_DISK_VADDR 0x5d700000
 #elif defined(BOARD_odroidc4)
 #define GUEST_RAM_SIZE 0x10000000
-#define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_DTB_VADDR 0x2f100000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #endif
 
@@ -125,6 +125,12 @@ void init(void) {
     register_passthrough_irq(62, 13);
     register_passthrough_irq(48, 16);
     register_passthrough_irq(89, 14);
+    register_passthrough_irq(214, 18);
+    register_passthrough_irq(215, 19);
+    register_passthrough_irq(246, 20);
+    register_passthrough_irq(247, 21);
+    register_passthrough_irq(71, 22);
+    register_passthrough_irq(227,23);
     // // @jade: this should not be necessary. Investigation required.
     register_passthrough_irq(5, 17);
 #endif

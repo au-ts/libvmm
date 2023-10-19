@@ -9,9 +9,7 @@
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" phys_addr="0x20_000_000" />
 
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
-    <memory_region name="bus2" size="0x3000" phys_addr="0xff800000" />
-    <memory_region name="ir" size="0x1000" phys_addr="0xff808000" />
-    <memory_region name="adc" size="0x1000" phys_addr="0xff809000" />
+    <memory_region name="bus2" size="0x100000" phys_addr="0xff800000" />
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
 
     <memory_region name="usb" size="0x1000" phys_addr="0xffe09000" />
@@ -21,6 +19,9 @@
     <memory_region name="gpu" size="0x40000" phys_addr="0xffe40000" />
     <memory_region name="vpu" size="0x100000" phys_addr="0xff900000" />
     <memory_region name="eth" size="0x10000" phys_addr="0xff3f0000" />
+
+    <!-- <memory_region name="sd" size="0x1000" phys_addr="0xffe05000" /> -->
+    <!-- <memory_region name="mmc" size="0x1000" phys_addr="0xffe07000" /> -->
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
     <!-- uio framebuffer -->
@@ -47,18 +48,19 @@
             <map mr="gpu" vaddr="0xffe40000" perms="rw" cached="false" />
             <map mr="vpu" vaddr="0xff900000" perms="rw" cached="false" />
             <map mr="eth" vaddr="0xff3f0000" perms="rw" cached="false" />
+            <!-- <map mr="sd" vaddr="0xffe05000" perms="rw" cached="false" /> -->
+            <!-- <map mr="mmc" vaddr="0xffe07000" perms="rw" cached="false" /> -->
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
-            <map mr="ir" vaddr="0xff808000" perms="rw" cached="false" />
-            <map mr="adc" vaddr="0xff809000" perms="rw" cached="false" />
         </virtual_machine>
-
+        
+        <!-- serial -->
+        <irq irq="225" id="1" trigger="edge" />
         <!-- adc -->
         <irq irq="232" id="4" trigger="edge" />
         <!-- eth -->
         <irq irq="40" id="5" />
         <!-- vpu -->
         <irq irq="35" id="15" trigger="edge" />
-
         <!-- phy -->
         <irq irq="96" id="6" />
         <!-- panfrost-gpu -->
@@ -68,7 +70,11 @@
         <!-- panfrost-job -->
         <irq irq="194" id="9" />
         <!-- i2c -->
-        <irq irq="53" id="10" />
+        <irq irq="53" id="10" trigger="edge" />
+        <irq irq="246" id="20" trigger="edge" />
+        <irq irq="247" id="21" trigger="edge" />
+        <irq irq="71" id="22" trigger="edge" />
+        <irq irq="227" id="23" trigger="edge" />
         <!-- ir -->
         <irq irq="228" id="11" />
         <!-- usb -->
@@ -81,6 +87,10 @@
         <irq irq="89" id="14" trigger="edge" />
         <!-- IRQ work interrupts -->
         <irq irq="5" id="17" />
+        <!-- sd -->
+        <!-- <irq irq="214" id="18" /> -->
+        <!-- mmc -->
+        <!-- <irq irq="215" id="19" /> -->
     </protection_domain>
 
     <channel>
