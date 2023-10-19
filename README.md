@@ -15,6 +15,8 @@ library itself is environment agnostic.
 
 For information on the project and how to use it, please see the [manual](docs/MANUAL.md).
 
+If you are interested in how the development of libvmm is progressing, please see the [roadmap](https://github.com/au-ts/libvmm/issues/23).
+
 ## Getting started
 
 To quickly show off the project, we will run the `simple` example. This example is
