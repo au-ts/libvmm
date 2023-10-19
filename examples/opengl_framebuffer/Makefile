@@ -58,7 +58,7 @@ BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
-SYSTEM_DESCRIPTION := board/$(BOARD)/vu7a.system
+SYSTEM_DESCRIPTION := board/$(BOARD)/opengl_framebuffer.system
 
 IMAGE_DIR := board/$(BOARD)
 LINUX := $(IMAGE_DIR)/linux
