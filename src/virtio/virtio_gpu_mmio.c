@@ -117,19 +117,21 @@ static int virtio_gpu_mmio_set_driver_features(uint32_t features)
 
 static int virtio_gpu_mmio_get_device_config(uint32_t offset, uint32_t *ret_val)
 {
-    void * config_base_addr = (void *)&gpu_config;
-    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
+    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
-    // printf("VIRTIO GPU|INFO: get_device_config_field config_field_address 0x%x returns retval %d\n", config_field_addr, *ret_val);
+    printf("VIRTIO GPU|INFO: get device config with base_addr 0x%x and field_address 0x%x has value %d\n", config_base_addr, config_field_addr, *ret_val);
     return 1;
 }
 
 static int virtio_gpu_mmio_set_device_config(uint32_t offset, uint32_t val)
 {
-    void * config_base_addr = (void *)&gpu_config;
-    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + (offset - REG_VIRTIO_MMIO_CONFIG));
+    uintptr_t config_base_addr = (uintptr_t)&gpu_config;
+    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *config_field_addr = val;
-    // printf("VIRTIO GPU|INFO: set_device_config_field set 0x%x to %d\n", config_field_addr, val);
+    printf("VIRTIO GPU|INFO: set device config with base_addr 0x%x and field_address 0x%x with value %d\n", config_base_addr, config_field_addr, val);
     return 1;
 }
 
