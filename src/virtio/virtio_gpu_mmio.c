@@ -151,8 +151,6 @@ static int virtio_gpu_mmio_handle_queue_notify()
 
         uint16_t curr_desc_head = desc_head;
 
-        // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
-
         // Print out what the command type is
         struct virtio_gpu_ctrl_hdr *header = (void *)vring->desc[curr_desc_head].addr;
         printf("\"%s\"|VIRTIO GPU|INFO: ----- Buffer header is 0x%x -----\n", microkit_name, header->type);
@@ -216,6 +214,7 @@ static int virtio_gpu_mmio_handle_queue_notify()
             // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
             curr_desc_head = vring->desc[curr_desc_head].next;
         } while (vring->desc[curr_desc_head].flags & VRING_DESC_F_NEXT);
+        // printf("\"%s\"|VIRTIO GPU|INFO: Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)vring->desc[curr_desc_head].flags, vring->desc[curr_desc_head].len);
 
         // Return the proper response to the driver
         switch (header->type) {
