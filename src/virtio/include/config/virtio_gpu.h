@@ -35,6 +35,10 @@
  * SUCH DAMAGE.
  */
 
+#pragma once
+
+#include <stdint.h>
+
 /*
  * VIRTIO_GPU_CMD_CTX_*
  * VIRTIO_GPU_CMD_*_3D
