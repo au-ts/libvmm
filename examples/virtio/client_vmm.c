@@ -62,7 +62,26 @@ ring_handle_t serial_tx_ring;
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
+uintptr_t blk_rx_free;
+uintptr_t blk_rx_used;
+uintptr_t blk_tx_free;
+uintptr_t blk_tx_used;
+
+uintptr_t blk_rx_data;
+uintptr_t blk_tx_data;
+
+ring_handle_t blk_rx_ring;
+ring_handle_t blk_tx_ring;
+
+#define BLK_TX_CH 3
+#define BLK_RX_CH 4
+
+#define VIRTIO_BLK_IRQ (75)
+#define VIRTIO_BLK_BASE (0x150000)
+#define VIRTIO_BLK_SIZE (0x1000)
+
 static struct virtio_device virtio_console;
+static struct virtio_device virtio_blk;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -117,6 +136,21 @@ void init(void) {
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       &serial_rx_ring, &serial_tx_ring, SERIAL_MUX_TX_CH);
     assert(success);
+    
+    /* Initialise our sDDF ring buffers for the block device */
+    // ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
+    // for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+    //     int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+    //     if (ret != 0) {
+    //         microkit_dbg_puts(microkit_name);
+    //         microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
+    //     }
+    // }
+    /* Initialise virtIO block device */
+    success = virtio_mmio_device_init(&virtio_blk, BLOCK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
+                                      NULL, NULL, BLK_TX_CH);
+    assert(success);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -127,6 +161,10 @@ void notified(microkit_channel ch) {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);
+            break;
+        }
+        case BLK_RX_CH: {
+            // virtio_blk_handle_rx(&virtio_blk);
             break;
         }
         default:
