@@ -222,7 +222,7 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 # 	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
 
 $(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
-	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
+	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@

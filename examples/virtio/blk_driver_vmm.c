@@ -42,7 +42,7 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 #define UIO_BLK_IRQ 50
-#define VSWITCH_BLK 0
+#define VSWITCH_BLK 1
 
 #define MAX_IRQ_CH 63
 int passthrough_irq_map[MAX_IRQ_CH];
