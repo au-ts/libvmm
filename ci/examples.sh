@@ -68,6 +68,19 @@ simulate_simple_make() {
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
+build_virtio() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building virtio example via Make with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${PWD}/build/examples/virtio/make/${BOARD}/${CONFIG}"
+    mkdir -p ${BUILD_DIR}
+    make -C examples/virtio -B \
+        BUILD_DIR=${BUILD_DIR} \
+        CONFIG=${CONFIG} \
+        BOARD=${BOARD} \
+        MICROKIT_SDK=${SDK_PATH}
+}
+
 build_simple_make "qemu_arm_virt" "debug"
 simulate_simple_make "qemu_arm_virt" "debug"
 build_simple_make "qemu_arm_virt" "release"
@@ -88,6 +101,9 @@ build_rust "debug"
 simulate_rust "debug"
 build_rust "release"
 simulate_rust "release"
+
+build_virtio "qemu_arm_virt" "debug"
+build_virtio "qemu_arm_virt" "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"
