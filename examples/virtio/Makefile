@@ -27,19 +27,19 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-# ifndef TOOLCHAIN
-# 	# Get whether the common toolchain triples exist
-# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-# 	# Then check if they are defined and select the appropriate one
-# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-# 		TOOLCHAIN := aarch64-linux-gnu
-# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-# 		TOOLCHAIN := aarch64-unknown-linux-gnu
-# 	else
-# 		$(error "Could not find an AArch64 cross-compiler")
-# 	endif
-# endif
+ifndef TOOLCHAIN
+	# Get whether the common toolchain triples exist
+	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+	# Then check if they are defined and select the appropriate one
+	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+		TOOLCHAIN := aarch64-linux-gnu
+	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+		TOOLCHAIN := aarch64-unknown-linux-gnu
+	else
+		$(error "Could not find an AArch64 cross-compiler")
+	endif
+endif
 
 CC := clang
 LD := ld.lld
@@ -53,18 +53,39 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 # have a helpful message that lists all the support boards.
 
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
-
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 
-IMAGE_DIR := board/$(BOARD)
-LINUX := $(IMAGE_DIR)/linux
-DTS := $(IMAGE_DIR)/linux.dts
-DTB := $(BUILD_DIR)/linux.dtb
-INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
+CURRENT_DIR := $(shell pwd)
+
+# BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
+# BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
+# BLK_DRIVER_VM_USERLEVEL_DIR := userlevel/blk_driver_vm
+# BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
+
+CLIENT_VM_DIR := board/$(BOARD)/client_vm
+CLIENT_VM_DTS_DIR := $(CLIENT_VM_DIR)/dts
+CLIENT_VM_USERLEVEL_DIR := userlevel/client_vm
+CLIENT_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_rootfs
+
+# BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
+# BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
+# BLK_DRIVER_VM_INITRD_OVERLAYED := $(BLK_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
+# BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
+# BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
+
+CLIENT_VM_LINUX := $(CLIENT_VM_DIR)/linux
+CLIENT_VM_INITRD := $(CLIENT_VM_DIR)/rootfs.cpio.gz
+CLIENT_VM_INITRD_OVERLAYED := $(CLIENT_VM_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_BASE_DTS := $(CLIENT_VM_DTS_DIR)/linux.dts
+CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
+							$(CLIENT_VM_DTS_DIR)/virtio.dts \
+
+# BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
+CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
 SDDF := sddf
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
@@ -72,14 +93,17 @@ SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
 
-ELFS := vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+# ELFS := blk_driver_vmm.elf client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+
+# BLK_DRIVER_VM_USERLEVEL_ELFS := cmdq_test.elf
+CLIENT_VM_USERLEVEL_ELFS := virtio_blk_test.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o \
-			printf.o \
+VMM_OBJS := printf.o \
 			virq.o \
 			linux.o \
 			guest.o \
@@ -89,13 +113,20 @@ VMM_OBJS := vmm.o \
 			util.o \
 			vgic.o \
 			vgic_v2.o \
-			package_guest_images.o \
 			tcb.o \
 			vcpu.o \
-			mmio.o \
-			console.o \
-			virtio.o \
-			shared_ringbuffer.o
+
+CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
+					client_images.o \
+					client_vmm.o \
+					virtio.o \
+					console.o \
+					mmio.o \
+					shared_ringbuffer.o \
+
+# BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
+# 						blk_driver_images.o \
+# 						blk_driver_vmm.o \
 
 SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
@@ -123,15 +154,22 @@ CFLAGS := -mstrict-align \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
 
+CFLAGS_USERLEVEL :=	-g3 \
+		  			-O3 \
+					-Wno-unused-command-line-argument \
+		  			-Wall -Wno-unused-function -Werror \
+					-target aarch64-linux-gnu
+
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories $(IMAGE_FILE)
+all: directories client_vm_userlevel $(IMAGE_FILE)
+# all: directories blk_driver_vm_userlevel client_vm_userlevel $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
 	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
+	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
@@ -141,18 +179,50 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(DTB): $(DTS)
-	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
-	# @ivanv: Shouldn't supress warnings
-	$(DTC) -q -I dts -O dtb $< > $@
+# Unpack rootfs, put the userlevel binary in /root, repack rootfs
+# blk_driver_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_ELFS))
+# 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
+# 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
+# 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
+# 	cp $< $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
+# 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
+	
+client_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
+	rm -r $(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
+	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
+	cp $< $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
+	(cd $(CLIENT_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED))
 
-$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
+# $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
+# 	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
+# 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
+
+# $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_OVERLAYED)
+# 	$(CC) -c -g3 -x assembler-with-cpp \
+# 					-DGUEST_KERNEL_IMAGE_PATH=\"$(BLK_DRIVER_VM_LINUX)\" \
+# 					-DGUEST_DTB_IMAGE_PATH=\"$(BLK_DRIVER_VM_DTB)\" \
+# 					-DGUEST_INITRD_IMAGE_PATH=\"$(BLK_DRIVER_VM_INITRD_OVERLAYED)\" \
+# 					-target aarch64-none-elf \
+# 					$< -o $@
+
+$(CLIENT_VM_DTB): $(CLIENT_VM_BASE_DTS) $(CLIENT_VM_DTS_OVERLAYS)
+	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm.dts > $@
+
+$(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LINUX) $(CLIENT_VM_DTB) $(CLIENT_VM_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_INITRD_OVERLAYED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
+
+# $(BUILD_DIR)/%.elf: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
+# 	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
+
+$(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
+	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -181,8 +251,11 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
+$(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+# $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
+# 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -193,5 +266,8 @@ $(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS)
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+# $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_DIR)
+# 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_DIR)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
