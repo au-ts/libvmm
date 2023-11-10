@@ -68,10 +68,10 @@ int main(void)
         return -1;
     }
 
-    // write_test(blk);
-    // fsync_file(blk);
-    // lseek_to(blk, 0);
-    // read_test(blk);
+    write_test(blk);
+    fsync_file(blk);
+    lseek_to(blk, 0);
+    read_test(blk);
 
     printf("VIRTIO BLK TEST|INFO: Closing /dev/vda...\n");
     // Close the device file
