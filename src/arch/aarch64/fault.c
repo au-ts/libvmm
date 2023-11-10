@@ -197,6 +197,14 @@ uint64_t fault_emulate(seL4_UserContext *regs, uint64_t reg, uint64_t addr, uint
     }
 }
 
+void fault_emulate_write(seL4_UserContext *regs, size_t addr, size_t fsr, size_t reg_val) {
+    // @ivanv: audit
+    /* Get register opearand */
+    int rt = get_rt(fsr);
+    seL4_Word *reg_ctx = decode_rt(rt, regs);
+    *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
+}
+
 bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t reg_val)
 {
     /* Get register opearand */
@@ -294,12 +302,13 @@ struct vm_exception_handler {
     uintptr_t base;
     uintptr_t end;
     vm_exception_handler_t callback;
+    void *data;
 };
 #define MAX_VM_EXCEPTION_HANDLERS 16
 struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
 size_t vm_exception_handler_index = 0;
 
-bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback) {
+bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data) {
     // @ivanv audit necessary here since this code was written very quickly. Other things to check such
     // as the region of memory is not overlapping with other regions, also should have GIC_DIST regions
     // use this API.
@@ -316,18 +325,21 @@ bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_excepti
         .base = base,
         .end = base + size,
         .callback = callback,
+        .data = data,
     };
     vm_exception_handler_index += 1;
 
     return true;
 }
 
-static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr) {
+static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs) {
     for (int i = 0; i < MAX_VM_EXCEPTION_HANDLERS; i++) {
         uintptr_t base = registered_vm_exception_handlers[i].base;
         uintptr_t end = registered_vm_exception_handlers[i].end;
+        vm_exception_handler_t callback = registered_vm_exception_handlers[i].callback;
+        void *data = registered_vm_exception_handlers[i].data;
         if (addr >= base && addr < end) {
-            bool success = registered_vm_exception_handlers[i].callback(vcpu_id, addr);
+            bool success = callback(vcpu_id, addr - base, fsr, regs, data);
             if (!success) {
                 // @ivanv: improve error message
                 LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base, end, addr);
@@ -361,8 +373,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
             return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
 #endif
         default: {
-            LOG_VMM("calling fault handle vm exception\n");
-            bool success = fault_handle_registered_vm_exceptions(vcpu_id ,addr);
+            bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
             if (!success) {
                 /*
                  * We could not find a registered handler for the address, meaning that the fault

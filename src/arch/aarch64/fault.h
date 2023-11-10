@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <microkit.h>
 
 /* Fault-handling functions */
@@ -19,8 +20,8 @@ bool fault_handle_user_exception(size_t vcpu_id);
 bool fault_handle_unknown_syscall(size_t vcpu_id);
 bool fault_handle_vm_exception(size_t vcpu_id);
 
-typedef bool (*vm_exception_handler_t)(size_t vcpu_id, uintptr_t addr);
-bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback);
+typedef bool (*vm_exception_handler_t)(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data);
 
 /* Helpers for emulating the fault and getting fault details */
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs);
@@ -28,6 +29,7 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr);
 uint64_t fault_get_data(seL4_UserContext *regs, uint64_t fsr);
 uint64_t fault_emulate(seL4_UserContext *regs, uint64_t reg, uint64_t addr, uint64_t fsr, uint64_t reg_val);
+void fault_emulate_write(seL4_UserContext *regs, size_t addr, size_t fsr, size_t reg_val);
 
 /* Take the fault label given by the kernel and convert it to a string. */
 char *fault_to_string(seL4_Word fault_label);
