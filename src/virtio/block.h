@@ -38,6 +38,8 @@
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULTQ 0
 
+#define VIRTIO_BLK_CAPACITY             0x100000
+
 /* Feature bits */
 #define VIRTIO_BLK_F_SIZE_MAX	    1	/* Indicates maximum segment size */
 #define VIRTIO_BLK_F_SEG_MAX	    2	/* Indicates maximum # of segments */
@@ -98,7 +100,7 @@ struct virtio_blk_config {
  * Usage is a bit tricky as some bits are used as flags and some are not.
  *
  * Rules:
- *   VIRTIO_BLK_T_OUT may be combined with VIRTIO_BLK_T_SCSI_CMD or
+ *   VIRTIO_BLK_T_OUT may be combined with
  *   VIRTIO_BLK_T_BARRIER.  VIRTIO_BLK_T_FLUSH is a command of its own
  *   and may not be combined with any of the other flags.
  */
@@ -124,7 +126,7 @@ struct virtio_blk_outhdr {
     uint32_t ioprio;
     /* Sector (ie. 512 byte offset) */
     uint64_t sector;
-};
+} __attribute__((packed));
 
 /* And this is the final byte of the write scatter-gather list. */
 #define VIRTIO_BLK_S_OK             0
@@ -133,6 +135,6 @@ struct virtio_blk_outhdr {
 
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
-                    size_t virq);
-
-void virtio_blk_handle_rx();
+                    size_t virq,
+                    ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_tx_mux_ch);
+void virtio_blk_handle_rx(struct virtio_device *dev);

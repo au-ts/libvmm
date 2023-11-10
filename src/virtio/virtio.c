@@ -6,7 +6,7 @@
 #include "fault.h"
 #include "util/util.h"
 #include "virtio/console.h"
-#include "virtio/blk.h"
+#include "virtio/block.h"
 #include "virtio/virtio.h"
 #include "virq.h"
 
@@ -42,7 +42,7 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
         }
         break;
     case BLOCK:
-        virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq);
+        virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq, sddf_rx_ring, sddf_tx_ring, sddf_mux_tx_ch);
         success = fault_register_vm_exception_handler(region_base,
                                                       region_size,
                                                       &virtio_mmio_fault_handle,

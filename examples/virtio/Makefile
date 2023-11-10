@@ -121,6 +121,7 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					client_vmm.o \
 					virtio.o \
 					console.o \
+					block.o \
 					mmio.o \
 					shared_ringbuffer.o \
 
