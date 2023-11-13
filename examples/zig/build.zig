@@ -67,26 +67,29 @@ pub fn build(b: *std.Build) void {
     const libvmm_src = libvmm_path ++ "/src/";
     // Right now we only support AArch64 so this is a safe assumption.
     const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
-    libvmm.addCSourceFiles(&.{
-        libvmm_src ++ "guest.c",
-        libvmm_src ++ "util/util.c",
-        libvmm_src ++ "util/printf.c",
-        libvmm_src_arch ++ "vgic/vgic.c",
-        libvmm_src_arch ++ "vgic/vgic_v2.c",
-        libvmm_src_arch ++ "fault.c",
-        libvmm_src_arch ++ "psci.c",
-        libvmm_src_arch ++ "smc.c",
-        libvmm_src_arch ++ "virq.c",
-        libvmm_src_arch ++ "linux.c",
-        libvmm_src_arch ++ "tcb.c",
-        libvmm_src_arch ++ "vcpu.c",
-    }, &.{
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-function",
-        "-mstrict-align",
-        "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
-        // "-fno-sanitize=undefined",
+    libvmm.addCSourceFiles(.{
+        .files = &.{
+            libvmm_src ++ "guest.c",
+            libvmm_src ++ "util/util.c",
+            libvmm_src ++ "util/printf.c",
+            libvmm_src_arch ++ "vgic/vgic.c",
+            libvmm_src_arch ++ "vgic/vgic_v2.c",
+            libvmm_src_arch ++ "fault.c",
+            libvmm_src_arch ++ "psci.c",
+            libvmm_src_arch ++ "smc.c",
+            libvmm_src_arch ++ "virq.c",
+            libvmm_src_arch ++ "linux.c",
+            libvmm_src_arch ++ "tcb.c",
+            libvmm_src_arch ++ "vcpu.c",
+        },
+        .flags = &.{
+            "-Wall",
+            "-Werror",
+            "-Wno-unused-function",
+            "-mstrict-align",
+            "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
+            // "-fno-sanitize=undefined",
+        }
     });
 
     libvmm.addIncludePath(.{ .path = libvmm_src });
