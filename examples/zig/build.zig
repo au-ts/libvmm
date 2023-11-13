@@ -20,7 +20,6 @@ const example_target = std.zig.CrossTarget{
 const ConfigOptions = enum {
     debug,
     release,
-    benchmark
 };
 
 pub fn build(b: *std.Build) void {
@@ -35,18 +34,17 @@ pub fn build(b: *std.Build) void {
     }
     const microkit_sdk = microkit_sdk_arg.?;
 
-    // @ivanv sort out
+    // Hard-code the board to QEMU ARM virt since it's the only one the example intends to support
     const microkit_board = "qemu_arm_virt";
-    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for")
-                             orelse ConfigOptions.debug;
+    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.debug;
     const microkit_config = @tagName(microkit_config_option);
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const microkit_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
     const microkit_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
-    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ sdk_board_dir });
-    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ sdk_board_dir });
-    const sdk_board_include_dir = fmtPrint("{s}/include", .{ sdk_board_dir });
+    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const sdk_board_include_dir = fmtPrint("{s}/include", .{ microkit_board_dir });
 
     const zig_libmicrokit = b.addObject(.{
         .name = "zig_libmicrokit",
@@ -111,6 +109,19 @@ pub fn build(b: *std.Build) void {
     // Zig not to strip symbols from the binary.
     exe.strip = false;
 
+    // For actually compiling the DTS into a DTB
+    const dts_path = "images/linux.dts";
+    const dtc_cmd = b.addSystemCommand(&[_][]const u8{
+        "dtc", "-q", "-I", "dts", "-O", "dtb", dts_path
+    });
+    const dtb = dtc_cmd.captureStdOut();
+    // When we embed these artifacts into our VMM code, we use @embedFile provided by
+    // the Zig compiler. However, we can't just include any path outside of the 'src/'
+    // directory and so we add each file as a "module".
+    exe.addAnonymousModule("linux.dtb", .{ .source_file = dtb });
+    exe.addAnonymousModule("linux", .{ .source_file = .{ .path = "images/linux" } });
+    exe.addAnonymousModule("rootfs.cpio.gz", .{ .source_file = .{ .path = "images/rootfs.cpio.gz" } });
+
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
     exe.addIncludePath(.{ .path = "../../src/" });
@@ -121,7 +132,6 @@ pub fn build(b: *std.Build) void {
     exe.addObjectFile(.{ .path = libmicrokit });
     exe.linkLibrary(libvmm);
     exe.addObject(zig_libmicrokit);
-    // exe.linkLibrary(libsel4);
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
 
@@ -151,8 +161,7 @@ pub fn build(b: *std.Build) void {
     microkit_step.dependOn(&microkit_tool_cmd.step);
     b.default_step = microkit_step;
 
-    // This is setting up a `qemu` command for running the system via QEMU,
-    // which we only want to do when we have a board that we can actually simulate.
+    // This is setting up a `qemu` command for running the system via QEMU.
     const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     const qemu_cmd = b.addSystemCommand(&[_][]const u8{
         "qemu-system-aarch64",

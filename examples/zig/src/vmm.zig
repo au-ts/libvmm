@@ -21,16 +21,15 @@ const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
 const GUEST_RAM_SIZE: usize = 0x10000000;
 
-const guest_image_path = "images/";
 // Data for the guest's kernel image.
 const guest_kernel_image = blk: {
-    const arr align(@alignOf(c.linux_image_header)) = @embedFile(guest_image_path ++ "linux").*;
+    const arr align(@alignOf(c.linux_image_header)) = @embedFile("linux").*;
     break :blk &arr;
 };
 // Data for the device tree to be passed to the kernel.
-const guest_dtb_image = @embedFile(guest_image_path ++ "linux.dtb");
+const guest_dtb_image = @embedFile("linux.dtb");
 // Data for the initial RAM disk to be passed to the kernel.
-const guest_initrd_image = @embedFile(guest_image_path ++ "rootfs.cpio.gz");
+const guest_initrd_image = @embedFile("rootfs.cpio.gz");
 
 const LinuxKernelImage = extern struct {
     header: c.linux_image_header,
