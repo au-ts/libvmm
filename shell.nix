@@ -1,12 +1,13 @@
 let
     rust_overlay = import (builtins.fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz");
+    zig = import (builtins.fetchTarball "https://github.com/mitchellh/zig-overlay/archive/master.tar.gz") {};
     pkgs = import <nixpkgs> { overlays = [ rust_overlay ]; };
     rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
     llvm = pkgs.llvmPackages_11;
 in
   pkgs.mkShell {
     buildInputs = with pkgs.buildPackages; [
-        zig_0_11
+        zig.master
         rust
         qemu
         gnumake
