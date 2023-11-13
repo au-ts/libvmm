@@ -67,8 +67,7 @@ pub fn build(b: *std.Build) void {
     }
     const microkit_sdk = microkit_sdk_arg.?;
 
-    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for")
-                                 orelse ConfigOptions.debug;
+    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.debug;
     const microkit_config = @tagName(microkit_config_option);
 
     // Get the Microkit SDK board we want to target
@@ -83,11 +82,11 @@ pub fn build(b: *std.Build) void {
 
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const sdk_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
-    const sdk_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
-    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ sdk_board_dir });
-    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ sdk_board_dir });
-    const sdk_board_include_dir = fmtPrint("{s}/include", .{ sdk_board_dir });
+    const microkit_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const microkit_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
+    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const sdk_board_include_dir = fmtPrint("{s}/include", .{ microkit_board_dir });
 
     const libvmm = b.addStaticLibrary(.{
         .name = "vmm",
@@ -198,7 +197,7 @@ pub fn build(b: *std.Build) void {
     const system_description_path = fmtPrint("board/{s}/simple.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
-       sdk_tool,
+       microkit_tool,
        system_description_path,
        "--search-path",
        b.getInstallPath(.bin, ""),
