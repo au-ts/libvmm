@@ -40,11 +40,6 @@ const guest_dtb_image = @embedFile("linux.dtb");
 // Data for the initial RAM disk to be passed to the kernel.
 const guest_initrd_image = @embedFile("rootfs.cpio.gz");
 
-const LinuxKernelImage = extern struct {
-    header: c.linux_image_header,
-    bytes: *u8
-};
-
 // In Zig the standard library comes with printf-like functionality with the
 // ability to provide your own function to ouput the characters. This is
 // extremely useful for us! Without changing the standard library or bringing
