@@ -21,7 +21,16 @@ const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
 const GUEST_RAM_SIZE: usize = 0x10000000;
 
-// Data for the guest's kernel image.
+// Below we make use of Zig's '@embedFile' builtin functions to easily include
+// the arficats/images that the VMM needs. You will notice these aren't based
+// on a relative or absolute path, this is because the build script enables us
+// to find the files just based on the name by adding each one as a 'module'.
+
+// Data for the guest's kernel image. This may look a bit complicated but
+// what it's doing is making sure that the embedded file (which is just an array
+// of bytes) is aligned to the alignment of the Linux image header in order to
+// avoid UB when we cast the array of bytes into a struct for the Linux image
+// hader.
 const guest_kernel_image = blk: {
     const arr align(@alignOf(c.linux_image_header)) = @embedFile("linux").*;
     break :blk &arr;
