@@ -34,8 +34,11 @@ system running the whole system.
 For educational purposes, you can also build and run this example using the
 [Zig](https://ziglang.org/) build system.
 
-You will first need Zig version 0.11.x (e.g 0.11.0 or 0.11.1) which can be
-downloaded from [here](https://ziglang.org/download/).
+At the moment, Zig still under heavy development and hence this example depends
+on the 'master' version of Zig for now. This example has been built using
+`0.12.0-dev.1533+b2ed2c4d4`, so anything equal to or above that version should work.
+
+You can download Zig [here](https://ziglang.org/download/).
 
 ```sh
 zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
