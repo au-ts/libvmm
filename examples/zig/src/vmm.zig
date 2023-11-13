@@ -55,7 +55,9 @@ const log = struct {
     const debug_uart = Writer { .context = 0 };
 
     fn debug_uart_put_str(_: u32, str: []const u8) !usize {
-        microkit.microkit_dbg_puts(@ptrCast(str));
+        for (str) |ch| {
+            microkit.microkit_dbg_putc(ch);
+        }
         return str.len;
     }
 
@@ -78,7 +80,7 @@ fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.C) void {
 
 export fn init() callconv(.C) void {
     // Initialise the VMM, the VCPU(s), and start the guest
-    log.info("starting \"{s}\"\n", .{ microkit.microkit_name });
+    log.info("starting \"{s}\"", .{ microkit.microkit_name });
     // Place all the binaries in the right locations before starting the guest
     const kernel_pc = c.linux_setup_images(
                 GUEST_RAM_VADDR,
