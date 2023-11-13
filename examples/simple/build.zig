@@ -140,10 +140,10 @@ pub fn build(b: *std.Build) void {
 
     // For actually compiling the DTS into a DTB
     const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
-    const dtb_image_path = "linux.dtb";
-    const dtc_command = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-I", "dts", "-O", "dtb", dts_path, "-o", dtb_image_path
+    const dtc_cmd = b.addSystemCommand(&[_][]const u8{
+        "dtc", "-q", "-I", "dts", "-O", "dtb", dts_path
     });
+    const dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -173,14 +173,14 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
-    guest_images.step.dependOn(&dtc_command.step);
+    guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
 
     const linux_image_path = fmtPrint("board/{s}/linux", .{ microkit_board });
     const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
 
     const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ microkit_board });
     const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
-    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path });
+    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
     guest_images.addCSourceFiles(.{
         .files = &.{ libvmm_tools ++ "package_guest_images.S" },
         .flags = &.{
