@@ -100,25 +100,28 @@ pub fn build(b: *std.Build) void {
     const libvmm_src = libvmm_path ++ "/src/";
     // Right now we only support AArch64 so this is a safe assumption.
     const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
-    libvmm.addCSourceFiles(&.{
-        libvmm_src ++ "guest.c",
-        libvmm_src ++ "util/util.c",
-        libvmm_src ++ "util/printf.c",
-        libvmm_src_arch ++ "vgic/vgic.c",
-        libvmm_src_arch ++ "vgic/vgic_v2.c",
-        libvmm_src_arch ++ "fault.c",
-        libvmm_src_arch ++ "psci.c",
-        libvmm_src_arch ++ "smc.c",
-        libvmm_src_arch ++ "virq.c",
-        libvmm_src_arch ++ "linux.c",
-        libvmm_src_arch ++ "tcb.c",
-        libvmm_src_arch ++ "vcpu.c",
-    }, &.{
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-function",
-        "-mstrict-align",
-        "-DBOARD_qemu_arm_virt",
+    libvmm.addCSourceFiles(.{
+        .files = &.{
+            libvmm_src ++ "guest.c",
+            libvmm_src ++ "util/util.c",
+            libvmm_src ++ "util/printf.c",
+            libvmm_src_arch ++ "vgic/vgic.c",
+            libvmm_src_arch ++ "vgic/vgic_v2.c",
+            libvmm_src_arch ++ "fault.c",
+            libvmm_src_arch ++ "psci.c",
+            libvmm_src_arch ++ "smc.c",
+            libvmm_src_arch ++ "virq.c",
+            libvmm_src_arch ++ "linux.c",
+            libvmm_src_arch ++ "tcb.c",
+            libvmm_src_arch ++ "vcpu.c",
+        },
+        .flags = &.{
+            "-Wall",
+            "-Werror",
+            "-Wno-unused-function",
+            "-mstrict-align",
+            "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
+        }
     });
 
     libvmm.addIncludePath(.{ .path = libvmm_src });
@@ -144,7 +147,6 @@ pub fn build(b: *std.Build) void {
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
-    // The VMM code will include 
     exe.addIncludePath(.{ .path = libvmm_src });
     exe.addIncludePath(.{ .path = libvmm_src_arch });
     // Add the static library that provides each protection domain's entry
@@ -154,12 +156,15 @@ pub fn build(b: *std.Build) void {
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
 
-    exe.addCSourceFiles(&.{"vmm.c"}, &.{
-        "-Wall",
-        "-Werror",
-        "-Wno-unused-function",
-        "-mstrict-align",
-        "-DBOARD_qemu_arm_virt", // @ivanv: shouldn't be needed as the library should not depend on the board
+    exe.addCSourceFiles(.{
+        .files = &.{"vmm.c"},
+        .flags = &.{
+            "-Wall",
+            "-Werror",
+            "-Wno-unused-function",
+            "-mstrict-align",
+            "-DBOARD_qemu_arm_virt", // @ivanv: shouldn't be needed as the library should not depend on the board
+        }
     });
 
     const guest_images = b.addObject(.{
@@ -176,12 +181,15 @@ pub fn build(b: *std.Build) void {
     const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ microkit_board });
     const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
     const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ dtb_image_path });
-    guest_images.addCSourceFiles(&.{ libvmm_tools ++ "package_guest_images.S" }, &.{
-        kernel_image_arg,
-        dtb_image_arg,
-        initrd_image_arg,
-        "-x",
-        "assembler-with-cpp",
+    guest_images.addCSourceFiles(.{
+        .files = &.{ libvmm_tools ++ "package_guest_images.S" },
+        .flags = &.{
+            kernel_image_arg,
+            dtb_image_arg,
+            initrd_image_arg,
+            "-x",
+            "assembler-with-cpp",
+        }
     });
 
     exe.addObject(guest_images);
