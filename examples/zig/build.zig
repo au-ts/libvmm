@@ -88,7 +88,7 @@ pub fn build(b: *std.Build) void {
             "-Wno-unused-function",
             "-mstrict-align",
             "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
-            // "-fno-sanitize=undefined",
+            "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
         }
     });
 
