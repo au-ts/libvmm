@@ -44,6 +44,14 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+/* Virtio Console sDDF */
+#define SERIAL_MUX_TX_CH 1
+#define SERIAL_MUX_RX_CH 2
+
+#define VIRTIO_CONSOLE_IRQ (74)
+#define VIRTIO_CONSOLE_BASE (0x130000)
+#define VIRTIO_CONSOLE_SIZE (0x1000)
+
 uintptr_t serial_rx_free;
 uintptr_t serial_rx_used;
 uintptr_t serial_tx_free;
@@ -55,32 +63,22 @@ uintptr_t serial_tx_data;
 ring_handle_t serial_rx_ring;
 ring_handle_t serial_tx_ring;
 
-#define SERIAL_MUX_TX_CH 1
-#define SERIAL_MUX_RX_CH 2
+static ring_handle_t *serial_rings[SDDF_NUM_RINGS];
 
-#define VIRTIO_CONSOLE_IRQ (74)
-#define VIRTIO_CONSOLE_BASE (0x130000)
-#define VIRTIO_CONSOLE_SIZE (0x1000)
+static struct virtio_device virtio_console;
 
-uintptr_t blk_rx_free;
-uintptr_t blk_rx_used;
-uintptr_t blk_tx_free;
-uintptr_t blk_tx_used;
+/* Virtio Block sDDF */
+uintptr_t blk_cmd_ring;
+uintptr_t blk_resp_ring;
+uintptr_t blk_data_ring;
+blk_ring_handle_t blk_ring;
 
-uintptr_t blk_rx_data;
-uintptr_t blk_tx_data;
-
-ring_handle_t blk_rx_ring;
-ring_handle_t blk_tx_ring;
-
-#define BLOCK_TX_CH 3
-#define BLOCK_RX_CH 4
+#define BLK_CH 3
 
 #define VIRTIO_BLK_IRQ (75)
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
-static struct virtio_device virtio_console;
 static struct virtio_device virtio_blk;
 
 void init(void) {
@@ -129,39 +127,29 @@ void init(void) {
             microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
         }
     }
+    serial_rings[SDDF_RX_RING] = &serial_rx_ring;
+    serial_rings[SDDF_TX_RING] = &serial_tx_ring;
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
     assert(!ring_plugged(serial_tx_ring.free_ring));
     assert(!ring_plugged(serial_tx_ring.used_ring));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      &serial_rx_ring, &serial_tx_ring, SERIAL_MUX_TX_CH);
+                                      (void **)serial_rings, SERIAL_MUX_TX_CH);
     assert(success);
     
     /* Initialise our sDDF ring buffers for the block device */
-    ring_init(&blk_rx_ring, (ring_buffer_t *)blk_rx_free, (ring_buffer_t *)blk_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(&blk_rx_ring, blk_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    ring_init(&blk_tx_ring, (ring_buffer_t *)blk_tx_free, (ring_buffer_t *)blk_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&blk_tx_ring, blk_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        assert(ret == 0);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!ring_plugged(blk_tx_ring.free_ring));
-    assert(!ring_plugged(blk_tx_ring.used_ring));
+    blk_ring_init(&blk_ring,
+                (blk_cmd_ring_buffer_t *)blk_cmd_ring,
+                (blk_resp_ring_buffer_t *)blk_resp_ring,
+                (blk_data_ring_buffer_t *)blk_data_ring,
+                true,
+                SDDF_BLK_NUM_CMD_BUFFERS, 
+                SDDF_BLK_NUM_RESP_BUFFERS,
+                SDDF_BLK_NUM_DATA_BUFFERS);
+    assert(!blk_cmd_ring_plugged(&blk_ring));
     /* Initialise virtIO block device */
-    success = virtio_mmio_device_init(&virtio_blk, BLOCK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      NULL, NULL, BLOCK_TX_CH);
+    success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
+                                      (void **)((blk_ring_handle_t *)&blk_ring), BLK_CH);
     assert(success);
 
     /* Finally start the guest */
@@ -176,8 +164,8 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
-        case BLOCK_RX_CH: {
-            // virtio_blk_handle_rx(&virtio_blk);
+        case BLK_CH: {
+            // virtio_blk_handle_resp(&virtio_blk);
             break;
         }
         default:

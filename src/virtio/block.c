@@ -4,6 +4,7 @@
 #include "virtio/block.h"
 #include "util/util.h"
 #include "virq.h"
+#include "block/libblocksharedringbuffer/include/blk_shared_ringbuffer.h"
 
 /* Uncomment this to enable debug logging */
 #define DEBUG_BLOCK
@@ -157,9 +158,6 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev  )
         // Respond OK for this command to the driver
         // by writing VIRTIO_BLK_S_OK to the final descriptor address
         *((uint8_t *)virtq->desc[curr_desc_head].addr) = VIRTIO_BLK_S_OK;
-
-
-
         
 
         // set the reason of the irq
@@ -180,7 +178,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev  )
     return 1;
 }
 
-void virtio_blk_handle_rx(struct virtio_device *dev) {
+void virtio_blk_handle_resp(struct virtio_device *dev) {
 
 }
 
@@ -202,15 +200,17 @@ static void virtio_blk_config_init()
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_mux_tx_ch) {
+                    void **sddf_rings, size_t sddf_ch) {
+    // @ericc: Only need 1 ring for blk which is passed to sddf_rx_ring, sddf_tx_ring is NULL.
+    // This suggests needing to refactor the virtio_device struct.
     dev->data.DeviceID = DEVICE_ID_VIRTIO_BLOCK;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
-    dev->sddf_rx_ring = sddf_rx_ring;
-    dev->sddf_tx_ring = sddf_tx_ring;
-    dev->sddf_mux_tx_ch = sddf_mux_tx_ch;
+    dev->sddf_rings = sddf_rings;
+    dev->sddf_ch = sddf_ch;
+    
     virtio_blk_config_init();
 }
