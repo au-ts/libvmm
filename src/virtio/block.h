@@ -136,5 +136,5 @@ struct virtio_blk_outhdr {
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_tx_mux_ch);
-void virtio_blk_handle_rx(struct virtio_device *dev);
+                    void **sddf_rings, size_t sddf_ch);
+void virtio_blk_handle_resp(struct virtio_device *dev);

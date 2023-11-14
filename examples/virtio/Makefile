@@ -88,16 +88,19 @@ CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
 CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
 SDDF := sddf
+
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
 
+SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
+
 # ELFS := blk_driver_vmm.elf client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 ELFS := client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
 # BLK_DRIVER_VM_USERLEVEL_ELFS := cmdq_test.elf
-CLIENT_VM_USERLEVEL_ELFS := virtio_blk_test.elf
+CLIENT_VM_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -124,6 +127,7 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					shared_ringbuffer.o \
+					blk_shared_ringbuffer.o \
 
 # BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 # 						blk_driver_images.o \
@@ -150,6 +154,7 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_RINGBUFFER)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
+		  -I$(SDDF_BLOCK_RINGBUFFER)/include \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -185,14 +190,14 @@ directories:
 # 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 # 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 # 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
-# 	cp $< $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
+# 	cp $^ $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 # 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 	
 client_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
 	rm -r $(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $< $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
+	cp $^ $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(CLIENT_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED))
 
 # $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
@@ -250,6 +255,9 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
