@@ -126,16 +126,16 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					shared_ringbuffer.o \
-					blk_shared_ringbuffer.o \
+					sddf_serial_shared_ringbuffer.o \
+					sddf_blk_shared_ringbuffer.o \
 
 # BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 # 						blk_driver_images.o \
 # 						blk_driver_vmm.o \
 
-SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o
-SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o shared_ringbuffer.o
+SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
+SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
+SERIAL_DRIVER_OBJS := uart.o sddf_serial_shared_ringbuffer.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.

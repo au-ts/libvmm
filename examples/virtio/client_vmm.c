@@ -60,24 +60,24 @@ uintptr_t serial_tx_used;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-ring_handle_t serial_rx_ring;
-ring_handle_t serial_tx_ring;
+sddf_serial_ring_handle_t serial_rx_ring_handle;
+sddf_serial_ring_handle_t serial_tx_ring_handle;
 
-static ring_handle_t *serial_rings[SDDF_NUM_RINGS];
+static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
 
 /* Virtio Block sDDF */
-uintptr_t blk_cmd_ring;
-uintptr_t blk_resp_ring;
-uintptr_t blk_data_ring;
-blk_ring_handle_t blk_ring;
-
 #define BLK_CH 3
 
 #define VIRTIO_BLK_IRQ (75)
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
+
+uintptr_t blk_cmd_ring;
+uintptr_t blk_resp_ring;
+uintptr_t blk_data_ring;
+sddf_blk_ring_handle_t blk_ring_handle;
 
 static struct virtio_device virtio_blk;
 
@@ -109,47 +109,57 @@ void init(void) {
         return;
     }
     /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+    sddf_serial_ring_init(&serial_rx_ring_handle,
+            (sddf_serial_ring_buffer_t *)serial_rx_free,
+            (sddf_serial_ring_buffer_t *)serial_rx_used,
+            true,
+            SDDF_SERIAL_NUM_BUFFERS,
+            SDDF_SERIAL_NUM_BUFFERS);
+    for (int i = 0; i < SDDF_SERIAL_NUM_BUFFERS - 1; i++) {
+        int ret = sddf_serial_enqueue_free(&serial_rx_ring_handle, serial_rx_data + (i * SDDF_SERIAL_BUFFER_SIZE), SDDF_SERIAL_BUFFER_SIZE, NULL);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    ring_init(&serial_tx_ring, (ring_buffer_t *)serial_tx_free, (ring_buffer_t *)serial_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+    sddf_serial_ring_init(&serial_tx_ring_handle,
+            (sddf_serial_ring_buffer_t *)serial_tx_free,
+            (sddf_serial_ring_buffer_t *)serial_tx_used,
+            true,
+            SDDF_SERIAL_NUM_BUFFERS,
+            SDDF_SERIAL_NUM_BUFFERS);
+    for (int i = 0; i < SDDF_SERIAL_NUM_BUFFERS - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        int ret = sddf_serial_enqueue_free(&serial_tx_ring_handle, serial_tx_data + ((i + SDDF_SERIAL_NUM_BUFFERS) * SDDF_SERIAL_BUFFER_SIZE), SDDF_SERIAL_BUFFER_SIZE, NULL);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_rings[SDDF_RX_RING] = &serial_rx_ring;
-    serial_rings[SDDF_TX_RING] = &serial_tx_ring;
+    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!ring_plugged(serial_tx_ring.free_ring));
-    assert(!ring_plugged(serial_tx_ring.used_ring));
+    assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.free_ring));
+    assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.used_ring));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      (void **)serial_rings, SERIAL_MUX_TX_CH);
+                                      (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
     
     /* Initialise our sDDF ring buffers for the block device */
-    blk_ring_init(&blk_ring,
-                (blk_cmd_ring_buffer_t *)blk_cmd_ring,
-                (blk_resp_ring_buffer_t *)blk_resp_ring,
-                (blk_data_ring_buffer_t *)blk_data_ring,
+    sddf_blk_ring_init(&blk_ring_handle,
+                (sddf_blk_cmd_ring_buffer_t *)blk_cmd_ring,
+                (sddf_blk_resp_ring_buffer_t *)blk_resp_ring,
+                (sddf_blk_data_ring_buffer_t *)blk_data_ring,
                 true,
                 SDDF_BLK_NUM_CMD_BUFFERS, 
                 SDDF_BLK_NUM_RESP_BUFFERS,
                 SDDF_BLK_NUM_DATA_BUFFERS);
-    assert(!blk_cmd_ring_plugged(&blk_ring));
+    assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      (void **)((blk_ring_handle_t *)&blk_ring), BLK_CH);
+                                      (void **)((sddf_blk_ring_handle_t *)&blk_ring_handle), BLK_CH);
     assert(success);
 
     /* Finally start the guest */
