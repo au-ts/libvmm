@@ -4,7 +4,7 @@
 #include "virtio/block.h"
 #include "util/util.h"
 #include "virq.h"
-#include "block/libblocksharedringbuffer/include/blk_shared_ringbuffer.h"
+#include "block/libblocksharedringbuffer/include/sddf_blk_shared_ringbuffer.h"
 
 /* Uncomment this to enable debug logging */
 #define DEBUG_BLOCK
@@ -200,16 +200,14 @@ static void virtio_blk_config_init()
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void **sddf_rings, size_t sddf_ch) {
-    // @ericc: Only need 1 ring for blk which is passed to sddf_rx_ring, sddf_tx_ring is NULL.
-    // This suggests needing to refactor the virtio_device struct.
+                    void **sddf_ring_handles, size_t sddf_ch) {
     dev->data.DeviceID = DEVICE_ID_VIRTIO_BLOCK;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
-    dev->sddf_rings = sddf_rings;
+    dev->sddf_ring_handles = sddf_ring_handles;
     dev->sddf_ch = sddf_ch;
     
     virtio_blk_config_init();

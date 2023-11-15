@@ -38,9 +38,9 @@
 #include <stdint.h>
 #include "virtio/mmio.h"
 
-#define SDDF_NUM_RINGS 2
-#define SDDF_RX_RING 0
-#define SDDF_TX_RING 1
+#define SDDF_SERIAL_NUM_RING_HANDLES 2
+#define SDDF_SERIAL_RX_RING 0
+#define SDDF_SERIAL_TX_RING 1
 
 #define RX_QUEUE 0
 #define TX_QUEUE 1
@@ -95,5 +95,5 @@ struct virtio_console_control {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
-                         void **sddf_rings, size_t sddf_ch);
+                         void **sddf_ring_handles, size_t sddf_ch);
 int virtio_console_handle_rx(struct virtio_device *dev);

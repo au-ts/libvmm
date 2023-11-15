@@ -113,14 +113,6 @@ void init(void) {
     /* Register UIO irq */
     virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
 
-    // Silence unused sDDF variable warnings, lets just print them out for now
-    // printf("cmdq_avail: 0x%lx\n", cmdq_avail);
-    // printf("cmdq_used: 0x%lx\n", cmdq_used);
-    // printf("cmdq_shm: 0x%lx\n", cmdq_shm);
-    // printf("resp_avail: 0x%lx\n", resp_avail);
-    // printf("resp_used: 0x%lx\n", resp_used);
-    // printf("resp_shm: 0x%lx\n", resp_shm);
-
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }

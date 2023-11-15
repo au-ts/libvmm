@@ -116,7 +116,7 @@ typedef struct virtio_device {
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
     /* Handlers for sDDF ring buffers */
-    void **sddf_rings;
+    void **sddf_ring_handles;
     /* Microkit channel to the sDDF TX multiplexor */
     // @ivanv: this is microkit specific so maybe should be a callback instead or something.
     // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
