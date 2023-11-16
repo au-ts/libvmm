@@ -25,8 +25,8 @@ static struct virtio_blk_config blk_config;
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
-    dev->vqs[VIRTIO_BLK_DEFAULTQ].ready = 0;
-    dev->vqs[VIRTIO_BLK_DEFAULTQ].last_idx = 0;
+    dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT].ready = 0;
+    dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT].last_idx = 0;
 }
 
 static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -99,16 +99,16 @@ static int virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t
     return 1;
 }
 
-static int virtio_blk_mmio_queue_notify(struct virtio_device *dev  )
+static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
-    virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_DEFAULTQ];
+    virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
     struct virtq *virtq = &vq->virtq;
 
     /* read the current guest index */
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
 
-    LOG_BLOCK("------------- Driver notified device -------------\n", microkit_name);
+    LOG_BLOCK("------------- Driver notified device -------------\n");
 
     for (; idx != guest_idx; idx++) {
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
@@ -116,32 +116,32 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev  )
         uint16_t curr_desc_head = desc_head;
 
         // Print out what the command type is
-        struct virtio_blk_outhdr *cmd = (void *)virtq->desc[curr_desc_head].addr;
-        LOG_BLOCK("----- Command type is 0x%x -----\n", microkit_name, cmd->type);
+        struct virtio_blk_outhdr *virtio_cmd = (void *)virtq->desc[curr_desc_head].addr;
+        LOG_BLOCK("----- Command type is 0x%x -----\n", virtio_cmd->type);
         
         // Parse different commands
-        switch (cmd->type) {
+        switch (virtio_cmd->type) {
             // header -> body -> reply
             case VIRTIO_BLK_T_IN: {
-                LOG_BLOCK("Command type is VIRTIO_BLK_T_IN\n", microkit_name);
-                LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", microkit_name, cmd->sector);
+                LOG_BLOCK("Command type is VIRTIO_BLK_T_IN\n");
+                LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", virtio_cmd->sector);
                 curr_desc_head = virtq->desc[curr_desc_head].next;
-                LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
+                LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // LOG_BLOCK("Data is %s\n", microkit_name, (char *)data);
+                // LOG_BLOCK("Data is %s\n", (char *)data);
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
-                LOG_BLOCK("Command type is VIRTIO_BLK_T_OUT\n", microkit_name);
-                LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", microkit_name, cmd->sector);
+                LOG_BLOCK("Command type is VIRTIO_BLK_T_OUT\n");
+                LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", virtio_cmd->sector);
                 curr_desc_head = virtq->desc[curr_desc_head].next;
-                LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
+                LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // LOG_BLOCK("Data is %s\n", microkit_name, (char *)data);
+                // LOG_BLOCK("Data is %s\n", (char *)data);
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
-                LOG_BLOCK("Command type is VIRTIO_BLK_T_FLUSH\n", microkit_name);
+                LOG_BLOCK("Command type is VIRTIO_BLK_T_FLUSH\n");
                 break;
             }
         }
@@ -150,10 +150,10 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev  )
         // to indicate that it is the last descriptor in the chain. That descriptor does not seem to serve any other purpose.
         // This loop brings us to the last descriptor in the chain.
         while (virtq->desc[curr_desc_head].flags & VIRTQ_DESC_F_NEXT) {
-            // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
+            // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
             curr_desc_head = virtq->desc[curr_desc_head].next;
         }
-        // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", microkit_name, curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
+        // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
         // Respond OK for this command to the driver
         // by writing VIRTIO_BLK_S_OK to the final descriptor address

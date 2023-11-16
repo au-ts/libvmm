@@ -35,8 +35,11 @@
 #include <stdint.h>
 #include "virtio/mmio.h"
 
+#define SDDF_BLK_NUM_RING_HANDLES 1
+#define SDDF_BLK_DEFAULT_RING 0
+
 #define VIRTIO_BLK_NUM_VIRTQ 1
-#define VIRTIO_BLK_DEFAULTQ 0
+#define VIRTIO_BLK_VIRTQ_DEFAULT 0
 
 #define VIRTIO_BLK_CAPACITY             0x100000
 
