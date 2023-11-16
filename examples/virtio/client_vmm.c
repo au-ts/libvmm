@@ -76,8 +76,12 @@ static struct virtio_device virtio_console;
 
 uintptr_t blk_cmd_ring;
 uintptr_t blk_resp_ring;
-uintptr_t blk_data_ring;
+uintptr_t blk_desc_handle;
+uintptr_t blk_data;
+uintptr_t blk_freelist_handle;
 sddf_blk_ring_handle_t blk_ring_handle;
+
+static sddf_blk_ring_handle_t *blk_ring_handles[SDDF_BLK_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_blk;
 
@@ -102,12 +106,14 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+    
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init(GUEST_VCPU_ID);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+    
     /* Initialise our sDDF ring buffers for the serial device */
     sddf_serial_ring_init(&serial_rx_ring_handle,
             (sddf_serial_ring_buffer_t *)serial_rx_free,
@@ -151,15 +157,22 @@ void init(void) {
     sddf_blk_ring_init(&blk_ring_handle,
                 (sddf_blk_cmd_ring_buffer_t *)blk_cmd_ring,
                 (sddf_blk_resp_ring_buffer_t *)blk_resp_ring,
-                (sddf_blk_data_ring_buffer_t *)blk_data_ring,
+                (sddf_blk_desc_handle_t *)blk_desc_handle,
+                (sddf_blk_freelist_handle_t *)blk_freelist_handle,
                 true,
                 SDDF_BLK_NUM_CMD_BUFFERS, 
                 SDDF_BLK_NUM_RESP_BUFFERS,
                 SDDF_BLK_NUM_DATA_BUFFERS);
+    for (int i = 0; i < SDDF_BLK_NUM_DATA_BUFFERS; i++) {
+        blk_ring_handle.desc_handle->descs[i].addr = blk_data + (i * SDDF_BLK_DATA_BUFFER_SIZE);
+        // @ericc: Should probably do some checks here, but not sure how
+    }
+    blk_ring_handles[SDDF_BLK_DEFAULT_RING] = &blk_ring_handle;
+    /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
     assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      (void **)((sddf_blk_ring_handle_t *)&blk_ring_handle), BLK_CH);
+                                      (void **)blk_ring_handles, BLK_CH);
     assert(success);
 
     /* Finally start the guest */
