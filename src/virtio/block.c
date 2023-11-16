@@ -104,6 +104,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
     struct virtq *virtq = &vq->virtq;
 
+    sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
+    sddf_blk_desc_handle_t *sddf_desc_handle = sddf_ring_handle->desc_handle;
+
     /* read the current guest index */
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
@@ -138,6 +141,70 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 // uintptr_t data = virtq->desc[curr_desc_head].addr;
                 // LOG_BLOCK("Data is %s\n", (char *)data);
+                uint32_t sddf_desc_head_idx;
+                uint32_t count = 3;
+                LOG_BLOCK("Get sDDF descriptors\n");
+                int success = sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, count);
+                if (success != 0) {
+                    LOG_BLOCK_ERR("Failed to get descriptor from sddf data region\n");
+                    return 0;
+                }
+                uint32_t curr_desc_idx = sddf_desc_head_idx;
+                sddf_blk_desc_t *curr_desc = &sddf_desc_handle->descs[sddf_desc_head_idx];
+                for (int i = 0; i<count; i++) {
+                    LOG_BLOCK("sDDF descriptor index: %d, hasNext: %d, next: %d\n", curr_desc_idx, curr_desc->has_next, curr_desc->next);
+                    *(char *)curr_desc->addr = 'P';
+                    curr_desc_idx = curr_desc->next;
+                    curr_desc = &sddf_desc_handle->descs[curr_desc->next];
+                }
+
+                success = sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_WRITE, sddf_desc_head_idx, 0, count, 0);
+                if (success != 0) {
+                    LOG_BLOCK_ERR("Failed to enqueue command to sddf command region\n");
+                    return 0;
+                }
+                LOG_BLOCK("sDDF command enqueued\n");
+
+                sddf_blk_command_code_t ret_code;
+                uint32_t ret_desc;
+                uint32_t ret_sector;
+                uint16_t ret_count;
+                uint32_t ret_id;
+                success = sddf_blk_dequeue_cmd(sddf_ring_handle, &ret_code, &ret_desc, &ret_sector, &ret_count, &ret_id);
+                LOG_BLOCK("sDDF command dequeued\n");
+                LOG_BLOCK("sDDF command code: %d, sector: %d, count: %d, id: %d\n", ret_code, ret_sector, ret_count, ret_id);
+                curr_desc_idx = ret_desc;
+                curr_desc = &sddf_desc_handle->descs[ret_desc];
+                for (int i = 0; i<count; i++) {
+                    LOG_BLOCK("sDDF descriptor index: %d, hasNext: %d, next: %d\n", ret_desc, curr_desc->has_next, curr_desc->next);
+                    LOG_BLOCK("sDDF descriptor data: %c\n", *(char *)curr_desc->addr);
+                    curr_desc_idx = curr_desc->next;
+                    curr_desc = &sddf_desc_handle->descs[curr_desc->next];
+                }
+
+                success = sddf_blk_enqueue_resp(sddf_ring_handle, SDDF_BLK_RESPONSE_OK, ret_desc, ret_count, 0);
+                if (success != 0) {
+                    LOG_BLOCK_ERR("Failed to enqueue response to sddf response region\n");
+                    return 0;
+                }
+                LOG_BLOCK("sDDF OK response enqueued\n");
+
+                sddf_blk_response_status_t ret_resp_status;
+                uint32_t ret_resp_desc;
+                uint16_t ret_resp_count;
+                uint32_t ret_resp_id;
+                success = sddf_blk_dequeue_resp(sddf_ring_handle, &ret_resp_status, &ret_resp_desc, &ret_resp_count, &ret_resp_id);
+                if (success != 0) {
+                    LOG_BLOCK_ERR("Failed to dequeue response from sddf response region\n");
+                    return 0;
+                }
+                LOG_BLOCK("sDDF response dequeued\n");
+                LOG_BLOCK("sDDF response status: %d, descriptor index head: %d, count: %d, id: %d\n", ret_resp_status, ret_resp_desc, ret_resp_count, ret_resp_id);
+                
+                LOG_BLOCK("sDDF okay, now freeing descriptors, we have freelist head: %d, tail: %d\n", sddf_ring_handle->freelist_handle->head, sddf_ring_handle->freelist_handle->tail);
+                sddf_blk_free_desc(sddf_ring_handle, ret_desc);
+                LOG_BLOCK("sDDF descriptors freed, we have freelist head: %d, tail: %d\n", sddf_ring_handle->freelist_handle->head, sddf_ring_handle->freelist_handle->tail);
+
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
