@@ -41,6 +41,8 @@
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_VIRTQ_DEFAULT 0
 
+#define VIRTIO_BLK_SECTOR_SIZE 512 // 0x200
+
 #define VIRTIO_BLK_CAPACITY             0x100000
 
 /* Feature bits */
