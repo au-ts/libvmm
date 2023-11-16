@@ -21,7 +21,11 @@
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
+// @ericc: Maybe move this into virtio.c, and store a pointer in virtio_device struct?
 static struct virtio_blk_config blk_config;
+
+/* Mapping for command ID and its virtio descriptor */
+static uint16_t virtio_blk_sent_cmds[SDDF_BLK_NUM_DATA_BUFFERS];
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -104,6 +108,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
     struct virtq *virtq = &vq->virtq;
 
+    sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
+    sddf_blk_desc_handle_t *sddf_desc_handle = sddf_ring_handle->desc_handle;
+
     /* read the current guest index */
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
@@ -127,8 +134,12 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", virtio_cmd->sector);
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
-                // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // LOG_BLOCK("Data is %s\n", (char *)data);
+
+                uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                uint32_t sddf_desc_head_idx;
+                sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_READ, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_desc_head_idx);
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
@@ -136,41 +147,28 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Sector (read/write offset) is %d (x512)\n", virtio_cmd->sector);
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
-                // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // LOG_BLOCK("Data is %s\n", (char *)data);
+                uintptr_t data = virtq->desc[curr_desc_head].addr;
+                
+                uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                uint32_t sddf_desc_head_idx;
+                sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                
+                uint32_t sddf_curr_desc_idx = sddf_desc_head_idx;
+                // Copy a sector of data from vring into sddf buffer
+                for (int i = 0; i < sddf_count; i++) {
+                    memcpy((void *)sddf_desc_handle->descs[sddf_curr_desc_idx].addr, (void *)(data + (i * SDDF_BLK_DATA_BUFFER_SIZE)), SDDF_BLK_DATA_BUFFER_SIZE);
+                    sddf_curr_desc_idx = sddf_desc_handle->descs[sddf_curr_desc_idx].next;
+                }
+                
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_WRITE, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_desc_head_idx);
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
                 LOG_BLOCK("Command type is VIRTIO_BLK_T_FLUSH\n");
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_FLUSH, 0, 0, 0, 0);
                 break;
             }
         }
-
-        // For descriptor chains with more than one descriptor, the last descriptor has the VIRTQ_DESC_F_NEXT flag set to 0
-        // to indicate that it is the last descriptor in the chain. That descriptor does not seem to serve any other purpose.
-        // This loop brings us to the last descriptor in the chain.
-        while (virtq->desc[curr_desc_head].flags & VIRTQ_DESC_F_NEXT) {
-            // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
-            curr_desc_head = virtq->desc[curr_desc_head].next;
-        }
-        // LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
-
-        // Respond OK for this command to the driver
-        // by writing VIRTIO_BLK_S_OK to the final descriptor address
-        *((uint8_t *)virtq->desc[curr_desc_head].addr) = VIRTIO_BLK_S_OK;
-        
-
-        // set the reason of the irq
-        dev->data.InterruptStatus = BIT_LOW(0);
-
-        struct virtq_used_elem used_elem = {desc_head, 0};
-        uint16_t guest_idx = virtq->used->idx;
-
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
-
-        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-        assert(success);
     }
 
     vq->last_idx = idx;
@@ -179,9 +177,71 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 }
 
 void virtio_blk_handle_resp(struct virtio_device *dev) {
+    sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
+    sddf_blk_desc_handle_t *sddf_desc_handle = sddf_ring_handle->desc_handle;
 
+    sddf_blk_response_status_t sddf_ret_status;
+    uint32_t sddf_ret_desc;
+    uint16_t sddf_ret_count;
+    uint32_t sddf_ret_id;
+    while (sddf_blk_dequeue_resp(sddf_ring_handle, &sddf_ret_status, &sddf_ret_desc, &sddf_ret_count, &sddf_ret_id) != -1) {
+        uint16_t virtio_desc = virtio_blk_sent_cmds[sddf_ret_id];
+        struct virtq *virtq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT].virtq;
+        
+        /* Error case, respond to virtio with error */
+        if (sddf_ret_status == SDDF_BLK_RESPONSE_ERROR) {
+            uint16_t curr_virtio_desc = virtio_desc;
+            for (;virtq->desc[curr_virtio_desc].flags & VIRTQ_DESC_F_NEXT; curr_virtio_desc = virtq->desc[curr_virtio_desc].next){}
+            *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_IOERR;
+            continue;
+        }
+        
+        struct virtio_blk_outhdr *virtio_cmd = (void *)virtq->desc[virtio_desc].addr;
+        uint16_t curr_virtio_desc = virtq->desc[virtio_desc].next;
+        switch (virtio_cmd->type) {
+            case VIRTIO_BLK_T_IN: {
+                uintptr_t data = virtq->desc[curr_virtio_desc].addr;
+
+                uint32_t sddf_curr_desc_idx = sddf_ret_desc;
+                // Copy a sector from sddf buffer into data
+                for (int i = 0; i < sddf_ret_count; i++) {
+                    memcpy((void * )(data + (i * SDDF_BLK_DATA_BUFFER_SIZE)), (void *)(sddf_desc_handle->descs[sddf_curr_desc_idx].addr), SDDF_BLK_DATA_BUFFER_SIZE);
+                    sddf_curr_desc_idx = sddf_desc_handle->descs[sddf_curr_desc_idx].next;   
+                }
+                
+                sddf_blk_free_desc(dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING], sddf_ret_desc);
+
+                curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
+                *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+                break;
+            }
+            case VIRTIO_BLK_T_OUT: {
+                sddf_blk_free_desc(dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING], sddf_ret_desc);
+                
+                curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
+                *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+                break;
+            }
+            case VIRTIO_BLK_T_FLUSH: {
+                curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
+                *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+                break;
+            }
+        }
+
+        struct virtq_used_elem used_elem = {virtio_desc, 0};
+        uint16_t guest_idx = virtq->used->idx;
+
+        virtq->used->ring[guest_idx % virtq->num] = used_elem;
+        virtq->used->idx++;
+    }
+
+    // set the reason of the irq: used buffer notification to virtio
+    dev->data.InterruptStatus = BIT_LOW(0);
+
+    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
+    assert(success);
 }
-
 
 static virtio_device_funs_t functions = {
     .device_reset = virtio_blk_mmio_reset,
