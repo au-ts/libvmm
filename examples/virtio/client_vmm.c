@@ -190,7 +190,7 @@ void notified(microkit_channel ch) {
             break;
         }
         case BLK_CH: {
-            // virtio_blk_handle_resp(&virtio_blk);
+            virtio_blk_handle_resp(&virtio_blk);
             break;
         }
         default:
