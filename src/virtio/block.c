@@ -25,7 +25,13 @@
 static struct virtio_blk_config blk_config;
 
 /* Mapping for command ID and its virtio descriptor */
-static uint16_t virtio_blk_sent_cmds[SDDF_BLK_NUM_DATA_BUFFERS];
+static struct virtio_blk_cmd_store {
+    uint16_t sent_cmds[SDDF_BLK_NUM_DATA_BUFFERS];
+    uint32_t freelist[SDDF_BLK_NUM_DATA_BUFFERS];
+    uint32_t head;
+    uint32_t tail;
+    uint32_t num_free;
+} cmd_store;
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -103,6 +109,58 @@ static int virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t
     return 1;
 }
 
+/* Set command response to error */
+static void virtio_blk_command_fail(struct virtio_device *dev, uint16_t desc)
+{
+    struct virtq *virtq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT].virtq;
+
+    uint16_t curr_virtio_desc = desc;
+    for (;virtq->desc[curr_virtio_desc].flags & VIRTQ_DESC_F_NEXT; curr_virtio_desc = virtq->desc[curr_virtio_desc].next){}
+    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_IOERR;
+
+    struct virtq_used_elem used_elem = {desc, 0};
+    uint16_t guest_idx = virtq->used->idx;
+
+    virtq->used->ring[guest_idx % virtq->num] = used_elem;
+    virtq->used->idx++;
+}
+
+static int virtio_blk_store_cmd(uint16_t desc, uint32_t *id)
+{
+    if (cmd_store.num_free == 0) {
+        return -1;
+    }
+
+    cmd_store.sent_cmds[cmd_store.head] = desc;
+    *id = cmd_store.head;
+
+    cmd_store.head = cmd_store.freelist[cmd_store.head];
+
+    cmd_store.num_free--;
+    
+    return 0;
+}
+
+static int virtio_blk_retrieve_cmd(uint32_t id, uint16_t *desc)
+{
+    assert(cmd_store.num_free < SDDF_BLK_NUM_DATA_BUFFERS);
+
+    if (cmd_store.num_free == 0) {
+        // Head points to stale index, so restore it
+        cmd_store.head = id;
+    }
+
+    *desc = cmd_store.sent_cmds[id];
+
+    cmd_store.freelist[cmd_store.tail] = id;
+    cmd_store.tail = id;
+
+    cmd_store.num_free++;
+
+    return 0;
+}
+
+
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
@@ -114,6 +172,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     /* read the current guest index */
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
+
+    int ret = 1;
 
     LOG_BLOCK("------------- Driver notified device -------------\n");
 
@@ -137,9 +197,28 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
                 uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
                 uint32_t sddf_desc_head_idx;
-                sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                ret = sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to get descriptor from sDDF blk\n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
+
+                /* Bookkeep this command */
+                uint32_t sddf_cmd_idx;
+                ret = virtio_blk_store_cmd(desc_head, &sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to store virtio command \n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 
-                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_READ, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_desc_head_idx);
+                ret = sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_READ, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to enqueue command to sDDF blk\n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
@@ -151,7 +230,12 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 
                 uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
                 uint32_t sddf_desc_head_idx;
-                sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                ret = sddf_blk_get_desc(sddf_ring_handle, &sddf_desc_head_idx, sddf_count);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to get descriptor from sDDF blk\n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 
                 uint32_t sddf_curr_desc_idx = sddf_desc_head_idx;
                 // Copy a sector of data from vring into sddf buffer
@@ -159,19 +243,50 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     memcpy((void *)sddf_desc_handle->descs[sddf_curr_desc_idx].addr, (void *)(data + (i * SDDF_BLK_DATA_BUFFER_SIZE)), SDDF_BLK_DATA_BUFFER_SIZE);
                     sddf_curr_desc_idx = sddf_desc_handle->descs[sddf_curr_desc_idx].next;
                 }
+
+                /* Bookkeep this command */
+                uint32_t sddf_cmd_idx;
+                ret = virtio_blk_store_cmd(desc_head, &sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to store virtio command \n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 
-                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_WRITE, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_desc_head_idx);
+                ret = sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_WRITE, sddf_desc_head_idx, virtio_cmd->sector, sddf_count, sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to enqueue command to sDDF blk\n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
                 LOG_BLOCK("Command type is VIRTIO_BLK_T_FLUSH\n");
-                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_FLUSH, 0, 0, 0, 0);
+                /* Bookkeep this command */
+                uint32_t sddf_cmd_idx;
+                ret = virtio_blk_store_cmd(desc_head, &sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to store virtio command \n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
+
+                ret = sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_FLUSH, 0, 0, 0, sddf_cmd_idx);
+                if (ret == -1) {
+                    LOG_BLOCK_ERR("Unable to enqueue command to sDDF blk\n");
+                    virtio_blk_command_fail(dev, desc_head);
+                    return 0;
+                }
                 break;
             }
         }
     }
 
     vq->last_idx = idx;
+    
+    /* Notify other side our command has been sent */
+    microkit_notify(dev->sddf_ch);
     
     return 1;
 }
@@ -185,14 +300,13 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     uint16_t sddf_ret_count;
     uint32_t sddf_ret_id;
     while (sddf_blk_dequeue_resp(sddf_ring_handle, &sddf_ret_status, &sddf_ret_desc, &sddf_ret_count, &sddf_ret_id) != -1) {
-        uint16_t virtio_desc = virtio_blk_sent_cmds[sddf_ret_id];
+        uint16_t virtio_desc;
+        virtio_blk_retrieve_cmd(sddf_ret_id, &virtio_desc);
         struct virtq *virtq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT].virtq;
         
         /* Error case, respond to virtio with error */
         if (sddf_ret_status == SDDF_BLK_RESPONSE_ERROR) {
-            uint16_t curr_virtio_desc = virtio_desc;
-            for (;virtq->desc[curr_virtio_desc].flags & VIRTQ_DESC_F_NEXT; curr_virtio_desc = virtq->desc[curr_virtio_desc].next){}
-            *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_IOERR;
+            virtio_blk_command_fail(dev, virtio_desc);
             continue;
         }
         
@@ -257,6 +371,17 @@ static void virtio_blk_config_init()
     blk_config.capacity = VIRTIO_BLK_CAPACITY;
 }
 
+static void virtio_blk_cmd_store_init()
+{
+    cmd_store.head = 0;
+    cmd_store.tail = SDDF_BLK_NUM_DATA_BUFFERS - 1;
+    cmd_store.num_free = SDDF_BLK_NUM_DATA_BUFFERS;
+    for (int i = 0; i < SDDF_BLK_NUM_DATA_BUFFERS - 1; i++) {
+        cmd_store.freelist[i] = i + 1;
+    }
+    cmd_store.freelist[SDDF_BLK_NUM_DATA_BUFFERS - 1] = -1;
+}
+
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
@@ -271,4 +396,5 @@ void virtio_blk_init(struct virtio_device *dev,
     dev->sddf_ch = sddf_ch;
     
     virtio_blk_config_init();
+    virtio_blk_cmd_store_init();
 }

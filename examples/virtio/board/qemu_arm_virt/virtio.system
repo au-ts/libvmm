@@ -19,9 +19,18 @@
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain> -->
+    <protection_domain name="TEST_BLK" priority="200">
+        <program_image path="test_blk.elf" />
+        <map mr="cmd_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_cmd_ring" />
+        <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_ring" />
+        <!-- sDDF data region -->
+        <map mr="data_blk_vmm_1" vaddr="0x8_c00_000" perms="rw" cached="true" setvar_vaddr="blk_data" />
+        <!-- sDDF data descriptor region -->
+        <map mr="descs_blk_vmm_1" vaddr="0x103_c00_000" perms="rw" cached="true" setvar_vaddr="blk_desc_handle" />
+    </protection_domain>
 
     <protection_domain name="CLIENT_VMM-1" priority="100">
-        <program_image path="client_vmm.elf" />
+        <program_image path="client_vmm_1.elf" />
         <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
         <!-- sDDF related regions for virtIO console -->
@@ -51,7 +60,7 @@
     </protection_domain>
 
     <protection_domain name="CLIENT_VMM-2" priority="100">
-        <program_image path="client_vmm.elf" />
+        <program_image path="client_vmm_2.elf" />
         <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
         <!-- sDDF related regions for virtIO console -->
@@ -207,4 +216,14 @@
         <end pd="CLIENT_VMM-1" id="3"/>
         <end pd="BLK_DRIVER_VMM" id="1"/>
     </channel> -->
+
+    <channel>
+        <end pd="CLIENT_VMM-1" id="3"/>
+        <end pd="TEST_BLK" id="1"/>
+    </channel>
+
+    <channel>
+        <end pd="CLIENT_VMM-2" id="3"/>
+        <end pd="TEST_BLK" id="2"/>
+    </channel>
 </system>
