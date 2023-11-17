@@ -67,9 +67,15 @@ CURRENT_DIR := $(shell pwd)
 # BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
 
 CLIENT_VM_DIR := board/$(BOARD)/client_vm
-CLIENT_VM_DTS_DIR := $(CLIENT_VM_DIR)/dts
 CLIENT_VM_USERLEVEL_DIR := userlevel/client_vm
-CLIENT_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_rootfs
+CLIENT_VM_1_DIR := $(CLIENT_VM_DIR)/client_vm_1
+CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
+CLIENT_VM_1_USERLEVEL_DIR := $(CLIENT_VM_USERLEVEL_DIR)/client_vm_1
+CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
+CLIENT_VM_2_DIR := $(CLIENT_VM_DIR)/client_vm_2
+CLIENT_VM_2_DTS_DIR := $(CLIENT_VM_2_DIR)/dts
+CLIENT_VM_2_USERLEVEL_DIR := $(CLIENT_VM_USERLEVEL_DIR)/client_vm_2
+CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
 
 # BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 # BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
@@ -77,15 +83,22 @@ CLIENT_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_rootfs
 # BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
 # BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
 
-CLIENT_VM_LINUX := $(CLIENT_VM_DIR)/linux
-CLIENT_VM_INITRD := $(CLIENT_VM_DIR)/rootfs.cpio.gz
-CLIENT_VM_INITRD_OVERLAYED := $(CLIENT_VM_DIR)/rootfs_overlayed.cpio.gz
-CLIENT_VM_BASE_DTS := $(CLIENT_VM_DTS_DIR)/linux.dts
-CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
-							$(CLIENT_VM_DTS_DIR)/virtio.dts \
+CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
+CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
+CLIENT_VM_1_INITRD_OVERLAYED := $(CLIENT_VM_1_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
+CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
+							$(CLIENT_VM_1_DTS_DIR)/virtio.dts
+CLIENT_VM_2_LINUX := $(CLIENT_VM_2_DIR)/linux
+CLIENT_VM_2_INITRD := $(CLIENT_VM_2_DIR)/rootfs.cpio.gz
+CLIENT_VM_2_INITRD_OVERLAYED := $(CLIENT_VM_2_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
+CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
+							$(CLIENT_VM_2_DTS_DIR)/virtio.dts
 
 # BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
-CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
+CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
+CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
 
@@ -97,10 +110,11 @@ SDDF_UTIL := $(SDDF)/util
 SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
 
 # ELFS := blk_driver_vmm.elf client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
-ELFS := client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
 
 # BLK_DRIVER_VM_USERLEVEL_ELFS := cmdq_test.elf
-CLIENT_VM_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf
+CLIENT_VM_1_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf
+CLIENT_VM_2_USERLEVEL_ELFS := cmdq_test.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -119,9 +133,19 @@ VMM_OBJS := printf.o \
 			tcb.o \
 			vcpu.o \
 
-CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
-					client_images.o \
-					client_vmm.o \
+CLIENT_VMM_1_OBJS :=	$(VMM_OBJS) \
+					client_images_1.o \
+					client_vmm_1.o \
+					virtio.o \
+					console.o \
+					block.o \
+					mmio.o \
+					sddf_serial_shared_ringbuffer.o \
+					sddf_blk_shared_ringbuffer.o \
+
+CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
+					client_images_2.o \
+					client_vmm_2.o \
 					virtio.o \
 					console.o \
 					block.o \
@@ -132,6 +156,8 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 # BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 # 						blk_driver_images.o \
 # 						blk_driver_vmm.o \
+
+TEST_BLK_OBJS := test_blk.o sddf_blk_shared_ringbuffer.o printf.o util.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
@@ -193,13 +219,22 @@ directories:
 # 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 # 	cp $^ $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 # 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
+
+client_vm_userlevel: client_vm_1_userlevel client_vm_2_userlevel
 	
-client_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
-	rm -r $(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
-	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $^ $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
-	(cd $(CLIENT_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED))
+client_vm_1_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_ELFS))
+	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
+	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(CLIENT_VM_1_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null && \
+	cp $^ $(CLIENT_VM_1_ROOTFS_TMP_DIR)/root && \
+	(cd $(CLIENT_VM_1_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_1_INITRD_OVERLAYED))
+
+client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_ELFS))
+	rm -r $(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null; \
+	mkdir -p $(CLIENT_VM_2_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(CLIENT_VM_2_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null && \
+	cp $^ $(CLIENT_VM_2_ROOTFS_TMP_DIR)/root && \
+	(cd $(CLIENT_VM_2_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_2_INITRD_OVERLAYED))
 
 # $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
 # 	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
@@ -213,22 +248,34 @@ client_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
 # 					-target aarch64-none-elf \
 # 					$< -o $@
 
-$(CLIENT_VM_DTB): $(CLIENT_VM_BASE_DTS) $(CLIENT_VM_DTS_OVERLAYS)
-	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm.dts > $@
+$(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
+	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_1.dts > $@
 
-$(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LINUX) $(CLIENT_VM_DTB) $(CLIENT_VM_INITRD_OVERLAYED)
+$(CLIENT_VM_2_DTB): $(CLIENT_VM_2_BASE_DTS) $(CLIENT_VM_2_DTS_OVERLAYS)
+	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_2.dts > $@
+
+$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_INITRD_OVERLAYED)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_1_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_1_INITRD_OVERLAYED)\" \
+					-target aarch64-none-elf \
+					$< -o $@
+
+$(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_2_LINUX) $(CLIENT_VM_2_DTB) $(CLIENT_VM_2_INITRD_OVERLAYED)
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_2_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_2_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_2_INITRD_OVERLAYED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
 # $(BUILD_DIR)/%.elf: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
 # 	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
 
-$(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
+$(BUILD_DIR)/%.elf: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
@@ -261,11 +308,17 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
+$(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
 # 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/test_blk.elf: $(addprefix $(BUILD_DIR)/, $(TEST_BLK_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -276,8 +329,8 @@ $(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS)
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-# $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_DIR)
-# 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+# $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR)
+# 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
