@@ -1,4 +1,4 @@
 [submodule "sddf"]
 	path = examples/virtio/sddf
 	url = https://github.com/au-ts/sddf
-	branch = ivanv/dev
+	branch = lionsos
