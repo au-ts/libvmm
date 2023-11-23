@@ -95,5 +95,6 @@ struct virtio_console_control {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
+                         void **data_region_handles,
                          void **sddf_ring_handles, size_t sddf_ch);
 int virtio_console_handle_rx(struct virtio_device *dev);
