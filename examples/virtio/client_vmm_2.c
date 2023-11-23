@@ -18,7 +18,6 @@
 #include "virtio/console.h"
 #include "virtio/block.h"
 #include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
-#include "block/libblocksharedringbuffer/include/sddf_blk_shared_ringbuffer.h"
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -46,7 +45,7 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-/* Virtio Console sDDF */
+/* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
@@ -68,24 +67,6 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
-
-/* Virtio Block sDDF */
-#define BLK_CH 3
-
-#define VIRTIO_BLK_IRQ (75)
-#define VIRTIO_BLK_BASE (0x150000)
-#define VIRTIO_BLK_SIZE (0x1000)
-
-uintptr_t blk_cmd_ring;
-uintptr_t blk_resp_ring;
-uintptr_t blk_metadata;
-uintptr_t blk_data;
-uintptr_t blk_freelist_handle;
-sddf_blk_ring_handle_t blk_ring_handle;
-
-static sddf_blk_ring_handle_t *blk_ring_handles[SDDF_BLK_NUM_RING_HANDLES];
-
-static struct virtio_device virtio_blk;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -152,27 +133,9 @@ void init(void) {
     assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.used_ring));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
+                                      NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
     
-    /* Initialise our sDDF ring buffers for the block device */
-    sddf_blk_ring_init(&blk_ring_handle,
-                (sddf_blk_cmd_ring_buffer_t *)blk_cmd_ring,
-                (sddf_blk_resp_ring_buffer_t *)blk_resp_ring,
-                (sddf_blk_data_t *)blk_metadata,
-                true,
-                SDDF_BLK_NUM_CMD_BUFFERS,
-                SDDF_BLK_NUM_RESP_BUFFERS,
-                blk_data,
-                SDDF_BLK_NUM_DATA_BUFFERS);
-    blk_ring_handles[SDDF_BLK_DEFAULT_RING] = &blk_ring_handle;
-    /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
-    assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
-    /* Initialise virtIO block device */
-    success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      (void **)blk_ring_handles, BLK_CH);
-    assert(success);
-
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -183,10 +146,6 @@ void notified(microkit_channel ch) {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);
-            break;
-        }
-        case BLK_CH: {
-            virtio_blk_handle_resp(&virtio_blk);
             break;
         }
         default:
