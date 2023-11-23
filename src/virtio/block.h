@@ -136,17 +136,6 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_S_IOERR          1
 #define VIRTIO_BLK_S_UNSUPP         2
 
-// /** 
-//  * Callback to be called when a response is received from sDDF layer
-//  * 
-//  * @param virtio_desc
-//  * @param ring_handle
-//  * @param status
-//  * @param sddf_desc
-//  * @param count
-//  */
-// typedef void (*virtio_blk_cmd_cb)(uint16_t, sddf_blk_ring_handle_t, sddf_blk_response_status_t, uint32_t, uint16_t);
-
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,

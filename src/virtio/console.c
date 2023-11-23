@@ -264,6 +264,7 @@ virtio_device_funs_t functions = {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
+                         void **data_region_handles,
                          void **sddf_ring_handles, size_t sddf_ch) {
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
@@ -272,6 +273,7 @@ void virtio_console_init(struct virtio_device *dev,
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
+    dev->data_region_handles = data_region_handles; // @ericc: unusued
     dev->sddf_ring_handles = sddf_ring_handles;
     dev->sddf_ch = sddf_ch;
 }

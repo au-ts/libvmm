@@ -114,6 +114,8 @@ typedef struct virtio_device {
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
+    /* shared data region handles */
+    void **data_region_handles;
     /* Handlers for sDDF ring buffers */
     void **sddf_ring_handles;
     /* Microkit channel to the sDDF TX multiplexor */
@@ -121,7 +123,7 @@ typedef struct virtio_device {
     // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
     // this is specific to device classes such as serial and networking
     // @ericc: on top of potentially changing to a callback, there can be multiple channels, one for each pair
-    // of rings. For now im leaving it as one channel since that's the how much block, serial and ethernet use.
+    // of rings. For now im leaving it as one channel since that's how much block, serial and ethernet use.
     size_t sddf_ch;
 } virtio_device_t;
 
