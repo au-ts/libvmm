@@ -27,8 +27,7 @@ void init(void)
     sddf_blk_ring_init(&blk_ring_handle,
                     (sddf_blk_cmd_ring_buffer_t *)blk_cmd_ring,
                     (sddf_blk_resp_ring_buffer_t *)blk_resp_ring,
-                    (sddf_blk_desc_handle_t *)blk_desc_handle,
-                    NULL, false, 0, 0, 0);
+                    false, 0, 0);
 }
 
 void notified(microkit_channel ch)
@@ -37,13 +36,13 @@ void notified(microkit_channel ch)
         LOG_BLKTEST("Received notification on channel %d\n", ch);
 
         sddf_blk_command_code_t ret_code;
-        uint32_t ret_desc;
+        uintptr_t ret_addr;
         uint32_t ret_sector;
         uint16_t ret_count;
         uint32_t ret_id;
 
-        while (sddf_blk_dequeue_cmd(&blk_ring_handle, &ret_code, &ret_desc, &ret_sector, &ret_count, &ret_id) != -1) {
-            LOG_BLKTEST("Received command: code=%d, desc=%d, sector=%d, count=%d, id=%d\n", ret_code, ret_desc, ret_sector, ret_count, ret_id);
+        while (sddf_blk_dequeue_cmd(&blk_ring_handle, &ret_code, &ret_addr, &ret_sector, &ret_count, &ret_id) != -1) {
+            LOG_BLKTEST("Received command: code=%d, desc=%d, sector=%d, count=%d, id=%d\n", ret_code, ret_addr, ret_sector, ret_count, ret_id);
         }
     }
 }

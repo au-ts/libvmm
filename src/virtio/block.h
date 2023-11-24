@@ -35,14 +35,6 @@
 #include <stdint.h>
 #include "virtio/mmio.h"
 
-#define SDDF_BLK_NUM_RING_HANDLES 1
-#define SDDF_BLK_DEFAULT_RING 0
-
-#define VIRTIO_BLK_NUM_VIRTQ 1
-#define VIRTIO_BLK_VIRTQ_DEFAULT 0
-
-#define VIRTIO_BLK_CAPACITY             0x100000
-
 /* Feature bits */
 #define VIRTIO_BLK_F_SIZE_MAX	    1	/* Indicates maximum segment size */
 #define VIRTIO_BLK_F_SEG_MAX	    2	/* Indicates maximum # of segments */
@@ -136,8 +128,29 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_S_IOERR          1
 #define VIRTIO_BLK_S_UNSUPP         2
 
+/* Backend implementation */
+#define SDDF_BLK_NUM_RING_HANDLES 1
+#define SDDF_BLK_DEFAULT_RING 0
+
+#define VIRTIO_BLK_NUM_VIRTQ 1
+#define VIRTIO_BLK_VIRTQ_DEFAULT 0
+
+#define VIRTIO_BLK_CAPACITY 0x100000
+
+/* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
+typedef struct blk_data_region {
+    uint32_t avail_bitpos; /* bit position of next avail buffer */
+    uint32_t *avail_bitmap; /* bit map representing avail data buffers */
+    uint32_t num_buffers; /* number of buffers in data region */
+    uintptr_t addr; /* encoded base address of data region */
+} blk_data_region_t;
+
+/* Data region bookkeeping */
+#define BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE 32 /* Number of bits in an element of available bitmap */
+
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
+                    void **data_region_handles,
                     void **sddf_ring_handles, size_t sddf_ch);
 void virtio_blk_handle_resp(struct virtio_device *dev);

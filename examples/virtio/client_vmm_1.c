@@ -46,7 +46,7 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-/* Virtio Console sDDF */
+/* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
@@ -69,19 +69,25 @@ static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDL
 
 static struct virtio_device virtio_console;
 
-/* Virtio Block sDDF */
+/* Virtio Block */
 #define BLK_CH 3
 
 #define VIRTIO_BLK_IRQ (75)
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
+/* Size of available bitmap */
+#define BLK_DATA_REGION_AVAIL_BITMAP_SIZE (SDDF_BLK_NUM_DATA_BUFFERS / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE)
+
 uintptr_t blk_cmd_ring;
 uintptr_t blk_resp_ring;
 uintptr_t blk_data;
 sddf_blk_ring_handle_t blk_ring_handle;
-
 static sddf_blk_ring_handle_t *blk_ring_handles[SDDF_BLK_NUM_RING_HANDLES];
+
+blk_data_region_t blk_data_region;
+uint32_t blk_data_region_avail_bitmap[BLK_DATA_REGION_AVAIL_BITMAP_SIZE];
+static blk_data_region_t *blk_data_region_handles[SDDF_BLK_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_blk;
 
@@ -150,7 +156,7 @@ void init(void) {
     assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.used_ring));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
+                                      NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
     
     /* Initialise our sDDF ring buffers for the block device */
@@ -163,9 +169,20 @@ void init(void) {
     blk_ring_handles[SDDF_BLK_DEFAULT_RING] = &blk_ring_handle;
     /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
     assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
+    /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
+    blk_data_region.avail_bitpos = 0; /* bit position of next avail buffer */
+    blk_data_region.avail_bitmap = blk_data_region_avail_bitmap; /* bit map representing avail data buffers */
+    blk_data_region.num_buffers = SDDF_BLK_NUM_DATA_BUFFERS; /* number of buffers in data region */
+    blk_data_region.addr = blk_data; /* encoded base address of data region */
+    /* Set all available bits to 1 to indicate it is available */ 
+    // the end condition is (blk_data_region.num_buffers / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) rounded up
+    for (unsigned int i = 0; i < (blk_data_region.num_buffers + (BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE - 1)) / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE; i++) {
+        blk_data_region.avail_bitmap[i] = UINT32_MAX;
+    }
+    blk_data_region_handles[SDDF_BLK_DEFAULT_RING] = &blk_data_region;
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      (void **)blk_ring_handles, BLK_CH);
+                                      (void **)blk_data_region_handles, (void **)blk_ring_handles, BLK_CH);
     assert(success);
 
     /* Finally start the guest */
