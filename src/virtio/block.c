@@ -26,12 +26,6 @@
 /* Returns uint32_t where all bits below position is set to 1 */
 #define MASK_BELOW_POSITION_EXCLUSIVE(position) (((uint32_t)1 << (position)) - 1)
 
-/* Data region bookkeeping */
-/* Number of bits in an element of available bitmap */
-#define DATA_REGION_AVAIL_BITMAP_ELEM_SIZE 32
-/* Size of available bitmap */
-#define DATA_REGION_AVAIL_BITMAP_SIZE (SDDF_BLK_NUM_DATA_BUFFERS / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE)
-
 // @ericc: Maybe move this into virtio.c, and store a pointer in virtio_device struct?
 static struct virtio_blk_config blk_config;
 
@@ -43,14 +37,6 @@ static struct virtio_blk_cmd_store {
     uint32_t tail;
     uint32_t num_free;
 } cmd_store;
-
-/* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
-static struct data_region {
-    uint32_t avail_bitpos; /* bit position of next avail buffer */
-    uint32_t avail_bitmap[DATA_REGION_AVAIL_BITMAP_SIZE]; /* Bit map representing avail data buffers */
-    uint32_t num_buffers; /* number of buffers in data region */
-    uintptr_t addr; /* encoded base address of data region */
-} data_region;
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -212,7 +198,7 @@ static inline uint16_t virtio_blk_cmd_store_retrieve(uint32_t id)
 
     cmd_store.num_free++;
 
-    return &cmd_store.sent_cmds[id];
+    return cmd_store.sent_cmds[id];
 }
 
 /**
@@ -221,9 +207,9 @@ static inline uint16_t virtio_blk_cmd_store_retrieve(uint32_t id)
  * @param bitpos bit position of the data buffer
  * @return address of the data buffer
  */
-static inline uintptr_t data_region_bitpos_to_addr(uint32_t bitpos)
+static inline uintptr_t blk_data_region_bitpos_to_addr(struct virtio_device *dev, uint32_t bitpos)
 {
-    return data_region.addr + ((uintptr_t)bitpos * SDDF_BLK_DATA_BUFFER_SIZE);
+    return ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->addr + ((uintptr_t)bitpos * SDDF_BLK_DATA_BUFFER_SIZE);
 }
 
 /**
@@ -232,9 +218,9 @@ static inline uintptr_t data_region_bitpos_to_addr(uint32_t bitpos)
  * @param addr address of the data buffer
  * @return bit position of the data buffer
  */
-static inline uint32_t data_region_addr_to_bitpos(uintptr_t addr)
+static inline uint32_t blk_data_region_addr_to_bitpos(struct virtio_device *dev, uintptr_t addr)
 {
-    return (uint32_t)((addr - data_region.addr) / SDDF_BLK_DATA_BUFFER_SIZE);
+    return (uint32_t)((addr - ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->addr) / SDDF_BLK_DATA_BUFFER_SIZE);
 }
 
 /**
@@ -243,18 +229,18 @@ static inline uint32_t data_region_addr_to_bitpos(uintptr_t addr)
  * @param count number of buffers to check
  * @return true if count number of buffers will overflow the end of the data region, false otherwise
  */
-static inline bool data_region_overflow(uint16_t count)
+static inline bool blk_data_region_overflow(struct virtio_device *dev, uint16_t count)
 {
-    return (data_region.avail_bitpos + count > data_region.num_buffers);
+    return (((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->avail_bitpos + count > ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->num_buffers);
 }
 
 /**
  * Reset the data region bitpos to the start of the data region.
  * Intended to be called when a command will cause an overflow.
  */
-static inline void data_region_loop_over()
+static inline void blk_data_region_loop_over(struct virtio_device *dev)
 {
-    data_region.avail_bitpos = 0;
+    ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->avail_bitpos = 0;
 }
 
 /**
@@ -264,26 +250,28 @@ static inline void data_region_loop_over()
  *
  * @return true indicates the data region has count number of free buffers after current bitpos, false otherwise.
  */
-static bool data_region_full(uint16_t count)
+static bool blk_data_region_full(struct virtio_device *dev, uint16_t count)
 {
-    if (count > data_region.num_buffers) {
+    blk_data_region_t *blk_data_region = dev->data_region_handles[SDDF_BLK_DEFAULT_RING];
+
+    if (count > blk_data_region->num_buffers) {
         return true;
     }
 
-    if (data_region_overflow(count)) {
+    if (blk_data_region_overflow(dev, count)) {
         return true;
     }
 
     // Check for all 0's in the next count many bits
-    unsigned int start_bitpos = data_region.avail_bitpos;
-    unsigned int end_bitpos = data_region.avail_bitpos + count;
-    unsigned int curr_idx = start_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
-    unsigned int end_idx = end_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int start_bitpos = blk_data_region->avail_bitpos;
+    unsigned int end_bitpos = blk_data_region->avail_bitpos + count;
+    unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int end_idx = end_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     uint32_t mask;
     if (curr_idx != end_idx) {
         // Check the bits in the first index
-        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        if (data_region.avail_bitmap[curr_idx] & mask != mask) {
+        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        if ((blk_data_region->avail_bitmap[curr_idx] & mask) != mask) {
             return true;
         }
         curr_idx++;
@@ -291,21 +279,21 @@ static bool data_region_full(uint16_t count)
         // Check the bits in indices between the first and last
         mask = MASK_ABOVE_POSITION_INCLUSIVE(0);
         for (; curr_idx != end_idx; curr_idx++) {
-            if (data_region.avail_bitmap[curr_idx] & mask != mask) {
+            if ((blk_data_region->avail_bitmap[curr_idx] & mask) != mask) {
                 return true;
             }
         }
 
         // Check the bits in the last index
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        if (data_region.avail_bitmap[end_idx] & mask != mask) {
+        mask = MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        if ((blk_data_region->avail_bitmap[end_idx] & mask) != mask) {
             return true;
         }
     } else {
         // Check the bits in the index
         // Create a mask as such 00000000_00001111_11110000_00000000, check whether section in middle is all 1's, if not then its full
-        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        if (data_region.avail_bitmap[curr_idx] & mask != mask) {
+        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        if ((blk_data_region->avail_bitmap[curr_idx] & mask) != mask) {
             return true;
         }
     }
@@ -321,47 +309,49 @@ static bool data_region_full(uint16_t count)
  *
  * @return -1 when data region is full, 0 on success.
  */
-static int data_region_get_buffer(uintptr_t *addr, uint16_t count)
+static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr, uint16_t count)
 {
-    if (data_region_full() || data_region_overflow(count)) {
+    blk_data_region_t *blk_data_region = dev->data_region_handles[SDDF_BLK_DEFAULT_RING];
+
+    if (blk_data_region_full(dev, count) || blk_data_region_overflow(dev, count)) {
         return -1;
     }
 
-    *addr = data_region_bitpos_to_addr(data_region.avail_bitpos);
+    *addr = blk_data_region_bitpos_to_addr(dev, blk_data_region->avail_bitpos);
 
     // Set the next count many bits as unavailable
-    unsigned int start_bitpos = data_region.avail_bitpos;
-    unsigned int end_bitpos = data_region.avail_bitpos + count;
-    unsigned int curr_idx = start_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
-    unsigned int end_idx = end_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int start_bitpos = blk_data_region->avail_bitpos;
+    unsigned int end_bitpos = blk_data_region->avail_bitpos + count;
+    unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int end_idx = end_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     uint32_t mask;
     if (curr_idx != end_idx) {
         // Set the bits in the first index
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[curr_idx] &= mask;
+        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[curr_idx] &= mask;
         curr_idx++;
 
         // Set the bits in indices between the first and last
         mask = MASK_BELOW_POSITION_EXCLUSIVE(0);
         for (; curr_idx != end_idx; curr_idx++) {
-            data_region.avail_bitmap[curr_idx] &= mask;
+            blk_data_region->avail_bitmap[curr_idx] &= mask;
         }
 
         // Set the bits in the last index
-        mask = MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[end_idx] &= mask;
+        mask = MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[end_idx] &= mask;
     } else {
         // Set the bits in the index
         // Create a mask as such 11111111_11110000_00001111_11111111, set some section in middle to be 0
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[curr_idx] &= mask;
+        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[curr_idx] &= mask;
     }
 
     // Update the bitpos
-    if (end_bitpos == data_region.num_buffers) {
+    if (end_bitpos == blk_data_region->num_buffers) {
         end_bitpos = 0;
     }
-    data_region.avail_bitpos = end_bitpos;
+    blk_data_region->avail_bitpos = end_bitpos;
 
     return 0;
 }
@@ -372,41 +362,41 @@ static int data_region_get_buffer(uintptr_t *addr, uint16_t count)
  * @param addr base address of the contiguous buffer to free.
  * @param count number of buffers to free.
  */
-static void data_region_free_buffer(uintptr_t addr, uint16_t count)
+static void blk_data_region_free_buffer(struct virtio_device *dev, uintptr_t addr, uint16_t count)
 {
-    unsigned int start_bitpos = data_region_addr_to_bitpos(addr);
+    blk_data_region_t *blk_data_region = dev->data_region_handles[SDDF_BLK_DEFAULT_RING];
+    
+    unsigned int start_bitpos = blk_data_region_addr_to_bitpos(dev, addr);
     unsigned int end_bitpos = start_bitpos + count;
-    unsigned int curr_idx = start_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
-    unsigned int end_idx = end_bitpos / DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
+    unsigned int end_idx = end_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     uint32_t mask;
 
     // Assert here in case we try to free buffers that overflow the data region
-    assert(start_bitpos + count <= data_region.num_buffers);
+    assert(start_bitpos + count <= blk_data_region->num_buffers);
 
     // Set the next many bits from the bit corresponding with addr as available
     if (curr_idx != end_idx) {
         // Set the bits in the first index
-        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[curr_idx] |= mask;
+        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[curr_idx] |= mask;
         curr_idx++;
 
         // Set the bits in indices between the first and last
         mask = MASK_ABOVE_POSITION_INCLUSIVE(0);
         for (; curr_idx != end_idx; curr_idx++) {
-            data_region.avail_bitmap[curr_idx] |= mask;
+            blk_data_region->avail_bitmap[curr_idx] |= mask;
         }
 
         // Set the bits in the last index
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[end_idx] |= mask;
+        mask = MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[end_idx] |= mask;
     } else {
         // Set the bits in the index
         // Create a mask as such 00000000_00001111_11110000_00000000, set all bits in the middle section to 1.
-        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
-        data_region.avail_bitmap[curr_idx] |= mask;
+        mask = MASK_ABOVE_POSITION_INCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_BELOW_POSITION_EXCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        blk_data_region->avail_bitmap[curr_idx] |= mask;
     }
-
-    return 0;
 }
 
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
@@ -416,7 +406,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
     struct virtq *virtq = &vq->virtq;
 
-    sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
+    // sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
 
     bool has_error = false; /* if any command has to be dropped due to any number of reasons (ring buffer full, cmd_store full), this becomes true */
     
@@ -443,8 +433,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 
-                uintptr_t data = virtq->desc[curr_desc_head].addr;
-                uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                // uintptr_t data = virtq->desc[curr_desc_head].addr;
+                // uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
 
                 // Check if cmd store is full, if data region is full, if cmd ring is full
                 // If these all pass then this command can be handled successfully
@@ -463,8 +453,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 
-                uintptr_t data = virtq->desc[curr_desc_head].addr;
-                uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                // uintptr_t data = virtq->desc[curr_desc_head].addr;
+                // uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
                 
                 // Check if cmd store is full, if data region is full, if cmd ring is full
                 // If these all pass then this command can be handled successfully
@@ -508,11 +498,12 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
 
     sddf_blk_response_status_t sddf_ret_status;
-    uint32_t sddf_ret_desc;
+    uintptr_t sddf_ret_addr;
     uint16_t sddf_ret_count;
+    uint16_t sddf_ret_success_count;
     uint32_t sddf_ret_id;
     while (!sddf_blk_resp_ring_empty(sddf_ring_handle)) {
-        sddf_blk_dequeue_resp(sddf_ring_handle, &sddf_ret_status, &sddf_ret_desc, &sddf_ret_count, &sddf_ret_id);
+        sddf_blk_dequeue_resp(sddf_ring_handle, &sddf_ret_status, &sddf_ret_addr, &sddf_ret_count, &sddf_ret_success_count, &sddf_ret_id);
         
         /* Freeing and retrieving command store */
         uint16_t virtio_desc = virtio_blk_cmd_store_retrieve(sddf_ret_id);
@@ -576,32 +567,21 @@ static void virtio_blk_cmd_store_init(unsigned int num_buffers)
     cmd_store.freelist[num_buffers - 1] = -1;
 }
 
-static void data_region_init(unsigned int num_buffers, uintptr_t addr)
-{
-    data_region.avail_bitpos = 0;
-    // Set all available bits to 1 to indicate it is available
-    for (unsigned int i = 0; i < num_buffers; i++) {
-        data_region.avail_bitmap[i] = MASK_ABOVE_POSITION_INCLUSIVE(0);
-    }
-    data_region.num_buffers = num_buffers;
-    data_region.addr = addr;
-}
-
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void **sddf_ring_handles, size_t sddf_ch,
-                    uintptr_t data_region_addr) {
+                    void **data_region_handles,
+                    void **sddf_ring_handles, size_t sddf_ch) {
     dev->data.DeviceID = DEVICE_ID_VIRTIO_BLOCK;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
+    dev->data_region_handles = data_region_handles;
     dev->sddf_ring_handles = sddf_ring_handles;
     dev->sddf_ch = sddf_ch;
     
     virtio_blk_config_init();
     virtio_blk_cmd_store_init(SDDF_BLK_NUM_DATA_BUFFERS);
-    data_region_init(SDDF_BLK_NUM_DATA_BUFFERS, data_region_addr);
 }
