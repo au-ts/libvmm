@@ -29,6 +29,7 @@
 // @ericc: Maybe move this into virtio.c, and store a pointer in virtio_device struct?
 static struct virtio_blk_config blk_config;
 
+// @ericc: Put this into virtio_device struct?
 /* Mapping for command ID and its virtio descriptor */
 static struct virtio_blk_cmd_store {
     uint16_t sent_cmds[SDDF_BLK_NUM_DATA_BUFFERS]; /* index is command ID, maps to virtio descriptor head */
@@ -37,6 +38,15 @@ static struct virtio_blk_cmd_store {
     uint32_t tail;
     uint32_t num_free;
 } cmd_store;
+
+// @ericc: debug function, move elsewhere or remove
+static void print_binary(uint32_t num)
+{
+    for (int i = 31; i >= 0; i--) {
+        printf("%d", (num >> i) & 1);
+    }
+    printf("\n");
+}
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -235,20 +245,11 @@ static inline bool blk_data_region_overflow(struct virtio_device *dev, uint16_t 
 }
 
 /**
- * Reset the data region bitpos to the start of the data region.
- * Intended to be called when a command will cause an overflow.
- */
-static inline void blk_data_region_loop_over(struct virtio_device *dev)
-{
-    ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->avail_bitpos = 0;
-}
-
-/**
- * Check if the data region has count number of free buffers available after current bitpos.
+ * Check if the data region has count number of free buffers available.
  *
  * @param count number of buffers to check.
  *
- * @return true indicates the data region has count number of free buffers after current bitpos, false otherwise.
+ * @return true indicates the data region has count number of free buffers, false otherwise.
  */
 static bool blk_data_region_full(struct virtio_device *dev, uint16_t count)
 {
@@ -257,13 +258,13 @@ static bool blk_data_region_full(struct virtio_device *dev, uint16_t count)
     if (count > blk_data_region->num_buffers) {
         return true;
     }
-
+    
+    unsigned int start_bitpos = blk_data_region->avail_bitpos;
     if (blk_data_region_overflow(dev, count)) {
-        return true;
+        start_bitpos = 0;
     }
 
     // Check for all 0's in the next count many bits
-    unsigned int start_bitpos = blk_data_region->avail_bitpos;
     unsigned int end_bitpos = blk_data_region->avail_bitpos + count;
     unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     unsigned int end_idx = end_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
@@ -313,8 +314,12 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
 {
     blk_data_region_t *blk_data_region = dev->data_region_handles[SDDF_BLK_DEFAULT_RING];
 
-    if (blk_data_region_full(dev, count) || blk_data_region_overflow(dev, count)) {
+    if (blk_data_region_full(dev, count)) {
         return -1;
+    }
+
+    if (blk_data_region_overflow(dev, count)) {
+        blk_data_region->avail_bitpos = 0;
     }
 
     *addr = blk_data_region_bitpos_to_addr(dev, blk_data_region->avail_bitpos);
@@ -325,6 +330,7 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
     unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     unsigned int end_idx = end_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
     uint32_t mask;
+    LOG_BLOCK("start_bitpos: %d, end_bitpos: %d, curr_idx: %d, end_idx: %d\n", start_bitpos, end_bitpos, curr_idx, end_idx);
     if (curr_idx != end_idx) {
         // Set the bits in the first index
         mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
@@ -332,7 +338,7 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
         curr_idx++;
 
         // Set the bits in indices between the first and last
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(0);
+        mask = 0;
         for (; curr_idx != end_idx; curr_idx++) {
             blk_data_region->avail_bitmap[curr_idx] &= mask;
         }
@@ -343,7 +349,7 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
     } else {
         // Set the bits in the index
         // Create a mask as such 11111111_11110000_00001111_11111111, set some section in middle to be 0
-        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) & MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
+        mask = MASK_BELOW_POSITION_EXCLUSIVE(start_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) | MASK_ABOVE_POSITION_INCLUSIVE(end_bitpos % BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE);
         blk_data_region->avail_bitmap[curr_idx] &= mask;
     }
 
@@ -363,9 +369,9 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
  * @param count number of buffers to free.
  */
 static void blk_data_region_free_buffer(struct virtio_device *dev, uintptr_t addr, uint16_t count)
-{
+{   
     blk_data_region_t *blk_data_region = dev->data_region_handles[SDDF_BLK_DEFAULT_RING];
-    
+
     unsigned int start_bitpos = blk_data_region_addr_to_bitpos(dev, addr);
     unsigned int end_bitpos = start_bitpos + count;
     unsigned int curr_idx = start_bitpos / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE;
@@ -406,7 +412,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_VIRTQ_DEFAULT];
     struct virtq *virtq = &vq->virtq;
 
-    // sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
+    sddf_blk_ring_handle_t *sddf_ring_handle = dev->sddf_ring_handles[SDDF_BLK_DEFAULT_RING];
 
     bool has_error = false; /* if any command has to be dropped due to any number of reasons (ring buffer full, cmd_store full), this becomes true */
     
@@ -432,18 +438,41 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
-                
-                // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
 
+                uint16_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                
                 // Check if cmd store is full, if data region is full, if cmd ring is full
                 // If these all pass then this command can be handled successfully
+                if (virtio_blk_cmd_store_full()) {
+                    LOG_BLOCK_ERR("Command store is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
+
+                if (sddf_blk_cmd_ring_full(sddf_ring_handle)) {
+                    LOG_BLOCK_ERR("Command ring is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
+
+                if (blk_data_region_full(dev, sddf_count)) {
+                    LOG_BLOCK_ERR("Data region is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
 
                 // Book keep the command
+                uint32_t cmd_id;
+                virtio_blk_cmd_store_allocate(desc_head, &cmd_id);
                 
                 // Allocate data buffer from data region based on sddf_count
                 // Pass this allocated data buffer to sddf read command, then enqueue it
-
+                uintptr_t sddf_data;
+                blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_READ, sddf_data, virtio_cmd->sector, sddf_count, cmd_id);
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
@@ -453,17 +482,42 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 
-                // uintptr_t data = virtq->desc[curr_desc_head].addr;
-                // uint32_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
+                uintptr_t virtio_data = virtq->desc[curr_desc_head].addr;
+                uint16_t sddf_count = virtq->desc[curr_desc_head].len / SDDF_BLK_DATA_BUFFER_SIZE;
                 
                 // Check if cmd store is full, if data region is full, if cmd ring is full
                 // If these all pass then this command can be handled successfully
+                if (virtio_blk_cmd_store_full()) {
+                    LOG_BLOCK_ERR("Command store is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
+
+                if (sddf_blk_cmd_ring_full(sddf_ring_handle)) {
+                    LOG_BLOCK_ERR("Command ring is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
+
+                if (blk_data_region_full(dev, sddf_count)) {
+                    LOG_BLOCK_ERR("Data region is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
 
                 // Book keep the command
+                uint32_t cmd_id;
+                virtio_blk_cmd_store_allocate(desc_head, &cmd_id);
                 
                 // Allocate data buffer from data region based on sddf_count
                 // Copy data from virtio buffer to data buffer, create sddf write command and initialise it with data buffer, then enqueue it
-
+                uintptr_t sddf_data;
+                blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
+                memcpy((void *)sddf_data, (void *)virtio_data, sddf_count * SDDF_BLK_DATA_BUFFER_SIZE);
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_WRITE, sddf_data, virtio_cmd->sector, sddf_count, cmd_id);
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
@@ -472,10 +526,26 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 // Check if cmd store is full, if cmd ring is full
                 // If these all pass then this command can be handled successfully
                 // If fail, then set response to virtio command to error
+                if (virtio_blk_cmd_store_full()) {
+                    LOG_BLOCK_ERR("Command store is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
+
+                if (sddf_blk_cmd_ring_full(sddf_ring_handle)) {
+                    LOG_BLOCK_ERR("Command ring is full\n");
+                    virtio_blk_set_cmd_fail(dev, desc_head);
+                    has_error = true;
+                    break;
+                }
 
                 // Book keep the command
+                uint32_t cmd_id;
+                virtio_blk_cmd_store_allocate(desc_head, &cmd_id);
 
                 // Create sddf flush command and enqueue it
+                sddf_blk_enqueue_cmd(sddf_ring_handle, SDDF_BLK_COMMAND_FLUSH, 0, 0, 0, cmd_id);
                 break;
             }
         }
@@ -517,18 +587,22 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
             uint16_t curr_virtio_desc = virtq->desc[virtio_desc].next;
             switch (virtio_cmd->type) {
                 case VIRTIO_BLK_T_IN: {
-                    // Copy the data from the data buffer to the virtio buffer
+                    // Copy successful counts from the data buffer to the virtio buffer
+                    memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)sddf_ret_addr, sddf_ret_success_count * SDDF_BLK_DATA_BUFFER_SIZE);
+                    // Free the data buffer
+                    blk_data_region_free_buffer(dev, sddf_ret_addr, sddf_ret_count);
+                    curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
+                    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;
                 }
                 case VIRTIO_BLK_T_OUT: {
                     // Free the data buffer
-                    
+                    blk_data_region_free_buffer(dev, sddf_ret_addr, sddf_ret_count);
                     curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
                     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;
                 }
                 case VIRTIO_BLK_T_FLUSH: {
-                    curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
                     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;
                 }

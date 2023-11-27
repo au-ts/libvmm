@@ -15,8 +15,6 @@
 
 uintptr_t blk_cmd_ring;
 uintptr_t blk_resp_ring;
-uintptr_t blk_desc_handle;
-uintptr_t blk_data;
 sddf_blk_ring_handle_t blk_ring_handle;
 
 #define BLK_CH 1
@@ -41,8 +39,23 @@ void notified(microkit_channel ch)
         uint16_t ret_count;
         uint32_t ret_id;
 
-        while (sddf_blk_dequeue_cmd(&blk_ring_handle, &ret_code, &ret_addr, &ret_sector, &ret_count, &ret_id) != -1) {
-            LOG_BLKTEST("Received command: code=%d, desc=%d, sector=%d, count=%d, id=%d\n", ret_code, ret_addr, ret_sector, ret_count, ret_id);
+        while (!sddf_blk_cmd_ring_empty(&blk_ring_handle)) {
+            sddf_blk_dequeue_cmd(&blk_ring_handle, &ret_code, &ret_addr, &ret_sector, &ret_count, &ret_id);
+            LOG_BLKTEST("Received command: code=%d, addr=%p, sector=%d, count=%d, id=%d\n", ret_code, ret_addr, ret_sector, ret_count, ret_id);
+
+            sddf_blk_response_status_t status = SDDF_BLK_RESPONSE_OK;
+            uintptr_t addr = ret_addr;
+            uint16_t count = ret_count;
+            uint16_t success_count = ret_count;
+            uint32_t id = ret_id;
+            //@ericc: what happens if this response is dropped? should we have a timeout in client?
+            if (sddf_blk_resp_ring_full(&blk_ring_handle)) {
+                LOG_BLKTEST_ERR("Response ring is full, dropping response\n");
+                continue;
+            }
+            sddf_blk_enqueue_resp(&blk_ring_handle, status, addr, count, success_count, id);    
         }
+
+        microkit_notify(BLK_CH);
     }
 }
