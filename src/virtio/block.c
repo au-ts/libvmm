@@ -558,8 +558,10 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         virtio_blk_used_buffer_virq_inject(dev);
     }
     
-    // @ericc: there is a world where all commands to be handled during this batch are dropped and hence this notify to the other PD would be redundant, i guess?
-    microkit_notify(dev->sddf_ch);
+    if (!sddf_blk_cmd_ring_plugged(sddf_ring_handle)) {
+        // @ericc: there is a world where all commands to be handled during this batch are dropped and hence this notify to the other PD would be redundant
+        microkit_notify(dev->sddf_ch);
+    }
     
     return 1;
 }
