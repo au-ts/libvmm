@@ -82,17 +82,23 @@ Sometimes a new Zig version has breaking changes so we have to re-translate
 `libmicrokit.zig` (since it's so large that manually fixing each compiler error
 is tedious). These are the steps for doing so.
 
-1.
+#### Step 1
+
+Produce the translated version of `microkit.h`.
 ```sh
-zig translate-c microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/microkit.h -I microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include -target aarch64-freestanding > src/libmicrokit.zig
+zig translate-c <MICROKIT SDK PATH>/board/qemu_arm_virt/debug/include/microkit.h -I <MICROKIT SDK PATH>/board/qemu_arm_virt/debug/include -target aarch64-freestanding > src/libmicrokit.zig
 ```
 
-2. Add the following to the top of `libmicrokit.zig`
+#### Step 2
+
+Add the following to the top of `libmicrokit.zig`
 ```zig
 const libmicrokit = @cImport({
     @cInclude("libmicrokit.h");
 });
 ```
 
-3. Replace `arm_sys_send_recv` with `libmicrokit.zig_arm_sys_send_recv`.
-4. Replace `arm_sys_send` with `libmicrokit.zig_arm_sys_send`.
+#### Step 3
+
+Replace `arm_sys_send_recv` with `libmicrokit.zig_arm_sys_send_recv`.
+Replace `arm_sys_send` with `libmicrokit.zig_arm_sys_send`.
