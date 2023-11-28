@@ -27,6 +27,8 @@ pub const __builtin_log2f = @import("std").zig.c_builtins.__builtin_log2f;
 pub const __builtin_log10 = @import("std").zig.c_builtins.__builtin_log10;
 pub const __builtin_log10f = @import("std").zig.c_builtins.__builtin_log10f;
 pub const __builtin_abs = @import("std").zig.c_builtins.__builtin_abs;
+pub const __builtin_labs = @import("std").zig.c_builtins.__builtin_labs;
+pub const __builtin_llabs = @import("std").zig.c_builtins.__builtin_llabs;
 pub const __builtin_fabs = @import("std").zig.c_builtins.__builtin_fabs;
 pub const __builtin_fabsf = @import("std").zig.c_builtins.__builtin_fabsf;
 pub const __builtin_floor = @import("std").zig.c_builtins.__builtin_floor;
@@ -75,14 +77,14 @@ pub const uint_fast8_t = u8;
 pub const intmax_t = c_long;
 pub const uintmax_t = c_ulong;
 pub const seL4_Int8 = i8;
-pub const seL4_Uint8 = u8; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_Uint8 = u8; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const seL4_Int16 = c_short;
-pub const seL4_Uint16 = c_ushort; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_Uint16 = c_ushort; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const seL4_Int32 = c_int;
-pub const seL4_Uint32 = c_uint; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_Uint32 = c_uint; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const seL4_Int64 = c_long;
 pub const seL4_Uint64 = c_ulong;
 pub const seL4_Bool = seL4_Int8;
@@ -196,55 +198,64 @@ pub const seL4_Timeout_Data: c_int = 0;
 pub const seL4_Timeout_Consumed: c_int = 1;
 pub const seL4_Timeout_Length: c_int = 2;
 pub const _enum_pad_seL4_Timeout_Msg: c_ulong = 9223372036854775807;
-pub const seL4_TimeoutMsg = c_ulong; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_TimeoutMsg = c_ulong; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const seL4_ARM_PageUpperDirectory = seL4_CPtr;
 pub const seL4_ARM_PageGlobalDirectory = seL4_CPtr;
 pub const seL4_ARM_VSpace = seL4_CPtr;
 pub const struct_seL4_UserContext_ = extern struct {
-    pc: seL4_Word,
-    sp: seL4_Word,
-    spsr: seL4_Word,
-    x0: seL4_Word,
-    x1: seL4_Word,
-    x2: seL4_Word,
-    x3: seL4_Word,
-    x4: seL4_Word,
-    x5: seL4_Word,
-    x6: seL4_Word,
-    x7: seL4_Word,
-    x8: seL4_Word,
-    x16: seL4_Word,
-    x17: seL4_Word,
-    x18: seL4_Word,
-    x29: seL4_Word,
-    x30: seL4_Word,
-    x9: seL4_Word,
-    x10: seL4_Word,
-    x11: seL4_Word,
-    x12: seL4_Word,
-    x13: seL4_Word,
-    x14: seL4_Word,
-    x15: seL4_Word,
-    x19: seL4_Word,
-    x20: seL4_Word,
-    x21: seL4_Word,
-    x22: seL4_Word,
-    x23: seL4_Word,
-    x24: seL4_Word,
-    x25: seL4_Word,
-    x26: seL4_Word,
-    x27: seL4_Word,
-    x28: seL4_Word,
-    tpidr_el0: seL4_Word,
-    tpidrro_el0: seL4_Word,
+    pc: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    sp: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    spsr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x0: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x1: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x2: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x3: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x4: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x5: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x6: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x7: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x8: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x16: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x17: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x18: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x29: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x30: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x9: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x10: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x11: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x12: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x13: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x14: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x15: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x19: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x20: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x21: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x22: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x23: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x24: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x25: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x26: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x27: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x28: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    tpidr_el0: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    tpidrro_el0: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_UserContext = struct_seL4_UserContext_;
+pub const struct_seL4_ARM_SMCContext_ = extern struct {
+    x0: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x1: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x2: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x3: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x4: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x5: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x6: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    x7: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+};
+pub const seL4_ARM_SMCContext = struct_seL4_ARM_SMCContext_;
 pub const seL4_ARM_Page = seL4_CPtr;
 pub const seL4_ARM_PageTable = seL4_CPtr;
 pub const seL4_ARM_PageDirectory = seL4_CPtr;
@@ -257,6 +268,7 @@ pub const seL4_ARM_SIDControl = seL4_CPtr;
 pub const seL4_ARM_SID = seL4_CPtr;
 pub const seL4_ARM_CBControl = seL4_CPtr;
 pub const seL4_ARM_CB = seL4_CPtr;
+pub const seL4_ARM_SMC = seL4_CPtr;
 pub const seL4_ARM_PageCacheable: c_int = 1;
 pub const seL4_ARM_ParityEnabled: c_int = 2;
 pub const seL4_ARM_Default_VMAttributes: c_int = 3;
@@ -270,7 +282,7 @@ pub const _enum_pad_seL4_ARM_CacheType: c_ulong = 9223372036854775807;
 pub const seL4_ARM_CacheType = c_ulong;
 pub extern fn __assert_fail(str: [*c]const u8, file: [*c]const u8, line: c_int, function: [*c]const u8) void;
 pub const struct_seL4_Fault = extern struct {
-    words: [14]seL4_Uint64,
+    words: [14]seL4_Uint64 = @import("std").mem.zeroes([14]seL4_Uint64),
 };
 pub const seL4_Fault_t = struct_seL4_Fault;
 pub const seL4_Fault_NullFault: c_int = 0;
@@ -286,22 +298,27 @@ pub const enum_seL4_Fault_tag = c_uint;
 pub const seL4_Fault_tag_t = enum_seL4_Fault_tag;
 pub fn seL4_Fault_get_seL4_FaultType(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     return @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)))) & @as(c_ulonglong, 15)))));
 }
 pub fn seL4_Fault_seL4_FaultType_equals(arg_seL4_Fault_1: seL4_Fault_t, arg_seL4_Fault_type_tag: seL4_Uint64) callconv(.C) c_int {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var seL4_Fault_type_tag = arg_seL4_Fault_type_tag;
+    _ = &seL4_Fault_type_tag;
     return @intFromBool((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)))) & @as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_Fault_type_tag))));
 }
 pub fn seL4_Fault_ptr_get_seL4_FaultType(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     return @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)))) & @as(c_ulonglong, 15)))));
 }
 pub fn seL4_Fault_NullFault_new() callconv(.C) seL4_Fault_t {
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_NullFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_NullFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_NullFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_NullFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 46), "seL4_Fault_NullFault_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_NullFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_NullFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 46), "seL4_Fault_NullFault_new");
         }
         if (!false) break;
     }
@@ -323,9 +340,10 @@ pub fn seL4_Fault_NullFault_new() callconv(.C) seL4_Fault_t {
 }
 pub fn seL4_Fault_NullFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_NullFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_NullFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_NullFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_NullFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 70), "seL4_Fault_NullFault_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_NullFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_NullFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 70), "seL4_Fault_NullFault_ptr_new");
         }
         if (!false) break;
     }
@@ -346,16 +364,24 @@ pub fn seL4_Fault_NullFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callco
 }
 pub fn seL4_Fault_CapFault_new(arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_InRecvPhase: seL4_Uint64, arg_LookupFailureType: seL4_Uint64, arg_MR4: seL4_Uint64, arg_MR5: seL4_Uint64, arg_MR6: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var IP = arg_IP;
+    _ = &IP;
     var Addr = arg_Addr;
+    _ = &Addr;
     var InRecvPhase = arg_InRecvPhase;
+    _ = &InRecvPhase;
     var LookupFailureType = arg_LookupFailureType;
+    _ = &LookupFailureType;
     var MR4 = arg_MR4;
+    _ = &MR4;
     var MR5 = arg_MR5;
+    _ = &MR5;
     var MR6 = arg_MR6;
+    _ = &MR6;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_CapFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_CapFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 94), "seL4_Fault_CapFault_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_CapFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_CapFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 94), "seL4_Fault_CapFault_new");
         }
         if (!false) break;
     }
@@ -377,16 +403,24 @@ pub fn seL4_Fault_CapFault_new(arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_I
 }
 pub fn seL4_Fault_CapFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_InRecvPhase: seL4_Uint64, arg_LookupFailureType: seL4_Uint64, arg_MR4: seL4_Uint64, arg_MR5: seL4_Uint64, arg_MR6: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var IP = arg_IP;
+    _ = &IP;
     var Addr = arg_Addr;
+    _ = &Addr;
     var InRecvPhase = arg_InRecvPhase;
+    _ = &InRecvPhase;
     var LookupFailureType = arg_LookupFailureType;
+    _ = &LookupFailureType;
     var MR4 = arg_MR4;
+    _ = &MR4;
     var MR5 = arg_MR5;
+    _ = &MR5;
     var MR6 = arg_MR6;
+    _ = &MR6;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_CapFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_CapFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 125), "seL4_Fault_CapFault_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_CapFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_CapFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 125), "seL4_Fault_CapFault_ptr_new");
         }
         if (!false) break;
     }
@@ -407,10 +441,12 @@ pub fn seL4_Fault_CapFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_IP:
 }
 pub fn seL4_Fault_CapFault_get_IP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 155), "seL4_Fault_CapFault_get_IP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 155), "seL4_Fault_CapFault_get_IP");
         }
         if (!false) break;
     }
@@ -422,16 +458,18 @@ pub fn seL4_Fault_CapFault_get_IP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) s
 }
 pub fn seL4_Fault_CapFault_set_IP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 168), "seL4_Fault_CapFault_set_IP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 168), "seL4_Fault_CapFault_set_IP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 170), "seL4_Fault_CapFault_set_IP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 170), "seL4_Fault_CapFault_set_IP");
         }
         if (!false) break;
     }
@@ -441,10 +479,12 @@ pub fn seL4_Fault_CapFault_set_IP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_
 }
 pub fn seL4_Fault_CapFault_ptr_get_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 181), "seL4_Fault_CapFault_ptr_get_IP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 181), "seL4_Fault_CapFault_ptr_get_IP");
         }
         if (!false) break;
     }
@@ -456,16 +496,18 @@ pub fn seL4_Fault_CapFault_ptr_get_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) call
 }
 pub fn seL4_Fault_CapFault_ptr_set_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 195), "seL4_Fault_CapFault_ptr_set_IP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 195), "seL4_Fault_CapFault_ptr_set_IP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 198), "seL4_Fault_CapFault_ptr_set_IP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 198), "seL4_Fault_CapFault_ptr_set_IP");
         }
         if (!false) break;
     }
@@ -474,10 +516,12 @@ pub fn seL4_Fault_CapFault_ptr_set_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_
 }
 pub fn seL4_Fault_CapFault_get_Addr(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 208), "seL4_Fault_CapFault_get_Addr");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 208), "seL4_Fault_CapFault_get_Addr");
         }
         if (!false) break;
     }
@@ -489,16 +533,18 @@ pub fn seL4_Fault_CapFault_get_Addr(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C)
 }
 pub fn seL4_Fault_CapFault_set_Addr(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 221), "seL4_Fault_CapFault_set_Addr");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 221), "seL4_Fault_CapFault_set_Addr");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 223), "seL4_Fault_CapFault_set_Addr");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 223), "seL4_Fault_CapFault_set_Addr");
         }
         if (!false) break;
     }
@@ -508,10 +554,12 @@ pub fn seL4_Fault_CapFault_set_Addr(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL
 }
 pub fn seL4_Fault_CapFault_ptr_get_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 234), "seL4_Fault_CapFault_ptr_get_Addr");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 234), "seL4_Fault_CapFault_ptr_get_Addr");
         }
         if (!false) break;
     }
@@ -523,16 +571,18 @@ pub fn seL4_Fault_CapFault_ptr_get_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) ca
 }
 pub fn seL4_Fault_CapFault_ptr_set_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 248), "seL4_Fault_CapFault_ptr_set_Addr");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 248), "seL4_Fault_CapFault_ptr_set_Addr");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 251), "seL4_Fault_CapFault_ptr_set_Addr");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 251), "seL4_Fault_CapFault_ptr_set_Addr");
         }
         if (!false) break;
     }
@@ -541,10 +591,12 @@ pub fn seL4_Fault_CapFault_ptr_set_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, ar
 }
 pub fn seL4_Fault_CapFault_get_InRecvPhase(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 261), "seL4_Fault_CapFault_get_InRecvPhase");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 261), "seL4_Fault_CapFault_get_InRecvPhase");
         }
         if (!false) break;
     }
@@ -556,16 +608,18 @@ pub fn seL4_Fault_CapFault_get_InRecvPhase(arg_seL4_Fault_1: seL4_Fault_t) callc
 }
 pub fn seL4_Fault_CapFault_set_InRecvPhase(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 274), "seL4_Fault_CapFault_set_InRecvPhase");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 274), "seL4_Fault_CapFault_set_InRecvPhase");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 276), "seL4_Fault_CapFault_set_InRecvPhase");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 276), "seL4_Fault_CapFault_set_InRecvPhase");
         }
         if (!false) break;
     }
@@ -575,10 +629,12 @@ pub fn seL4_Fault_CapFault_set_InRecvPhase(arg_seL4_Fault_1: seL4_Fault_t, arg_v
 }
 pub fn seL4_Fault_CapFault_ptr_get_InRecvPhase(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 287), "seL4_Fault_CapFault_ptr_get_InRecvPhase");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 287), "seL4_Fault_CapFault_ptr_get_InRecvPhase");
         }
         if (!false) break;
     }
@@ -590,16 +646,18 @@ pub fn seL4_Fault_CapFault_ptr_get_InRecvPhase(arg_seL4_Fault_ptr: [*c]seL4_Faul
 }
 pub fn seL4_Fault_CapFault_ptr_set_InRecvPhase(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 301), "seL4_Fault_CapFault_ptr_set_InRecvPhase");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 301), "seL4_Fault_CapFault_ptr_set_InRecvPhase");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 304), "seL4_Fault_CapFault_ptr_set_InRecvPhase");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 304), "seL4_Fault_CapFault_ptr_set_InRecvPhase");
         }
         if (!false) break;
     }
@@ -608,10 +666,12 @@ pub fn seL4_Fault_CapFault_ptr_set_InRecvPhase(arg_seL4_Fault_ptr: [*c]seL4_Faul
 }
 pub fn seL4_Fault_CapFault_get_LookupFailureType(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 314), "seL4_Fault_CapFault_get_LookupFailureType");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 314), "seL4_Fault_CapFault_get_LookupFailureType");
         }
         if (!false) break;
     }
@@ -623,16 +683,18 @@ pub fn seL4_Fault_CapFault_get_LookupFailureType(arg_seL4_Fault_1: seL4_Fault_t)
 }
 pub fn seL4_Fault_CapFault_set_LookupFailureType(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 327), "seL4_Fault_CapFault_set_LookupFailureType");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 327), "seL4_Fault_CapFault_set_LookupFailureType");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 329), "seL4_Fault_CapFault_set_LookupFailureType");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 329), "seL4_Fault_CapFault_set_LookupFailureType");
         }
         if (!false) break;
     }
@@ -642,10 +704,12 @@ pub fn seL4_Fault_CapFault_set_LookupFailureType(arg_seL4_Fault_1: seL4_Fault_t,
 }
 pub fn seL4_Fault_CapFault_ptr_get_LookupFailureType(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 340), "seL4_Fault_CapFault_ptr_get_LookupFailureType");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 340), "seL4_Fault_CapFault_ptr_get_LookupFailureType");
         }
         if (!false) break;
     }
@@ -657,16 +721,18 @@ pub fn seL4_Fault_CapFault_ptr_get_LookupFailureType(arg_seL4_Fault_ptr: [*c]seL
 }
 pub fn seL4_Fault_CapFault_ptr_set_LookupFailureType(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 354), "seL4_Fault_CapFault_ptr_set_LookupFailureType");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 354), "seL4_Fault_CapFault_ptr_set_LookupFailureType");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 357), "seL4_Fault_CapFault_ptr_set_LookupFailureType");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 357), "seL4_Fault_CapFault_ptr_set_LookupFailureType");
         }
         if (!false) break;
     }
@@ -675,10 +741,12 @@ pub fn seL4_Fault_CapFault_ptr_set_LookupFailureType(arg_seL4_Fault_ptr: [*c]seL
 }
 pub fn seL4_Fault_CapFault_get_MR4(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 367), "seL4_Fault_CapFault_get_MR4");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 367), "seL4_Fault_CapFault_get_MR4");
         }
         if (!false) break;
     }
@@ -690,16 +758,18 @@ pub fn seL4_Fault_CapFault_get_MR4(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) 
 }
 pub fn seL4_Fault_CapFault_set_MR4(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 380), "seL4_Fault_CapFault_set_MR4");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 380), "seL4_Fault_CapFault_set_MR4");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 382), "seL4_Fault_CapFault_set_MR4");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 382), "seL4_Fault_CapFault_set_MR4");
         }
         if (!false) break;
     }
@@ -709,10 +779,12 @@ pub fn seL4_Fault_CapFault_set_MR4(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4
 }
 pub fn seL4_Fault_CapFault_ptr_get_MR4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 393), "seL4_Fault_CapFault_ptr_get_MR4");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 393), "seL4_Fault_CapFault_ptr_get_MR4");
         }
         if (!false) break;
     }
@@ -724,16 +796,18 @@ pub fn seL4_Fault_CapFault_ptr_get_MR4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) cal
 }
 pub fn seL4_Fault_CapFault_ptr_set_MR4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 407), "seL4_Fault_CapFault_ptr_set_MR4");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 407), "seL4_Fault_CapFault_ptr_set_MR4");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 410), "seL4_Fault_CapFault_ptr_set_MR4");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 410), "seL4_Fault_CapFault_ptr_set_MR4");
         }
         if (!false) break;
     }
@@ -742,10 +816,12 @@ pub fn seL4_Fault_CapFault_ptr_set_MR4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg
 }
 pub fn seL4_Fault_CapFault_get_MR5(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 420), "seL4_Fault_CapFault_get_MR5");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 420), "seL4_Fault_CapFault_get_MR5");
         }
         if (!false) break;
     }
@@ -757,16 +833,18 @@ pub fn seL4_Fault_CapFault_get_MR5(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) 
 }
 pub fn seL4_Fault_CapFault_set_MR5(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 433), "seL4_Fault_CapFault_set_MR5");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 433), "seL4_Fault_CapFault_set_MR5");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 435), "seL4_Fault_CapFault_set_MR5");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 435), "seL4_Fault_CapFault_set_MR5");
         }
         if (!false) break;
     }
@@ -776,10 +854,12 @@ pub fn seL4_Fault_CapFault_set_MR5(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4
 }
 pub fn seL4_Fault_CapFault_ptr_get_MR5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 446), "seL4_Fault_CapFault_ptr_get_MR5");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 446), "seL4_Fault_CapFault_ptr_get_MR5");
         }
         if (!false) break;
     }
@@ -791,16 +871,18 @@ pub fn seL4_Fault_CapFault_ptr_get_MR5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) cal
 }
 pub fn seL4_Fault_CapFault_ptr_set_MR5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 460), "seL4_Fault_CapFault_ptr_set_MR5");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 460), "seL4_Fault_CapFault_ptr_set_MR5");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 463), "seL4_Fault_CapFault_ptr_set_MR5");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 463), "seL4_Fault_CapFault_ptr_set_MR5");
         }
         if (!false) break;
     }
@@ -809,10 +891,12 @@ pub fn seL4_Fault_CapFault_ptr_set_MR5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg
 }
 pub fn seL4_Fault_CapFault_get_MR6(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 473), "seL4_Fault_CapFault_get_MR6");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 473), "seL4_Fault_CapFault_get_MR6");
         }
         if (!false) break;
     }
@@ -824,16 +908,18 @@ pub fn seL4_Fault_CapFault_get_MR6(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) 
 }
 pub fn seL4_Fault_CapFault_set_MR6(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 486), "seL4_Fault_CapFault_set_MR6");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 486), "seL4_Fault_CapFault_set_MR6");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 488), "seL4_Fault_CapFault_set_MR6");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 488), "seL4_Fault_CapFault_set_MR6");
         }
         if (!false) break;
     }
@@ -843,10 +929,12 @@ pub fn seL4_Fault_CapFault_set_MR6(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4
 }
 pub fn seL4_Fault_CapFault_ptr_get_MR6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 499), "seL4_Fault_CapFault_ptr_get_MR6");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 499), "seL4_Fault_CapFault_ptr_get_MR6");
         }
         if (!false) break;
     }
@@ -858,16 +946,18 @@ pub fn seL4_Fault_CapFault_ptr_get_MR6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) cal
 }
 pub fn seL4_Fault_CapFault_ptr_set_MR6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 513), "seL4_Fault_CapFault_ptr_set_MR6");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_CapFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 513), "seL4_Fault_CapFault_ptr_set_MR6");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 516), "seL4_Fault_CapFault_ptr_set_MR6");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 516), "seL4_Fault_CapFault_ptr_set_MR6");
         }
         if (!false) break;
     }
@@ -876,22 +966,36 @@ pub fn seL4_Fault_CapFault_ptr_set_MR6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg
 }
 pub fn seL4_Fault_UnknownSyscall_new(arg_X0: seL4_Uint64, arg_X1: seL4_Uint64, arg_X2: seL4_Uint64, arg_X3: seL4_Uint64, arg_X4: seL4_Uint64, arg_X5: seL4_Uint64, arg_X6: seL4_Uint64, arg_X7: seL4_Uint64, arg_FaultIP: seL4_Uint64, arg_SP: seL4_Uint64, arg_LR: seL4_Uint64, arg_SPSR: seL4_Uint64, arg_Syscall: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var X0 = arg_X0;
+    _ = &X0;
     var X1 = arg_X1;
+    _ = &X1;
     var X2 = arg_X2;
+    _ = &X2;
     var X3 = arg_X3;
+    _ = &X3;
     var X4 = arg_X4;
+    _ = &X4;
     var X5 = arg_X5;
+    _ = &X5;
     var X6 = arg_X6;
+    _ = &X6;
     var X7 = arg_X7;
+    _ = &X7;
     var FaultIP = arg_FaultIP;
+    _ = &FaultIP;
     var SP = arg_SP;
+    _ = &SP;
     var LR = arg_LR;
+    _ = &LR;
     var SPSR = arg_SPSR;
+    _ = &SPSR;
     var Syscall = arg_Syscall;
+    _ = &Syscall;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_UnknownSyscall & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UnknownSyscall & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 527), "seL4_Fault_UnknownSyscall_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_UnknownSyscall & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UnknownSyscall & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 527), "seL4_Fault_UnknownSyscall_new");
         }
         if (!false) break;
     }
@@ -913,22 +1017,36 @@ pub fn seL4_Fault_UnknownSyscall_new(arg_X0: seL4_Uint64, arg_X1: seL4_Uint64, a
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_X0: seL4_Uint64, arg_X1: seL4_Uint64, arg_X2: seL4_Uint64, arg_X3: seL4_Uint64, arg_X4: seL4_Uint64, arg_X5: seL4_Uint64, arg_X6: seL4_Uint64, arg_X7: seL4_Uint64, arg_FaultIP: seL4_Uint64, arg_SP: seL4_Uint64, arg_LR: seL4_Uint64, arg_SPSR: seL4_Uint64, arg_Syscall: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var X0 = arg_X0;
+    _ = &X0;
     var X1 = arg_X1;
+    _ = &X1;
     var X2 = arg_X2;
+    _ = &X2;
     var X3 = arg_X3;
+    _ = &X3;
     var X4 = arg_X4;
+    _ = &X4;
     var X5 = arg_X5;
+    _ = &X5;
     var X6 = arg_X6;
+    _ = &X6;
     var X7 = arg_X7;
+    _ = &X7;
     var FaultIP = arg_FaultIP;
+    _ = &FaultIP;
     var SP = arg_SP;
+    _ = &SP;
     var LR = arg_LR;
+    _ = &LR;
     var SPSR = arg_SPSR;
+    _ = &SPSR;
     var Syscall = arg_Syscall;
+    _ = &Syscall;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_UnknownSyscall & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UnknownSyscall & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 564), "seL4_Fault_UnknownSyscall_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_UnknownSyscall & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UnknownSyscall & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 564), "seL4_Fault_UnknownSyscall_ptr_new");
         }
         if (!false) break;
     }
@@ -949,10 +1067,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, a
 }
 pub fn seL4_Fault_UnknownSyscall_get_X0(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 600), "seL4_Fault_UnknownSyscall_get_X0");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 600), "seL4_Fault_UnknownSyscall_get_X0");
         }
         if (!false) break;
     }
@@ -964,16 +1084,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X0(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X0(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 613), "seL4_Fault_UnknownSyscall_set_X0");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 613), "seL4_Fault_UnknownSyscall_set_X0");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 615), "seL4_Fault_UnknownSyscall_set_X0");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 615), "seL4_Fault_UnknownSyscall_set_X0");
         }
         if (!false) break;
     }
@@ -983,10 +1105,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X0(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X0(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 626), "seL4_Fault_UnknownSyscall_ptr_get_X0");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 626), "seL4_Fault_UnknownSyscall_ptr_get_X0");
         }
         if (!false) break;
     }
@@ -998,16 +1122,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X0(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X0(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 640), "seL4_Fault_UnknownSyscall_ptr_set_X0");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 640), "seL4_Fault_UnknownSyscall_ptr_set_X0");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 643), "seL4_Fault_UnknownSyscall_ptr_set_X0");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 643), "seL4_Fault_UnknownSyscall_ptr_set_X0");
         }
         if (!false) break;
     }
@@ -1016,10 +1142,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X0(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X1(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 653), "seL4_Fault_UnknownSyscall_get_X1");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 653), "seL4_Fault_UnknownSyscall_get_X1");
         }
         if (!false) break;
     }
@@ -1031,16 +1159,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X1(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X1(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 666), "seL4_Fault_UnknownSyscall_set_X1");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 666), "seL4_Fault_UnknownSyscall_set_X1");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 668), "seL4_Fault_UnknownSyscall_set_X1");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 668), "seL4_Fault_UnknownSyscall_set_X1");
         }
         if (!false) break;
     }
@@ -1050,10 +1180,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X1(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X1(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 679), "seL4_Fault_UnknownSyscall_ptr_get_X1");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 679), "seL4_Fault_UnknownSyscall_ptr_get_X1");
         }
         if (!false) break;
     }
@@ -1065,16 +1197,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X1(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X1(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 693), "seL4_Fault_UnknownSyscall_ptr_set_X1");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 693), "seL4_Fault_UnknownSyscall_ptr_set_X1");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 696), "seL4_Fault_UnknownSyscall_ptr_set_X1");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 696), "seL4_Fault_UnknownSyscall_ptr_set_X1");
         }
         if (!false) break;
     }
@@ -1083,10 +1217,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X1(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X2(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 706), "seL4_Fault_UnknownSyscall_get_X2");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 706), "seL4_Fault_UnknownSyscall_get_X2");
         }
         if (!false) break;
     }
@@ -1098,16 +1234,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X2(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X2(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 719), "seL4_Fault_UnknownSyscall_set_X2");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 719), "seL4_Fault_UnknownSyscall_set_X2");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 721), "seL4_Fault_UnknownSyscall_set_X2");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 721), "seL4_Fault_UnknownSyscall_set_X2");
         }
         if (!false) break;
     }
@@ -1117,10 +1255,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X2(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X2(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 732), "seL4_Fault_UnknownSyscall_ptr_get_X2");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 732), "seL4_Fault_UnknownSyscall_ptr_get_X2");
         }
         if (!false) break;
     }
@@ -1132,16 +1272,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X2(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X2(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 746), "seL4_Fault_UnknownSyscall_ptr_set_X2");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 746), "seL4_Fault_UnknownSyscall_ptr_set_X2");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 749), "seL4_Fault_UnknownSyscall_ptr_set_X2");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 749), "seL4_Fault_UnknownSyscall_ptr_set_X2");
         }
         if (!false) break;
     }
@@ -1150,10 +1292,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X2(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X3(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 759), "seL4_Fault_UnknownSyscall_get_X3");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 759), "seL4_Fault_UnknownSyscall_get_X3");
         }
         if (!false) break;
     }
@@ -1165,16 +1309,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X3(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X3(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 772), "seL4_Fault_UnknownSyscall_set_X3");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 772), "seL4_Fault_UnknownSyscall_set_X3");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 774), "seL4_Fault_UnknownSyscall_set_X3");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 774), "seL4_Fault_UnknownSyscall_set_X3");
         }
         if (!false) break;
     }
@@ -1184,10 +1330,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X3(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X3(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 785), "seL4_Fault_UnknownSyscall_ptr_get_X3");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 785), "seL4_Fault_UnknownSyscall_ptr_get_X3");
         }
         if (!false) break;
     }
@@ -1199,16 +1347,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X3(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X3(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 799), "seL4_Fault_UnknownSyscall_ptr_set_X3");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 799), "seL4_Fault_UnknownSyscall_ptr_set_X3");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 802), "seL4_Fault_UnknownSyscall_ptr_set_X3");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 802), "seL4_Fault_UnknownSyscall_ptr_set_X3");
         }
         if (!false) break;
     }
@@ -1217,10 +1367,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X3(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X4(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 812), "seL4_Fault_UnknownSyscall_get_X4");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 812), "seL4_Fault_UnknownSyscall_get_X4");
         }
         if (!false) break;
     }
@@ -1232,16 +1384,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X4(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X4(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 825), "seL4_Fault_UnknownSyscall_set_X4");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 825), "seL4_Fault_UnknownSyscall_set_X4");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 827), "seL4_Fault_UnknownSyscall_set_X4");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 827), "seL4_Fault_UnknownSyscall_set_X4");
         }
         if (!false) break;
     }
@@ -1251,10 +1405,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X4(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 838), "seL4_Fault_UnknownSyscall_ptr_get_X4");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 838), "seL4_Fault_UnknownSyscall_ptr_get_X4");
         }
         if (!false) break;
     }
@@ -1266,16 +1422,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 852), "seL4_Fault_UnknownSyscall_ptr_set_X4");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 852), "seL4_Fault_UnknownSyscall_ptr_set_X4");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 855), "seL4_Fault_UnknownSyscall_ptr_set_X4");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 855), "seL4_Fault_UnknownSyscall_ptr_set_X4");
         }
         if (!false) break;
     }
@@ -1284,10 +1442,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X4(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X5(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 865), "seL4_Fault_UnknownSyscall_get_X5");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 865), "seL4_Fault_UnknownSyscall_get_X5");
         }
         if (!false) break;
     }
@@ -1299,16 +1459,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X5(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X5(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 878), "seL4_Fault_UnknownSyscall_set_X5");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 878), "seL4_Fault_UnknownSyscall_set_X5");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 880), "seL4_Fault_UnknownSyscall_set_X5");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 880), "seL4_Fault_UnknownSyscall_set_X5");
         }
         if (!false) break;
     }
@@ -1318,10 +1480,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X5(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 891), "seL4_Fault_UnknownSyscall_ptr_get_X5");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 891), "seL4_Fault_UnknownSyscall_ptr_get_X5");
         }
         if (!false) break;
     }
@@ -1333,16 +1497,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 905), "seL4_Fault_UnknownSyscall_ptr_set_X5");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 905), "seL4_Fault_UnknownSyscall_ptr_set_X5");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 908), "seL4_Fault_UnknownSyscall_ptr_set_X5");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 908), "seL4_Fault_UnknownSyscall_ptr_set_X5");
         }
         if (!false) break;
     }
@@ -1351,10 +1517,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X5(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X6(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 918), "seL4_Fault_UnknownSyscall_get_X6");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 918), "seL4_Fault_UnknownSyscall_get_X6");
         }
         if (!false) break;
     }
@@ -1366,16 +1534,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X6(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X6(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 931), "seL4_Fault_UnknownSyscall_set_X6");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 931), "seL4_Fault_UnknownSyscall_set_X6");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 933), "seL4_Fault_UnknownSyscall_set_X6");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 933), "seL4_Fault_UnknownSyscall_set_X6");
         }
         if (!false) break;
     }
@@ -1385,10 +1555,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X6(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 944), "seL4_Fault_UnknownSyscall_ptr_get_X6");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 944), "seL4_Fault_UnknownSyscall_ptr_get_X6");
         }
         if (!false) break;
     }
@@ -1400,16 +1572,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 958), "seL4_Fault_UnknownSyscall_ptr_set_X6");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 958), "seL4_Fault_UnknownSyscall_ptr_set_X6");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 961), "seL4_Fault_UnknownSyscall_ptr_set_X6");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 961), "seL4_Fault_UnknownSyscall_ptr_set_X6");
         }
         if (!false) break;
     }
@@ -1418,10 +1592,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X6(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_X7(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 971), "seL4_Fault_UnknownSyscall_get_X7");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 971), "seL4_Fault_UnknownSyscall_get_X7");
         }
         if (!false) break;
     }
@@ -1433,16 +1609,18 @@ pub fn seL4_Fault_UnknownSyscall_get_X7(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_X7(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 984), "seL4_Fault_UnknownSyscall_set_X7");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 984), "seL4_Fault_UnknownSyscall_set_X7");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 986), "seL4_Fault_UnknownSyscall_set_X7");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 986), "seL4_Fault_UnknownSyscall_set_X7");
         }
         if (!false) break;
     }
@@ -1452,10 +1630,12 @@ pub fn seL4_Fault_UnknownSyscall_set_X7(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_X7(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 997), "seL4_Fault_UnknownSyscall_ptr_get_X7");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 997), "seL4_Fault_UnknownSyscall_ptr_get_X7");
         }
         if (!false) break;
     }
@@ -1467,16 +1647,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_X7(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_X7(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1011), "seL4_Fault_UnknownSyscall_ptr_set_X7");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1011), "seL4_Fault_UnknownSyscall_ptr_set_X7");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1014), "seL4_Fault_UnknownSyscall_ptr_set_X7");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1014), "seL4_Fault_UnknownSyscall_ptr_set_X7");
         }
         if (!false) break;
     }
@@ -1485,10 +1667,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_X7(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_FaultIP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1024), "seL4_Fault_UnknownSyscall_get_FaultIP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1024), "seL4_Fault_UnknownSyscall_get_FaultIP");
         }
         if (!false) break;
     }
@@ -1500,16 +1684,18 @@ pub fn seL4_Fault_UnknownSyscall_get_FaultIP(arg_seL4_Fault_1: seL4_Fault_t) cal
 }
 pub fn seL4_Fault_UnknownSyscall_set_FaultIP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1037), "seL4_Fault_UnknownSyscall_set_FaultIP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1037), "seL4_Fault_UnknownSyscall_set_FaultIP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1039), "seL4_Fault_UnknownSyscall_set_FaultIP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1039), "seL4_Fault_UnknownSyscall_set_FaultIP");
         }
         if (!false) break;
     }
@@ -1519,10 +1705,12 @@ pub fn seL4_Fault_UnknownSyscall_set_FaultIP(arg_seL4_Fault_1: seL4_Fault_t, arg
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1050), "seL4_Fault_UnknownSyscall_ptr_get_FaultIP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1050), "seL4_Fault_UnknownSyscall_ptr_get_FaultIP");
         }
         if (!false) break;
     }
@@ -1534,16 +1722,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fa
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1064), "seL4_Fault_UnknownSyscall_ptr_set_FaultIP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1064), "seL4_Fault_UnknownSyscall_ptr_set_FaultIP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1067), "seL4_Fault_UnknownSyscall_ptr_set_FaultIP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1067), "seL4_Fault_UnknownSyscall_ptr_set_FaultIP");
         }
         if (!false) break;
     }
@@ -1552,10 +1742,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fa
 }
 pub fn seL4_Fault_UnknownSyscall_get_SP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1077), "seL4_Fault_UnknownSyscall_get_SP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1077), "seL4_Fault_UnknownSyscall_get_SP");
         }
         if (!false) break;
     }
@@ -1567,16 +1759,18 @@ pub fn seL4_Fault_UnknownSyscall_get_SP(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_SP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1090), "seL4_Fault_UnknownSyscall_set_SP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1090), "seL4_Fault_UnknownSyscall_set_SP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1092), "seL4_Fault_UnknownSyscall_set_SP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1092), "seL4_Fault_UnknownSyscall_set_SP");
         }
         if (!false) break;
     }
@@ -1586,10 +1780,12 @@ pub fn seL4_Fault_UnknownSyscall_set_SP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_SP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1103), "seL4_Fault_UnknownSyscall_ptr_get_SP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1103), "seL4_Fault_UnknownSyscall_ptr_get_SP");
         }
         if (!false) break;
     }
@@ -1601,16 +1797,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_SP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_SP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1117), "seL4_Fault_UnknownSyscall_ptr_set_SP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1117), "seL4_Fault_UnknownSyscall_ptr_set_SP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1120), "seL4_Fault_UnknownSyscall_ptr_set_SP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1120), "seL4_Fault_UnknownSyscall_ptr_set_SP");
         }
         if (!false) break;
     }
@@ -1619,10 +1817,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_SP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_LR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1130), "seL4_Fault_UnknownSyscall_get_LR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1130), "seL4_Fault_UnknownSyscall_get_LR");
         }
         if (!false) break;
     }
@@ -1634,16 +1834,18 @@ pub fn seL4_Fault_UnknownSyscall_get_LR(arg_seL4_Fault_1: seL4_Fault_t) callconv
 }
 pub fn seL4_Fault_UnknownSyscall_set_LR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1143), "seL4_Fault_UnknownSyscall_set_LR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1143), "seL4_Fault_UnknownSyscall_set_LR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1145), "seL4_Fault_UnknownSyscall_set_LR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1145), "seL4_Fault_UnknownSyscall_set_LR");
         }
         if (!false) break;
     }
@@ -1653,10 +1855,12 @@ pub fn seL4_Fault_UnknownSyscall_set_LR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64:
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_LR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1156), "seL4_Fault_UnknownSyscall_ptr_get_LR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1156), "seL4_Fault_UnknownSyscall_ptr_get_LR");
         }
         if (!false) break;
     }
@@ -1668,16 +1872,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_LR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_LR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1170), "seL4_Fault_UnknownSyscall_ptr_set_LR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1170), "seL4_Fault_UnknownSyscall_ptr_set_LR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1173), "seL4_Fault_UnknownSyscall_ptr_set_LR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1173), "seL4_Fault_UnknownSyscall_ptr_set_LR");
         }
         if (!false) break;
     }
@@ -1686,10 +1892,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_LR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t
 }
 pub fn seL4_Fault_UnknownSyscall_get_SPSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1183), "seL4_Fault_UnknownSyscall_get_SPSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1183), "seL4_Fault_UnknownSyscall_get_SPSR");
         }
         if (!false) break;
     }
@@ -1701,16 +1909,18 @@ pub fn seL4_Fault_UnknownSyscall_get_SPSR(arg_seL4_Fault_1: seL4_Fault_t) callco
 }
 pub fn seL4_Fault_UnknownSyscall_set_SPSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1196), "seL4_Fault_UnknownSyscall_set_SPSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1196), "seL4_Fault_UnknownSyscall_set_SPSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1198), "seL4_Fault_UnknownSyscall_set_SPSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1198), "seL4_Fault_UnknownSyscall_set_SPSR");
         }
         if (!false) break;
     }
@@ -1720,10 +1930,12 @@ pub fn seL4_Fault_UnknownSyscall_set_SPSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v6
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1209), "seL4_Fault_UnknownSyscall_ptr_get_SPSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1209), "seL4_Fault_UnknownSyscall_ptr_get_SPSR");
         }
         if (!false) break;
     }
@@ -1735,16 +1947,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1223), "seL4_Fault_UnknownSyscall_ptr_set_SPSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1223), "seL4_Fault_UnknownSyscall_ptr_set_SPSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1226), "seL4_Fault_UnknownSyscall_ptr_set_SPSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1226), "seL4_Fault_UnknownSyscall_ptr_set_SPSR");
         }
         if (!false) break;
     }
@@ -1753,10 +1967,12 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_UnknownSyscall_get_Syscall(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1236), "seL4_Fault_UnknownSyscall_get_Syscall");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1236), "seL4_Fault_UnknownSyscall_get_Syscall");
         }
         if (!false) break;
     }
@@ -1768,16 +1984,18 @@ pub fn seL4_Fault_UnknownSyscall_get_Syscall(arg_seL4_Fault_1: seL4_Fault_t) cal
 }
 pub fn seL4_Fault_UnknownSyscall_set_Syscall(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1249), "seL4_Fault_UnknownSyscall_set_Syscall");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1249), "seL4_Fault_UnknownSyscall_set_Syscall");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1251), "seL4_Fault_UnknownSyscall_set_Syscall");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1251), "seL4_Fault_UnknownSyscall_set_Syscall");
         }
         if (!false) break;
     }
@@ -1787,10 +2005,12 @@ pub fn seL4_Fault_UnknownSyscall_set_Syscall(arg_seL4_Fault_1: seL4_Fault_t, arg
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_get_Syscall(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1262), "seL4_Fault_UnknownSyscall_ptr_get_Syscall");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1262), "seL4_Fault_UnknownSyscall_ptr_get_Syscall");
         }
         if (!false) break;
     }
@@ -1802,16 +2022,18 @@ pub fn seL4_Fault_UnknownSyscall_ptr_get_Syscall(arg_seL4_Fault_ptr: [*c]seL4_Fa
 }
 pub fn seL4_Fault_UnknownSyscall_ptr_set_Syscall(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1276), "seL4_Fault_UnknownSyscall_ptr_set_Syscall");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UnknownSyscall", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1276), "seL4_Fault_UnknownSyscall_ptr_set_Syscall");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1279), "seL4_Fault_UnknownSyscall_ptr_set_Syscall");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1279), "seL4_Fault_UnknownSyscall_ptr_set_Syscall");
         }
         if (!false) break;
     }
@@ -1820,14 +2042,20 @@ pub fn seL4_Fault_UnknownSyscall_ptr_set_Syscall(arg_seL4_Fault_ptr: [*c]seL4_Fa
 }
 pub fn seL4_Fault_UserException_new(arg_FaultIP: seL4_Uint64, arg_Stack: seL4_Uint64, arg_SPSR: seL4_Uint64, arg_Number: seL4_Uint64, arg_Code: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var FaultIP = arg_FaultIP;
+    _ = &FaultIP;
     var Stack = arg_Stack;
+    _ = &Stack;
     var SPSR = arg_SPSR;
+    _ = &SPSR;
     var Number = arg_Number;
+    _ = &Number;
     var Code = arg_Code;
+    _ = &Code;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_UserException & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UserException & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1290), "seL4_Fault_UserException_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_UserException & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UserException & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1290), "seL4_Fault_UserException_new");
         }
         if (!false) break;
     }
@@ -1849,14 +2077,20 @@ pub fn seL4_Fault_UserException_new(arg_FaultIP: seL4_Uint64, arg_Stack: seL4_Ui
 }
 pub fn seL4_Fault_UserException_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_FaultIP: seL4_Uint64, arg_Stack: seL4_Uint64, arg_SPSR: seL4_Uint64, arg_Number: seL4_Uint64, arg_Code: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var FaultIP = arg_FaultIP;
+    _ = &FaultIP;
     var Stack = arg_Stack;
+    _ = &Stack;
     var SPSR = arg_SPSR;
+    _ = &SPSR;
     var Number = arg_Number;
+    _ = &Number;
     var Code = arg_Code;
+    _ = &Code;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_UserException & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UserException & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1319), "seL4_Fault_UserException_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_UserException & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_UserException & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1319), "seL4_Fault_UserException_ptr_new");
         }
         if (!false) break;
     }
@@ -1877,10 +2111,12 @@ pub fn seL4_Fault_UserException_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, ar
 }
 pub fn seL4_Fault_UserException_get_FaultIP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1347), "seL4_Fault_UserException_get_FaultIP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1347), "seL4_Fault_UserException_get_FaultIP");
         }
         if (!false) break;
     }
@@ -1892,16 +2128,18 @@ pub fn seL4_Fault_UserException_get_FaultIP(arg_seL4_Fault_1: seL4_Fault_t) call
 }
 pub fn seL4_Fault_UserException_set_FaultIP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1360), "seL4_Fault_UserException_set_FaultIP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1360), "seL4_Fault_UserException_set_FaultIP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1362), "seL4_Fault_UserException_set_FaultIP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1362), "seL4_Fault_UserException_set_FaultIP");
         }
         if (!false) break;
     }
@@ -1911,10 +2149,12 @@ pub fn seL4_Fault_UserException_set_FaultIP(arg_seL4_Fault_1: seL4_Fault_t, arg_
 }
 pub fn seL4_Fault_UserException_ptr_get_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1373), "seL4_Fault_UserException_ptr_get_FaultIP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1373), "seL4_Fault_UserException_ptr_get_FaultIP");
         }
         if (!false) break;
     }
@@ -1926,16 +2166,18 @@ pub fn seL4_Fault_UserException_ptr_get_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fau
 }
 pub fn seL4_Fault_UserException_ptr_set_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1387), "seL4_Fault_UserException_ptr_set_FaultIP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1387), "seL4_Fault_UserException_ptr_set_FaultIP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1390), "seL4_Fault_UserException_ptr_set_FaultIP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1390), "seL4_Fault_UserException_ptr_set_FaultIP");
         }
         if (!false) break;
     }
@@ -1944,10 +2186,12 @@ pub fn seL4_Fault_UserException_ptr_set_FaultIP(arg_seL4_Fault_ptr: [*c]seL4_Fau
 }
 pub fn seL4_Fault_UserException_get_Stack(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1400), "seL4_Fault_UserException_get_Stack");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1400), "seL4_Fault_UserException_get_Stack");
         }
         if (!false) break;
     }
@@ -1959,16 +2203,18 @@ pub fn seL4_Fault_UserException_get_Stack(arg_seL4_Fault_1: seL4_Fault_t) callco
 }
 pub fn seL4_Fault_UserException_set_Stack(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1413), "seL4_Fault_UserException_set_Stack");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1413), "seL4_Fault_UserException_set_Stack");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1415), "seL4_Fault_UserException_set_Stack");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1415), "seL4_Fault_UserException_set_Stack");
         }
         if (!false) break;
     }
@@ -1978,10 +2224,12 @@ pub fn seL4_Fault_UserException_set_Stack(arg_seL4_Fault_1: seL4_Fault_t, arg_v6
 }
 pub fn seL4_Fault_UserException_ptr_get_Stack(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1426), "seL4_Fault_UserException_ptr_get_Stack");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1426), "seL4_Fault_UserException_ptr_get_Stack");
         }
         if (!false) break;
     }
@@ -1993,16 +2241,18 @@ pub fn seL4_Fault_UserException_ptr_get_Stack(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_UserException_ptr_set_Stack(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1440), "seL4_Fault_UserException_ptr_set_Stack");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1440), "seL4_Fault_UserException_ptr_set_Stack");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1443), "seL4_Fault_UserException_ptr_set_Stack");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1443), "seL4_Fault_UserException_ptr_set_Stack");
         }
         if (!false) break;
     }
@@ -2011,10 +2261,12 @@ pub fn seL4_Fault_UserException_ptr_set_Stack(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_UserException_get_SPSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1453), "seL4_Fault_UserException_get_SPSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1453), "seL4_Fault_UserException_get_SPSR");
         }
         if (!false) break;
     }
@@ -2026,16 +2278,18 @@ pub fn seL4_Fault_UserException_get_SPSR(arg_seL4_Fault_1: seL4_Fault_t) callcon
 }
 pub fn seL4_Fault_UserException_set_SPSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1466), "seL4_Fault_UserException_set_SPSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1466), "seL4_Fault_UserException_set_SPSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1468), "seL4_Fault_UserException_set_SPSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1468), "seL4_Fault_UserException_set_SPSR");
         }
         if (!false) break;
     }
@@ -2045,10 +2299,12 @@ pub fn seL4_Fault_UserException_set_SPSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64
 }
 pub fn seL4_Fault_UserException_ptr_get_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1479), "seL4_Fault_UserException_ptr_get_SPSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1479), "seL4_Fault_UserException_ptr_get_SPSR");
         }
         if (!false) break;
     }
@@ -2060,16 +2316,18 @@ pub fn seL4_Fault_UserException_ptr_get_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_
 }
 pub fn seL4_Fault_UserException_ptr_set_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1493), "seL4_Fault_UserException_ptr_set_SPSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1493), "seL4_Fault_UserException_ptr_set_SPSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1496), "seL4_Fault_UserException_ptr_set_SPSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1496), "seL4_Fault_UserException_ptr_set_SPSR");
         }
         if (!false) break;
     }
@@ -2078,10 +2336,12 @@ pub fn seL4_Fault_UserException_ptr_set_SPSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_
 }
 pub fn seL4_Fault_UserException_get_Number(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1506), "seL4_Fault_UserException_get_Number");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1506), "seL4_Fault_UserException_get_Number");
         }
         if (!false) break;
     }
@@ -2093,16 +2353,18 @@ pub fn seL4_Fault_UserException_get_Number(arg_seL4_Fault_1: seL4_Fault_t) callc
 }
 pub fn seL4_Fault_UserException_set_Number(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1519), "seL4_Fault_UserException_set_Number");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1519), "seL4_Fault_UserException_set_Number");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1521), "seL4_Fault_UserException_set_Number");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1521), "seL4_Fault_UserException_set_Number");
         }
         if (!false) break;
     }
@@ -2112,10 +2374,12 @@ pub fn seL4_Fault_UserException_set_Number(arg_seL4_Fault_1: seL4_Fault_t, arg_v
 }
 pub fn seL4_Fault_UserException_ptr_get_Number(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1532), "seL4_Fault_UserException_ptr_get_Number");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1532), "seL4_Fault_UserException_ptr_get_Number");
         }
         if (!false) break;
     }
@@ -2127,16 +2391,18 @@ pub fn seL4_Fault_UserException_ptr_get_Number(arg_seL4_Fault_ptr: [*c]seL4_Faul
 }
 pub fn seL4_Fault_UserException_ptr_set_Number(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1546), "seL4_Fault_UserException_ptr_set_Number");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1546), "seL4_Fault_UserException_ptr_set_Number");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1549), "seL4_Fault_UserException_ptr_set_Number");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1549), "seL4_Fault_UserException_ptr_set_Number");
         }
         if (!false) break;
     }
@@ -2145,10 +2411,12 @@ pub fn seL4_Fault_UserException_ptr_set_Number(arg_seL4_Fault_ptr: [*c]seL4_Faul
 }
 pub fn seL4_Fault_UserException_get_Code(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1559), "seL4_Fault_UserException_get_Code");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1559), "seL4_Fault_UserException_get_Code");
         }
         if (!false) break;
     }
@@ -2160,16 +2428,18 @@ pub fn seL4_Fault_UserException_get_Code(arg_seL4_Fault_1: seL4_Fault_t) callcon
 }
 pub fn seL4_Fault_UserException_set_Code(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1572), "seL4_Fault_UserException_set_Code");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1572), "seL4_Fault_UserException_set_Code");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1574), "seL4_Fault_UserException_set_Code");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1574), "seL4_Fault_UserException_set_Code");
         }
         if (!false) break;
     }
@@ -2179,10 +2449,12 @@ pub fn seL4_Fault_UserException_set_Code(arg_seL4_Fault_1: seL4_Fault_t, arg_v64
 }
 pub fn seL4_Fault_UserException_ptr_get_Code(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1585), "seL4_Fault_UserException_ptr_get_Code");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1585), "seL4_Fault_UserException_ptr_get_Code");
         }
         if (!false) break;
     }
@@ -2194,16 +2466,18 @@ pub fn seL4_Fault_UserException_ptr_get_Code(arg_seL4_Fault_ptr: [*c]seL4_Fault_
 }
 pub fn seL4_Fault_UserException_ptr_set_Code(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1599), "seL4_Fault_UserException_ptr_set_Code");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_UserException", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1599), "seL4_Fault_UserException_ptr_set_Code");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1602), "seL4_Fault_UserException_ptr_set_Code");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1602), "seL4_Fault_UserException_ptr_set_Code");
         }
         if (!false) break;
     }
@@ -2212,11 +2486,14 @@ pub fn seL4_Fault_UserException_ptr_set_Code(arg_seL4_Fault_ptr: [*c]seL4_Fault_
 }
 pub fn seL4_Fault_Timeout_new(arg_data: seL4_Uint64, arg_consumed: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var data = arg_data;
+    _ = &data;
     var consumed = arg_consumed;
+    _ = &consumed;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_Timeout & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_Timeout & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1613), "seL4_Fault_Timeout_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_Timeout & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_Timeout & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1613), "seL4_Fault_Timeout_new");
         }
         if (!false) break;
     }
@@ -2238,11 +2515,14 @@ pub fn seL4_Fault_Timeout_new(arg_data: seL4_Uint64, arg_consumed: seL4_Uint64) 
 }
 pub fn seL4_Fault_Timeout_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_data: seL4_Uint64, arg_consumed: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var data = arg_data;
+    _ = &data;
     var consumed = arg_consumed;
+    _ = &consumed;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_Timeout & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_Timeout & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1639), "seL4_Fault_Timeout_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_Timeout & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_Timeout & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1639), "seL4_Fault_Timeout_ptr_new");
         }
         if (!false) break;
     }
@@ -2263,10 +2543,12 @@ pub fn seL4_Fault_Timeout_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_data
 }
 pub fn seL4_Fault_Timeout_get_data(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1664), "seL4_Fault_Timeout_get_data");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1664), "seL4_Fault_Timeout_get_data");
         }
         if (!false) break;
     }
@@ -2278,16 +2560,18 @@ pub fn seL4_Fault_Timeout_get_data(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) 
 }
 pub fn seL4_Fault_Timeout_set_data(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1677), "seL4_Fault_Timeout_set_data");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1677), "seL4_Fault_Timeout_set_data");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1679), "seL4_Fault_Timeout_set_data");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1679), "seL4_Fault_Timeout_set_data");
         }
         if (!false) break;
     }
@@ -2297,10 +2581,12 @@ pub fn seL4_Fault_Timeout_set_data(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4
 }
 pub fn seL4_Fault_Timeout_ptr_get_data(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1690), "seL4_Fault_Timeout_ptr_get_data");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1690), "seL4_Fault_Timeout_ptr_get_data");
         }
         if (!false) break;
     }
@@ -2312,16 +2598,18 @@ pub fn seL4_Fault_Timeout_ptr_get_data(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) cal
 }
 pub fn seL4_Fault_Timeout_ptr_set_data(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1704), "seL4_Fault_Timeout_ptr_set_data");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1704), "seL4_Fault_Timeout_ptr_set_data");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1707), "seL4_Fault_Timeout_ptr_set_data");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1707), "seL4_Fault_Timeout_ptr_set_data");
         }
         if (!false) break;
     }
@@ -2330,10 +2618,12 @@ pub fn seL4_Fault_Timeout_ptr_set_data(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg
 }
 pub fn seL4_Fault_Timeout_get_consumed(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1717), "seL4_Fault_Timeout_get_consumed");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1717), "seL4_Fault_Timeout_get_consumed");
         }
         if (!false) break;
     }
@@ -2345,16 +2635,18 @@ pub fn seL4_Fault_Timeout_get_consumed(arg_seL4_Fault_1: seL4_Fault_t) callconv(
 }
 pub fn seL4_Fault_Timeout_set_consumed(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1730), "seL4_Fault_Timeout_set_consumed");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1730), "seL4_Fault_Timeout_set_consumed");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1732), "seL4_Fault_Timeout_set_consumed");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1732), "seL4_Fault_Timeout_set_consumed");
         }
         if (!false) break;
     }
@@ -2364,10 +2656,12 @@ pub fn seL4_Fault_Timeout_set_consumed(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: 
 }
 pub fn seL4_Fault_Timeout_ptr_get_consumed(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1743), "seL4_Fault_Timeout_ptr_get_consumed");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1743), "seL4_Fault_Timeout_ptr_get_consumed");
         }
         if (!false) break;
     }
@@ -2379,16 +2673,18 @@ pub fn seL4_Fault_Timeout_ptr_get_consumed(arg_seL4_Fault_ptr: [*c]seL4_Fault_t)
 }
 pub fn seL4_Fault_Timeout_ptr_set_consumed(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1757), "seL4_Fault_Timeout_ptr_set_consumed");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_Timeout", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1757), "seL4_Fault_Timeout_ptr_set_consumed");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1760), "seL4_Fault_Timeout_ptr_set_consumed");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1760), "seL4_Fault_Timeout_ptr_set_consumed");
         }
         if (!false) break;
     }
@@ -2397,13 +2693,18 @@ pub fn seL4_Fault_Timeout_ptr_set_consumed(arg_seL4_Fault_ptr: [*c]seL4_Fault_t,
 }
 pub fn seL4_Fault_VMFault_new(arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_PrefetchFault: seL4_Uint64, arg_FSR: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var IP = arg_IP;
+    _ = &IP;
     var Addr = arg_Addr;
+    _ = &Addr;
     var PrefetchFault = arg_PrefetchFault;
+    _ = &PrefetchFault;
     var FSR = arg_FSR;
+    _ = &FSR;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VMFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VMFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1771), "seL4_Fault_VMFault_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VMFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VMFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1771), "seL4_Fault_VMFault_new");
         }
         if (!false) break;
     }
@@ -2425,13 +2726,18 @@ pub fn seL4_Fault_VMFault_new(arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_Pr
 }
 pub fn seL4_Fault_VMFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_IP: seL4_Uint64, arg_Addr: seL4_Uint64, arg_PrefetchFault: seL4_Uint64, arg_FSR: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var IP = arg_IP;
+    _ = &IP;
     var Addr = arg_Addr;
+    _ = &Addr;
     var PrefetchFault = arg_PrefetchFault;
+    _ = &PrefetchFault;
     var FSR = arg_FSR;
+    _ = &FSR;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VMFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VMFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1799), "seL4_Fault_VMFault_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VMFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VMFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1799), "seL4_Fault_VMFault_ptr_new");
         }
         if (!false) break;
     }
@@ -2452,10 +2758,12 @@ pub fn seL4_Fault_VMFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_IP: 
 }
 pub fn seL4_Fault_VMFault_get_IP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1826), "seL4_Fault_VMFault_get_IP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1826), "seL4_Fault_VMFault_get_IP");
         }
         if (!false) break;
     }
@@ -2467,16 +2775,18 @@ pub fn seL4_Fault_VMFault_get_IP(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) se
 }
 pub fn seL4_Fault_VMFault_set_IP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1839), "seL4_Fault_VMFault_set_IP");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1839), "seL4_Fault_VMFault_set_IP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1841), "seL4_Fault_VMFault_set_IP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1841), "seL4_Fault_VMFault_set_IP");
         }
         if (!false) break;
     }
@@ -2486,10 +2796,12 @@ pub fn seL4_Fault_VMFault_set_IP(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_U
 }
 pub fn seL4_Fault_VMFault_ptr_get_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1852), "seL4_Fault_VMFault_ptr_get_IP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1852), "seL4_Fault_VMFault_ptr_get_IP");
         }
         if (!false) break;
     }
@@ -2501,16 +2813,18 @@ pub fn seL4_Fault_VMFault_ptr_get_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callc
 }
 pub fn seL4_Fault_VMFault_ptr_set_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1866), "seL4_Fault_VMFault_ptr_set_IP");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1866), "seL4_Fault_VMFault_ptr_set_IP");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1869), "seL4_Fault_VMFault_ptr_set_IP");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1869), "seL4_Fault_VMFault_ptr_set_IP");
         }
         if (!false) break;
     }
@@ -2519,10 +2833,12 @@ pub fn seL4_Fault_VMFault_ptr_set_IP(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v
 }
 pub fn seL4_Fault_VMFault_get_Addr(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1879), "seL4_Fault_VMFault_get_Addr");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1879), "seL4_Fault_VMFault_get_Addr");
         }
         if (!false) break;
     }
@@ -2534,16 +2850,18 @@ pub fn seL4_Fault_VMFault_get_Addr(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) 
 }
 pub fn seL4_Fault_VMFault_set_Addr(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1892), "seL4_Fault_VMFault_set_Addr");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1892), "seL4_Fault_VMFault_set_Addr");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1894), "seL4_Fault_VMFault_set_Addr");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1894), "seL4_Fault_VMFault_set_Addr");
         }
         if (!false) break;
     }
@@ -2553,10 +2871,12 @@ pub fn seL4_Fault_VMFault_set_Addr(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4
 }
 pub fn seL4_Fault_VMFault_ptr_get_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1905), "seL4_Fault_VMFault_ptr_get_Addr");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1905), "seL4_Fault_VMFault_ptr_get_Addr");
         }
         if (!false) break;
     }
@@ -2568,16 +2888,18 @@ pub fn seL4_Fault_VMFault_ptr_get_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) cal
 }
 pub fn seL4_Fault_VMFault_ptr_set_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1919), "seL4_Fault_VMFault_ptr_set_Addr");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1919), "seL4_Fault_VMFault_ptr_set_Addr");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1922), "seL4_Fault_VMFault_ptr_set_Addr");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1922), "seL4_Fault_VMFault_ptr_set_Addr");
         }
         if (!false) break;
     }
@@ -2586,10 +2908,12 @@ pub fn seL4_Fault_VMFault_ptr_set_Addr(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg
 }
 pub fn seL4_Fault_VMFault_get_PrefetchFault(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1932), "seL4_Fault_VMFault_get_PrefetchFault");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1932), "seL4_Fault_VMFault_get_PrefetchFault");
         }
         if (!false) break;
     }
@@ -2601,16 +2925,18 @@ pub fn seL4_Fault_VMFault_get_PrefetchFault(arg_seL4_Fault_1: seL4_Fault_t) call
 }
 pub fn seL4_Fault_VMFault_set_PrefetchFault(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1945), "seL4_Fault_VMFault_set_PrefetchFault");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1945), "seL4_Fault_VMFault_set_PrefetchFault");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1947), "seL4_Fault_VMFault_set_PrefetchFault");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1947), "seL4_Fault_VMFault_set_PrefetchFault");
         }
         if (!false) break;
     }
@@ -2620,10 +2946,12 @@ pub fn seL4_Fault_VMFault_set_PrefetchFault(arg_seL4_Fault_1: seL4_Fault_t, arg_
 }
 pub fn seL4_Fault_VMFault_ptr_get_PrefetchFault(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1958), "seL4_Fault_VMFault_ptr_get_PrefetchFault");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1958), "seL4_Fault_VMFault_ptr_get_PrefetchFault");
         }
         if (!false) break;
     }
@@ -2635,16 +2963,18 @@ pub fn seL4_Fault_VMFault_ptr_get_PrefetchFault(arg_seL4_Fault_ptr: [*c]seL4_Fau
 }
 pub fn seL4_Fault_VMFault_ptr_set_PrefetchFault(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1972), "seL4_Fault_VMFault_ptr_set_PrefetchFault");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1972), "seL4_Fault_VMFault_ptr_set_PrefetchFault");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1975), "seL4_Fault_VMFault_ptr_set_PrefetchFault");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1975), "seL4_Fault_VMFault_ptr_set_PrefetchFault");
         }
         if (!false) break;
     }
@@ -2653,10 +2983,12 @@ pub fn seL4_Fault_VMFault_ptr_set_PrefetchFault(arg_seL4_Fault_ptr: [*c]seL4_Fau
 }
 pub fn seL4_Fault_VMFault_get_FSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1985), "seL4_Fault_VMFault_get_FSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1985), "seL4_Fault_VMFault_get_FSR");
         }
         if (!false) break;
     }
@@ -2668,16 +3000,18 @@ pub fn seL4_Fault_VMFault_get_FSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) s
 }
 pub fn seL4_Fault_VMFault_set_FSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 1998), "seL4_Fault_VMFault_set_FSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 1998), "seL4_Fault_VMFault_set_FSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2000), "seL4_Fault_VMFault_set_FSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2000), "seL4_Fault_VMFault_set_FSR");
         }
         if (!false) break;
     }
@@ -2687,10 +3021,12 @@ pub fn seL4_Fault_VMFault_set_FSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_
 }
 pub fn seL4_Fault_VMFault_ptr_get_FSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2011), "seL4_Fault_VMFault_ptr_get_FSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2011), "seL4_Fault_VMFault_ptr_get_FSR");
         }
         if (!false) break;
     }
@@ -2702,16 +3038,18 @@ pub fn seL4_Fault_VMFault_ptr_get_FSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) call
 }
 pub fn seL4_Fault_VMFault_ptr_set_FSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2025), "seL4_Fault_VMFault_ptr_set_FSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VMFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2025), "seL4_Fault_VMFault_ptr_set_FSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2028), "seL4_Fault_VMFault_ptr_set_FSR");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2028), "seL4_Fault_VMFault_ptr_set_FSR");
         }
         if (!false) break;
     }
@@ -2720,10 +3058,12 @@ pub fn seL4_Fault_VMFault_ptr_set_FSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_
 }
 pub fn seL4_Fault_VGICMaintenance_new(arg_IDX: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var IDX = arg_IDX;
+    _ = &IDX;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VGICMaintenance & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VGICMaintenance & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2039), "seL4_Fault_VGICMaintenance_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VGICMaintenance & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VGICMaintenance & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2039), "seL4_Fault_VGICMaintenance_new");
         }
         if (!false) break;
     }
@@ -2745,10 +3085,12 @@ pub fn seL4_Fault_VGICMaintenance_new(arg_IDX: seL4_Uint64) callconv(.C) seL4_Fa
 }
 pub fn seL4_Fault_VGICMaintenance_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_IDX: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var IDX = arg_IDX;
+    _ = &IDX;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VGICMaintenance & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VGICMaintenance & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2064), "seL4_Fault_VGICMaintenance_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VGICMaintenance & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VGICMaintenance & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2064), "seL4_Fault_VGICMaintenance_ptr_new");
         }
         if (!false) break;
     }
@@ -2769,10 +3111,12 @@ pub fn seL4_Fault_VGICMaintenance_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, 
 }
 pub fn seL4_Fault_VGICMaintenance_get_IDX(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2088), "seL4_Fault_VGICMaintenance_get_IDX");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2088), "seL4_Fault_VGICMaintenance_get_IDX");
         }
         if (!false) break;
     }
@@ -2784,16 +3128,18 @@ pub fn seL4_Fault_VGICMaintenance_get_IDX(arg_seL4_Fault_1: seL4_Fault_t) callco
 }
 pub fn seL4_Fault_VGICMaintenance_set_IDX(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2101), "seL4_Fault_VGICMaintenance_set_IDX");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2101), "seL4_Fault_VGICMaintenance_set_IDX");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2103), "seL4_Fault_VGICMaintenance_set_IDX");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2103), "seL4_Fault_VGICMaintenance_set_IDX");
         }
         if (!false) break;
     }
@@ -2803,10 +3149,12 @@ pub fn seL4_Fault_VGICMaintenance_set_IDX(arg_seL4_Fault_1: seL4_Fault_t, arg_v6
 }
 pub fn seL4_Fault_VGICMaintenance_ptr_get_IDX(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2114), "seL4_Fault_VGICMaintenance_ptr_get_IDX");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2114), "seL4_Fault_VGICMaintenance_ptr_get_IDX");
         }
         if (!false) break;
     }
@@ -2818,16 +3166,18 @@ pub fn seL4_Fault_VGICMaintenance_ptr_get_IDX(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_VGICMaintenance_ptr_set_IDX(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VGICMaintenance))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2128), "seL4_Fault_VGICMaintenance_ptr_set_IDX");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VGICMaintenance", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2128), "seL4_Fault_VGICMaintenance_ptr_set_IDX");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2131), "seL4_Fault_VGICMaintenance_ptr_set_IDX");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2131), "seL4_Fault_VGICMaintenance_ptr_set_IDX");
         }
         if (!false) break;
     }
@@ -2836,16 +3186,18 @@ pub fn seL4_Fault_VGICMaintenance_ptr_set_IDX(arg_seL4_Fault_ptr: [*c]seL4_Fault
 }
 pub fn seL4_Fault_VCPUFault_new(arg_HSR: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var HSR = arg_HSR;
+    _ = &HSR;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, HSR))) & ~@as(c_ulonglong, 4294967295)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, HSR))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(HSR & ~0xffffffffull) == ((0 && (HSR & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2142), "seL4_Fault_VCPUFault_new");
+            __assert_fail("(HSR & ~0xffffffffull) == ((0 && (HSR & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2142), "seL4_Fault_VCPUFault_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VCPUFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VCPUFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2143), "seL4_Fault_VCPUFault_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VCPUFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VCPUFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2143), "seL4_Fault_VCPUFault_new");
         }
         if (!false) break;
     }
@@ -2867,16 +3219,18 @@ pub fn seL4_Fault_VCPUFault_new(arg_HSR: seL4_Uint64) callconv(.C) seL4_Fault_t 
 }
 pub fn seL4_Fault_VCPUFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_HSR: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var HSR = arg_HSR;
+    _ = &HSR;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, HSR))) & ~@as(c_ulonglong, 4294967295)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, HSR))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(HSR & ~0xffffffffull) == ((0 && (HSR & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2168), "seL4_Fault_VCPUFault_ptr_new");
+            __assert_fail("(HSR & ~0xffffffffull) == ((0 && (HSR & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2168), "seL4_Fault_VCPUFault_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VCPUFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VCPUFault & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2169), "seL4_Fault_VCPUFault_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VCPUFault & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VCPUFault & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2169), "seL4_Fault_VCPUFault_ptr_new");
         }
         if (!false) break;
     }
@@ -2897,10 +3251,12 @@ pub fn seL4_Fault_VCPUFault_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_HS
 }
 pub fn seL4_Fault_VCPUFault_get_HSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2193), "seL4_Fault_VCPUFault_get_HSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2193), "seL4_Fault_VCPUFault_get_HSR");
         }
         if (!false) break;
     }
@@ -2912,16 +3268,18 @@ pub fn seL4_Fault_VCPUFault_get_HSR(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C)
 }
 pub fn seL4_Fault_VCPUFault_set_HSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2206), "seL4_Fault_VCPUFault_set_HSR");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2206), "seL4_Fault_VCPUFault_set_HSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 4294967295) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2208), "seL4_Fault_VCPUFault_set_HSR");
+            __assert_fail("(((~0xffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2208), "seL4_Fault_VCPUFault_set_HSR");
         }
         if (!false) break;
     }
@@ -2931,10 +3289,12 @@ pub fn seL4_Fault_VCPUFault_set_HSR(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL
 }
 pub fn seL4_Fault_VCPUFault_ptr_get_HSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2219), "seL4_Fault_VCPUFault_ptr_get_HSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2219), "seL4_Fault_VCPUFault_ptr_get_HSR");
         }
         if (!false) break;
     }
@@ -2946,16 +3306,18 @@ pub fn seL4_Fault_VCPUFault_ptr_get_HSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) ca
 }
 pub fn seL4_Fault_VCPUFault_ptr_set_HSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VCPUFault))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2233), "seL4_Fault_VCPUFault_ptr_set_HSR");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VCPUFault", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2233), "seL4_Fault_VCPUFault_ptr_set_HSR");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 4294967295) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2236), "seL4_Fault_VCPUFault_ptr_set_HSR");
+            __assert_fail("(((~0xffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2236), "seL4_Fault_VCPUFault_ptr_set_HSR");
         }
         if (!false) break;
     }
@@ -2964,10 +3326,12 @@ pub fn seL4_Fault_VCPUFault_ptr_set_HSR(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, ar
 }
 pub fn seL4_Fault_VPPIEvent_new(arg_irq: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var irq = arg_irq;
+    _ = &irq;
     var seL4_Fault_1: seL4_Fault_t = undefined;
+    _ = &seL4_Fault_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VPPIEvent & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VPPIEvent & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2247), "seL4_Fault_VPPIEvent_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VPPIEvent & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VPPIEvent & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2247), "seL4_Fault_VPPIEvent_new");
         }
         if (!false) break;
     }
@@ -2989,10 +3353,12 @@ pub fn seL4_Fault_VPPIEvent_new(arg_irq: seL4_Uint64) callconv(.C) seL4_Fault_t 
 }
 pub fn seL4_Fault_VPPIEvent_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_irq: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var irq = arg_irq;
+    _ = &irq;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent)))))) & ~@as(c_ulonglong, 15)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent)))))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("((seL4_Uint64)seL4_Fault_VPPIEvent & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VPPIEvent & (1ull << 63))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2272), "seL4_Fault_VPPIEvent_ptr_new");
+            __assert_fail("((seL4_Uint64)seL4_Fault_VPPIEvent & ~0xfull) == ((0 && ((seL4_Uint64)seL4_Fault_VPPIEvent & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2272), "seL4_Fault_VPPIEvent_ptr_new");
         }
         if (!false) break;
     }
@@ -3013,10 +3379,12 @@ pub fn seL4_Fault_VPPIEvent_ptr_new(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_ir
 }
 pub fn seL4_Fault_VPPIEvent_get_irq(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2296), "seL4_Fault_VPPIEvent_get_irq");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2296), "seL4_Fault_VPPIEvent_get_irq");
         }
         if (!false) break;
     }
@@ -3028,16 +3396,18 @@ pub fn seL4_Fault_VPPIEvent_get_irq(arg_seL4_Fault_1: seL4_Fault_t) callconv(.C)
 }
 pub fn seL4_Fault_VPPIEvent_set_irq(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) seL4_Fault_t {
     var seL4_Fault_1 = arg_seL4_Fault_1;
+    _ = &seL4_Fault_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_1.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent))))) {
-            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2309), "seL4_Fault_VPPIEvent_set_irq");
+            __assert_fail("((seL4_Fault.words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2309), "seL4_Fault_VPPIEvent_set_irq");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2311), "seL4_Fault_VPPIEvent_set_irq");
+            __assert_fail("(((~0xffffffffffffffffull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2311), "seL4_Fault_VPPIEvent_set_irq");
         }
         if (!false) break;
     }
@@ -3047,10 +3417,12 @@ pub fn seL4_Fault_VPPIEvent_set_irq(arg_seL4_Fault_1: seL4_Fault_t, arg_v64: seL
 }
 pub fn seL4_Fault_VPPIEvent_ptr_get_irq(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) callconv(.C) seL4_Uint64 {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2322), "seL4_Fault_VPPIEvent_ptr_get_irq");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2322), "seL4_Fault_VPPIEvent_ptr_get_irq");
         }
         if (!false) break;
     }
@@ -3062,16 +3434,18 @@ pub fn seL4_Fault_VPPIEvent_ptr_get_irq(arg_seL4_Fault_ptr: [*c]seL4_Fault_t) ca
 }
 pub fn seL4_Fault_VPPIEvent_ptr_set_irq(arg_seL4_Fault_ptr: [*c]seL4_Fault_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_Fault_ptr = arg_seL4_Fault_ptr;
+    _ = &seL4_Fault_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!(((seL4_Fault_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] >> @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 15))))) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VPPIEvent))))) {
-            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2336), "seL4_Fault_VPPIEvent_ptr_set_irq");
+            __assert_fail("((seL4_Fault_ptr->words[0] >> 0) & 0xf) == seL4_Fault_VPPIEvent", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2336), "seL4_Fault_VPPIEvent_ptr_set_irq");
         }
         if (!false) break;
     }
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551615) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/sel4_arch/types_gen.h", @as(c_int, 2339), "seL4_Fault_VPPIEvent_ptr_set_irq");
+            __assert_fail("(((~0xffffffffffffffffull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/types_gen.h", @as(c_int, 2339), "seL4_Fault_VPPIEvent_ptr_set_irq");
         }
         if (!false) break;
     }
@@ -3110,17 +3484,15 @@ pub const seL4_ObjectType = enum_api_object;
 pub const seL4_AsyncEndpointObject: seL4_ObjectType = @as(c_uint, @bitCast(seL4_NotificationObject));
 pub const api_object_t = seL4_Word;
 pub const seL4_ARM_HugePageObject: c_int = 7;
-pub const seL4_ARM_PageUpperDirectoryObject: c_int = 8;
-pub const seL4_ARM_PageGlobalDirectoryObject: c_int = 9;
-pub const seL4_ModeObjectTypeCount: c_int = 10;
+pub const seL4_ARM_VSpaceObject: c_int = 8;
+pub const seL4_ModeObjectTypeCount: c_int = 9;
 pub const enum__mode_object = c_uint;
 pub const seL4_ModeObjectType = enum__mode_object;
-pub const seL4_ARM_SmallPageObject: c_int = 10;
-pub const seL4_ARM_LargePageObject: c_int = 11;
-pub const seL4_ARM_PageTableObject: c_int = 12;
-pub const seL4_ARM_PageDirectoryObject: c_int = 13;
-pub const seL4_ARM_VCPUObject: c_int = 14;
-pub const seL4_ObjectTypeCount: c_int = 15;
+pub const seL4_ARM_SmallPageObject: c_int = 9;
+pub const seL4_ARM_LargePageObject: c_int = 10;
+pub const seL4_ARM_PageTableObject: c_int = 11;
+pub const seL4_ARM_VCPUObject: c_int = 12;
+pub const seL4_ObjectTypeCount: c_int = 13;
 pub const enum__object = c_uint;
 pub const seL4_ArchObjectType = enum__object;
 pub const object_t = seL4_Word;
@@ -3152,11 +3524,12 @@ pub const seL4_MissingCapability: c_int = 2;
 pub const seL4_DepthMismatch: c_int = 3;
 pub const seL4_GuardMismatch: c_int = 4;
 pub const _enum_pad_seL4_LookupFailureType: c_ulong = 9223372036854775807;
-pub const seL4_LookupFailureType = c_ulong; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
-// ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_LookupFailureType = c_ulong; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub fn seL4_MaxExtraRefills(arg_size: seL4_Word) callconv(.C) seL4_Word {
     var size = arg_size;
+    _ = &size;
     return ((@as(c_ulong, 1) << @intCast(size)) -% ((@as(c_ulong, @bitCast(@as(c_long, @as(c_int, 10)))) *% @sizeOf(seL4_Word)) +% @as(c_ulong, @bitCast(@as(c_long, @as(c_int, 6) * @as(c_int, 8)))))) / @as(c_ulong, @bitCast(@as(c_long, @as(c_int, 2) * @as(c_int, 8))));
 }
 pub const seL4_SchedContext_NoFlag: c_int = 0;
@@ -3164,22 +3537,25 @@ pub const seL4_SchedContext_Sporadic: c_int = 1;
 pub const _enum_pad_seL4_SchedContextFlag: c_ulong = 9223372036854775807;
 pub const seL4_SchedContextFlag = c_ulong;
 pub const struct_seL4_CNode_CapData = extern struct {
-    words: [1]seL4_Uint64,
+    words: [1]seL4_Uint64 = @import("std").mem.zeroes([1]seL4_Uint64),
 };
 pub const seL4_CNode_CapData_t = struct_seL4_CNode_CapData;
 pub fn seL4_CNode_CapData_new(arg_guard: seL4_Uint64, arg_guardSize: seL4_Uint64) callconv(.C) seL4_CNode_CapData_t {
     var guard = arg_guard;
+    _ = &guard;
     var guardSize = arg_guardSize;
+    _ = &guardSize;
     var seL4_CNode_CapData_1: seL4_CNode_CapData_t = undefined;
+    _ = &seL4_CNode_CapData_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guard))) & ~@as(c_ulonglong, 288230376151711743)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guard))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(guard & ~0x3ffffffffffffffull) == ((0 && (guard & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 18), "seL4_CNode_CapData_new");
+            __assert_fail("(guard & ~0x3ffffffffffffffull) == ((0 && (guard & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 18), "seL4_CNode_CapData_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guardSize))) & ~@as(c_ulonglong, 63)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guardSize))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(guardSize & ~0x3full) == ((0 && (guardSize & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 19), "seL4_CNode_CapData_new");
+            __assert_fail("(guardSize & ~0x3full) == ((0 && (guardSize & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 19), "seL4_CNode_CapData_new");
         }
         if (!false) break;
     }
@@ -3188,17 +3564,20 @@ pub fn seL4_CNode_CapData_new(arg_guard: seL4_Uint64, arg_guardSize: seL4_Uint64
 }
 pub fn seL4_CNode_CapData_ptr_new(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_CapData_t, arg_guard: seL4_Uint64, arg_guardSize: seL4_Uint64) callconv(.C) void {
     var seL4_CNode_CapData_ptr = arg_seL4_CNode_CapData_ptr;
+    _ = &seL4_CNode_CapData_ptr;
     var guard = arg_guard;
+    _ = &guard;
     var guardSize = arg_guardSize;
+    _ = &guardSize;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guard))) & ~@as(c_ulonglong, 288230376151711743)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guard))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(guard & ~0x3ffffffffffffffull) == ((0 && (guard & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 31), "seL4_CNode_CapData_ptr_new");
+            __assert_fail("(guard & ~0x3ffffffffffffffull) == ((0 && (guard & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 31), "seL4_CNode_CapData_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guardSize))) & ~@as(c_ulonglong, 63)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, guardSize))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(guardSize & ~0x3full) == ((0 && (guardSize & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 32), "seL4_CNode_CapData_ptr_new");
+            __assert_fail("(guardSize & ~0x3full) == ((0 && (guardSize & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 32), "seL4_CNode_CapData_ptr_new");
         }
         if (!false) break;
     }
@@ -3206,7 +3585,9 @@ pub fn seL4_CNode_CapData_ptr_new(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_Cap
 }
 pub fn seL4_CNode_CapData_get_guard(arg_seL4_CNode_CapData_1: seL4_CNode_CapData_t) callconv(.C) seL4_Uint64 {
     var seL4_CNode_CapData_1 = arg_seL4_CNode_CapData_1;
+    _ = &seL4_CNode_CapData_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CNode_CapData_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 18446744073709551552)) >> @intCast(6)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3215,10 +3596,12 @@ pub fn seL4_CNode_CapData_get_guard(arg_seL4_CNode_CapData_1: seL4_CNode_CapData
 }
 pub fn seL4_CNode_CapData_set_guard(arg_seL4_CNode_CapData_1: seL4_CNode_CapData_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CNode_CapData_t {
     var seL4_CNode_CapData_1 = arg_seL4_CNode_CapData_1;
+    _ = &seL4_CNode_CapData_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551552) >> @intCast(6)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffc0ull >> 6 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 53), "seL4_CNode_CapData_set_guard");
+            __assert_fail("(((~0xffffffffffffffc0ull >> 6 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 53), "seL4_CNode_CapData_set_guard");
         }
         if (!false) break;
     }
@@ -3228,7 +3611,9 @@ pub fn seL4_CNode_CapData_set_guard(arg_seL4_CNode_CapData_1: seL4_CNode_CapData
 }
 pub fn seL4_CNode_CapData_ptr_get_guard(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_CapData_t) callconv(.C) seL4_Uint64 {
     var seL4_CNode_CapData_ptr = arg_seL4_CNode_CapData_ptr;
+    _ = &seL4_CNode_CapData_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CNode_CapData_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 18446744073709551552)) >> @intCast(6)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3237,10 +3622,12 @@ pub fn seL4_CNode_CapData_ptr_get_guard(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNo
 }
 pub fn seL4_CNode_CapData_ptr_set_guard(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_CapData_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CNode_CapData_ptr = arg_seL4_CNode_CapData_ptr;
+    _ = &seL4_CNode_CapData_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709551552) >> @intCast(6)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xffffffffffffffc0ull >> 6) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 73), "seL4_CNode_CapData_ptr_set_guard");
+            __assert_fail("(((~0xffffffffffffffc0ull >> 6) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 73), "seL4_CNode_CapData_ptr_set_guard");
         }
         if (!false) break;
     }
@@ -3249,7 +3636,9 @@ pub fn seL4_CNode_CapData_ptr_set_guard(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNo
 }
 pub fn seL4_CNode_CapData_get_guardSize(arg_seL4_CNode_CapData_1: seL4_CNode_CapData_t) callconv(.C) seL4_Uint64 {
     var seL4_CNode_CapData_1 = arg_seL4_CNode_CapData_1;
+    _ = &seL4_CNode_CapData_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CNode_CapData_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 63)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3258,10 +3647,12 @@ pub fn seL4_CNode_CapData_get_guardSize(arg_seL4_CNode_CapData_1: seL4_CNode_Cap
 }
 pub fn seL4_CNode_CapData_set_guardSize(arg_seL4_CNode_CapData_1: seL4_CNode_CapData_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CNode_CapData_t {
     var seL4_CNode_CapData_1 = arg_seL4_CNode_CapData_1;
+    _ = &seL4_CNode_CapData_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 63) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x3full >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 92), "seL4_CNode_CapData_set_guardSize");
+            __assert_fail("(((~0x3full >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 92), "seL4_CNode_CapData_set_guardSize");
         }
         if (!false) break;
     }
@@ -3271,7 +3662,9 @@ pub fn seL4_CNode_CapData_set_guardSize(arg_seL4_CNode_CapData_1: seL4_CNode_Cap
 }
 pub fn seL4_CNode_CapData_ptr_get_guardSize(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_CapData_t) callconv(.C) seL4_Uint64 {
     var seL4_CNode_CapData_ptr = arg_seL4_CNode_CapData_ptr;
+    _ = &seL4_CNode_CapData_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CNode_CapData_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 63)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3280,10 +3673,12 @@ pub fn seL4_CNode_CapData_ptr_get_guardSize(arg_seL4_CNode_CapData_ptr: [*c]seL4
 }
 pub fn seL4_CNode_CapData_ptr_set_guardSize(arg_seL4_CNode_CapData_ptr: [*c]seL4_CNode_CapData_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CNode_CapData_ptr = arg_seL4_CNode_CapData_ptr;
+    _ = &seL4_CNode_CapData_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 63) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x3full >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 112), "seL4_CNode_CapData_ptr_set_guardSize");
+            __assert_fail("(((~0x3full >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 112), "seL4_CNode_CapData_ptr_set_guardSize");
         }
         if (!false) break;
     }
@@ -3291,36 +3686,41 @@ pub fn seL4_CNode_CapData_ptr_set_guardSize(arg_seL4_CNode_CapData_ptr: [*c]seL4
     seL4_CNode_CapData_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] |= (v64 << @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 63))));
 }
 pub const struct_seL4_CapRights = extern struct {
-    words: [1]seL4_Uint64,
+    words: [1]seL4_Uint64 = @import("std").mem.zeroes([1]seL4_Uint64),
 };
 pub const seL4_CapRights_t = struct_seL4_CapRights;
 pub fn seL4_CapRights_new(arg_capAllowGrantReply: seL4_Uint64, arg_capAllowGrant: seL4_Uint64, arg_capAllowRead: seL4_Uint64, arg_capAllowWrite: seL4_Uint64) callconv(.C) seL4_CapRights_t {
     var capAllowGrantReply = arg_capAllowGrantReply;
+    _ = &capAllowGrantReply;
     var capAllowGrant = arg_capAllowGrant;
+    _ = &capAllowGrant;
     var capAllowRead = arg_capAllowRead;
+    _ = &capAllowRead;
     var capAllowWrite = arg_capAllowWrite;
+    _ = &capAllowWrite;
     var seL4_CapRights_1: seL4_CapRights_t = undefined;
+    _ = &seL4_CapRights_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrantReply))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrantReply))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowGrantReply & ~0x1ull) == ((0 && (capAllowGrantReply & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 127), "seL4_CapRights_new");
+            __assert_fail("(capAllowGrantReply & ~0x1ull) == ((0 && (capAllowGrantReply & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 127), "seL4_CapRights_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrant))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrant))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowGrant & ~0x1ull) == ((0 && (capAllowGrant & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 128), "seL4_CapRights_new");
+            __assert_fail("(capAllowGrant & ~0x1ull) == ((0 && (capAllowGrant & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 128), "seL4_CapRights_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowRead))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowRead))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowRead & ~0x1ull) == ((0 && (capAllowRead & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 129), "seL4_CapRights_new");
+            __assert_fail("(capAllowRead & ~0x1ull) == ((0 && (capAllowRead & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 129), "seL4_CapRights_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowWrite))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowWrite))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowWrite & ~0x1ull) == ((0 && (capAllowWrite & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 130), "seL4_CapRights_new");
+            __assert_fail("(capAllowWrite & ~0x1ull) == ((0 && (capAllowWrite & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 130), "seL4_CapRights_new");
         }
         if (!false) break;
     }
@@ -3329,31 +3729,36 @@ pub fn seL4_CapRights_new(arg_capAllowGrantReply: seL4_Uint64, arg_capAllowGrant
 }
 pub fn seL4_CapRights_ptr_new(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_capAllowGrantReply: seL4_Uint64, arg_capAllowGrant: seL4_Uint64, arg_capAllowRead: seL4_Uint64, arg_capAllowWrite: seL4_Uint64) callconv(.C) void {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var capAllowGrantReply = arg_capAllowGrantReply;
+    _ = &capAllowGrantReply;
     var capAllowGrant = arg_capAllowGrant;
+    _ = &capAllowGrant;
     var capAllowRead = arg_capAllowRead;
+    _ = &capAllowRead;
     var capAllowWrite = arg_capAllowWrite;
+    _ = &capAllowWrite;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrantReply))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrantReply))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowGrantReply & ~0x1ull) == ((0 && (capAllowGrantReply & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 144), "seL4_CapRights_ptr_new");
+            __assert_fail("(capAllowGrantReply & ~0x1ull) == ((0 && (capAllowGrantReply & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 144), "seL4_CapRights_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrant))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowGrant))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowGrant & ~0x1ull) == ((0 && (capAllowGrant & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 145), "seL4_CapRights_ptr_new");
+            __assert_fail("(capAllowGrant & ~0x1ull) == ((0 && (capAllowGrant & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 145), "seL4_CapRights_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowRead))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowRead))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowRead & ~0x1ull) == ((0 && (capAllowRead & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 146), "seL4_CapRights_ptr_new");
+            __assert_fail("(capAllowRead & ~0x1ull) == ((0 && (capAllowRead & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 146), "seL4_CapRights_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowWrite))) & ~@as(c_ulonglong, 1)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capAllowWrite))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capAllowWrite & ~0x1ull) == ((0 && (capAllowWrite & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 147), "seL4_CapRights_ptr_new");
+            __assert_fail("(capAllowWrite & ~0x1ull) == ((0 && (capAllowWrite & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 147), "seL4_CapRights_ptr_new");
         }
         if (!false) break;
     }
@@ -3361,7 +3766,9 @@ pub fn seL4_CapRights_ptr_new(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_
 }
 pub fn seL4_CapRights_get_capAllowGrantReply(arg_seL4_CapRights_1: seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 8)) >> @intCast(3)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3370,10 +3777,12 @@ pub fn seL4_CapRights_get_capAllowGrantReply(arg_seL4_CapRights_1: seL4_CapRight
 }
 pub fn seL4_CapRights_set_capAllowGrantReply(arg_seL4_CapRights_1: seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CapRights_t {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 8) >> @intCast(3)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x8ull >> 3 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 170), "seL4_CapRights_set_capAllowGrantReply");
+            __assert_fail("(((~0x8ull >> 3 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 170), "seL4_CapRights_set_capAllowGrantReply");
         }
         if (!false) break;
     }
@@ -3383,7 +3792,9 @@ pub fn seL4_CapRights_set_capAllowGrantReply(arg_seL4_CapRights_1: seL4_CapRight
 }
 pub fn seL4_CapRights_ptr_get_capAllowGrantReply(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 8)) >> @intCast(3)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3392,10 +3803,12 @@ pub fn seL4_CapRights_ptr_get_capAllowGrantReply(arg_seL4_CapRights_ptr: [*c]seL
 }
 pub fn seL4_CapRights_ptr_set_capAllowGrantReply(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 8) >> @intCast(3)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x8ull >> 3) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 190), "seL4_CapRights_ptr_set_capAllowGrantReply");
+            __assert_fail("(((~0x8ull >> 3) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 190), "seL4_CapRights_ptr_set_capAllowGrantReply");
         }
         if (!false) break;
     }
@@ -3404,7 +3817,9 @@ pub fn seL4_CapRights_ptr_set_capAllowGrantReply(arg_seL4_CapRights_ptr: [*c]seL
 }
 pub fn seL4_CapRights_get_capAllowGrant(arg_seL4_CapRights_1: seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 4)) >> @intCast(2)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3413,10 +3828,12 @@ pub fn seL4_CapRights_get_capAllowGrant(arg_seL4_CapRights_1: seL4_CapRights_t) 
 }
 pub fn seL4_CapRights_set_capAllowGrant(arg_seL4_CapRights_1: seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CapRights_t {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 4) >> @intCast(2)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x4ull >> 2 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 209), "seL4_CapRights_set_capAllowGrant");
+            __assert_fail("(((~0x4ull >> 2 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 209), "seL4_CapRights_set_capAllowGrant");
         }
         if (!false) break;
     }
@@ -3426,7 +3843,9 @@ pub fn seL4_CapRights_set_capAllowGrant(arg_seL4_CapRights_1: seL4_CapRights_t, 
 }
 pub fn seL4_CapRights_ptr_get_capAllowGrant(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 4)) >> @intCast(2)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3435,10 +3854,12 @@ pub fn seL4_CapRights_ptr_get_capAllowGrant(arg_seL4_CapRights_ptr: [*c]seL4_Cap
 }
 pub fn seL4_CapRights_ptr_set_capAllowGrant(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 4) >> @intCast(2)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x4ull >> 2) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 229), "seL4_CapRights_ptr_set_capAllowGrant");
+            __assert_fail("(((~0x4ull >> 2) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 229), "seL4_CapRights_ptr_set_capAllowGrant");
         }
         if (!false) break;
     }
@@ -3447,7 +3868,9 @@ pub fn seL4_CapRights_ptr_set_capAllowGrant(arg_seL4_CapRights_ptr: [*c]seL4_Cap
 }
 pub fn seL4_CapRights_get_capAllowRead(arg_seL4_CapRights_1: seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 2)) >> @intCast(1)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3456,10 +3879,12 @@ pub fn seL4_CapRights_get_capAllowRead(arg_seL4_CapRights_1: seL4_CapRights_t) c
 }
 pub fn seL4_CapRights_set_capAllowRead(arg_seL4_CapRights_1: seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CapRights_t {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 2) >> @intCast(1)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x2ull >> 1 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 248), "seL4_CapRights_set_capAllowRead");
+            __assert_fail("(((~0x2ull >> 1 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 248), "seL4_CapRights_set_capAllowRead");
         }
         if (!false) break;
     }
@@ -3469,7 +3894,9 @@ pub fn seL4_CapRights_set_capAllowRead(arg_seL4_CapRights_1: seL4_CapRights_t, a
 }
 pub fn seL4_CapRights_ptr_get_capAllowRead(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 2)) >> @intCast(1)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3478,10 +3905,12 @@ pub fn seL4_CapRights_ptr_get_capAllowRead(arg_seL4_CapRights_ptr: [*c]seL4_CapR
 }
 pub fn seL4_CapRights_ptr_set_capAllowRead(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 2) >> @intCast(1)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x2ull >> 1) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 268), "seL4_CapRights_ptr_set_capAllowRead");
+            __assert_fail("(((~0x2ull >> 1) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 268), "seL4_CapRights_ptr_set_capAllowRead");
         }
         if (!false) break;
     }
@@ -3490,7 +3919,9 @@ pub fn seL4_CapRights_ptr_set_capAllowRead(arg_seL4_CapRights_ptr: [*c]seL4_CapR
 }
 pub fn seL4_CapRights_get_capAllowWrite(arg_seL4_CapRights_1: seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 1)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3499,10 +3930,12 @@ pub fn seL4_CapRights_get_capAllowWrite(arg_seL4_CapRights_1: seL4_CapRights_t) 
 }
 pub fn seL4_CapRights_set_capAllowWrite(arg_seL4_CapRights_1: seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) seL4_CapRights_t {
     var seL4_CapRights_1 = arg_seL4_CapRights_1;
+    _ = &seL4_CapRights_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 1) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x1ull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 287), "seL4_CapRights_set_capAllowWrite");
+            __assert_fail("(((~0x1ull >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 287), "seL4_CapRights_set_capAllowWrite");
         }
         if (!false) break;
     }
@@ -3512,7 +3945,9 @@ pub fn seL4_CapRights_set_capAllowWrite(arg_seL4_CapRights_1: seL4_CapRights_t, 
 }
 pub fn seL4_CapRights_ptr_get_capAllowWrite(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t) callconv(.C) seL4_Uint64 {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_CapRights_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 1)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3521,10 +3956,12 @@ pub fn seL4_CapRights_ptr_get_capAllowWrite(arg_seL4_CapRights_ptr: [*c]seL4_Cap
 }
 pub fn seL4_CapRights_ptr_set_capAllowWrite(arg_seL4_CapRights_ptr: [*c]seL4_CapRights_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_CapRights_ptr = arg_seL4_CapRights_ptr;
+    _ = &seL4_CapRights_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 1) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x1ull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 307), "seL4_CapRights_ptr_set_capAllowWrite");
+            __assert_fail("(((~0x1ull >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 307), "seL4_CapRights_ptr_set_capAllowWrite");
         }
         if (!false) break;
     }
@@ -3532,36 +3969,41 @@ pub fn seL4_CapRights_ptr_set_capAllowWrite(arg_seL4_CapRights_ptr: [*c]seL4_Cap
     seL4_CapRights_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] |= (v64 << @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1))));
 }
 pub const struct_seL4_MessageInfo = extern struct {
-    words: [1]seL4_Uint64,
+    words: [1]seL4_Uint64 = @import("std").mem.zeroes([1]seL4_Uint64),
 };
 pub const seL4_MessageInfo_t = struct_seL4_MessageInfo;
 pub fn seL4_MessageInfo_new(arg_label: seL4_Uint64, arg_capsUnwrapped: seL4_Uint64, arg_extraCaps: seL4_Uint64, arg_length: seL4_Uint64) callconv(.C) seL4_MessageInfo_t {
     var label = arg_label;
+    _ = &label;
     var capsUnwrapped = arg_capsUnwrapped;
+    _ = &capsUnwrapped;
     var extraCaps = arg_extraCaps;
+    _ = &extraCaps;
     var length = arg_length;
+    _ = &length;
     var seL4_MessageInfo_1: seL4_MessageInfo_t = undefined;
+    _ = &seL4_MessageInfo_1;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, label))) & ~@as(c_ulonglong, 4503599627370495)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, label))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(label & ~0xfffffffffffffull) == ((0 && (label & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 322), "seL4_MessageInfo_new");
+            __assert_fail("(label & ~0xfffffffffffffull) == ((0 && (label & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 322), "seL4_MessageInfo_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capsUnwrapped))) & ~@as(c_ulonglong, 7)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capsUnwrapped))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capsUnwrapped & ~0x7ull) == ((0 && (capsUnwrapped & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 323), "seL4_MessageInfo_new");
+            __assert_fail("(capsUnwrapped & ~0x7ull) == ((0 && (capsUnwrapped & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 323), "seL4_MessageInfo_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, extraCaps))) & ~@as(c_ulonglong, 3)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, extraCaps))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(extraCaps & ~0x3ull) == ((0 && (extraCaps & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 324), "seL4_MessageInfo_new");
+            __assert_fail("(extraCaps & ~0x3ull) == ((0 && (extraCaps & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 324), "seL4_MessageInfo_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, length))) & ~@as(c_ulonglong, 127)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, length))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(length & ~0x7full) == ((0 && (length & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 325), "seL4_MessageInfo_new");
+            __assert_fail("(length & ~0x7full) == ((0 && (length & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 325), "seL4_MessageInfo_new");
         }
         if (!false) break;
     }
@@ -3570,31 +4012,36 @@ pub fn seL4_MessageInfo_new(arg_label: seL4_Uint64, arg_capsUnwrapped: seL4_Uint
 }
 pub fn seL4_MessageInfo_ptr_new(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t, arg_label: seL4_Uint64, arg_capsUnwrapped: seL4_Uint64, arg_extraCaps: seL4_Uint64, arg_length: seL4_Uint64) callconv(.C) void {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var label = arg_label;
+    _ = &label;
     var capsUnwrapped = arg_capsUnwrapped;
+    _ = &capsUnwrapped;
     var extraCaps = arg_extraCaps;
+    _ = &extraCaps;
     var length = arg_length;
+    _ = &length;
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, label))) & ~@as(c_ulonglong, 4503599627370495)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, label))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(label & ~0xfffffffffffffull) == ((0 && (label & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 339), "seL4_MessageInfo_ptr_new");
+            __assert_fail("(label & ~0xfffffffffffffull) == ((0 && (label & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 339), "seL4_MessageInfo_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capsUnwrapped))) & ~@as(c_ulonglong, 7)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, capsUnwrapped))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(capsUnwrapped & ~0x7ull) == ((0 && (capsUnwrapped & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 340), "seL4_MessageInfo_ptr_new");
+            __assert_fail("(capsUnwrapped & ~0x7ull) == ((0 && (capsUnwrapped & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 340), "seL4_MessageInfo_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, extraCaps))) & ~@as(c_ulonglong, 3)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, extraCaps))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(extraCaps & ~0x3ull) == ((0 && (extraCaps & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 341), "seL4_MessageInfo_ptr_new");
+            __assert_fail("(extraCaps & ~0x3ull) == ((0 && (extraCaps & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 341), "seL4_MessageInfo_ptr_new");
         }
         if (!false) break;
     }
     while (true) {
         if (!((@as(c_ulonglong, @bitCast(@as(c_ulonglong, length))) & ~@as(c_ulonglong, 127)) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, length))) & (@as(c_ulonglong, 1) << @intCast(63))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(length & ~0x7full) == ((0 && (length & (1ull << 63))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 342), "seL4_MessageInfo_ptr_new");
+            __assert_fail("(length & ~0x7full) == ((0 && (length & (1ull << 63))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 342), "seL4_MessageInfo_ptr_new");
         }
         if (!false) break;
     }
@@ -3602,7 +4049,9 @@ pub fn seL4_MessageInfo_ptr_new(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t
 }
 pub fn seL4_MessageInfo_get_label(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 18446744073709547520)) >> @intCast(12)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3611,10 +4060,12 @@ pub fn seL4_MessageInfo_get_label(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) ca
 }
 pub fn seL4_MessageInfo_set_label(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) seL4_MessageInfo_t {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709547520) >> @intCast(12)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xfffffffffffff000ull >> 12 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 365), "seL4_MessageInfo_set_label");
+            __assert_fail("(((~0xfffffffffffff000ull >> 12 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 365), "seL4_MessageInfo_set_label");
         }
         if (!false) break;
     }
@@ -3624,7 +4075,9 @@ pub fn seL4_MessageInfo_set_label(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, ar
 }
 pub fn seL4_MessageInfo_ptr_get_label(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 18446744073709547520)) >> @intCast(12)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3633,10 +4086,12 @@ pub fn seL4_MessageInfo_ptr_get_label(arg_seL4_MessageInfo_ptr: [*c]seL4_Message
 }
 pub fn seL4_MessageInfo_ptr_set_label(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 18446744073709547520) >> @intCast(12)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xfffffffffffff000ull >> 12) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 385), "seL4_MessageInfo_ptr_set_label");
+            __assert_fail("(((~0xfffffffffffff000ull >> 12) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 385), "seL4_MessageInfo_ptr_set_label");
         }
         if (!false) break;
     }
@@ -3645,7 +4100,9 @@ pub fn seL4_MessageInfo_ptr_set_label(arg_seL4_MessageInfo_ptr: [*c]seL4_Message
 }
 pub fn seL4_MessageInfo_get_capsUnwrapped(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 3584)) >> @intCast(9)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3654,10 +4111,12 @@ pub fn seL4_MessageInfo_get_capsUnwrapped(arg_seL4_MessageInfo_1: seL4_MessageIn
 }
 pub fn seL4_MessageInfo_set_capsUnwrapped(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) seL4_MessageInfo_t {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 3584) >> @intCast(9)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xe00ull >> 9 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 404), "seL4_MessageInfo_set_capsUnwrapped");
+            __assert_fail("(((~0xe00ull >> 9 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 404), "seL4_MessageInfo_set_capsUnwrapped");
         }
         if (!false) break;
     }
@@ -3667,7 +4126,9 @@ pub fn seL4_MessageInfo_set_capsUnwrapped(arg_seL4_MessageInfo_1: seL4_MessageIn
 }
 pub fn seL4_MessageInfo_ptr_get_capsUnwrapped(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 3584)) >> @intCast(9)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3676,10 +4137,12 @@ pub fn seL4_MessageInfo_ptr_get_capsUnwrapped(arg_seL4_MessageInfo_ptr: [*c]seL4
 }
 pub fn seL4_MessageInfo_ptr_set_capsUnwrapped(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 3584) >> @intCast(9)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0xe00ull >> 9) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 424), "seL4_MessageInfo_ptr_set_capsUnwrapped");
+            __assert_fail("(((~0xe00ull >> 9) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 424), "seL4_MessageInfo_ptr_set_capsUnwrapped");
         }
         if (!false) break;
     }
@@ -3688,7 +4151,9 @@ pub fn seL4_MessageInfo_ptr_set_capsUnwrapped(arg_seL4_MessageInfo_ptr: [*c]seL4
 }
 pub fn seL4_MessageInfo_get_extraCaps(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 384)) >> @intCast(7)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3697,10 +4162,12 @@ pub fn seL4_MessageInfo_get_extraCaps(arg_seL4_MessageInfo_1: seL4_MessageInfo_t
 }
 pub fn seL4_MessageInfo_set_extraCaps(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) seL4_MessageInfo_t {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 384) >> @intCast(7)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x180ull >> 7 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 443), "seL4_MessageInfo_set_extraCaps");
+            __assert_fail("(((~0x180ull >> 7 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 443), "seL4_MessageInfo_set_extraCaps");
         }
         if (!false) break;
     }
@@ -3710,7 +4177,9 @@ pub fn seL4_MessageInfo_set_extraCaps(arg_seL4_MessageInfo_1: seL4_MessageInfo_t
 }
 pub fn seL4_MessageInfo_ptr_get_extraCaps(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 384)) >> @intCast(7)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3719,10 +4188,12 @@ pub fn seL4_MessageInfo_ptr_get_extraCaps(arg_seL4_MessageInfo_ptr: [*c]seL4_Mes
 }
 pub fn seL4_MessageInfo_ptr_set_extraCaps(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 384) >> @intCast(7)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x180ull >> 7) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 463), "seL4_MessageInfo_ptr_set_extraCaps");
+            __assert_fail("(((~0x180ull >> 7) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 463), "seL4_MessageInfo_ptr_set_extraCaps");
         }
         if (!false) break;
     }
@@ -3731,7 +4202,9 @@ pub fn seL4_MessageInfo_ptr_set_extraCaps(arg_seL4_MessageInfo_ptr: [*c]seL4_Mes
 }
 pub fn seL4_MessageInfo_get_length(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_1.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 127)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3740,10 +4213,12 @@ pub fn seL4_MessageInfo_get_length(arg_seL4_MessageInfo_1: seL4_MessageInfo_t) c
 }
 pub fn seL4_MessageInfo_set_length(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) seL4_MessageInfo_t {
     var seL4_MessageInfo_1 = arg_seL4_MessageInfo_1;
+    _ = &seL4_MessageInfo_1;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 127) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x7full >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 482), "seL4_MessageInfo_set_length");
+            __assert_fail("(((~0x7full >> 0 ) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 482), "seL4_MessageInfo_set_length");
         }
         if (!false) break;
     }
@@ -3753,7 +4228,9 @@ pub fn seL4_MessageInfo_set_length(arg_seL4_MessageInfo_1: seL4_MessageInfo_t, a
 }
 pub fn seL4_MessageInfo_ptr_get_length(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t) callconv(.C) seL4_Uint64 {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var ret: seL4_Uint64 = undefined;
+    _ = &ret;
     ret = @as(seL4_Uint64, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_ulonglong, seL4_MessageInfo_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))]))) & @as(c_ulonglong, 127)) >> @intCast(0)))));
     if (__builtin_expect(@as(c_long, @intFromBool(!!(false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, ret))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)))), @as(c_long, @bitCast(@as(c_long, @as(c_int, 0))))) != 0) {
         ret |= @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))));
@@ -3762,10 +4239,12 @@ pub fn seL4_MessageInfo_ptr_get_length(arg_seL4_MessageInfo_ptr: [*c]seL4_Messag
 }
 pub fn seL4_MessageInfo_ptr_set_length(arg_seL4_MessageInfo_ptr: [*c]seL4_MessageInfo_t, arg_v64: seL4_Uint64) callconv(.C) void {
     var seL4_MessageInfo_ptr = arg_seL4_MessageInfo_ptr;
+    _ = &seL4_MessageInfo_ptr;
     var v64 = arg_v64;
+    _ = &v64;
     while (true) {
         if (!((((~@as(c_ulonglong, 127) >> @intCast(0)) | @as(c_ulonglong, @bitCast(@as(c_longlong, @as(c_int, 0))))) & @as(c_ulonglong, @bitCast(@as(c_ulonglong, v64)))) == @as(c_ulonglong, @bitCast(@as(c_longlong, if (false and ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, v64))) & (@as(c_ulonglong, 1) << @intCast(@as(c_int, 63)))) != 0)) @as(c_int, 0) else @as(c_int, 0)))))) {
-            __assert_fail("(((~0x7full >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "./sel4/shared_types_gen.h", @as(c_int, 502), "seL4_MessageInfo_ptr_set_length");
+            __assert_fail("(((~0x7full >> 0) | 0x0) & v64) == ((0 && (v64 & (1ull << (63)))) ? 0x0 : 0)", "microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/shared_types_gen.h", @as(c_int, 502), "seL4_MessageInfo_ptr_set_length");
         }
         if (!false) break;
     }
@@ -3773,13 +4252,13 @@ pub fn seL4_MessageInfo_ptr_set_length(arg_seL4_MessageInfo_ptr: [*c]seL4_Messag
     seL4_MessageInfo_ptr.*.words[@as(c_uint, @intCast(@as(c_int, 0)))] |= (v64 << @intCast(0)) & @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 127))));
 }
 pub const struct_seL4_IPCBuffer_ = extern struct {
-    tag: seL4_MessageInfo_t,
-    msg: [120]seL4_Word,
-    userData: seL4_Word,
-    caps_or_badges: [3]seL4_Word,
-    receiveCNode: seL4_CPtr,
-    receiveIndex: seL4_CPtr,
-    receiveDepth: seL4_Word,
+    tag: seL4_MessageInfo_t = @import("std").mem.zeroes(seL4_MessageInfo_t),
+    msg: [120]seL4_Word = @import("std").mem.zeroes([120]seL4_Word),
+    userData: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    caps_or_badges: [3]seL4_Word = @import("std").mem.zeroes([3]seL4_Word),
+    receiveCNode: seL4_CPtr = @import("std").mem.zeroes(seL4_CPtr),
+    receiveIndex: seL4_CPtr = @import("std").mem.zeroes(seL4_CPtr),
+    receiveDepth: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_IPCBuffer = struct_seL4_IPCBuffer_;
 pub const seL4_CapFault_IP: c_int = 0;
@@ -3807,6 +4286,7 @@ pub const seL4_Time = seL4_Uint64;
 pub extern var __sel4_ipc_buffer: [*c]seL4_IPCBuffer;
 pub fn seL4_SetIPCBuffer(arg_ipc_buffer: [*c]seL4_IPCBuffer) callconv(.C) void {
     var ipc_buffer = arg_ipc_buffer;
+    _ = &ipc_buffer;
     __sel4_ipc_buffer = ipc_buffer;
     return;
 }
@@ -3815,11 +4295,14 @@ pub fn seL4_GetIPCBuffer() callconv(.C) [*c]seL4_IPCBuffer {
 }
 pub fn seL4_GetMR(arg_i: c_int) callconv(.C) seL4_Word {
     var i = arg_i;
+    _ = &i;
     return seL4_GetIPCBuffer().*.msg[@as(c_uint, @intCast(i))];
 }
 pub fn seL4_SetMR(arg_i: c_int, arg_mr: seL4_Word) callconv(.C) void {
     var i = arg_i;
+    _ = &i;
     var mr = arg_mr;
+    _ = &mr;
     seL4_GetIPCBuffer().*.msg[@as(c_uint, @intCast(i))] = mr;
 }
 pub fn seL4_GetUserData() callconv(.C) seL4_Word {
@@ -3827,26 +4310,35 @@ pub fn seL4_GetUserData() callconv(.C) seL4_Word {
 }
 pub fn seL4_SetUserData(arg_data: seL4_Word) callconv(.C) void {
     var data = arg_data;
+    _ = &data;
     seL4_GetIPCBuffer().*.userData = data;
 }
 pub fn seL4_GetBadge(arg_i: c_int) callconv(.C) seL4_Word {
     var i = arg_i;
+    _ = &i;
     return seL4_GetIPCBuffer().*.caps_or_badges[@as(c_uint, @intCast(i))];
 }
 pub fn seL4_GetCap(arg_i: c_int) callconv(.C) seL4_CPtr {
     var i = arg_i;
+    _ = &i;
     return @as(seL4_CPtr, @bitCast(seL4_GetIPCBuffer().*.caps_or_badges[@as(c_uint, @intCast(i))]));
 }
 pub fn seL4_SetCap(arg_i: c_int, arg_cptr: seL4_CPtr) callconv(.C) void {
     var i = arg_i;
+    _ = &i;
     var cptr = arg_cptr;
+    _ = &cptr;
     seL4_GetIPCBuffer().*.caps_or_badges[@as(c_uint, @intCast(i))] = @as(seL4_Word, @bitCast(cptr));
 }
 pub fn seL4_GetCapReceivePath(arg_receiveCNode: [*c]seL4_CPtr, arg_receiveIndex: [*c]seL4_CPtr, arg_receiveDepth: [*c]seL4_Word) callconv(.C) void {
     var receiveCNode = arg_receiveCNode;
+    _ = &receiveCNode;
     var receiveIndex = arg_receiveIndex;
+    _ = &receiveIndex;
     var receiveDepth = arg_receiveDepth;
+    _ = &receiveDepth;
     var ipcbuffer: [*c]seL4_IPCBuffer = seL4_GetIPCBuffer();
+    _ = &ipcbuffer;
     if (receiveCNode != @as([*c]seL4_CPtr, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) {
         receiveCNode.* = ipcbuffer.*.receiveCNode;
     }
@@ -3859,28 +4351,43 @@ pub fn seL4_GetCapReceivePath(arg_receiveCNode: [*c]seL4_CPtr, arg_receiveIndex:
 }
 pub fn seL4_SetCapReceivePath(arg_receiveCNode: seL4_CPtr, arg_receiveIndex: seL4_CPtr, arg_receiveDepth: seL4_Word) callconv(.C) void {
     var receiveCNode = arg_receiveCNode;
+    _ = &receiveCNode;
     var receiveIndex = arg_receiveIndex;
+    _ = &receiveIndex;
     var receiveDepth = arg_receiveDepth;
+    _ = &receiveDepth;
     var ipcbuffer: [*c]seL4_IPCBuffer = seL4_GetIPCBuffer();
+    _ = &ipcbuffer;
     ipcbuffer.*.receiveCNode = receiveCNode;
     ipcbuffer.*.receiveIndex = receiveIndex;
     ipcbuffer.*.receiveDepth = receiveDepth;
 }
 pub fn seL4_Send(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(.C) void {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
 }
 pub fn seL4_Recv(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysRecv))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
@@ -3893,12 +4400,19 @@ pub fn seL4_Recv(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_
 }
 pub fn seL4_Call(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var msg0: seL4_Word = seL4_GetMR(@as(c_int, 0));
+    _ = &msg0;
     var msg1: seL4_Word = seL4_GetMR(@as(c_int, 1));
+    _ = &msg1;
     var msg2: seL4_Word = seL4_GetMR(@as(c_int, 2));
+    _ = &msg2;
     var msg3: seL4_Word = seL4_GetMR(@as(c_int, 3));
+    _ = &msg3;
     libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysCall))), dest, &dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
@@ -3908,20 +4422,32 @@ pub fn seL4_Call(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(
 }
 pub fn seL4_NBSend(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t) callconv(.C) void {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], seL4_GetMR(@as(c_int, 0)), seL4_GetMR(@as(c_int, 1)), seL4_GetMR(@as(c_int, 2)), seL4_GetMR(@as(c_int, 3)));
 }
 pub fn seL4_ReplyRecv(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var sender = arg_sender;
+    _ = &sender;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     msg0 = seL4_GetMR(@as(c_int, 0));
     msg1 = seL4_GetMR(@as(c_int, 1));
     msg2 = seL4_GetMR(@as(c_int, 2));
@@ -3938,14 +4464,23 @@ pub fn seL4_ReplyRecv(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_s
 }
 pub fn seL4_NBRecv(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBRecv))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
@@ -3958,16 +4493,27 @@ pub fn seL4_NBRecv(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL
 }
 pub fn seL4_NBSendRecv(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     msg0 = seL4_GetMR(@as(c_int, 0));
     msg1 = seL4_GetMR(@as(c_int, 1));
     msg2 = seL4_GetMR(@as(c_int, 2));
@@ -3984,15 +4530,25 @@ pub fn seL4_NBSendRecv(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg
 }
 pub fn seL4_NBSendWait(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     msg0 = seL4_GetMR(@as(c_int, 0));
     msg1 = seL4_GetMR(@as(c_int, 1));
     msg2 = seL4_GetMR(@as(c_int, 2));
@@ -4006,18 +4562,26 @@ pub fn seL4_NBSendWait(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg
         sender.* = badge;
     }
     return info;
-} // ./sel4/arch/syscalls.h:490:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/arch/syscalls.h:487:26: warning: unable to translate function, demoted to extern
+} // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:490:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:487:26: warning: unable to translate function, demoted to extern
 pub extern fn seL4_Yield() callconv(.C) void;
 pub fn seL4_Wait(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysWait))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
@@ -4030,13 +4594,21 @@ pub fn seL4_Wait(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) seL
 }
 pub fn seL4_NBWait(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = undefined;
+    _ = &msg0;
     var msg1: seL4_Word = undefined;
+    _ = &msg1;
     var msg2: seL4_Word = undefined;
+    _ = &msg2;
     var msg3: seL4_Word = undefined;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBWait))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     seL4_SetMR(@as(c_int, 0), msg0);
     seL4_SetMR(@as(c_int, 1), msg1);
@@ -4049,103 +4621,158 @@ pub fn seL4_NBWait(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) s
 }
 pub fn seL4_Poll(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     return seL4_NBWait(src, sender);
 }
 pub fn seL4_Signal(arg_dest: seL4_CPtr) callconv(.C) void {
     var dest = arg_dest;
-    arm_sys_send_null(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))))).words[@as(c_uint, @intCast(@as(c_int, 0)))]);
+    _ = &dest;
+    libmicrokit.zig_arm_sys_send_null(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0))))).words[@as(c_uint, @intCast(@as(c_int, 0)))]);
 }
 pub fn seL4_DebugPutChar(arg_c: u8) callconv(.C) void {
     var c = arg_c;
+    _ = &c;
     var unused0: seL4_Word = 0;
+    _ = &unused0;
     var unused1: seL4_Word = 0;
+    _ = &unused1;
     var unused2: seL4_Word = 0;
+    _ = &unused2;
     var unused3: seL4_Word = 0;
+    _ = &unused3;
     var unused4: seL4_Word = 0;
+    _ = &unused4;
     var unused5: seL4_Word = 0;
+    _ = &unused5;
     libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugPutChar))), @as(seL4_Word, @bitCast(@as(c_ulong, c))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_DebugDumpScheduler() callconv(.C) void {
     var unused0: seL4_Word = 0;
+    _ = &unused0;
     var unused1: seL4_Word = 0;
+    _ = &unused1;
     var unused2: seL4_Word = 0;
+    _ = &unused2;
     var unused3: seL4_Word = 0;
+    _ = &unused3;
     var unused4: seL4_Word = 0;
+    _ = &unused4;
     var unused5: seL4_Word = 0;
+    _ = &unused5;
     libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugDumpScheduler))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_DebugHalt() callconv(.C) void {
     arm_sys_null(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugHalt))));
-} // ./sel4/arch/syscalls.h:617:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/arch/syscalls.h:614:26: warning: unable to translate function, demoted to extern
+} // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:617:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:614:26: warning: unable to translate function, demoted to extern
 pub extern fn seL4_DebugSnapshot() callconv(.C) void;
 pub fn seL4_DebugCapIdentify(arg_cap: seL4_CPtr) callconv(.C) seL4_Uint32 {
     var cap = arg_cap;
+    _ = &cap;
     var unused0: seL4_Word = 0;
+    _ = &unused0;
     var unused1: seL4_Word = 0;
+    _ = &unused1;
     var unused2: seL4_Word = 0;
+    _ = &unused2;
     var unused3: seL4_Word = 0;
+    _ = &unused3;
     var unused4: seL4_Word = 0;
+    _ = &unused4;
     libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugCapIdentify))), cap, &cap, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused0, &unused1, &unused2, &unused3, &unused4, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     return @as(seL4_Uint32, @bitCast(@as(c_uint, @truncate(cap))));
 }
 pub fn seL4_DebugNameThread(arg_tcb: seL4_CPtr, arg_name: [*c]const u8) callconv(.C) void {
     var tcb = arg_tcb;
+    _ = &tcb;
     var name = arg_name;
+    _ = &name;
     _ = strcpy(@as([*c]u8, @ptrCast(@alignCast(@as([*c]seL4_Word, @ptrCast(@alignCast(&seL4_GetIPCBuffer().*.msg)))))), name);
     var unused0: seL4_Word = 0;
+    _ = &unused0;
     var unused1: seL4_Word = 0;
+    _ = &unused1;
     var unused2: seL4_Word = 0;
+    _ = &unused2;
     var unused3: seL4_Word = 0;
+    _ = &unused3;
     var unused4: seL4_Word = 0;
+    _ = &unused4;
     var unused5: seL4_Word = 0;
+    _ = &unused5;
     libmicrokit.zig_arm_sys_send_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysDebugNameThread))), tcb, &unused0, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), &unused1, &unused2, &unused3, &unused4, &unused5, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
-} // ./sel4/sel4_arch/syscalls.h:71:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:57:20: warning: unable to translate function, demoted to extern
-pub extern fn arm_sys_send(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_info_arg: seL4_Word, arg_mr0: seL4_Word, arg_mr1: seL4_Word, arg_mr2: seL4_Word, arg_mr3: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:109:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:102:20: warning: unable to translate function, demoted to extern
-pub extern fn arm_sys_send_null(arg_sys: seL4_Word, arg_src: seL4_Word, arg_info_arg: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:131:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:116:20: warning: unable to translate function, demoted to extern
-pub extern fn arm_sys_recv(arg_sys: seL4_Word, arg_src: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_out_info: [*c]seL4_Word, arg_out_mr0: [*c]seL4_Word, arg_out_mr1: [*c]seL4_Word, arg_out_mr2: [*c]seL4_Word, arg_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:162:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:146:20: warning: unable to translate function, demoted to extern
-pub extern fn arm_sys_send_recv(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_info_arg: seL4_Word, arg_out_info: [*c]seL4_Word, arg_in_out_mr0: [*c]seL4_Word, arg_in_out_mr1: [*c]seL4_Word, arg_in_out_mr2: [*c]seL4_Word, arg_in_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:197:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:178:20: warning: unable to translate function, demoted to extern
-pub extern fn arm_sys_nbsend_recv(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_src: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_info_arg: seL4_Word, arg_out_info: [*c]seL4_Word, arg_in_out_mr0: [*c]seL4_Word, arg_in_out_mr1: [*c]seL4_Word, arg_in_out_mr2: [*c]seL4_Word, arg_in_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // ./sel4/sel4_arch/syscalls.h:217:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// ./sel4/sel4_arch/syscalls.h:214:20: warning: unable to translate function, demoted to extern
+} // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:71:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:57:20: warning: unable to translate function, demoted to extern
+pub extern fn arm_sys_send(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_info_arg: seL4_Word, arg_mr0: seL4_Word, arg_mr1: seL4_Word, arg_mr2: seL4_Word, arg_mr3: seL4_Word) callconv(.C) void; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:109:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:102:20: warning: unable to translate function, demoted to extern
+pub extern fn arm_sys_send_null(arg_sys: seL4_Word, arg_src: seL4_Word, arg_info_arg: seL4_Word) callconv(.C) void; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:131:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:116:20: warning: unable to translate function, demoted to extern
+pub extern fn arm_sys_recv(arg_sys: seL4_Word, arg_src: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_out_info: [*c]seL4_Word, arg_out_mr0: [*c]seL4_Word, arg_out_mr1: [*c]seL4_Word, arg_out_mr2: [*c]seL4_Word, arg_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:162:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:146:20: warning: unable to translate function, demoted to extern
+pub extern fn arm_sys_send_recv(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_info_arg: seL4_Word, arg_out_info: [*c]seL4_Word, arg_in_out_mr0: [*c]seL4_Word, arg_in_out_mr1: [*c]seL4_Word, arg_in_out_mr2: [*c]seL4_Word, arg_in_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:197:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:178:20: warning: unable to translate function, demoted to extern
+pub extern fn arm_sys_nbsend_recv(arg_sys: seL4_Word, arg_dest: seL4_Word, arg_src: seL4_Word, arg_out_badge: [*c]seL4_Word, arg_info_arg: seL4_Word, arg_out_info: [*c]seL4_Word, arg_in_out_mr0: [*c]seL4_Word, arg_in_out_mr1: [*c]seL4_Word, arg_in_out_mr2: [*c]seL4_Word, arg_in_out_mr3: [*c]seL4_Word, arg_reply: seL4_Word) callconv(.C) void; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:217:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:214:20: warning: unable to translate function, demoted to extern
 pub extern fn arm_sys_null(arg_sys: seL4_Word) callconv(.C) void;
 pub fn seL4_SendWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) void {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_NBSendWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) void {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     libmicrokit.zig_arm_sys_send(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysNBSend))), dest, msgInfo.words[@as(c_uint, @intCast(@as(c_int, 0)))], if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr0.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr1 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr1.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr2 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr2.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))), if ((mr3 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) mr3.* else @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
 }
 pub fn seL4_RecvWithMRs(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply: seL4_CPtr, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var reply = arg_reply;
+    _ = &reply;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysRecv))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, reply);
     if (mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) {
         mr0.* = msg0;
@@ -4166,16 +4793,27 @@ pub fn seL4_RecvWithMRs(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_reply
 }
 pub fn seL4_CallWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) {
         msg0 = mr0.*;
     }
@@ -4205,19 +4843,33 @@ pub fn seL4_CallWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, ar
 }
 pub fn seL4_ReplyRecvWithMRs(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_sender: [*c]seL4_Word, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var sender = arg_sender;
+    _ = &sender;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) {
         msg0 = mr0.*;
     }
@@ -4250,20 +4902,35 @@ pub fn seL4_ReplyRecvWithMRs(arg_src: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t
 }
 pub fn seL4_NBSendRecvWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word, arg_reply: seL4_CPtr) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var reply = arg_reply;
+    _ = &reply;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) {
         msg0 = mr0.*;
     }
@@ -4296,19 +4963,33 @@ pub fn seL4_NBSendRecvWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo
 }
 pub fn seL4_NBSendWaitWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo_t, arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var dest = arg_dest;
+    _ = &dest;
     var msgInfo = arg_msgInfo;
+    _ = &msgInfo;
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     if ((mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) and (seL4_MessageInfo_get_length(msgInfo) > @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))))) {
         msg0 = mr0.*;
     }
@@ -4341,17 +5022,29 @@ pub fn seL4_NBSendWaitWithMRs(arg_dest: seL4_CPtr, arg_msgInfo: seL4_MessageInfo
 }
 pub fn seL4_WaitWithMRs(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_mr0: [*c]seL4_Word, arg_mr1: [*c]seL4_Word, arg_mr2: [*c]seL4_Word, arg_mr3: [*c]seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var src = arg_src;
+    _ = &src;
     var sender = arg_sender;
+    _ = &sender;
     var mr0 = arg_mr0;
+    _ = &mr0;
     var mr1 = arg_mr1;
+    _ = &mr1;
     var mr2 = arg_mr2;
+    _ = &mr2;
     var mr3 = arg_mr3;
+    _ = &mr3;
     var info: seL4_MessageInfo_t = undefined;
+    _ = &info;
     var badge: seL4_Word = undefined;
+    _ = &badge;
     var msg0: seL4_Word = 0;
+    _ = &msg0;
     var msg1: seL4_Word = 0;
+    _ = &msg1;
     var msg2: seL4_Word = 0;
+    _ = &msg2;
     var msg3: seL4_Word = 0;
+    _ = &msg3;
     arm_sys_recv(@as(seL4_Word, @bitCast(@as(c_long, seL4_SysWait))), src, &badge, &info.words[@as(c_uint, @intCast(@as(c_int, 0)))], &msg0, &msg1, &msg2, &msg3, @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 0)))));
     if (mr0 != @as([*c]seL4_Word, @ptrCast(@alignCast(@as(?*anyopaque, @ptrFromInt(@as(c_int, 0))))))) {
         mr0.* = msg0;
@@ -4372,8 +5065,10 @@ pub fn seL4_WaitWithMRs(arg_src: seL4_CPtr, arg_sender: [*c]seL4_Word, arg_mr0: 
 }
 pub fn seL4_DebugPutString(arg_str: [*c]u8) callconv(.C) void {
     var str = arg_str;
+    _ = &str;
     {
         var s: [*c]u8 = str;
+        _ = &s;
         while (s.* != 0) : (s += 1) {
             seL4_DebugPutChar(s.*);
         }
@@ -4423,28 +5118,27 @@ pub const ARMVSpaceClean_Data: c_int = 36;
 pub const ARMVSpaceInvalidate_Data: c_int = 37;
 pub const ARMVSpaceCleanInvalidate_Data: c_int = 38;
 pub const ARMVSpaceUnify_Instruction: c_int = 39;
-pub const ARMPageDirectoryMap: c_int = 40;
-pub const ARMPageDirectoryUnmap: c_int = 41;
-pub const nSeL4ArchInvocationLabels: c_int = 42;
+pub const ARMSMCCall: c_int = 40;
+pub const nSeL4ArchInvocationLabels: c_int = 41;
 pub const enum_sel4_arch_invocation_label = c_uint;
-pub const ARMPageTableMap: c_int = 42;
-pub const ARMPageTableUnmap: c_int = 43;
-pub const ARMPageMap: c_int = 44;
-pub const ARMPageUnmap: c_int = 45;
-pub const ARMPageClean_Data: c_int = 46;
-pub const ARMPageInvalidate_Data: c_int = 47;
-pub const ARMPageCleanInvalidate_Data: c_int = 48;
-pub const ARMPageUnify_Instruction: c_int = 49;
-pub const ARMPageGetAddress: c_int = 50;
-pub const ARMASIDControlMakePool: c_int = 51;
-pub const ARMASIDPoolAssign: c_int = 52;
-pub const ARMVCPUSetTCB: c_int = 53;
-pub const ARMVCPUInjectIRQ: c_int = 54;
-pub const ARMVCPUReadReg: c_int = 55;
-pub const ARMVCPUWriteReg: c_int = 56;
-pub const ARMVCPUAckVPPI: c_int = 57;
-pub const ARMIRQIssueIRQHandlerTrigger: c_int = 58;
-pub const nArchInvocationLabels: c_int = 59;
+pub const ARMPageTableMap: c_int = 41;
+pub const ARMPageTableUnmap: c_int = 42;
+pub const ARMPageMap: c_int = 43;
+pub const ARMPageUnmap: c_int = 44;
+pub const ARMPageClean_Data: c_int = 45;
+pub const ARMPageInvalidate_Data: c_int = 46;
+pub const ARMPageCleanInvalidate_Data: c_int = 47;
+pub const ARMPageUnify_Instruction: c_int = 48;
+pub const ARMPageGetAddress: c_int = 49;
+pub const ARMASIDControlMakePool: c_int = 50;
+pub const ARMASIDPoolAssign: c_int = 51;
+pub const ARMVCPUSetTCB: c_int = 52;
+pub const ARMVCPUInjectIRQ: c_int = 53;
+pub const ARMVCPUReadReg: c_int = 54;
+pub const ARMVCPUWriteReg: c_int = 55;
+pub const ARMVCPUAckVPPI: c_int = 56;
+pub const ARMIRQIssueIRQHandlerTrigger: c_int = 57;
+pub const nArchInvocationLabels: c_int = 58;
 pub const enum_arch_invocation_label = c_uint;
 pub const __type_int_size_incorrect = [1]c_ulong;
 pub const __type_long_size_incorrect = [1]c_ulong;
@@ -4468,78 +5162,87 @@ pub const __type_seL4_SchedControl_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_VMAttributes_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_Page_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_PageTable_size_incorrect = [1]c_ulong;
-pub const __type_seL4_ARM_PageDirectory_size_incorrect = [1]c_ulong;
-pub const __type_seL4_ARM_PageUpperDirectory_size_incorrect = [1]c_ulong;
-pub const __type_seL4_ARM_PageGlobalDirectory_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_VSpace_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_ASIDControl_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_ASIDPool_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_VCPU_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_IOSpace_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_IOPageTable_size_incorrect = [1]c_ulong;
+pub const __type_seL4_ARM_SMC_size_incorrect = [1]c_ulong;
 pub const __type_seL4_UserContext_size_incorrect = [1]c_ulong;
+pub const __type_seL4_ARM_SMCContext_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_SIDControl_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_SID_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_CBControl_size_incorrect = [1]c_ulong;
 pub const __type_seL4_ARM_CB_size_incorrect = [1]c_ulong;
 pub const struct_seL4_ARM_Page_GetAddress = extern struct {
-    @"error": c_int,
-    paddr: seL4_Word,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    paddr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_ARM_Page_GetAddress_t = struct_seL4_ARM_Page_GetAddress;
 pub const struct_seL4_ARM_VCPU_ReadRegs = extern struct {
-    @"error": c_int,
-    value: seL4_Word,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    value: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_ARM_VCPU_ReadRegs_t = struct_seL4_ARM_VCPU_ReadRegs;
 pub const struct_seL4_ARM_SIDControl_GetFault = extern struct {
-    @"error": c_int,
-    status: seL4_Word,
-    syndrome_0: seL4_Word,
-    syndrome_1: seL4_Word,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    status: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    syndrome_0: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    syndrome_1: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_ARM_SIDControl_GetFault_t = struct_seL4_ARM_SIDControl_GetFault;
 pub const struct_seL4_ARM_CB_CBGetFault = extern struct {
-    @"error": c_int,
-    status: seL4_Word,
-    address: seL4_Word,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    status: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    address: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_ARM_CB_CBGetFault_t = struct_seL4_ARM_CB_CBGetFault;
 pub const struct_seL4_TCB_GetBreakpoint = extern struct {
-    @"error": c_int,
-    vaddr: seL4_Word,
-    type: seL4_Word,
-    size: seL4_Word,
-    rw: seL4_Word,
-    is_enabled: seL4_Bool,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    vaddr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    type: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    size: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    rw: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    is_enabled: seL4_Bool = @import("std").mem.zeroes(seL4_Bool),
 };
 pub const seL4_TCB_GetBreakpoint_t = struct_seL4_TCB_GetBreakpoint;
 pub const struct_seL4_TCB_ConfigureSingleStepping = extern struct {
-    @"error": c_int,
-    bp_was_consumed: seL4_Bool,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    bp_was_consumed: seL4_Bool = @import("std").mem.zeroes(seL4_Bool),
 };
 pub const seL4_TCB_ConfigureSingleStepping_t = struct_seL4_TCB_ConfigureSingleStepping;
 pub const struct_seL4_SchedContext_Consumed = extern struct {
-    @"error": c_int,
-    consumed: seL4_Time,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    consumed: seL4_Time = @import("std").mem.zeroes(seL4_Time),
 };
 pub const seL4_SchedContext_Consumed_t = struct_seL4_SchedContext_Consumed;
 pub const struct_seL4_SchedContext_YieldTo = extern struct {
-    @"error": c_int,
-    consumed: seL4_Time,
+    @"error": c_int = @import("std").mem.zeroes(c_int),
+    consumed: seL4_Time = @import("std").mem.zeroes(seL4_Time),
 };
 pub const seL4_SchedContext_YieldTo_t = struct_seL4_SchedContext_YieldTo;
 pub fn seL4_ARM_VSpace_Clean_Data(arg__service: seL4_ARM_VSpace, arg_start: seL4_Word, arg_end: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start = arg_start;
+    _ = &start;
     var end = arg_end;
+    _ = &end;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVSpaceClean_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start;
     mr1 = end;
     mr2 = 0;
@@ -4556,15 +5259,25 @@ pub fn seL4_ARM_VSpace_Clean_Data(arg__service: seL4_ARM_VSpace, arg_start: seL4
 }
 pub fn seL4_ARM_VSpace_Invalidate_Data(arg__service: seL4_ARM_VSpace, arg_start: seL4_Word, arg_end: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start = arg_start;
+    _ = &start;
     var end = arg_end;
+    _ = &end;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVSpaceInvalidate_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start;
     mr1 = end;
     mr2 = 0;
@@ -4581,15 +5294,25 @@ pub fn seL4_ARM_VSpace_Invalidate_Data(arg__service: seL4_ARM_VSpace, arg_start:
 }
 pub fn seL4_ARM_VSpace_CleanInvalidate_Data(arg__service: seL4_ARM_VSpace, arg_start: seL4_Word, arg_end: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start = arg_start;
+    _ = &start;
     var end = arg_end;
+    _ = &end;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVSpaceCleanInvalidate_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start;
     mr1 = end;
     mr2 = 0;
@@ -4606,15 +5329,25 @@ pub fn seL4_ARM_VSpace_CleanInvalidate_Data(arg__service: seL4_ARM_VSpace, arg_s
 }
 pub fn seL4_ARM_VSpace_Unify_Instruction(arg__service: seL4_ARM_VSpace, arg_start: seL4_Word, arg_end: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start = arg_start;
+    _ = &start;
     var end = arg_end;
+    _ = &end;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVSpaceUnify_Instruction))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start;
     mr1 = end;
     mr2 = 0;
@@ -4629,23 +5362,35 @@ pub fn seL4_ARM_VSpace_Unify_Instruction(arg__service: seL4_ARM_VSpace, arg_star
     }
     return result;
 }
-pub fn seL4_ARM_PageDirectory_Map(arg__service: seL4_ARM_PageDirectory, arg_vspace: seL4_CPtr, arg_vaddr: seL4_Word, arg_attr: seL4_ARM_VMAttributes) callconv(.C) seL4_Error {
+pub fn seL4_ARM_SMC_Call(arg__service: seL4_ARM_SMC, arg_smc_args: [*c]seL4_ARM_SMCContext, arg_smc_response: [*c]seL4_ARM_SMCContext) callconv(.C) seL4_Error {
     var _service = arg__service;
-    var vspace = arg_vspace;
-    var vaddr = arg_vaddr;
-    var attr = arg_attr;
+    _ = &_service;
+    var smc_args = arg_smc_args;
+    _ = &smc_args;
+    var smc_response = arg_smc_response;
+    _ = &smc_response;
     var result: seL4_Error = undefined;
-    var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageDirectoryMap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &result;
+    var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMSMCCall))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 8)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
-    seL4_SetCap(@as(c_int, 0), vspace);
-    mr0 = vaddr;
-    mr1 = @as(seL4_Word, @bitCast(attr));
-    mr2 = 0;
-    mr3 = 0;
+    _ = &mr3;
+    mr0 = smc_args.*.x0;
+    mr1 = smc_args.*.x1;
+    mr2 = smc_args.*.x2;
+    mr3 = smc_args.*.x3;
+    seL4_SetMR(@as(c_int, 4), smc_args.*.x4);
+    seL4_SetMR(@as(c_int, 5), smc_args.*.x5);
+    seL4_SetMR(@as(c_int, 6), smc_args.*.x6);
+    seL4_SetMR(@as(c_int, 7), smc_args.*.x7);
     output_tag = seL4_CallWithMRs(_service, tag, &mr0, &mr1, &mr2, &mr3);
     result = @as(c_uint, @bitCast(@as(c_uint, @truncate(seL4_MessageInfo_get_label(output_tag)))));
     if (result != @as(c_uint, @bitCast(seL4_NoError))) {
@@ -4654,43 +5399,39 @@ pub fn seL4_ARM_PageDirectory_Map(arg__service: seL4_ARM_PageDirectory, arg_vspa
         seL4_SetMR(@as(c_int, 2), mr2);
         seL4_SetMR(@as(c_int, 3), mr3);
     }
-    return result;
-}
-pub fn seL4_ARM_PageDirectory_Unmap(arg__service: seL4_ARM_PageDirectory) callconv(.C) seL4_Error {
-    var _service = arg__service;
-    var result: seL4_Error = undefined;
-    var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageDirectoryUnmap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
-    var output_tag: seL4_MessageInfo_t = undefined;
-    var mr0: seL4_Word = undefined;
-    var mr1: seL4_Word = undefined;
-    var mr2: seL4_Word = undefined;
-    var mr3: seL4_Word = undefined;
-    mr0 = 0;
-    mr1 = 0;
-    mr2 = 0;
-    mr3 = 0;
-    output_tag = seL4_CallWithMRs(_service, tag, &mr0, &mr1, &mr2, &mr3);
-    result = @as(c_uint, @bitCast(@as(c_uint, @truncate(seL4_MessageInfo_get_label(output_tag)))));
-    if (result != @as(c_uint, @bitCast(seL4_NoError))) {
-        seL4_SetMR(@as(c_int, 0), mr0);
-        seL4_SetMR(@as(c_int, 1), mr1);
-        seL4_SetMR(@as(c_int, 2), mr2);
-        seL4_SetMR(@as(c_int, 3), mr3);
-    }
+    smc_response.*.x0 = mr0;
+    smc_response.*.x1 = mr1;
+    smc_response.*.x2 = mr2;
+    smc_response.*.x3 = mr3;
+    smc_response.*.x4 = seL4_GetMR(@as(c_int, 4));
+    smc_response.*.x5 = seL4_GetMR(@as(c_int, 5));
+    smc_response.*.x6 = seL4_GetMR(@as(c_int, 6));
+    smc_response.*.x7 = seL4_GetMR(@as(c_int, 7));
     return result;
 }
 pub fn seL4_ARM_PageTable_Map(arg__service: seL4_ARM_PageTable, arg_vspace: seL4_CPtr, arg_vaddr: seL4_Word, arg_attr: seL4_ARM_VMAttributes) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var vspace = arg_vspace;
+    _ = &vspace;
     var vaddr = arg_vaddr;
+    _ = &vaddr;
     var attr = arg_attr;
+    _ = &attr;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageTableMap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), vspace);
     mr0 = vaddr;
     mr1 = @as(seL4_Word, @bitCast(attr));
@@ -4708,13 +5449,21 @@ pub fn seL4_ARM_PageTable_Map(arg__service: seL4_ARM_PageTable, arg_vspace: seL4
 }
 pub fn seL4_ARM_PageTable_Unmap(arg__service: seL4_ARM_PageTable) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageTableUnmap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -4731,17 +5480,29 @@ pub fn seL4_ARM_PageTable_Unmap(arg__service: seL4_ARM_PageTable) callconv(.C) s
 }
 pub fn seL4_ARM_Page_Map(arg__service: seL4_ARM_Page, arg_vspace: seL4_CPtr, arg_vaddr: seL4_Word, arg_rights: seL4_CapRights_t, arg_attr: seL4_ARM_VMAttributes) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var vspace = arg_vspace;
+    _ = &vspace;
     var vaddr = arg_vaddr;
+    _ = &vaddr;
     var rights = arg_rights;
+    _ = &rights;
     var attr = arg_attr;
+    _ = &attr;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageMap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), vspace);
     mr0 = vaddr;
     mr1 = rights.words[@as(c_uint, @intCast(@as(c_int, 0)))];
@@ -4759,13 +5520,21 @@ pub fn seL4_ARM_Page_Map(arg__service: seL4_ARM_Page, arg_vspace: seL4_CPtr, arg
 }
 pub fn seL4_ARM_Page_Unmap(arg__service: seL4_ARM_Page) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageUnmap))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -4782,15 +5551,25 @@ pub fn seL4_ARM_Page_Unmap(arg__service: seL4_ARM_Page) callconv(.C) seL4_Error 
 }
 pub fn seL4_ARM_Page_Clean_Data(arg__service: seL4_ARM_Page, arg_start_offset: seL4_Word, arg_end_offset: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start_offset = arg_start_offset;
+    _ = &start_offset;
     var end_offset = arg_end_offset;
+    _ = &end_offset;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageClean_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start_offset;
     mr1 = end_offset;
     mr2 = 0;
@@ -4807,15 +5586,25 @@ pub fn seL4_ARM_Page_Clean_Data(arg__service: seL4_ARM_Page, arg_start_offset: s
 }
 pub fn seL4_ARM_Page_Invalidate_Data(arg__service: seL4_ARM_Page, arg_start_offset: seL4_Word, arg_end_offset: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start_offset = arg_start_offset;
+    _ = &start_offset;
     var end_offset = arg_end_offset;
+    _ = &end_offset;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageInvalidate_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start_offset;
     mr1 = end_offset;
     mr2 = 0;
@@ -4832,15 +5621,25 @@ pub fn seL4_ARM_Page_Invalidate_Data(arg__service: seL4_ARM_Page, arg_start_offs
 }
 pub fn seL4_ARM_Page_CleanInvalidate_Data(arg__service: seL4_ARM_Page, arg_start_offset: seL4_Word, arg_end_offset: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start_offset = arg_start_offset;
+    _ = &start_offset;
     var end_offset = arg_end_offset;
+    _ = &end_offset;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageCleanInvalidate_Data))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start_offset;
     mr1 = end_offset;
     mr2 = 0;
@@ -4857,15 +5656,25 @@ pub fn seL4_ARM_Page_CleanInvalidate_Data(arg__service: seL4_ARM_Page, arg_start
 }
 pub fn seL4_ARM_Page_Unify_Instruction(arg__service: seL4_ARM_Page, arg_start_offset: seL4_Word, arg_end_offset: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var start_offset = arg_start_offset;
+    _ = &start_offset;
     var end_offset = arg_end_offset;
+    _ = &end_offset;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageUnify_Instruction))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = start_offset;
     mr1 = end_offset;
     mr2 = 0;
@@ -4882,13 +5691,21 @@ pub fn seL4_ARM_Page_Unify_Instruction(arg__service: seL4_ARM_Page, arg_start_of
 }
 pub fn seL4_ARM_Page_GetAddress(arg__service: seL4_ARM_Page) callconv(.C) seL4_ARM_Page_GetAddress_t {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_ARM_Page_GetAddress_t = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMPageGetAddress))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -4907,17 +5724,29 @@ pub fn seL4_ARM_Page_GetAddress(arg__service: seL4_ARM_Page) callconv(.C) seL4_A
 }
 pub fn seL4_ARM_ASIDControl_MakePool(arg__service: seL4_ARM_ASIDControl, arg_untyped: seL4_Untyped, arg_root: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var untyped = arg_untyped;
+    _ = &untyped;
     var root = arg_root;
+    _ = &root;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMASIDControlMakePool))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), untyped);
     seL4_SetCap(@as(c_int, 1), root);
     mr0 = index;
@@ -4936,14 +5765,23 @@ pub fn seL4_ARM_ASIDControl_MakePool(arg__service: seL4_ARM_ASIDControl, arg_unt
 }
 pub fn seL4_ARM_ASIDPool_Assign(arg__service: seL4_ARM_ASIDPool, arg_vspace: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var vspace = arg_vspace;
+    _ = &vspace;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMASIDPoolAssign))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), vspace);
     mr0 = 0;
     mr1 = 0;
@@ -4961,14 +5799,23 @@ pub fn seL4_ARM_ASIDPool_Assign(arg__service: seL4_ARM_ASIDPool, arg_vspace: seL
 }
 pub fn seL4_ARM_VCPU_SetTCB(arg__service: seL4_ARM_VCPU, arg_tcb: seL4_TCB) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var tcb = arg_tcb;
+    _ = &tcb;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVCPUSetTCB))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), tcb);
     mr0 = 0;
     mr1 = 0;
@@ -4986,17 +5833,29 @@ pub fn seL4_ARM_VCPU_SetTCB(arg__service: seL4_ARM_VCPU, arg_tcb: seL4_TCB) call
 }
 pub fn seL4_ARM_VCPU_InjectIRQ(arg__service: seL4_ARM_VCPU, arg_virq: seL4_Uint16, arg_priority: seL4_Uint8, arg_group: seL4_Uint8, arg_index: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var virq = arg_virq;
+    _ = &virq;
     var priority = arg_priority;
+    _ = &priority;
     var group = arg_group;
+    _ = &group;
     var index = arg_index;
+    _ = &index;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVCPUInjectIRQ))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate((((@as(c_ulonglong, @bitCast(@as(c_ulonglong, virq))) & @as(c_ulonglong, 65535)) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, priority))) & @as(c_ulonglong, 255)) << @intCast(16))) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, group))) & @as(c_ulonglong, 255)) << @intCast(24))) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, index))) & @as(c_ulonglong, 255)) << @intCast(32))))));
     mr1 = 0;
     mr2 = 0;
@@ -5013,14 +5872,23 @@ pub fn seL4_ARM_VCPU_InjectIRQ(arg__service: seL4_ARM_VCPU, arg_virq: seL4_Uint1
 }
 pub fn seL4_ARM_VCPU_ReadRegs(arg__service: seL4_ARM_VCPU, arg_field: seL4_Word) callconv(.C) seL4_ARM_VCPU_ReadRegs_t {
     var _service = arg__service;
+    _ = &_service;
     var field = arg_field;
+    _ = &field;
     var result: seL4_ARM_VCPU_ReadRegs_t = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVCPUReadReg))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = field;
     mr1 = 0;
     mr2 = 0;
@@ -5039,15 +5907,25 @@ pub fn seL4_ARM_VCPU_ReadRegs(arg__service: seL4_ARM_VCPU, arg_field: seL4_Word)
 }
 pub fn seL4_ARM_VCPU_WriteRegs(arg__service: seL4_ARM_VCPU, arg_field: seL4_Word, arg_value: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var field = arg_field;
+    _ = &field;
     var value = arg_value;
+    _ = &value;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVCPUWriteReg))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = field;
     mr1 = value;
     mr2 = 0;
@@ -5064,14 +5942,23 @@ pub fn seL4_ARM_VCPU_WriteRegs(arg__service: seL4_ARM_VCPU, arg_field: seL4_Word
 }
 pub fn seL4_ARM_VCPU_AckVPPI(arg__service: seL4_ARM_VCPU, arg_irq: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var irq = arg_irq;
+    _ = &irq;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMVCPUAckVPPI))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = irq;
     mr1 = 0;
     mr2 = 0;
@@ -5088,18 +5975,31 @@ pub fn seL4_ARM_VCPU_AckVPPI(arg__service: seL4_ARM_VCPU, arg_irq: seL4_Word) ca
 }
 pub fn seL4_IRQControl_GetTrigger(arg__service: seL4_IRQControl, arg_irq: seL4_Word, arg_trigger: seL4_Word, arg_root: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var irq = arg_irq;
+    _ = &irq;
     var trigger = arg_trigger;
+    _ = &trigger;
     var root = arg_root;
+    _ = &root;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, ARMIRQIssueIRQHandlerTrigger))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 4)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), root);
     mr0 = irq;
     mr1 = trigger;
@@ -5117,20 +6017,35 @@ pub fn seL4_IRQControl_GetTrigger(arg__service: seL4_IRQControl, arg_irq: seL4_W
 }
 pub fn seL4_Untyped_Retype(arg__service: seL4_Untyped, arg_type: seL4_Word, arg_size_bits: seL4_Word, arg_root: seL4_CNode, arg_node_index: seL4_Word, arg_node_depth: seL4_Word, arg_node_offset: seL4_Word, arg_num_objects: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var @"type" = arg_type;
+    _ = &@"type";
     var size_bits = arg_size_bits;
+    _ = &size_bits;
     var root = arg_root;
+    _ = &root;
     var node_index = arg_node_index;
+    _ = &node_index;
     var node_depth = arg_node_depth;
+    _ = &node_depth;
     var node_offset = arg_node_offset;
+    _ = &node_offset;
     var num_objects = arg_num_objects;
+    _ = &num_objects;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, UntypedRetype))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 6)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), root);
     mr0 = @"type";
     mr1 = size_bits;
@@ -5150,17 +6065,29 @@ pub fn seL4_Untyped_Retype(arg__service: seL4_Untyped, arg_type: seL4_Word, arg_
 }
 pub fn seL4_TCB_ReadRegisters(arg__service: seL4_TCB, arg_suspend_source: seL4_Bool, arg_arch_flags: seL4_Uint8, arg_count: seL4_Word, arg_regs: [*c]seL4_UserContext) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var suspend_source = arg_suspend_source;
+    _ = &suspend_source;
     var arch_flags = arg_arch_flags;
+    _ = &arch_flags;
     var count = arg_count;
+    _ = &count;
     var regs = arg_regs;
+    _ = &regs;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBReadRegisters))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_longlong, suspend_source))) & @as(c_ulonglong, 1)) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, arch_flags))) & @as(c_ulonglong, 255)) << @intCast(8))))));
     mr1 = count;
     mr2 = 0;
@@ -5213,17 +6140,29 @@ pub fn seL4_TCB_ReadRegisters(arg__service: seL4_TCB, arg_suspend_source: seL4_B
 }
 pub fn seL4_TCB_WriteRegisters(arg__service: seL4_TCB, arg_resume_target: seL4_Bool, arg_arch_flags: seL4_Uint8, arg_count: seL4_Word, arg_regs: [*c]seL4_UserContext) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var resume_target = arg_resume_target;
+    _ = &resume_target;
     var arch_flags = arg_arch_flags;
+    _ = &arch_flags;
     var count = arg_count;
+    _ = &count;
     var regs = arg_regs;
+    _ = &regs;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBWriteRegisters))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 38)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate((@as(c_ulonglong, @bitCast(@as(c_longlong, resume_target))) & @as(c_ulonglong, 1)) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, arch_flags))) & @as(c_ulonglong, 255)) << @intCast(8))))));
     mr1 = count;
     mr2 = regs.*.pc;
@@ -5274,19 +6213,33 @@ pub fn seL4_TCB_WriteRegisters(arg__service: seL4_TCB, arg_resume_target: seL4_B
 }
 pub fn seL4_TCB_CopyRegisters(arg__service: seL4_TCB, arg_source: seL4_TCB, arg_suspend_source: seL4_Bool, arg_resume_target: seL4_Bool, arg_transfer_frame: seL4_Bool, arg_transfer_integer: seL4_Bool, arg_arch_flags: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var source = arg_source;
+    _ = &source;
     var suspend_source = arg_suspend_source;
+    _ = &suspend_source;
     var resume_target = arg_resume_target;
+    _ = &resume_target;
     var transfer_frame = arg_transfer_frame;
+    _ = &transfer_frame;
     var transfer_integer = arg_transfer_integer;
+    _ = &transfer_integer;
     var arch_flags = arg_arch_flags;
+    _ = &arch_flags;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBCopyRegisters))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), source);
     mr0 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(((((@as(c_ulonglong, @bitCast(@as(c_longlong, suspend_source))) & @as(c_ulonglong, 1)) | ((@as(c_ulonglong, @bitCast(@as(c_longlong, resume_target))) & @as(c_ulonglong, 1)) << @intCast(1))) | ((@as(c_ulonglong, @bitCast(@as(c_longlong, transfer_frame))) & @as(c_ulonglong, 1)) << @intCast(2))) | ((@as(c_ulonglong, @bitCast(@as(c_longlong, transfer_integer))) & @as(c_ulonglong, 1)) << @intCast(3))) | ((@as(c_ulonglong, @bitCast(@as(c_ulonglong, arch_flags))) & @as(c_ulonglong, 255)) << @intCast(8))))));
     mr1 = 0;
@@ -5304,19 +6257,33 @@ pub fn seL4_TCB_CopyRegisters(arg__service: seL4_TCB, arg_source: seL4_TCB, arg_
 }
 pub fn seL4_TCB_Configure(arg__service: seL4_TCB, arg_cspace_root: seL4_CNode, arg_cspace_root_data: seL4_Word, arg_vspace_root: seL4_CPtr, arg_vspace_root_data: seL4_Word, arg_buffer: seL4_Word, arg_bufferFrame: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var cspace_root = arg_cspace_root;
+    _ = &cspace_root;
     var cspace_root_data = arg_cspace_root_data;
+    _ = &cspace_root_data;
     var vspace_root = arg_vspace_root;
+    _ = &vspace_root;
     var vspace_root_data = arg_vspace_root_data;
+    _ = &vspace_root_data;
     var buffer = arg_buffer;
+    _ = &buffer;
     var bufferFrame = arg_bufferFrame;
+    _ = &bufferFrame;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBConfigure))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), cspace_root);
     seL4_SetCap(@as(c_int, 1), vspace_root);
     seL4_SetCap(@as(c_int, 2), bufferFrame);
@@ -5336,15 +6303,25 @@ pub fn seL4_TCB_Configure(arg__service: seL4_TCB, arg_cspace_root: seL4_CNode, a
 }
 pub fn seL4_TCB_SetPriority(arg__service: seL4_TCB, arg_authority: seL4_TCB, arg_priority: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var authority = arg_authority;
+    _ = &authority;
     var priority = arg_priority;
+    _ = &priority;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetPriority))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), authority);
     mr0 = priority;
     mr1 = 0;
@@ -5362,15 +6339,25 @@ pub fn seL4_TCB_SetPriority(arg__service: seL4_TCB, arg_authority: seL4_TCB, arg
 }
 pub fn seL4_TCB_SetMCPriority(arg__service: seL4_TCB, arg_authority: seL4_TCB, arg_mcp: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var authority = arg_authority;
+    _ = &authority;
     var mcp = arg_mcp;
+    _ = &mcp;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetMCPriority))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), authority);
     mr0 = mcp;
     mr1 = 0;
@@ -5388,18 +6375,31 @@ pub fn seL4_TCB_SetMCPriority(arg__service: seL4_TCB, arg_authority: seL4_TCB, a
 }
 pub fn seL4_TCB_SetSchedParams(arg__service: seL4_TCB, arg_authority: seL4_TCB, arg_mcp: seL4_Word, arg_priority: seL4_Word, arg_sched_context: seL4_CPtr, arg_fault_ep: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var authority = arg_authority;
+    _ = &authority;
     var mcp = arg_mcp;
+    _ = &mcp;
     var priority = arg_priority;
+    _ = &priority;
     var sched_context = arg_sched_context;
+    _ = &sched_context;
     var fault_ep = arg_fault_ep;
+    _ = &fault_ep;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetSchedParams))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), authority);
     seL4_SetCap(@as(c_int, 1), sched_context);
     seL4_SetCap(@as(c_int, 2), fault_ep);
@@ -5419,14 +6419,23 @@ pub fn seL4_TCB_SetSchedParams(arg__service: seL4_TCB, arg_authority: seL4_TCB, 
 }
 pub fn seL4_TCB_SetTimeoutEndpoint(arg__service: seL4_TCB, arg_timeout_fault_ep: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var timeout_fault_ep = arg_timeout_fault_ep;
+    _ = &timeout_fault_ep;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetTimeoutEndpoint))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), timeout_fault_ep);
     mr0 = 0;
     mr1 = 0;
@@ -5444,15 +6453,25 @@ pub fn seL4_TCB_SetTimeoutEndpoint(arg__service: seL4_TCB, arg_timeout_fault_ep:
 }
 pub fn seL4_TCB_SetIPCBuffer(arg__service: seL4_TCB, arg_buffer: seL4_Word, arg_bufferFrame: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var buffer = arg_buffer;
+    _ = &buffer;
     var bufferFrame = arg_bufferFrame;
+    _ = &bufferFrame;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetIPCBuffer))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), bufferFrame);
     mr0 = buffer;
     mr1 = 0;
@@ -5470,18 +6489,31 @@ pub fn seL4_TCB_SetIPCBuffer(arg__service: seL4_TCB, arg_buffer: seL4_Word, arg_
 }
 pub fn seL4_TCB_SetSpace(arg__service: seL4_TCB, arg_fault_ep: seL4_CPtr, arg_cspace_root: seL4_CNode, arg_cspace_root_data: seL4_Word, arg_vspace_root: seL4_CPtr, arg_vspace_root_data: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var fault_ep = arg_fault_ep;
+    _ = &fault_ep;
     var cspace_root = arg_cspace_root;
+    _ = &cspace_root;
     var cspace_root_data = arg_cspace_root_data;
+    _ = &cspace_root_data;
     var vspace_root = arg_vspace_root;
+    _ = &vspace_root;
     var vspace_root_data = arg_vspace_root_data;
+    _ = &vspace_root_data;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetSpace))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), fault_ep);
     seL4_SetCap(@as(c_int, 1), cspace_root);
     seL4_SetCap(@as(c_int, 2), vspace_root);
@@ -5501,13 +6533,21 @@ pub fn seL4_TCB_SetSpace(arg__service: seL4_TCB, arg_fault_ep: seL4_CPtr, arg_cs
 }
 pub fn seL4_TCB_Suspend(arg__service: seL4_TCB) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSuspend))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -5524,13 +6564,21 @@ pub fn seL4_TCB_Suspend(arg__service: seL4_TCB) callconv(.C) seL4_Error {
 }
 pub fn seL4_TCB_Resume(arg__service: seL4_TCB) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBResume))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -5547,14 +6595,23 @@ pub fn seL4_TCB_Resume(arg__service: seL4_TCB) callconv(.C) seL4_Error {
 }
 pub fn seL4_TCB_BindNotification(arg__service: seL4_TCB, arg_notification: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var notification = arg_notification;
+    _ = &notification;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBBindNotification))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), notification);
     mr0 = 0;
     mr1 = 0;
@@ -5572,13 +6629,21 @@ pub fn seL4_TCB_BindNotification(arg__service: seL4_TCB, arg_notification: seL4_
 }
 pub fn seL4_TCB_UnbindNotification(arg__service: seL4_TCB) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBUnbindNotification))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -5595,14 +6660,23 @@ pub fn seL4_TCB_UnbindNotification(arg__service: seL4_TCB) callconv(.C) seL4_Err
 }
 pub fn seL4_TCB_SetTLSBase(arg__service: seL4_TCB, arg_tls_base: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var tls_base = arg_tls_base;
+    _ = &tls_base;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, TCBSetTLSBase))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = tls_base;
     mr1 = 0;
     mr2 = 0;
@@ -5619,15 +6693,25 @@ pub fn seL4_TCB_SetTLSBase(arg__service: seL4_TCB, arg_tls_base: seL4_Word) call
 }
 pub fn seL4_CNode_Revoke(arg__service: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeRevoke))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, depth))) & @as(c_ulonglong, 255)))));
     mr2 = 0;
@@ -5644,15 +6728,25 @@ pub fn seL4_CNode_Revoke(arg__service: seL4_CNode, arg_index: seL4_Word, arg_dep
 }
 pub fn seL4_CNode_Delete(arg__service: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeDelete))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, depth))) & @as(c_ulonglong, 255)))));
     mr2 = 0;
@@ -5669,15 +6763,25 @@ pub fn seL4_CNode_Delete(arg__service: seL4_CNode, arg_index: seL4_Word, arg_dep
 }
 pub fn seL4_CNode_CancelBadgedSends(arg__service: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeCancelBadgedSends))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, depth))) & @as(c_ulonglong, 255)))));
     mr2 = 0;
@@ -5694,19 +6798,33 @@ pub fn seL4_CNode_CancelBadgedSends(arg__service: seL4_CNode, arg_index: seL4_Wo
 }
 pub fn seL4_CNode_Copy(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_dest_depth: seL4_Uint8, arg_src_root: seL4_CNode, arg_src_index: seL4_Word, arg_src_depth: seL4_Uint8, arg_rights: seL4_CapRights_t) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var dest_index = arg_dest_index;
+    _ = &dest_index;
     var dest_depth = arg_dest_depth;
+    _ = &dest_depth;
     var src_root = arg_src_root;
+    _ = &src_root;
     var src_index = arg_src_index;
+    _ = &src_index;
     var src_depth = arg_src_depth;
+    _ = &src_depth;
     var rights = arg_rights;
+    _ = &rights;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeCopy))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 5)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), src_root);
     mr0 = dest_index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, dest_depth))) & @as(c_ulonglong, 255)))));
@@ -5725,20 +6843,35 @@ pub fn seL4_CNode_Copy(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_
 }
 pub fn seL4_CNode_Mint(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_dest_depth: seL4_Uint8, arg_src_root: seL4_CNode, arg_src_index: seL4_Word, arg_src_depth: seL4_Uint8, arg_rights: seL4_CapRights_t, arg_badge: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var dest_index = arg_dest_index;
+    _ = &dest_index;
     var dest_depth = arg_dest_depth;
+    _ = &dest_depth;
     var src_root = arg_src_root;
+    _ = &src_root;
     var src_index = arg_src_index;
+    _ = &src_index;
     var src_depth = arg_src_depth;
+    _ = &src_depth;
     var rights = arg_rights;
+    _ = &rights;
     var badge = arg_badge;
+    _ = &badge;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeMint))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 6)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), src_root);
     mr0 = dest_index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, dest_depth))) & @as(c_ulonglong, 255)))));
@@ -5758,18 +6891,31 @@ pub fn seL4_CNode_Mint(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_
 }
 pub fn seL4_CNode_Move(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_dest_depth: seL4_Uint8, arg_src_root: seL4_CNode, arg_src_index: seL4_Word, arg_src_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var dest_index = arg_dest_index;
+    _ = &dest_index;
     var dest_depth = arg_dest_depth;
+    _ = &dest_depth;
     var src_root = arg_src_root;
+    _ = &src_root;
     var src_index = arg_src_index;
+    _ = &src_index;
     var src_depth = arg_src_depth;
+    _ = &src_depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeMove))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 4)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), src_root);
     mr0 = dest_index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, dest_depth))) & @as(c_ulonglong, 255)))));
@@ -5787,19 +6933,33 @@ pub fn seL4_CNode_Move(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_
 }
 pub fn seL4_CNode_Mutate(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_dest_depth: seL4_Uint8, arg_src_root: seL4_CNode, arg_src_index: seL4_Word, arg_src_depth: seL4_Uint8, arg_badge: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var dest_index = arg_dest_index;
+    _ = &dest_index;
     var dest_depth = arg_dest_depth;
+    _ = &dest_depth;
     var src_root = arg_src_root;
+    _ = &src_root;
     var src_index = arg_src_index;
+    _ = &src_index;
     var src_depth = arg_src_depth;
+    _ = &src_depth;
     var badge = arg_badge;
+    _ = &badge;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeMutate))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 5)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), src_root);
     mr0 = dest_index;
     mr1 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, dest_depth))) & @as(c_ulonglong, 255)))));
@@ -5818,23 +6978,41 @@ pub fn seL4_CNode_Mutate(arg__service: seL4_CNode, arg_dest_index: seL4_Word, ar
 }
 pub fn seL4_CNode_Rotate(arg__service: seL4_CNode, arg_dest_index: seL4_Word, arg_dest_depth: seL4_Uint8, arg_dest_badge: seL4_Word, arg_pivot_root: seL4_CNode, arg_pivot_index: seL4_Word, arg_pivot_depth: seL4_Uint8, arg_pivot_badge: seL4_Word, arg_src_root: seL4_CNode, arg_src_index: seL4_Word, arg_src_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var dest_index = arg_dest_index;
+    _ = &dest_index;
     var dest_depth = arg_dest_depth;
+    _ = &dest_depth;
     var dest_badge = arg_dest_badge;
+    _ = &dest_badge;
     var pivot_root = arg_pivot_root;
+    _ = &pivot_root;
     var pivot_index = arg_pivot_index;
+    _ = &pivot_index;
     var pivot_depth = arg_pivot_depth;
+    _ = &pivot_depth;
     var pivot_badge = arg_pivot_badge;
+    _ = &pivot_badge;
     var src_root = arg_src_root;
+    _ = &src_root;
     var src_index = arg_src_index;
+    _ = &src_index;
     var src_depth = arg_src_depth;
+    _ = &src_depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, CNodeRotate))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 8)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), pivot_root);
     seL4_SetCap(@as(c_int, 1), src_root);
     mr0 = dest_index;
@@ -5857,17 +7035,29 @@ pub fn seL4_CNode_Rotate(arg__service: seL4_CNode, arg_dest_index: seL4_Word, ar
 }
 pub fn seL4_IRQControl_Get(arg__service: seL4_IRQControl, arg_irq: seL4_Word, arg_root: seL4_CNode, arg_index: seL4_Word, arg_depth: seL4_Uint8) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var irq = arg_irq;
+    _ = &irq;
     var root = arg_root;
+    _ = &root;
     var index = arg_index;
+    _ = &index;
     var depth = arg_depth;
+    _ = &depth;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQIssueIRQHandler))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 3)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), root);
     mr0 = irq;
     mr1 = index;
@@ -5885,13 +7075,21 @@ pub fn seL4_IRQControl_Get(arg__service: seL4_IRQControl, arg_irq: seL4_Word, ar
 }
 pub fn seL4_IRQHandler_Ack(arg__service: seL4_IRQHandler) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQAckIRQ))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -5908,14 +7106,23 @@ pub fn seL4_IRQHandler_Ack(arg__service: seL4_IRQHandler) callconv(.C) seL4_Erro
 }
 pub fn seL4_IRQHandler_SetNotification(arg__service: seL4_IRQHandler, arg_notification: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var notification = arg_notification;
+    _ = &notification;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQSetIRQHandler))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), notification);
     mr0 = 0;
     mr1 = 0;
@@ -5933,13 +7140,21 @@ pub fn seL4_IRQHandler_SetNotification(arg__service: seL4_IRQHandler, arg_notifi
 }
 pub fn seL4_IRQHandler_Clear(arg__service: seL4_IRQHandler) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQClearIRQHandler))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -5956,15 +7171,25 @@ pub fn seL4_IRQHandler_Clear(arg__service: seL4_IRQHandler) callconv(.C) seL4_Er
 }
 pub fn seL4_DomainSet_Set(arg__service: seL4_DomainSet, arg_domain: seL4_Uint8, arg_thread: seL4_TCB) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var domain = arg_domain;
+    _ = &domain;
     var thread = arg_thread;
+    _ = &thread;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, DomainSetSet))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), thread);
     mr0 = @as(seL4_Word, @bitCast(@as(c_ulong, @truncate(@as(c_ulonglong, @bitCast(@as(c_ulonglong, domain))) & @as(c_ulonglong, 255)))));
     mr1 = 0;
@@ -5982,19 +7207,33 @@ pub fn seL4_DomainSet_Set(arg__service: seL4_DomainSet, arg_domain: seL4_Uint8, 
 }
 pub fn seL4_SchedControl_ConfigureFlags(arg__service: seL4_SchedControl, arg_schedcontext: seL4_SchedContext, arg_budget: seL4_Time, arg_period: seL4_Time, arg_extra_refills: seL4_Word, arg_badge: seL4_Word, arg_flags: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var schedcontext = arg_schedcontext;
+    _ = &schedcontext;
     var budget = arg_budget;
+    _ = &budget;
     var period = arg_period;
+    _ = &period;
     var extra_refills = arg_extra_refills;
+    _ = &extra_refills;
     var badge = arg_badge;
+    _ = &badge;
     var flags = arg_flags;
+    _ = &flags;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedControlConfigureFlags))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 5)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), schedcontext);
     mr0 = budget;
     mr1 = period;
@@ -6013,14 +7252,23 @@ pub fn seL4_SchedControl_ConfigureFlags(arg__service: seL4_SchedControl, arg_sch
 }
 pub fn seL4_SchedContext_Bind(arg__service: seL4_SchedContext, arg_cap: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var cap = arg_cap;
+    _ = &cap;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedContextBind))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), cap);
     mr0 = 0;
     mr1 = 0;
@@ -6038,13 +7286,21 @@ pub fn seL4_SchedContext_Bind(arg__service: seL4_SchedContext, arg_cap: seL4_CPt
 }
 pub fn seL4_SchedContext_Unbind(arg__service: seL4_SchedContext) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedContextUnbind))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -6061,14 +7317,23 @@ pub fn seL4_SchedContext_Unbind(arg__service: seL4_SchedContext) callconv(.C) se
 }
 pub fn seL4_SchedContext_UnbindObject(arg__service: seL4_SchedContext, arg_cap: seL4_CPtr) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var cap = arg_cap;
+    _ = &cap;
     var result: seL4_Error = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedContextUnbindObject))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     seL4_SetCap(@as(c_int, 0), cap);
     mr0 = 0;
     mr1 = 0;
@@ -6086,13 +7351,21 @@ pub fn seL4_SchedContext_UnbindObject(arg__service: seL4_SchedContext, arg_cap: 
 }
 pub fn seL4_SchedContext_Consumed(arg__service: seL4_SchedContext) callconv(.C) seL4_SchedContext_Consumed_t {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_SchedContext_Consumed_t = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedContextConsumed))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -6111,13 +7384,21 @@ pub fn seL4_SchedContext_Consumed(arg__service: seL4_SchedContext) callconv(.C) 
 }
 pub fn seL4_SchedContext_YieldTo(arg__service: seL4_SchedContext) callconv(.C) seL4_SchedContext_YieldTo_t {
     var _service = arg__service;
+    _ = &_service;
     var result: seL4_SchedContext_YieldTo_t = undefined;
+    _ = &result;
     var tag: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, SchedContextYieldTo))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
+    _ = &tag;
     var output_tag: seL4_MessageInfo_t = undefined;
+    _ = &output_tag;
     var mr0: seL4_Word = undefined;
+    _ = &mr0;
     var mr1: seL4_Word = undefined;
+    _ = &mr1;
     var mr2: seL4_Word = undefined;
+    _ = &mr2;
     var mr3: seL4_Word = undefined;
+    _ = &mr3;
     mr0 = 0;
     mr1 = 0;
     mr2 = 0;
@@ -6136,11 +7417,17 @@ pub fn seL4_SchedContext_YieldTo(arg__service: seL4_SchedContext) callconv(.C) s
 }
 pub fn seL4_SchedControl_Configure(arg__service: seL4_SchedControl, arg_schedcontext: seL4_SchedContext, arg_budget: seL4_Time, arg_period: seL4_Time, arg_extra_refills: seL4_Word, arg_badge: seL4_Word) callconv(.C) seL4_Error {
     var _service = arg__service;
+    _ = &_service;
     var schedcontext = arg_schedcontext;
+    _ = &schedcontext;
     var budget = arg_budget;
+    _ = &budget;
     var period = arg_period;
+    _ = &period;
     var extra_refills = arg_extra_refills;
+    _ = &extra_refills;
     var badge = arg_badge;
+    _ = &badge;
     return seL4_SchedControl_ConfigureFlags(_service, schedcontext, budget, period, extra_refills, badge, @as(seL4_Word, @bitCast(@as(c_long, seL4_SchedContext_NoFlag))));
 }
 pub const seL4_CapNull: c_int = 0;
@@ -6158,40 +7445,41 @@ pub const seL4_CapDomain: c_int = 11;
 pub const seL4_CapSMMUSIDControl: c_int = 12;
 pub const seL4_CapSMMUCBControl: c_int = 13;
 pub const seL4_CapInitThreadSC: c_int = 14;
-pub const seL4_NumInitialCaps: c_int = 15;
+pub const seL4_CapSMC: c_int = 15;
+pub const seL4_NumInitialCaps: c_int = 16;
 const enum_unnamed_2 = c_uint;
 pub const seL4_SlotPos = seL4_Word;
 pub const struct_seL4_SlotRegion = extern struct {
-    start: seL4_SlotPos,
-    end: seL4_SlotPos,
+    start: seL4_SlotPos = @import("std").mem.zeroes(seL4_SlotPos),
+    end: seL4_SlotPos = @import("std").mem.zeroes(seL4_SlotPos),
 };
 pub const seL4_SlotRegion = struct_seL4_SlotRegion;
 pub const struct_seL4_UntypedDesc = extern struct {
-    paddr: seL4_Word,
-    sizeBits: seL4_Uint8,
-    isDevice: seL4_Uint8,
-    padding: [6]seL4_Uint8,
+    paddr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    sizeBits: seL4_Uint8 = @import("std").mem.zeroes(seL4_Uint8),
+    isDevice: seL4_Uint8 = @import("std").mem.zeroes(seL4_Uint8),
+    padding: [6]seL4_Uint8 = @import("std").mem.zeroes([6]seL4_Uint8),
 };
-pub const seL4_UntypedDesc = struct_seL4_UntypedDesc; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_UntypedDesc = struct_seL4_UntypedDesc; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const struct_seL4_BootInfo = extern struct {
-    extraLen: seL4_Word,
-    nodeID: seL4_NodeId,
-    numNodes: seL4_Word,
-    numIOPTLevels: seL4_Word,
-    ipcBuffer: [*c]seL4_IPCBuffer,
-    empty: seL4_SlotRegion,
-    sharedFrames: seL4_SlotRegion,
-    userImageFrames: seL4_SlotRegion,
-    userImagePaging: seL4_SlotRegion,
-    ioSpaceCaps: seL4_SlotRegion,
-    extraBIPages: seL4_SlotRegion,
-    initThreadCNodeSizeBits: seL4_Word,
-    initThreadDomain: seL4_Domain,
-    schedcontrol: seL4_SlotRegion,
-    untyped: seL4_SlotRegion,
-    untypedList: [230]seL4_UntypedDesc,
+    extraLen: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    nodeID: seL4_NodeId = @import("std").mem.zeroes(seL4_NodeId),
+    numNodes: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    numIOPTLevels: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    ipcBuffer: [*c]seL4_IPCBuffer = @import("std").mem.zeroes([*c]seL4_IPCBuffer),
+    empty: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    sharedFrames: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    userImageFrames: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    userImagePaging: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    ioSpaceCaps: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    extraBIPages: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    initThreadCNodeSizeBits: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    initThreadDomain: seL4_Domain = @import("std").mem.zeroes(seL4_Domain),
+    schedcontrol: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    untyped: seL4_SlotRegion = @import("std").mem.zeroes(seL4_SlotRegion),
+    untypedList: [230]seL4_UntypedDesc = @import("std").mem.zeroes([230]seL4_UntypedDesc),
 };
-pub const seL4_BootInfo = struct_seL4_BootInfo;
+pub const seL4_BootInfo = struct_seL4_BootInfo; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub const SEL4_BOOTINFO_HEADER_PADDING: c_int = 0;
 pub const SEL4_BOOTINFO_HEADER_X86_VBE: c_int = 1;
 pub const SEL4_BOOTINFO_HEADER_X86_MBMMAP: c_int = 2;
@@ -6203,14 +7491,15 @@ pub const SEL4_BOOTINFO_HEADER_NUM: c_int = 7;
 pub const _enum_pad_seL4_BootInfoID: c_ulong = 9223372036854775807;
 pub const seL4_BootInfoID = c_ulong;
 pub const struct_seL4_BootInfoHeader = extern struct {
-    id: seL4_Word,
-    len: seL4_Word,
+    id: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    len: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
-pub const seL4_BootInfoHeader = struct_seL4_BootInfoHeader; // ./sel4/macros.h:49:43: warning: ignoring StaticAssert declaration
+pub const seL4_BootInfoHeader = struct_seL4_BootInfoHeader; // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:43: warning: ignoring StaticAssert declaration
 pub extern fn seL4_InitBootInfo(bi: [*c]seL4_BootInfo) void;
 pub extern fn seL4_GetBootInfo() [*c]seL4_BootInfo;
 pub fn seL4_getArchFault(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Fault_t {
     var tag = arg_tag;
+    _ = &tag;
     while (true) {
         switch (seL4_MessageInfo_get_label(tag)) {
             @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 2)))) => return seL4_Fault_UnknownSyscall_new(seL4_GetMR(seL4_UnknownSyscall_X0), seL4_GetMR(seL4_UnknownSyscall_X1), seL4_GetMR(seL4_UnknownSyscall_X2), seL4_GetMR(seL4_UnknownSyscall_X3), seL4_GetMR(seL4_UnknownSyscall_X4), seL4_GetMR(seL4_UnknownSyscall_X5), seL4_GetMR(seL4_UnknownSyscall_X6), seL4_GetMR(seL4_UnknownSyscall_X7), seL4_GetMR(seL4_UnknownSyscall_FaultIP), seL4_GetMR(seL4_UnknownSyscall_SP), seL4_GetMR(seL4_UnknownSyscall_LR), seL4_GetMR(seL4_UnknownSyscall_SPSR), seL4_GetMR(seL4_UnknownSyscall_Syscall)),
@@ -6228,6 +7517,7 @@ pub fn seL4_getArchFault(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Fault_t 
 }
 pub fn seL4_getFault(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Fault_t {
     var tag = arg_tag;
+    _ = &tag;
     while (true) {
         switch (seL4_MessageInfo_get_label(tag)) {
             @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 1)))) => return seL4_Fault_CapFault_new(seL4_GetMR(seL4_CapFault_IP), seL4_GetMR(seL4_CapFault_Addr), seL4_GetMR(seL4_CapFault_InRecvPhase), seL4_GetMR(seL4_CapFault_LookupFailureType), seL4_GetMR(seL4_CapFault_BitsLeft), seL4_GetMR(seL4_CapFault_GuardMismatch_GuardFound), seL4_GetMR(seL4_CapFault_GuardMismatch_BitsFound)),
@@ -6239,35 +7529,46 @@ pub fn seL4_getFault(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Fault_t {
 }
 pub fn seL4_isVMFault_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_VMFault)))));
 }
 pub fn seL4_isUnknownSyscall_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UnknownSyscall)))));
 }
 pub fn seL4_isUserException_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_UserException)))));
 }
 pub fn seL4_isNullFault_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_NullFault)))));
 }
 pub fn seL4_isCapFault_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_CapFault)))));
 }
 pub fn seL4_isTimeoutFault_tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Bool {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Bool, @intFromBool(seL4_MessageInfo_get_label(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_Fault_Timeout)))));
 }
 pub fn seL4_TimeoutReply_new(arg_resume: seL4_Bool, arg_regs: seL4_UserContext, arg_length: seL4_Word) callconv(.C) seL4_MessageInfo_t {
     var @"resume" = arg_resume;
+    _ = &@"resume";
     var regs = arg_regs;
+    _ = &regs;
     var length = arg_length;
+    _ = &length;
     var info: seL4_MessageInfo_t = seL4_MessageInfo_new(@as(seL4_Uint64, @intFromBool(!(@"resume" != 0))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), length);
+    _ = &info;
     {
         var i: seL4_Word = 0;
+        _ = &i;
         while (i < length) : (i +%= 1) {
             seL4_SetMR(@as(c_int, @bitCast(@as(c_uint, @truncate(i)))), @as([*c]seL4_Word, @ptrCast(@alignCast(&regs)))[i]);
         }
@@ -6276,10 +7577,10 @@ pub fn seL4_TimeoutReply_new(arg_resume: seL4_Bool, arg_regs: seL4_UserContext, 
 }
 pub const seL4_CapRights = seL4_CapRights_t;
 const struct_unnamed_3 = extern struct {
-    fault_ip: seL4_Word,
-    fault_addr: seL4_Word,
-    prefetch_fault: seL4_Word,
-    fsr: seL4_Word,
+    fault_ip: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    fault_addr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    prefetch_fault: seL4_Word = @import("std").mem.zeroes(seL4_Word),
+    fsr: seL4_Word = @import("std").mem.zeroes(seL4_Word),
 };
 pub const seL4_PageFaultIpcRegisters = extern union {
     regs: struct_unnamed_3,
@@ -6291,6 +7592,7 @@ pub fn seL4_GetTag() callconv(.C) seL4_MessageInfo_t {
 }
 pub fn seL4_SetTag(arg_tag: seL4_MessageInfo_t) callconv(.C) void {
     var tag = arg_tag;
+    _ = &tag;
     seL4_GetIPCBuffer().*.tag = tag;
 }
 pub fn seL4_PF_FIP() callconv(.C) seL4_Word {
@@ -6304,37 +7606,47 @@ pub fn seL4_isPageFault_MSG() callconv(.C) seL4_Word {
 }
 pub fn seL4_isPageFault_Tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Word {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Word, @bitCast(@as(c_long, seL4_isVMFault_tag(tag))));
 }
 pub fn seL4_isExceptIPC_Tag(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Word {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Word, @bitCast(@as(c_long, seL4_isUnknownSyscall_tag(tag))));
 }
 pub fn seL4_ExceptIPC_Get(arg_mr: seL4_Word) callconv(.C) seL4_Word {
     var mr = arg_mr;
+    _ = &mr;
     return seL4_GetMR(@as(c_int, @bitCast(@as(c_uint, @truncate(mr)))));
 }
 pub fn seL4_ExceptIPC_Set(arg_index: seL4_Word, arg_val: seL4_Word) callconv(.C) void {
     var index = arg_index;
+    _ = &index;
     var val = arg_val;
+    _ = &val;
     seL4_SetMR(@as(c_int, @bitCast(@as(c_uint, @truncate(index)))), val);
 }
 pub fn seL4_IsArchSyscallFrom(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Word {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Word, @intFromBool(seL4_MessageInfo_get_length(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_UnknownSyscall_Length)))));
 }
 pub fn seL4_IsArchExceptionFrom(arg_tag: seL4_MessageInfo_t) callconv(.C) seL4_Word {
     var tag = arg_tag;
+    _ = &tag;
     return @as(seL4_Word, @intFromBool(seL4_MessageInfo_get_length(tag) == @as(seL4_Uint64, @bitCast(@as(c_long, seL4_UnknownSyscall_Length)))));
 }
 pub const seL4_CapData_t = seL4_Word;
 pub fn seL4_CapData_Badge_new(arg_badge: seL4_Word) callconv(.C) seL4_Word {
     var badge = arg_badge;
+    _ = &badge;
     return badge;
 }
 pub fn seL4_CapData_Guard_new(arg_guard: seL4_Word, arg_bits: seL4_Word) callconv(.C) seL4_Word {
     var guard = arg_guard;
+    _ = &guard;
     var bits = arg_bits;
+    _ = &bits;
     return seL4_CNode_CapData_new(guard, bits).words[@as(c_uint, @intCast(@as(c_int, 0)))];
 }
 pub const microkit_channel = c_uint;
@@ -6346,14 +7658,17 @@ pub extern fn protected(ch: microkit_channel, msginfo: microkit_msginfo) microki
 pub extern fn fault(ch: microkit_channel, msginfo: microkit_msginfo) void;
 pub extern var microkit_name: [16]u8;
 pub extern var have_signal: bool;
-pub extern var signal: seL4_CPtr;
+pub extern var signal_cap: seL4_CPtr;
 pub extern var signal_msg: seL4_MessageInfo_t;
 pub extern fn microkit_dbg_putc(c: c_int) void;
 pub extern fn microkit_dbg_puts(s: [*c]const u8) void;
 pub fn memzero(arg_s: ?*anyopaque, arg_n: c_ulong) callconv(.C) void {
     var s = arg_s;
+    _ = &s;
     var n = arg_n;
+    _ = &n;
     var p: [*c]u8 = undefined;
+    _ = &p;
     {
         p = @as([*c]u8, @ptrCast(@alignCast(s)));
         while (n > @as(c_ulong, @bitCast(@as(c_long, @as(c_int, 0))))) : (_ = blk: {
@@ -6371,34 +7686,44 @@ pub fn memzero(arg_s: ?*anyopaque, arg_n: c_ulong) callconv(.C) void {
 }
 pub fn microkit_internal_crash(arg_err: seL4_Error) callconv(.C) void {
     var err = arg_err;
+    _ = &err;
     var x: [*c]c_int = @as([*c]c_int, @ptrFromInt(@as(usize, @bitCast(@as(c_ulong, err)))));
+    _ = &x;
     x.* = 0;
 }
 pub fn microkit_notify(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
+    _ = &ch;
     seL4_Signal(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 10))) +% ch))));
 }
 pub fn microkit_irq_ack(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
+    _ = &ch;
     _ = seL4_IRQHandler_Ack(@as(seL4_IRQHandler, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 138))) +% ch))));
 }
 pub fn microkit_notify_delayed(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
+    _ = &ch;
     have_signal = @as(c_int, 1) != 0;
     signal_msg = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
-    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 10))) +% ch)));
+    signal_cap = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 10))) +% ch)));
 }
 pub fn microkit_irq_ack_delayed(arg_ch: microkit_channel) callconv(.C) void {
     var ch = arg_ch;
+    _ = &ch;
     have_signal = @as(c_int, 1) != 0;
     signal_msg = seL4_MessageInfo_new(@as(seL4_Uint64, @bitCast(@as(c_long, IRQAckIRQ))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))));
-    signal = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 138))) +% ch)));
+    signal_cap = @as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 138))) +% ch)));
 }
 pub fn microkit_pd_restart(arg_pd: microkit_id, arg_entry_point: usize) callconv(.C) void {
     var pd = arg_pd;
+    _ = &pd;
     var entry_point = arg_entry_point;
+    _ = &entry_point;
     var err: seL4_Error = undefined;
+    _ = &err;
     var ctxt: seL4_UserContext = undefined;
+    _ = &ctxt;
     memzero(@as(?*anyopaque, @ptrCast(&ctxt)), @sizeOf(seL4_UserContext));
     ctxt.pc = entry_point;
     err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 202))) +% pd))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
@@ -6409,7 +7734,9 @@ pub fn microkit_pd_restart(arg_pd: microkit_id, arg_entry_point: usize) callconv
 }
 pub fn microkit_pd_stop(arg_pd: microkit_id) callconv(.C) void {
     var pd = arg_pd;
+    _ = &pd;
     var err: seL4_Error = undefined;
+    _ = &err;
     err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 202))) +% pd))));
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
         microkit_dbg_puts("microkit_pd_stop: error suspending TCB\n");
@@ -6418,36 +7745,49 @@ pub fn microkit_pd_stop(arg_pd: microkit_id) callconv(.C) void {
 }
 pub fn microkit_fault_reply(arg_msginfo: microkit_msginfo) callconv(.C) void {
     var msginfo = arg_msginfo;
+    _ = &msginfo;
     seL4_Send(@as(seL4_CPtr, @bitCast(@as(c_long, @as(c_int, 4)))), msginfo);
 }
 pub fn microkit_ppcall(arg_ch: microkit_channel, arg_msginfo: microkit_msginfo) callconv(.C) microkit_msginfo {
     var ch = arg_ch;
+    _ = &ch;
     var msginfo = arg_msginfo;
+    _ = &msginfo;
     return seL4_Call(@as(seL4_CPtr, @bitCast(@as(c_ulong, @as(microkit_channel, @bitCast(@as(c_int, 74))) +% ch))), msginfo);
 }
 pub fn microkit_msginfo_new(arg_label: u64, arg_count: u16) callconv(.C) microkit_msginfo {
     var label = arg_label;
+    _ = &label;
     var count = arg_count;
+    _ = &count;
     return seL4_MessageInfo_new(label, @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_long, @as(c_int, 0)))), @as(seL4_Uint64, @bitCast(@as(c_ulong, count))));
 }
 pub fn microkit_msginfo_get_label(arg_msginfo: microkit_msginfo) callconv(.C) u64 {
     var msginfo = arg_msginfo;
+    _ = &msginfo;
     return seL4_MessageInfo_get_label(msginfo);
 }
 pub fn microkit_mr_set(arg_mr: u8, arg_value: u64) callconv(.C) void {
     var mr = arg_mr;
+    _ = &mr;
     var value = arg_value;
+    _ = &value;
     seL4_SetMR(@as(c_int, @bitCast(@as(c_uint, mr))), value);
 }
 pub fn microkit_mr_get(arg_mr: u8) callconv(.C) u64 {
     var mr = arg_mr;
+    _ = &mr;
     return seL4_GetMR(@as(c_int, @bitCast(@as(c_uint, mr))));
 }
 pub fn microkit_vm_restart(arg_vm: microkit_id, arg_entry_point: usize) callconv(.C) void {
     var vm = arg_vm;
+    _ = &vm;
     var entry_point = arg_entry_point;
+    _ = &entry_point;
     var err: seL4_Error = undefined;
+    _ = &err;
     var ctxt: seL4_UserContext = undefined;
+    _ = &ctxt;
     memzero(@as(?*anyopaque, @ptrCast(&ctxt)), @sizeOf(seL4_UserContext));
     ctxt.pc = entry_point;
     err = seL4_TCB_WriteRegisters(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 266))) +% vm))), @as(seL4_Bool, @bitCast(@as(i8, @truncate(@as(c_int, 1))))), @as(seL4_Uint8, @bitCast(@as(i8, @truncate(@as(c_int, 0))))), @as(seL4_Word, @bitCast(@as(c_long, @as(c_int, 1)))), &ctxt);
@@ -6458,7 +7798,9 @@ pub fn microkit_vm_restart(arg_vm: microkit_id, arg_entry_point: usize) callconv
 }
 pub fn microkit_vm_stop(arg_vm: microkit_id) callconv(.C) void {
     var vm = arg_vm;
+    _ = &vm;
     var err: seL4_Error = undefined;
+    _ = &err;
     err = seL4_TCB_Suspend(@as(seL4_TCB, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 266))) +% vm))));
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
         microkit_dbg_puts("microkit_vm_stop: error suspending TCB\n");
@@ -6467,11 +7809,17 @@ pub fn microkit_vm_stop(arg_vm: microkit_id) callconv(.C) void {
 }
 pub fn microkit_arm_vcpu_inject_irq(arg_vm: microkit_id, arg_irq: u16, arg_priority: u8, arg_group: u8, arg_index: u8) callconv(.C) void {
     var vm = arg_vm;
+    _ = &vm;
     var irq = arg_irq;
+    _ = &irq;
     var priority = arg_priority;
+    _ = &priority;
     var group = arg_group;
+    _ = &group;
     var index = arg_index;
+    _ = &index;
     var err: seL4_Error = undefined;
+    _ = &err;
     err = seL4_ARM_VCPU_InjectIRQ(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), irq, priority, group, index);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
         microkit_dbg_puts("microkit_arm_vcpu_inject_irq: error injecting IRQ\n");
@@ -6480,8 +7828,11 @@ pub fn microkit_arm_vcpu_inject_irq(arg_vm: microkit_id, arg_irq: u16, arg_prior
 }
 pub fn microkit_arm_vcpu_ack_vppi(arg_vm: microkit_id, arg_irq: u64) callconv(.C) void {
     var vm = arg_vm;
+    _ = &vm;
     var irq = arg_irq;
+    _ = &irq;
     var err: seL4_Error = undefined;
+    _ = &err;
     err = seL4_ARM_VCPU_AckVPPI(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), irq);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
         microkit_dbg_puts("microkit_arm_vcpu_ack_vppi: error acking VPPI\n");
@@ -6490,8 +7841,11 @@ pub fn microkit_arm_vcpu_ack_vppi(arg_vm: microkit_id, arg_irq: u64) callconv(.C
 }
 pub fn microkit_arm_vcpu_read_reg(arg_vm: microkit_id, arg_reg: u64) callconv(.C) seL4_Word {
     var vm = arg_vm;
+    _ = &vm;
     var reg = arg_reg;
+    _ = &reg;
     var ret: seL4_ARM_VCPU_ReadRegs_t = undefined;
+    _ = &ret;
     ret = seL4_ARM_VCPU_ReadRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), reg);
     if (ret.@"error" != seL4_NoError) {
         microkit_dbg_puts("microkit_arm_vcpu_read_reg: error reading VCPU register\n");
@@ -6501,77 +7855,76 @@ pub fn microkit_arm_vcpu_read_reg(arg_vm: microkit_id, arg_reg: u64) callconv(.C
 }
 pub fn microkit_arm_vcpu_write_reg(arg_vm: microkit_id, arg_reg: u64, arg_value: u64) callconv(.C) void {
     var vm = arg_vm;
+    _ = &vm;
     var reg = arg_reg;
+    _ = &reg;
     var value = arg_value;
+    _ = &value;
     var err: seL4_Error = undefined;
+    _ = &err;
     err = seL4_ARM_VCPU_WriteRegs(@as(seL4_ARM_VCPU, @bitCast(@as(c_ulong, @as(microkit_id, @bitCast(@as(c_int, 330))) +% vm))), reg, value);
     if (err != @as(c_uint, @bitCast(seL4_NoError))) {
         microkit_dbg_puts("microkit_arm_vcpu_write_reg: error VPPI\n");
         microkit_internal_crash(err);
     }
 }
-pub const __INTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):80:9
-pub const __UINTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `UL`"); // (no file):86:9
-pub const __FLT16_DENORM_MIN__ = @compileError("unable to translate C expr: unexpected token 'IntegerLiteral'"); // (no file):109:9
-pub const __FLT16_EPSILON__ = @compileError("unable to translate C expr: unexpected token 'IntegerLiteral'"); // (no file):113:9
-pub const __FLT16_MAX__ = @compileError("unable to translate C expr: unexpected token 'IntegerLiteral'"); // (no file):119:9
-pub const __FLT16_MIN__ = @compileError("unable to translate C expr: unexpected token 'IntegerLiteral'"); // (no file):122:9
-pub const __INT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):184:9
-pub const __UINT32_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `U`"); // (no file):206:9
-pub const __UINT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `UL`"); // (no file):214:9
-pub const __stdint_join3 = @compileError("unable to translate C expr: unexpected token '##'"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:287:9
-pub const __int_c_join = @compileError("unable to translate C expr: unexpected token '##'"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:324:9
-pub const __uint_c = @compileError("unable to translate macro: undefined identifier `U`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:326:9
-pub const __INTN_MIN = @compileError("unable to translate macro: undefined identifier `INT`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:894:10
-pub const __INTN_MAX = @compileError("unable to translate macro: undefined identifier `INT`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:895:10
-pub const __UINTN_MAX = @compileError("unable to translate macro: undefined identifier `UINT`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:896:9
-pub const __INTN_C = @compileError("unable to translate macro: undefined identifier `INT`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:897:10
-pub const __UINTN_C = @compileError("unable to translate macro: undefined identifier `UINT`"); // /Users/ivanv/zigs/zig-macos-x86_64-0.11.0-dev.3942+49ac816e3/lib/include/stdint.h:898:9
-pub const CONFIG_SEL4_ARCH = @compileError("unable to translate macro: undefined identifier `aarch64`"); // ./kernel/gen_config.h:16:9
-pub const CONFIG_ARCH = @compileError("unable to translate macro: undefined identifier `arm`"); // ./kernel/gen_config.h:18:9
-pub const CONFIG_ARM_PLAT = @compileError("unable to translate macro: undefined identifier `qemu`"); // ./kernel/gen_config.h:20:9
-pub const CONFIG_PLAT = @compileError("unable to translate macro: undefined identifier `qemu`"); // ./kernel/gen_config.h:38:9
-pub const CONFIG_KERNEL_BENCHMARK = @compileError("unable to translate macro: undefined identifier `none`"); // ./kernel/gen_config.h:109:9
-pub const CONFIG_KERNEL_OPT_LEVEL = @compileError("unable to translate macro: undefined identifier `O2`"); // ./kernel/gen_config.h:121:9
-pub const CONFIG_LIB_SEL4_FUNCTION_ATTRIBUTE = @compileError("unable to translate C expr: unexpected token 'inline'"); // ./sel4/gen_config.h:6:9
-pub const CONST = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:12:9
-pub const PURE = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:16:9
-pub const SEL4_PACKED = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:19:9
-pub const SEL4_DEPRECATED = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:20:9
-pub const SEL4_DEPRECATE_MACRO = @compileError("unable to translate macro: undefined identifier `_Pragma`"); // ./sel4/macros.h:21:9
-pub const SEL4_OFFSETOF = @compileError("unable to translate macro: undefined identifier `__builtin_offsetof`"); // ./sel4/macros.h:22:9
-pub const LIBSEL4_UNUSED = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:24:9
-pub const LIBSEL4_WEAK = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:25:9
-pub const LIBSEL4_NOINLINE = @compileError("unable to translate macro: undefined identifier `__attribute__`"); // ./sel4/macros.h:26:9
-pub const LIBSEL4_INLINE = @compileError("unable to translate C expr: unexpected token 'static'"); // ./sel4/macros.h:31:9
-pub const LIBSEL4_INLINE_FUNC = @compileError("unable to translate C expr: unexpected token 'static'"); // ./sel4/macros.h:32:9
-pub const SEL4_COMPILE_ASSERT = @compileError("unable to translate C expr: unexpected token '_Static_assert'"); // ./sel4/macros.h:49:9
-pub const SEL4_SIZE_SANITY = @compileError("unable to translate macro: undefined identifier `_`"); // ./sel4/macros.h:56:9
-pub const SEL4_FORCE_LONG_ENUM = @compileError("unable to translate macro: undefined identifier `_enum_pad_`"); // ./sel4/macros.h:65:9
-pub const seL4_integer_size_assert = @compileError("unable to translate macro: undefined identifier `sizeof_`"); // ./sel4/simple_types.h:29:9
-pub const _seL4_int64_fmt = @compileError("unable to translate macro: undefined identifier `l`"); // ./sel4/simple_types.h:75:9
-pub const _macro_str_concat_helper2 = @compileError("unable to translate C expr: unexpected token '#'"); // ./sel4/simple_types.h:90:9
-pub const _macro_str_concat_helper1 = @compileError("unable to translate C expr: expected ',' or ')' instead got '##'"); // ./sel4/simple_types.h:91:9
-pub const SEL4_PRId64 = @compileError("unable to translate macro: undefined identifier `d`"); // ./sel4/simple_types.h:94:9
-pub const SEL4_PRIi64 = @compileError("unable to translate macro: undefined identifier `i`"); // ./sel4/simple_types.h:95:9
-pub const SEL4_PRIu64 = @compileError("unable to translate macro: undefined identifier `u`"); // ./sel4/simple_types.h:96:9
-pub const SEL4_PRIx64 = @compileError("unable to translate macro: undefined identifier `x`"); // ./sel4/simple_types.h:97:9
-pub const SEL4_PRId_word = @compileError("unable to translate macro: undefined identifier `d`"); // ./sel4/simple_types.h:122:9
-pub const SEL4_PRIi_word = @compileError("unable to translate macro: undefined identifier `i`"); // ./sel4/simple_types.h:123:9
-pub const SEL4_PRIu_word = @compileError("unable to translate macro: undefined identifier `u`"); // ./sel4/simple_types.h:124:9
-pub const SEL4_PRIx_word = @compileError("unable to translate macro: undefined identifier `x`"); // ./sel4/simple_types.h:125:9
-pub const seL4_Fail = @compileError("unable to translate macro: undefined identifier `__FILE__`"); // ./sel4/assert.h:28:9
-pub const seL4_Assert = @compileError("unable to translate macro: undefined identifier `__FILE__`"); // ./sel4/assert.h:34:9
-pub const MCS_PARAM_DECL = @compileError("unable to translate macro: undefined identifier `reply_reg`"); // ./sel4/sel4_arch/syscalls.h:14:9
-pub const MCS_PARAM = @compileError("unable to translate macro: undefined identifier `reply_reg`"); // ./sel4/sel4_arch/syscalls.h:15:9
-pub const LIBSEL4_MCS_REPLY = @compileError("unable to translate macro: undefined identifier `reply`"); // ./sel4/arch/syscalls.h:15:9
-pub const assert_size_correct = @compileError("unable to translate macro: undefined identifier `__type_`"); // ./interfaces/sel4_client.h:18:9
+pub const __INTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):90:9
+pub const __UINTMAX_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `UL`"); // (no file):96:9
+pub const __INT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `L`"); // (no file):194:9
+pub const __UINT32_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `U`"); // (no file):216:9
+pub const __UINT64_C_SUFFIX__ = @compileError("unable to translate macro: undefined identifier `UL`"); // (no file):224:9
+pub const __stdint_join3 = @compileError("unable to translate C expr: unexpected token '##'"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:287:9
+pub const __int_c_join = @compileError("unable to translate C expr: unexpected token '##'"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:324:9
+pub const __uint_c = @compileError("unable to translate macro: undefined identifier `U`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:326:9
+pub const __INTN_MIN = @compileError("unable to translate macro: undefined identifier `INT`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:894:10
+pub const __INTN_MAX = @compileError("unable to translate macro: undefined identifier `INT`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:895:10
+pub const __UINTN_MAX = @compileError("unable to translate macro: undefined identifier `UINT`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:896:9
+pub const __INTN_C = @compileError("unable to translate macro: undefined identifier `INT`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:897:10
+pub const __UINTN_C = @compileError("unable to translate macro: undefined identifier `UINT`"); // /home/ivanv/zigs/zig-linux-x86_64-0.12.0-dev.1746+19af8aac8/lib/include/stdint.h:898:9
+pub const CONFIG_SEL4_ARCH = @compileError("unable to translate macro: undefined identifier `aarch64`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:16:9
+pub const CONFIG_ARCH = @compileError("unable to translate macro: undefined identifier `arm`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:18:9
+pub const CONFIG_ARM_PLAT = @compileError("unable to translate macro: undefined identifier `qemu`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:20:9
+pub const CONFIG_PLAT = @compileError("unable to translate macro: undefined identifier `qemu`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:38:9
+pub const CONFIG_KERNEL_BENCHMARK = @compileError("unable to translate macro: undefined identifier `none`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:110:9
+pub const CONFIG_KERNEL_OPT_LEVEL = @compileError("unable to translate macro: undefined identifier `O2`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/kernel/gen_config.h:122:9
+pub const CONFIG_LIB_SEL4_FUNCTION_ATTRIBUTE = @compileError("unable to translate C expr: unexpected token 'inline'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/gen_config.h:6:9
+pub const CONST = @compileError("unable to translate C expr: unexpected token '__attribute__'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:12:9
+pub const PURE = @compileError("unable to translate macro: undefined identifier `__pure__`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:16:9
+pub const SEL4_PACKED = @compileError("unable to translate macro: undefined identifier `packed`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:19:9
+pub const SEL4_DEPRECATED = @compileError("unable to translate macro: undefined identifier `deprecated`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:20:9
+pub const SEL4_DEPRECATE_MACRO = @compileError("unable to translate macro: undefined identifier `_Pragma`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:21:9
+pub const LIBSEL4_UNUSED = @compileError("unable to translate macro: undefined identifier `unused`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:23:9
+pub const LIBSEL4_WEAK = @compileError("unable to translate macro: undefined identifier `weak`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:24:9
+pub const LIBSEL4_NOINLINE = @compileError("unable to translate macro: undefined identifier `noinline`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:25:9
+pub const LIBSEL4_INLINE = @compileError("unable to translate C expr: unexpected token 'static'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:30:9
+pub const LIBSEL4_INLINE_FUNC = @compileError("unable to translate C expr: unexpected token 'static'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:31:9
+pub const SEL4_COMPILE_ASSERT = @compileError("unable to translate C expr: unexpected token '_Static_assert'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:48:9
+pub const SEL4_SIZE_SANITY = @compileError("unable to translate macro: undefined identifier `_`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:55:9
+pub const SEL4_FORCE_LONG_ENUM = @compileError("unable to translate macro: undefined identifier `_enum_pad_`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/macros.h:64:9
+pub const seL4_integer_size_assert = @compileError("unable to translate macro: undefined identifier `sizeof_`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:29:9
+pub const _seL4_int64_fmt = @compileError("unable to translate macro: undefined identifier `l`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:75:9
+pub const _macro_str_concat_helper2 = @compileError("unable to translate C expr: unexpected token '#'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:90:9
+pub const _macro_str_concat_helper1 = @compileError("unable to translate C expr: expected ',' or ')' instead got '##'"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:91:9
+pub const SEL4_PRId64 = @compileError("unable to translate macro: undefined identifier `d`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:94:9
+pub const SEL4_PRIi64 = @compileError("unable to translate macro: undefined identifier `i`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:95:9
+pub const SEL4_PRIu64 = @compileError("unable to translate macro: undefined identifier `u`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:96:9
+pub const SEL4_PRIx64 = @compileError("unable to translate macro: undefined identifier `x`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:97:9
+pub const SEL4_PRId_word = @compileError("unable to translate macro: undefined identifier `d`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:122:9
+pub const SEL4_PRIi_word = @compileError("unable to translate macro: undefined identifier `i`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:123:9
+pub const SEL4_PRIu_word = @compileError("unable to translate macro: undefined identifier `u`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:124:9
+pub const SEL4_PRIx_word = @compileError("unable to translate macro: undefined identifier `x`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/simple_types.h:125:9
+pub const seL4_Fail = @compileError("unable to translate macro: undefined identifier `__FILE__`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/assert.h:28:9
+pub const seL4_Assert = @compileError("unable to translate macro: undefined identifier `__FILE__`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/assert.h:34:9
+pub const MCS_PARAM_DECL = @compileError("unable to translate macro: undefined identifier `reply_reg`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:14:9
+pub const MCS_PARAM = @compileError("unable to translate macro: undefined identifier `reply_reg`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/sel4_arch/syscalls.h:15:9
+pub const LIBSEL4_MCS_REPLY = @compileError("unable to translate macro: undefined identifier `reply`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:15:9
+pub const assert_size_correct = @compileError("unable to translate macro: undefined identifier `__type_`"); // microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/interfaces/sel4_client.h:18:9
 pub const __llvm__ = @as(c_int, 1);
 pub const __clang__ = @as(c_int, 1);
-pub const __clang_major__ = @as(c_int, 16);
+pub const __clang_major__ = @as(c_int, 17);
 pub const __clang_minor__ = @as(c_int, 0);
-pub const __clang_patchlevel__ = @as(c_int, 1);
-pub const __clang_version__ = "16.0.1 (https://github.com/ziglang/zig-bootstrap bf1b2cdb83141ad9336eec42160c9fe87f90198d)";
+pub const __clang_patchlevel__ = @as(c_int, 3);
+pub const __clang_version__ = "17.0.3 (https://github.com/ziglang/zig-bootstrap 1dc1fa6a122996fcd030cc956385e055289e09d9)";
 pub const __GNUC__ = @as(c_int, 4);
 pub const __GNUC_MINOR__ = @as(c_int, 2);
 pub const __GNUC_PATCHLEVEL__ = @as(c_int, 1);
@@ -6587,8 +7940,18 @@ pub const __OPENCL_MEMORY_SCOPE_WORK_GROUP = @as(c_int, 1);
 pub const __OPENCL_MEMORY_SCOPE_DEVICE = @as(c_int, 2);
 pub const __OPENCL_MEMORY_SCOPE_ALL_SVM_DEVICES = @as(c_int, 3);
 pub const __OPENCL_MEMORY_SCOPE_SUB_GROUP = @as(c_int, 4);
+pub const __FPCLASS_SNAN = @as(c_int, 0x0001);
+pub const __FPCLASS_QNAN = @as(c_int, 0x0002);
+pub const __FPCLASS_NEGINF = @as(c_int, 0x0004);
+pub const __FPCLASS_NEGNORMAL = @as(c_int, 0x0008);
+pub const __FPCLASS_NEGSUBNORMAL = @as(c_int, 0x0010);
+pub const __FPCLASS_NEGZERO = @as(c_int, 0x0020);
+pub const __FPCLASS_POSZERO = @as(c_int, 0x0040);
+pub const __FPCLASS_POSSUBNORMAL = @as(c_int, 0x0080);
+pub const __FPCLASS_POSNORMAL = @as(c_int, 0x0100);
+pub const __FPCLASS_POSINF = @as(c_int, 0x0200);
 pub const __PRAGMA_REDEFINE_EXTNAME = @as(c_int, 1);
-pub const __VERSION__ = "Clang 16.0.1 (https://github.com/ziglang/zig-bootstrap bf1b2cdb83141ad9336eec42160c9fe87f90198d)";
+pub const __VERSION__ = "Clang 17.0.3 (https://github.com/ziglang/zig-bootstrap 1dc1fa6a122996fcd030cc956385e055289e09d9)";
 pub const __OBJC_BOOL_IS_BOOL = @as(c_int, 0);
 pub const __CONSTANT_CFSTRINGS__ = @as(c_int, 1);
 pub const __clang_literal_encoding__ = "UTF-8";
@@ -6671,16 +8034,20 @@ pub const __UINTPTR_FMTo__ = "lo";
 pub const __UINTPTR_FMTu__ = "lu";
 pub const __UINTPTR_FMTx__ = "lx";
 pub const __UINTPTR_FMTX__ = "lX";
+pub const __FLT16_DENORM_MIN__ = @as(f16, 5.9604644775390625e-8);
 pub const __FLT16_HAS_DENORM__ = @as(c_int, 1);
 pub const __FLT16_DIG__ = @as(c_int, 3);
 pub const __FLT16_DECIMAL_DIG__ = @as(c_int, 5);
+pub const __FLT16_EPSILON__ = @as(f16, 9.765625e-4);
 pub const __FLT16_HAS_INFINITY__ = @as(c_int, 1);
 pub const __FLT16_HAS_QUIET_NAN__ = @as(c_int, 1);
 pub const __FLT16_MANT_DIG__ = @as(c_int, 11);
 pub const __FLT16_MAX_10_EXP__ = @as(c_int, 4);
 pub const __FLT16_MAX_EXP__ = @as(c_int, 16);
+pub const __FLT16_MAX__ = @as(f16, 6.5504e+4);
 pub const __FLT16_MIN_10_EXP__ = -@as(c_int, 4);
 pub const __FLT16_MIN_EXP__ = -@as(c_int, 13);
+pub const __FLT16_MIN__ = @as(f16, 6.103515625e-5);
 pub const __FLT_DENORM_MIN__ = @as(f32, 1.40129846e-45);
 pub const __FLT_HAS_DENORM__ = @as(c_int, 1);
 pub const __FLT_DIG__ = @as(c_int, 6);
@@ -6887,9 +8254,10 @@ pub const __GCC_ATOMIC_POINTER_LOCK_FREE = @as(c_int, 2);
 pub const __NO_INLINE__ = @as(c_int, 1);
 pub const __FLT_RADIX__ = @as(c_int, 2);
 pub const __DECIMAL_DIG__ = __LDBL_DECIMAL_DIG__;
+pub const __ELF__ = @as(c_int, 1);
 pub const __AARCH64EL__ = @as(c_int, 1);
 pub const __aarch64__ = @as(c_int, 1);
-pub const __ELF__ = @as(c_int, 1);
+pub const __GCC_ASM_FLAG_OUTPUTS__ = @as(c_int, 1);
 pub const __AARCH64_CMODEL_SMALL__ = @as(c_int, 1);
 pub const __ARM_ACLE = @as(c_int, 200);
 pub const __ARM_ARCH = @as(c_int, 8);
@@ -6946,6 +8314,8 @@ pub const __intptr_t_defined = "";
 pub const _INTPTR_T = "";
 pub const _UINTPTR_T = "";
 pub inline fn __int_c(v: anytype, suffix: anytype) @TypeOf(__int_c_join(v, suffix)) {
+    _ = &v;
+    _ = &suffix;
     return __int_c_join(v, suffix);
 }
 pub const __int64_c_suffix = __INT64_C_SUFFIX__;
@@ -6953,27 +8323,35 @@ pub const __int32_c_suffix = __INT64_C_SUFFIX__;
 pub const __int16_c_suffix = __INT64_C_SUFFIX__;
 pub const __int8_c_suffix = __INT64_C_SUFFIX__;
 pub inline fn INT64_C(v: anytype) @TypeOf(__int_c(v, __int64_c_suffix)) {
+    _ = &v;
     return __int_c(v, __int64_c_suffix);
 }
 pub inline fn UINT64_C(v: anytype) @TypeOf(__uint_c(v, __int64_c_suffix)) {
+    _ = &v;
     return __uint_c(v, __int64_c_suffix);
 }
 pub inline fn INT32_C(v: anytype) @TypeOf(__int_c(v, __int32_c_suffix)) {
+    _ = &v;
     return __int_c(v, __int32_c_suffix);
 }
 pub inline fn UINT32_C(v: anytype) @TypeOf(__uint_c(v, __int32_c_suffix)) {
+    _ = &v;
     return __uint_c(v, __int32_c_suffix);
 }
 pub inline fn INT16_C(v: anytype) @TypeOf(__int_c(v, __int16_c_suffix)) {
+    _ = &v;
     return __int_c(v, __int16_c_suffix);
 }
 pub inline fn UINT16_C(v: anytype) @TypeOf(__uint_c(v, __int16_c_suffix)) {
+    _ = &v;
     return __uint_c(v, __int16_c_suffix);
 }
 pub inline fn INT8_C(v: anytype) @TypeOf(__int_c(v, __int8_c_suffix)) {
+    _ = &v;
     return __int_c(v, __int8_c_suffix);
 }
 pub inline fn UINT8_C(v: anytype) @TypeOf(__uint_c(v, __int8_c_suffix)) {
+    _ = &v;
     return __uint_c(v, __int8_c_suffix);
 }
 pub const INT64_MAX = INT64_C(@import("std").zig.c_translation.promoteIntLiteral(c_int, 9223372036854775807, .decimal));
@@ -7040,9 +8418,11 @@ pub const WINT_MAX = __INTN_MAX(__WINT_WIDTH__);
 pub const WCHAR_MAX = __WCHAR_MAX__;
 pub const WCHAR_MIN = __UINTN_C(__WCHAR_WIDTH__, @as(c_int, 0));
 pub inline fn INTMAX_C(v: anytype) @TypeOf(__int_c(v, __INTMAX_C_SUFFIX__)) {
+    _ = &v;
     return __int_c(v, __INTMAX_C_SUFFIX__);
 }
 pub inline fn UINTMAX_C(v: anytype) @TypeOf(__int_c(v, __UINTMAX_C_SUFFIX__)) {
+    _ = &v;
     return __int_c(v, __UINTMAX_C_SUFFIX__);
 }
 pub const __thread = "";
@@ -7052,7 +8432,7 @@ pub const CONFIG_ARM_HIKEY_PREFETCHER_NPFSTRM = @as(c_int, 0);
 pub const CONFIG_ARCH_AARCH64 = @as(c_int, 1);
 pub const CONFIG_ARCH_ARM = @as(c_int, 1);
 pub const CONFIG_WORD_SIZE = @as(c_int, 64);
-pub const CONFIG_USER_TOP = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0xa0000000, .hexadecimal);
+pub const CONFIG_USER_TOP = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0xa0000000, .hex);
 pub const CONFIG_PLAT_QEMU_ARM_VIRT = @as(c_int, 1);
 pub const CONFIG_ARM_CORTEX_A53 = @as(c_int, 1);
 pub const CONFIG_ARCH_ARM_V8A = @as(c_int, 1);
@@ -7064,7 +8444,6 @@ pub const CONFIG_ARM_HYPERVISOR_SUPPORT = @as(c_int, 1);
 pub const CONFIG_AARCH64_USER_CACHE_ENABLE = @as(c_int, 1);
 pub const CONFIG_L1_CACHE_LINE_SIZE_BITS = @as(c_int, 6);
 pub const CONFIG_EXPORT_PCNT_USER = @as(c_int, 1);
-pub const CONFIG_VTIMER_UPDATE_VOFFSET = @as(c_int, 1);
 pub const CONFIG_HAVE_FPU = @as(c_int, 1);
 pub const CONFIG_PADDR_USER_DEVICE_TOP = @import("std").zig.c_translation.promoteIntLiteral(c_int, 1099511627776, .decimal);
 pub const CONFIG_ROOT_CNODE_SIZE_BITS = @as(c_int, 12);
@@ -7093,6 +8472,7 @@ pub const CONFIG_KERNEL_STATIC_MAX_PERIOD_US = @as(c_int, 0);
 pub const CONFIG_LIB_SEL4_INLINE_INVOCATIONS = @as(c_int, 1);
 pub const CONFIG_LIB_SEL4_PRINT_INVOCATION_ERRORS = @as(c_int, 0);
 pub inline fn LIBSEL4_BIT(n: anytype) @TypeOf(@as(c_ulong, 1) << n) {
+    _ = &n;
     return @as(c_ulong, 1) << n;
 }
 pub const SEL4_WORD_IS_UINT64 = "";
@@ -7102,6 +8482,8 @@ pub const _seL4_int16_type = c_short;
 pub const _seL4_int32_type = c_int;
 pub const _seL4_int64_type = c_long;
 pub inline fn _macro_str_concat(x: anytype, y: anytype) @TypeOf(_macro_str_concat_helper1(x, y)) {
+    _ = &x;
+    _ = &y;
     return _macro_str_concat_helper1(x, y);
 }
 pub const seL4_True = @as(c_int, 1);
@@ -7122,23 +8504,14 @@ pub const seL4_ReplyBits = @as(c_int, 5);
 pub const seL4_PageTableBits = @as(c_int, 12);
 pub const seL4_PageTableEntryBits = @as(c_int, 3);
 pub const seL4_PageTableIndexBits = @as(c_int, 9);
-pub const seL4_PageDirBits = @as(c_int, 12);
-pub const seL4_PageDirEntryBits = @as(c_int, 3);
-pub const seL4_PageDirIndexBits = @as(c_int, 9);
 pub const seL4_NumASIDPoolsBits = @as(c_int, 7);
 pub const seL4_ASIDPoolBits = @as(c_int, 12);
 pub const seL4_ASIDPoolIndexBits = @as(c_int, 9);
 pub const seL4_IOPageTableBits = @as(c_int, 12);
 pub const seL4_WordSizeBits = @as(c_int, 3);
-pub const seL4_PUDEntryBits = @as(c_int, 3);
-pub const seL4_PGDBits = @as(c_int, 0);
-pub const seL4_PGDEntryBits = @as(c_int, 0);
-pub const seL4_PGDIndexBits = @as(c_int, 0);
-pub const seL4_PUDBits = @as(c_int, 13);
-pub const seL4_PUDIndexBits = @as(c_int, 10);
-pub const seL4_VSpaceBits = seL4_PUDBits;
-pub const seL4_VSpaceIndexBits = seL4_PUDIndexBits;
-pub const seL4_ARM_VSpaceObject = seL4_ARM_PageUpperDirectoryObject;
+pub const seL4_VSpaceEntryBits = @as(c_int, 3);
+pub const seL4_VSpaceBits = @as(c_int, 13);
+pub const seL4_VSpaceIndexBits = @as(c_int, 10);
 pub const seL4_ARM_VCPUBits = @as(c_int, 12);
 pub const seL4_VCPUBits = @as(c_int, 12);
 pub const seL4_WordBits = @import("std").zig.c_translation.sizeof(seL4_Word) * @as(c_int, 8);
@@ -7146,14 +8519,16 @@ pub const seL4_MinUntypedBits = @as(c_int, 4);
 pub const seL4_MaxUntypedBits = @as(c_int, 47);
 pub const seL4_FastMessageRegisters = @as(c_int, 4);
 pub const seL4_IPCBufferSizeBits = @as(c_int, 10);
-pub const seL4_UserTop = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0x000000ffffffffff, .hexadecimal);
+pub const seL4_UserTop = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0x000000ffffffffff, .hex);
 pub inline fn seL4_CompileTimeAssert(expr: anytype) @TypeOf(SEL4_COMPILE_ASSERT(seL4_CompileTimeAssert, expr)) {
+    _ = &expr;
     return SEL4_COMPILE_ASSERT(seL4_CompileTimeAssert, expr);
 }
 pub inline fn seL4_DebugAssert(expr: anytype) @TypeOf(seL4_Assert(expr)) {
+    _ = &expr;
     return seL4_Assert(expr);
 }
-pub const seL4_ARM_IOPageTableObject = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0xffff, .hexadecimal);
+pub const seL4_ARM_IOPageTableObject = @import("std").zig.c_translation.promoteIntLiteral(c_int, 0xffff, .hex);
 pub const seL4_MsgMaxExtraCaps = LIBSEL4_BIT(seL4_MsgExtraCapBits) - @as(c_int, 1);
 pub const seL4_CapRightsBits = @as(c_int, 4);
 pub const seL4_MinSchedContextBits = @as(c_int, 7);
@@ -7174,6 +8549,23 @@ pub const seL4_BadgeBits = @as(c_int, 64);
 pub const seL4_UntypedRetypeMaxObjects = CONFIG_RETYPE_FAN_OUT_LIMIT;
 pub const seL4_NilData = @as(c_int, 0);
 pub const seL4_CapInitThreadPD = seL4_CapInitThreadVSpace;
+pub const seL4_BootInfoFrameBits = seL4_PageBits;
+pub const seL4_BootInfoFrameSize = LIBSEL4_BIT(seL4_BootInfoFrameBits);
+pub const seL4_ARM_PageDirectory_Map = seL4_ARM_PageTable_Map;
+pub const seL4_ARM_PageDirectory_Unmap = seL4_ARM_PageTable_Unmap;
+pub const ARMPageDirectoryMap = ARMPageTableMap;
+pub const ARMPageDirectoryUnmap = ARMPageTableUnmap;
+pub const seL4_PageDirBits = seL4_PageTableBits;
+pub const seL4_PageDirEntryBits = seL4_PageTableEntryBits;
+pub const seL4_PageDirIndexBits = seL4_PageTableIndexBits;
+pub const seL4_ARM_PageDirectoryObject = seL4_ARM_PageTableObject;
+pub const seL4_PUDEntryBits = @as(c_int, 3);
+pub const seL4_PGDBits = @as(c_int, 0);
+pub const seL4_PGDEntryBits = @as(c_int, 0);
+pub const seL4_PGDIndexBits = @as(c_int, 0);
+pub const seL4_PUDBits = @as(c_int, 13);
+pub const seL4_PUDIndexBits = @as(c_int, 10);
+pub const seL4_ARM_PageUpperDirectoryObject = seL4_ARM_VSpaceObject;
 pub const SEL4_PFIPC_LABEL = SEL4_DEPRECATE_MACRO(seL4_Fault_VMFault);
 pub const SEL4_PFIPC_LENGTH = SEL4_DEPRECATE_MACRO(seL4_VMFault_Length);
 pub const SEL4_PFIPC_FAULT_IP = SEL4_DEPRECATE_MACRO(seL4_VMFault_IP);
@@ -7195,16 +8587,19 @@ pub const seL4_VMFault = SEL4_DEPRECATE_MACRO(seL4_Fault_VMFault);
 pub const seL4_NumHWBreakpoints = @as(c_int, 10);
 pub const seL4_NumExclusiveBreakpoints = @as(c_int, 6);
 pub const seL4_NumExclusiveWatchpoints = @as(c_int, 4);
+pub const REPLY_CAP = @as(c_int, 4);
 pub const MONITOR_ENDPOINT_CAP = @as(c_int, 5);
 pub const TCB_CAP = @as(c_int, 6);
+pub const SMC_CAP = @as(c_int, 7);
 pub const BASE_OUTPUT_NOTIFICATION_CAP = @as(c_int, 10);
 pub const BASE_ENDPOINT_CAP = @as(c_int, 74);
 pub const BASE_IRQ_CAP = @as(c_int, 138);
 pub const BASE_TCB_CAP = @as(c_int, 202);
 pub const BASE_VM_TCB_CAP = @as(c_int, 266);
 pub const BASE_VCPU_CAP = @as(c_int, 330);
-pub const MICROKIT_MAX_CHANNELS = @as(c_int, 63);
+pub const MICROKIT_MAX_CHANNELS = @as(c_int, 62);
 pub const seL4_UserContext_ = struct_seL4_UserContext_;
+pub const seL4_ARM_SMCContext_ = struct_seL4_ARM_SMCContext_;
 pub const seL4_Fault = struct_seL4_Fault;
 pub const seL4_Fault_tag = enum_seL4_Fault_tag;
 pub const api_object = enum_api_object;
