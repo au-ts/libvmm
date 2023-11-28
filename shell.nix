@@ -4,6 +4,11 @@ let
     pkgs = import <nixpkgs> { overlays = [ rust_overlay ]; };
     rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
     llvm = pkgs.llvmPackages_11;
+    manual_deps = with pkgs.buildPackages; [
+        texlive.combined.scheme-full
+        pandoc
+        librsvg
+    ];
 in
   pkgs.mkShell {
     buildInputs = with pkgs.buildPackages; [
@@ -19,7 +24,7 @@ in
         # expect is only needed for CI testing but we include it for
         # completeness
         expect
-    ];
+    ] ++ manual_deps;
     hardeningDisable = [ "all" ];
     # Need to specify this when using Rust with bindgen
     LIBCLANG_PATH = "${llvm.libclang.lib}/lib";
