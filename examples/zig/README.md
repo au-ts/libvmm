@@ -49,3 +49,50 @@ Welcome to Buildroot
 buildroot login: root
 #
 ```
+
+## Producing libmicrokit.zig
+
+You will notice that in the `src/` directory there is more than just the
+`vmm.zig` implementation.
+
+For some context, the Zig toolchain has the ability to automatically convert
+C headers to Zig code which can then obviously be called from Zig like any
+other Zig API.
+
+Here is the problem though, this translation fails currently for inline assembly,
+which in libsel4, there is a lot of as any system call with use inline assembly.
+
+If you run step 1 below, you will encounter the following text:
+```
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:490:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:487:26: warning: unable to translate function, demoted to extern
+```
+
+Until this is solved, unfortunately using libsel4 and hence libmicrokit from Zig
+is a more complicated process than it needs to be.
+
+For now the way we deal with this is having a subset of libsel4 reproduced in
+a separate translation unit such that Zig does not have to translate it since
+it's not in a C header file. We can then call into the translation unit from
+`libmicrokit.zig`.
+
+### Steps to reproduce libmicrokit.zig
+
+Sometimes a new Zig version has breaking changes so we have to re-translate
+`libmicrokit.zig` (since it's so large that manually fixing each compiler error
+is tedious). These are the steps for doing so.
+
+1.
+```sh
+zig translate-c microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/microkit.h -I microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include -target aarch64-freestanding > src/libmicrokit.zig
+```
+
+2. Add the following to the top of `libmicrokit.zig`
+```zig
+const libmicrokit = @cImport({
+    @cInclude("libmicrokit.h");
+});
+```
+
+3. Replace `arm_sys_send_recv` with `libmicrokit.zig_arm_sys_send_recv`.
+4. Replace `arm_sys_send` with `libmicrokit.zig_arm_sys_send`.
