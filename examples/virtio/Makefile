@@ -113,7 +113,7 @@ SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
 ELFS := client_vmm_1.elf client_vmm_2.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
 
 # BLK_DRIVER_VM_USERLEVEL_ELFS := cmdq_test.elf
-CLIENT_VM_1_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf
+CLIENT_VM_1_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf postmark.elf
 CLIENT_VM_2_USERLEVEL_ELFS := cmdq_test.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -276,6 +276,9 @@ $(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 # 	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
 
 $(BUILD_DIR)/%.elf: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
+	$(TOOLCHAIN)-gcc $< -o $@
+
+$(BUILD_DIR)/%.elf: $(CLIENT_VM_2_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
