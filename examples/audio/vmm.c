@@ -52,6 +52,7 @@
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
 #define SERIAL_IRQ_CH 1
+#define SOUND_IRQ_CH 2
 
 #if defined(BOARD_qemu_arm_virt)
 #define SERIAL_IRQ 33
@@ -63,6 +64,12 @@
 #define SERIAL_IRQ 79
 #else
 #error Need to define serial interrupt
+#endif
+
+#if defined(BOARD_qemu_arm_virt)
+#define SOUND_IRQ 37
+#else
+#error Need to define sound interrupt
 #endif
 
 /* Data for the guest's kernel image. */
@@ -117,6 +124,10 @@ void init(void) {
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+
+    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &serial_ack, NULL);
+    microkit_irq_ack(SOUND_IRQ_CH);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -127,6 +138,13 @@ void notified(microkit_channel ch) {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
+            }
+            break;
+        }
+        case SOUND_IRQ_CH: {
+            bool success = virq_inject(GUEST_VCPU_ID, SOUND_IRQ);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SOUND_IRQ, GUEST_VCPU_ID);
             }
             break;
         }

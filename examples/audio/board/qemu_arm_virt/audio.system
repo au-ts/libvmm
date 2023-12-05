@@ -35,5 +35,6 @@
 
         <!-- For the pass-through UART -->
         <irq irq="33" id="1" />
+        <irq irq="37" id="2" />
     </protection_domain>
 </system>
