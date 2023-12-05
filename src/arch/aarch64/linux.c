@@ -28,7 +28,7 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uintptr_t kernel_end = kernel_start + kernel_size;
     if (!(dtb_start >= kernel_end || dtb_end <= kernel_start)) {
         LOG_VMM_ERR("Linux kernel image [0x%lx..0x%lx)"
-                    "overlaps with the destination of the DTB [0x%lx, 0x%lx)\n",
+                    " overlaps with the destination of the DTB [0x%lx, 0x%lx)\n",
                     kernel_start, kernel_end, dtb_start, dtb_end);
         return 0;
     }
@@ -37,14 +37,14 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uintptr_t initrd_end = initrd_start + initrd_size;
     if (!(initrd_start >= kernel_end || initrd_end <= kernel_start)) {
         LOG_VMM_ERR("Linux kernel image [0x%lx..0x%lx) overlaps"
-                    "with the destination of the initial RAM disk [0x%lx, 0x%lx)\n",
+                    " with the destination of the initial RAM disk [0x%lx, 0x%lx)\n",
                     kernel_start, kernel_end, initrd_start, initrd_end);
         return 0;
     }
     // Check that the DTB and initrd do not overlap
     if (!(initrd_start >= dtb_end || initrd_end <= dtb_start)) {
         LOG_VMM_ERR("DTB [0x%lx..0x%lx) overlaps with the destination of the"
-                    "initial RAM disk [0x%lx, 0x%lx)\n",
+                    " initial RAM disk [0x%lx, 0x%lx)\n",
                     dtb_start, dtb_end, initrd_start, initrd_end);
         return 0;
     }
