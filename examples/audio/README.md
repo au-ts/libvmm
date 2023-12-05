@@ -1,11 +1,10 @@
-# A simple VMM for running Linux guests
+# A VMM example for pass-through audio in Linux
 
 This example is a minimal VMM that supports Linux guests and a basic
 buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
-* HardKernel Odroid-C4
 * QEMU ARM virt
 
 ## Building with Make
