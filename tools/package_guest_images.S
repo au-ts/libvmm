@@ -43,3 +43,14 @@ _guest_initrd_image:
 .incbin GUEST_INITRD_IMAGE_PATH
 _guest_initrd_image_end:
 #endif
+
+
+#if defined(GUEST_INTERF_IMAGE_PATH)
+.section .guest_interf_image, "aw", @progbits
+.global _guest_interf_image, _guest_interf_image_end
+_guest_interf_image:
+.incbin GUEST_INTERF_IMAGE_PATH
+_guest_interf_image_end:
+#endif
+
+
