@@ -65,8 +65,8 @@
 #endif
 
 /* Data for the interf baremetal boot image */
-extern char _guest_interf_image[];
-extern char _guest_interf_image_end[];
+extern char _guest_bare_image[];
+extern char _guest_bare_image_end[];
 
 
 /* Microkit will set this variable to the start of the guest RAM memory region. */
@@ -80,25 +80,28 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
-void init(void) {
-    /* Initialise the VMM, the VCPU(s), and start the guest */
-    LOG_VMM("starting \"%s\"\n", microkit_name);
-    /* Place all the binaries in the right locations before starting the guest */
-    size_t kernel_size = _guest_interf_image_end - _guest_interf_image;
-
-    struct linux_image_header *image_header = (struct linux_image_header *)  _guest_interf_image;
+uintptr_t load_kernel(char *kernel_image, size_t kernel_size) {
+    struct linux_image_header *image_header = (struct linux_image_header *) kernel_image;
     if (image_header->magic != LINUX_IMAGE_MAGIC) {
         LOG_VMM_ERR("Linux kernel image magic check failed\n");
-        return;
+        return 0;
     }
 
     uintptr_t kernel_dest = guest_ram_vaddr + image_header->text_offset;
 
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", kernel_dest, kernel_size);
     
-    memcpy((char *)kernel_dest, (char *) _guest_interf_image, kernel_size);
+    memcpy((char *)kernel_dest, kernel_image, kernel_size);
 
-    uintptr_t kernel_pc = (uintptr_t) kernel_dest;
+    return kernel_dest;
+}
+
+void init(void) {
+    /* Initialise the VMM, the VCPU(s), and start the guest */
+    LOG_VMM("starting \"%s\"\n", microkit_name);
+    /* Place all the binaries in the right locations before starting the guest */
+    size_t kernel_size = _guest_bare_image_end - _guest_bare_image;
+    uintptr_t kernel_pc = (uintptr_t) load_kernel(_guest_bare_image, kernel_size);
 
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");

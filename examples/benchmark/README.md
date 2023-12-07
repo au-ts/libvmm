@@ -1,8 +1,9 @@
-# A simple VMM for running Linux guests
+# Benchmarking!
 
-This example is a minimal VMM that supports Linux guests and a basic
-buildroot/BusyBox root file system. This gives a basic command-line with some
-common Linux utilities.
+This is a benchmarking example utilising the various SPH benchmarks done by Martins and Pinto in the paper titled:
+'Shedding Light on Static Partitioning Hypervisors for Arm-based Mixed-Criticality Systems'
+
+
 
 The example currently works on the following platforms:
 * HardKernel Odroid-C4
@@ -11,19 +12,23 @@ The example currently works on the following platforms:
 ## Building with Make
 
 ```sh
-make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
+make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk TEST=<TEST>
 ```
 
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
 
+Where `<TEST>` is one of:
+* `mibench`
+* `mibench+interf`
+
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
+make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk TEST=<TEST> qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
@@ -57,4 +62,5 @@ You can view other options by doing:
 ```sh
 zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> -h
 ```
+
 

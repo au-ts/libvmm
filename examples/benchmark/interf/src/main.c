@@ -56,7 +56,7 @@ void main(void){
     // while(!master_done);
 
     spin_lock(&print_lock);
-    printf("cpu %d up\n", get_cpuid());
+    printf("cpu %d up!!!\n", get_cpuid());
     spin_unlock(&print_lock);
 
     const size_t bufid = buf_index;
@@ -69,12 +69,14 @@ void main(void){
         for(size_t i = base; i < (base+range); i += stride) {
             interf_buf[bufid][i] = i;
         }
-
-
-        /* -------------------- READ ----------------------------- */
-        for(size_t i = base; i < (base+range); i += stride) {
-            (void)interf_buf[bufid][i];
+        // #Defined in Makefile to easily switch which test is which (some interf tests do not read)
+        if (DO_READ == 1) {
+            /* -------------------- READ ----------------------------- */
+            for(size_t i = base; i < (base+range); i += stride) {
+                (void)interf_buf[bufid][i];
+            }
         }
+
 
     }
 }

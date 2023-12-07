@@ -112,7 +112,7 @@ $(BUILD_DIR):
 $(OBJS): | $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DDO_READ=0 -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c $< -o $@
