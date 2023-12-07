@@ -61,8 +61,8 @@ ring_handle_t serial_tx_ring;
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
-#define NET_MUX_RX_CH 2
-#define NET_MUX_GET_MAC_CH 2
+#define NET_MUX_RX_CH 3
+#define NET_MUX_GET_MAC_CH 4
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)

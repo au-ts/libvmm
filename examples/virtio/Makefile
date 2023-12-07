@@ -143,10 +143,10 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(DTB): $(DTS)
-	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
-	# @ivanv: Shouldn't supress warnings
-	$(DTC) -q -I dts -O dtb $< > $@
+# $(DTB): $(DTS)
+# 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+# 	# @ivanv: Shouldn't supress warnings
+# 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(DTB): $(DTS) $(VMM_DTS_OVERLAY)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
