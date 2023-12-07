@@ -13,6 +13,14 @@ ifeq ($(strip $(BOARD)),)
 $(error BOARD must be specified)
 endif
 
+# Tests must be one of
+# - mibench
+# - mibench+interf
+
+ifeq ($(strip $(TEST)),)
+$(error TEST must be specified)
+endif
+
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
@@ -58,7 +66,12 @@ BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
-SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
+SYSTEM_DESCRIPTION := board/$(BOARD)/$(TEST).system
+
+ifeq ("$(wildcard $(SYSTEM_DESCRIPTION))","")
+    $(error specified TEST does not exist!)
+endif
+
 
 IMAGE_DIR := board/$(BOARD)
 INTERF_IMAGE_DIR := interf/build/qemu-aarch64-virt
@@ -68,14 +81,14 @@ DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
-ELFS := vmm.elf interf_vmm.elf
+ELFS := vmm.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
-REPORT_FILE = $(BUILD_DIR)/report.txtLINUX
+REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-INTERF_OBJS := interf_vmm.o printf.o virq.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+INTERF_OBJS := bare_vmm.o printf.o virq.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -122,14 +135,29 @@ $(DTB): $(DTS)
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
 
+
+PATHS := \
+	-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
+	-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
+	-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
+
+# If the $(TEST) variable contains the string "interf", add the interf image path to paths
+
+ifeq ($(findstring interf,$(TEST)),interf)
+	PATHS += \
+	-DGUEST_BARE_IMAGE_PATH=\"$(INTERF)\" \
+
+	ELFS +=  bare_vmm.elf
+
+endif
+
+
 $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-DGUEST_INTERF_IMAGE_PATH=\"$(INTERF)\" \
+					$(PATHS) \
 					-target aarch64-none-elf \
 					$< -o $@
+
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -149,7 +177,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/interf_vmm.elf: $(addprefix $(BUILD_DIR)/, $(INTERF_OBJS))
+$(BUILD_DIR)/bare_vmm.elf: $(addprefix $(BUILD_DIR)/, $(INTERF_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
