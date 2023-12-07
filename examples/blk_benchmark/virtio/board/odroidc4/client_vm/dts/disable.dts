@@ -1,0 +1,30 @@
+// this overlay contains strictly necessary entries for a client VM with no passthrough devices
+/ {
+	soc {
+		/delete-node/ ethernet@ff3f0000;
+		/delete-node/ bus@ff600000;
+		/delete-node/ bus@ff800000;
+		/delete-node/ bus@ffd00000;
+		/delete-node/ usb@ffe09000;
+
+		ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+		bus@ff600000 {
+			status = "disabled"
+        };
+
+		bus@ff800000 {
+			status = "disabled"
+		};
+
+		bus@ffd00000 {
+            status = "disabled";
+        };
+
+		usb@ffe09000 {
+            status = "disabled";
+        };
+    };
+};

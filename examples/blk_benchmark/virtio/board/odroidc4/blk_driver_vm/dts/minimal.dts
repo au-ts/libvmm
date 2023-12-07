@@ -1,0 +1,110 @@
+// this overlay contains strickly necessary entries (still a lot!) for a passthrough serial to work
+/ {
+	soc {
+		/delete-node/ ethernet@ff3f0000;
+		/delete-node/ bus@ff600000;
+		/delete-node/ bus@ff800000;
+		/delete-node/ bus@ffd00000;
+		/delete-node/ usb@ffe09000;
+
+		ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+		bus@ff600000 {
+			bus@3c000 {
+				compatible = "simple-bus";
+				reg = <0x00 0x3c000 0x00 0x1400>;
+				#address-cells = <0x02>;
+				#size-cells = <0x02>;
+				ranges = <0x00 0x00 0x00 0x3c000 0x00 0x1400>;
+
+				system-controller@0 {
+					compatible = "amlogic,meson-gx-hhi-sysctrl\0simple-mfd\0syscon";
+					reg = <0x00 0x00 0x00 0x400>;
+
+					clock-controller {
+						compatible = "amlogic,sm1-clkc";
+						#clock-cells = <0x01>;
+						clocks = <0x11>;
+						clock-names = "xtal";
+						phandle = <0x02>;
+					};
+				};
+			};
+        };
+
+		bus@ff800000 {
+			compatible = "simple-bus";
+			reg = <0x00 0xff800000 0x00 0x100000>;
+			#address-cells = <0x02>;
+			#size-cells = <0x02>;
+			ranges = <0x00 0x00 0x00 0xff800000 0x00 0x100000>;
+
+			sys-ctrl@0 {
+				compatible = "amlogic,meson-gx-ao-sysctrl\0simple-mfd\0syscon";
+				reg = <0x00 0x00 0x00 0x100>;
+				#address-cells = <0x02>;
+				#size-cells = <0x02>;
+				ranges = <0x00 0x00 0x00 0x00 0x00 0x100>;
+				phandle = <0x12>;
+
+				clock-controller {
+					compatible = "amlogic,meson-g12a-aoclkc";
+					#clock-cells = <0x01>;
+					#reset-cells = <0x01>;
+					clocks = <0x11 0x02 0x0a>;
+					clock-names = "xtal\0mpeg-clk";
+					phandle = <0x19>;
+				};
+
+				pinctrl@14 {
+					compatible = "amlogic,meson-g12a-aobus-pinctrl";
+					#address-cells = <0x02>;
+					#size-cells = <0x02>;
+					ranges;
+					phandle = <0x18>;
+
+					bank@14 {
+						reg = <0x00 0x14 0x00 0x08 0x00 0x1c 0x00 0x08 0x00 0x24 0x00 0x14>;
+						reg-names = "mux\0ds\0gpio";
+						gpio-controller;
+						#gpio-cells = <0x02>;
+						gpio-ranges = <0x18 0x00 0x00 0x0f>;
+						gpio-line-names = "\0\0\0\0PIN_47\0\0\0PIN_45\0PIN_46\0PIN_44\0PIN_42\0\0\0\0";
+						phandle = <0x3e>;
+					};
+
+					uart-a-ao {
+						phandle = <0x1e>;
+
+						mux {
+							groups = "uart_ao_a_tx\0uart_ao_a_rx";
+							function = "uart_ao_a";
+							bias-disable;
+						};
+					};
+				};
+			};
+
+			serial@3000 {
+				compatible = "amlogic,meson-gx-uart\0amlogic,meson-ao-uart";
+				reg = <0x00 0x3000 0x00 0x18>;
+				interrupts = <0x00 0xc1 0x01>;
+				clocks = <0x11 0x19 0x04 0x11>;
+				clock-names = "xtal\0pclk\0baud";
+				status = "okay";
+				pinctrl-0 = <0x1e>;
+				pinctrl-names = "default";
+			};
+		};
+
+		bus@ffd00000 {
+            status = "disabled";
+        };
+
+		usb@ffe09000 {
+            status = "disabled";
+        };
+    };
+};
