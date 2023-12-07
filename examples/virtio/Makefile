@@ -63,13 +63,15 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 IMAGE_DIR := board/$(BOARD)
 LINUX := $(IMAGE_DIR)/linux
 DTS := $(IMAGE_DIR)/linux.dts
+VMM_DTS_OVERLAY := $(IMAGE_DIR)/vmm_overlay.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
 SDDF := sddf
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
-SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
+# SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
+SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/meson
 SDDF_UTIL := $(SDDF)/util
 
 ELFS := vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
@@ -145,6 +147,12 @@ $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $< > $@
+
+$(DTB): $(DTS) $(VMM_DTS_OVERLAY)
+	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+	# @ivanv: Shouldn't supress warnings
+	cat $^ > $(BUILD_DIR)/tem.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/tem.dts > $@
 
 $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \

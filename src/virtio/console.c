@@ -19,6 +19,9 @@
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
+#define NUM_SDDF_CHANNEL    1
+static size_t channels[NUM_SDDF_CHANNEL];
+
 static void virtio_console_features_print(uint32_t features) {
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
@@ -154,7 +157,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
 
             if (is_empty) {
                 // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(dev->sddf_mux_tx_ch);
+                microkit_notify(dev->sddf_chs[0]);
             }
 
             /* Lastly, move to the next descriptor in the chain */
@@ -271,5 +274,7 @@ void virtio_console_init(struct virtio_device *dev,
     dev->virq = virq;
     dev->sddf_rx_ring = sddf_rx_ring;
     dev->sddf_tx_ring = sddf_tx_ring;
-    dev->sddf_mux_tx_ch = sddf_mux_tx_ch;
+
+    channels[0] = sddf_mux_tx_ch;
+    dev->sddf_chs = channels;
 }

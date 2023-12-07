@@ -28,6 +28,9 @@
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
+#elif defined(BOARD_odroidc4)
+#define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -57,6 +60,9 @@ ring_handle_t serial_tx_ring;
 
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
+
+#define NET_MUX_RX_CH 2
+#define NET_MUX_GET_MAC_CH 2
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
@@ -116,6 +122,7 @@ void init(void) {
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       &serial_rx_ring, &serial_tx_ring, SERIAL_MUX_TX_CH);
+    
     assert(success);
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

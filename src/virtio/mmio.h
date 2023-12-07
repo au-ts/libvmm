@@ -122,7 +122,7 @@ typedef struct virtio_device {
     // @ivanv: this is microkit specific so maybe should be a callback instead or something.
     // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
     // this is specific to device classes such as serial and networking
-    size_t sddf_mux_tx_ch;
+    size_t *sddf_chs;
 } virtio_device_t;
 
 /**
