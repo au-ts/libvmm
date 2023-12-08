@@ -31,36 +31,8 @@ If you would like to simulate the QEMU board you can run the following command:
 make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk TEST=<TEST> qemu
 ```
 
-This will build the example code as well as run the QEMU command to simulate a
+This will build the benchmark code as well as run the QEMU command to simulate a
 system running the whole system.
 
-## Building with Zig
-
-For educational purposes, you can also build and run this example using the
-[Zig](https://ziglang.org/) build system.
-
-At the moment, Zig still under heavy development and hence this example depends
-on the 'master' version of Zig for now. This example has been built using
-`0.12.0-dev.1533+b2ed2c4d4`, so anything equal to or above that version should work.
-
-You can download Zig [here](https://ziglang.org/download/).
-
-```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
-```
-
-Where `<BOARD>` is one of:
-* `qemu_arm_virt`
-* `odroidc4`
-
-If you are building for QEMU then you can also run QEMU by doing:
-```sh
-zig build -Dsdk=/path/to/sdk -Dboard=qemu_arm_virt qemu
-```
-
-You can view other options by doing:
-```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> -h
-```
 
 

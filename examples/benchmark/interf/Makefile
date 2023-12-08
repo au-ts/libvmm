@@ -27,6 +27,10 @@ $(error Undefined platform)
 endif
 endif
 
+ifeq ($(READ_SWITCH),)
+$(error Undefined read switch)
+endif
+
 SRC_DIR:=./src
 BUILD_DIR:=build/$(PLATFORM)
 ifneq ($(MEM_BASE),)
@@ -112,7 +116,7 @@ $(BUILD_DIR):
 $(OBJS): | $(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -DDO_READ=0 -c $< -o $@
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DDO_READ=$(READ_SWITCH) -c $< -o $@
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.S
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c $< -o $@
