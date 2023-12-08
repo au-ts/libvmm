@@ -65,8 +65,8 @@
 #endif
 
 /* Data for the interf baremetal boot image */
-extern char _guest_bare_image[];
-extern char _guest_bare_image_end[];
+extern char _guest_interf_image[];
+extern char _guest_interf_image_end[];
 
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
@@ -99,8 +99,8 @@ void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
-    size_t kernel_size = _guest_bare_image_end - _guest_bare_image;
-    uintptr_t kernel_pc = (uintptr_t) load_kernel(_guest_bare_image, kernel_size);
+    size_t kernel_size = _guest_interf_image_end - _guest_interf_image;
+    uintptr_t kernel_pc = (uintptr_t) load_kernel(_guest_interf_image, kernel_size);
 
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
@@ -114,12 +114,7 @@ void init(void) {
     }
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    LOG_VMM("Registering IRQ %d on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    if (!success) {
-        LOG_VMM_ERR("Failed to register serial IRQ\n");
-        return;
-    }
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */

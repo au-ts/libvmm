@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-
+ifneq ($(strip $(MAKECMDGOALS)), clean)
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
@@ -20,7 +20,7 @@ endif
 ifeq ($(strip $(TEST)),)
 $(error TEST must be specified)
 endif
-
+endif
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
@@ -67,16 +67,25 @@ VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/$(TEST).system
-
+ifneq ($(strip $(MAKECMDGOALS)), clean)
 ifeq ("$(wildcard $(SYSTEM_DESCRIPTION))","")
-    $(error specified TEST does not exist!)
+$(error specified TEST does not exist!)
+endif
 endif
 
 
 IMAGE_DIR := board/$(BOARD)
-INTERF_IMAGE_DIR := interf/build/qemu-aarch64-virt
 LINUX := $(IMAGE_DIR)/linux
+
+INTERF_IMAGE_DIR := interf/build/qemu-aarch64-virt
 INTERF := $(INTERF_IMAGE_DIR)/baremetal.bin
+INTERF_DO_READ := 1
+BARE_IS_INTERF := 0
+
+IRQLAT_IMAGE_DIR := irqlat/build/qemu-aarch64-virt
+IRQLAT := $(IRQLAT_IMAGE_DIR)/baremetal.bin
+
+
 DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
@@ -86,9 +95,12 @@ ELFS := vmm.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
+OBJS := printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
-INTERF_OBJS := bare_vmm.o printf.o virq.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+VMM_OBJS := vmm.o $(OBJS)
+BARE_OBJS := bare_vmm.o $(OBJS)
+INTERF_OBJS := interf_vmm.o $(OBJS)
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -128,7 +140,10 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 interf:
-	$(MAKE) -C interf
+	$(MAKE) -C interf READ_SWITCH=$(INTERF_DO_READ)
+
+clean:
+	@rm -rf build
 
 $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
@@ -142,10 +157,18 @@ PATHS := \
 	-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
 
 # If the $(TEST) variable contains the string "interf", add the interf image path to paths
-
 ifeq ($(findstring interf,$(TEST)),interf)
 	PATHS += \
-	-DGUEST_BARE_IMAGE_PATH=\"$(INTERF)\" \
+	-DGUEST_INTERF_IMAGE_PATH=\"$(INTERF)\" \
+
+	ELFS +=  interf_vmm.elf
+
+endif
+
+# Various test image linking
+ifeq ($(findstring irqlat,$(TEST)),irqlat)
+	PATHS += \
+	-DGUEST_BARE_IMAGE_PATH=\"$(IRQLAT)\" \
 
 	ELFS +=  bare_vmm.elf
 
@@ -177,7 +200,10 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/bare_vmm.elf: $(addprefix $(BUILD_DIR)/, $(INTERF_OBJS))
+$(BUILD_DIR)/bare_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BARE_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/interf_vmm.elf: $(addprefix $(BUILD_DIR)/, $(INTERF_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)

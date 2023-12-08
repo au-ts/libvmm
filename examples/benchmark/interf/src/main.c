@@ -28,8 +28,11 @@
 spinlock_t print_lock = SPINLOCK_INITVAL;
 
 #define NUM_CPUS   (1)
-
+#if DO_READ == 1
 #define INTERF_BUF_SIZE (0x100000)
+#else
+#define INTERF_BUF_SIZE (0x200000)
+#endif
 #define CACHE_LINE (64)
 #define CPU_INTERF_BUF_SIZE (INTERF_BUF_SIZE/NUM_CPUS)
 volatile uint64_t interf_buf[NUM_CPUS][CPU_INTERF_BUF_SIZE/sizeof(uint64_t)]  __attribute__((aligned(INTERF_BUF_SIZE)));
