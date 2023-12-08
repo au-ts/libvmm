@@ -124,7 +124,7 @@ CFLAGS := -mstrict-align \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: interf directories $(IMAGE_FILE) 
+all: irqlat interf directories $(IMAGE_FILE) 
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -142,8 +142,13 @@ directories:
 interf:
 	$(MAKE) -C interf READ_SWITCH=$(INTERF_DO_READ)
 
+irqlat:
+	$(MAKE) -C irqlat
+
 clean:
 	@rm -rf build
+	$(MAKE) -C interf clean
+	$(MAKE) -C irqlat clean
 
 $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
@@ -170,6 +175,7 @@ ifeq ($(findstring irqlat,$(TEST)),irqlat)
 	PATHS += \
 	-DGUEST_BARE_IMAGE_PATH=\"$(IRQLAT)\" \
 
+	INTERF_DO_READ = 0
 	ELFS +=  bare_vmm.elf
 
 endif

@@ -17,6 +17,7 @@
 #include "gic.h"
 #include <irq.h>
 #include <cpu.h>
+#include <stdio.h>
 
 volatile gicd_t *gicd = (void *)0x8000000;
 volatile gicc_t *gicc = (void *)0x8010000;
@@ -173,7 +174,6 @@ void gic_handle(){
     uint64_t ack = gicc->IAR;
     uint64_t id = ack & GICC_IAR_ID_MSK;
     uint64_t src = (ack & GICC_IAR_CPU_MSK) >> GICC_IAR_CPU_OFF;
-
     if(id >= 1022) return;
 
     irq_handle(id);

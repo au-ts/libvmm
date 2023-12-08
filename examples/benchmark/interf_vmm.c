@@ -114,9 +114,9 @@ void init(void) {
     }
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    // success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    // microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
