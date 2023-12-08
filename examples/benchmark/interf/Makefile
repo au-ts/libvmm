@@ -25,11 +25,11 @@ ifneq ($(MAKECMDGOALS), clean)
 ifeq ($(PLATFORM),)
 $(error Undefined platform)
 endif
-endif
-
 ifeq ($(READ_SWITCH),)
 $(error Undefined read switch)
 endif
+endif
+
 
 SRC_DIR:=./src
 BUILD_DIR:=build/$(PLATFORM)
