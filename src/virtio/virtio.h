@@ -20,6 +20,7 @@
 enum virtio_device_type {
     CONSOLE,
     BLOCK,
+    SOUND,
 };
 
 bool virtio_mmio_device_init(virtio_device_t *dev,
