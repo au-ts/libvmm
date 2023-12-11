@@ -4,3 +4,6 @@ zig-cache/
 *.pdf
 *.dtb
 rust/target/
+*overlayed.cpio.gz
+.cache
+compile_commands.json

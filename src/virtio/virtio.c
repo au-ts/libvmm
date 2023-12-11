@@ -5,6 +5,7 @@
  */
 #include "virtio/console.h"
 #include "virtio/block.h"
+#include "virtio/sound.h"
 #include "virtio/virtio.h"
 #include "fault.h"
 #include "util.h"
@@ -12,6 +13,7 @@
 
 static struct virtio_queue_handler virtio_console_queues[VIRTIO_CONSOLE_NUM_VIRTQ];
 static struct virtio_queue_handler virtio_blk_queues[VIRTIO_BLK_NUM_VIRTQ];
+static struct virtio_queue_handler virtio_snd_queues[VIRTIO_SND_NUM_VIRTQ];
 
 void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie)
 {
@@ -37,6 +39,13 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
         break;
     case BLOCK:
         virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq, sddf_handlers);
+        success = fault_register_vm_exception_handler(region_base,
+                                                      region_size,
+                                                      &virtio_mmio_fault_handle,
+                                                      dev);
+        break;
+    case SOUND:
+        virtio_snd_init(dev, virtio_snd_queues, VIRTIO_SND_NUM_VIRTQ, virq, sddf_handlers);
         success = fault_register_vm_exception_handler(region_base,
                                                       region_size,
                                                       &virtio_mmio_fault_handle,
