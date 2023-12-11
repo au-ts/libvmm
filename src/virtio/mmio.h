@@ -48,6 +48,7 @@
 #define DEVICE_ID_VIRTIO_BLOCK        2
 #define DEVICE_ID_VIRTIO_CONSOLE      3
 #define DEVICE_ID_VIRTIO_VSOCK        19
+#define DEVICE_ID_VIRTIO_SOUND        25
 
 /* The maximum size (number of elements) of a virtqueue. It is set
  * to 128 because I copied it from the camkes virtio device. If you find
