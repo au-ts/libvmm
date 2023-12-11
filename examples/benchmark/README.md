@@ -22,6 +22,8 @@ Where `<BOARD>` is one of:
 Where `<TEST>` is one of:
 * `mibench`
 * `mibench+interf`
+* `irqlat`
+* `irqlat+interf`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.

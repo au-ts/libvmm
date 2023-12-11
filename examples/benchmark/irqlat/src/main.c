@@ -190,16 +190,16 @@ void main(void){
     irq_enable(TIMER_IRQ_ID);
     irq_set_prio(TIMER_IRQ_ID, IRQ_MAX_PRIO);
 
-    irq_set_handler(UART_IRQ_ID, uart_handler);
-    irq_enable(UART_IRQ_ID);
-    irq_set_prio(TIMER_IRQ_ID, IRQ_MAX_PRIO);
+    // irq_set_handler(UART_IRQ_ID, uart_handler);
+    // irq_enable(UART_IRQ_ID);
+    // irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
     sample_count = 0;
     next_tick = timer_set(TIMER_INTERVAL);
     while(sample_count < NUM_WARMUPS);
 
     // while(1) {
-        // printf("Press 's' to start...\n");
-        // while(uart_getchar() != 's');
+    //     printf("Press 's' to start...\n");
+    //     while(uart_getchar() != 's');
 
         size_t i = 0;
         while(i < sample_events_size) {

@@ -169,10 +169,9 @@ void main(void){
 
     irq_set_prio(128, 0);
     priorities[7].prio = 0;
-    // print_prios();
+    print_prios();
 
-    printf("Press 's' to start...\n");
-    while(uart_getchar() != 's');
+    // Starting now
 
     sample_count = 0;
     for (int i = 0; i < NUM_WARMUP; i++) {

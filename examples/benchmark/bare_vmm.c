@@ -127,6 +127,7 @@ void init(void) {
 }
 
 void notified(microkit_channel ch) {
+    LOG_VMM("Got notified on channel %d\n", ch);
     switch (ch) {
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);

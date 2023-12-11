@@ -85,6 +85,9 @@ BARE_IS_INTERF := 0
 IRQLAT_IMAGE_DIR := irqlat/build/qemu-aarch64-virt
 IRQLAT := $(IRQLAT_IMAGE_DIR)/baremetal.bin
 
+IRQSTORM_IMAGE_DIR := irqstorm/build/qemu-aarch64-virt
+IRQSTORM := $(IRQSTORM_IMAGE_DIR)/baremetal.bin
+
 
 DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
@@ -124,7 +127,7 @@ CFLAGS := -mstrict-align \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: irqlat interf directories $(IMAGE_FILE) 
+all: irqstorm irqlat interf directories $(IMAGE_FILE) 
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -145,10 +148,14 @@ interf:
 irqlat:
 	$(MAKE) -C irqlat
 
+irqstorm:
+	$(MAKE) -C irqstorm
+
 clean:
 	@rm -rf build
 	$(MAKE) -C interf clean
 	$(MAKE) -C irqlat clean
+	$(MAKE) -C irqstorm clean
 
 $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
@@ -174,6 +181,15 @@ endif
 ifeq ($(findstring irqlat,$(TEST)),irqlat)
 	PATHS += \
 	-DGUEST_BARE_IMAGE_PATH=\"$(IRQLAT)\" \
+
+	INTERF_DO_READ = 0
+	ELFS +=  bare_vmm.elf
+
+endif
+
+ifeq ($(findstring irqstorm,$(TEST)),irqstorm)
+	PATHS += \
+	-DGUEST_BARE_IMAGE_PATH=\"$(IRQSTORM)\" \
 
 	INTERF_DO_READ = 0
 	ELFS +=  bare_vmm.elf
