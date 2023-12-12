@@ -27,22 +27,24 @@ SHELL=/bin/bash
 QEMU := qemu-system-aarch64
 DTC := dtc
 
-# ifndef TOOLCHAIN
-# 	# Get whether the common toolchain triples exist
-# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-# 	# Then check if they are defined and select the appropriate one
-# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-# 		TOOLCHAIN := aarch64-linux-gnu
-# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-# 		TOOLCHAIN := aarch64-unknown-linux-gnu
-# 	else
-# 		$(error "Could not find an AArch64 cross-compiler")
-# 	endif
-# endif
+ifndef TOOLCHAIN
+ 	# Get whether the common toolchain triples exist
+ 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
+ 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
+	# Then check if they are defined and select the appropriate one
+	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
+		TOOLCHAIN := aarch64-linux-gnu
+	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
+		TOOLCHAIN := aarch64-unknown-linux-gnu
+	else
+		$(error "Could not find an AArch64 cross-compiler")
+	endif
+endif
 
-CC := clang
-LD := ld.lld
+# CC := clang
+# LD := ld.lld
+CC := $(TOOLCHAIN)-gcc
+LD := $(TOOLCHAIN)-ld
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -142,8 +144,7 @@ CFLAGS := -mstrict-align \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
-		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-none-elf
+		  -DCONFIG_$(CONFIG)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -171,7 +172,7 @@ DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/driver_vm_rootfs
 DRIVER_VM_USERLEVEL_ELFS := uio_enable_irq.elf uio_ethernet.elf uio_read.elf uio_write.elf
 
 DRIVER_VM_INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
-DRIVER_VM_INITRD_OVERLAYED := $(IMAGE_DIR)/rootfs_overlayed.cpio.gz
+DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/rootfs_overlayed.cpio.gz
 
 # Unpack rootfs, put the userlevel binary in /root, repack rootfs
 driver_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(DRIVER_VM_USERLEVEL_ELFS))
@@ -198,7 +199,6 @@ $(BUILD_DIR)/package_guest_images_client.o: $(VMM_TOOLS)/package_guest_images.S 
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(VMM_CLIENT_DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-target aarch64-none-elf \
 					$< -o $@
 
 $(BUILD_DIR)/package_guest_images_driver.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(DRIVER_VM_INITRD_OVERLAYED) $(VMM_DRIVER_DTB)
@@ -206,7 +206,6 @@ $(BUILD_DIR)/package_guest_images_driver.o: $(VMM_TOOLS)/package_guest_images.S 
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(VMM_DRIVER_DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(DRIVER_VM_INITRD_OVERLAYED)\" \
-					-target aarch64-none-elf \
 					$< -o $@
 
 $(BUILD_DIR)/%.elf: $(DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
