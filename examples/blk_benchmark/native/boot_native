@@ -1,3 +1,1 @@
-load mmc 0:2 $kernel_addr_r uImage
-load mmc 0:2 $fdt_addr_r blk_driver_vm.dtb
-bootm $kernel_addr_r - $fdt_addr_r
+load mmc 0:2 $kernel_addr_r uImage;load mmc 0:2 $fdt_addr_r blk_driver_vm.dtb;bootm $kernel_addr_r - $fdt_addr_r
