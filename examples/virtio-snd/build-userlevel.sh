@@ -8,6 +8,3 @@ fi
 
 aarch64-unknown-linux-gnu-gcc $1 &&
 patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 "$2"
-
-# aarch64-unknown-linux-gnu-gcc -lasound "$1" -o "$2" &&
-# patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 "$2"

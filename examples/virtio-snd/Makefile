@@ -126,6 +126,7 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					virtio.o \
 					console.o \
 					block.o \
+					sound.o \
 					mmio.o \
 					sddf_serial_shared_ringbuffer.o \
 
@@ -135,6 +136,7 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						virtio.o \
 						console.o \
 						block.o \
+						sound.o \
 						mmio.o \
 						sddf_serial_shared_ringbuffer.o \
 
