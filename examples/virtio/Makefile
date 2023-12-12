@@ -63,27 +63,22 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 IMAGE_DIR := board/$(BOARD)
 LINUX := $(IMAGE_DIR)/linux
 DTS := $(IMAGE_DIR)/linux.dts
-VMM_DTS_OVERLAY := $(IMAGE_DIR)/vmm_overlay.dts
-VMM_CLIENT_DTS_OVERLAY := $(IMAGE_DIR)/vmm_client_overlay.dts
-VMM_DRIVER_DTS_OVERLAY := $(IMAGE_DIR)/vmm_driver_overlay.dts
-VMM_CLIENT_DTB := $(BUILD_DIR)/vmm_client_linux.dtb
-VMM_DRIVER_DTB := $(BUILD_DIR)/vmm_driver_linux.dtb
+DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
 SDDF := sddf
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
-# SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
-SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/meson
+SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
 
-ELFS := vmm_driver.elf vmm_client.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_DRIVER_OBJS := vmm_driver.o \
+VMM_OBJS := vmm.o \
 			printf.o \
 			virq.o \
 			linux.o \
@@ -94,29 +89,12 @@ VMM_DRIVER_OBJS := vmm_driver.o \
 			util.o \
 			vgic.o \
 			vgic_v2.o \
-			package_guest_images_driver.o \
+			package_guest_images.o \
 			tcb.o \
 			vcpu.o \
 			mmio.o \
 			console.o \
-			shared_ringbuffer.o
-
-VMM_CLIENT_OBJS := vmm_client.o \
-			printf.o \
-			virq.o \
-			linux.o \
-			guest.o \
-			psci.o \
-			smc.o \
-			fault.o \
-			util.o \
-			vgic.o \
-			vgic_v2.o \
-			package_guest_images_client.o \
-			tcb.o \
-			vcpu.o \
-			mmio.o \
-			console.o \
+			virtio.o \
 			shared_ringbuffer.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o
@@ -148,7 +126,7 @@ CFLAGS := -mstrict-align \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories driver_vm_userlevel $(IMAGE_FILE)
+all: directories $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -163,54 +141,18 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-CURRENT_DIR := $(shell pwd)
-
-DRIVER_VM_USERLEVEL_DIR := userlevel
-DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/driver_vm_rootfs
-
-DRIVER_VM_USERLEVEL_ELFS := uio_enable_irq.elf uio_ethernet.elf uio_read.elf uio_write.elf
-
-DRIVER_VM_INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
-DRIVER_VM_INITRD_OVERLAYED := $(IMAGE_DIR)/rootfs_overlayed.cpio.gz
-
-# Unpack rootfs, put the userlevel binary in /root, repack rootfs
-driver_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(DRIVER_VM_USERLEVEL_ELFS))
-	rm -r $(DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
-	mkdir -p $(DRIVER_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(DRIVER_VM_ROOTFS_TMP_DIR) && \
-	cp $^ $(DRIVER_VM_ROOTFS_TMP_DIR)/root && \
-	(cd $(DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(DRIVER_VM_INITRD_OVERLAYED))
-
-$(VMM_CLIENT_DTB): $(DTS) $(VMM_CLIENT_DTS_OVERLAY)
+$(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
 	# @ivanv: Shouldn't supress warnings
-	cat $^ > $(BUILD_DIR)/tem.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/tem.dts > $@
+	$(DTC) -q -I dts -O dtb $< > $@
 
-$(VMM_DRIVER_DTB): $(DTS) $(VMM_DRIVER_DTS_OVERLAY)
-	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
-	# @ivanv: Shouldn't supress warnings
-	cat $^ > $(BUILD_DIR)/tem.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/tem.dts > $@
-
-$(BUILD_DIR)/package_guest_images_client.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(VMM_CLIENT_DTB)
+$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(VMM_CLIENT_DTB)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
 					-target aarch64-none-elf \
 					$< -o $@
-
-$(BUILD_DIR)/package_guest_images_driver.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(DRIVER_VM_INITRD_OVERLAYED) $(VMM_DRIVER_DTB)
-	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(VMM_DRIVER_DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(DRIVER_VM_INITRD_OVERLAYED)\" \
-					-target aarch64-none-elf \
-					$< -o $@
-
-$(BUILD_DIR)/%.elf: $(DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
-	$(CC) $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -239,10 +181,7 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/vmm_driver.elf: $(addprefix $(BUILD_DIR)/, $(VMM_DRIVER_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/vmm_client.elf: $(addprefix $(BUILD_DIR)/, $(VMM_CLIENT_OBJS))
+$(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
