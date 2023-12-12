@@ -125,6 +125,8 @@ typedef struct virtio_device {
     size_t *sddf_chs;
 } virtio_device_t;
 
+void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie);
+
 /**
  * Handles MMIO Device Register Layout I/O for VirtIO MMIO
  *

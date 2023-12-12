@@ -20,7 +20,13 @@
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
 #define NUM_SDDF_CHANNEL    1
+static struct virtio_queue_handler virtio_console_queues[VIRTIO_CONSOLE_NUM_VIRTQ];
+
 static size_t channels[NUM_SDDF_CHANNEL];
+
+// sDDF rings to communicates with the serial mux
+ring_handle_t serial_rx_ring;
+ring_handle_t serial_tx_ring;
 
 static void virtio_console_features_print(uint32_t features) {
     /* Dump the features given in a human-readable format */
@@ -261,19 +267,45 @@ virtio_device_funs_t functions = {
     .queue_notify = virtio_console_handle_tx,
 };
 
-void virtio_console_init(struct virtio_device *dev,
-                         struct virtio_queue_handler *vqs, size_t num_vqs,
-                         size_t virq,
-                         ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_mux_tx_ch) {
+void virtio_console_init(struct virtio_device *dev, 
+                         uintptr_t serial_rx_free, uintptr_t serial_rx_used,
+                         uintptr_t serial_tx_free, uintptr_t serial_tx_used,
+                         uintptr_t serial_rx_data, uintptr_t serial_tx_data, 
+                         size_t virq, size_t sddf_mux_tx_ch)
+{
+
+    /* Initialise our sDDF ring buffers for the serial device */
+    ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+        int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        if (ret != 0) {
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
+        }
+    }
+    ring_init(&serial_tx_ring, (ring_buffer_t *)serial_tx_free, (ring_buffer_t *)serial_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+        // Have to start at the memory region left of by the rx ring
+        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        assert(ret == 0);
+        if (ret != 0) {
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
+        }
+    }
+    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
+    assert(!ring_plugged(serial_tx_ring.free_ring));
+    assert(!ring_plugged(serial_tx_ring.used_ring));
+
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = virtio_console_queues;
+    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_rx_ring = sddf_rx_ring;
-    dev->sddf_tx_ring = sddf_tx_ring;
+    dev->sddf_rx_ring = &serial_rx_ring;
+    dev->sddf_tx_ring = &serial_tx_ring;
 
     channels[0] = sddf_mux_tx_ch;
     dev->sddf_chs = channels;

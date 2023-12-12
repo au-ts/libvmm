@@ -1,25 +1,23 @@
-// this overlay contains strickly necessary entries (still a lot!) for a passthrough serial to work
-// and the virtio net interfaces
+// this overlay contains the virtio net and virtio console interfaces
 
 / {
 
 	chosen {
-        // bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1 ip=172.16.0.11";
         bootargs = "console=hvc0 earlycon=hvc0 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
 	};
-
-	// virtio_net@0130000 {
-	// 	compatible = "virtio,mmio";
-	// 	reg = <0x00 0x130000 0x00 0x200>;
-	// 	interrupts = <0x00 42 0x04>;
-	// };
 
 	virtio-console@0130000 {
 		compatible = "virtio,mmio";
 		reg = <0x00 0x130000 0x00 0x200>;
 		interrupts = <0x00 42 0x04>;
 	};
-	
+
+	// virtio-net@0140000 {
+	// 	compatible = "virtio,mmio";
+	// 	reg = <0x00 0x140000 0x00 0x200>;
+	// 	interrupts = <0x00 43 0x04>;
+	// };
+
 	soc {
 		/delete-node/ ethernet@ff3f0000;
 		/delete-node/ bus@ff600000;

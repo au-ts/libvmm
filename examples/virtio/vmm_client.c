@@ -14,7 +14,6 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
-#include "virtio/virtio.h"
 #include "virtio/console.h"
 #include "serial/libserialsharedringbuffer/include/shared_ringbuffer.h"
 
@@ -55,20 +54,19 @@ uintptr_t serial_tx_used;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-ring_handle_t serial_rx_ring;
-ring_handle_t serial_tx_ring;
-
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
 #define NET_MUX_RX_CH 3
-#define NET_MUX_GET_MAC_CH 4
+#define NET_MUX_TX_CH 4
+#define NET_MUX_GET_MAC_CH 5
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
 static struct virtio_device virtio_console;
+// static struct virtio_device virtio_net;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -97,33 +95,27 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    ring_init(&serial_tx_ring, (ring_buffer_t *)serial_tx_free, (ring_buffer_t *)serial_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        assert(ret == 0);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!ring_plugged(serial_tx_ring.free_ring));
-    assert(!ring_plugged(serial_tx_ring.used_ring));
-    /* Initialise virtIO console device */
-    success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      &serial_rx_ring, &serial_tx_ring, SERIAL_MUX_TX_CH);
+
+    // virtio console
+    virtio_console_init(&virtio_console, 
+                        serial_rx_free, serial_rx_used, serial_tx_free, serial_tx_used,
+                        serial_rx_data, serial_tx_data,
+                        VIRTIO_CONSOLE_IRQ, SERIAL_MUX_TX_CH);
     
+    success = fault_register_vm_exception_handler(VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE,
+                                                    &virtio_mmio_fault_handle, &virtio_console);
+    if (!success) {
+        LOG_VMM_ERR("Could not register virtual memory fault handler for "
+                    "virtIO region [0x%lx..0x%lx)\n", VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_BASE + VIRTIO_CONSOLE_SIZE);
+        return;
+    }
+
+    /* Register the virtual IRQ that will be used to communicate from the device
+     * to the guest. This assumes that the interrupt controller is already setup. */
+    // @ivanv: we should check that (on AArch64) the virq is an SPI.
+    success = virq_register(GUEST_VCPU_ID, VIRTIO_CONSOLE_IRQ, &virtio_virq_default_ack, NULL);
     assert(success);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -136,6 +128,14 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
+
+        // case NET_MUX_RX_CH: {
+        //     /* We have received an event from the net multipelxor, so we
+        //      * call the virtIO net handling */
+        //     net_client_rx(&virtio_net);
+        //     break;
+        // }
+
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }

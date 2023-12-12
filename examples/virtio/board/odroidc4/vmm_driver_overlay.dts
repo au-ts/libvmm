@@ -1,0 +1,28 @@
+// this overlay contains the virtio console interface
+
+
+/ {
+
+	chosen {
+        bootargs = "console=hvc0 earlycon=hvc0 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+	};
+
+	virtio-console@0130000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x130000 0x00 0x200>;
+		interrupts = <0x00 42 0x04>;
+	};
+
+	// uio
+
+	soc {
+		// /delete-node/ bus@ff800000/serial@3000;
+
+		bus@ff800000 {
+			/delete-node/ serial@3000;
+			serial@3000 {
+				status = "disabled";
+			};
+		};
+	};
+};

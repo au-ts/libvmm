@@ -303,6 +303,10 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     return success;
 }
 
+void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {
+    // nothing needs to be done
+}
+
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
     virtio_device_t *dev = (virtio_device_t *) data;
