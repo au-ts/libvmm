@@ -1,0 +1,48 @@
+// this overlay contains the virtio net and virtio console interfaces
+
+/ {
+
+	chosen {
+        bootargs = "console=hvc0 earlycon=hvc0 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+	};
+
+	virtio-console@0130000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x130000 0x00 0x200>;
+		interrupts = <0x00 42 0x04>;
+	};
+
+	// virtio-net@0140000 {
+	// 	compatible = "virtio,mmio";
+	// 	reg = <0x00 0x140000 0x00 0x200>;
+	// 	interrupts = <0x00 43 0x04>;
+	// };
+
+	soc {
+		/delete-node/ ethernet@ff3f0000;
+		/delete-node/ bus@ff600000;
+		/delete-node/ bus@ff800000;
+		/delete-node/ bus@ffd00000;
+		/delete-node/ usb@ffe09000;
+
+		ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+		bus@ff600000 {
+            status = "disabled";
+        };
+
+		bus@ff800000 {
+            status = "disabled";
+		};
+
+		bus@ffd00000 {
+            status = "disabled";
+        };
+
+		usb@ffe09000 {
+            status = "disabled";
+        };
+    };
+};
