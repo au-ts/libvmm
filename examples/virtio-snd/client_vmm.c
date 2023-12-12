@@ -53,6 +53,12 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
+#define VIRTIO_SOUND_IRQ (76)
+#define VIRTIO_SOUND_BASE (0x170000)
+#define VIRTIO_SOUND_SIZE (0x1000)
+
+#define SOUND_CH 4
+
 uintptr_t serial_rx_free;
 uintptr_t serial_rx_used;
 uintptr_t serial_tx_free;
@@ -67,6 +73,7 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
+static struct virtio_device virtio_sound;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -135,6 +142,10 @@ void init(void) {
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
+
+    success = virtio_mmio_device_init(&virtio_sound, SND, VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE, VIRTIO_SOUND_IRQ,
+                                      NULL, NULL, SOUND_CH);
+    assert(success);
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -146,6 +157,10 @@ void notified(microkit_channel ch) {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);
+            break;
+        }
+        case SOUND_CH: {
+            printf("SOUND CHANNEL\n");
             break;
         }
         default:
