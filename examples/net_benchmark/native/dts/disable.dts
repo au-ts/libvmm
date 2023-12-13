@@ -1,0 +1,5 @@
+/ {
+    soc {
+        /delete-node/ usb@ffe09000;
+    };
+};

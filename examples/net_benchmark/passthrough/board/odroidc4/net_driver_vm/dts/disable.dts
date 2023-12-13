@@ -1,0 +1,13 @@
+/ {
+    soc {
+        /delete-node/ usb@ffe09000;
+        
+        sd@ffe05000 {
+            status = "disabled";
+        };
+
+        mmc@ffe07000 {
+            status = "disabled";
+        };
+    };
+};
