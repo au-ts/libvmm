@@ -1,0 +1,32 @@
+Current configuration is:
+The base number of files is 500
+Transactions: 500000
+Files range between 500 bytes and 9.77 kilobytes in size
+Working directory: 
+        /mnt (weight=1)
+Block sizes are: read=16.00 kilobytes, write=16.00 kilobytes
+Biases are: read/append=5, create/delete=5
+Not using Unix buffered file I/O
+Random number generator seed is 42
+Report format is verbose.
+
+Creating files...Done
+Performing transactions..........Done
+Deleting files...Done
+Time:
+        73 seconds total
+        73 seconds of transactions (6849 per second)
+
+Files:
+        249825 created (3422 per second)
+                Creation alone: 500 files (500 per second)
+                Mixed with transactions: 249325 files (3415 per second)
+        250169 read (3426 per second)
+        246899 appended (3382 per second)
+        249825 deleted (3422 per second)
+                Deletion alone: 578 files (578 per second)
+                Mixed with transactions: 249247 files (3414 per second)
+
+Data:
+        1626.89 megabytes read (22.29 megabytes per second)
+        1626.94 megabytes written (22.29 megabytes per second)

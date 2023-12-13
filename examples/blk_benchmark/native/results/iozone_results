@@ -1,0 +1,153 @@
+        Iozone: Performance Test of File I/O
+                Version $Revision: 3.493 $
+                Compiled for 64 bit mode.
+                Build: linux 
+
+        Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+                     Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+                     Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+                     Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+                     Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+                     Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+                     Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+                     Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+                     Alexey Skidanov, Sudhir Kumar.
+
+        Run began: Thu Jan  1 00:00:43 1970
+
+        SYNC Mode. 
+        File size set to 131072 kB
+        Record Size 4 kB
+        Command line used: iozone -f/mnt/test -o -s131072 -r4 -i0 -i1
+        Output is in kBytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 kBytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+          131072       4      960     1289   841786   995118                                                                                  
+
+iozone test complete.
+        Iozone: Performance Test of File I/O
+                Version $Revision: 3.493 $
+                Compiled for 64 bit mode.
+                Build: linux 
+
+        Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+                     Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+                     Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+                     Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+                     Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+                     Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+                     Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+                     Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+                     Alexey Skidanov, Sudhir Kumar.
+
+        Run began: Thu Jan  1 00:04:42 1970
+
+        SYNC Mode. 
+        File size set to 131072 kB
+        Record Size 16 kB
+        Command line used: iozone -f/mnt/test -o -s131072 -r16 -i0 -i1
+        Output is in kBytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 kBytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+          131072      16     3208     8139  1408149  1248352                                                                                  
+
+iozone test complete.
+        Iozone: Performance Test of File I/O
+                Version $Revision: 3.493 $
+                Compiled for 64 bit mode.
+                Build: linux 
+
+        Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+                     Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+                     Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+                     Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+                     Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+                     Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+                     Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+                     Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+                     Alexey Skidanov, Sudhir Kumar.
+
+        Run began: Thu Jan  1 00:05:40 1970
+
+        SYNC Mode. 
+        File size set to 131072 kB
+        Record Size 512 kB
+        Command line used: iozone -f/mnt/test -o -s131072 -r512 -i0 -i1
+        Output is in kBytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 kBytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+          131072     512    16828    17974  1583473  1239264                                                                                  
+
+iozone test complete.
+        Iozone: Performance Test of File I/O
+                Version $Revision: 3.493 $
+                Compiled for 64 bit mode.
+                Build: linux 
+
+        Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+                     Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+                     Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+                     Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+                     Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+                     Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+                     Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+                     Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+                     Alexey Skidanov, Sudhir Kumar.
+
+        Run began: Thu Jan  1 00:05:55 1970
+
+        SYNC Mode. 
+        File size set to 131072 kB
+        Record Size 1024 kB
+        Command line used: iozone -f/mnt/test -o -s131072 -r1024 -i0 -i1
+        Output is in kBytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 kBytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+          131072    1024    18545    19830  1501913  1209318                                                                                  
+
+iozone test complete.
+        Iozone: Performance Test of File I/O
+                Version $Revision: 3.493 $
+                Compiled for 64 bit mode.
+                Build: linux 
+
+        Contributors:William Norcott, Don Capps, Isom Crawford, Kirby Collins
+                     Al Slater, Scott Rhine, Mike Wisner, Ken Goss
+                     Steve Landherr, Brad Smith, Mark Kelly, Dr. Alain CYR,
+                     Randy Dunlap, Mark Montague, Dan Million, Gavin Brebner,
+                     Jean-Marc Zucconi, Jeff Blomberg, Benny Halevy, Dave Boone,
+                     Erik Habbinga, Kris Strecker, Walter Wong, Joshua Root,
+                     Fabrice Bacchella, Zhenghua Xue, Qin Li, Darren Sawyer,
+                     Vangel Bojaxhi, Ben England, Vikentsi Lapa,
+                     Alexey Skidanov, Sudhir Kumar.
+
+        Run began: Thu Jan  1 00:06:10 1970
+
+        SYNC Mode. 
+        File size set to 131072 kB
+        Record Size 16384 kB
+        Command line used: iozone -f/mnt/test -o -s131072 -r16384 -i0 -i1
+        Output is in kBytes/sec
+        Time Resolution = 0.000001 seconds.
+        Processor cache size set to 1024 kBytes.
+        Processor cache line size set to 32 bytes.
+        File stride size set to 17 * record size.
+                                                              random    random     bkwd    record    stride                                    
+              kB  reclen    write  rewrite    read    reread    read     write     read   rewrite      read   fwrite frewrite    fread  freread
+          131072   16384    20511    16740  1553353  1279262  
