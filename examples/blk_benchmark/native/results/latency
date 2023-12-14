@@ -23,3 +23,7 @@ Time taken: 731917 nanoseconds
 Time taken: 732750 nanoseconds
 Time taken: 727417 nanoseconds
 Time taken: 735625 nanoseconds
+
+Avg time taken: 737062 nanoseconds
+
+grep "Time taken:" latency | awk '{total += $3; count++} END {print total/count}'
