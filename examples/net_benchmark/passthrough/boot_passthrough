@@ -1,0 +1,1 @@
+dhcp;tftp 0x20000000 10.13.0.12:/odroidc4_eric/passthrough.img;go 0x20000000

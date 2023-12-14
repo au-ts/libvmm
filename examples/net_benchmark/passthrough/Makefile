@@ -82,8 +82,8 @@ NET_DRIVER_VM_DTB := $(BUILD_DIR)/net_driver_vm.dtb
 
 ELFS := net_driver_vmm.elf
 
-NET_DRIVER_VM_USERLEVEL_ELFS := 
-NET_DRIVER_VM_USERLEVEL_FILES := stub
+NET_DRIVER_VM_USERLEVEL_ELFS := echo-udp.elf
+NET_DRIVER_VM_USERLEVEL_FILES := ipbenchd.py
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt

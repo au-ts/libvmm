@@ -32,5 +32,7 @@
         <irq irq="40" id="2" />
         <!-- phy -->
         <irq irq="96" id="3" />
+        <!-- need this for some reason -->
+        <irq irq="5" id="4" />
     </protection_domain>
 </system>

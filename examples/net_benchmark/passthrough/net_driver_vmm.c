@@ -104,6 +104,9 @@ void init(void) {
     /* Register phy passthrough */
     register_passthrough_irq(96, 3);
 
+    /* Register unknown? irq */
+    register_passthrough_irq(5, 4);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
