@@ -18,6 +18,7 @@
 #include "virtio/console.h"
 #include "virtio/block.h"
 #include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
+#include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -71,6 +72,19 @@ sddf_serial_ring_handle_t serial_rx_ring_handle;
 sddf_serial_ring_handle_t serial_tx_ring_handle;
 
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
+
+uintptr_t sound_commands;
+uintptr_t sound_rx_free;
+uintptr_t sound_rx_used;
+uintptr_t sound_tx_free;
+uintptr_t sound_tx_used;
+
+uintptr_t sound_rx_data;
+uintptr_t sound_tx_data;
+
+uintptr_t sound_shared_state;
+
+static sddf_snd_rings_t sound_rings;
 
 static struct virtio_device virtio_console;
 static struct virtio_device virtio_sound;
@@ -142,6 +156,14 @@ void init(void) {
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
+
+    sound_rings = (sddf_snd_rings_t){
+        .commands = (sddf_snd_cmd_ring_t *)sound_commands,
+        .rx_free  = (sddf_snd_pcm_data_ring_t *)sound_rx_free,
+        .rx_used  = (sddf_snd_pcm_data_ring_t *)sound_rx_used,
+        .tx_free  = (sddf_snd_pcm_data_ring_t *)sound_tx_free,
+        .tx_used  = (sddf_snd_pcm_data_ring_t *)sound_tx_used,
+    };
 
     success = virtio_mmio_device_init(&virtio_sound, SND, VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE, VIRTIO_SOUND_IRQ,
                                       NULL, NULL, SOUND_CH);

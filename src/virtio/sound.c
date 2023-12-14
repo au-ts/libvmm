@@ -15,7 +15,7 @@
 
 // @ivanv: put in util or remove
 #define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
+#define BIT_HIGH(n) (1ul<<(n - 32))
 
 // @alexbr: why is this global?
 static struct virtio_snd_config snd_config;
