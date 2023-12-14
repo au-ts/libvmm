@@ -77,7 +77,7 @@ SND_DRIVER_VM_INITRD_OVERLAYED := $(SND_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
 SND_DRIVER_VM_BASE_DTS := $(SND_DRIVER_VM_DTS_DIR)/linux.dts
 SND_DRIVER_VM_DTS_OVERLAYS := $(SND_DRIVER_VM_DTS_DIR)/init.dts \
 							$(SND_DRIVER_VM_DTS_DIR)/virtio.dts \
-							$(SND_DRIVER_VM_DTS_DIR)/pcie.dts \
+							$(SND_DRIVER_VM_DTS_DIR)/passthrough.dts \
 
 CLIENT_VM_LINUX := $(CLIENT_VM_DIR)/linux
 CLIENT_VM_INITRD := $(CLIENT_VM_DIR)/rootfs.cpio.gz
@@ -97,10 +97,16 @@ SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
 
 SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
+SDDF_SOUND_RINGBUFFER := $(SDDF)/sound/libsoundsharedringbuffer
 
-ELFS := client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf snd_driver_vmm.elf
+ELFS := client_vmm.elf \
+		serial_mux_tx.elf \
+		serial_mux_rx.elf \
+		uart_driver.elf \
+		snd_driver_vmm.elf \
+		virt_snd_driver.elf \
 
-SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf snd_driver.elf
+SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf
 CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -129,6 +135,7 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					sound.o \
 					mmio.o \
 					sddf_serial_shared_ringbuffer.o \
+					sddf_snd_shared_ringbuffer.o
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
@@ -139,6 +146,11 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						sound.o \
 						mmio.o \
 						sddf_serial_shared_ringbuffer.o \
+
+VIRT_SND_DRIVER_OBJS := virt_snd_driver.o \
+						sddf_snd_shared_ringbuffer.o \
+						util.o \
+						printf.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
@@ -162,6 +174,7 @@ CFLAGS := -mstrict-align \
 		  -I$(SDDF_SERIAL_RINGBUFFER)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF_BLOCK_RINGBUFFER)/include \
+		  -I$(SDDF_SOUND_RINGBUFFER)/include \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -172,10 +185,17 @@ CFLAGS_USERLEVEL :=	-g3 \
 		  			-O3 \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
+					-I$(CURRENT_DIR) \
+					-I$(SDDF) \
+					-I$(SDDF_SOUND_RINGBUFFER)/include \
 					-lasound
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
+
+LIBS_USERLEVEL := sddf_snd_shared_ringbuffer.o util.o
+
+.PHONY: all qemu clean
 
 all: directories $(IMAGE_FILE)
 
@@ -233,8 +253,10 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
-	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $< -o $@" $@
+USERLEVEL_OBJS := 
+
+$(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c $(addprefix $(BUILD_DIR)/, $(USERLEVEL_OBJS))
+	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $^ -o $@" $@
 
 $(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
 	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $< -o $@" $@
@@ -269,10 +291,16 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/%.o: $(SDDF_SOUND_RINGBUFFER)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/snd_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VMM_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/virt_snd_driver.elf: $(addprefix $(BUILD_DIR)/, $(VIRT_SND_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
@@ -284,5 +312,9 @@ $(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS)
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
+
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(SND_DRIVER_VM_DIR) $(CLIENT_VM_DIR)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(SND_DRIVER_VM_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+
+clean:
+	rm -rf build
