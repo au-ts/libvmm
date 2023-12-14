@@ -82,7 +82,7 @@ BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 
 ELFS := blk_driver_vmm.elf
 
-BLK_DRIVER_VM_USERLEVEL_ELFS := postmark.elf 
+BLK_DRIVER_VM_USERLEVEL_ELFS := postmark.elf test_latency.elf
 BLK_DRIVER_VM_USERLEVEL_FILES := postmark_script.sh postmark.conf iozone_script.sh
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
