@@ -19,7 +19,7 @@ def save_bar_graph(record_sizes, read_speeds, output_filename):
     plt.xticks(y_pos, record_sizes)
     plt.ylabel('Read Speed (kB/s)')
     plt.xlabel('Record Size')
-    plt.title('Block Device Benchmark')
+    plt.title('Block Device IOZone Read Benchmark (131072kB file size)')
 
     plt.savefig(output_filename)
     print(f"Graph saved as {output_filename}")
