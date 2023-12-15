@@ -1,1 +1,4 @@
 load mmc 0:2 $kernel_addr_r uImage;load mmc 0:2 $fdt_addr_r net_driver_vm.dtb;bootm $kernel_addr_r - $fdt_addr_r
+
+scp build/net_driver_vm.dtb tftp:/tftpboot/odroidc4_eric/ && scp board/odroidc4/net_driver_vm/linux tftp:/tftpboot/odroidc4_eric/ && scp ../native/uInitrd tftp:/tftpboot/odroidc4_eric/
+tftp ${fdt_addr_r} /odroidc4_eric/net_driver_vm.dtb;tftp ${ramdisk_addr_r} /odroidc4_eric/uInitrd;tftp ${kernel_addr_r} /odroidc4_eric/linux;booti ${kernel_addr_r} ${ramdisk_addr_r} ${fdt_addr_r}
