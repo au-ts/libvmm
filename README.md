@@ -73,7 +73,7 @@ For acquiring the SDK, you have two options.
 
 ##### Option 1 - Download pre-built SDK
 
-Go to this page: https://github.com/Ivan-Velickovic/microkit/actions/runs/6257526318 and scroll to the bottom.
+Go to this page: https://github.com/Ivan-Velickovic/microkit/actions/runs/7108797946 and scroll to the bottom.
 
 Click on the artefact that matches the system you will be using the SDK on (e.g Linux x86-64 or macOS AArch64).
 You will then have to unzip and untar it (unfortunately GitHub zips the archive no matter what).
