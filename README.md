@@ -73,10 +73,23 @@ For acquiring the SDK, you have two options.
 
 ##### Option 1 - Download pre-built SDK
 
-Go to this page: https://github.com/Ivan-Velickovic/microkit/actions/runs/7108797946 and scroll to the bottom.
+On Linux (x86-64):
+```sh
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
+tar xf microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
+```
 
-Click on the artefact that matches the system you will be using the SDK on (e.g Linux x86-64 or macOS AArch64).
-You will then have to unzip and untar it (unfortunately GitHub zips the archive no matter what).
+On macOS (Apple Silicon/AArch64):
+```sh
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
+tar xf microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
+```
+
+On macOS (Intel/x86-64):
+```sh
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
+tar xf microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
+```
 
 ##### Option 2 - Building the SDK
 
@@ -89,7 +102,7 @@ From here, you can follow the instructions
 [here](https://github.com/Ivan-Velickovic/microkit/tree/dev) to build the SDK.
 
 If you have built the SDK then the path to the SDK should look something like
-this: `microkit/release/microkit-sdk-1.2.6`.
+this: `microkit/release/microkit-sdk-<VERSION>`.
 
 ### Building and running
 
