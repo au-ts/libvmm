@@ -48,7 +48,6 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
                     dtb_start, dtb_end, initrd_start, initrd_end);
         return 0;
     }
-    // @ivanv: is there a initrd magic to check?
     // First we inspect the kernel image header to confirm it is a valid image
     // and to determine where in memory to place the image.
     struct linux_image_header *image_header = (struct linux_image_header *) kernel;
