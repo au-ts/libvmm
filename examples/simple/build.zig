@@ -136,6 +136,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    // Microkit expects and requires the symbol table to exist in the ELF,
+    // this means that even when building for release mode, we want to tell
+    // Zig not to strip symbols from the binary.
+    exe.strip = false;
 
     // For actually compiling the DTS into a DTB
     const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
