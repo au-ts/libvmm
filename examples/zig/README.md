@@ -1,8 +1,8 @@
 # Zig VMM example
 
 This example aims to show using [Zig](https://ziglang.org/) to interact with
-the VMM library. Although Zig is most-often thought of as a programming
-language, the project actually provides three things:
+libvmm. Although Zig is most-often thought of as a programming language, the
+project actually provides three things:
 1. The Zig programming language
 2. The Zig build system
 3. A portable drop-in C/C++ cross-compiler
