@@ -8,7 +8,7 @@ fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
 }
 
 // For this example we hard-code the target to AArch64 and the platform to QEMU ARM virt
-// since the main point of this example is to show off using the VMM library in another
+// since the main point of this example is to show off using libvmm in another
 // systems programming language.
 const example_target = std.zig.CrossTarget{
     .cpu_arch = .aarch64,

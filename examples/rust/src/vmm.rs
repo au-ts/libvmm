@@ -18,7 +18,7 @@ const UART_IRQ: usize = 33;
 const UART_CH: Channel = Channel::new(1);
 
 // This is arguably the hardest part of writing the VMM in Rust, it is the act of
-// connecting the Rust code to the VMM library written in C. Thankfully, it is not
+// connecting the Rust code to libvmm which is written in C. Thankfully, it is not
 // too bad for us to manually create the bindings, given that there are only a few
 // VMM calls in order to setup a basic Linux guest.
 //
@@ -61,7 +61,7 @@ fn init() -> VmmHandler {
     let linux = include_bytes!(concat!(env!("IMAGE_DIR"), "/linux"));
     let dtb = include_bytes!(concat!(env!("BUILD_DIR"), "/linux.dtb"));
     let initrd = include_bytes!(concat!(env!("IMAGE_DIR"), "/rootfs.cpio.gz"));
-    // The VMM library does not understand slices like Rust, so we have to
+    // libvmm does not understand slices like Rust, so we have to
     // turn this slices of u8 into raw addresses.
     let linux_addr = linux.as_ptr() as usize;
     let dtb_addr = dtb.as_ptr() as usize;

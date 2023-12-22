@@ -3,8 +3,8 @@
 The purpose of this project is to make it easy to run virtual machines on top of the seL4 microkernel.
 
 This project contains three parts:
-* `src/`: The virtual-machine-monitor (VMM) library, for creating and managing virtual machines on seL4.
-* `examples/`: Examples for using the VMM library.
+* `src/`: The source code of libvmm, a library for virtual-machime-monitors (VMM) to create and manage virtual machines on seL4.
+* `examples/`: Examples for using libvmm.
 * `tools/`: Tools that are useful when developing systems using virtual machines, but are not
   necessary for using the library.
 

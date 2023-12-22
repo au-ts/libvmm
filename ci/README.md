@@ -5,7 +5,7 @@ the minimal assurance that at least the code is not completely broken.
 
 ## Running the CI locally
 
-If you are making changes to the VMM library itself, it is a good idea to
+If you are making changes to libvmm itself, it is a good idea to
 first test the changes locally before upstreaming the changes.
 
 Make sure you have the dependencies listed in the top-level README, you will
