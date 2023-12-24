@@ -25,8 +25,8 @@ const UART_CH: Channel = Channel::new(1);
 // However, in the future it might not be realistic to do this, especially with other
 // services of the VMM such as virtIO. Ultimately if you are writing a VMM in Rust
 // then you may want to look into bindgen for automatically creating these bindings,
-// or even creating your own "Rust-like" bindings for the VMM library to make it
-// nicer to use (or closer to feeling like a Rust crate), or both!
+// or even creating your own "Rust-like" bindings for libvmm to make it nicer to use
+// (or closer to feeling like a Rust crate), or both!
 #[link(name = "vmm", kind = "static")]
 #[link(name = "microkit", kind = "static")]
 extern "C" {
