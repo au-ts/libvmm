@@ -110,6 +110,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command. We want to run the `simple` example system in a `debug`
 configuration for the QEMU ARM virt system.
 ```sh
+cd examples/simple
 make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
 ```
 
