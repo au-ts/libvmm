@@ -107,8 +107,7 @@ this: `microkit/release/microkit-sdk-<VERSION>`.
 ### Building and running
 
 Finally, we can simulate a basic system with a single Linux guest with the
-following command. We want to run the `simple` example system in a `debug`
-configuration for the QEMU ARM virt system.
+following command:
 ```sh
 cd examples/simple
 make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
