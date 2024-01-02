@@ -2,6 +2,7 @@
 #include "config.h"
 #include "virtio/mmio.h"
 #include "virq.h"
+#include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
 
 #define DEBUG_SOUND
 
@@ -19,6 +20,13 @@
 
 // @alexbr: why is this global?
 static struct virtio_snd_config snd_config;
+
+static sddf_snd_rings_t *get_rings(struct virtio_device *dev)
+{
+    // @alexbr: currently this casts from a void ** which doesn't make sense.
+    // I prefer to have a struct instead of array however, need to discuss.
+    return (sddf_snd_rings_t *)dev->sddf_ring_handles;
+}
 
 static void virtio_snd_config_init()
 {
@@ -243,4 +251,16 @@ void virtio_snd_init(struct virtio_device *dev,
     dev->sddf_ch = sddf_ch;
     
     virtio_snd_config_init();
+}
+
+void virtio_snd_notified(struct virtio_device *dev)
+{
+    LOG_SOUND("virtio snd notified by driver\n");
+
+    sddf_snd_rings_t *rings = get_rings(dev);
+
+    sddf_snd_pcm_data_t pcm;
+    while (sddf_snd_dequeue_pcm_data(rings->rx_used, &pcm) == 0) {
+        LOG_SOUND("deq device.rx_used\n");
+    }
 }

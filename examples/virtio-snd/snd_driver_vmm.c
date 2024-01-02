@@ -11,6 +11,7 @@
 #include "arch/aarch64/linux.h"
 #include "arch/aarch64/fault.h"
 #include "guest.h"
+#include "fault.h"
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
@@ -18,6 +19,7 @@
 #include "virtio/console.h"
 #include "virtio/block.h"
 #include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
+#include "uio.h"
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -49,6 +51,8 @@ uintptr_t guest_ram_vaddr;
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
+#define VIRT_SND_DRIVER_CH 4
+
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
@@ -67,6 +71,7 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
+bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -135,9 +140,17 @@ void init(void) {
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
+
+    fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS, sizeof(size_t), &uio_snd_fault_handler, NULL);
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+}
+
+bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+    LOG_VMM("Got fault from user process, notifying virt driver\n");
+    microkit_notify(VIRT_SND_DRIVER_CH);
+    return true;
 }
 
 void notified(microkit_channel ch) {
@@ -148,6 +161,9 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
+        case VIRT_SND_DRIVER_CH:
+            // @alexbr: we received a free rx frame or control message (?)
+            LOG_VMM("Got notification from snd driver.\n");
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }

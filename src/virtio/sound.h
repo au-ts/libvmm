@@ -289,4 +289,4 @@ void virtio_snd_init(struct virtio_device *dev,
                      void **data_region_handles,
                      void **sddf_ring_handles, size_t sddf_ch);
 
-void virtio_snd_handle_resp(struct virtio_device *dev);
+void virtio_snd_notified(struct virtio_device *dev);
