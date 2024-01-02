@@ -16,7 +16,7 @@
 #include "vcpu.h"
 #include "virtio/virtio.h"
 #include "virtio/console.h"
-#include "virtio/block.h"
+#include "virtio/sound.h"
 #include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
 #include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
 
@@ -58,7 +58,7 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_SOUND_BASE (0x170000)
 #define VIRTIO_SOUND_SIZE (0x1000)
 
-#define SOUND_CH 4
+#define SOUND_DRIVER_CH 4
 
 uintptr_t serial_rx_free;
 uintptr_t serial_rx_used;
@@ -166,7 +166,7 @@ void init(void) {
     };
 
     success = virtio_mmio_device_init(&virtio_sound, SND, VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE, VIRTIO_SOUND_IRQ,
-                                      NULL, NULL, SOUND_CH);
+                                      NULL, (void **)&sound_rings, SOUND_DRIVER_CH);
     assert(success);
     
     /* Finally start the guest */
@@ -181,8 +181,9 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
-        case SOUND_CH: {
-            printf("SOUND CHANNEL\n");
+        case SOUND_DRIVER_CH: {
+            printf("Client VM got notification from virt sound driver\n");
+            virtio_snd_notified(&virtio_sound);
             break;
         }
         default:

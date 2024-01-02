@@ -42,6 +42,7 @@ DTC := dtc
 # endif
 
 CC := clang
+CC_USERLEVEL := aarch64-unknown-linux-gnu-gcc
 LD := ld.lld
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
@@ -146,6 +147,7 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						sound.o \
 						mmio.o \
 						sddf_serial_shared_ringbuffer.o \
+						sddf_snd_shared_ringbuffer.o
 
 VIRT_SND_DRIVER_OBJS := virt_snd_driver.o \
 						sddf_snd_shared_ringbuffer.o \
@@ -155,6 +157,8 @@ VIRT_SND_DRIVER_OBJS := virt_snd_driver.o \
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_shared_ringbuffer.o
+
+USERLEVEL_OBJS := sddf_snd_shared_ringbuffer.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -167,6 +171,7 @@ CFLAGS := -mstrict-align \
 		  -g3 \
 		  -O3 \
 		  -ffreestanding \
+		  -fno-stack-protector \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
@@ -193,7 +198,6 @@ CFLAGS_USERLEVEL :=	-g3 \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-LIBS_USERLEVEL := sddf_snd_shared_ringbuffer.o util.o
 
 .PHONY: all qemu clean
 
@@ -218,14 +222,14 @@ directories:
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
 	rm -r $(SND_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(SND_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(SND_DRIVER_VM_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(SND_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(SND_DRIVER_VM_ROOTFS_TMP_DIR) > /dev/null 2>&1 && \
 	cp $^ $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED))
 
 $(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
 	rm -r $(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
+	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) > /dev/null 2>&1 && \
 	cp $^ $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(CLIENT_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED))
 
@@ -253,10 +257,16 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 					-target aarch64-none-elf \
 					$< -o $@
 
-USERLEVEL_OBJS := 
+$(BUILD_DIR)/user_sound.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound.c
+	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
 
-$(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c $(addprefix $(BUILD_DIR)/, $(USERLEVEL_OBJS))
-	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $^ -o $@" $@
+$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
+	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
+
+$(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
+	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
 $(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
 	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $< -o $@" $@

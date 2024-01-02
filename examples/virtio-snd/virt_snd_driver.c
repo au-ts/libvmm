@@ -3,15 +3,15 @@
 #include <microkit.h>
 #include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
 #include "util.h"
+#include "fault.h"
+#include "uio.h"
 
 #define LOG_DRIVER(...) do{ microkit_dbg_puts(microkit_name); microkit_dbg_puts("|INFO: "); microkit_dbg_puts(__VA_ARGS__); }while(0)
 #define LOG_DRIVER_ERR(...) do{ microkit_dbg_puts(microkit_name); microkit_dbg_puts("|ERROR: "); microkit_dbg_puts(__VA_ARGS__); }while(0)
 
 /* Defines to manage interrupts and notifications */
-#define VMM_CH 1
-#define CMD_CH  2
-#define TX_CH  3
-#define RX_CH  4
+#define DRIVER_VMM_CH 1
+#define CLIENT_CH 2
 
 #define RING_SIZE 0x200000
 
@@ -26,7 +26,11 @@ uintptr_t rx_data;
 uintptr_t tx_data;
 
 uintptr_t uio_shared_state;
-uintptr_t uio_ring_buffers;
+uintptr_t uio_commands;
+uintptr_t uio_rx_free;
+uintptr_t uio_rx_used;
+uintptr_t uio_tx_free;
+uintptr_t uio_tx_used;
 
 static sddf_snd_rings_t device_rings;
 static sddf_snd_rings_t uio_rings;
@@ -39,7 +43,11 @@ void init(void) {
     assert(driver_rx_used);
     assert(driver_tx_free);
     assert(driver_tx_used);
-    assert(uio_ring_buffers);
+    assert(uio_commands);
+    assert(uio_rx_free);
+    assert(uio_rx_used);
+    assert(uio_tx_free);
+    assert(uio_tx_used);
 
     // Init the shared ring buffers
     device_rings = (sddf_snd_rings_t){
@@ -51,14 +59,17 @@ void init(void) {
     };
     sddf_snd_rings_init_default(&device_rings);
 
+    LOG_DRIVER("initialised device rings\n");
+
     uio_rings = (sddf_snd_rings_t){
-        .commands = (sddf_snd_cmd_ring_t *)uio_ring_buffers,
-        .rx_free  = (sddf_snd_pcm_data_ring_t *)(uio_ring_buffers + RING_SIZE),
-        .rx_used  = (sddf_snd_pcm_data_ring_t *)(uio_ring_buffers + RING_SIZE * 2),
-        .tx_free  = (sddf_snd_pcm_data_ring_t *)(uio_ring_buffers + RING_SIZE * 3),
-        .tx_used  = (sddf_snd_pcm_data_ring_t *)(uio_ring_buffers + RING_SIZE * 4),
+        .commands = (sddf_snd_cmd_ring_t *)uio_commands,
+        .rx_free  = (sddf_snd_pcm_data_ring_t *)uio_rx_free,
+        .rx_used  = (sddf_snd_pcm_data_ring_t *)uio_rx_used,
+        .tx_free  = (sddf_snd_pcm_data_ring_t *)uio_tx_free,
+        .tx_used  = (sddf_snd_pcm_data_ring_t *)uio_tx_used,
     };
     sddf_snd_rings_init_default(&uio_rings);
+    LOG_DRIVER("initialised uio rings\n");
 
     // @alexbr: why -1?
     for (int i = 0; i < SDDF_SND_NUM_PCM_DATA_BUFFERS - 1; i++) {
@@ -74,35 +85,62 @@ void init(void) {
                                         SDDF_SND_PCM_BUFFER_SIZE);
         assert(ret == 0);
     }
+    LOG_DRIVER("filled data");
+
+    // Color data
+    // memset((void *)uio_shared_state, 0x32, 0x1000);
+    // memset((void *)uio_commands, 0x45, 0x200000);
+    // memset((void *)uio_rx_free, 0x67, 0x200000);
+    // memset((void *)uio_rx_used, 0x68, 0x200000);
+    // memset((void *)uio_tx_free, 0x9a, 0x200000);
+    // memset((void *)uio_tx_used, 0x9b, 0x200000);
+    // memset((void *)tx_data, 0xab, 0x200000);
+    // memset((void *)rx_data, 0xcd, 0x200000);
+
+    printf("SND command ring size %d\n", sddf_snd_ring_size(&uio_rings.commands->state));
+    printf("SND rx_free ring size %d\n", sddf_snd_ring_size(&uio_rings.rx_free->state));
+    printf("SND rx_used ring size %d\n", sddf_snd_ring_size(&uio_rings.rx_used->state));
+    printf("SND tx_free ring size %d\n", sddf_snd_ring_size(&uio_rings.tx_free->state));
+    printf("SND tx_used ring size %d\n", sddf_snd_ring_size(&uio_rings.tx_used->state));
+
+    LOG_DRIVER("WRITTEN BYTES");
+
 
     // todo: initialise shared data
 }
 
 void handle_vmm() {
-    LOG_DRIVER("Got vmm notification!");
-    // todo: first time this is called, recv data from vmm?
+    LOG_DRIVER("Got notification from vmm, notifying client\n");
+
+    sddf_snd_pcm_data_t pcm;
+    // Send received PCM frames to client
+    while (sddf_snd_dequeue_pcm_data(uio_rings.rx_used, &pcm) == 0) {
+        LOG_DRIVER("deq uio.rx_used, enq device.rx_used\n");
+        sddf_snd_enqueue_pcm_data(device_rings.rx_used, pcm.stream_id, pcm.addr, pcm.len);
+    }
+    microkit_notify(CLIENT_CH);
 }
 
-void handle_tx() {
-    LOG_DRIVER("Got tx notification!");
+void handle_client() {
+    LOG_DRIVER("Got notificatioon from client");
+
+    sddf_snd_pcm_data_t pcm;
+    // Return free PCM frames back to UIO driver
+    while (sddf_snd_dequeue_pcm_data(device_rings.rx_free, &pcm) == 0) {
+        sddf_snd_enqueue_pcm_data(uio_rings.rx_free, pcm.stream_id, pcm.addr, pcm.len);
+    }
+    microkit_notify(DRIVER_VMM_CH);
 }
 
 void notified(microkit_channel ch) {
     switch(ch) {
-    case VMM_CH:
+    case DRIVER_VMM_CH:
         /** The userlevel driver has recv PCM data for us? */
         handle_vmm();
         return;
-    case CMD_CH:
+    case CLIENT_CH:
         /** Someone enqueued commands for us */
-        handle_tx();
-        break;
-    case TX_CH:
-        /** Someone enqueued PCM frames for us */
-        handle_tx();
-        break;
-    case RX_CH:
-        LOG_DRIVER_ERR("Should not be getting RX notifications");
+        handle_client();
         break;
     default:
         LOG_DRIVER("received notification on unexpected channel\n");
