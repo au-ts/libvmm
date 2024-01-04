@@ -5,7 +5,7 @@ let
     rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
     llvm = pkgs.llvmPackages_11;
     manual_deps = with pkgs.buildPackages; [
-        texlive.combined.scheme-full
+        texliveFull
         pandoc
         librsvg
     ];
