@@ -17,5 +17,13 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device,
 
 sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params);
 
+sddf_snd_status_code_t stream_prepare(stream_t *stream);
+
+sddf_snd_status_code_t stream_release(stream_t *stream);
+
+sddf_snd_status_code_t stream_start(stream_t *stream);
+
+sddf_snd_status_code_t stream_stop(stream_t *stream);
+
 struct pollfd *stream_fds(stream_t *stream);
 int stream_nfds(stream_t *stream);

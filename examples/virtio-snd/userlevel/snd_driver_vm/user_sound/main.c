@@ -159,30 +159,44 @@ static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
 
     sddf_snd_status_code_t status = SDDF_SND_S_OK;
 
+    // Check stream ID. Currently switch is redundant but we might want to add
+    // jack commands in future.
     switch (cmd->code) {
-    case SDDF_SND_CMD_PCM_SET_PARAMS: {
-
+    case SDDF_SND_CMD_PCM_SET_PARAMS:
+    case SDDF_SND_CMD_PCM_PREPARE:
+    case SDDF_SND_CMD_PCM_RELEASE:
+    case SDDF_SND_CMD_PCM_START:
+    case SDDF_SND_CMD_PCM_STOP:
         if (cmd->stream_id >= state->stream_count) {
             printf("UIO SND|ERR: stream %d does not exist\n", cmd->stream_id);
             status = SDDF_SND_S_BAD_MSG;
             break;
         }
+    }
 
+    switch (cmd->code) {
+    case SDDF_SND_CMD_PCM_SET_PARAMS: {
         status = stream_set_params(state->streams[cmd->stream_id], &cmd->set_params);
         break;
     }
     case SDDF_SND_CMD_PCM_PREPARE:
+        status = stream_prepare(state->streams[cmd->stream_id]);
+        break;
     case SDDF_SND_CMD_PCM_RELEASE:
+        status = stream_release(state->streams[cmd->stream_id]);
+        break;
     case SDDF_SND_CMD_PCM_START:
+        status = stream_start(state->streams[cmd->stream_id]);
+        break;
     case SDDF_SND_CMD_PCM_STOP:
-        printf("UIO SND|ERR: command %s not implemened\n", sddf_snd_command_code_str(cmd->code));
-        status = SDDF_SND_S_NOT_SUPP;
+        status = stream_stop(state->streams[cmd->stream_id]);
+        break;
     default:
         printf("UIO SND|ERR: unknown command %d\n", cmd->code);
         status = SDDF_SND_S_BAD_MSG;
     }
 
-    sddf_snd_enqueue_response(state->rings.responses, cmd->cmd_id, status);
+    sddf_snd_enqueue_response(state->rings.responses, cmd->msg_id, status);
 }
 
 static void handle_interrupt(driver_state_t *state, bool *signal_vmm)
@@ -199,6 +213,9 @@ static void handle_interrupt(driver_state_t *state, bool *signal_vmm)
     while (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) == 0) {
         printf("UIO SND|INFO: got playback pcm data: stream %d, addr %lx, len %x\n", pcm.stream_id,
                (size_t)pcm.addr, pcm.len);
+
+        sddf_snd_enqueue_pcm_data(state->rings.tx_free, pcm.stream_id, pcm.addr, SDDF_SND_PCM_BUFFER_SIZE);
+        *signal_vmm = true;
     }
 }
 
