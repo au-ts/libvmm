@@ -37,7 +37,7 @@ static sddf_snd_rings_t device_rings;
 static sddf_snd_rings_t uio_rings;
 
 void init(void) {
-    LOG_DRIVER("initialising\n");
+    LOG_DRIVER("Initialising\n");
 
     assert(driver_commands);
     assert(driver_responses);
@@ -64,8 +64,6 @@ void init(void) {
     };
     sddf_snd_rings_init_default(&device_rings);
 
-    LOG_DRIVER("initialised device rings\n");
-
     uio_rings = (sddf_snd_rings_t){
         .commands = (sddf_snd_cmd_ring_t *)uio_commands,
         .responses = (sddf_snd_response_ring_t *)uio_responses,
@@ -75,45 +73,26 @@ void init(void) {
         .tx_used  = (sddf_snd_pcm_data_ring_t *)uio_tx_used,
     };
     sddf_snd_rings_init_default(&uio_rings);
-    LOG_DRIVER("initialised uio rings\n");
 
     // @alexbr: why -1?
     for (int i = 0; i < SDDF_SND_NUM_PCM_DATA_BUFFERS - 1; i++) {
+        sddf_snd_pcm_data_t pcm;
+        pcm.stream_id = (uint32_t)-1;
+        pcm.msg_id = (uint32_t)-1;
+        pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
+
         // UIO gets free RX buffers as it will need them first.
-        int ret;
-        ret = sddf_snd_enqueue_pcm_data(uio_rings.rx_free, (uint32_t)-1,
-                                        rx_data + (i * SDDF_SND_PCM_BUFFER_SIZE),
-                                        SDDF_SND_PCM_BUFFER_SIZE);
+        pcm.addr = rx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        int ret = sddf_snd_enqueue_pcm_data(uio_rings.rx_free, &pcm);
         assert(ret == 0);
+
         // Client gets free TX buffers as it will need them first.
-        ret = sddf_snd_enqueue_pcm_data(device_rings.tx_free, (uint32_t)-1,
-                                        tx_data + (i * SDDF_SND_PCM_BUFFER_SIZE),
-                                        SDDF_SND_PCM_BUFFER_SIZE);
+        pcm.addr = tx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        ret = sddf_snd_enqueue_pcm_data(device_rings.tx_free, &pcm);
         assert(ret == 0);
     }
-    LOG_DRIVER("filled data");
 
-    // Color data
-    // memset((void *)uio_shared_state, 0x32, 0x1000);
-    // memset((void *)uio_commands, 0x45, 0x200000);
-    // memset((void *)uio_responses, 0x53, 0x200000);
-    // memset((void *)uio_rx_free, 0x67, 0x200000);
-    // memset((void *)uio_rx_used, 0x68, 0x200000);
-    // memset((void *)uio_tx_free, 0x9a, 0x200000);
-    // memset((void *)uio_tx_used, 0x9b, 0x200000);
-    // memset((void *)tx_data, 0xab, 0x200000);
-    // memset((void *)rx_data, 0xcd, 0x200000);
-
-    printf("SND command ring size %d\n", sddf_snd_ring_size(&uio_rings.commands->state));
-    printf("SND response ring size %d\n", sddf_snd_ring_size(&uio_rings.responses->state));
-    printf("SND rx_free ring size %d\n", sddf_snd_ring_size(&uio_rings.rx_free->state));
-    printf("SND rx_used ring size %d\n", sddf_snd_ring_size(&uio_rings.rx_used->state));
-    printf("SND tx_free ring size %d\n", sddf_snd_ring_size(&uio_rings.tx_free->state));
-    printf("SND tx_used ring size %d\n", sddf_snd_ring_size(&uio_rings.tx_used->state));
-
-    LOG_DRIVER("WRITTEN BYTES");
-
-    // todo: initialise shared data
+    LOG_DRIVER("Finished initalising\n");
 }
 
 void handle_vmm() {
@@ -130,19 +109,20 @@ void handle_vmm() {
     // Send recorded PCM frames to client
     while (sddf_snd_dequeue_pcm_data(uio_rings.rx_used, &pcm) == 0) {
         LOG_DRIVER("deq uio.rx_used, enq device.rx_used\n");
-        sddf_snd_enqueue_pcm_data(device_rings.rx_used, pcm.stream_id, pcm.addr, pcm.len);
+        sddf_snd_enqueue_pcm_data(device_rings.rx_used, &pcm);
     }
     // Return free playback frames
     while (sddf_snd_dequeue_pcm_data(uio_rings.tx_free, &pcm) == 0) {
         LOG_DRIVER("deq uio.tx_free, enq device.tx_free\n");
-        sddf_snd_enqueue_pcm_data(device_rings.tx_free, pcm.stream_id, pcm.addr, pcm.len);
+        assert(pcm.len == SDDF_SND_PCM_BUFFER_SIZE);
+        sddf_snd_enqueue_pcm_data(device_rings.tx_free, &pcm);
     }
 
     microkit_notify(CLIENT_CH);
 }
 
 void handle_client() {
-    LOG_DRIVER("Got notificatioon from client");
+    LOG_DRIVER("Got notification from client\n");
 
     // Forward commands
     sddf_snd_command_t cmd;
@@ -155,12 +135,12 @@ void handle_client() {
     // Forward playback frames
     while (sddf_snd_dequeue_pcm_data(device_rings.tx_used, &pcm) == 0) {
         LOG_DRIVER("deq device.tx_used, enq uio.tx_used\n");
-        sddf_snd_enqueue_pcm_data(uio_rings.tx_used, pcm.stream_id, pcm.addr, pcm.len);
+        sddf_snd_enqueue_pcm_data(uio_rings.tx_used, &pcm);
     }
     // Return free recording frames
     while (sddf_snd_dequeue_pcm_data(device_rings.rx_free, &pcm) == 0) {
         LOG_DRIVER("deq device.rx_free, enq uio.rx_free\n");
-        sddf_snd_enqueue_pcm_data(uio_rings.rx_free, pcm.stream_id, pcm.addr, pcm.len);
+        sddf_snd_enqueue_pcm_data(uio_rings.rx_free, &pcm);
     }
 
     microkit_notify(DRIVER_VMM_CH);

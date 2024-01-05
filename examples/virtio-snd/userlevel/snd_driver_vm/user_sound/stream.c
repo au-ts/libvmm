@@ -234,6 +234,11 @@ sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_para
 {
     printf("UIO SND|INFO: set params stream %p, format %s, rate %u, channels %d\n", stream,
            sddf_snd_pcm_fmt_str(params->format), alsa_rates[params->rate], params->channels);
+    
+    bool state_valid = stream->state == STREAM_STATE_UNSET || stream->state == STREAM_STATE_SET;
+    if (!state_valid) {
+        return SDDF_SND_S_BAD_MSG;
+    }
 
     int err;
     snd_pcm_t *handle = stream->handle;
@@ -289,6 +294,46 @@ sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_para
 
     stream->state = STREAM_STATE_SET;
 
+    return SDDF_SND_S_OK;
+}
+
+sddf_snd_status_code_t stream_prepare(stream_t *stream)
+{
+    if (stream->state != STREAM_STATE_SET) {
+        return SDDF_SND_S_BAD_MSG;
+    }
+
+    stream->state = STREAM_STATE_PAUSED;
+    return SDDF_SND_S_OK;
+}
+
+sddf_snd_status_code_t stream_release(stream_t *stream)
+{
+    if (stream->state != STREAM_STATE_PAUSED) {
+        return SDDF_SND_S_BAD_MSG;
+    }
+    // TODO
+    stream->state = STREAM_STATE_SET;
+    return SDDF_SND_S_OK;
+}
+
+sddf_snd_status_code_t stream_start(stream_t *stream)
+{
+    if (stream->state != STREAM_STATE_PAUSED) {
+        return SDDF_SND_S_BAD_MSG;
+    }
+    // TODO
+    stream->state = STREAM_STATE_PLAYING;
+    return SDDF_SND_S_OK;
+}
+
+sddf_snd_status_code_t stream_stop(stream_t *stream)
+{
+    if (stream->state != STREAM_STATE_PLAYING) {
+        return SDDF_SND_S_BAD_MSG;
+    }
+    // TODO
+    stream->state = STREAM_STATE_PAUSED;
     return SDDF_SND_S_OK;
 }
 
