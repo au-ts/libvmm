@@ -52,6 +52,8 @@ uintptr_t guest_ram_vaddr;
 #define SERIAL_MUX_RX_CH 2
 
 #define VIRT_SND_DRIVER_CH 4
+// @alexbr: why 50?
+#define UIO_SND_IRQ 50
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
@@ -71,7 +73,8 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
-bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+static void uio_snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -141,13 +144,14 @@ void init(void) {
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
 
+    virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
     fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS, sizeof(size_t), &uio_snd_fault_handler, NULL);
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
     LOG_VMM("Got fault from user process, notifying virt driver\n");
     microkit_notify(VIRT_SND_DRIVER_CH);
     return true;
@@ -162,8 +166,12 @@ void notified(microkit_channel ch) {
             break;
         }
         case VIRT_SND_DRIVER_CH:
-            // @alexbr: we received a free rx frame or control message (?)
-            LOG_VMM("Got notification from snd driver.\n");
+            LOG_VMM("Injecting IRQ to sound driver vm\n");
+            bool success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+            }
+            break;
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }

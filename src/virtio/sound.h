@@ -206,7 +206,7 @@ struct virtio_snd_pcm_info { // largest at 32 bytes
     uint8_t padding[5];
 } __attribute__((packed));
 
-// VIRTIO_SND_R_PCM_SET_PARAMS request (no response)
+// VIRTIO_SND_R_PCM_SET_PARAMS request
 struct virtio_snd_pcm_set_params {
     struct virtio_snd_pcm_hdr hdr; /* .code = VIRTIO_SND_R_PCM_SET_PARAMS */
     uint32_t buffer_bytes;
