@@ -1,0 +1,7 @@
+---
+BasedOnStyle: WebKit
+PointerAlignment: Right
+ColumnLimit: 100
+AllowShortFunctionsOnASingleLine: Empty
+AlignAfterOpenBracket: Align
+...

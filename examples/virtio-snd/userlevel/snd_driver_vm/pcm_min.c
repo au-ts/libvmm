@@ -1,8 +1,17 @@
 #include <alsa/asoundlib.h>
+#include <alsa/pcm.h>
  
 static char *device = "default";            /* playback device */
 unsigned char buffer[16*1024];              /* some random data */
- 
+
+void print_err(int err, const char *msg)
+{
+    if (err < 0) {
+        fprintf(stderr, "%s: %s\n", msg, snd_strerror(err));
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(void)
 {
     int err;
@@ -13,21 +22,25 @@ int main(void)
     for (i = 0; i < sizeof(buffer); i++)
         buffer[i] = random() & 0xff;
  
-    if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
-        printf("Playback open error: %s\n", snd_strerror(err));
-        exit(EXIT_FAILURE);
-    }
-    if ((err = snd_pcm_set_params(handle,
+    err = snd_pcm_open(&handle, device, SND_PCM_STREAM_PLAYBACK, 0);
+    print_err(err, "Playback open error");
+
+    snd_pcm_hw_params_t *hw_params;
+    err = snd_pcm_hw_params_malloc(&hw_params);
+    print_err(err, "Cannot allocate hardware parameter structure");
+
+    err = snd_pcm_hw_params_any(handle, hw_params);
+    print_err(err, "Cannot initialize hardware parameter structure");
+
+    err = snd_pcm_set_params(handle,
                       SND_PCM_FORMAT_U8,
                       SND_PCM_ACCESS_RW_INTERLEAVED,
                       1,
                       48000,
                       1,
-                      500000)) < 0) {   /* 0.5sec */
-        printf("Playback open error: %s\n", snd_strerror(err));
-        exit(EXIT_FAILURE);
-    }
- 
+                      500000);
+    print_err(err, "Failed to set params");
+
     for (i = 0; i < 16; i++) {
         frames = snd_pcm_writei(handle, buffer, sizeof(buffer));
         if (frames < 0)

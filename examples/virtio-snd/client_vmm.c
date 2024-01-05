@@ -74,6 +74,7 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 uintptr_t sound_commands;
+uintptr_t sound_responses;
 uintptr_t sound_rx_free;
 uintptr_t sound_rx_used;
 uintptr_t sound_tx_free;
@@ -84,10 +85,13 @@ uintptr_t sound_tx_data;
 
 uintptr_t sound_shared_state;
 
-static sddf_snd_rings_t sound_rings;
+static sddf_snd_state_t snd_state;
 
 static struct virtio_device virtio_console;
 static struct virtio_device virtio_sound;
+
+static bool guest_started = false;
+uintptr_t kernel_pc = 0;
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -96,7 +100,7 @@ void init(void) {
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
+    kernel_pc = linux_setup_images(guest_ram_vaddr,
                                       (uintptr_t) _guest_kernel_image,
                                       kernel_size,
                                       (uintptr_t) _guest_dtb_image,
@@ -157,8 +161,10 @@ void init(void) {
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
 
-    sound_rings = (sddf_snd_rings_t){
+    snd_state.shared_state = (sddf_snd_shared_state_t *)sound_shared_state;
+    snd_state.rings = (sddf_snd_rings_t){
         .commands = (sddf_snd_cmd_ring_t *)sound_commands,
+        .responses = (sddf_snd_response_ring_t *)sound_responses,
         .rx_free  = (sddf_snd_pcm_data_ring_t *)sound_rx_free,
         .rx_used  = (sddf_snd_pcm_data_ring_t *)sound_rx_used,
         .tx_free  = (sddf_snd_pcm_data_ring_t *)sound_tx_free,
@@ -166,11 +172,10 @@ void init(void) {
     };
 
     success = virtio_mmio_device_init(&virtio_sound, SND, VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE, VIRTIO_SOUND_IRQ,
-                                      NULL, (void **)&sound_rings, SOUND_DRIVER_CH);
+                                      NULL, (void **)&snd_state, SOUND_DRIVER_CH);
     assert(success);
     
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
@@ -184,6 +189,10 @@ void notified(microkit_channel ch) {
         case SOUND_DRIVER_CH: {
             printf("Client VM got notification from virt sound driver\n");
             virtio_snd_notified(&virtio_sound);
+            if (!guest_started) {
+                guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+                guest_started = true;
+            }
             break;
         }
         default:

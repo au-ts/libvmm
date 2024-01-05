@@ -257,10 +257,11 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/user_sound.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound.c
+$(BUILD_DIR)/user_sound/%.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound/%.c
+	mkdir -p $(BUILD_DIR)/user_sound
 	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
 
-$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
+$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
