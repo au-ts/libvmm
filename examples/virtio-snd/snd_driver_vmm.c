@@ -144,8 +144,13 @@ void init(void) {
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
 
-    virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
-    fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS, sizeof(size_t), &uio_snd_fault_handler, NULL);
+    success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
+    assert(success);
+
+    success = fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS,
+                                                  sizeof(size_t),
+                                                  &uio_snd_fault_handler, NULL);
+    assert(success);
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -165,13 +170,14 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
-        case VIRT_SND_DRIVER_CH:
-            LOG_VMM("Injecting IRQ to sound driver vm\n");
+        case VIRT_SND_DRIVER_CH: {
+            // LOG_VMM("Injecting IRQ to sound driver vm\n");
             bool success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
             if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+                // LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
             }
             break;
+        }
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
