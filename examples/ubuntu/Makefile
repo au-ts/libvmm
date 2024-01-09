@@ -66,7 +66,7 @@ UBUNTU_VM_DIR := board/$(BOARD)/ubuntu_vm
 UBUNTU_VM_DTS_DIR := $(UBUNTU_VM_DIR)/dts
 
 UBUNTU_VM_LINUX := $(UBUNTU_VM_DIR)/linux
-UBUNTU_VM_INITRD := $(UBUNTU_VM_DIR)/rootfs.cpio.gz
+UBUNTU_VM_INITRD := $(UBUNTU_VM_DIR)/initrd.cpio.gz
 UBUNTU_VM_BASE_DTS := $(UBUNTU_VM_DTS_DIR)/linux.dts
 UBUNTU_VM_DTS_OVERLAYS := $(UBUNTU_VM_DTS_DIR)/init.dts \
 								$(UBUNTU_VM_DTS_DIR)/disable.dts \
