@@ -74,9 +74,6 @@ static struct virtio_device virtio_console;
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
-/* Size of available bitmap */
-#define BLK_DATA_REGION_AVAIL_BITMAP_SIZE (SDDF_BLK_NUM_DATA_BUFFERS / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE)
-
 uintptr_t blk_cmd_ring;
 uintptr_t blk_resp_ring;
 uintptr_t blk_data;
@@ -84,7 +81,8 @@ sddf_blk_ring_handle_t blk_ring_handle;
 static sddf_blk_ring_handle_t *blk_ring_handles[SDDF_BLK_NUM_RING_HANDLES];
 
 blk_data_region_t blk_data_region;
-uint32_t blk_data_region_avail_bitmap[BLK_DATA_REGION_AVAIL_BITMAP_SIZE];
+bitarray_t blk_data_region_avail_bitarr;
+word_t blk_data_region_avail_bitarr_words[roundup_bits2words64(SDDF_BLK_NUM_DATA_BUFFERS)];
 static blk_data_region_t *blk_data_region_handles[SDDF_BLK_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_blk;
@@ -167,17 +165,17 @@ void init(void) {
     blk_ring_handles[SDDF_BLK_DEFAULT_RING] = &blk_ring_handle;
     /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
     assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
+    /* Initialise bit array*/
+    bitarray_init(&blk_data_region_avail_bitarr, blk_data_region_avail_bitarr_words, roundup_bits2words64(SDDF_BLK_NUM_DATA_BUFFERS));
     /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
     blk_data_region.avail_bitpos = 0; /* bit position of next avail buffer */
-    blk_data_region.avail_bitmap = blk_data_region_avail_bitmap; /* bit map representing avail data buffers */
+    blk_data_region.avail_bitarr = &blk_data_region_avail_bitarr; /* bit array representing avail data buffers */
     blk_data_region.num_buffers = SDDF_BLK_NUM_DATA_BUFFERS; /* number of buffers in data region */
     blk_data_region.addr = blk_data; /* encoded base address of data region */
     /* Set all available bits to 1 to indicate it is available */ 
-    // the end condition is (blk_data_region.num_buffers / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE) rounded up
-    for (unsigned int i = 0; i < (blk_data_region.num_buffers + (BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE - 1)) / BLK_DATA_REGION_AVAIL_BITMAP_ELEM_SIZE; i++) {
-        blk_data_region.avail_bitmap[i] = UINT32_MAX;
-    }
+    bitarray_set_region(&blk_data_region_avail_bitarr, 0, SDDF_BLK_NUM_DATA_BUFFERS);
     blk_data_region_handles[SDDF_BLK_DEFAULT_RING] = &blk_data_region;
+    
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
                                       (void **)blk_data_region_handles, (void **)blk_ring_handles, BLK_CH);
