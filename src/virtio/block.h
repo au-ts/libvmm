@@ -34,6 +34,7 @@
 
 #include <stdint.h>
 #include "virtio/mmio.h"
+#include "util/bitarray.h"
 
 /* Feature bits */
 #define VIRTIO_BLK_F_SIZE_MAX	    1	/* Indicates maximum segment size */
@@ -140,7 +141,7 @@ struct virtio_blk_outhdr {
 /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
 typedef struct blk_data_region {
     uint32_t avail_bitpos; /* bit position of next avail buffer */
-    uint32_t *avail_bitmap; /* bit map representing avail data buffers */
+    bitarray_t *avail_bitarr; /* bit array representing avail data buffers */
     uint32_t num_buffers; /* number of buffers in data region */
     uintptr_t addr; /* encoded base address of data region */
 } blk_data_region_t;

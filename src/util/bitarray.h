@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdint.h>
 
 // 64 bit words
@@ -7,6 +9,10 @@ typedef uint8_t word_offset_t; // Offset within a 64 bit word
 #define BIT_INDEX_MIN 0
 #define BIT_INDEX_MAX (~(bit_index_t)0)
 
+#define roundup_bits2bytes(bits)   (((bits)+7)/8)
+#define roundup_bits2words32(bits) (((bits)+31)/32)
+#define roundup_bits2words64(bits) (((bits)+63)/64)
+
 typedef struct bitarray
 {
   word_t* words; /* Word array */
@@ -15,7 +21,7 @@ typedef struct bitarray
 } bitarray_t;
 
 /* Initialise a bit array */
-bitarray_t *bitarray_init(bitarray_t *bitarr, word_t *words, word_addr_t num_of_words);
+void bitarray_init(bitarray_t *bitarr, word_t *words, word_addr_t num_of_words);
 
 /* Set all the bits in a region */
 void bitarray_set_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len);

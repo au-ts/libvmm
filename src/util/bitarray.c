@@ -14,16 +14,11 @@
 #define bitset64_wrd(pos) ((pos) >> 6)
 #define bitset64_idx(pos) ((pos) & 63)
 
-#define roundup_bits2bytes(bits)   (((bits)+7)/8)
-#define roundup_bits2words32(bits) (((bits)+31)/32)
-#define roundup_bits2words64(bits) (((bits)+63)/64)
-
-bitarray_t *bitarray_init(bitarray_t *bitarr, word_t *words, word_addr_t num_of_words)
+void bitarray_init(bitarray_t *bitarr, word_t *words, word_addr_t num_of_words)
 {
     bitarr->words = words;
     bitarr->num_of_words = num_of_words;
     bitarr->num_of_bits = num_of_words * 64;
-    return bitarr;
 }
 
 // FillAction is fill with 0 or 1 or toggle
