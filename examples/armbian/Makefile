@@ -58,22 +58,22 @@ VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
 SCRIPTS := $(VMM)/scripts
-SYSTEM_DESCRIPTION := board/$(BOARD)/ubuntu.system
+SYSTEM_DESCRIPTION := board/$(BOARD)/armbian.system
 
 CURRENT_DIR := $(shell pwd)
 
-UBUNTU_VM_DIR := board/$(BOARD)/ubuntu_vm
-UBUNTU_VM_DTS_DIR := $(UBUNTU_VM_DIR)/dts
+ARMBIAN_VM_DIR := board/$(BOARD)/armbian_vm
+ARMBIAN_VM_DTS_DIR := $(ARMBIAN_VM_DIR)/dts
 
-UBUNTU_VM_LINUX := $(UBUNTU_VM_DIR)/linux
-UBUNTU_VM_INITRD := $(UBUNTU_VM_DIR)/initrd.cpio.gz
-UBUNTU_VM_BASE_DTS := $(UBUNTU_VM_DTS_DIR)/linux.dts
-UBUNTU_VM_DTS_OVERLAYS := $(UBUNTU_VM_DTS_DIR)/init.dts \
-								$(UBUNTU_VM_DTS_DIR)/disable.dts \
+ARMBIAN_VM_LINUX := $(ARMBIAN_VM_DIR)/linux
+ARMBIAN_VM_INITRD := $(ARMBIAN_VM_DIR)/initrd.cpio.gz
+ARMBIAN_VM_BASE_DTS := $(ARMBIAN_VM_DTS_DIR)/linux.dts
+ARMBIAN_VM_DTS_OVERLAYS := $(ARMBIAN_VM_DTS_DIR)/init.dts \
+								$(ARMBIAN_VM_DTS_DIR)/disable.dts \
 
-UBUNTU_VM_DTB := $(BUILD_DIR)/ubuntu_vm.dtb
+ARMBIAN_VM_DTB := $(BUILD_DIR)/armbian_vm.dtb
 
-ELFS := ubuntu_vmm.elf
+ELFS := armbian_vmm.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -92,9 +92,9 @@ VMM_OBJS := printf.o \
 			tcb.o \
 			vcpu.o \
 
-UBUNTU_VMM_OBJS :=	$(VMM_OBJS) \
-						ubuntu_images.o \
-						ubuntu_vmm.o \
+ARMBIAN_VMM_OBJS :=	$(VMM_OBJS) \
+						armbian_images.o \
+						armbian_vmm.o \
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -123,15 +123,15 @@ all: directories $(IMAGE_FILE)
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(UBUNTU_VM_DTB): $(UBUNTU_VM_BASE_DTS) $(UBUNTU_VM_DTS_OVERLAYS)
-	sh $(SCRIPTS)/dtscat $^ > $(BUILD_DIR)/ubuntu_vm.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/ubuntu_vm.dts > $@
+$(ARMBIAN_VM_DTB): $(ARMBIAN_VM_BASE_DTS) $(ARMBIAN_VM_DTS_OVERLAYS)
+	sh $(SCRIPTS)/dtscat $^ > $(BUILD_DIR)/armbian_vm.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/armbian_vm.dts > $@
 
-$(BUILD_DIR)/ubuntu_images.o: $(VMM_TOOLS)/package_guest_images.S $(UBUNTU_VM_LINUX) $(UBUNTU_VM_DTB) $(UBUNTU_VM_INITRD)
+$(BUILD_DIR)/armbian_images.o: $(VMM_TOOLS)/package_guest_images.S $(ARMBIAN_VM_LINUX) $(ARMBIAN_VM_DTB) $(ARMBIAN_VM_INITRD)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(UBUNTU_VM_LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(UBUNTU_VM_DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(UBUNTU_VM_INITRD)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(ARMBIAN_VM_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(ARMBIAN_VM_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(ARMBIAN_VM_INITRD)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
@@ -153,8 +153,8 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/ubuntu_vmm.elf: $(addprefix $(BUILD_DIR)/, $(UBUNTU_VMM_OBJS))
+$(BUILD_DIR)/armbian_vmm.elf: $(addprefix $(BUILD_DIR)/, $(ARMBIAN_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(UBUNTU_VM_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(UBUNTU_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(ARMBIAN_VM_DIR)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(ARMBIAN_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
