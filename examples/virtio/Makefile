@@ -121,6 +121,7 @@ REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := printf.o \
+			bitarray.o \
 			virq.o \
 			linux.o \
 			guest.o \

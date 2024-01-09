@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <microkit.h>
 #include "printf.h"
+#include "bitarray.h"
 
 // @ivanv: these are here for convience, should not be here though
 #define GUEST_VCPU_ID 0
@@ -57,6 +58,8 @@ static void assert_fail(
     printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
     while (1) {}
 }
+
+void print_bitarray(bitarray_t* bitarr);
 
 #define assert(expr) \
     do { \

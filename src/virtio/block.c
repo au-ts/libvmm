@@ -20,6 +20,8 @@
 // @ivanv: put in util or remove
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
+
+// TAGGED
 // @ericc: maybe put this into util.c?
 /* Returns uint32_t where all bits above and including position is set to 1 */
 #define MASK_ABOVE_POSITION_INCLUSIVE(position) (~(((uint32_t)1 << (position)) - 1))
@@ -38,15 +40,6 @@ static struct virtio_blk_cmd_store {
     uint32_t tail;
     uint32_t num_free;
 } cmd_store;
-
-// @ericc: debug function, move elsewhere or remove
-static void print_binary(uint32_t num)
-{
-    for (int i = 31; i >= 0; i--) {
-        printf("%d", (num >> i) & 1);
-    }
-    printf("\n");
-}
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -211,6 +204,7 @@ static inline uint16_t virtio_blk_cmd_store_retrieve(uint32_t id)
     return cmd_store.sent_cmds[id];
 }
 
+// TAGGED
 /**
  * Convert a bit position to the address of the corresponding data buffer.
  * 
@@ -222,6 +216,7 @@ static inline uintptr_t blk_data_region_bitpos_to_addr(struct virtio_device *dev
     return ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->addr + ((uintptr_t)bitpos * SDDF_BLK_DATA_BUFFER_SIZE);
 }
 
+// TAGGED
 /**
  * Convert an address to the bit position of the corresponding data buffer.
  * 
@@ -233,6 +228,7 @@ static inline uint32_t blk_data_region_addr_to_bitpos(struct virtio_device *dev,
     return (uint32_t)((addr - ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->addr) / SDDF_BLK_DATA_BUFFER_SIZE);
 }
 
+// TAGGED
 /**
  * Check if count number of buffers will overflow the end of the data region.
  * 
@@ -244,6 +240,7 @@ static inline bool blk_data_region_overflow(struct virtio_device *dev, uint16_t 
     return (((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->avail_bitpos + count > ((blk_data_region_t *)dev->data_region_handles[SDDF_BLK_DEFAULT_RING])->num_buffers);
 }
 
+// TAGGED
 /**
  * Check if the data region has count number of free buffers available.
  *
@@ -302,6 +299,7 @@ static bool blk_data_region_full(struct virtio_device *dev, uint16_t count)
     return false;
 }
 
+// TAGGED
 /**
  * Get count many free buffers in the data region.
  *
@@ -362,6 +360,7 @@ static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr
     return 0;
 }
 
+// TAGGED
 /**
  * Free count many available buffers in the data region.
  *
@@ -643,6 +642,9 @@ static void virtio_blk_cmd_store_init(unsigned int num_buffers)
     cmd_store.freelist[num_buffers - 1] = -1;
 }
 
+bitarray_t bitarr;
+word_t words[10];
+
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
@@ -660,4 +662,7 @@ void virtio_blk_init(struct virtio_device *dev,
     
     virtio_blk_config_init();
     virtio_blk_cmd_store_init(SDDF_BLK_NUM_DATA_BUFFERS);
+
+    bitarray_init(&bitarr, words, 10);
+    print_bitarray(&bitarr);
 }

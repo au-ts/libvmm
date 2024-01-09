@@ -13,3 +13,17 @@ void _putchar(char character)
 {
     microkit_dbg_putc(character);
 }
+
+/* Convenience function to print a bit array */
+void print_bitarray(bitarray_t* bitarr)
+{
+    for (int i = 0; i < bitarr->num_of_words; i++)
+    {
+        printf("%d:", i);
+        for (int j = 0; j < sizeof(bitarr->words[i]) * 8; j++)
+        {
+            printf("%lu", (bitarr->words[i] >> j) & 1);
+        }
+        printf("\n");
+    }
+}
