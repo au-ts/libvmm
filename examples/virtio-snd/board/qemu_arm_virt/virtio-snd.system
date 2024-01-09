@@ -18,18 +18,20 @@
     <!-- Sound sDDF regions -->
     <memory_region name="snd_shared"   size="0x1000" />
     <memory_region name="snd_driver_commands"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_driver_responses" size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_driver_cmd_responses" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="snd_driver_rx_free"  size="0x200_000" page_size="0x200_000"/>
     <memory_region name="snd_driver_rx_used"  size="0x200_000" page_size="0x200_000"/>
     <memory_region name="snd_driver_tx_free"  size="0x200_000" page_size="0x200_000"/>
     <memory_region name="snd_driver_tx_used"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_driver_tx_responses"  size="0x200_000" page_size="0x200_000"/>
     <!-- Sound UIO regions -->
-    <memory_region name="snd_uio_commands" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_uio_responses" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_uio_rx_free"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_uio_rx_used"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_uio_tx_free"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_uio_tx_used"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_commands"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_cmd_responses" size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_rx_free"   size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_rx_used"   size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_tx_free"   size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_tx_used"   size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_uio_tx_responses"  size="0x200_000" page_size="0x200_000"/>
     <!-- Sound data (both sDDF and UIO) -->
     <memory_region name="snd_tx_data" size="0x200_000" page_size="0x200_000" />
     <memory_region name="snd_rx_data" size="0x200_000" page_size="0x200_000" />
@@ -57,7 +59,8 @@
         <map mr="snd_driver_tx_free" vaddr="0x4_400_000"  perms="rw" cached="true" setvar_vaddr="sound_tx_free" />
         <map mr="snd_driver_tx_used" vaddr="0x4_600_000"  perms="rw" cached="true" setvar_vaddr="sound_tx_used" />
         <map mr="snd_driver_commands" vaddr="0x4_800_000" perms="rw" cached="true" setvar_vaddr="sound_commands" />
-        <map mr="snd_driver_responses" vaddr="0x4_a00_000" perms="rw" cached="true" setvar_vaddr="sound_responses" />
+        <map mr="snd_driver_cmd_responses" vaddr="0x4_a00_000" perms="rw" cached="true" setvar_vaddr="sound_cmd_responses" />
+        <map mr="snd_driver_tx_responses" vaddr="0x4_c00_000" perms="rw" cached="true" setvar_vaddr="sound_tx_responses" />
 
         <virtual_machine name="client_linux" id="0" priority="100">
             <map mr="client_vm_ram" vaddr="0x40000000" perms="rwx" />
@@ -94,7 +97,8 @@
             <map mr="snd_uio_tx_free"  vaddr="0x7_400_000"  perms="rw" cached="true" />
             <map mr="snd_uio_tx_used"  vaddr="0x7_600_000"  perms="rw" cached="true" />
             <map mr="snd_uio_commands" vaddr="0x7_800_000" perms="rw" cached="true" />
-            <map mr="snd_uio_responses" vaddr="0x7_a00_000" perms="rw" cached="true" />
+            <map mr="snd_uio_cmd_responses" vaddr="0x7_a00_000" perms="rw" cached="true" />
+            <map mr="snd_uio_tx_responses" vaddr="0x7_c00_000" perms="rw" cached="true" />
 
             <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" />
             <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" />
@@ -112,7 +116,8 @@
         <map mr="snd_driver_tx_free"  vaddr="0x4_400_000"  perms="rw" cached="true" setvar_vaddr="driver_tx_free" />
         <map mr="snd_driver_tx_used"  vaddr="0x4_600_000"  perms="rw" cached="true" setvar_vaddr="driver_tx_used" />
         <map mr="snd_driver_commands" vaddr="0x4_800_000" perms="rw" cached="true" setvar_vaddr="driver_commands" />
-        <map mr="snd_driver_responses" vaddr="0x4_a00_000" perms="rw" cached="true" setvar_vaddr="driver_responses" />
+        <map mr="snd_driver_cmd_responses" vaddr="0x4_a00_000" perms="rw" cached="true" setvar_vaddr="driver_cmd_responses" />
+        <map mr="snd_driver_tx_responses" vaddr="0x4_c00_000" perms="rw" cached="true" setvar_vaddr="driver_tx_responses" />
 
         <map mr="snd_shared" vaddr="0x6_f00_000" perms="rw" cached="false" setvar_vaddr="shared_state"/>
         <map mr="snd_uio_rx_free"  vaddr="0x7_000_000"  perms="rw" cached="true" setvar_vaddr="uio_rx_free" />
@@ -120,7 +125,8 @@
         <map mr="snd_uio_tx_free"  vaddr="0x7_400_000"  perms="rw" cached="true" setvar_vaddr="uio_tx_free" />
         <map mr="snd_uio_tx_used"  vaddr="0x7_600_000"  perms="rw" cached="true" setvar_vaddr="uio_tx_used" />
         <map mr="snd_uio_commands" vaddr="0x7_800_000" perms="rw" cached="true" setvar_vaddr="uio_commands" />
-        <map mr="snd_uio_responses" vaddr="0x7_a00_000" perms="rw" cached="true" setvar_vaddr="uio_responses" />
+        <map mr="snd_uio_cmd_responses" vaddr="0x7_a00_000" perms="rw" cached="true" setvar_vaddr="uio_cmd_responses" />
+        <map mr="snd_uio_tx_responses" vaddr="0x7_c00_000" perms="rw" cached="true" setvar_vaddr="uio_tx_responses" />
     </protection_domain>
 
     <!-- Serial sDDF regions -->
