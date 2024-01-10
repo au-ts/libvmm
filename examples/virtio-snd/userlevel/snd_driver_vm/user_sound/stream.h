@@ -23,6 +23,8 @@ typedef struct stream stream_t;
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t stream,
                       sddf_snd_ring_state_t *consume_ring);
 
+void stream_close(stream_t *stream);
+
 sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params);
 
 sddf_snd_status_code_t stream_prepare(stream_t *stream);
