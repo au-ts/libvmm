@@ -214,7 +214,7 @@ static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
         status = SDDF_SND_S_BAD_MSG;
     }
 
-    sddf_snd_enqueue_response(state->rings.cmd_responses, cmd->msg_id, status);
+    sddf_snd_enqueue_response(state->rings.cmd_responses, cmd->cookie, status);
 }
 
 static void *translate_tx(translation_state_t *translate, void *phys_addr)
@@ -254,7 +254,7 @@ static void update_playback(driver_state_t *state, stream_t *playback_stream, bo
         sddf_snd_enqueue_pcm_data(state->rings.tx_free, stream_pcm);
         *signal_vmm = true;
 
-        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->msg_id, SDDF_SND_S_OK);
+        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->cookie, SDDF_SND_S_OK);
 
         sddf_snd_pcm_data_t pcm;
         if (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) != 0) {
@@ -273,7 +273,7 @@ static void update_playback(driver_state_t *state, stream_t *playback_stream, bo
         sddf_snd_enqueue_pcm_data(state->rings.tx_free, stream_pcm);
         *signal_vmm = true;
 
-        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->msg_id, SDDF_SND_S_OK);
+        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->cookie, SDDF_SND_S_OK);
     }
 }
 
@@ -281,19 +281,19 @@ static void handle_interrupt(driver_state_t *state, bool *signal_vmm)
 {
     printf("UIO SND|INFO: got interrupt\n");
 
-    // TODO: play before commands?
+    sddf_snd_command_t cmd;
+    while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
+        handle_cmd(state, &cmd);
+        *signal_vmm = true;
+    }
+
+    // TODO: enforce seq ordering
     for (int i = 0; i < state->stream_count; i++) {
         stream_t *stream = state->streams[i];
         if (stream_direction(stream) == SND_PCM_STREAM_PLAYBACK) {
             update_playback(state, state->streams[i], signal_vmm);
             break;
         }
-    }
-
-    sddf_snd_command_t cmd;
-    while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
-        handle_cmd(state, &cmd);
-        *signal_vmm = true;
     }
 }
 
@@ -409,6 +409,10 @@ int main(void)
 
         bool signal_vmm = false;
 
+        if (fds[UIO_POLLFD].revents & POLLIN) {
+            handle_interrupt(&state, &signal_vmm);
+        }
+
         for (int i = 0; i < state.stream_count; i++) {
             if (stream_to_fds[i] == -1) {
                 continue;
@@ -433,10 +437,6 @@ int main(void)
             }
         }
 
-        if (fds[UIO_POLLFD].revents & POLLIN) {
-            handle_interrupt(&state, &signal_vmm);
-        }
-
         // Playback: only include the file descriptor if we have written a pcm frame
         //  and tx used is non-empty
         // Recording: only include file descriptor if rx free is non-empty
@@ -451,6 +451,10 @@ int main(void)
         printf("Updating pollfds\n");
         curr_fd_count
             = update_pollfds(state.streams, state.stream_count, fds, fd_to_stream, stream_to_fds);
+    }
+
+    for (int i = 0; i < state.stream_count; i++) {
+        stream_close(state.streams[i]);
     }
 
     free(fds);
