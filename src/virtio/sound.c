@@ -364,6 +364,8 @@ static uint32_t virtio_status_from_sddf(sddf_snd_status_code_t status)
         case SDDF_SND_S_BAD_MSG: return VIRTIO_SND_S_BAD_MSG;
         case SDDF_SND_S_NOT_SUPP: return VIRTIO_SND_S_NOT_SUPP;
         case SDDF_SND_S_IO_ERR: return VIRTIO_SND_S_IO_ERR;
+        // TODO: handle properly
+        case SDDF_SND_S_XRUN: return VIRTIO_SND_S_OK;
     }
     return (uint32_t)-1;
 }
@@ -434,7 +436,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 
     sddf_snd_command_t cmd;
     cmd.code = SDDF_SND_CMD_PCM_SET_PARAMS;
-    cmd.msg_id = id;
+    cmd.cookie = id;
     cmd.stream_id = set_params->hdr.stream_id;
     cmd.set_params.buffer_bytes = set_params->buffer_bytes;
     cmd.set_params.period_bytes = set_params->period_bytes;
@@ -473,7 +475,7 @@ static int handle_basic_cmd(struct virtio_device *dev,
 
     sddf_snd_command_t cmd;
     cmd.code = code;
-    cmd.msg_id = id;
+    cmd.cookie = id;
     cmd.stream_id = stream_id;
 
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
@@ -645,7 +647,7 @@ static void handle_tx(struct virtio_device *dev,
     uint32_t pcm_written = 0;
     uint32_t pcm_remaining = pcm.len;
     pcm.stream_id = hdr->stream_id;
-    pcm.msg_id = msg_id;
+    pcm.cookie = msg_id;
 
     struct virtq_desc *desc;
     for (desc = &virtq->desc[req_desc->next];
@@ -689,7 +691,7 @@ static void handle_tx(struct virtio_device *dev,
                 pcm_remaining = pcm.len;
                 pcm_written = 0;
                 pcm.stream_id = hdr->stream_id;
-                pcm.msg_id = msg_id;
+                pcm.cookie = msg_id;
 
                 to_transmit = MIN(desc_remaining, pcm_remaining);
 
@@ -862,8 +864,8 @@ void virtio_snd_notified(struct virtio_device *dev)
     sddf_snd_response_t response;
     while (sddf_snd_dequeue_response(state->rings.cmd_responses, &response) == 0) {
 
-        uint16_t desc_head = virtio_snd_msg_store_get(&messages, response.msg_id)->desc_head;
-        virtio_snd_msg_store_remove(&messages, response.msg_id);
+        uint16_t desc_head = virtio_snd_msg_store_get(&messages, response.cookie)->desc_head;
+        virtio_snd_msg_store_remove(&messages, response.cookie);
 
         struct virtq *virtq = &dev->vqs[CONTROLQ].virtq;
         struct virtq_desc *req_desc = &virtq->desc[desc_head];
@@ -891,7 +893,7 @@ void virtio_snd_notified(struct virtio_device *dev)
     while (sddf_snd_dequeue_response(state->rings.tx_responses, &response) == 0) {
         // LOG_SOUND("deq device.tx_responses\n");
 
-        msg_handle_t *msg = virtio_snd_msg_store_get(&messages, response.msg_id);
+        msg_handle_t *msg = virtio_snd_msg_store_get(&messages, response.cookie);
 
         if (response.status != SDDF_SND_S_OK) {
             msg->status = response.status;
@@ -899,7 +901,7 @@ void virtio_snd_notified(struct virtio_device *dev)
         
         if ((--msg->ref_count) == 0) {
             uint16_t desc_head = msg->desc_head;
-            virtio_snd_msg_store_remove(&messages, response.msg_id);
+            virtio_snd_msg_store_remove(&messages, response.cookie);
 
             if (msg->replied == 0) {
                 struct virtq *virtq = &dev->vqs[TXQ].virtq;

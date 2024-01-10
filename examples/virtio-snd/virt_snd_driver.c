@@ -84,7 +84,7 @@ void init(void) {
     for (int i = 0; i < SDDF_SND_NUM_PCM_DATA_BUFFERS - 1; i++) {
         sddf_snd_pcm_data_t pcm;
         pcm.stream_id = (uint32_t)-1;
-        pcm.msg_id = (uint32_t)-1;
+        pcm.cookie = (uint32_t)-1;
         pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
 
         // UIO gets free RX buffers as it will need them first.
@@ -108,11 +108,11 @@ void handle_vmm() {
     // Send responses to client
     while (sddf_snd_dequeue_response(uio_rings.cmd_responses, &resp) == 0) {
         // LOG_DRIVER("deq uio.cmd_responses, enq device.cmd_responses\n");
-        sddf_snd_enqueue_response(device_rings.cmd_responses, resp.msg_id, resp.status);
+        sddf_snd_enqueue_response(device_rings.cmd_responses, resp.cookie, resp.status);
     }
     while (sddf_snd_dequeue_response(uio_rings.tx_responses, &resp) == 0) {
         // LOG_DRIVER("deq uio.tx_responses, enq device.tx_responses\n");
-        sddf_snd_enqueue_response(device_rings.tx_responses, resp.msg_id, resp.status);
+        sddf_snd_enqueue_response(device_rings.tx_responses, resp.cookie, resp.status);
     }
 
     sddf_snd_pcm_data_t pcm;
