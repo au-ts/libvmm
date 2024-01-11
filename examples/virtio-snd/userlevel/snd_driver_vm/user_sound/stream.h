@@ -12,31 +12,25 @@ typedef enum stream_state {
     STREAM_STATE_DRAINING,
 } stream_state_t;
 
-typedef enum stream_flush_status {
-    STREAM_FLUSH_BLOCKED,
-    STREAM_FLUSH_NEED_MORE,
-    STREAM_FLUSH_ERR,
-} stream_flush_status_t;
+typedef struct translation_state {
+    ssize_t tx_offset;
+    ssize_t rx_offset;
+} translation_state_t;
 
 typedef struct stream stream_t;
 
+typedef void (*respond_fn)(uint32_t cookie, sddf_snd_status_code_t status, void *user_data);
+typedef void (*tx_free_fn)(uintptr_t addr, unsigned int len, void *user_data);
+
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t stream,
-                      sddf_snd_ring_state_t *consume_ring);
+                      translation_state_t translate, respond_fn respond, tx_free_fn tx_free,
+                      void *user_data);
 
 void stream_close(stream_t *stream);
 
-sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params);
-
-sddf_snd_status_code_t stream_prepare(stream_t *stream);
-
-sddf_snd_status_code_t stream_release(stream_t *stream);
-
-sddf_snd_status_code_t stream_start(stream_t *stream);
-
-sddf_snd_status_code_t stream_stop(stream_t *stream);
+void stream_enqueue_command(stream_t *stream, sddf_snd_command_t *cmd);
 
 void stream_update(stream_t *stream);
-
 
 bool stream_should_poll(stream_t *stream);
 
@@ -48,16 +42,5 @@ int stream_demangle_fds(stream_t *stream, struct pollfd *pfds, unsigned int nfds
                         unsigned short *revents);
 
 snd_pcm_stream_t stream_direction(stream_t *stream);
-
-
-void stream_set_pcm(stream_t *stream, sddf_snd_pcm_data_t *pcm, void *pcm_data);
-
-sddf_snd_pcm_data_t *stream_get_pcm(stream_t *stream);
-
-bool stream_has_pcm(stream_t *stream);
-
-stream_flush_status_t stream_flush_pcm(stream_t *stream);
-
-bool stream_accepting_pcm(stream_t *stream);
 
 void stream_debug_state(stream_t *stream);

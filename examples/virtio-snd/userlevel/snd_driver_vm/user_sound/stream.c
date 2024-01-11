@@ -1,14 +1,16 @@
 #include "stream.h"
 #include "convert.h"
+#include "queue.h"
 #include <alsa/pcm.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define AVAIL_FRAMES 4
-#define MIN_FRAMES 2
-
-#define BITS_PER_BYTE 8
+// This queue may have many TX buffers along side commands.
+#define PLAYBACK_QUEUE_SIZE (SDDF_SND_NUM_BUFFERS / 4)
+#define STAGING_QUEUE_SIZE 8
+// This queue will only ever have START, STOP, etc.
+#define RECORDING_QUEUE_SIZE 8
 
 // 0.5 seconds
 #define LATENCY 500000
@@ -19,6 +21,8 @@
 // Ensures we don't autoplay.
 #define PREFILL_GAP 16
 
+#define BITS_PER_BYTE 8
+
 struct stream {
     snd_pcm_t *handle;
     snd_pcm_hw_params_t *hw_params;
@@ -26,7 +30,10 @@ struct stream {
 
     snd_pcm_stream_t direction;
     stream_state_t state;
-    sddf_snd_ring_state_t *consume_ring;
+    translation_state_t translate;
+    
+    cmd_queue_t *commands;
+    cmd_queue_t *staged_pcms;
 
     int frame_size;
     snd_pcm_sframes_t buffer_size;
@@ -35,27 +42,67 @@ struct stream {
 
     snd_pcm_sframes_t prefilled;
 
-    bool has_pcm;
-    sddf_snd_pcm_data_t pcm_copy;
-    void *pcm_data;
     snd_pcm_sframes_t pcm_offset;
 
     struct pollfd *fds;
     int nfds;
+
+    respond_fn respond;
+    tx_free_fn tx_free;
+    void *user_data;
 };
+
+struct alsa_params {
+    unsigned resample;
+    snd_pcm_format_t format;
+    unsigned channels;
+    unsigned rate;
+    unsigned latency_us;
+    unsigned period_us; // time between hardware interrupts
+};
+
+struct buffer_state {
+    snd_pcm_sframes_t buffer_size;
+    snd_pcm_sframes_t period_size;
+};
+
+typedef enum cmd_state {
+    CMD_STATE_COMPLETE = 0,
+    CMD_STATE_BLOCK,
+    CMD_STATE_STAGE,
+} cmd_state_t;
+
+typedef struct cmd_result {
+    sddf_snd_status_code_t status;
+    cmd_state_t state;
+} cmd_result_t;
+
+static const char *stream_state_str(stream_state_t state);
+static char *snd_state_str(snd_pcm_t *handle);
 
 static void print_err(int err, const char *msg)
 {
-    fprintf(stderr, "%s: %s\n", msg, snd_strerror(err));
+    fprintf(stderr, "UIO SND|ERR: %s: %s\n", msg, snd_strerror(err));
 }
 
-static inline snd_pcm_sframes_t min(snd_pcm_sframes_t a, snd_pcm_sframes_t b)
+static snd_pcm_sframes_t min(snd_pcm_sframes_t a, snd_pcm_sframes_t b)
 {
     return a <= b ? a : b;
 }
 
+static void *translate_tx(translation_state_t *translate, void *phys_addr)
+{
+    return phys_addr + translate->tx_offset;
+}
+
+static void *translate_rx(translation_state_t *translate, void *phys_addr)
+{
+    return phys_addr + translate->rx_offset;
+}
+
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
-                      sddf_snd_ring_state_t *consume_ring)
+                      translation_state_t translate, respond_fn respond, tx_free_fn tx_free,
+                      void *user_data)
 {
     stream_t *stream = malloc(sizeof(stream_t));
     if (stream == NULL) {
@@ -122,19 +169,19 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
 
     int nfds = snd_pcm_poll_descriptors_count(handle);
     if (nfds <= 0) {
-        printf("Invalid poll descriptors count\n");
+        printf("UIO SND|ERR: Invalid poll descriptors count\n");
         err = -1;
         goto fail;
     }
 
     fds = malloc(sizeof(struct pollfd) * nfds);
     if (fds == NULL) {
-        printf("No enough memory\n");
-        err = -ENOMEM;
+        printf("UIO SND|ERR: No enough memory\n");
         goto fail;
     }
     if ((err = snd_pcm_poll_descriptors(handle, fds, nfds)) < 0) {
-        printf("Unable to obtain poll descriptors for playback: %s\n", snd_strerror(err));
+        printf("UIO SND|ERR: Unable to obtain poll descriptors for playback: %s\n",
+               snd_strerror(err));
         goto fail;
     }
 
@@ -148,11 +195,30 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
     stream->nfds = nfds;
     stream->state = STREAM_STATE_UNSET;
     stream->direction = direction;
-    stream->has_pcm = false;
-    stream->consume_ring = consume_ring;
-    // state->period_size = period_size;
     stream->hw_params = hw_params;
     stream->sw_params = sw_params;
+    stream->translate = translate;
+    stream->respond = respond;
+    stream->tx_free = tx_free;
+    stream->user_data = user_data;
+
+    if (direction == SND_PCM_STREAM_PLAYBACK) {
+        stream->commands = cmd_queue_create(PLAYBACK_QUEUE_SIZE);
+        stream->staged_pcms = cmd_queue_create(STAGING_QUEUE_SIZE);
+        
+        if (stream->staged_pcms == NULL) {
+            printf("UIO SND|ERR: Failed to create staged_pcms queue\n");
+            goto fail;
+        }
+    } else {
+        stream->commands = cmd_queue_create(RECORDING_QUEUE_SIZE);
+        stream->staged_pcms = NULL;
+    }
+
+    if (stream->commands == NULL) {
+        printf("UIO SND|ERR: Failed to create command queue\n");
+        goto fail;
+    }
 
     return stream;
 
@@ -165,6 +231,10 @@ fail:
         snd_pcm_sw_params_free(sw_params);
     if (handle)
         snd_pcm_close(handle);
+    if (stream->commands)
+        free(stream->commands);
+    if (stream->staged_pcms)
+        free(stream->staged_pcms);
     if (stream)
         free(stream);
     return NULL;
@@ -183,21 +253,10 @@ void stream_close(stream_t *stream)
     free(stream);
 }
 
-struct alsa_params {
-    unsigned resample;
-    snd_pcm_format_t format;
-    unsigned channels;
-    unsigned rate;
-    unsigned latency_us;
-    unsigned period_us; // time between hardware interrupts
-};
-
-struct buffer_state {
-    snd_pcm_sframes_t buffer_size;
-    snd_pcm_sframes_t period_size;
-};
-
-void play(snd_pcm_t *handle);
+void stream_enqueue_command(stream_t *stream, sddf_snd_command_t *cmd)
+{
+    cmd_queue_enqueue(stream->commands, cmd);
+}
 
 static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_t *hw_params,
                                            snd_pcm_access_t access, struct alsa_params *params,
@@ -324,7 +383,7 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
     return 0;
 }
 
-sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params)
+static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params)
 {
     printf("UIO SND|INFO: set params stream %p, format %s, rate %u, channels %d, period_bytes %u\n",
            stream, sddf_snd_pcm_fmt_str(params->format), sddf_rate_to_alsa(params->rate),
@@ -362,9 +421,9 @@ sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_para
     struct buffer_state buffer_state;
     sddf_snd_status_code_t code;
 
-    code = set_hwparams(
-        handle, stream->hw_params, SND_PCM_ACCESS_RW_INTERLEAVED, &alsa_params, &buffer_state);
-    
+    code = set_hwparams(handle, stream->hw_params, SND_PCM_ACCESS_RW_INTERLEAVED, &alsa_params,
+                        &buffer_state);
+
     if (code != SDDF_SND_S_OK) {
         return code;
     }
@@ -385,7 +444,7 @@ sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_para
     return SDDF_SND_S_OK;
 }
 
-sddf_snd_status_code_t stream_prepare(stream_t *stream)
+static sddf_snd_status_code_t stream_prepare(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_SET) {
         return SDDF_SND_S_BAD_MSG;
@@ -403,7 +462,7 @@ sddf_snd_status_code_t stream_prepare(stream_t *stream)
     return SDDF_SND_S_OK;
 }
 
-sddf_snd_status_code_t stream_release(stream_t *stream)
+static sddf_snd_status_code_t stream_release(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED) {
         printf("UIO SND|ERR: Cannot release stream now, not paused\n");
@@ -413,6 +472,11 @@ sddf_snd_status_code_t stream_release(stream_t *stream)
     // Change state even if drop fails
     stream->state = STREAM_STATE_SET;
 
+    if (stream->staged_pcms) {
+        cmd_queue_clear(stream->staged_pcms);
+    }
+
+    // TODO: change to drain
     int err = snd_pcm_drop(stream->handle);
     if (err) {
         printf("UIO SND|ERR: Failed to release stream: %s\n", snd_strerror(err));
@@ -422,7 +486,7 @@ sddf_snd_status_code_t stream_release(stream_t *stream)
     return SDDF_SND_S_OK;
 }
 
-sddf_snd_status_code_t stream_start(stream_t *stream)
+static sddf_snd_status_code_t stream_start(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED) {
         printf("UIO SND|ERR: Cannot start stream now, invalid state\n");
@@ -440,7 +504,7 @@ sddf_snd_status_code_t stream_start(stream_t *stream)
     return SDDF_SND_S_OK;
 }
 
-sddf_snd_status_code_t stream_stop(stream_t *stream)
+static sddf_snd_status_code_t stream_stop(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PLAYING) {
         printf("UIO SND|ERR: Cannot stop stream now, invalid state\n");
@@ -456,27 +520,194 @@ sddf_snd_status_code_t stream_stop(stream_t *stream)
         printf("UIO SND|ERR: Failed to stop stream: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
-    printf("UIO SND|INFO: STOPPED\n");
 
     stream->state = STREAM_STATE_PAUSED;
 
     return SDDF_SND_S_OK;
 }
 
+static snd_pcm_sframes_t stream_prefill_remaining(stream_t *stream)
+{
+    return stream->start_threshold - PREFILL_GAP - stream->prefilled;
+}
+
+static bool stream_prefilled(stream_t *stream)
+{
+    snd_pcm_sframes_t remaining = stream_prefill_remaining(stream);
+    assert(remaining >= 0);
+    return remaining == 0;
+}
+
+static bool stream_accepting_pcm(stream_t *stream)
+{
+    return (stream->state == STREAM_STATE_PAUSED && !stream_prefilled(stream))
+        || stream->state == STREAM_STATE_PLAYING;
+}
+
+static cmd_result_t stream_tx(stream_t *stream, sddf_snd_pcm_data_t *pcm)
+{
+    cmd_result_t result;
+
+    // if (stream->state == STREAM_STATE_PAUSED) {
+    //     printf("UIO SND|INFO: Prefilled %ld/%ld (%s)\n",
+    //         stream->prefilled, stream->start_threshold,
+    //         stream_prefilled(stream) ? "yes" : "no");
+    // }
+
+    if (!stream_accepting_pcm(stream)) {
+        if (stream->state == STREAM_STATE_PAUSED && stream_prefilled(stream)) {
+            result.state = CMD_STATE_STAGE;
+        } else {
+            result.state = CMD_STATE_BLOCK;
+        }
+        result.status = SDDF_SND_S_OK;
+        return result;
+    }
+
+    // printf("UIO SND|INFO: flushing\n");
+    stream_debug_state(stream);
+
+    const void *pcm_data = translate_tx(&stream->translate, (void *)pcm->addr);
+
+    const snd_pcm_sframes_t frames_remaining
+        = pcm->len / stream->frame_size - stream->pcm_offset;
+
+    snd_pcm_sframes_t to_write = frames_remaining;
+    if (stream->state == STREAM_STATE_PAUSED) {
+        to_write = min(stream_prefill_remaining(stream), to_write);
+    }
+
+    while (to_write > 0) {
+
+        snd_pcm_sframes_t written
+            = snd_pcm_writei(stream->handle, pcm_data + stream->pcm_offset, to_write);
+
+        if (written == -EAGAIN) {
+            result.state = CMD_STATE_BLOCK;
+            result.status = SDDF_SND_S_OK;
+            return result;
+
+        } else if (written < 0) {
+            printf("UIO SND|ERR: failed to flush pcm: %s, state %s\n", snd_strerror(written),
+                   snd_state_str(stream->handle));
+
+            // @alexbr: should we have an error state?
+            stream->state = STREAM_STATE_PAUSED;
+
+            result.state = CMD_STATE_BLOCK;
+            result.status = SDDF_SND_S_IO_ERR;
+            return result;
+        }
+
+        if (stream->state == STREAM_STATE_PAUSED) {
+            stream->prefilled += written;
+            printf("UIO SND|INFO: Prefilled %ld/%ld\n", stream->prefilled, stream->start_threshold);
+        }
+
+        stream->pcm_offset += written;
+        to_write -= written;
+    }
+
+    stream->pcm_offset = 0;
+
+    result.state = CMD_STATE_COMPLETE;
+    result.status = SDDF_SND_S_OK;
+    return result;
+}
+
+cmd_result_t handle_command(stream_t *stream, sddf_snd_command_t *cmd)
+{
+    cmd_result_t result;
+    result.state = CMD_STATE_COMPLETE;
+
+    switch (cmd->code) {
+    case SDDF_SND_CMD_PCM_SET_PARAMS: {
+        result.status = stream_set_params(stream, &cmd->set_params);
+        break;
+    }
+    case SDDF_SND_CMD_PCM_PREPARE:
+        result.status = stream_prepare(stream);
+        break;
+    case SDDF_SND_CMD_PCM_RELEASE:
+        result.status = stream_release(stream);
+        break;
+    case SDDF_SND_CMD_PCM_START:
+        result.status = stream_start(stream);
+        break;
+    case SDDF_SND_CMD_PCM_STOP:
+        result.status = stream_stop(stream);
+        break;
+    case SDDF_SND_CMD_PCM_TX:
+        result = stream_tx(stream, &cmd->pcm);
+        break;
+    default:
+        printf("UIO SND|ERR: unknown command %d\n", cmd->code);
+        result.status = SDDF_SND_S_BAD_MSG;
+    }
+
+    return result;
+}
+
+static void update_staged(stream_t *stream)
+{
+    sddf_snd_command_t *cmd;
+    while ((cmd = cmd_queue_front(stream->staged_pcms)) != NULL) {
+        assert(cmd->code == SDDF_SND_CMD_PCM_TX);
+
+        cmd_result_t result = stream_tx(stream, &cmd->pcm);
+        switch (result.state) {
+        case CMD_STATE_COMPLETE:
+            printf("UIO SND|INFO: responding to staged tx with %s, cookie %u\n",
+                sddf_snd_status_code_str(result.status), cmd->cookie);
+
+            stream->tx_free(cmd->pcm.addr, SDDF_SND_PCM_BUFFER_SIZE, stream->user_data);
+            stream->respond(cmd->cookie, result.status, stream->user_data);
+            break;
+        case CMD_STATE_BLOCK:
+        case CMD_STATE_STAGE:
+            printf("UIO SND|INFO: staged blocked\n");
+            return;
+        }
+
+        bool did_dequeue = cmd_queue_dequeue(stream->staged_pcms);
+        assert(did_dequeue);
+    }
+}
+
 void stream_update(stream_t *stream)
 {
-    // if (stream->state == STREAM_STATE_DRAINING) {
-    //     stream_debug_state(stream);
+    if (stream->direction == SND_PCM_STREAM_PLAYBACK) {
+        update_staged(stream);
+    }
 
-    //     int err = snd_pcm_drain(stream->handle);
-    //     if (err && err != -EAGAIN) {
-    //         printf("UIO SND|ERR: Failed to drain stream: %s\n", snd_strerror(err));
-    //     }
+    sddf_snd_command_t *cmd;
+    while ((cmd = cmd_queue_front(stream->commands)) != NULL) {
 
-    //     if (snd_pcm_state(stream->handle) != SND_PCM_STATE_DRAINING) {
-    //         stream->state = STREAM_STATE_PAUSED;
-    //     }
-    // }
+        cmd_result_t result = handle_command(stream, cmd);
+
+        switch (result.state) {
+        case CMD_STATE_COMPLETE:
+            printf("UIO SND|INFO: responding to %s with %s, cookie %u\n",
+                sddf_snd_command_code_str(cmd->code), sddf_snd_status_code_str(result.status),
+                cmd->cookie);
+            
+            if (cmd->code == SDDF_SND_CMD_PCM_TX) {
+                stream->tx_free(cmd->pcm.addr, SDDF_SND_PCM_BUFFER_SIZE, stream->user_data);
+            }
+            stream->respond(cmd->cookie, result.status, stream->user_data);
+            break;
+        case CMD_STATE_BLOCK:
+            printf("UIO SND|INFO: blocked\n");
+            return;
+        case CMD_STATE_STAGE:
+            printf("UIO SND|INFO: staging tx with cookie %u\n", cmd->cookie);
+            cmd_queue_enqueue(stream->staged_pcms, cmd);
+            break;
+        }
+
+        bool did_dequeue = cmd_queue_dequeue(stream->commands);
+        assert(did_dequeue);
+    }
 }
 
 snd_pcm_t *stream_handle(stream_t *stream)
@@ -486,8 +717,7 @@ snd_pcm_t *stream_handle(stream_t *stream)
 
 bool stream_should_poll(stream_t *stream)
 {
-    // @alexbr: we could also wait for produce buffer to not be full
-    return stream->has_pcm && !sddf_snd_ring_empty(stream->consume_ring);
+    return !cmd_queue_empty(stream->commands);
 }
 
 struct pollfd *stream_fds(stream_t *stream)
@@ -504,6 +734,20 @@ int stream_demangle_fds(stream_t *stream, struct pollfd *pfds, unsigned int nfds
                         unsigned short *revents)
 {
     return snd_pcm_poll_descriptors_revents(stream->handle, pfds, nfds, revents);
+}
+
+snd_pcm_stream_t stream_direction(stream_t *stream)
+{
+    return stream->direction;
+}
+
+void stream_debug_state(stream_t *stream)
+{
+    printf("UIO SND|INFO: staged %d, commands %d, state %s, snd_state %s\n",
+        stream->staged_pcms ? cmd_queue_size(stream->staged_pcms) : 0,
+        cmd_queue_size(stream->commands),
+        stream_state_str(stream->state),
+        snd_state_str(stream->handle));
 }
 
 static const char *stream_state_str(stream_state_t state)
@@ -524,26 +768,7 @@ static const char *stream_state_str(stream_state_t state)
     }
 }
 
-snd_pcm_stream_t stream_direction(stream_t *stream)
-{
-    return stream->direction;
-}
-
-void stream_set_pcm(stream_t *stream, sddf_snd_pcm_data_t *pcm, void *pcm_data)
-{
-    assert(!stream->has_pcm);
-    stream->pcm_copy = *pcm;
-    stream->pcm_data = pcm_data;
-    stream->pcm_offset = 0;
-    stream->has_pcm = true;
-}
-
-bool stream_has_pcm(stream_t *stream)
-{
-    return stream->has_pcm;
-}
-
-char *snd_state_str(snd_pcm_t *handle)
+static char *snd_state_str(snd_pcm_t *handle)
 {
     switch (snd_pcm_state(handle)) {
     case SND_PCM_STATE_OPEN:
@@ -576,76 +801,4 @@ char *snd_state_str(snd_pcm_t *handle)
     default:
         return "unknown";
     }
-}
-
-static snd_pcm_sframes_t stream_prefill_remaining(stream_t *stream)
-{
-    return stream->start_threshold - PREFILL_GAP - stream->prefilled;
-}
-
-static bool stream_prefilled(stream_t *stream)
-{
-    return stream_prefill_remaining(stream) > 0;
-}
-
-stream_flush_status_t stream_flush_pcm(stream_t *stream)
-{
-    assert(stream_has_pcm(stream));
-    assert(stream_accepting_pcm(stream));
-
-    printf("UIO SND|INFO: flushing\n");
-    stream_debug_state(stream);
-
-    snd_pcm_sframes_t frames_remaining = stream->pcm_copy.len / stream->frame_size - stream->pcm_offset;
-
-    while (frames_remaining > 0) {
-
-        snd_pcm_sframes_t to_write = frames_remaining;
-        if (stream->state == STREAM_STATE_PAUSED) {
-            to_write = min(stream_prefill_remaining(stream), to_write);
-        }
-
-        snd_pcm_sframes_t written = snd_pcm_writei(
-            stream->handle, stream->pcm_data + stream->pcm_offset, to_write);
-
-        if (written == -EAGAIN) {
-            return STREAM_FLUSH_BLOCKED;
-        } else if (written < 0) {
-            printf("UIO SND|ERR: failed to flush pcm: %s, state %s\n", snd_strerror(written),
-                   snd_state_str(stream->handle));
-
-            // @alexbr: should we have an error state?
-            stream->state = STREAM_STATE_PAUSED;
-            return STREAM_FLUSH_ERR;
-        }
-
-        if (stream->state == STREAM_STATE_PAUSED) {
-            stream->prefilled += written;
-        }
-
-        printf("UIO_SND|INFO: wrote %ld frames\n", written);
-
-        stream->pcm_offset += written;
-        frames_remaining -= written;
-    }
-
-    stream->has_pcm = false;
-    return STREAM_FLUSH_NEED_MORE;
-}
-
-sddf_snd_pcm_data_t *stream_get_pcm(stream_t *stream)
-{
-    return &stream->pcm_copy;
-}
-
-bool stream_accepting_pcm(stream_t *stream)
-{
-    return (stream->state == STREAM_STATE_PAUSED && !stream_prefilled(stream)) ||
-            stream->state == STREAM_STATE_PLAYING;
-}
-
-void stream_debug_state(stream_t *stream)
-{
-    printf("UIO SND|INFO: flushing, state %s, snd_state %s\n", stream_state_str(stream->state),
-           snd_state_str(stream->handle));
 }

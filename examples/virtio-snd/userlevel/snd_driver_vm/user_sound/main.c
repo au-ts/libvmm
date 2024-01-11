@@ -31,11 +31,6 @@
 #define RX_DATA_ADDR UIO_ADDR("3")
 #define RX_DATA_SIZE UIO_SIZE("3")
 
-typedef struct translation_state {
-    ssize_t tx_offset;
-    ssize_t rx_offset;
-} translation_state_t;
-
 typedef struct driver_state {
     stream_t *streams[MAX_STREAMS];
     int stream_count;
@@ -43,6 +38,8 @@ typedef struct driver_state {
     sddf_snd_shared_state_t *shared_state;
     sddf_snd_rings_t rings;
     translation_state_t translate;
+
+    bool signal_vmm;
 } driver_state_t;
 
 static void signal_ready_to_vmm()
@@ -157,13 +154,11 @@ int init_mappings(driver_state_t *state, int uio_fd)
     }
 
     int offset = 0;
-    state->rings.rx_free = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.rx_used = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_free = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_used = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.commands = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.cmd_responses = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_responses = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.responses = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.tx_free = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.rx_used = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.rx_free = (void *)(ring_buffers + RING_BYTES * offset++);
 
     state->translate.tx_offset = tx_data - (void *)tx_data_physical;
     state->translate.rx_offset = rx_data - (void *)rx_data_physical;
@@ -185,115 +180,41 @@ static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
     case SDDF_SND_CMD_PCM_RELEASE:
     case SDDF_SND_CMD_PCM_START:
     case SDDF_SND_CMD_PCM_STOP:
+    case SDDF_SND_CMD_PCM_TX:
         if (cmd->stream_id >= state->stream_count) {
             printf("UIO SND|ERR: stream %d does not exist\n", cmd->stream_id);
             status = SDDF_SND_S_BAD_MSG;
             break;
         }
-    }
 
-    switch (cmd->code) {
-    case SDDF_SND_CMD_PCM_SET_PARAMS: {
-        status = stream_set_params(state->streams[cmd->stream_id], &cmd->set_params);
-        break;
-    }
-    case SDDF_SND_CMD_PCM_PREPARE:
-        status = stream_prepare(state->streams[cmd->stream_id]);
-        break;
-    case SDDF_SND_CMD_PCM_RELEASE:
-        status = stream_release(state->streams[cmd->stream_id]);
-        break;
-    case SDDF_SND_CMD_PCM_START:
-        status = stream_start(state->streams[cmd->stream_id]);
-        break;
-    case SDDF_SND_CMD_PCM_STOP:
-        status = stream_stop(state->streams[cmd->stream_id]);
+        stream_t *stream = state->streams[cmd->stream_id];
+        stream_enqueue_command(stream, cmd);
         break;
     default:
         printf("UIO SND|ERR: unknown command %d\n", cmd->code);
         status = SDDF_SND_S_BAD_MSG;
     }
 
-    sddf_snd_enqueue_response(state->rings.cmd_responses, cmd->cookie, status);
-}
-
-static void *translate_tx(translation_state_t *translate, void *phys_addr)
-{
-    return phys_addr + translate->tx_offset;
-}
-
-static void *translate_rx(translation_state_t *translate, void *phys_addr)
-{
-    return phys_addr + translate->rx_offset;
-}
-
-static void update_playback(driver_state_t *state, stream_t *playback_stream, bool *signal_vmm)
-{
-    stream_update(playback_stream);
-
-    if (!stream_accepting_pcm(playback_stream)) {
-        return;
-    }
-
-    stream_flush_status_t status;
-
-    if (!stream_has_pcm(playback_stream)) {
-        sddf_snd_pcm_data_t pcm;
-        if (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) != 0) {
-            return;
+    if (status != SDDF_SND_S_OK) {
+        if (cmd->code == SDDF_SND_CMD_PCM_TX) {
+            cmd->pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
+            sddf_snd_enqueue_pcm_data(state->rings.tx_free, cmd->pcm.addr, cmd->pcm.len);
         }
-        void *data = translate_tx(&state->translate, (void *)pcm.addr);
-        stream_set_pcm(playback_stream, &pcm, data);
-    }
-
-    while ((status = stream_flush_pcm(playback_stream)) == STREAM_FLUSH_NEED_MORE) {
-
-        sddf_snd_pcm_data_t *stream_pcm = stream_get_pcm(playback_stream);
-
-        stream_pcm->len = SDDF_SND_PCM_BUFFER_SIZE;
-        sddf_snd_enqueue_pcm_data(state->rings.tx_free, stream_pcm);
-        *signal_vmm = true;
-
-        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->cookie, SDDF_SND_S_OK);
-
-        sddf_snd_pcm_data_t pcm;
-        if (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) != 0) {
-            return;
-        }
-        stream_set_pcm(playback_stream, &pcm, translate_tx(&state->translate, (void *)pcm.addr));
-    }
-
-    // todo: think about how to handle errors
-    if (status == STREAM_FLUSH_ERR) {
-        printf("UIO SND|ERR: Failed to flush pcm\n");
-
-        sddf_snd_pcm_data_t *stream_pcm = stream_get_pcm(playback_stream);
-
-        stream_pcm->len = SDDF_SND_PCM_BUFFER_SIZE;
-        sddf_snd_enqueue_pcm_data(state->rings.tx_free, stream_pcm);
-        *signal_vmm = true;
-
-        sddf_snd_enqueue_response(state->rings.tx_responses, stream_pcm->cookie, SDDF_SND_S_OK);
+        sddf_snd_enqueue_response(state->rings.responses, cmd->cookie, status);
     }
 }
 
-static void handle_interrupt(driver_state_t *state, bool *signal_vmm)
+static void handle_interrupt(driver_state_t *state)
 {
-    printf("UIO SND|INFO: got interrupt\n");
+    // printf("UIO SND|INFO: got interrupt\n");
 
     sddf_snd_command_t cmd;
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
         handle_cmd(state, &cmd);
-        *signal_vmm = true;
     }
 
-    // TODO: enforce seq ordering
     for (int i = 0; i < state->stream_count; i++) {
-        stream_t *stream = state->streams[i];
-        if (stream_direction(stream) == SND_PCM_STREAM_PLAYBACK) {
-            update_playback(state, state->streams[i], signal_vmm);
-            break;
-        }
+        stream_update(state->streams[i]);
     }
 }
 
@@ -323,6 +244,26 @@ int update_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds,
     return open_fd_count;
 }
 
+static void respond(uint32_t cookie, sddf_snd_status_code_t status, void *user_data)
+{
+    driver_state_t *state = user_data;
+
+    if (sddf_snd_enqueue_response(state->rings.responses, cookie, status) != 0) {
+        printf("UIO SND|ERR: failed to enqueue response\n");
+    }
+    state->signal_vmm = true;
+}
+
+static void tx_free(uintptr_t addr, unsigned int len, void *user_data)
+{
+    driver_state_t *state = user_data;
+
+    if (sddf_snd_enqueue_pcm_data(state->rings.tx_free, addr, len) != 0) {
+        printf("UIO SND|ERR: failed to enqueue response\n");
+    }
+    state->signal_vmm = true;
+}
+
 int main(void)
 {
     int uio_fd = open("/dev/uio0", O_RDWR);
@@ -344,17 +285,13 @@ int main(void)
         SND_PCM_STREAM_PLAYBACK,
         SND_PCM_STREAM_CAPTURE,
     };
-    sddf_snd_ring_state_t *stream_consume_rings[MAX_STREAMS] = {
-        &state.rings.tx_used->state,
-        &state.rings.rx_free->state,
-    };
 
     state.stream_count = 0;
 
     for (int i = 0; i < MAX_STREAMS; i++) {
         state.streams[state.stream_count]
             = stream_open(&state.shared_state->stream_info[state.stream_count], SOUND_DEVICE,
-                          target_streams[i], stream_consume_rings[i]);
+                          target_streams[i], state.translate, respond, tx_free, &state);
 
         if (state.streams[state.stream_count] == NULL)
             printf("Failed to initialise target stream %d\n", i);
@@ -394,7 +331,7 @@ int main(void)
     // int expire = 10;
 
     while (true) {
-        printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
+        // printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
 
         // We might not need a UIO interrupt for tx/rx, ALSA should signal.
         int ready = poll(fds, curr_fd_count, -1);
@@ -403,14 +340,11 @@ int main(void)
             return EXIT_FAILURE;
         }
 
-        printf("UIO SND|INFO: Awake. Stream state: \n");
-        stream_debug_state(state.streams[0]);
-        printf("UIO SND|INFO: tx_used size %d\n", sddf_snd_ring_size(&state.rings.tx_used->state));
-
-        bool signal_vmm = false;
+        // printf("UIO SND|INFO: Awake. Stream state: \n");
+        // stream_debug_state(state.streams[0]);
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
-            handle_interrupt(&state, &signal_vmm);
+            handle_interrupt(&state);
         }
 
         for (int i = 0; i < state.stream_count; i++) {
@@ -427,28 +361,19 @@ int main(void)
 
             for (int fd_index = fd_begin; fd_index < fd_end; fd_index++) {
                 if (fds[fd_index].revents & POLLIN) {
-                    printf("UIO SND|INFO: got poll event on stream %d (idx %d)\n", i, fd_index);
-
-                    if (stream_direction(stream) == SND_PCM_STREAM_PLAYBACK) {
-                        update_playback(&state, stream, &signal_vmm);
-                    }
+                    // printf("UIO SND|INFO: got poll event on stream %d (idx %d)\n", i, fd_index);
+                    // this assumes driver will signal if there are any commands
+                    stream_update(stream);
                     break;
                 }
             }
         }
 
-        // Playback: only include the file descriptor if we have written a pcm frame
-        //  and tx used is non-empty
-        // Recording: only include file descriptor if rx free is non-empty
-
-        if (signal_vmm) {
+        if (state.signal_vmm) {
             signal_ready_to_vmm();
+            state.signal_vmm = false;
         }
 
-        // if (expire-- < 0)
-        //     break;
-
-        printf("Updating pollfds\n");
         curr_fd_count
             = update_pollfds(state.streams, state.stream_count, fds, fd_to_stream, stream_to_fds);
     }
