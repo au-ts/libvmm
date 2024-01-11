@@ -108,7 +108,7 @@ ELFS := client_vmm.elf \
 		virt_snd_driver.elf \
 
 SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf
-CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf
+CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -193,7 +193,8 @@ CFLAGS_USERLEVEL :=	-g3 \
 					-I$(CURRENT_DIR) \
 					-I$(SDDF) \
 					-I$(SDDF_SOUND_RINGBUFFER)/include \
-					-lasound
+					-lasound \
+					-lm
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -261,7 +262,7 @@ $(BUILD_DIR)/user_sound/%.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound/%.c
 	mkdir -p $(BUILD_DIR)/user_sound
 	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
 
-$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/user_sound/convert.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
+$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/user_sound/queue.o $(BUILD_DIR)/user_sound/convert.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
@@ -269,8 +270,9 @@ $(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
-$(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c Makefile
-	./build-userlevel.sh "$(CFLAGS_USERLEVEL) $< -o $@" $@
+$(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
+	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@

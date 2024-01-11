@@ -36,12 +36,13 @@ int main(void)
                       SND_PCM_FORMAT_U8,
                       SND_PCM_ACCESS_RW_INTERLEAVED,
                       1,
+                    //   16000,
                       48000,
                       1,
                       500000);
     print_err(err, "Failed to set params");
 
-    for (i = 0; i < 16; i++) {
+    for (i = 0; i < 8; i++) {
         frames = snd_pcm_writei(handle, buffer, sizeof(buffer));
         if (frames < 0)
             frames = snd_pcm_recover(handle, frames, 0);
