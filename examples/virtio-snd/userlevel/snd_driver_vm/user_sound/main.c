@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #define PAGE_SIZE_4K 0x1000
 #define RING_BYTES 0x200000
@@ -40,15 +41,12 @@ typedef struct driver_state {
     translation_state_t translate;
 
     bool signal_vmm;
+    char *signal_addr;
 } driver_state_t;
 
-static void signal_ready_to_vmm()
+static void signal_ready_to_vmm(char *signal_addr)
 {
-    printf("UIO SND|INFO: faulting to VMM\n");
-    char command_str[64] = { 0 };
-    sprintf(command_str, "devmem %d", UIO_SND_FAULT_ADDRESS);
-    int res = system(command_str);
-    assert(res == 0);
+    *signal_addr = 1;
 }
 
 static void print_bytes(void *data)
@@ -106,6 +104,28 @@ static void *map_uio(int index, const char *size_str, int uio_fd)
     off_t offset = index * PAGE_SIZE_4K;
 
     return mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, uio_fd, offset);
+}
+
+static char *map_mem(uintptr_t target, int *out_fd)
+{
+    int fd = open("/dev/mem", O_RDWR | O_SYNC);
+    if (fd < 0) {
+        printf("UIO SND|ERR: Failed to open /dev/mem\n");
+        return NULL;
+    }
+
+    int page_size = getpagesize();
+
+    off_t offset = target & ~(off_t)(page_size - 1);
+
+    *out_fd = fd;
+    void *base = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
+    if (base == MAP_FAILED) {
+        printf("UIO SND|ERR: Failed to map /dev/mem\n");
+        return NULL;
+    }
+
+    return base + (target & (page_size - 1));
 }
 
 int init_mappings(driver_state_t *state, int uio_fd)
@@ -168,7 +188,7 @@ int init_mappings(driver_state_t *state, int uio_fd)
 
 static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
 {
-    printf("UIO SND|INFO: got command %s\n", sddf_snd_command_code_str(cmd->code));
+    // printf("UIO SND|INFO: got command %s\n", sddf_snd_command_code_str(cmd->code));
 
     sddf_snd_status_code_t status = SDDF_SND_S_OK;
 
@@ -200,13 +220,13 @@ static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
             cmd->pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
             sddf_snd_enqueue_pcm_data(state->rings.tx_free, cmd->pcm.addr, cmd->pcm.len);
         }
-        sddf_snd_enqueue_response(state->rings.responses, cmd->cookie, status);
+        sddf_snd_enqueue_response(state->rings.responses, cmd->cookie, status, 0);
     }
 }
 
 static void handle_interrupt(driver_state_t *state)
 {
-    // printf("UIO SND|INFO: got interrupt\n");
+    printf("UIO SND|INFO: got interrupt\n");
 
     sddf_snd_command_t cmd;
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
@@ -244,11 +264,11 @@ int update_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds,
     return open_fd_count;
 }
 
-static void respond(uint32_t cookie, sddf_snd_status_code_t status, void *user_data)
+static void respond(uint32_t cookie, sddf_snd_status_code_t status, uint32_t latency_bytes, void *user_data)
 {
     driver_state_t *state = user_data;
 
-    if (sddf_snd_enqueue_response(state->rings.responses, cookie, status) != 0) {
+    if (sddf_snd_enqueue_response(state->rings.responses, cookie, status, latency_bytes) != 0) {
         printf("UIO SND|ERR: failed to enqueue response\n");
     }
     state->signal_vmm = true;
@@ -280,6 +300,13 @@ int main(void)
         return EXIT_FAILURE;
     }
 
+    int signal_fd;
+    state.signal_addr = map_mem(UIO_SND_FAULT_ADDRESS, &signal_fd);
+    if (state.signal_addr == NULL) {
+        return EXIT_FAILURE;
+    }
+    printf("UIO SND|INFO: opened /dev/mem\n");
+
     // The idea is that this should work even if one stream fails to open.
     snd_pcm_stream_t target_streams[MAX_STREAMS] = {
         SND_PCM_STREAM_PLAYBACK,
@@ -303,7 +330,7 @@ int main(void)
     printf("UIO SND|INFO: %d streams available\n", state.stream_count);
 
     // Signal ready even if we don't create all streams.
-    signal_ready_to_vmm();
+    signal_ready_to_vmm(state.signal_addr);
 
     if (state.stream_count == 0) {
         printf("No streams available, exiting\n");
@@ -370,7 +397,7 @@ int main(void)
         }
 
         if (state.signal_vmm) {
-            signal_ready_to_vmm();
+            signal_ready_to_vmm(state.signal_addr);
             state.signal_vmm = false;
         }
 
@@ -382,6 +409,7 @@ int main(void)
         stream_close(state.streams[i]);
     }
 
+    close(signal_fd);
     free(fds);
     free(fd_to_stream);
     free(stream_to_fds);

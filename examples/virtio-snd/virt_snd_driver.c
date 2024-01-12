@@ -94,7 +94,7 @@ void handle_vmm() {
     // Send responses to client
     while (sddf_snd_dequeue_response(uio_rings.responses, &resp) == 0) {
         // LOG_DRIVER("deq uio.cmd_responses, enq device.cmd_responses\n");
-        sddf_snd_enqueue_response(device_rings.responses, resp.cookie, resp.status);
+        sddf_snd_enqueue_response(device_rings.responses, resp.cookie, resp.status, resp.latency_bytes);
     }
 
     sddf_snd_pcm_rx_t pcm_rx;
