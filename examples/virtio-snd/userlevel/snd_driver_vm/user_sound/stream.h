@@ -19,7 +19,8 @@ typedef struct translation_state {
 
 typedef struct stream stream_t;
 
-typedef void (*respond_fn)(uint32_t cookie, sddf_snd_status_code_t status, void *user_data);
+typedef void (*respond_fn)(uint32_t cookie, sddf_snd_status_code_t status, uint32_t latency_bytes,
+                           void *user_data);
 typedef void (*tx_free_fn)(uintptr_t addr, unsigned int len, void *user_data);
 
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t stream,

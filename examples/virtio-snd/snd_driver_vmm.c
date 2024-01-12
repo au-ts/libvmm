@@ -157,7 +157,7 @@ void init(void) {
 }
 
 static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
-    LOG_VMM("Got fault from user process, notifying virt driver\n");
+    // LOG_VMM("Got fault from uio driver, notifying proxy\n");
     microkit_notify(VIRT_SND_DRIVER_CH);
     return true;
 }

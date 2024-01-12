@@ -107,8 +107,8 @@ ELFS := client_vmm.elf \
 		snd_driver_vmm.elf \
 		virt_snd_driver.elf \
 
-SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf
-CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf
+SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf
+CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf tick.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
