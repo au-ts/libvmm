@@ -22,5 +22,5 @@ dd if=/path/to/armbian/image of=/dev/yourrawdevice bs=1M oflag=sync
 ```
 You'll need to run above with sudo
 
-You may also need to replace the ```root=/dev/mmcblk0p1``` param from bootargs located in ```board/odroidc4/dts/init.dts``` to the SD card partition that has the image flashed.
+You may also need to replace the ```root=/dev/mmcblk0p1``` param from bootargs located in ```board/odroidc4/armbian_vm/dts/init.dts``` to the SD card partition that has the image flashed.
 
