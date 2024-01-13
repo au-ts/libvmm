@@ -8,7 +8,7 @@ project actually provides three things:
 3. A portable drop-in C/C++ cross-compiler
 
 This example makes use of all three. The VMM code itself is written in the
-Zig programming langauge, it calls into `libvmm` which has been compiled using
+Zig programming langauge, it calls into libvmm which has been compiled using
 the Zig C compiler. Building the example is done via the Zig build system.
 
 ## Building the example
@@ -60,7 +60,7 @@ C headers to Zig code which can then obviously be called from Zig like any
 other Zig API.
 
 Here is the problem though, this translation fails currently for inline assembly,
-which in libsel4, there is a lot of as any system call with use inline assembly.
+which in libsel4, there is a lot of as all system calls makes use of inline assembly.
 
 If you run step 1 below, you will encounter the following text:
 ```
