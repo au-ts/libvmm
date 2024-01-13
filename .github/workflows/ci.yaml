@@ -12,7 +12,7 @@ jobs:
     name: Build manual
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout VMM repository
+      - name: Checkout repository
         uses: actions/checkout@v3
       - name: Install Nix
         uses: cachix/install-nix-action@v22
@@ -29,7 +29,7 @@ jobs:
     name: Build and run examples (Linux x86-64)
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout VMM repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: 'true'
@@ -38,7 +38,7 @@ jobs:
         shell: bash
       - name: Extract Microkit SDK
         run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
-      - name: Install VMM dependencies (via apt)
+      - name: Install dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect
       - name: Install Zig
@@ -60,7 +60,7 @@ jobs:
     name: Build and run examples (macOS x86-64)
     runs-on: macos-12
     steps:
-      - name: Checkout VMM repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: 'true'
@@ -69,7 +69,7 @@ jobs:
         shell: bash
       - name: Extract Microkit SDK
         run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
-      - name: Install VMM dependencies (via Homebrew)
+      - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
           brew install llvm qemu dtc make expect
@@ -92,7 +92,7 @@ jobs:
     name: Build and run examples (Linux x86-64 via Nix)
     runs-on: ubuntu-20.04
     steps:
-      - name: Checkout VMM repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: 'true'
@@ -115,7 +115,7 @@ jobs:
     name: Build and run examples (macOS x86-64 via Nix)
     runs-on: macos-12
     steps:
-      - name: Checkout VMM repository
+      - name: Checkout repository
         uses: actions/checkout@v3
         with:
           submodules: 'true'
