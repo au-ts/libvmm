@@ -36,7 +36,7 @@ For educational purposes, you can also build and run this example using the
 
 At the moment, Zig still under heavy development and hence this example depends
 on the 'master' version of Zig for now. This example has been built using
-`0.12.0-dev.1533+b2ed2c4d4`, so anything equal to or above that version should work.
+`0.12.0-dev.2150+63de8a598`, so anything equal to or above that version should work.
 
 You can download Zig [here](https://ziglang.org/download/).
 
