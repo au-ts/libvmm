@@ -15,7 +15,7 @@ the Zig C compiler. Building the example is done via the Zig build system.
 
 At the moment, Zig still under heavy development and hence this example depends
 on the 'master' version of Zig for now. This example has been built using
-`0.12.0-dev.1533+b2ed2c4d4`, so anything equal to or above that version should work.
+`0.12.0-dev.2150+63de8a598`, so anything equal to or above that version should work.
 
 You can download Zig [here](https://ziglang.org/download/).
 
