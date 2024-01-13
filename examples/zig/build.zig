@@ -7,23 +7,21 @@ fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
     return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
 }
 
-// For this example we hard-code the target to AArch64 and the platform to QEMU ARM virt
-// since the main point of this example is to show off using libvmm in another
-// systems programming language.
-const example_target = std.zig.CrossTarget{
-    .cpu_arch = .aarch64,
-    .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
-    .os_tag = .freestanding,
-    .abi = .none,
-};
-
 const ConfigOptions = enum {
     debug,
     release,
 };
 
 pub fn build(b: *std.Build) void {
-    const target = b.standardTargetOptions(.{ .default_target = example_target });
+    // For this example we hard-code the target to AArch64 and the platform to QEMU ARM virt
+    // since the main point of this example is to show off using libvmm in another
+    // systems programming language.
+    const target = b.resolveTargetQuery(.{
+        .cpu_arch = .aarch64,
+        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+        .os_tag = .freestanding,
+        .abi = .none,
+    });
     const optimize = b.standardOptimizeOption(.{});
 
     // Getting the path to the Microkit SDK before doing anything else
@@ -48,10 +46,10 @@ pub fn build(b: *std.Build) void {
 
     const zig_libmicrokit = b.addObject(.{
         .name = "zig_libmicrokit",
-        .root_source_file = .{ .path = "src/libmicrokit.c" },
         .target = target,
         .optimize = optimize,
     });
+    zig_libmicrokit.addCSourceFile(.{ .file = .{ .path = "src/libmicrokit.c" }, .flags = &.{} });
     zig_libmicrokit.addIncludePath(.{ .path = "src/" });
     zig_libmicrokit.addIncludePath(.{ .path = sdk_board_include_dir });
 
@@ -103,24 +101,24 @@ pub fn build(b: *std.Build) void {
         .root_source_file = .{ .path = "src/vmm.zig" },
         .target = target,
         .optimize = optimize,
+        // Microkit expects and requires the symbol table to exist in the ELF,
+        // this means that even when building for release mode, we want to tell
+        // Zig not to strip symbols from the binary.
+        .strip = false,
     });
-    // Microkit expects and requires the symbol table to exist in the ELF,
-    // this means that even when building for release mode, we want to tell
-    // Zig not to strip symbols from the binary.
-    exe.strip = false;
 
     // For actually compiling the DTS into a DTB
-    const dts_path = "images/linux.dts";
     const dtc_cmd = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-q", "-I", "dts", "-O", "dtb", dts_path
+        "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
+    dtc_cmd.addFileArg(.{ .path = "images/linux.dts" });
     const dtb = dtc_cmd.captureStdOut();
     // When we embed these artifacts into our VMM code, we use @embedFile provided by
     // the Zig compiler. However, we can't just include any path outside of the 'src/'
     // directory and so we add each file as a "module".
-    exe.addAnonymousModule("linux.dtb", .{ .source_file = dtb });
-    exe.addAnonymousModule("linux", .{ .source_file = .{ .path = "images/linux" } });
-    exe.addAnonymousModule("rootfs.cpio.gz", .{ .source_file = .{ .path = "images/rootfs.cpio.gz" } });
+    exe.root_module.addAnonymousImport("dtb", .{ .root_source_file = dtb });
+    exe.root_module.addAnonymousImport("linux", .{ .root_source_file = .{ .path = "images/linux" } });
+    exe.root_module.addAnonymousImport("rootfs", .{ .root_source_file = .{ .path = "images/rootfs.cpio.gz" } });
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -161,7 +159,7 @@ pub fn build(b: *std.Build) void {
     microkit_step.dependOn(&microkit_tool_cmd.step);
     b.default_step = microkit_step;
 
-    // This is setting up a `qemu` command for running the system via QEMU.
+    // This is setting up a `qemu` command for running the system using QEMU.
     const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     const qemu_cmd = b.addSystemCommand(&[_][]const u8{
         "qemu-system-aarch64",

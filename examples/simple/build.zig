@@ -77,7 +77,7 @@ pub fn build(b: *std.Build) void {
         std.log.err("Missing -Dboard=<BOARD> argument being passed\n", .{});
         std.os.exit(1);
     }
-    const target = findTarget(microkit_board_option.?);
+    const target = b.resolveTargetQuery(findTarget(microkit_board_option.?));
     const microkit_board = @tagName(microkit_board_option.?);
 
     // Since we are relying on Zig to produce the final ELF, it needs to do the
@@ -135,17 +135,18 @@ pub fn build(b: *std.Build) void {
         .name = "vmm.elf",
         .target = target,
         .optimize = optimize,
+        // Microkit expects and requires the symbol table to exist in the ELF,
+        // this means that even when building for release mode, we want to tell
+        // Zig not to strip symbols from the binary.
+        .strip = false,
     });
-    // Microkit expects and requires the symbol table to exist in the ELF,
-    // this means that even when building for release mode, we want to tell
-    // Zig not to strip symbols from the binary.
-    exe.strip = false;
 
     // For actually compiling the DTS into a DTB
     const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
     const dtc_cmd = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-q", "-I", "dts", "-O", "dtb", dts_path
+        "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
+    dtc_cmd.addFileArg(.{ .path = dts_path });
     const dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
@@ -214,14 +215,13 @@ pub fn build(b: *std.Build) void {
        "-r",
        b.getInstallPath(.prefix, "./report.txt")
     });
-    // Running the Microkit tool depends on 
     microkit_tool_cmd.step.dependOn(b.getInstallStep());
     // Add the "microkit" step, and make it the default step when we execute `zig build`>
     const microkit_step = b.step("microkit", "Compile and build the final bootable image");
     microkit_step.dependOn(&microkit_tool_cmd.step);
     b.default_step = microkit_step;
 
-    // This is setting up a `qemu` command for running the system via QEMU,
+    // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
     const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     if (std.mem.eql(u8, microkit_board, "qemu_arm_virt")) {
@@ -240,7 +240,7 @@ pub fn build(b: *std.Build) void {
             "-nographic",
         });
         qemu_cmd.step.dependOn(b.default_step);
-        const simulate_step = b.step("qemu", "Simulate the image via QEMU");
+        const simulate_step = b.step("qemu", "Simulate the image using QEMU");
         simulate_step.dependOn(&qemu_cmd.step);
     }
 }
