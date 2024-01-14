@@ -226,7 +226,7 @@ static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
 
 static void handle_interrupt(driver_state_t *state)
 {
-    printf("UIO SND|INFO: got interrupt\n");
+    // printf("UIO SND|INFO: got interrupt\n");
 
     sddf_snd_command_t cmd;
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
@@ -259,6 +259,12 @@ int update_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds,
         for (int j = 0; j < nfds; j++, open_fd_count++) {
             pollfds[open_fd_count] = streamfds[j];
             fd_to_stream[open_fd_count] = i;
+
+            printf("update %d: ", streamfds[j].fd);
+            if (streamfds[j].events & POLLIN) printf("in ");
+            if (streamfds[j].events & POLLOUT) printf("out ");
+            if (streamfds[j].events & POLLPRI) printf("pri ");
+            if (streamfds[j].events & POLLERR) printf("err ");
         }
     }
     return open_fd_count;
@@ -286,6 +292,9 @@ static void tx_free(uintptr_t addr, unsigned int len, void *user_data)
 
 int main(void)
 {
+    int err = system("alsactl init -U");
+    // assert(!err);
+
     int uio_fd = open("/dev/uio0", O_RDWR);
     if (uio_fd == -1) {
         perror("Error opening /dev/uio0");
@@ -294,7 +303,7 @@ int main(void)
     printf("UIO SND|INFO: opened /dev/uio0\n");
 
     driver_state_t state;
-    int err = init_mappings(&state, uio_fd);
+    err = init_mappings(&state, uio_fd);
     if (err) {
         printf("UIO SND|ERR: failed to initialise mappings\n");
         return EXIT_FAILURE;
@@ -352,13 +361,19 @@ int main(void)
     fds[UIO_POLLFD].revents = 0;
     fd_to_stream[UIO_POLLFD] = -1;
 
+    printf("UIO SND|INFO: UIO fd %d\n", uio_fd);
+
     int curr_fd_count
         = update_pollfds(state.streams, state.stream_count, fds, fd_to_stream, stream_to_fds);
 
-    // int expire = 10;
-
+    const uint32_t enable = 1;
+    if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
+        perror("UIO SND|ERR: Failed to reenable interrupts\n");
+        return EXIT_FAILURE;
+    }
+    
     while (true) {
-        // printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
+        printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
 
         // We might not need a UIO interrupt for tx/rx, ALSA should signal.
         int ready = poll(fds, curr_fd_count, -1);
@@ -367,11 +382,33 @@ int main(void)
             return EXIT_FAILURE;
         }
 
-        // printf("UIO SND|INFO: Awake. Stream state: \n");
-        // stream_debug_state(state.streams[0]);
+        printf("UIO SND|INFO: Awake on %d (%d) fds: ", curr_fd_count, ready);
+        for (int i = 0; i < curr_fd_count; i++) {
+            char *state = "off";
+            if (fds[i].revents & POLLIN) state = "in";
+            else if (fds[i].revents & POLLOUT) state = "out";
+            else if (fds[i].revents & POLLPRI) state = "pri";
+            else if (fds[i].revents & POLLERR) state = "err";
+            printf("%d: %s, ", fds[i].fd, state);
+        }
+        putchar('\n');
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
+            // int32_t irq_count;
+            printf("Reading interrupt\n");
+            // if(read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
+            //     perror("UIO SND|ERR: Failed to read interrupt\n");
+            //     break;
+            // }
+            // printf("Got %d interrupts\n", irq_count);
+
             handle_interrupt(&state);
+
+            printf("Writing interrupt\n");
+            if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
+                perror("UIO SND|ERR: Failed to reenable interrupts\n");
+                break;
+            }
         }
 
         for (int i = 0; i < state.stream_count; i++) {
@@ -383,11 +420,15 @@ int main(void)
             int fd_begin = stream_to_fds[i];
             int fd_end = fd_begin + stream_nfds(stream);
 
+            // snd_pcm_stream_t direction = stream_direction(stream);
+            // short target_event = direction == SND_PCM_STREAM_PLAYBACK ? POLLOUT : POLLIN; 
+
             unsigned short revents;
             stream_demangle_fds(stream, &fds[fd_begin], stream_nfds(stream), &revents);
 
             for (int fd_index = fd_begin; fd_index < fd_end; fd_index++) {
-                if (fds[fd_index].revents & POLLIN) {
+                // if (fds[fd_index].revents & target_event) {
+                if (fds[fd_index].revents) {
                     // printf("UIO SND|INFO: got poll event on stream %d (idx %d)\n", i, fd_index);
                     // this assumes driver will signal if there are any commands
                     stream_update(stream);
