@@ -186,6 +186,14 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
         goto fail;
     }
 
+    for (int i = 0; i < nfds; i++) {
+        printf("init fd %d: ", fds[i].fd);
+        if (fds[i].events & POLLIN)  printf("in ");
+        if (fds[i].events & POLLOUT) printf("out ");
+        if (fds[i].events & POLLPRI) printf("pri ");
+        if (fds[i].events & POLLERR) printf("err ");
+    }
+
     info->formats = formats;
     info->rates = rates;
     info->direction = direction == SND_PCM_STREAM_PLAYBACK ? SDDF_SND_D_OUTPUT : SDDF_SND_D_INPUT;

@@ -171,10 +171,10 @@ void notified(microkit_channel ch) {
             break;
         }
         case VIRT_SND_DRIVER_CH: {
-            // LOG_VMM("Injecting IRQ to sound driver vm\n");
+            LOG_VMM("Injecting IRQ to sound driver vm\n");
             bool success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
             if (!success) {
-                // LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
             }
             break;
         }
