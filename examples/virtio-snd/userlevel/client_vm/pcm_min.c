@@ -1,4 +1,5 @@
 #include <alsa/asoundlib.h>
+#include <stdio.h>
  
 static char *device = "default";            /* playback device */
 unsigned char buffer[16*1024];              /* some random data */

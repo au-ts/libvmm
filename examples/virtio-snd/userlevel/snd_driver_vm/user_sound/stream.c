@@ -477,6 +477,8 @@ static sddf_snd_status_code_t stream_prepare(stream_t *stream)
         return SDDF_SND_S_IO_ERR;
     }
 
+    printf("UIO SND|INFO: Prepared stream\n");
+
     stream->state = STREAM_STATE_PAUSED;
     stream->prefilled = 0;
 
@@ -513,14 +515,14 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
         printf("UIO SND|ERR: Cannot start stream now, invalid state\n");
         return SDDF_SND_S_BAD_MSG;
     }
-    // @alexbr: figure out how to disable autostart
-    if (snd_pcm_state(stream->handle) != SND_PCM_STATE_RUNNING) {
-        int err = snd_pcm_start(stream->handle);
-        if (err) {
-            printf("UIO SND|ERR: failed to start stream: %s\n", snd_strerror(err));
-            return SDDF_SND_S_IO_ERR;
-        }
+
+    int err = snd_pcm_start(stream->handle);
+    if (err) {
+        printf("UIO SND|ERR: failed to start stream: %s\n", snd_strerror(err));
+        return SDDF_SND_S_IO_ERR;
     }
+    printf("UIO SND|INFO: Started stream\n");
+
     stream->state = STREAM_STATE_PLAYING;
     return SDDF_SND_S_OK;
 }
@@ -540,8 +542,6 @@ static cmd_result_t stream_stop(stream_t *stream)
     int err = snd_pcm_drain(stream->handle);
 
     if (err == -EAGAIN) {
-        // printf("UIO SND|INFO: Drain blocked\n");
-
         stream->state = STREAM_STATE_DRAINING;
         result.state = CMD_STATE_BLOCK;
 
@@ -581,12 +581,6 @@ static cmd_result_t stream_tx(stream_t *stream, sddf_snd_pcm_data_t *pcm)
 {
     cmd_result_t result;
 
-    // if (stream->state == STREAM_STATE_PAUSED) {
-    //     printf("UIO SND|INFO: Prefilled %ld/%ld (%s)\n",
-    //         stream->prefilled, stream->start_threshold,
-    //         stream_prefilled(stream) ? "yes" : "no");
-    // }
-
     if (!stream_accepting_pcm(stream)) {
         if (stream->state == STREAM_STATE_PAUSED && stream_prefilled(stream)) {
             result.state = CMD_STATE_STAGE;
@@ -596,9 +590,6 @@ static cmd_result_t stream_tx(stream_t *stream, sddf_snd_pcm_data_t *pcm)
         result.status = SDDF_SND_S_OK;
         return result;
     }
-
-    // printf("UIO SND|INFO: flushing\n");
-    // stream_debug_state(stream);
 
     const void *pcm_data = translate_tx(&stream->translate, (void *)pcm->addr);
 
@@ -631,49 +622,6 @@ static cmd_result_t stream_tx(stream_t *stream, sddf_snd_pcm_data_t *pcm)
             return result;
         }
 
-        // int consec = 0;
-        // int max_consec = 0;
-        // int16_t consec_char = 999;
-        // int max_diff = 0;
-        // int max_diff_idx = -1;
-
-        // int16_t prev = ((int16_t *)pcm_data + stream->pcm_offset)[0];
-        // const int16_t first = prev;
-        // for (int i = 1; i < written; i++) {
-        //     int16_t sample = ((int16_t *)pcm_data + stream->pcm_offset)[i];
-        //     if (sample == prev) {
-        //         consec++;
-        //         if (consec > max_consec) {
-        //             max_consec = consec;
-        //             consec_char = sample;
-        //         }
-        //     }
-        //     int diff = abs(sample - prev);
-        //     if (diff > max_diff) {
-        //         max_diff = diff;
-        //         max_diff_idx = i;
-        //     }
-        //     prev = sample;
-        // }
-        // printf("Written %ld, max consec %d (sample %d), max diff %d. first/last %6d %6d\n",
-        //     written, max_consec, consec_char, max_diff, first, prev);
-
-        // for (int i = 0; i < 20; i++) {
-        //     int16_t sample = ((int16_t *)pcm_data + stream->pcm_offset)[i];
-        //     printf("%6d ", sample);
-        //     if (i % 32 == 31) putchar('\n');
-        // }
-        
-        // if (max_diff > 3000) {
-        //     int left = max_diff_idx - 12 >= 0 ? max_diff_idx - 12 : 0;
-        //     int right = max_diff_idx + 12 < written ? max_diff_idx + 12 : written-1;
-        //     printf("%d -> [%d, %d)\n", max_diff_idx, left, right);
-        //     for (int i = left; i < right; i++) {
-        //         int16_t sample = ((int16_t *)pcm_data + stream->pcm_offset)[i];
-        //         printf("%6d ", sample);
-        //     }
-        // }
-
         if (stream->state == STREAM_STATE_PAUSED) {
             stream->prefilled += written;
             printf("UIO SND|INFO: Prefilled %ld/%ld\n", stream->prefilled, stream->start_threshold);
@@ -684,8 +632,6 @@ static cmd_result_t stream_tx(stream_t *stream, sddf_snd_pcm_data_t *pcm)
     }
 
     stream->pcm_offset = 0;
-
-    // printf("\nUIO SND|INFO: END TX\n");
 
     result.state = CMD_STATE_COMPLETE;
     result.status = SDDF_SND_S_OK;
@@ -748,7 +694,7 @@ static void update_staged(stream_t *stream)
         }
 
         bool did_dequeue = cmd_queue_dequeue(stream->staged_pcms);
-        assert(did_dequeue);
+        assert(did_dequeue); (void)did_dequeue;
     }
 }
 
@@ -787,7 +733,7 @@ void stream_update(stream_t *stream)
         }
 
         bool did_dequeue = cmd_queue_dequeue(stream->commands);
-        assert(did_dequeue);
+        assert(did_dequeue); (void)did_dequeue;
     }
 }
 
