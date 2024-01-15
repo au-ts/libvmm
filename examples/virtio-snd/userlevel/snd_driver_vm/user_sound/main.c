@@ -373,7 +373,7 @@ int main(void)
     }
     
     while (true) {
-        printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
+        // printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
 
         // We might not need a UIO interrupt for tx/rx, ALSA should signal.
         int ready = poll(fds, curr_fd_count, -1);
@@ -382,25 +382,25 @@ int main(void)
             return EXIT_FAILURE;
         }
 
-        printf("UIO SND|INFO: Awake on %d (%d) fds: ", curr_fd_count, ready);
-        for (int i = 0; i < curr_fd_count; i++) {
-            char *state = "off";
-            if (fds[i].revents & POLLIN) state = "in";
-            else if (fds[i].revents & POLLOUT) state = "out";
-            else if (fds[i].revents & POLLPRI) state = "pri";
-            else if (fds[i].revents & POLLERR) state = "err";
-            printf("%d: %s, ", fds[i].fd, state);
-        }
-        putchar('\n');
+        // printf("UIO SND|INFO: Awake on %d (%d) fds: ", curr_fd_count, ready);
+        // for (int i = 0; i < curr_fd_count; i++) {
+        //     char *state = "off";
+        //     if (fds[i].revents & POLLIN) state = "in";
+        //     else if (fds[i].revents & POLLOUT) state = "out";
+        //     else if (fds[i].revents & POLLPRI) state = "pri";
+        //     else if (fds[i].revents & POLLERR) state = "err";
+        //     printf("%d: %s, ", fds[i].fd, state);
+        // }
+        // putchar('\n');
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
-            // int32_t irq_count;
+            int32_t irq_count;
             printf("Reading interrupt\n");
-            // if(read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
-            //     perror("UIO SND|ERR: Failed to read interrupt\n");
-            //     break;
-            // }
-            // printf("Got %d interrupts\n", irq_count);
+            if(read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
+                perror("UIO SND|ERR: Failed to read interrupt\n");
+                break;
+            }
+            printf("Got %d interrupts\n", irq_count);
 
             handle_interrupt(&state);
 

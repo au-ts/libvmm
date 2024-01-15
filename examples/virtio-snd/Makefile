@@ -25,6 +25,8 @@ CONFIG ?= debug
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
+QEMU_SND := coreaudio
+
 DTC := dtc
 
 # ifndef TOOLCHAIN
@@ -42,7 +44,7 @@ DTC := dtc
 # endif
 
 CC := clang
-CC_USERLEVEL := aarch64-unknown-linux-gnu-gcc
+CC_USERLEVEL := zig cc
 LD := ld.lld
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
@@ -194,7 +196,10 @@ CFLAGS_USERLEVEL :=	-g3 \
 					-I$(SDDF) \
 					-I$(SDDF_SOUND_RINGBUFFER)/include \
 					-lasound \
-					-lm
+					-lm \
+					-target aarch64-linux-gnu \
+					$(NIX_LDFLAGS) \
+					$(NIX_CFLAGS_COMPILE)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -211,28 +216,40 @@ qemu: all
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
-			-audio driver=pipewire,model=hda,id=pipewire \
+			-audio driver=$(QEMU_SND),model=hda,id=$(QEMU_SND) \
 			-m size=2G \
 			-nographic
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
+docker: Dockerfile
+	docker build -t snd .
+
+docker-run: docker
+	docker run --rm -it \
+		--entrypoint=/bin/bash \
+		--mount type=bind,src=$(MICROKIT_SDK),target=/microkit-sdk \
+		--mount type=bind,src=$(CURRENT_DIR)/../../,target=/libvmm \
+		snd \
+		-c 'cd /libvmm/examples/virtio-snd && make MICROKIT_SDK=/microkit-sdk BOARD=$(BOARD) CC_USERLEVEL=gcc all'
+
+
 # Unpack rootfs, put the userlevel binary in /root, repack rootfs
 
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
-	rm -r $(SND_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
-	mkdir -p $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(SND_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(SND_DRIVER_VM_ROOTFS_TMP_DIR) > /dev/null 2>&1 && \
-	cp $^ $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
-	(cd $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED))
+    ROOTFS_TMP_DIR=$(SND_DRIVER_VM_ROOTFS_TMP_DIR) \
+		INITRD=$(SND_DRIVER_VM_INITRD) \
+		INITRD_OVERLAYED=$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED) \
+		ELFS="$^" \
+		./pack.sh
 
 $(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
-	rm -r $(CLIENT_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
-	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR) && \
-	gunzip -dc $(CLIENT_VM_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_ROOTFS_TMP_DIR) > /dev/null 2>&1 && \
-	cp $^ $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
-	(cd $(CLIENT_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED))
+    ROOTFS_TMP_DIR=$(CLIENT_VM_ROOTFS_TMP_DIR) \
+		INITRD=$(CLIENT_VM_INITRD) \
+		INITRD_OVERLAYED=$(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) \
+		ELFS="$^" \
+		./pack.sh
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
 	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts

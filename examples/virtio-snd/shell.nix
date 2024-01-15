@@ -1,22 +1,21 @@
 { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
-    nativeBuildInputs =    # nativeBuildInputs is usually what you want -- tools you need to run
+    nativeBuildInputs =
     let
       crossInputs = with pkgs.pkgsCross.aarch64-multiplatform; [
-        buildPackages.gcc
+        # buildPackages.gcc
         alsa-lib
       ];
       nativeInputs = with pkgs; [
         dtc
         qemu
         patchelf
-        buildPackages.clang
-        buildPackages.lld
+        clang
+        lld
         gzip
         fakeroot
         cpio
-        # used to generate compile_commands.json
-        bear
+        zig
       ];
     in crossInputs ++ nativeInputs;
 }
