@@ -119,6 +119,7 @@ pub fn build(b: *std.Build) void {
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
+            "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
             fmtPrint("-DBOARD_{s}", .{ microkit_board }) // @ivanv: shouldn't be needed as the library should not depend on the board
         }
     });
