@@ -40,3 +40,14 @@ Now build:
 ```
 make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all -j$(nproc)
 ```
+
+### Reproducing Linux dts
+To obtain the dts, boot armbian bookworm natively and cat it's DTS.
+
+Image obtained from: https://redirect.armbian.com/region/NA/odroidc4/Bookworm_current
+
+```
+dtc -I fs -O dts /proc/device-tree > linux.dts
+```
+
+dts will be stored in `linux.dts`
