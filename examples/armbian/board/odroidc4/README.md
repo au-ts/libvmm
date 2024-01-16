@@ -14,7 +14,6 @@ You can also get the Linux config used after booting by running the following
 command in userspace: `zcat /proc/config.gz`.
 
 ### Instructions for reproducing
-
 ```
 git clone --depth 1 --branch v6.1 https://github.com/torvalds/linux.git
 cp linux_config linux/.config
@@ -23,7 +22,21 @@ make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- linux_config all -j$(np
 
 The path to the image will be: `linux/arm64/boot/Image`.
 
-## Buildroot RootFS image
+### Reproducing Linux configuration from scratch
+Begin with default linux configuration
+```
+make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- defconfig
+```
+Using menuconfig `make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- menuconfig`,
+enable booting with NFS root file system by enabling these drivers as built-in:
+* DWMAC_MESON
+* MDIO
+* MDIO_BUS_MUX_MESON_G12A
+* MESON_GXL_PHY ??
+* R8169 ??
+* DWMAC_GENERIC ??
 
-Note that buildoot currently does not list a configuration for OdroidC4 so we just
-use the OdroidC2 configuration.
+Now build:
+```
+make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all -j$(nproc)
+```
