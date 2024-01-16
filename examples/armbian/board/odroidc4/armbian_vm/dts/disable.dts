@@ -1,5 +1,21 @@
 / {
+    secure-monitor {
+		status = "disabled";
+	};
+
     soc {
         /delete-node/ usb@ffe09000;
+
+        usb@ffe09000 {
+            status = "disabled";
+        };
+        
+        vpu@ff900000 {
+            status = "disabled";
+        };
+
+        gpu@ffe40000 {
+            status = "disabled";
+        };
     };
 };

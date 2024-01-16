@@ -23,7 +23,7 @@
 #define GUEST_RAM_SIZE 0x10000000
 
 #if defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_DTB_VADDR 0x2ff00000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #else
 #error Need to define guest kernel image address and DTB address
@@ -100,6 +100,12 @@ void init(void) {
 
     /* Register MMC passthrough */
     register_passthrough_irq(222, 2);
+
+    /* Register ethernet passthrough */
+    register_passthrough_irq(40, 3);
+
+    /* Register phy passthrough */
+    register_passthrough_irq(96, 4);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
