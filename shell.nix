@@ -3,7 +3,7 @@ let
     zig = import (builtins.fetchTarball "https://github.com/mitchellh/zig-overlay/archive/master.tar.gz") {};
     pkgs = import <nixpkgs> { overlays = [ rust_overlay ]; };
     rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
-    llvm = pkgs.llvmPackages_11;
+    llvm = pkgs.llvmPackages_16;
     manual_deps = with pkgs.buildPackages; [
         texliveFull
         pandoc
