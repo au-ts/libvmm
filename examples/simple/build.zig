@@ -119,7 +119,7 @@ pub fn build(b: *std.Build) void {
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
-            "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
+            fmtPrint("-DBOARD_{s}", .{ microkit_board }) // @ivanv: shouldn't be needed as the library should not depend on the board
         }
     });
 
@@ -167,7 +167,7 @@ pub fn build(b: *std.Build) void {
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
-            "-DBOARD_qemu_arm_virt", // @ivanv: shouldn't be needed as the library should not depend on the board
+            fmtPrint("-DBOARD_{s}", .{ microkit_board })
         }
     });
 
