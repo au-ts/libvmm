@@ -15,6 +15,7 @@
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
     <memory_region name="sd" size="0x1000" phys_addr="0xffe05000" />
     <memory_region name="mmc" size="0x1000" phys_addr="0xffe07000" />
+    <memory_region name="eth" size="0x10000" phys_addr="0xff3f0000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
     <protection_domain name="VMM">
@@ -28,8 +29,15 @@
             <map mr="bus3" vaddr="0xffd00000" perms="rw" cached="false" />
             <map mr="sd" vaddr="0xffe05000" perms="rw" cached="false" />
             <map mr="mmc" vaddr="0xffe07000" perms="rw" cached="false" />
+            <map mr="eth" vaddr="0xff3f0000" perms="rw" cached="false" />
         </virtual_machine>
+        <!-- Serial -->
         <irq irq="225" id="1" trigger="edge" />
+        <!-- SD card -->
         <irq irq="222" id="2" />
+        <!-- Ethernet -->
+        <irq irq="40" id="3" />
+        <!-- Phy -->
+        <irq irq="96" id="4" />
     </protection_domain>
 </system>
