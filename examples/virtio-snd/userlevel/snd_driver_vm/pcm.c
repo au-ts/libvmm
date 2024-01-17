@@ -285,6 +285,7 @@ static int write_loop(snd_pcm_t *handle,
 static int wait_for_poll(snd_pcm_t *handle, struct pollfd *ufds, unsigned int count)
 {
     unsigned short revents;
+    printf("wait for poll\n");
  
     while (1) {
         poll(ufds, count, -1);
@@ -321,10 +322,12 @@ static int write_and_poll_loop(snd_pcm_t *handle,
         return err;
     }
  
+    int index = 0;
     init = 1;
     while (1) {
         if (!init) {
             err = wait_for_poll(handle, ufds, count);
+            printf("awake\n");
             if (err < 0) {
                 if (snd_pcm_state(handle) == SND_PCM_STATE_XRUN ||
                     snd_pcm_state(handle) == SND_PCM_STATE_SUSPENDED) {
@@ -345,6 +348,7 @@ static int write_and_poll_loop(snd_pcm_t *handle,
         ptr = samples;
         cptr = period_size;
         while (cptr > 0) {
+            printf("chill %d\n", index++);
             err = snd_pcm_writei(handle, ptr, cptr);
             if (err < 0) {
                 if (xrun_recovery(handle, err) < 0) {
@@ -363,6 +367,7 @@ static int write_and_poll_loop(snd_pcm_t *handle,
             /* it is possible, that the initial buffer cannot store */
             /* all data from the last period, so wait awhile */
             err = wait_for_poll(handle, ufds, count);
+            printf("awake\n");
             if (err < 0) {
                 if (snd_pcm_state(handle) == SND_PCM_STATE_XRUN ||
                     snd_pcm_state(handle) == SND_PCM_STATE_SUSPENDED) {

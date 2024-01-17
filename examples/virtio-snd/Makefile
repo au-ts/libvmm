@@ -25,7 +25,8 @@ CONFIG ?= debug
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
-QEMU_SND := coreaudio
+QEMU_SND_BACKEND := coreaudio
+QEMU_SND_FRONTEND := hda
 
 DTC := dtc
 
@@ -109,8 +110,8 @@ ELFS := client_vmm.elf \
 		snd_driver_vmm.elf \
 		virt_snd_driver.elf \
 
-SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf
-CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf tick.elf crab_rave.elf
+SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf
+CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf cantina.elf crab_rave.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -124,6 +125,7 @@ VMM_OBJS := printf.o \
 			smc.o \
 			fault.o \
 			util.o \
+			bitarray.o \
 			vgic.o \
 			vgic_v2.o \
 			tcb.o \
@@ -154,9 +156,10 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 VIRT_SND_DRIVER_OBJS := virt_snd_driver.o \
 						sddf_snd_shared_ringbuffer.o \
 						util.o \
-						printf.o
+						printf.o \
+						bitarray.o
 
-SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
+SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o util.o printf.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_shared_ringbuffer.o
 
@@ -189,7 +192,6 @@ CFLAGS := -mstrict-align \
 
 # @alexbr: currently all userlevel procs link asound. this should instead be done per-process.
 CFLAGS_USERLEVEL :=	-g3 \
-		  			-O3 \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
 					-I$(CURRENT_DIR) \
@@ -200,6 +202,8 @@ CFLAGS_USERLEVEL :=	-g3 \
 					-target aarch64-linux-gnu \
 					$(NIX_LDFLAGS) \
 					$(NIX_CFLAGS_COMPILE)
+
+# -O3 \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -216,40 +220,20 @@ qemu: all
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
-			-audio driver=$(QEMU_SND),model=hda,id=$(QEMU_SND) \
+			-audio driver=$(QEMU_SND_BACKEND),model=$(QEMU_SND_FRONTEND),id=$(QEMU_SND_BACKEND) \
 			-m size=2G \
 			-nographic
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-docker: Dockerfile
-	docker build -t snd .
-
-docker-run: docker
-	docker run --rm -it \
-		--entrypoint=/bin/bash \
-		--mount type=bind,src=$(MICROKIT_SDK),target=/microkit-sdk \
-		--mount type=bind,src=$(CURRENT_DIR)/../../,target=/libvmm \
-		snd \
-		-c 'cd /libvmm/examples/virtio-snd && make MICROKIT_SDK=/microkit-sdk BOARD=$(BOARD) CC_USERLEVEL=gcc all'
-
-
 # Unpack rootfs, put the userlevel binary in /root, repack rootfs
 
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
-    ROOTFS_TMP_DIR=$(SND_DRIVER_VM_ROOTFS_TMP_DIR) \
-		INITRD=$(SND_DRIVER_VM_INITRD) \
-		INITRD_OVERLAYED=$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED) \
-		ELFS="$^" \
-		./pack.sh
+	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)" "$^"
 
-$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
-    ROOTFS_TMP_DIR=$(CLIENT_VM_ROOTFS_TMP_DIR) \
-		INITRD=$(CLIENT_VM_INITRD) \
-		INITRD_OVERLAYED=$(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) \
-		ELFS="$^" \
-		./pack.sh
+$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) build/crab_rave.elf
+	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
 	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts

@@ -1,10 +1,16 @@
 #!/usr/bin/env bash
 set -e
 
-[ -z "$ROOTFS_TMP_DIR" ]   && (echo "Missing ROOTFS_TMP_DIR" && exit 1)
-[ -z "$INITRD" ]           && (echo "Missing INITRD" && exit 1)
-[ -z "$INITRD_OVERLAYED" ] && (echo "Missing INITRD_OVERLAYED" && exit 1)
-[ -z "$ELFS" ]             && (echo "Missing ELFS" && exit 1)
+if [ "$#" -ne 4 ]; then
+    echo "usage: $0 ROOTFS_TMP_DIR INITRD INITRD_OVERLAYED ELF1 ELF2 ..."
+fi
+
+ROOTFS_TMP_DIR="$1"
+INITRD="$2"
+INITRD_OVERLAYED="$3"
+ELFS="$4"
+
+echo "Packing $ELFS into $INITRD"
 
 rm -rf $ROOTFS_TMP_DIR
 mkdir -p $ROOTFS_TMP_DIR/root

@@ -40,7 +40,6 @@ typedef struct driver_state {
     sddf_snd_rings_t rings;
     translation_state_t translate;
 
-    bool signal_vmm;
     char *signal_addr;
 } driver_state_t;
 
@@ -232,62 +231,37 @@ static void handle_interrupt(driver_state_t *state)
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
         handle_cmd(state, &cmd);
     }
-
-    for (int i = 0; i < state->stream_count; i++) {
-        stream_update(state->streams[i]);
-    }
 }
 
-int update_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds, int *fd_to_stream,
-                   int *stream_to_fds)
+void fill_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds)
 {
-    // Skip UIO fd
-    int open_fd_count = 1;
-
     for (int i = 0; i < stream_count; i++) {
         stream_t *stream = streams[i];
-        struct pollfd *streamfds = stream_fds(stream);
-
-        int nfds = stream_nfds(stream);
-
-        if (!stream_should_poll(stream)) {
-            stream_to_fds[i] = -1;
-            continue;
-        }
-
-        stream_to_fds[i] = open_fd_count;
-        for (int j = 0; j < nfds; j++, open_fd_count++) {
-            pollfds[open_fd_count] = streamfds[j];
-            fd_to_stream[open_fd_count] = i;
-
-            printf("update %d: ", streamfds[j].fd);
-            if (streamfds[j].events & POLLIN) printf("in ");
-            if (streamfds[j].events & POLLOUT) printf("out ");
-            if (streamfds[j].events & POLLPRI) printf("pri ");
-            if (streamfds[j].events & POLLERR) printf("err ");
-        }
+        pollfds[i].fd = stream_res_fd(stream);
+        pollfds[i].events = POLLIN;
     }
-    return open_fd_count;
 }
 
-static void respond(uint32_t cookie, sddf_snd_status_code_t status, uint32_t latency_bytes, void *user_data)
+static void handle_response(driver_state_t *state, int resp_fd)
 {
-    driver_state_t *state = user_data;
+    stream_response_t resp;
+    int nread = read(resp_fd, &resp, sizeof(resp));
+    if (nread != sizeof(resp)) {
+        printf("UIO SND|ERR: Failed to read from response queue\n");
+        return;
+    }
 
-    if (sddf_snd_enqueue_response(state->rings.responses, cookie, status, latency_bytes) != 0) {
+    if (resp.has_tx_free
+        && sddf_snd_enqueue_pcm_data(state->rings.tx_free, resp.tx_free.addr, resp.tx_free.len)
+            != 0) {
         printf("UIO SND|ERR: failed to enqueue response\n");
     }
-    state->signal_vmm = true;
-}
 
-static void tx_free(uintptr_t addr, unsigned int len, void *user_data)
-{
-    driver_state_t *state = user_data;
-
-    if (sddf_snd_enqueue_pcm_data(state->rings.tx_free, addr, len) != 0) {
+    if (sddf_snd_enqueue_response(state->rings.responses, resp.response.cookie,
+                                  resp.response.status, resp.response.latency_bytes)
+        != 0) {
         printf("UIO SND|ERR: failed to enqueue response\n");
     }
-    state->signal_vmm = true;
 }
 
 int main(void)
@@ -327,7 +301,7 @@ int main(void)
     for (int i = 0; i < MAX_STREAMS; i++) {
         state.streams[state.stream_count]
             = stream_open(&state.shared_state->stream_info[state.stream_count], SOUND_DEVICE,
-                          target_streams[i], state.translate, respond, tx_free, &state);
+                          target_streams[i], state.translate);
 
         if (state.streams[state.stream_count] == NULL)
             printf("Failed to initialise target stream %d\n", i);
@@ -347,43 +321,39 @@ int main(void)
     }
 
     // Start with 1 for UIO fd
-    int fd_count = 1;
-    for (int i = 0; i < state.stream_count; i++) {
-        fd_count += stream_nfds(state.streams[i]);
-    }
+    int fd_count = state.stream_count + 1;
 
     struct pollfd *fds = calloc(fd_count, sizeof(struct pollfd));
-    int *fd_to_stream = calloc(fd_count, sizeof(int));
-    int *stream_to_fds = calloc(state.stream_count, sizeof(int));
+    if (fds == NULL) {
+        perror("UIO SND|ERR: Failed to allocate file descriptor array\n");
+        return EXIT_FAILURE;
+    }
 
     fds[UIO_POLLFD].fd = uio_fd;
     fds[UIO_POLLFD].events = POLLIN;
     fds[UIO_POLLFD].revents = 0;
-    fd_to_stream[UIO_POLLFD] = -1;
 
     printf("UIO SND|INFO: UIO fd %d\n", uio_fd);
 
-    int curr_fd_count
-        = update_pollfds(state.streams, state.stream_count, fds, fd_to_stream, stream_to_fds);
+    fill_pollfds(state.streams, state.stream_count, fds + 1);
 
     const uint32_t enable = 1;
     if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
         perror("UIO SND|ERR: Failed to reenable interrupts\n");
         return EXIT_FAILURE;
     }
-    
-    while (true) {
-        // printf("UIO SND|INFO: polling with %d fds\n", curr_fd_count);
 
-        // We might not need a UIO interrupt for tx/rx, ALSA should signal.
-        int ready = poll(fds, curr_fd_count, -1);
+    while (true) {
+        // printf("UIO SND|INFO: polling with %d fds\n", fd_count);
+
+        int ready = poll(fds, fd_count, -1);
         if (ready == -1) {
             perror("UIO SND|ERR: Failed to poll descriptors");
             return EXIT_FAILURE;
         }
 
-        // printf("UIO SND|INFO: Awake on %d (%d) fds: ", curr_fd_count, ready);
-        // for (int i = 0; i < curr_fd_count; i++) {
+        // printf("UIO SND|INFO: Awake on %d (ready %d) fds: ", fd_count, ready);
+        // for (int i = 0; i < fd_count; i++) {
         //     char *state = "off";
         //     if (fds[i].revents & POLLIN) state = "in";
         //     else if (fds[i].revents & POLLOUT) state = "out";
@@ -395,64 +365,36 @@ int main(void)
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
             int32_t irq_count;
-            printf("Reading interrupt\n");
-            if(read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
+            printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
+            if (read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
                 perror("UIO SND|ERR: Failed to read interrupt\n");
                 break;
             }
-            printf("Got %d interrupts\n", irq_count);
 
             handle_interrupt(&state);
 
-            printf("Writing interrupt\n");
             if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
                 perror("UIO SND|ERR: Failed to reenable interrupts\n");
                 break;
             }
         }
 
+        bool signal_vmm = false;
         for (int i = 0; i < state.stream_count; i++) {
-            if (stream_to_fds[i] == -1) {
-                continue;
-            }
-
-            stream_t *stream = state.streams[i];
-            int fd_begin = stream_to_fds[i];
-            int fd_end = fd_begin + stream_nfds(stream);
-
-            // snd_pcm_stream_t direction = stream_direction(stream);
-            // short target_event = direction == SND_PCM_STREAM_PLAYBACK ? POLLOUT : POLLIN; 
-
-            unsigned short revents;
-            stream_demangle_fds(stream, &fds[fd_begin], stream_nfds(stream), &revents);
-
-            for (int fd_index = fd_begin; fd_index < fd_end; fd_index++) {
-                // if (fds[fd_index].revents & target_event) {
-                if (fds[fd_index].revents) {
-                    // printf("UIO SND|INFO: got poll event on stream %d (idx %d)\n", i, fd_index);
-                    // this assumes driver will signal if there are any commands
-                    stream_update(stream);
-                    break;
-                }
+            if (fds[i + 1].revents & POLLIN) {
+                // printf("UIO SND|INFO: Stream %d got response\n", i);
+                handle_response(&state, fds[i + 1].fd);
+                signal_vmm = true;
             }
         }
 
-        if (state.signal_vmm) {
+        if (signal_vmm) {
             signal_ready_to_vmm(state.signal_addr);
-            state.signal_vmm = false;
+            signal_vmm = false;
         }
-
-        curr_fd_count
-            = update_pollfds(state.streams, state.stream_count, fds, fd_to_stream, stream_to_fds);
-    }
-
-    for (int i = 0; i < state.stream_count; i++) {
-        stream_close(state.streams[i]);
     }
 
     close(signal_fd);
     free(fds);
-    free(fd_to_stream);
-    free(stream_to_fds);
     return EXIT_SUCCESS;
 }
