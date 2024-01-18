@@ -59,7 +59,10 @@ static void assert_fail(
     while (1) {}
 }
 
+/* Convenience function to print a bit array */
 void print_bitarray(bitarray_t* bitarr);
+/* Convenience function to print word in bits */
+void print_binary(word_t word);
 
 #define assert(expr) \
     do { \

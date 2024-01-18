@@ -14,7 +14,6 @@ void _putchar(char character)
     microkit_dbg_putc(character);
 }
 
-/* Convenience function to print a bit array */
 void print_bitarray(bitarray_t* bitarr)
 {
     for (int i = 0; i < bitarr->num_of_words; i++)
@@ -26,4 +25,15 @@ void print_bitarray(bitarray_t* bitarr)
         }
         printf("\n");
     }
+}
+
+void print_binary(word_t word) {
+    for (int i = 63; i >= 0; i--) {
+        printf("%llu", (word >> i) & 1);
+
+        if (i % 8 == 0 && i != 0) {
+            printf(" ");
+        }
+    }
+    printf("\n");
 }
