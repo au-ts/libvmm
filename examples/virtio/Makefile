@@ -173,7 +173,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DNUM_CLIENTS=2 $< -o $@
+	$(CC) -c $(CFLAGS) -DNUM_CLIENTS=2 -DTRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
