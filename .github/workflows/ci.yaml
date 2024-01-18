@@ -24,7 +24,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: MANUAL
-          path: MANUAL.pdf
+          path: docs/MANUAL.pdf
   build_linux_x86_64:
     name: Build and run examples (Linux x86-64)
     runs-on: ubuntu-20.04
