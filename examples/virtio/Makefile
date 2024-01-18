@@ -63,18 +63,17 @@ CURRENT_DIR := $(shell pwd)
 
 # BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
 # BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
-# BLK_DRIVER_VM_USERLEVEL_DIR := userlevel/blk_driver_vm
+# BLK_DRIVER_VM_USERLEVEL_DIR := $(BLK_DRIVER_VM_DIR)/userlevel
 # BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
 
-CLIENT_VM_DIR := board/$(BOARD)/client_vm
-CLIENT_VM_USERLEVEL_DIR := userlevel/client_vm
-CLIENT_VM_1_DIR := $(CLIENT_VM_DIR)/client_vm_1
+CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
 CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
-CLIENT_VM_1_USERLEVEL_DIR := $(CLIENT_VM_USERLEVEL_DIR)/client_vm_1
+CLIENT_VM_1_USERLEVEL_DIR := $(CLIENT_VM_1_DIR)/userlevel
 CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
-CLIENT_VM_2_DIR := $(CLIENT_VM_DIR)/client_vm_2
+
+CLIENT_VM_2_DIR := board/$(BOARD)/client_vm_2
 CLIENT_VM_2_DTS_DIR := $(CLIENT_VM_2_DIR)/dts
-CLIENT_VM_2_USERLEVEL_DIR := $(CLIENT_VM_USERLEVEL_DIR)/client_vm_2
+CLIENT_VM_2_USERLEVEL_DIR := $(CLIENT_VM_2_DIR)/userlevel
 CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
 
 # BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
@@ -238,7 +237,7 @@ client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_ELFS))
 	(cd $(CLIENT_VM_2_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_2_INITRD_OVERLAYED))
 
 # $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
-# 	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
+# 	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
 # 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
 
 # $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_OVERLAYED)
@@ -250,11 +249,11 @@ client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_ELFS))
 # 					$< -o $@
 
 $(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
-	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
+	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_1.dts > $@
 
 $(CLIENT_VM_2_DTB): $(CLIENT_VM_2_BASE_DTS) $(CLIENT_VM_2_DTS_OVERLAYS)
-	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
+	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_2.dts > $@
 
 $(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_OVERLAYED)
