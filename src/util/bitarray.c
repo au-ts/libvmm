@@ -1,4 +1,5 @@
 #include "bitarray.h"
+#include <util.h>
 
 #define SET_REGION(arr,start,len)    _set_region((arr),(start),(len),FILL_REGION)
 #define CLEAR_REGION(arr,start,len)  _set_region((arr),(start),(len),ZERO_REGION)
@@ -84,11 +85,7 @@ static inline void _set_region(bitarray_t *bitarr, bit_index_t start,
     }
 }
 
-//
-// Set, clear and toggle all bits in a region
-//
-
-// Set all the bits in a region
+/* Set all the bits in a region */ 
 void bitarray_set_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len)
 {
     // assert(start + len <= bitarr->num_of_bits);
@@ -96,69 +93,59 @@ void bitarray_set_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len)
 }
 
 
-// Clear all the bits in a region
+/* Clear all the bits in a region */
 void bitarray_clear_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len)
 {
     // assert(start + len <= bitarr->num_of_bits);
     CLEAR_REGION(bitarr, start, len);
 }
 
-// Toggle all the bits in a region
+/* Toggle all the bits in a region */ 
 void bitarray_toggle_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len)
 {
     // assert(start + len <= bitarr->num_of_bits);
     TOGGLE_REGION(bitarr, start, len);
 }
 
+/* Compare the regions of two bit arrays */
 bool bitarray_cmp_region(bitarray_t* bitarr1, bit_index_t start1,
-                         bitarray_t* bitarr2, bit_index_t start2, bit_index_t len) {
-    // Check if the length exceeds the bounds of the bitarrays
-    // assert(start1 + len > bitarr1->num_of_bits);
-    // assert(start2 + len > bitarr2->num_of_bits);
-
+                         bitarray_t* bitarr2, bit_index_t start2, bit_index_t len)
+{
     if (len == 0) return true;
 
-    word_addr_t first_word1 = bitset64_wrd(start1);
-    word_addr_t last_word1 = bitset64_wrd(start1 + len - 1);
-    word_offset_t foffset1 = bitset64_idx(start1);
-    word_offset_t loffset1 = bitset64_idx(start1 + len - 1);
+    while (len > 0) {
+        // calculate the word index and bit offset for both arrays
+        word_addr_t word_idx1 = bitset64_wrd(start1);
+        word_offset_t bit_offset1 = bitset64_idx(start1);
+        word_addr_t word_idx2 = bitset64_wrd(start2);
+        word_offset_t bit_offset2 = bitset64_idx(start2);
 
-    word_addr_t first_word2 = bitset64_wrd(start2);
-    word_addr_t last_word2 = bitset64_wrd(start2 + len - 1);
-    word_offset_t foffset2 = bitset64_idx(start2);
-    word_offset_t loffset2 = bitset64_idx(start2 + len - 1);
+        // calculate the number of bits to compare in this iteration
+        bit_index_t bits_in_current_word1 = 64 - bit_offset1;
+        bit_index_t bits_in_current_word2 = 64 - bit_offset2;
+        bit_index_t bits_to_compare = len;
+        if (bits_to_compare > bits_in_current_word1) bits_to_compare = bits_in_current_word1;
+        if (bits_to_compare > bits_in_current_word2) bits_to_compare = bits_in_current_word2;
 
-    // Compare first words if necessary
-    if (first_word1 == last_word1 && first_word2 == last_word2) {
-        word_t mask1 = bitmask64(len) << foffset1;
-        word_t mask2 = bitmask64(len) << foffset2;
-        return ((bitarr1->words[first_word1] & mask1) == (bitarr2->words[first_word2] & mask2));
-    } else {
-        // Compare first words separately
-        word_t first_mask1 = (~(bitmask64(foffset1))) & (bitmask64(64 - (foffset1 - loffset1 + 1)));
-        word_t first_mask2 = (~(bitmask64(foffset2))) & (bitmask64(64 - (foffset2 - loffset2 + 1)));
-        if ((bitarr1->words[first_word1] & first_mask1) != (bitarr2->words[first_word2] & first_mask2)) {
+        // create masks for the bits to compare
+        word_t mask1 = bitmask64(bits_to_compare) << bit_offset1;
+        word_t mask2 = bitmask64(bits_to_compare) << bit_offset2;
+
+        // extract the relevant bits from each array
+        word_t bits1 = (bitarr1->words[word_idx1] & mask1) >> bit_offset1;
+        word_t bits2 = (bitarr2->words[word_idx2] & mask2) >> bit_offset2;
+
+        // compare the bits
+        if (bits1 != bits2) {
             return false;
         }
 
-        // Compare whole words in between
-        for (word_addr_t i = 1; i < last_word1 - first_word1; i++) {
-            if (bitarr1->words[first_word1 + i] != bitarr2->words[first_word2 + i]) {
-                return false;
-            }
-        }
-
-        // Compare the last words if necessary
-        if (last_word1 != first_word1 && last_word2 != first_word2) {
-            word_t last_mask1 = bitmask64(loffset1 + 1);
-            word_t last_mask2 = bitmask64(loffset2 + 1);
-            if ((bitarr1->words[last_word1] & last_mask1) != (bitarr2->words[last_word2] & last_mask2)) {
-                return false;
-            }
-        }
+        // update for the next iteration
+        len -= bits_to_compare;
+        start1 += bits_to_compare;
+        start2 += bits_to_compare;
     }
 
     return true;
 }
-
 
