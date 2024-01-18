@@ -68,8 +68,12 @@ int main(void)
         return -1;
     }
 
-    write_test(blk);
-    fsync_file(blk);
+    for (int i=0; i<100; i++) {
+        write_test(blk);
+        fsync_file(blk);
+    }
+    // write_test(blk);
+    // fsync_file(blk);
     // lseek_to(blk, 0);
     // read_test(blk);
 
