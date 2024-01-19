@@ -17,8 +17,8 @@
 		// linux,initrd-start = <0x00000000 0x13000000>;
 		linux,initrd-end = <0x00000000 0x2ff00000>;
         linux,initrd-start = <0x00000000 0x2d700000>;
-        bootargs = "console=ttyAML0,115200n8 root=/dev/nfs nfsroot=10.13.0.12:/vmm-rfs ip=dhcp nfsrootdebug nosmp rw loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
-		// root=/dev/nfs nfsroot=10.13.0.12:/vmm-rfs ip=dhcp
+        bootargs = "console=ttyAML0,115200n8 root=/dev/nfs nfsroot=/vmm-rfs nosmp rw loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+		// root=/dev/nfs nfsroot=/vmm-rfs
 		// root=/dev/mmcblk0p1 rootwait
 
 		framebuffer-cvbs {
