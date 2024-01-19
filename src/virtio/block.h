@@ -130,8 +130,9 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_S_UNSUPP         2
 
 /* Backend implementation */
-#define SDDF_BLK_NUM_RING_HANDLES 1
-#define SDDF_BLK_DEFAULT_RING 0
+#define BLK_NUM_QUEUES 1
+#define BLK_DEFAULT_QUEUE 0
+#define BLK_NUM_DATA_BUFFERS 4096
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_VIRTQ_DEFAULT 0
@@ -152,6 +153,6 @@ typedef struct blk_data_region {
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void **data_region_handles,
-                    void **sddf_ring_handles, size_t sddf_ch);
+                    void **data_region_handlers,
+                    void **sddf_handlers, size_t sddf_ch);
 void virtio_blk_handle_resp(struct virtio_device *dev);
