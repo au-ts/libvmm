@@ -2,7 +2,7 @@
 
 This example VMM supports Armbian Bookworm with only minimal CLI support on HardKernel's Odroidc4.
 
-This works by running the initrd from armbian and using SD card passthrough containing the distro image for second stage booting. 
+This works by running the initrd from armbian and using SD card passthrough containing the distro image for second stage booting.
 
 ## Building with Make
 
@@ -23,4 +23,8 @@ dd if=/path/to/armbian/image of=/dev/yourrawdevice bs=1M oflag=sync
 You'll need to run above with sudo
 
 You may also need to replace the ```root=/dev/mmcblk0p1``` param from bootargs located in ```board/odroidc4/armbian_vm/dts/init.dts``` to the SD card partition that has the image flashed.
+
+## Booting with NFS
+
+Alternatively, you may also boot with NFS by storing the armbian root-fs in a NFS server, then replacing `root=` and `rootwait` with `root=/dev/nfs nfsroot=[<server-ip>:]/path/to/rootfs`
 
