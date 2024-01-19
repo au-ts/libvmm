@@ -28,13 +28,9 @@ Begin with default linux configuration
 make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- defconfig
 ```
 Using menuconfig `make ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- menuconfig`,
-enable booting with NFS root file system by enabling these drivers as built-in:
+enable booting with NFS as root file system by enabling these drivers as built-in:
 * DWMAC_MESON
-* MDIO
 * MDIO_BUS_MUX_MESON_G12A
-* MESON_GXL_PHY ??
-* R8169 ??
-* DWMAC_GENERIC ??
 
 Now build:
 ```
