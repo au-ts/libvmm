@@ -100,7 +100,6 @@ CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
-SDDF_UTIL := $(SDDF)/util
 
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
@@ -181,7 +180,6 @@ CFLAGS := -mstrict-align \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF) \
 		  -I$(SDDF)/include \
-		  -I$(SDDF_UTIL)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
