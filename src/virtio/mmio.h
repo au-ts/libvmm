@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "util/util.h"
 #include "virtio/virtq.h"
-#include "serial/libserialsharedringbuffer/include/shared_ringbuffer.h"
+#include <sddf/serial/shared_ringbuffer.h>
 
 // table 4.1
 #define VIRTIO_MMIO_DEV_MAGIC               0x74726976 // "virt"
