@@ -3,7 +3,7 @@
 #include "virtio/console.h"
 #include "util/util.h"
 #include "virq.h"
-#include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
+#include <sddf/serial/shared_ringbuffer.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_CONSOLE
@@ -111,7 +111,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
     uint16_t guest_idx = virtq->avail->idx;
     size_t idx = tx_queue->last_idx;
 
-    sddf_serial_ring_handle_t *sddf_tx_ring = ((sddf_serial_ring_handle_t **)dev->sddf_ring_handles)[SDDF_SERIAL_TX_RING];
+    ring_handle_t *sddf_tx_ring = ((ring_handle_t **)dev->sddf_handlers)[TX_RING];
 
     while (idx != guest_idx) {
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
@@ -130,9 +130,9 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             uintptr_t sddf_buffer = 0;
             unsigned int sddf_buffer_len = 0;
             void *sddf_cookie = NULL;
-            LOG_CONSOLE("tx ring free size: 0x%lx, tx ring used size: 0x%lx\n", sddf_serial_ring_size(sddf_tx_ring->free_ring), sddf_serial_ring_size(sddf_tx_ring->used_ring));
-            assert(!sddf_serial_ring_empty(sddf_tx_ring->free_ring));
-            int ret = sddf_serial_dequeue_free(sddf_tx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
+            LOG_CONSOLE("tx ring free size: 0x%lx, tx ring used size: 0x%lx\n", ring_size(sddf_tx_ring->free_ring), ring_size(sddf_tx_ring->used_ring));
+            assert(!ring_empty(sddf_tx_ring->free_ring));
+            int ret = dequeue_free(sddf_tx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
             assert(!ret);
             if (ret != 0) {
                 LOG_CONSOLE_ERR("could not dequeue from the TX free ring\n");
@@ -149,9 +149,9 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
              * by the multiplexor. */
             memcpy((char *) sddf_buffer, (char *) desc.addr, desc.len);
 
-            bool is_empty = sddf_serial_ring_empty(sddf_tx_ring->used_ring);
+            bool is_empty = ring_empty(sddf_tx_ring->used_ring);
             /* Now we can enqueue our buffer into the used TX ring */
-            ret = sddf_serial_enqueue_used(sddf_tx_ring, sddf_buffer, desc.len, sddf_cookie);
+            ret = enqueue_used(sddf_tx_ring, sddf_buffer, desc.len, sddf_cookie);
             // @ivanv: handle case in release made
             assert(ret == 0);
 
@@ -196,11 +196,11 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
      * Our job is to inspect the sDDF used RX ring, and dequeue everything
      * we can and give it to the guest driver.
      */
-    sddf_serial_ring_handle_t *sddf_rx_ring = ((sddf_serial_ring_handle_t **)dev->sddf_ring_handles)[SDDF_SERIAL_RX_RING];
+    ring_handle_t *sddf_rx_ring = ((ring_handle_t **)dev->sddf_handlers)[RX_RING];
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
     void *sddf_cookie = NULL;
-    int ret = sddf_serial_dequeue_used(sddf_rx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
+    int ret = dequeue_used(sddf_rx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
     assert(!ret);
     if (ret != 0) {
         LOG_CONSOLE_ERR("could not dequeue from RX used ring\n");
@@ -245,7 +245,7 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
     }
 
     // 4. Enqueue sDDF buffer into RX free ring
-    ret = sddf_serial_enqueue_free(sddf_rx_ring, sddf_buffer, SDDF_SERIAL_BUFFER_SIZE, sddf_cookie);
+    ret = enqueue_free(sddf_rx_ring, sddf_buffer, BUFFER_SIZE, sddf_cookie);
     assert(!ret);
     // @ivanv: error handle for release mode
 
@@ -264,8 +264,8 @@ virtio_device_funs_t functions = {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
-                         void **data_region_handles,
-                         void **sddf_ring_handles, size_t sddf_ch) {
+                         void **data_region_handlers,
+                         void **sddf_handlers, size_t sddf_ch) {
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
@@ -273,7 +273,7 @@ void virtio_console_init(struct virtio_device *dev,
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
-    dev->data_region_handles = data_region_handles; // @ericc: unusued
-    dev->sddf_ring_handles = sddf_ring_handles;
+    dev->data_region_handlers = data_region_handlers; // @ericc: unusued
+    dev->sddf_handlers = sddf_handlers;
     dev->sddf_ch = sddf_ch;
 }

@@ -100,13 +100,13 @@ CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
+SDDF_UTIL := $(SDDF)/util
 
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
-SDDF_UTIL := $(SDDF)/util
 
-SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
+SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
 # ELFS := blk_driver_vmm.elf client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 ELFS := client_vmm_1.elf client_vmm_2.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
@@ -140,8 +140,8 @@ CLIENT_VMM_1_OBJS :=	$(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_serial_shared_ringbuffer.o \
-					sddf_blk_shared_ringbuffer.o \
+					sddf_serial_sharedringbuffer.o \
+					sddf_blk_shared_queue.o \
 
 CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
 					client_images_2.o \
@@ -150,18 +150,18 @@ CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_serial_shared_ringbuffer.o \
-					sddf_blk_shared_ringbuffer.o \
+					sddf_serial_sharedringbuffer.o \
+					sddf_blk_shared_queue.o \
 
 # BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 # 						blk_driver_images.o \
 # 						blk_driver_vmm.o \
 
-TEST_BLK_OBJS := test_blk.o sddf_blk_shared_ringbuffer.o printf.o util.o
+TEST_BLK_OBJS := test_blk.o sddf_blk_shared_queue.o printf.o util.o
 
-SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o
-SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o sddf_serial_shared_ringbuffer.o
+SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
+SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
+SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -178,11 +178,10 @@ CFLAGS := -mstrict-align \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
-		  -I$(SDDF_SERIAL_RINGBUFFER)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
-		  -I$(SDDF_BLOCK_RINGBUFFER)/include \
 		  -I$(SDDF) \
 		  -I$(SDDF)/include \
+		  -I$(SDDF_UTIL)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -302,14 +301,16 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
+$(BUILD_DIR)/sddf_serial_sharedringbuffer.o: Makefile
+	$(MAKE) -C $(SDDF_SERIAL_RINGBUFFER) MICROKIT_INCLUDE=$(MICROKIT_SDK)
+	cp $(SDDF_SERIAL_RINGBUFFER)/sddf_serial_sharedringbuffer.o $(BUILD_DIR)/sddf_serial_sharedringbuffer.o
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
+$(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
+	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK)
+	cp $(SDDF_BLK_SHAREDQUEUE)/sddf_blk_shared_queue.o $(BUILD_DIR)/sddf_blk_shared_queue.o
 
 $(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@

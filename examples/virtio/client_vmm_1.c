@@ -17,6 +17,8 @@
 #include "virtio/virtio.h"
 #include "virtio/console.h"
 #include <sddf/serial/shared_ringbuffer.h>
+#include "virtio/block.h"
+#include <sddf/blk/shared_queue.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -60,10 +62,10 @@ uintptr_t serial_tx_used;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-sddf_serial_ring_handle_t serial_rx_ring_handle;
-sddf_serial_ring_handle_t serial_tx_ring_handle;
+ring_handle_t serial_rx_ring_handle;
+ring_handle_t serial_tx_ring_handle;
 
-static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
+static ring_handle_t *serial_ring_handles[NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
 
@@ -74,16 +76,16 @@ static struct virtio_device virtio_console;
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
-uintptr_t blk_cmd_ring;
-uintptr_t blk_resp_ring;
+uintptr_t blk_req_queue;
+uintptr_t blk_resp_queue;
 uintptr_t blk_data;
-sddf_blk_ring_handle_t blk_ring_handle;
-static sddf_blk_ring_handle_t *blk_ring_handles[SDDF_BLK_NUM_RING_HANDLES];
+blk_queue_handle_t blk_queue_handle;
+static blk_queue_handle_t *blk_queue_handles[BLK_NUM_QUEUES];
 
 blk_data_region_t blk_data_region;
 bitarray_t blk_data_region_avail_bitarr;
-word_t blk_data_region_avail_bitarr_words[roundup_bits2words64(SDDF_BLK_NUM_DATA_BUFFERS)];
-static blk_data_region_t *blk_data_region_handles[SDDF_BLK_NUM_RING_HANDLES];
+word_t blk_data_region_avail_bitarr_words[roundup_bits2words64(BLK_NUM_DATA_BUFFERS)];
+static blk_data_region_t *blk_data_region_handlers[BLK_NUM_QUEUES];
 
 static struct virtio_device virtio_blk;
 
@@ -117,68 +119,68 @@ void init(void) {
     }
     
     /* Initialise our sDDF ring buffers for the serial device */
-    sddf_serial_ring_init(&serial_rx_ring_handle,
-            (sddf_serial_ring_buffer_t *)serial_rx_free,
-            (sddf_serial_ring_buffer_t *)serial_rx_used,
+    ring_init(&serial_rx_ring_handle,
+            (ring_buffer_t *)serial_rx_free,
+            (ring_buffer_t *)serial_rx_used,
             true,
-            SDDF_SERIAL_NUM_BUFFERS,
-            SDDF_SERIAL_NUM_BUFFERS);
-    for (int i = 0; i < SDDF_SERIAL_NUM_BUFFERS - 1; i++) {
-        int ret = sddf_serial_enqueue_free(&serial_rx_ring_handle, serial_rx_data + (i * SDDF_SERIAL_BUFFER_SIZE), SDDF_SERIAL_BUFFER_SIZE, NULL);
+            NUM_BUFFERS,
+            NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+        int ret = enqueue_free(&serial_rx_ring_handle, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    sddf_serial_ring_init(&serial_tx_ring_handle,
-            (sddf_serial_ring_buffer_t *)serial_tx_free,
-            (sddf_serial_ring_buffer_t *)serial_tx_used,
+    ring_init(&serial_tx_ring_handle,
+            (ring_buffer_t *)serial_tx_free,
+            (ring_buffer_t *)serial_tx_used,
             true,
-            SDDF_SERIAL_NUM_BUFFERS,
-            SDDF_SERIAL_NUM_BUFFERS);
-    for (int i = 0; i < SDDF_SERIAL_NUM_BUFFERS - 1; i++) {
+            NUM_BUFFERS,
+            NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = sddf_serial_enqueue_free(&serial_tx_ring_handle, serial_tx_data + ((i + SDDF_SERIAL_NUM_BUFFERS) * SDDF_SERIAL_BUFFER_SIZE), SDDF_SERIAL_BUFFER_SIZE, NULL);
+        int ret = enqueue_free(&serial_tx_ring_handle, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
-    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
+    serial_ring_handles[RX_RING] = &serial_rx_ring_handle;
+    serial_ring_handles[TX_RING] = &serial_tx_ring_handle;
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.free_ring));
-    assert(!sddf_serial_ring_plugged(serial_tx_ring_handle.used_ring));
+    assert(!ring_plugged(serial_tx_ring_handle.free_ring));
+    assert(!ring_plugged(serial_tx_ring_handle.used_ring));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
     
     /* Initialise our sDDF ring buffers for the block device */
-    sddf_blk_ring_init(&blk_ring_handle,
-                (sddf_blk_cmd_ring_buffer_t *)blk_cmd_ring,
-                (sddf_blk_resp_ring_buffer_t *)blk_resp_ring,
+    blk_queue_init(&blk_queue_handle,
+                (blk_req_queue_t *)blk_req_queue,
+                (blk_resp_queue_t *)blk_resp_queue,
                 true,
-                SDDF_BLK_NUM_CMD_BUFFERS,
-                SDDF_BLK_NUM_RESP_BUFFERS);
-    blk_ring_handles[SDDF_BLK_DEFAULT_RING] = &blk_ring_handle;
+                BLK_REQ_QUEUE_SIZE,
+                BLK_RESP_QUEUE_SIZE);
+    blk_queue_handles[BLK_DEFAULT_QUEUE] = &blk_queue_handle;
     /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
-    assert(!sddf_blk_cmd_ring_plugged(&blk_ring_handle));
+    assert(!blk_req_queue_plugged(&blk_queue_handle));
     /* Initialise bit array*/
-    bitarray_init(&blk_data_region_avail_bitarr, blk_data_region_avail_bitarr_words, roundup_bits2words64(SDDF_BLK_NUM_DATA_BUFFERS));
+    bitarray_init(&blk_data_region_avail_bitarr, blk_data_region_avail_bitarr_words, roundup_bits2words64(BLK_NUM_DATA_BUFFERS));
     /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
     blk_data_region.avail_bitpos = 0; /* bit position of next avail buffer */
     blk_data_region.avail_bitarr = &blk_data_region_avail_bitarr; /* bit array representing avail data buffers */
-    blk_data_region.num_buffers = SDDF_BLK_NUM_DATA_BUFFERS; /* number of buffers in data region */
+    blk_data_region.num_buffers = BLK_NUM_DATA_BUFFERS; /* number of buffers in data region */
     blk_data_region.addr = blk_data; /* encoded base address of data region */
     /* Set all available bits to 1 to indicate it is available */ 
-    bitarray_set_region(&blk_data_region_avail_bitarr, 0, SDDF_BLK_NUM_DATA_BUFFERS);
-    blk_data_region_handles[SDDF_BLK_DEFAULT_RING] = &blk_data_region;
+    bitarray_set_region(&blk_data_region_avail_bitarr, 0, BLK_NUM_DATA_BUFFERS);
+    blk_data_region_handlers[BLK_DEFAULT_QUEUE] = &blk_data_region;
     
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      (void **)blk_data_region_handles, (void **)blk_ring_handles, BLK_CH);
+                                      (void **)blk_data_region_handlers, (void **)blk_queue_handles, BLK_CH);
     assert(success);
 
     /* Finally start the guest */
