@@ -17,5 +17,11 @@
         gpu@ffe40000 {
             status = "disabled";
         };
+
+        bus@ff800000 {
+            adc@9000 {
+                status = "disabled";
+            };
+        };
     };
 };
