@@ -34,5 +34,5 @@ void bitarray_toggle_region(bitarray_t* bitarr, bit_index_t start, bit_index_t l
 /* Clear all the bits in a region */
 void bitarray_clear_region(bitarray_t* bitarr, bit_index_t start, bit_index_t len);
 
-/* Compare two bit arrays */
+/* Compare two bit arrays, true if the two regions are equal */
 bool bitarray_cmp_region(bitarray_t* bitarr1, bit_index_t start1, bitarray_t* bitarr2, bit_index_t start2, bit_index_t len);
