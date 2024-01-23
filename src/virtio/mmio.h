@@ -115,6 +115,8 @@ typedef struct virtio_device {
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
+    /* Pointer to the sDDF config space */
+    void *config;
     /* Shared data region handlers */
     void **data_region_handlers;
     /* Handlers for sDDF structures */
@@ -125,7 +127,7 @@ typedef struct virtio_device {
     // this is specific to device classes such as serial and networking
     // @ericc: on top of potentially changing to a callback, there can be multiple channels, one for each pair
     // of rings. For now im leaving it as one channel since that's how much block, serial and ethernet use.
-    size_t sddf_ch;
+    size_t *sddf_ch;
 } virtio_device_t;
 
 /**

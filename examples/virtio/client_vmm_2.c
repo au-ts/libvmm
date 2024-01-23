@@ -61,10 +61,12 @@ uintptr_t serial_tx_used;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
+size_t serial_ch[SDDF_SERIAL_NUM_CH];
+
 ring_handle_t serial_rx_ring_handle;
 ring_handle_t serial_tx_ring_handle;
 
-static ring_handle_t *serial_ring_handles[NUM_RING_HANDLES];
+static ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
 
@@ -126,14 +128,16 @@ void init(void) {
             microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_ring_handles[RX_RING] = &serial_rx_ring_handle;
-    serial_ring_handles[TX_RING] = &serial_tx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
     assert(!ring_plugged(serial_tx_ring_handle.free_ring));
     assert(!ring_plugged(serial_tx_ring_handle.used_ring));
+    /* Initialise channel */
+    serial_ch[SDDF_SERIAL_TX_CH_INDEX] = SERIAL_MUX_TX_CH;
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
+                                      NULL, NULL, (void **)serial_ring_handles, serial_ch);
     assert(success);
     
     /* Finally start the guest */
