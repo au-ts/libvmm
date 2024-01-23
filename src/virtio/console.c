@@ -111,7 +111,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
     uint16_t guest_idx = virtq->avail->idx;
     size_t idx = tx_queue->last_idx;
 
-    ring_handle_t *sddf_tx_ring = ((ring_handle_t **)dev->sddf_handlers)[TX_RING];
+    ring_handle_t *sddf_tx_ring = ((ring_handle_t **)dev->sddf_handlers)[SDDF_SERIAL_TX_RING];
 
     while (idx != guest_idx) {
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
@@ -157,7 +157,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
 
             if (is_empty) {
                 // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(dev->sddf_ch);
+                microkit_notify(dev->sddf_ch[SDDF_SERIAL_TX_CH_INDEX]);
             }
 
             /* Lastly, move to the next descriptor in the chain */
@@ -196,7 +196,7 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
      * Our job is to inspect the sDDF used RX ring, and dequeue everything
      * we can and give it to the guest driver.
      */
-    ring_handle_t *sddf_rx_ring = ((ring_handle_t **)dev->sddf_handlers)[RX_RING];
+    ring_handle_t *sddf_rx_ring = ((ring_handle_t **)dev->sddf_handlers)[SDDF_SERIAL_RX_RING];
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
     void *sddf_cookie = NULL;
@@ -264,8 +264,9 @@ virtio_device_funs_t functions = {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
+                         void *config,
                          void **data_region_handlers,
-                         void **sddf_handlers, size_t sddf_ch) {
+                         void **sddf_handlers, size_t *sddf_ch) {
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
@@ -273,6 +274,7 @@ void virtio_console_init(struct virtio_device *dev,
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
+    dev->config = config; // @ericc: unused
     dev->data_region_handlers = data_region_handlers; // @ericc: unusued
     dev->sddf_handlers = sddf_handlers;
     dev->sddf_ch = sddf_ch;
