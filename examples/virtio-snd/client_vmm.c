@@ -75,6 +75,7 @@ static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDL
 
 uintptr_t sound_commands;
 uintptr_t sound_responses;
+uintptr_t sound_tx_used;
 uintptr_t sound_tx_free;
 uintptr_t sound_rx_used;
 uintptr_t sound_rx_free;
@@ -164,6 +165,7 @@ void init(void) {
     snd_state.rings = (sddf_snd_rings_t){
         .commands  = (void *)sound_commands,
         .responses = (void *)sound_responses,
+        .tx_used   = (void *)sound_tx_used,
         .tx_free   = (void *)sound_tx_free,
         .rx_used   = (void *)sound_rx_used,
         .rx_free   = (void *)sound_rx_free,

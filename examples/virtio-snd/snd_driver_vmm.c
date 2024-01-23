@@ -18,7 +18,9 @@
 #include "virtio/virtio.h"
 #include "virtio/console.h"
 #include "virtio/block.h"
-#include "serial/libserialsharedringbuffer/include/sddf_serial_shared_ringbuffer.h"
+#include "virtio/sound.h"
+#include "sddf_serial_shared_ringbuffer.h"
+#include "sddf_snd_shared_ringbuffer.h"
 #include "uio.h"
 
 /*
@@ -66,6 +68,19 @@ uintptr_t serial_tx_used;
 
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
+
+uintptr_t snd_shared_state;
+uintptr_t snd_rx_data;
+uintptr_t snd_tx_data;
+
+uintptr_t snd_commands;
+uintptr_t snd_responses;
+uintptr_t snd_tx_used;
+uintptr_t snd_tx_free;
+uintptr_t snd_rx_used;
+uintptr_t snd_rx_free;
+
+static sddf_snd_rings_t snd_rings;
 
 sddf_serial_ring_handle_t serial_rx_ring_handle;
 sddf_serial_ring_handle_t serial_tx_ring_handle;
@@ -151,6 +166,42 @@ void init(void) {
                                                   sizeof(size_t),
                                                   &uio_snd_fault_handler, NULL);
     assert(success);
+
+    assert(snd_commands);
+    assert(snd_responses);
+    assert(snd_rx_free);
+    assert(snd_rx_used);
+    assert(snd_tx_free);
+    assert(snd_rx_data);
+    assert(snd_tx_data);
+
+    // Init the shared ring buffers
+    snd_rings = (sddf_snd_rings_t){
+        .commands = (sddf_snd_cmd_ring_t *)snd_commands,
+        .responses = (sddf_snd_response_ring_t *)snd_responses,
+        .tx_used  = (sddf_snd_pcm_data_ring_t *)snd_tx_used,
+        .tx_free  = (sddf_snd_pcm_data_ring_t *)snd_tx_free,
+        .rx_used  = (sddf_snd_pcm_data_ring_t *)snd_rx_used,
+        .rx_free  = (sddf_snd_pcm_data_ring_t *)snd_rx_free,
+    };
+    sddf_snd_rings_init_default(&snd_rings);
+
+    // @alexbr: why -1?
+    for (int i = 0; i < SDDF_SND_NUM_BUFFERS - 1; i++) {
+        sddf_snd_pcm_data_t pcm;
+        memset(&pcm, 0, sizeof(pcm));
+        pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
+
+        // UIO gets free RX buffers as it will need them first.
+        pcm.addr = snd_rx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        int ret = sddf_snd_enqueue_pcm_data(snd_rings.rx_free, &pcm);
+        assert(ret == 0);
+
+        // Client gets free TX buffers as it will need them first.
+        pcm.addr = snd_tx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        ret = sddf_snd_enqueue_pcm_data(snd_rings.tx_free, &pcm);
+        assert(ret == 0);
+    }
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

@@ -2,12 +2,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
-struct cmd_queue
+struct pcm_queue
 {
     int head;
     int size;
     int capacity;
-    sddf_snd_command_t *commands;
+    sddf_snd_pcm_data_t *commands;
 };
 
 static int min(int a, int b)
@@ -15,14 +15,14 @@ static int min(int a, int b)
     return a <= b ? a : b;
 }
 
-cmd_queue_t *cmd_queue_create(int initial_capacity)
+pcm_queue_t *pcm_queue_create(int initial_capacity)
 {
-    sddf_snd_command_t *commands = calloc(initial_capacity, sizeof(sddf_snd_command_t));
+    sddf_snd_pcm_data_t *commands = calloc(initial_capacity, sizeof(sddf_snd_pcm_data_t));
     if (commands == NULL) {
         return NULL;
     }
 
-    cmd_queue_t *queue = malloc(sizeof(cmd_queue_t));
+    pcm_queue_t *queue = malloc(sizeof(pcm_queue_t));
     if (queue == NULL) {
         free(commands);
         return NULL;
@@ -36,12 +36,12 @@ cmd_queue_t *cmd_queue_create(int initial_capacity)
     return queue;
 }
 
-static void cmd_queue_resize(cmd_queue_t *queue)
+static void pcm_queue_resize(pcm_queue_t *queue)
 {
     int tail = (queue->head + queue->size) % queue->capacity;
 
     queue->capacity *= 2;
-    queue->commands = realloc(queue->commands, sizeof(sddf_snd_command_t) * queue->capacity);
+    queue->commands = realloc(queue->commands, sizeof(sddf_snd_pcm_data_t) * queue->capacity);
     assert(queue->commands);
 
     if (queue->head > tail) {
@@ -51,24 +51,24 @@ static void cmd_queue_resize(cmd_queue_t *queue)
     }
 }
 
-void cmd_queue_enqueue(cmd_queue_t *queue, const sddf_snd_command_t *cmd)
+void pcm_queue_enqueue(pcm_queue_t *queue, const sddf_snd_pcm_data_t *pcm)
 {
     if (queue->size == queue->capacity) {
-        cmd_queue_resize(queue);
+        pcm_queue_resize(queue);
     }
 
     int tail = (queue->head + queue->size) % queue->capacity;
-    queue->commands[tail] = *cmd;
+    queue->commands[tail] = *pcm;
     queue->size++;
 }
 
-void cmd_queue_clear(cmd_queue_t *queue)
+void pcm_queue_clear(pcm_queue_t *queue)
 {
     queue->size = 0;
     queue->head = 0;
 }
 
-sddf_snd_command_t *cmd_queue_front(cmd_queue_t *queue)
+sddf_snd_pcm_data_t *pcm_queue_front(pcm_queue_t *queue)
 {
     if (queue->size == 0) {
         return false;
@@ -76,7 +76,7 @@ sddf_snd_command_t *cmd_queue_front(cmd_queue_t *queue)
     return &queue->commands[queue->head];
 }
 
-bool cmd_queue_dequeue(cmd_queue_t *queue)
+bool pcm_queue_dequeue(pcm_queue_t *queue)
 {
     if (queue->size == 0) {
         return false;
@@ -87,12 +87,12 @@ bool cmd_queue_dequeue(cmd_queue_t *queue)
     return true;
 }
 
-int cmd_queue_size(cmd_queue_t *queue)
+int pcm_queue_size(pcm_queue_t *queue)
 {
     return queue->size;
 }
 
-bool cmd_queue_empty(cmd_queue_t *queue)
+bool pcm_queue_empty(pcm_queue_t *queue)
 {
     return queue->size == 0;
 }
