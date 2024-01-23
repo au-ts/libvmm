@@ -107,8 +107,7 @@ ELFS := client_vmm.elf \
 		serial_mux_tx.elf \
 		serial_mux_rx.elf \
 		uart_driver.elf \
-		snd_driver_vmm.elf \
-		virt_snd_driver.elf \
+		snd_driver_vmm.elf
 
 SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf
 CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf cantina.elf crab_rave.elf
@@ -126,6 +125,7 @@ VMM_OBJS := printf.o \
 			fault.o \
 			util.o \
 			bitarray.o \
+			buffer_queue.o \
 			vgic.o \
 			vgic_v2.o \
 			tcb.o \
@@ -152,12 +152,6 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						mmio.o \
 						sddf_serial_shared_ringbuffer.o \
 						sddf_snd_shared_ringbuffer.o
-
-VIRT_SND_DRIVER_OBJS := virt_snd_driver.o \
-						sddf_snd_shared_ringbuffer.o \
-						util.o \
-						printf.o \
-						bitarray.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o util.o printf.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
@@ -232,7 +226,7 @@ directories:
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
 	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)" "$^"
 
-$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) build/crab_rave.elf
+$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) userlevel/client_vm/crab_rave.s16le
 	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
@@ -312,9 +306,6 @@ $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/snd_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VMM_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/virt_snd_driver.elf: $(addprefix $(BUILD_DIR)/, $(VIRT_SND_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))

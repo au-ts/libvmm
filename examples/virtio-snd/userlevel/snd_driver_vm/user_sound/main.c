@@ -1,8 +1,6 @@
 #include "sddf_snd_shared_ringbuffer.h"
 #include "stream.h"
 #include "uio.h"
-#include <alsa/asoundlib.h>
-#include <alsa/pcm.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -175,6 +173,7 @@ int init_mappings(driver_state_t *state, int uio_fd)
     int offset = 0;
     state->rings.commands = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.responses = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.tx_used = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.tx_free = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.rx_used = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.rx_free = (void *)(ring_buffers + RING_BYTES * offset++);
@@ -185,51 +184,51 @@ int init_mappings(driver_state_t *state, int uio_fd)
     return 0;
 }
 
-static void handle_cmd(driver_state_t *state, sddf_snd_command_t *cmd)
+static void handle_uio_interrupt(driver_state_t *state)
 {
-    // printf("UIO SND|INFO: got command %s\n", sddf_snd_command_code_str(cmd->code));
+    sddf_snd_command_t cmd;
+    sddf_snd_pcm_data_t pcm;
+    bool notify[MAX_STREAMS] = { false };
 
-    sddf_snd_status_code_t status = SDDF_SND_S_OK;
-
-    // Check stream ID. Currently switch is redundant but we might want to add
-    // jack commands in future.
-    switch (cmd->code) {
-    case SDDF_SND_CMD_PCM_SET_PARAMS:
-    case SDDF_SND_CMD_PCM_PREPARE:
-    case SDDF_SND_CMD_PCM_RELEASE:
-    case SDDF_SND_CMD_PCM_START:
-    case SDDF_SND_CMD_PCM_STOP:
-    case SDDF_SND_CMD_PCM_TX:
-        if (cmd->stream_id >= state->stream_count) {
-            printf("UIO SND|ERR: stream %d does not exist\n", cmd->stream_id);
-            status = SDDF_SND_S_BAD_MSG;
+    while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
+        if (cmd.stream_id >= state->stream_count) {
+            printf("UIO SND|ERR: Invalid stream id\n");
+            continue;
+        }
+        if (stream_enqueue_command(state->streams[cmd.stream_id], &cmd) != 0) {
+            printf("UIO SND|ERR: Failed to enqueue command to stream\n");
             break;
         }
-
-        stream_t *stream = state->streams[cmd->stream_id];
-        stream_enqueue_command(stream, cmd);
-        break;
-    default:
-        printf("UIO SND|ERR: unknown command %d\n", cmd->code);
-        status = SDDF_SND_S_BAD_MSG;
+        notify[cmd.stream_id] = true;
     }
 
-    if (status != SDDF_SND_S_OK) {
-        if (cmd->code == SDDF_SND_CMD_PCM_TX) {
-            cmd->pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
-            sddf_snd_enqueue_pcm_data(state->rings.tx_free, cmd->pcm.addr, cmd->pcm.len);
+    while (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) == 0) {
+        if (pcm.stream_id >= state->stream_count) {
+            printf("UIO SND|ERR: Invalid stream id\n");
+            continue;
         }
-        sddf_snd_enqueue_response(state->rings.responses, cmd->cookie, status, 0);
+        if (stream_enqueue_tx_used(state->streams[pcm.stream_id], &pcm) != 0) {
+            printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
+            break;
+        }
     }
-}
 
-static void handle_interrupt(driver_state_t *state)
-{
-    // printf("UIO SND|INFO: got interrupt\n");
+    while (sddf_snd_dequeue_pcm_data(state->rings.rx_free, &pcm) == 0) {
+        if (pcm.stream_id >= state->stream_count) {
+            printf("UIO SND|ERR: Invalid stream id\n");
+            continue;
+        }
+        if (stream_enqueue_rx_free(state->streams[pcm.stream_id], &pcm) != 0) {
+            printf("UIO SND|ERR: Failed to enqueue rx_free to stream\n");
+            break;
+        }
+    }
 
-    sddf_snd_command_t cmd;
-    while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
-        handle_cmd(state, &cmd);
+    // Avoid notifying a stream more than necessary.
+    for (int i = 0; i < state->stream_count; i++) {
+        if (notify[i]) {
+            stream_notify(state->streams[i]);
+        }
     }
 }
 
@@ -237,30 +236,35 @@ void fill_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds)
 {
     for (int i = 0; i < stream_count; i++) {
         stream_t *stream = streams[i];
-        pollfds[i].fd = stream_res_fd(stream);
+        pollfds[i].fd = stream_response_fd(stream);
         pollfds[i].events = POLLIN;
     }
 }
 
-static void handle_response(driver_state_t *state, int resp_fd)
+static void handle_stream_notify(driver_state_t *state, stream_t *stream)
 {
-    stream_response_t resp;
-    int nread = read(resp_fd, &resp, sizeof(resp));
-    if (nread != sizeof(resp)) {
-        printf("UIO SND|ERR: Failed to read from response queue\n");
-        return;
+    sddf_snd_response_t response;
+    sddf_snd_pcm_data_t pcm;
+
+    while (stream_dequeue_response(stream, &response) == 0) {
+        if (sddf_snd_enqueue_response(state->rings.responses, &response) != 0) {
+            printf("UIO SND|ERR: failed to enqueue response\n");
+            break;
+        }
     }
 
-    if (resp.has_tx_free
-        && sddf_snd_enqueue_pcm_data(state->rings.tx_free, resp.tx_free.addr, resp.tx_free.len)
-            != 0) {
-        printf("UIO SND|ERR: failed to enqueue response\n");
+    while (stream_dequeue_tx_free(stream, &pcm) == 0) {
+        if (sddf_snd_enqueue_pcm_data(state->rings.tx_free, &pcm) != 0) {
+            printf("UIO SND|ERR: failed to enqueue tx_free\n");
+            break;
+        }
     }
 
-    if (sddf_snd_enqueue_response(state->rings.responses, resp.response.cookie,
-                                  resp.response.status, resp.response.latency_bytes)
-        != 0) {
-        printf("UIO SND|ERR: failed to enqueue response\n");
+    while (stream_dequeue_rx_used(stream, &pcm) == 0) {
+        if (sddf_snd_enqueue_pcm_data(state->rings.rx_used, &pcm) != 0) {
+            printf("UIO SND|ERR: failed to enqueue rx_used\n");
+            break;
+        }
     }
 }
 
@@ -344,51 +348,46 @@ int main(void)
     }
 
     while (true) {
-        // printf("UIO SND|INFO: polling with %d fds\n", fd_count);
-
         int ready = poll(fds, fd_count, -1);
         if (ready == -1) {
             perror("UIO SND|ERR: Failed to poll descriptors");
             return EXIT_FAILURE;
         }
 
-        // printf("UIO SND|INFO: Awake on %d (ready %d) fds: ", fd_count, ready);
-        // for (int i = 0; i < fd_count; i++) {
-        //     char *state = "off";
-        //     if (fds[i].revents & POLLIN) state = "in";
-        //     else if (fds[i].revents & POLLOUT) state = "out";
-        //     else if (fds[i].revents & POLLPRI) state = "pri";
-        //     else if (fds[i].revents & POLLERR) state = "err";
-        //     printf("%d: %s, ", fds[i].fd, state);
-        // }
-        // putchar('\n');
-
         if (fds[UIO_POLLFD].revents & POLLIN) {
             int32_t irq_count;
-            printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
+            // printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
             if (read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
                 perror("UIO SND|ERR: Failed to read interrupt\n");
                 break;
             }
-
-            handle_interrupt(&state);
-
             if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
                 perror("UIO SND|ERR: Failed to reenable interrupts\n");
                 break;
             }
+
+            handle_uio_interrupt(&state);
         }
 
         bool signal_vmm = false;
-        for (int i = 0; i < state.stream_count; i++) {
-            if (fds[i + 1].revents & POLLIN) {
-                // printf("UIO SND|INFO: Stream %d got response\n", i);
-                handle_response(&state, fds[i + 1].fd);
+        for (int i = 1; i <= state.stream_count; i++) {
+            if (fds[i].revents & POLLIN) {
+
+                uint64_t message;
+                int nread = read(fds[i].fd, &message, sizeof(message));
+
+                if (nread != sizeof(message)) {
+                    printf("UIO SND|ERR: Failed to read stream eventfd\n");
+                    continue;
+                }
+
+                handle_stream_notify(&state, state.streams[i - 1]);
                 signal_vmm = true;
             }
         }
 
         if (signal_vmm) {
+            printf("UIO SND|INFO: Signalling client\n");
             signal_ready_to_vmm(state.signal_addr);
             signal_vmm = false;
         }
