@@ -109,8 +109,8 @@ ELFS := client_vmm.elf \
 		uart_driver.elf \
 		snd_driver_vmm.elf
 
-SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf
-CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf cantina.elf crab_rave.elf
+SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf feedback.elf
+CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf cantina.elf crab_rave.elf feedback.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -226,7 +226,7 @@ directories:
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
 	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)" "$^"
 
-$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
+$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) userlevel/client_vm/record.sh
 	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)

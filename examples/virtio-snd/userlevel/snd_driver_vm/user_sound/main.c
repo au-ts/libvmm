@@ -1,6 +1,7 @@
 #include "sddf_snd_shared_ringbuffer.h"
 #include "stream.h"
 #include "uio.h"
+#include <alsa/pcm.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +53,16 @@ static void print_bytes(void *data)
         printf("%02x ", ((uint8_t *)data)[i]);
     }
     printf("\n");
+}
+
+static ssize_t translate_offset(translation_state_t *translate, snd_pcm_stream_t direction)
+{
+    switch (direction) {
+    case SND_PCM_STREAM_PLAYBACK:
+        return translate->tx_offset;
+    case SND_PCM_STREAM_CAPTURE:
+        return translate->rx_offset;
+    }
 }
 
 static int get_uio_map_value(const char *path, size_t *value)
@@ -173,15 +184,47 @@ int init_mappings(driver_state_t *state, int uio_fd)
     int offset = 0;
     state->rings.commands = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.responses = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_used = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_free = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.rx_used = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.rx_free = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.tx_req = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.tx_res = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.rx_res = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.rx_req = (void *)(ring_buffers + RING_BYTES * offset++);
 
     state->translate.tx_offset = tx_data - (void *)tx_data_physical;
     state->translate.rx_offset = rx_data - (void *)rx_data_physical;
 
     return 0;
+}
+
+static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
+{
+    pcm->status = SDDF_SND_S_BAD_MSG;
+    pcm->latency_bytes = 0;
+    if (sddf_snd_enqueue_pcm_data(ring, pcm) != 0) {
+        printf("UIO SND|ERR: Failed to send fail response\n");
+    }
+}
+
+static bool handle_pcm_request(driver_state_t *state,
+                              sddf_snd_pcm_data_ring_t *res_ring,
+                              sddf_snd_pcm_data_t *pcm,
+                              snd_pcm_stream_t expected_direction)
+{
+    if (pcm->stream_id >= state->stream_count) {
+        printf("UIO SND|ERR: Invalid tx request\n");
+        fail_pcm(res_ring, pcm);
+        return false;
+    }
+    stream_t *stream = state->streams[pcm->stream_id];
+    if (stream_direction(stream) != expected_direction) {
+        printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
+        fail_pcm(res_ring, pcm);
+        return false;
+    }
+    if (stream_enqueue_pcm_req(stream, pcm) != 0) {
+        printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
+        return false;
+    }
+    return true;
 }
 
 static void handle_uio_interrupt(driver_state_t *state)
@@ -202,24 +245,14 @@ static void handle_uio_interrupt(driver_state_t *state)
         notify[cmd.stream_id] = true;
     }
 
-    while (sddf_snd_dequeue_pcm_data(state->rings.tx_used, &pcm) == 0) {
-        if (pcm.stream_id >= state->stream_count) {
-            printf("UIO SND|ERR: Invalid stream id\n");
-            continue;
-        }
-        if (stream_enqueue_tx_used(state->streams[pcm.stream_id], &pcm) != 0) {
-            printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
+    while (sddf_snd_dequeue_pcm_data(state->rings.tx_req, &pcm) == 0) {
+        if (!handle_pcm_request(state, state->rings.tx_res, &pcm, SND_PCM_STREAM_PLAYBACK)) {
             break;
         }
     }
 
-    while (sddf_snd_dequeue_pcm_data(state->rings.rx_free, &pcm) == 0) {
-        if (pcm.stream_id >= state->stream_count) {
-            printf("UIO SND|ERR: Invalid stream id\n");
-            continue;
-        }
-        if (stream_enqueue_rx_free(state->streams[pcm.stream_id], &pcm) != 0) {
-            printf("UIO SND|ERR: Failed to enqueue rx_free to stream\n");
+    while (sddf_snd_dequeue_pcm_data(state->rings.rx_req, &pcm) == 0) {
+        if (!handle_pcm_request(state, state->rings.rx_res, &pcm, SND_PCM_STREAM_CAPTURE)) {
             break;
         }
     }
@@ -253,16 +286,19 @@ static void handle_stream_notify(driver_state_t *state, stream_t *stream)
         }
     }
 
-    while (stream_dequeue_tx_free(stream, &pcm) == 0) {
-        if (sddf_snd_enqueue_pcm_data(state->rings.tx_free, &pcm) != 0) {
-            printf("UIO SND|ERR: failed to enqueue tx_free\n");
-            break;
-        }
+    sddf_snd_pcm_data_ring_t *dest;
+    switch (stream_direction(stream)) {
+    case SND_PCM_STREAM_PLAYBACK:
+        dest = state->rings.tx_res;
+        break;
+    case SND_PCM_STREAM_CAPTURE:
+        dest = state->rings.rx_res;
+        break;
     }
 
-    while (stream_dequeue_rx_used(stream, &pcm) == 0) {
-        if (sddf_snd_enqueue_pcm_data(state->rings.rx_used, &pcm) != 0) {
-            printf("UIO SND|ERR: failed to enqueue rx_used\n");
+    while (stream_dequeue_pcm_res(stream, &pcm) == 0) {
+        if (sddf_snd_enqueue_pcm_data(dest, &pcm) != 0) {
+            printf("UIO SND|ERR: failed to enqueue pcm response\n");
             break;
         }
     }
@@ -305,7 +341,7 @@ int main(void)
     for (int i = 0; i < MAX_STREAMS; i++) {
         state.streams[state.stream_count]
             = stream_open(&state.shared_state->stream_info[state.stream_count], SOUND_DEVICE,
-                          target_streams[i], state.translate);
+                          target_streams[i], translate_offset(&state.translate, target_streams[i]));
 
         if (state.streams[state.stream_count] == NULL)
             printf("Failed to initialise target stream %d\n", i);
@@ -387,7 +423,6 @@ int main(void)
         }
 
         if (signal_vmm) {
-            printf("UIO SND|INFO: Signalling client\n");
             signal_ready_to_vmm(state.signal_addr);
             signal_vmm = false;
         }

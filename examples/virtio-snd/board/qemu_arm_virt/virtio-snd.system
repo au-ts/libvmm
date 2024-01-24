@@ -41,8 +41,8 @@
         <map mr="tx_data_serial_vmm_1" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" />
-        <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" />
+        <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_tx_data"/>
+        <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" setvar_vaddr="sound_rx_data"/>
         
         <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="true" setvar_vaddr="sound_shared_state" />
         <map mr="snd_commands"  vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="sound_commands" />
@@ -71,17 +71,6 @@
         <!-- sDDF data region -->
         <map mr="tx_data_serial_vmm_2" vaddr="0x8_800_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_2" vaddr="0x8_a00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
-
-        <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="true" setvar_vaddr="snd_shared_state" />
-        <map mr="snd_commands"  vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="snd_commands" />
-        <map mr="snd_responses" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="snd_responses" />
-        <map mr="snd_tx_used"   vaddr="0x4_400_000"  perms="rw" cached="true" setvar_vaddr="snd_tx_used" />
-        <map mr="snd_tx_free"   vaddr="0x4_600_000"  perms="rw" cached="true" setvar_vaddr="snd_tx_free" />
-        <map mr="snd_rx_used"   vaddr="0x4_800_000"  perms="rw" cached="true" setvar_vaddr="snd_rx_used" />
-        <map mr="snd_rx_free"   vaddr="0x4_a00_000"  perms="rw" cached="true" setvar_vaddr="snd_rx_free" />
-
-        <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="snd_tx_data" />
-        <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" setvar_vaddr="snd_rx_data" />
 
         <virtual_machine name="snd_linux" id="0" priority="100">
             <map mr="snd_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
