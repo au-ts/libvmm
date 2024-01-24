@@ -161,15 +161,39 @@ void init(void) {
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
 
+    assert(sound_commands);
+    assert(sound_responses);
+    assert(sound_rx_free);
+    assert(sound_rx_used);
+    assert(sound_tx_free);
+    assert(sound_rx_data);
+    assert(sound_tx_data);
+
     snd_state.shared_state = (sddf_snd_shared_state_t *)sound_shared_state;
     snd_state.rings = (sddf_snd_rings_t){
         .commands  = (void *)sound_commands,
         .responses = (void *)sound_responses,
-        .tx_used   = (void *)sound_tx_used,
-        .tx_free   = (void *)sound_tx_free,
-        .rx_used   = (void *)sound_rx_used,
-        .rx_free   = (void *)sound_rx_free,
+        .tx_req   = (void *)sound_tx_used,
+        .tx_res   = (void *)sound_tx_free,
+        .rx_res   = (void *)sound_rx_used,
+        .rx_req   = (void *)sound_rx_free,
     };
+    sddf_snd_rings_init_default(&snd_state.rings);
+
+    // @alexbr: why -1?
+    for (int i = 0; i < SDDF_SND_NUM_BUFFERS - 1; i++) {
+        sddf_snd_pcm_data_t pcm;
+        memset(&pcm, 0, sizeof(pcm));
+        pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
+
+        pcm.addr = sound_rx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        int ret = sddf_snd_enqueue_pcm_data(snd_state.rings.rx_res, &pcm);
+        assert(ret == 0);
+
+        pcm.addr = sound_tx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        ret = sddf_snd_enqueue_pcm_data(snd_state.rings.tx_res, &pcm);
+        assert(ret == 0);
+    }
 
     success = virtio_mmio_device_init(&virtio_sound, SND, VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE, VIRTIO_SOUND_IRQ,
                                       NULL, (void **)&snd_state, SOUND_DRIVER_CH);
