@@ -319,7 +319,7 @@ static void blk_data_region_free_buffer(struct virtio_device *dev, uintptr_t add
 
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
-    // @ericc: If multiqueue feature bit negotiated, should read which queue has been selected from dev->data->QueueSel,
+    // @ericc: If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
     // but for now we just assume it's the one and only default queue
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ];
     struct virtq *virtq = &vq->virtq;
