@@ -172,9 +172,9 @@ void init(void) {
                 BLK_REQ_QUEUE_SIZE,
                 BLK_RESP_QUEUE_SIZE);
     blk_queue_handles[SDDF_BLK_DEFAULT_HANDLE] = &blk_queue_handle;
-    /* Command ring should be plugged and hence all buffers we send should actually end up at the driver VM. */
+    /* Request queue should be plugged and hence all buffers we send should actually end up at the driver VM. */
     assert(!blk_req_queue_plugged(&blk_queue_handle));
-    /* Initialise bit array*/
+    /* Initialise bit array */
     bitarray_init(&blk_data_region_avail_bitarr, blk_data_region_avail_bitarr_words, roundup_bits2words64(SDDF_BLK_MAX_DATA_BUFFERS));
     /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
     blk_data_region.avail_bitpos = 0; /* bit position of next avail buffer */
