@@ -35,6 +35,11 @@ static struct virtio_blk_req_store {
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
+    // Poll ((blk_storage_info_t *)dev->config)->ready until it is ready
+    while (!((blk_storage_info_t *)dev->config)->ready) {
+        LOG_BLOCK("waiting for device to be ready\n");
+    }
+
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = 0;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
