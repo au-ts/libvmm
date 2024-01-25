@@ -48,7 +48,7 @@ static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32
     switch (dev->data.DeviceFeaturesSel) {
         // feature bits 0 to 31
         case 0:
-            *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
+            *features = BIT_LOW(VIRTIO_BLK_F_FLUSH) | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
             break;
         // features bits 32 to 63
         case 1:
@@ -71,7 +71,7 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
     switch (dev->data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
-            success = (features & BIT_LOW(VIRTIO_BLK_F_FLUSH));
+            success = (features == (BIT_LOW(VIRTIO_BLK_F_FLUSH) | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE)));
             break;
         // features bits 32 to 63
         case 1:
@@ -527,6 +527,10 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     }
 
     virtio_blk_used_buffer_virq_inject(dev);
+}
+
+void virtio_blk_handle_config_change(struct virtio_device *dev) {
+
 }
 
 static virtio_device_funs_t functions = {
