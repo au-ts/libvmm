@@ -204,10 +204,8 @@ static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
     }
 }
 
-static bool handle_pcm_request(driver_state_t *state,
-                              sddf_snd_pcm_data_ring_t *res_ring,
-                              sddf_snd_pcm_data_t *pcm,
-                              snd_pcm_stream_t expected_direction)
+static bool handle_pcm_request(driver_state_t *state, sddf_snd_pcm_data_ring_t *res_ring,
+                               sddf_snd_pcm_data_t *pcm, snd_pcm_stream_t expected_direction)
 {
     if (pcm->stream_id >= state->stream_count) {
         printf("UIO SND|ERR: Invalid tx request\n");
@@ -220,14 +218,12 @@ static bool handle_pcm_request(driver_state_t *state,
         fail_pcm(res_ring, pcm);
         return false;
     }
-    if (stream_enqueue_pcm_req(stream, pcm) != 0) {
-        printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
-        return false;
-    }
+    stream_enqueue_pcm_req(stream, pcm);
+
     return true;
 }
 
-static void handle_uio_interrupt(driver_state_t *state)
+static bool handle_uio_interrupt(driver_state_t *state)
 {
     sddf_snd_command_t cmd;
     sddf_snd_pcm_data_t pcm;
@@ -238,10 +234,7 @@ static void handle_uio_interrupt(driver_state_t *state)
             printf("UIO SND|ERR: Invalid stream id\n");
             continue;
         }
-        if (stream_enqueue_command(state->streams[cmd.stream_id], &cmd) != 0) {
-            printf("UIO SND|ERR: Failed to enqueue command to stream\n");
-            break;
-        }
+        stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
         notify[cmd.stream_id] = true;
     }
 
@@ -257,50 +250,24 @@ static void handle_uio_interrupt(driver_state_t *state)
         }
     }
 
+    bool notify_client = false;
     // Avoid notifying a stream more than necessary.
     for (int i = 0; i < state->stream_count; i++) {
         if (notify[i]) {
-            stream_notify(state->streams[i]);
+            if (stream_flush_commands(state->streams[i])) {
+                notify_client = true;
+            }
         }
     }
+    return notify_client;
 }
 
 void fill_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds)
 {
     for (int i = 0; i < stream_count; i++) {
         stream_t *stream = streams[i];
-        pollfds[i].fd = stream_response_fd(stream);
+        pollfds[i].fd = stream_timer_fd(stream);
         pollfds[i].events = POLLIN;
-    }
-}
-
-static void handle_stream_notify(driver_state_t *state, stream_t *stream)
-{
-    sddf_snd_response_t response;
-    sddf_snd_pcm_data_t pcm;
-
-    while (stream_dequeue_response(stream, &response) == 0) {
-        if (sddf_snd_enqueue_response(state->rings.responses, &response) != 0) {
-            printf("UIO SND|ERR: failed to enqueue response\n");
-            break;
-        }
-    }
-
-    sddf_snd_pcm_data_ring_t *dest;
-    switch (stream_direction(stream)) {
-    case SND_PCM_STREAM_PLAYBACK:
-        dest = state->rings.tx_res;
-        break;
-    case SND_PCM_STREAM_CAPTURE:
-        dest = state->rings.rx_res;
-        break;
-    }
-
-    while (stream_dequeue_pcm_res(stream, &pcm) == 0) {
-        if (sddf_snd_enqueue_pcm_data(dest, &pcm) != 0) {
-            printf("UIO SND|ERR: failed to enqueue pcm response\n");
-            break;
-        }
     }
 }
 
@@ -331,7 +298,7 @@ int main(void)
     printf("UIO SND|INFO: opened /dev/mem\n");
 
     // The idea is that this should work even if one stream fails to open.
-    snd_pcm_stream_t target_streams[MAX_STREAMS] = {
+    snd_pcm_stream_t stream_directions[MAX_STREAMS] = {
         SND_PCM_STREAM_PLAYBACK,
         SND_PCM_STREAM_CAPTURE,
     };
@@ -339,9 +306,14 @@ int main(void)
     state.stream_count = 0;
 
     for (int i = 0; i < MAX_STREAMS; i++) {
-        state.streams[state.stream_count]
-            = stream_open(&state.shared_state->stream_info[state.stream_count], SOUND_DEVICE,
-                          target_streams[i], translate_offset(&state.translate, target_streams[i]));
+        snd_pcm_stream_t direction = stream_directions[i];
+
+        sddf_snd_pcm_data_ring_t *pcm_responses
+            = direction == SND_PCM_STREAM_PLAYBACK ? state.rings.tx_res : state.rings.rx_res;
+
+        state.streams[state.stream_count] = stream_open(
+            &state.shared_state->stream_info[state.stream_count], SOUND_DEVICE, direction,
+            translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
 
         if (state.streams[state.stream_count] == NULL)
             printf("Failed to initialise target stream %d\n", i);
@@ -384,6 +356,8 @@ int main(void)
     }
 
     while (true) {
+        bool signal_vmm = false;
+
         int ready = poll(fds, fd_count, -1);
         if (ready == -1) {
             perror("UIO SND|ERR: Failed to poll descriptors");
@@ -402,10 +376,11 @@ int main(void)
                 break;
             }
 
-            handle_uio_interrupt(&state);
+            if (handle_uio_interrupt(&state)) {
+                signal_vmm = true;
+            }
         }
 
-        bool signal_vmm = false;
         for (int i = 1; i <= state.stream_count; i++) {
             if (fds[i].revents & POLLIN) {
 
@@ -417,8 +392,9 @@ int main(void)
                     continue;
                 }
 
-                handle_stream_notify(&state, state.streams[i - 1]);
-                signal_vmm = true;
+                if (stream_tick(state.streams[i - 1])) {
+                    signal_vmm = true;
+                }
             }
         }
 

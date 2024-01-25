@@ -11,16 +11,18 @@ typedef struct translation_state {
 
 typedef struct stream stream_t;
 
-stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
-                      ssize_t translate_offset);
+stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device,
+                      snd_pcm_stream_t direction, ssize_t translate_offset,
+                      sddf_snd_response_ring_t *cmd_responses,
+                      sddf_snd_pcm_data_ring_t *pcm_responses);
 
-int stream_enqueue_command(stream_t *stream, sddf_snd_command_t *cmd);
-int stream_dequeue_response(stream_t *stream, sddf_snd_response_t *res);
+void stream_enqueue_command(stream_t *stream, sddf_snd_command_t *cmd);
+void stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm);
 
-int stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm);
-int stream_dequeue_pcm_res(stream_t *stream, sddf_snd_pcm_data_t *pcm);
+int stream_timer_fd(stream_t *stream);
 
-int stream_notify(stream_t *stream);
-int stream_response_fd(stream_t *stream);
+/** Returns true to signal client notify */
+bool stream_flush_commands(stream_t *stream);
+bool stream_tick(stream_t *stream);
 
 snd_pcm_stream_t stream_direction(stream_t *stream);

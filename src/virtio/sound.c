@@ -50,9 +50,9 @@ typedef struct virtio_snd_msg_store {
     uint32_t head;
     uint32_t tail;
     uint32_t num_free;
-} virtio_snd_msg_store_t;
+} msg_store_t;
 
-static virtio_snd_msg_store_t messages;
+static msg_store_t messages;
 
 #define BUFFER_QUEUE_SIZE SDDF_SND_NUM_BUFFERS
 
@@ -62,6 +62,9 @@ static buffer_queue_t rx_buffers;
 static buffer_t tx_buffer_data[BUFFER_QUEUE_SIZE];
 static buffer_t rx_buffer_data[BUFFER_QUEUE_SIZE];
 
+static int outlying_tx = 0;
+static int outlying_rx = 0;
+
 static sddf_snd_state_t *get_state(struct virtio_device *dev)
 {
     // @alexbr: currently this casts from a void ** which doesn't make sense.
@@ -69,7 +72,7 @@ static sddf_snd_state_t *get_state(struct virtio_device *dev)
     return (sddf_snd_state_t *)dev->sddf_ring_handles;
 }
 
-static void virtio_snd_msg_store_init(virtio_snd_msg_store_t *msg_store, unsigned int num_buffers)
+static void msg_store_init(msg_store_t *msg_store, unsigned int num_buffers)
 {
     msg_store->head = 0;
     msg_store->tail = num_buffers - 1;
@@ -81,7 +84,7 @@ static void virtio_snd_msg_store_init(virtio_snd_msg_store_t *msg_store, unsigne
 }
 
 /** Check if the command store is full. */
-static bool virtio_snd_msg_store_full(virtio_snd_msg_store_t *msg_store)
+static bool msg_store_full(msg_store_t *msg_store)
 {
     return msg_store->num_free == 0;
 }
@@ -93,9 +96,9 @@ static bool virtio_snd_msg_store_full(virtio_snd_msg_store_t *msg_store)
  * @param id pointer to command ID allocated
  * @return 0 on success, -1 on failure
  */
-static int virtio_snd_msg_store_allocate(virtio_snd_msg_store_t *msg_store, msg_handle_t handle, uint32_t *id)
+static int msg_store_allocate(msg_store_t *msg_store, msg_handle_t handle, uint32_t *id)
 {
-    if (virtio_snd_msg_store_full(msg_store)) {
+    if (msg_store_full(msg_store)) {
         return -1;
     }
 
@@ -112,7 +115,7 @@ static int virtio_snd_msg_store_allocate(virtio_snd_msg_store_t *msg_store, msg_
     return 0;
 }
 
-static msg_handle_t *virtio_snd_msg_store_get(virtio_snd_msg_store_t *msg_store, uint32_t id)
+static msg_handle_t *msg_store_get(msg_store_t *msg_store, uint32_t id)
 {
     return &msg_store->sent_msgs[id];
 }
@@ -123,7 +126,7 @@ static msg_handle_t *virtio_snd_msg_store_get(virtio_snd_msg_store_t *msg_store,
  * @param id command ID to be retrieved
  * @return virtio descriptor stored in slot
  */
-static void virtio_snd_msg_store_remove(virtio_snd_msg_store_t *msg_store, uint32_t id)
+static void msg_store_remove(msg_store_t *msg_store, uint32_t id)
 {
     assert(msg_store->num_free < SDDF_SND_NUM_BUFFERS);
 
@@ -136,6 +139,11 @@ static void virtio_snd_msg_store_remove(virtio_snd_msg_store_t *msg_store, uint3
     msg_store->tail = id;
 
     msg_store->num_free++;
+}
+
+static int msg_store_size(msg_store_t *msg_store)
+{
+    return SDDF_SND_NUM_BUFFERS - msg_store->num_free;
 }
 
 static void virtio_snd_config_init(void)
@@ -463,7 +471,6 @@ static uint32_t handle_pcm_info(struct virtio_device *dev,
 
         responses[i].hdr.hda_fn_nid = stream;
         get_pcm_info(&responses[i], pcm_info);
-        debug_pcm_info(&responses[i]);
     }
 
     *bytes_written += i * sizeof(*responses);
@@ -483,7 +490,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     handle.replied = 0;
     handle.bytes_received = 0;
 
-    int err = virtio_snd_msg_store_allocate(&messages, handle, &id);
+    int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
         return -1;
@@ -501,7 +508,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        virtio_snd_msg_store_remove(&messages, id);
+        msg_store_remove(&messages, id);
         return -1;
     }
 
@@ -523,7 +530,7 @@ static int handle_basic_cmd(struct virtio_device *dev,
     handle.replied = 0;
     handle.bytes_received = 0;
 
-    int err = virtio_snd_msg_store_allocate(&messages, handle, &id);
+    int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
         return -1;
@@ -536,7 +543,7 @@ static int handle_basic_cmd(struct virtio_device *dev,
 
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        virtio_snd_msg_store_remove(&messages, id);
+        msg_store_remove(&messages, id);
         return -1;
     }
 
@@ -687,25 +694,31 @@ static void handle_xfer(struct virtio_device *dev,
     handle.replied = 0;
     handle.bytes_received = 0;
 
-    int err = virtio_snd_msg_store_allocate(&messages, handle, &msg_id);
+    int err = msg_store_allocate(&messages, handle, &msg_id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
         return;
     }
 
-    msg_handle_t *msg = virtio_snd_msg_store_get(&messages, msg_id);
+    msg_handle_t *msg = msg_store_get(&messages, msg_id);
+
+    if (transmit)
+        outlying_tx++;
+    else
+        outlying_rx++;
 
     buffer_t pcm_buffer;
     if (!buffer_queue_dequeue(free_buffers, &pcm_buffer)) {
         LOG_SOUND_ERR("No free buffers\n");
-        virtio_snd_msg_store_remove(&messages, msg_id);
+        msg_store_remove(&messages, msg_id);
         return;
     }
 
     uint32_t pcm_transmitted = 0;
     uint32_t pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
 
-    // LOG_SOUND("XFER desc_head %u\n", desc_head);
+    // if (transmit)
+    //     LOG_SOUND("XFER desc_head %u, cookie %d\n", desc_head, msg_id);
 
     // int desc_idx = 0;
 
@@ -722,6 +735,7 @@ static void handle_xfer(struct virtio_device *dev,
         uint32_t desc_transmitted = 0;
         uint32_t desc_remaining = desc->len;
 
+        // if (transmit)
         // LOG_SOUND("Transmitting desc %d of len %u\n", desc_idx++, desc_remaining);
 
         while (desc_remaining > 0) {
@@ -756,6 +770,7 @@ static void handle_xfer(struct virtio_device *dev,
                 }
 
                 // TODO: remove
+                // if (transmit)
                 // LOG_SOUND("Enqueing %u bytes\n", pcm_transmitted);
                 // if (transmit) {
                 //     print_bytes((void *)pcm_buffer.addr);
@@ -776,6 +791,7 @@ static void handle_xfer(struct virtio_device *dev,
     }
 
     if (pcm_transmitted > 0) {
+        // if (transmit)
         // LOG_SOUND("Enqueing last %u bytes\n", pcm_transmitted);
         // // TODO: remove
         // if (transmit) {
@@ -917,7 +933,7 @@ void virtio_snd_init(struct virtio_device *dev,
     dev->sddf_ch = sddf_ch;
     
     virtio_snd_config_init();
-    virtio_snd_msg_store_init(&messages, SDDF_SND_NUM_BUFFERS);
+    msg_store_init(&messages, SDDF_SND_NUM_BUFFERS);
 
     buffer_queue_create(&tx_buffers, tx_buffer_data, BUFFER_QUEUE_SIZE);
     buffer_queue_create(&rx_buffers, rx_buffer_data, BUFFER_QUEUE_SIZE);
@@ -927,7 +943,7 @@ void virtio_snd_init(struct virtio_device *dev,
 static void respond_to_message(struct virtq *virtq, uint8_t status,
                                uint32_t cookie, void *response, unsigned len, bool *respond)
 {
-    msg_handle_t *msg = virtio_snd_msg_store_get(&messages, cookie);
+    msg_handle_t *msg = msg_store_get(&messages, cookie);
     // TODO: msg might be invalid on tx error if already removed
 
     // LOG_SOUND("Got response %s, cookie %u, ref_count %u, desc_head %u\n",
@@ -943,7 +959,11 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
         return;
 
     uint16_t desc_head = msg->desc_head;
-    virtio_snd_msg_store_remove(&messages, cookie);
+    msg_store_remove(&messages, cookie);
+
+    // TODO: remove
+    if (len > sizeof(uint32_t))
+        outlying_tx--;
 
     if (msg->replied) {
         LOG_SOUND_ERR("UIO SND|WARN: message already replied to\n");
@@ -979,7 +999,7 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
 
 void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, bool *respond)
 {
-    msg_handle_t *msg = virtio_snd_msg_store_get(&messages, pcm->cookie);
+    msg_handle_t *msg = msg_store_get(&messages, pcm->cookie);
 
     if (pcm->status != SDDF_SND_S_OK) {
         msg->status = pcm->status;
@@ -1073,15 +1093,18 @@ void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, boo
 
         memcpy((void *)desc->addr, &response, sizeof(response));
 
-        LOG_SOUND("Responding to RX with %s, desc %u, cookie %u, desc_position %u\n",
-                sddf_snd_status_code_str(msg->status), msg->desc_head, pcm->cookie, desc_position);
+        // LOG_SOUND("Responding to RX with %s, desc %u, cookie %u, desc_position %u, outlying %d\n",
+        //         sddf_snd_status_code_str(msg->status), msg->desc_head, pcm->cookie, desc_position,
+        //         msg_store_size(&messages));
         
         struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
         used_elem->id = msg->desc_head;
         used_elem->len = desc_position + sizeof(response);
         virtq->used->idx++;
 
-        virtio_snd_msg_store_remove(&messages, pcm->cookie);
+        outlying_rx--;
+
+        msg_store_remove(&messages, pcm->cookie);
 
         *respond = true;
     }
@@ -1097,10 +1120,11 @@ static void debug_ring(const char *name, sddf_snd_ring_state_t *ring)
 
 void virtio_snd_notified(struct virtio_device *dev)
 {
-    // LOG_SOUND("virtIO sound device notified by server\n");
-
     sddf_snd_state_t *state = get_state(dev);
     bool respond = false;
+
+    // LOG_SOUND("virtIO sound device notified by server. tx_res %d, rx_res %d\n",
+    //     sddf_snd_ring_size(&state->rings.tx_res->state), sddf_snd_ring_size(&state->rings.rx_res->state));
 
     snd_config.streams = state->shared_state->streams;
 
@@ -1129,6 +1153,8 @@ void virtio_snd_notified(struct virtio_device *dev)
         handle_rx_response(dev, &pcm, &respond);
         buffer_queue_enqueue(&rx_buffers, pcm.addr, pcm.len);
     }
+
+    // LOG_SOUND("Outlying TX|RX: %d|%d\n", outlying_tx, outlying_rx);
 
     if (respond) {
         virtio_snd_respond(dev);
