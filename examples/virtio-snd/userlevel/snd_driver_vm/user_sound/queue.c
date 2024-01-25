@@ -1,13 +1,15 @@
 #include "queue.h"
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
-struct pcm_queue
+struct queue
 {
     int head;
-    int size;
+    int len;
     int capacity;
-    sddf_snd_pcm_data_t *commands;
+    int item_size;
+    void *data;
 };
 
 static int min(int a, int b)
@@ -15,84 +17,83 @@ static int min(int a, int b)
     return a <= b ? a : b;
 }
 
-pcm_queue_t *pcm_queue_create(int initial_capacity)
+queue_t *queue_create(int item_size, int initial_capacity)
 {
-    sddf_snd_pcm_data_t *commands = calloc(initial_capacity, sizeof(sddf_snd_pcm_data_t));
-    if (commands == NULL) {
+    void *data = calloc(initial_capacity, item_size);
+    if (data == NULL) {
         return NULL;
     }
 
-    pcm_queue_t *queue = malloc(sizeof(pcm_queue_t));
+    queue_t *queue = malloc(sizeof(queue_t));
     if (queue == NULL) {
-        free(commands);
+        free(data);
         return NULL;
     }
 
     queue->head = 0;
-    queue->size = 0;
+    queue->len = 0;
     queue->capacity = initial_capacity;
-    queue->commands = commands;
+    queue->item_size = item_size;
+    queue->data = data;
 
     return queue;
 }
 
-static void pcm_queue_resize(pcm_queue_t *queue)
+static void pcm_queue_resize(queue_t *queue)
 {
-    int tail = (queue->head + queue->size) % queue->capacity;
+    int tail = (queue->head + queue->len) % queue->capacity;
 
     queue->capacity *= 2;
-    queue->commands = realloc(queue->commands, sizeof(sddf_snd_pcm_data_t) * queue->capacity);
-    assert(queue->commands);
+    queue->data = realloc(queue->data, queue->item_size * queue->capacity);
+    assert(queue->data);
 
     if (queue->head > tail) {
-        for (int i = 0; i < tail; i++) {
-            queue->commands[i + queue->size] = queue->commands[i];
-        }
+        memcpy(queue->data + queue->item_size * queue->len, queue->data, tail * queue->item_size);
     }
 }
 
-void pcm_queue_enqueue(pcm_queue_t *queue, const sddf_snd_pcm_data_t *pcm)
+void queue_enqueue(queue_t *queue, const void *item)
 {
-    if (queue->size == queue->capacity) {
+    if (queue->len == queue->capacity) {
         pcm_queue_resize(queue);
     }
 
-    int tail = (queue->head + queue->size) % queue->capacity;
-    queue->commands[tail] = *pcm;
-    queue->size++;
+    int tail = (queue->head + queue->len) % queue->capacity;
+    memcpy(queue->data + (tail * queue->item_size), item, queue->item_size);
+    queue->len++;
 }
 
-void pcm_queue_clear(pcm_queue_t *queue)
+void queue_clear(queue_t *queue)
 {
-    queue->size = 0;
+    queue->len = 0;
     queue->head = 0;
 }
 
-sddf_snd_pcm_data_t *pcm_queue_front(pcm_queue_t *queue)
+void *queue_front(queue_t *queue)
 {
-    if (queue->size == 0) {
-        return false;
+    if (queue->len == 0) {
+        return NULL;
     }
-    return &queue->commands[queue->head];
+    return queue->data + queue->head * queue->item_size;
 }
 
-bool pcm_queue_dequeue(pcm_queue_t *queue)
+bool queue_dequeue(queue_t *queue)
 {
-    if (queue->size == 0) {
+    if (queue->len == 0) {
         return false;
     }
 
     queue->head = (queue->head + 1) % queue->capacity;
-    queue->size--;
+    queue->len--;
     return true;
 }
 
-int pcm_queue_size(pcm_queue_t *queue)
+int queue_size(queue_t *queue)
 {
-    return queue->size;
+    return queue->len;
 }
 
-bool pcm_queue_empty(pcm_queue_t *queue)
+bool queue_empty(queue_t *queue)
 {
-    return queue->size == 0;
+    return queue->len == 0;
 }

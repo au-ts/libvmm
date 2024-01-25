@@ -61,8 +61,10 @@ int main(int argc, char **argv)
 
     while (running) {
         snd_pcm_sframes_t read = snd_pcm_readi(capture, buffer, sizeof(buffer) / frame_size);
-        if (read < 0)
+        if (read < 0) {
+            printf("Recovering capture\n");
             read = snd_pcm_recover(capture, read, 0);
+        }
         if (read < 0) {
             printf("snd_pcm_readi failed: %s\n", snd_strerror(read));
             break;
@@ -71,8 +73,10 @@ int main(int argc, char **argv)
             printf("Short read (expected %li, wrote %li)\n", (long)sizeof(buffer), read);
 
         snd_pcm_sframes_t written = snd_pcm_writei(playback, buffer, read);
-        if (written < 0)
-            written = snd_pcm_recover(capture, written, 0);
+        if (written < 0){
+            printf("Recovering playback\n");
+            written = snd_pcm_recover(playback, written, 0);
+        }
         if (written < 0) {
             printf("snd_pcm_writteni failed: %s\n", snd_strerror(written));
             break;
