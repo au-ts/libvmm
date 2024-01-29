@@ -6,19 +6,21 @@
 -->
 <system>
     <!-- <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" /> -->
-    <memory_region name="client_vm_ram_1" size="0x8_000_000" page_size="0x200_000" />
-    <memory_region name="client_vm_ram_2" size="0x8_000_000" page_size="0x200_000" />
+    <memory_region name="client_vm_ram_1" size="0x5_000_000" page_size="0x200_000" />
+    <memory_region name="client_vm_ram_2" size="0x5_000_000" page_size="0x200_000" />
+    <memory_region name="blk_driver_vm_ram" size="0x5_000_000" page_size="0x200_000" />
     <memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
-    <!-- <protection_domain name="BLK_DRIVER_VMM" priority="200">
+    <protection_domain name="BLK_DRIVER_VMM" priority="200">
         <program_image path="blk_driver_vmm.elf" />
         <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         <virtual_machine name="blk_linux" id="0" priority="100">
             <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
-    </protection_domain> -->
+    </protection_domain>
+
     <protection_domain name="TEST_BLK" priority="200">
         <program_image path="test_blk.elf" />
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
@@ -186,8 +188,7 @@
     <!-- Shared memory for the actual data transfered -->
     <memory_region name="data_blk_vmm_1" size="0x200_000" page_size="0x200_000" />
     <!--
-        Regions for the shared ring buffers used by the multiplexor (not implemented yet, in this case its the driver vm) and the
-        client (in this case the client is the VMM)
+        Regions for the shared ring buffers used by the driver vm and client vm
     -->
     <memory_region name="req_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
