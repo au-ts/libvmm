@@ -24,6 +24,8 @@ in
         # expect is only needed for CI testing but we include it for
         # completeness
         expect
+        meson
+        ninja
     ] ++ manual_deps;
     hardeningDisable = [ "all" ];
     # Need to specify this when using Rust with bindgen

@@ -1,0 +1,2 @@
+option('microkit', type : 'string', description : 'Path to Microkit SDK')
+option('board', type : 'string', description : 'Board')
