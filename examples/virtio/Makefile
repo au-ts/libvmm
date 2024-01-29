@@ -61,10 +61,10 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 
 CURRENT_DIR := $(shell pwd)
 
-# BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
-# BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
-# BLK_DRIVER_VM_USERLEVEL_DIR := $(BLK_DRIVER_VM_DIR)/userlevel
-# BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
+BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
+BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
+BLK_DRIVER_VM_USERLEVEL_DIR := $(BLK_DRIVER_VM_DIR)/userlevel
+BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
 
 CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
 CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
@@ -76,11 +76,12 @@ CLIENT_VM_2_DTS_DIR := $(CLIENT_VM_2_DIR)/dts
 CLIENT_VM_2_USERLEVEL_DIR := $(CLIENT_VM_2_DIR)/userlevel
 CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
 
-# BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
-# BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
-# BLK_DRIVER_VM_INITRD_OVERLAYED := $(BLK_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
-# BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
-# BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
+BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
+BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
+BLK_DRIVER_VM_INITRD_OVERLAYED := $(BLK_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
+BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
+BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
+								$(BLK_DRIVER_VM_DTS_DIR)/uio.dts
 
 CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
 CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
@@ -95,7 +96,7 @@ CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
 CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
 							$(CLIENT_VM_2_DTS_DIR)/virtio.dts
 
-# BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
+BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
@@ -107,12 +108,11 @@ SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 
 SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
-# ELFS := blk_driver_vmm.elf client_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
-ELFS := client_vmm_1.elf client_vmm_2.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
 
-# BLK_DRIVER_VM_USERLEVEL_ELFS := cmdq_test.elf
-CLIENT_VM_1_USERLEVEL_ELFS := virtio_blk_test.elf cmdq_test.elf postmark.elf
-CLIENT_VM_2_USERLEVEL_ELFS := cmdq_test.elf
+BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := blk_driver
+CLIENT_VM_1_USERLEVEL_BINS := virtio_blk_test cmdq_test postmark
+CLIENT_VM_2_USERLEVEL_BINS := cmdq_test
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -152,9 +152,9 @@ CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
 					sddf_serial_sharedringbuffer.o \
 					sddf_blk_shared_queue.o \
 
-# BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
-# 						blk_driver_images.o \
-# 						blk_driver_vmm.o \
+BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
+						blk_driver_images.o \
+						blk_driver_vmm.o \
 
 TEST_BLK_OBJS := test_blk.o sddf_blk_shared_queue.o printf.o util.o
 
@@ -193,8 +193,7 @@ CFLAGS_USERLEVEL :=	-g3 \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories client_vm_userlevel $(IMAGE_FILE)
-# all: directories blk_driver_vm_userlevel client_vm_userlevel $(IMAGE_FILE)
+all: directories client_vm_userlevel blk_driver_vm_userlevel $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -210,40 +209,40 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 # Unpack rootfs, put the userlevel binary in /root, repack rootfs
-# blk_driver_vm_userlevel: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_ELFS))
-# 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
-# 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
-# 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
-# 	cp $^ $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
-# 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
+blk_driver_vm_userlevel: $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
+	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
+	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
+	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
+	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 
 client_vm_userlevel: client_vm_1_userlevel client_vm_2_userlevel
 	
-client_vm_1_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_ELFS))
+client_vm_1_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_BINS))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_1_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null && \
 	cp $^ $(CLIENT_VM_1_ROOTFS_TMP_DIR)/root && \
 	(cd $(CLIENT_VM_1_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_1_INITRD_OVERLAYED))
 
-client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_ELFS))
+client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_BINS))
 	rm -r $(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_2_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_2_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null && \
 	cp $^ $(CLIENT_VM_2_ROOTFS_TMP_DIR)/root && \
 	(cd $(CLIENT_VM_2_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_2_INITRD_OVERLAYED))
 
-# $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
-# 	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
-# 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
+$(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
+	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
 
-# $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_OVERLAYED)
-# 	$(CC) -c -g3 -x assembler-with-cpp \
-# 					-DGUEST_KERNEL_IMAGE_PATH=\"$(BLK_DRIVER_VM_LINUX)\" \
-# 					-DGUEST_DTB_IMAGE_PATH=\"$(BLK_DRIVER_VM_DTB)\" \
-# 					-DGUEST_INITRD_IMAGE_PATH=\"$(BLK_DRIVER_VM_INITRD_OVERLAYED)\" \
-# 					-target aarch64-none-elf \
-# 					$< -o $@
+$(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_OVERLAYED)
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(BLK_DRIVER_VM_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(BLK_DRIVER_VM_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(BLK_DRIVER_VM_INITRD_OVERLAYED)\" \
+					-target aarch64-none-elf \
+					$< -o $@
 
 $(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
 	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
@@ -269,13 +268,13 @@ $(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-target aarch64-none-elf \
 					$< -o $@
 
-# $(BUILD_DIR)/%.elf: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
-# 	$(CC) -c $(CFLAGS_USERLEVEL) $< -o $@
-
-$(BUILD_DIR)/%.elf: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
+$(BUILD_DIR)/%: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
-$(BUILD_DIR)/%.elf: $(CLIENT_VM_2_USERLEVEL_DIR)/%.c Makefile
+$(BUILD_DIR)/%: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
+	$(TOOLCHAIN)-gcc $< -o $@
+
+$(BUILD_DIR)/%: $(CLIENT_VM_2_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
@@ -316,8 +315,8 @@ $(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
 $(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-# $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
-# 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+$(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/test_blk.elf: $(addprefix $(BUILD_DIR)/, $(TEST_BLK_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -331,8 +330,5 @@ $(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS)
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-# $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR)
-# 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
-
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) $(BLK_DRIVER_VM_DIR)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

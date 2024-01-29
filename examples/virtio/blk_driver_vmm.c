@@ -20,11 +20,11 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#define GUEST_RAM_SIZE 0x10000000
+#define GUEST_RAM_SIZE 0x5000000
 
 #if defined(BOARD_qemu_arm_virt)
-#define GUEST_DTB_VADDR 0x47000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x46000000
+#define GUEST_DTB_VADDR 0x44f00000
+#define GUEST_INIT_RAM_DISK_VADDR 0x44000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -68,14 +68,6 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
     }
 }
 
-/* sDDF memory regions for virtio blk */
-// uintptr_t cmdq_avail;
-// uintptr_t cmdq_used;
-// uintptr_t cmdq_shm;
-// uintptr_t resp_avail;
-// uintptr_t resp_used;
-// uintptr_t resp_shm;
-
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -103,12 +95,6 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-
-    /* Register serial passthrough */
-    // register_passthrough_irq(33, 1);
-
-    /* Register MMC passthrough */
-    // register_passthrough_irq(75, 1);
 
     /* Register UIO irq */
     virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
