@@ -2,7 +2,6 @@
 #include "sddf_snd_shared_ringbuffer.h"
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
-#include <sys/poll.h>
 
 typedef struct translation_state {
     ssize_t tx_offset;
