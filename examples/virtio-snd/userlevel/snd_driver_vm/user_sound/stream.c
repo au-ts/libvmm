@@ -1,7 +1,7 @@
 #include "stream.h"
 #include "convert.h"
+#include "log.h"
 #include "queue.h"
-#include <alsa/pcm.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdio.h>
@@ -18,7 +18,6 @@
 #define PERIOD_TIME 100000
 
 #define BITS_PER_BYTE 8
-
 #define NS_PER_SECOND 1000000000
 
 typedef snd_pcm_sframes_t (*pcm_op_t)(stream_t *stream, void *pcm_data, snd_pcm_sframes_t to_read);
@@ -85,7 +84,7 @@ static char *snd_state_str(snd_pcm_t *handle);
 
 static void print_err(int err, const char *msg)
 {
-    fprintf(stderr, "UIO SND|ERR: %s: %s\n", msg, snd_strerror(err));
+    LOG_SOUND_ERR("%s: %s\n", msg, snd_strerror(err));
 }
 
 static snd_pcm_sframes_t min(snd_pcm_sframes_t a, snd_pcm_sframes_t b)
@@ -96,14 +95,6 @@ static snd_pcm_sframes_t min(snd_pcm_sframes_t a, snd_pcm_sframes_t b)
 static void *translate_addr(stream_t *stream, void *phys_addr)
 {
     return phys_addr + stream->translate_offset;
-}
-
-static void print_bytes(const void *data)
-{
-    for (int i = 0; i < 16; i++) {
-        printf("%02x ", ((uint8_t *)data)[i]);
-    }
-    printf("\n");
 }
 
 static const char *stream_name(stream_t *stream)
@@ -129,7 +120,7 @@ static bool send_response(stream_t *stream)
     response->status = stream->state == STREAM_STATE_IO_ERR ? SDDF_SND_S_IO_ERR : SDDF_SND_S_OK;
 
     if (sddf_snd_enqueue_pcm_data(stream->pcm_res, response) != 0) {
-        printf("UIO SND|ERR: Failed to enqueue tx_free\n");
+        LOG_SOUND_ERR("Failed to enqueue tx_free\n");
         return false;
     }
     queue_dequeue(stream->consumed_frames);
@@ -147,15 +138,15 @@ static snd_pcm_sframes_t stream_read(stream_t *stream, void *pcm_data, snd_pcm_s
         if (read == -EAGAIN) {
             return offset;
         } else if (read < 0) {
-            printf("UIO SND|ERR: failed to read pcm: %s, state %s\n", snd_strerror(read),
-                   snd_state_str(stream->handle));
+            LOG_SOUND_ERR("Failed to read pcm: %s, state %s\n", snd_strerror(read),
+                          snd_state_str(stream->handle));
 
             stream->state = STREAM_STATE_IO_ERR;
             return offset;
         }
 
         if (read < to_read) {
-            printf("UIO SND|WARN: tried to write %ld but wrote %ld\n", to_read, read);
+            LOG_SOUND_WARN("Tried to write %ld but wrote %ld\n", to_read, read);
         }
 
         to_read -= read;
@@ -175,7 +166,7 @@ static snd_pcm_sframes_t stream_write(stream_t *stream, void *pcm_data, snd_pcm_
         if (written == -EAGAIN) {
             return offset;
         } else if (written < 0) {
-            printf("UIO SND|ERR: failed to flush pcm: %s, state %s\n", snd_strerror(written),
+            LOG_SOUND_ERR("Failed to flush pcm: %s, state %s\n", snd_strerror(written),
                    snd_state_str(stream->handle));
 
             stream->state = STREAM_STATE_IO_ERR;
@@ -183,7 +174,7 @@ static snd_pcm_sframes_t stream_write(stream_t *stream, void *pcm_data, snd_pcm_
         }
 
         if (written < to_write) {
-            printf("UIO SND|WARN: tried to write %ld but wrote %ld\n", to_write, written);
+            LOG_SOUND_WARN("Tried to write %ld but wrote %ld\n", to_write, written);
         }
 
         to_write -= written;
@@ -199,15 +190,9 @@ static int flush_pcm(stream_t *stream, int max_count)
     snd_pcm_sframes_t avail = snd_pcm_avail(stream->handle);
 
     if (avail < 0) {
-        printf("UIO SND|ERR: Failed to get avail: %s\n", snd_strerror(avail));
+        LOG_SOUND_ERR("Failed to get avail: %s\n", snd_strerror(avail));
         return response_count;
     }
-
-    // printf("UIO SND|INFO: [%s] Flush pcm (%d in ring) (%d in q) (%ld avail) (%d max)\n",
-    //     stream_name(stream),
-    //     queue_size(stream->pcm_req),
-    //     queue_size(stream->consumed_frames),
-    //     avail, max_count);
 
     while (!queue_empty(stream->pcm_req) && max_count-- > 0) {
 
@@ -220,11 +205,10 @@ static int flush_pcm(stream_t *stream, int max_count)
         void *addr_offset = (void *)pcm->addr + (stream->frame_offset * stream->frame_size);
         void *pcm_data = translate_addr(stream, addr_offset);
 
-        // printf("UIO SND|INFO: Consume %ld\n", to_consume);
         snd_pcm_sframes_t consumed = stream->pcm_op(stream, pcm_data, to_consume);
 
         if (consumed < to_consume) {
-            printf("UIO SND|ERR: Failed to read/write whole rx/tx\n");
+            LOG_SOUND_ERR("Failed to read/write whole rx/tx\n");
             break;
         }
 
@@ -236,12 +220,12 @@ static int flush_pcm(stream_t *stream, int max_count)
             queue_enqueue(stream->consumed_frames, pcm);
 
             if (!queue_dequeue(stream->pcm_req)) {
-                printf("UIO SND|ERR: Failed to dequeue\n");
+                LOG_SOUND_ERR("Failed to dequeue\n");
                 break;
             }
 
             if (!send_response(stream)) {
-                printf("UIO SND|ERR: Failed to send response\n");
+                LOG_SOUND_ERR("Failed to send response\n");
             }
             response_count++;
 
@@ -266,32 +250,32 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     /* choose all parameters */
     err = snd_pcm_hw_params_any(handle, hw_params);
     if (err < 0) {
-        printf("Broken configuration for playback: no configurations available: %s\n",
+        LOG_SOUND_ERR("Broken configuration for playback: no configurations available: %s\n",
                snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
     /* set hardware resampling */
     err = snd_pcm_hw_params_set_rate_resample(handle, hw_params, params->resample);
     if (err < 0) {
-        printf("Resampling setup failed for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Resampling setup failed for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
     /* set the interleaved read/write format */
     err = snd_pcm_hw_params_set_access(handle, hw_params, access);
     if (err < 0) {
-        printf("Access type not available for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Access type not available for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
     /* set the sample format */
     err = snd_pcm_hw_params_set_format(handle, hw_params, params->format);
     if (err < 0) {
-        printf("Sample format not available for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Sample format not available for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
     /* set the count of channels */
     err = snd_pcm_hw_params_set_channels(handle, hw_params, params->channels);
     if (err < 0) {
-        printf("Channels count (%u) not available for playbacks: %s\n", params->channels,
+        LOG_SOUND_ERR("Channels count (%u) not available for playbacks: %s\n", params->channels,
                snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
@@ -299,23 +283,23 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     rrate = params->rate;
     err = snd_pcm_hw_params_set_rate_near(handle, hw_params, &rrate, 0);
     if (err < 0) {
-        printf("Rate %uHz not available for playback: %s\n", params->rate, snd_strerror(err));
+        LOG_SOUND_ERR("Rate %uHz not available for playback: %s\n", params->rate, snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
     if (rrate != params->rate) {
-        printf("Rate doesn't match (requested %uHz, get %iHz)\n", params->rate, err);
+        LOG_SOUND_ERR("Rate doesn't match (requested %uHz, get %iHz)\n", params->rate, err);
         return SDDF_SND_S_NOT_SUPP;
     }
     /* set the buffer time */
     err = snd_pcm_hw_params_set_buffer_time_near(handle, hw_params, &params->latency_us, &dir);
     if (err < 0) {
-        printf("Unable to set buffer time %u for playback: %s\n", params->latency_us,
+        LOG_SOUND_ERR("Unable to set buffer time %u for playback: %s\n", params->latency_us,
                snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
     err = snd_pcm_hw_params_get_buffer_size(hw_params, &size);
     if (err < 0) {
-        printf("Unable to get buffer size for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to get buffer size for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
     state->buffer_size = size;
@@ -323,14 +307,14 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     /* set the period time -- interval between consecutive interrupts from the sound card */
     err = snd_pcm_hw_params_set_period_time_near(handle, hw_params, &params->period_us, &dir);
     if (err < 0) {
-        printf("Unable to set period time %u for playback: %s\n", params->period_us,
+        LOG_SOUND_ERR("Unable to set period time %u for playback: %s\n", params->period_us,
                snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
     // err = snd_pcm_hw_params_set_period_size(handle, hw_params, params->period_bytes, 0);
     err = snd_pcm_hw_params_get_period_size(hw_params, &size, &dir);
     if (err < 0) {
-        printf("Unable to set period size for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to set period size for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
     // state->period_size = params->period_bytes;
@@ -338,7 +322,7 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     /* write the parameters to device */
     err = snd_pcm_hw_params(handle, hw_params);
     if (err < 0) {
-        printf("Unable to set hw params for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to set hw params for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_NOT_SUPP;
     }
     return 0;
@@ -352,7 +336,7 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
     /* get the current swparams */
     err = snd_pcm_sw_params_current(handle, swparams);
     if (err < 0) {
-        printf("Unable to determine current swparams for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to determine current swparams for playback: %s\n", snd_strerror(err));
         return err;
     }
     /* start the transfer when the buffer is almost full: */
@@ -361,20 +345,20 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
 
     err = snd_pcm_sw_params_set_start_threshold(handle, swparams, threshold);
     if (err < 0) {
-        printf("Unable to set start threshold mode for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to set start threshold mode for playback: %s\n", snd_strerror(err));
         return err;
     }
 
     /* allow the transfer when at least period_size samples can be processed */
     err = snd_pcm_sw_params_set_avail_min(handle, swparams, state->period_size);
     if (err < 0) {
-        printf("Unable to set avail min for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to set avail min for playback: %s\n", snd_strerror(err));
         return err;
     }
     /* write the parameters to the playback device */
     err = snd_pcm_sw_params(handle, swparams);
     if (err < 0) {
-        printf("Unable to set sw params for playback: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Unable to set sw params for playback: %s\n", snd_strerror(err));
         return err;
     }
     return 0;
@@ -382,14 +366,14 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
 
 static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params)
 {
-    printf("UIO SND|INFO: [%s] Set parameters: format %s, rate %u, channels %d\n",
+    LOG_SOUND("[%s] Set parameters: format %s, rate %u, channels %d\n",
            stream_name(stream), sddf_snd_pcm_fmt_str(params->format),
            sddf_rate_to_alsa(params->rate), params->channels);
 
     bool state_valid = stream->state == STREAM_STATE_UNSET || stream->state == STREAM_STATE_SET
         || stream->state == STREAM_STATE_PAUSED;
     if (!state_valid) {
-        printf("UIO SND|ERR: Cannot set params, invalid state\n");
+        LOG_SOUND_ERR("Cannot set params, invalid state\n");
         return SDDF_SND_S_BAD_MSG;
     }
 
@@ -398,13 +382,13 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     // Set the sample format
     snd_pcm_format_t format = sddf_format_to_alsa(params->format);
     if (format == SND_PCM_FORMAT_UNKNOWN) {
-        printf("UIO SND|ERR: Invalid format %d\n", params->format);
+        LOG_SOUND_ERR("Invalid format %d\n", params->format);
         return SDDF_SND_S_NOT_SUPP;
     }
 
     unsigned rate = sddf_rate_to_alsa(params->rate);
     if (rate == INVALID_RATE) {
-        printf("UIO SND|ERR: Invalid rate %d\n", params->rate);
+        LOG_SOUND_ERR("Invalid rate %d\n", params->rate);
         return SDDF_SND_S_NOT_SUPP;
     }
 
@@ -424,14 +408,14 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
                         &buffer_state);
 
     if (code != SDDF_SND_S_OK) {
-        printf("UIO SND|ERR: failed to set hardware params\n");
+        LOG_SOUND_ERR("Failed to set hardware params\n");
         return code;
     }
 
     code = set_swparams(handle, stream->sw_params, &buffer_state);
 
     if (code != SDDF_SND_S_OK) {
-        printf("UIO SND|ERR: failed to set software params\n");
+        LOG_SOUND_ERR("Failed to set software params\n");
         return code;
     }
 
@@ -447,17 +431,17 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
 static sddf_snd_status_code_t stream_prepare(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_SET && stream->state != STREAM_STATE_PAUSED) {
-        printf("UIO SND|ERR: Cannot prepare in state '%s'\n", stream_state_str(stream->state));
+        LOG_SOUND_ERR("Cannot prepare in state '%s'\n", stream_state_str(stream->state));
         return SDDF_SND_S_BAD_MSG;
     }
 
     int err = snd_pcm_prepare(stream->handle);
     if (err) {
-        printf("UIO SND|ERR: Failed to prepare stream: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Failed to prepare stream: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
 
-    printf("UIO SND|INFO: [%s] Prepared stream\n", stream_name(stream));
+    LOG_SOUND("[%s] Prepared stream\n", stream_name(stream));
     stream->state = STREAM_STATE_PAUSED;
 
     return SDDF_SND_S_OK;
@@ -466,11 +450,11 @@ static sddf_snd_status_code_t stream_prepare(stream_t *stream)
 static sddf_snd_status_code_t stream_release(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED && stream->state != STREAM_STATE_IO_ERR) {
-        printf("UIO SND|ERR: Cannot release stream now, not paused\n");
+        LOG_SOUND_ERR("Cannot release stream now, not paused\n");
         return SDDF_SND_S_BAD_MSG;
     }
 
-    printf("UIO SND|INFO: [%s] Released stream\n", stream_name(stream));
+    LOG_SOUND("[%s] Released stream\n", stream_name(stream));
     stream->state = STREAM_STATE_SET;
 
     return SDDF_SND_S_OK;
@@ -479,7 +463,7 @@ static sddf_snd_status_code_t stream_release(stream_t *stream)
 static sddf_snd_status_code_t stream_start(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED) {
-        printf("UIO SND|ERR: Cannot start stream now, invalid state\n");
+        LOG_SOUND_ERR("Cannot start stream now, invalid state\n");
         return SDDF_SND_S_BAD_MSG;
     }
 
@@ -487,30 +471,29 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
     if (stream->direction == SND_PCM_STREAM_CAPTURE) {
         int err = snd_pcm_start(stream->handle);
         if (err < 0) {
-            printf("UIO SND|ERR: Failed to start ALSA stream for recording\n");
+            LOG_SOUND_ERR("Failed to start ALSA stream for recording\n");
             return SDDF_SND_S_IO_ERR;
         }
     }
 
-    printf("UIO SND|INFO: [%s] Starting stream\n", stream_name(stream));
+    LOG_SOUND("[%s] Starting stream\n", stream_name(stream));
     stream->state = STREAM_STATE_PLAYING;
 
     // Repeat every period, start immediately.
     struct itimerspec timer;
     timer.it_interval.tv_sec = 0;
     timer.it_interval.tv_nsec = (NS_PER_SECOND / (long)stream->rate) * stream->period_size;
-    // timer.it_interval.tv_nsec = (NS_PER_SECOND / (long)stream->rate) * stream->period_size * 3 /
-    // 2;
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_nsec = 1;
+
     if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
-        printf("UIO SND: ERR: Failed to set period timer\n");
+        LOG_SOUND_ERR("Failed to set period timer\n");
     }
     stream->timer_enabled = true;
 
     // Drop any TX frames sent before START.
     if (stream->direction == SND_PCM_STREAM_PLAYBACK) {
-        printf("UIO SND|INFO: [%s] Skipping %d early TX buffers\n", stream_name(stream),
+        LOG_SOUND("[%s] Skipping %d early TX buffers\n", stream_name(stream),
                queue_size(stream->pcm_req));
 
         sddf_snd_pcm_data_t *pcm;
@@ -529,7 +512,7 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
         || stream->state == STREAM_STATE_DRAINING || stream->state == STREAM_STATE_IO_ERR;
 
     if (!state_valid) {
-        printf("UIO SND|ERR: Cannot stop stream at %s, invalid state\n",
+        LOG_SOUND_ERR("Cannot stop stream at %s, invalid state\n",
                stream_state_str(stream->state));
 
         return SDDF_SND_S_BAD_MSG;
@@ -539,7 +522,7 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
     if (stream->state == STREAM_STATE_PLAYING) {
         stream->drain_count = queue_size(stream->pcm_req);
         stream->state = STREAM_STATE_DRAINING;
-        printf("UIO SND|INFO: [%s] Stopping stream (draining %d buffers)\n", stream_name(stream),
+        LOG_SOUND("[%s] Stopping stream (draining %d buffers)\n", stream_name(stream),
                stream->drain_count);
     }
 
@@ -571,7 +554,7 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
         return SDDF_SND_S_OK;
 
     } else if (err < 0) {
-        printf("UIO SND|ERR: Failed to drain stream: %s\n", snd_strerror(err));
+        LOG_SOUND_ERR("Failed to drain stream: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     } else {
         // Flush remaining responses immediately
@@ -585,12 +568,12 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
         timer.it_value.tv_sec = 0;
         timer.it_value.tv_nsec = 0;
         if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
-            printf("UIO SND: ERR: Failed to set period timer\n");
+            LOG_SOUND_ERR("Failed to set period timer\n");
         }
         stream->timer_enabled = false;
 
         stream->state = STREAM_STATE_PAUSED;
-        printf("UIO SND|INFO: [%s] Stream stopped\n", stream_name(stream));
+        LOG_SOUND("[%s] Stream stopped\n", stream_name(stream));
         return SDDF_SND_S_OK;
     }
 }
@@ -610,7 +593,7 @@ sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_command_t *cmd,
     case SDDF_SND_CMD_PCM_STOP:
         return stream_stop(stream, blocked, notify);
     default:
-        printf("UIO SND|ERR: unknown command %d\n", cmd->code);
+        LOG_SOUND_ERR("Unknown command %d\n", cmd->code);
         return SDDF_SND_S_BAD_MSG;
     }
 }
@@ -633,7 +616,7 @@ bool stream_flush_commands(stream_t *stream)
         response.status = status;
 
         if (sddf_snd_enqueue_response(stream->responses, &response) != 0) {
-            printf("UIO SND|ERR: Failed to enqueue response");
+            LOG_SOUND_ERR("Failed to enqueue response");
             break;
         }
         queue_dequeue(stream->commands);
@@ -672,7 +655,7 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
 {
     stream_t *stream = malloc(sizeof(stream_t));
     if (stream == NULL) {
-        printf("No enough memory\n");
+        LOG_SOUND_ERR("No enough memory\n");
         return NULL;
     }
 

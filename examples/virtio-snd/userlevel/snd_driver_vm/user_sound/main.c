@@ -1,7 +1,7 @@
+#include "log.h"
 #include "sddf_snd_shared_ringbuffer.h"
 #include "stream.h"
 #include "uio.h"
-#include <alsa/pcm.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,14 +47,6 @@ static void signal_ready_to_vmm(char *signal_addr)
     *signal_addr = 1;
 }
 
-static void print_bytes(void *data)
-{
-    for (int i = 0; i < 16; i++) {
-        printf("%02x ", ((uint8_t *)data)[i]);
-    }
-    printf("\n");
-}
-
 static ssize_t translate_offset(translation_state_t *translate, snd_pcm_stream_t direction)
 {
     switch (direction) {
@@ -84,7 +76,7 @@ static int get_uio_map_value(const char *path, size_t *value)
     }
 
     if (str_values_read == sizeof(str)) {
-        fprintf(stderr, "Size string is too long to fit in size_str buffer\n");
+        LOG_SOUND_ERR("Size string is too long to fit in size_str buffer\n");
         close(fp);
         return -1;
     }
@@ -103,7 +95,7 @@ static void *map_uio(int index, const char *size_str, int uio_fd)
 
     res = get_uio_map_value(size_str, &size);
     if (res) {
-        printf("failed to get value\n");
+        LOG_SOUND_ERR("Failed to get value\n");
         return MAP_FAILED;
     }
 
@@ -118,7 +110,7 @@ static char *map_mem(uintptr_t target, int *out_fd)
 {
     int fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (fd < 0) {
-        printf("UIO SND|ERR: Failed to open /dev/mem\n");
+        LOG_SOUND_ERR("Failed to open /dev/mem\n");
         return NULL;
     }
 
@@ -129,7 +121,7 @@ static char *map_mem(uintptr_t target, int *out_fd)
     *out_fd = fd;
     void *base = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
     if (base == MAP_FAILED) {
-        printf("UIO SND|ERR: Failed to map /dev/mem\n");
+        LOG_SOUND_ERR("Failed to map /dev/mem\n");
         return NULL;
     }
 
@@ -200,7 +192,7 @@ static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
     pcm->status = SDDF_SND_S_BAD_MSG;
     pcm->latency_bytes = 0;
     if (sddf_snd_enqueue_pcm_data(ring, pcm) != 0) {
-        printf("UIO SND|ERR: Failed to send fail response\n");
+        LOG_SOUND_ERR("Failed to send fail response\n");
     }
 }
 
@@ -208,13 +200,13 @@ static bool handle_pcm_request(driver_state_t *state, sddf_snd_pcm_data_ring_t *
                                sddf_snd_pcm_data_t *pcm, snd_pcm_stream_t expected_direction)
 {
     if (pcm->stream_id >= state->stream_count) {
-        printf("UIO SND|ERR: Invalid tx request\n");
+        LOG_SOUND_ERR("Invalid tx request\n");
         fail_pcm(res_ring, pcm);
         return false;
     }
     stream_t *stream = state->streams[pcm->stream_id];
     if (stream_direction(stream) != expected_direction) {
-        printf("UIO SND|ERR: Failed to enqueue tx_used to stream\n");
+        LOG_SOUND_ERR("Failed to enqueue tx_used to stream\n");
         fail_pcm(res_ring, pcm);
         return false;
     }
@@ -231,7 +223,7 @@ static bool handle_uio_interrupt(driver_state_t *state)
 
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
-            printf("UIO SND|ERR: Invalid stream id\n");
+            LOG_SOUND_ERR("Invalid stream id\n");
             continue;
         }
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
@@ -262,29 +254,21 @@ static bool handle_uio_interrupt(driver_state_t *state)
     return notify_client;
 }
 
-void fill_pollfds(stream_t **streams, int stream_count, struct pollfd *pollfds)
-{
-    for (int i = 0; i < stream_count; i++) {
-        stream_t *stream = streams[i];
-        pollfds[i].fd = stream_timer_fd(stream);
-        pollfds[i].events = POLLIN;
-    }
-}
-
 int main(void)
 {
-    int err = system("alsactl init -U");
-    // assert(!err);
+    system("alsactl init -U");
+
+    LOG_SOUND("Starting sound driver\n");
 
     int uio_fd = open("/dev/uio0", O_RDWR);
     if (uio_fd == -1) {
-        perror("Error opening /dev/uio0");
+        LOG_SOUND_ERR("Error opening /dev/uio0\n");
         return EXIT_FAILURE;
     }
-    printf("UIO SND|INFO: opened /dev/uio0\n");
+    LOG_SOUND("Opened /dev/uio0\n");
 
     driver_state_t state;
-    err = init_mappings(&state, uio_fd);
+    int err = init_mappings(&state, uio_fd);
     if (err) {
         printf("UIO SND|ERR: failed to initialise mappings\n");
         return EXIT_FAILURE;
@@ -295,7 +279,7 @@ int main(void)
     if (state.signal_addr == NULL) {
         return EXIT_FAILURE;
     }
-    printf("UIO SND|INFO: opened /dev/mem\n");
+    LOG_SOUND("Opened /dev/mem\n");
 
     // The idea is that this should work even if one stream fails to open.
     snd_pcm_stream_t stream_directions[MAX_STREAMS] = {
@@ -316,19 +300,19 @@ int main(void)
             translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
 
         if (state.streams[state.stream_count] == NULL)
-            printf("Failed to initialise target stream %d\n", i);
+            LOG_SOUND_ERR("Failed to initialise target stream %d\n", i);
         else
             state.stream_count++;
     }
 
     state.shared_state->streams = state.stream_count;
-    printf("UIO SND|INFO: %d streams available\n", state.stream_count);
+    LOG_SOUND("Initialised %d streams\n", state.stream_count);
 
     // Signal ready even if we don't create all streams.
     signal_ready_to_vmm(state.signal_addr);
 
     if (state.stream_count == 0) {
-        printf("No streams available, exiting\n");
+        LOG_SOUND_ERR("No streams available, exiting\n");
         return EXIT_FAILURE;
     }
 
@@ -337,7 +321,7 @@ int main(void)
 
     struct pollfd *fds = calloc(fd_count, sizeof(struct pollfd));
     if (fds == NULL) {
-        perror("UIO SND|ERR: Failed to allocate file descriptor array\n");
+        LOG_SOUND_ERR("Failed to allocate file descriptor array\n");
         return EXIT_FAILURE;
     }
 
@@ -345,13 +329,15 @@ int main(void)
     fds[UIO_POLLFD].events = POLLIN;
     fds[UIO_POLLFD].revents = 0;
 
-    printf("UIO SND|INFO: UIO fd %d\n", uio_fd);
-
-    fill_pollfds(state.streams, state.stream_count, fds + 1);
+    for (int i = 0; i < state.stream_count; i++) {
+        stream_t *stream = state.streams[i];
+        fds[i + 1].fd = stream_timer_fd(stream);
+        fds[i + 1].events = POLLIN;
+    }
 
     const uint32_t enable = 1;
     if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
-        perror("UIO SND|ERR: Failed to reenable interrupts\n");
+        LOG_SOUND_ERR("Failed to reenable interrupts\n");
         return EXIT_FAILURE;
     }
 
@@ -360,7 +346,7 @@ int main(void)
 
         int ready = poll(fds, fd_count, -1);
         if (ready == -1) {
-            perror("UIO SND|ERR: Failed to poll descriptors");
+            LOG_SOUND_ERR("Failed to poll descriptors\n");
             return EXIT_FAILURE;
         }
 
@@ -368,11 +354,11 @@ int main(void)
             int32_t irq_count;
             // printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
             if (read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
-                perror("UIO SND|ERR: Failed to read interrupt\n");
+                LOG_SOUND_ERR("Failed to read interrupt\n");
                 break;
             }
             if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
-                perror("UIO SND|ERR: Failed to reenable interrupts\n");
+                LOG_SOUND_ERR("Failed to reenable interrupts\n");
                 break;
             }
 
@@ -388,7 +374,7 @@ int main(void)
                 int nread = read(fds[i].fd, &message, sizeof(message));
 
                 if (nread != sizeof(message)) {
-                    printf("UIO SND|ERR: Failed to read stream eventfd\n");
+                    LOG_SOUND_ERR("Failed to read stream eventfd\n");
                     continue;
                 }
 
