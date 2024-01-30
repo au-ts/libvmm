@@ -14,17 +14,21 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
+#include "virtio/virtio.h"
+#include "virtio/console.h"
+#include "virtio/block.h"
+#include <sddf/serial/shared_ringbuffer.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#define GUEST_RAM_SIZE 0x5000000
+#define GUEST_RAM_SIZE 0x8000000
 
 #if defined(BOARD_qemu_arm_virt)
-#define GUEST_DTB_VADDR 0x44f00000
-#define GUEST_INIT_RAM_DISK_VADDR 0x44000000
+#define GUEST_DTB_VADDR 0x47f00000
+#define GUEST_INIT_RAM_DISK_VADDR 0x47000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -38,11 +42,8 @@ extern char _guest_dtb_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
-/* microkit will set this variable to the start of the guest RAM memory region. */
+/* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
-
-#define UIO_BLK_IRQ 50
-#define VSWITCH_BLK 1
 
 #define MAX_IRQ_CH 63
 int passthrough_irq_map[MAX_IRQ_CH];
@@ -68,6 +69,39 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
     }
 }
 
+/* sDDF block */
+#define UIO_BLK_IRQ 50
+#define VSWITCH_BLK 3
+
+void uio_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_notify(VSWITCH_BLK);
+}
+
+/* Virtio Console */
+#define SERIAL_MUX_TX_CH 1
+#define SERIAL_MUX_RX_CH 2
+
+#define VIRTIO_CONSOLE_IRQ (74)
+#define VIRTIO_CONSOLE_BASE (0x130000)
+#define VIRTIO_CONSOLE_SIZE (0x1000)
+
+uintptr_t serial_rx_free;
+uintptr_t serial_rx_used;
+uintptr_t serial_tx_free;
+uintptr_t serial_tx_used;
+
+uintptr_t serial_rx_data;
+uintptr_t serial_tx_data;
+
+size_t serial_ch[SDDF_SERIAL_NUM_CH];
+
+ring_handle_t serial_rx_ring_handle;
+ring_handle_t serial_tx_ring_handle;
+
+static ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_HANDLES];
+
+static struct virtio_device virtio_console;
+
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -89,15 +123,57 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+    
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init(GUEST_VCPU_ID);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+    
+    /* Initialise our sDDF ring buffers for the serial device */
+    ring_init(&serial_rx_ring_handle,
+            (ring_buffer_t *)serial_rx_free,
+            (ring_buffer_t *)serial_rx_used,
+            true,
+            NUM_BUFFERS,
+            NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+        int ret = enqueue_free(&serial_rx_ring_handle, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        if (ret != 0) {
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
+        }
+    }
+    ring_init(&serial_tx_ring_handle,
+            (ring_buffer_t *)serial_tx_free,
+            (ring_buffer_t *)serial_tx_used,
+            true,
+            NUM_BUFFERS,
+            NUM_BUFFERS);
+    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+        // Have to start at the memory region left of by the rx ring
+        int ret = enqueue_free(&serial_tx_ring_handle, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        assert(ret == 0);
+        if (ret != 0) {
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
+        }
+    }
+    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
+    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
+    assert(!ring_plugged(serial_tx_ring_handle.free_ring));
+    assert(!ring_plugged(serial_tx_ring_handle.used_ring));
+    /* Initialise channel */
+    serial_ch[SDDF_SERIAL_TX_CH_INDEX] = SERIAL_MUX_TX_CH;
+    /* Initialise virtIO console device */
+    success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
+                                      NULL, NULL, (void **)serial_ring_handles, serial_ch);
+    assert(success);
 
     /* Register UIO irq */
-    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
+    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &uio_ack, NULL);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -105,17 +181,17 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     switch (ch) {
-        case VSWITCH_BLK:
-            // virq_inject(GUEST_VCPU_ID, UIO_BLK_IRQ);
+        case SERIAL_MUX_RX_CH: {
+            /* We have received an event from the serial multipelxor, so we
+             * call the virtIO console handling */
+            virtio_console_handle_rx(&virtio_console);
             break;
+        }
+        case VSWITCH_BLK: {
+            virq_inject(GUEST_VCPU_ID, UIO_BLK_IRQ);
+            break;
+        }
         default:
-            if (passthrough_irq_map[ch]) {
-                bool success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
-                if (!success) {
-                    LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
-                }
-                break;
-            }
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }

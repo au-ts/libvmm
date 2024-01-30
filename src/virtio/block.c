@@ -33,13 +33,22 @@ static struct virtio_blk_req_store {
     uint32_t num_free;
 } req_store;
 
+static void virtio_blk_config_init(struct virtio_device *dev) 
+{
+    blk_storage_info_t *config = (blk_storage_info_t *)dev->config;
+    virtio_blk_config.blk_size = config->blocksize;
+    virtio_blk_config.capacity = (config->blocksize / 512) * config->size; // Number of 512-byte sectors
+}
+
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
-    // Poll ((blk_storage_info_t *)dev->config)->ready until it is ready
-    while (!((blk_storage_info_t *)dev->config)->ready) {
-        LOG_BLOCK("waiting for device to be ready\n");
-    }
+    // Busy wait until device is ready
+    // Need to put an empty assembly line to prevent compiler from optimising out the busy wait
+    LOG_BLOCK("device begin busy wait\n");
+    while (!((blk_storage_info_t *)dev->config)->ready) asm("");
+    LOG_BLOCK("device is done busy waiting\n");
 
+    virtio_blk_config_init(dev);
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = 0;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
@@ -491,7 +500,11 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     uint16_t sddf_ret_count;
     uint16_t sddf_ret_success_count;
     uint32_t sddf_ret_id;
+
+    // @ericc: we need to know if we handled any responses so we can inject an interrupt
+    bool handled = false;
     while (!blk_resp_queue_empty(queue_handle)) {
+        handled = true;
         blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_addr, &sddf_ret_count, &sddf_ret_success_count, &sddf_ret_id);
         
         /* Freeing and retrieving request store */
@@ -531,11 +544,9 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
         virtio_blk_used_buffer(dev, virtio_desc);
     }
 
-    virtio_blk_used_buffer_virq_inject(dev);
-}
-
-void virtio_blk_handle_config_change(struct virtio_device *dev) {
-
+    if (handled) {
+        virtio_blk_used_buffer_virq_inject(dev);
+    }
 }
 
 static virtio_device_funs_t functions = {
@@ -546,13 +557,6 @@ static virtio_device_funs_t functions = {
     .set_device_config = virtio_blk_mmio_set_device_config,
     .queue_notify = virtio_blk_mmio_queue_notify,
 };
-
-static void virtio_blk_config_init(struct virtio_device *dev) 
-{
-    blk_storage_info_t *config = (blk_storage_info_t *)dev->config;
-    virtio_blk_config.blk_size = config->blocksize;
-    virtio_blk_config.capacity = (config->blocksize / 512) * config->size;
-}
 
 static void virtio_blk_req_store_init(struct virtio_device *dev, unsigned int num_buffers)
 {
@@ -582,6 +586,5 @@ void virtio_blk_init(struct virtio_device *dev,
     dev->sddf_handlers = sddf_handlers;
     dev->sddf_ch = sddf_ch;
     
-    virtio_blk_config_init(dev);
     virtio_blk_req_store_init(dev, SDDF_BLK_MAX_DATA_BUFFERS);
 }

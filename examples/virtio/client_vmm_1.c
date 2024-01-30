@@ -25,11 +25,11 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#define GUEST_RAM_SIZE 0x5000000
+#define GUEST_RAM_SIZE 0x8000000
 
 #if defined(BOARD_qemu_arm_virt)
-#define GUEST_DTB_VADDR 0x44f00000
-#define GUEST_INIT_RAM_DISK_VADDR 0x44000000
+#define GUEST_DTB_VADDR 0x47f00000
+#define GUEST_INIT_RAM_DISK_VADDR 0x47000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -45,6 +45,30 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+
+#define MAX_IRQ_CH 63
+int passthrough_irq_map[MAX_IRQ_CH];
+
+static void dummy_ack(size_t vcpu_id, int irq, void *cookie) {
+    return;
+}
+
+static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
+    microkit_irq_ack(irq_ch);
+}
+
+static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
+    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
+    assert(irq_ch < MAX_IRQ_CH);
+    passthrough_irq_map[irq_ch] = irq;
+
+    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
+    if (!err) {
+        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
+        return;
+    }
+}
 
 /* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
@@ -81,11 +105,11 @@ static struct virtio_device virtio_console;
 uintptr_t blk_req_queue;
 uintptr_t blk_resp_queue;
 uintptr_t blk_data;
+uintptr_t blk_config;
 blk_queue_handle_t blk_queue_handle;
 static blk_queue_handle_t *blk_queue_handles[SDDF_BLK_NUM_HANDLES];
 
 size_t blk_ch[SDDF_BLK_NUM_CH];
-blk_storage_info_t blk_config;
 
 blk_data_region_t blk_data_region;
 bitarray_t blk_data_region_avail_bitarr;
@@ -186,13 +210,9 @@ void init(void) {
     blk_data_region_handlers[SDDF_BLK_DEFAULT_HANDLE] = &blk_data_region;
     /* Initialise channel */
     blk_ch[SDDF_BLK_DEFAULT_CH_INDEX] = BLK_CH; 
-    // @ericc: Grab these values from driver in the future, for now hard code here
-    blk_config.blocksize = 1024;
-    blk_config.size = 10000;
-    blk_config.ready = true;
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      &blk_config, (void **)blk_data_region_handlers, (void **)blk_queue_handles, blk_ch);
+                                      (void *)blk_config, (void **)blk_data_region_handlers, (void **)blk_queue_handles, blk_ch);
     assert(success);
 
     /* Finally start the guest */
