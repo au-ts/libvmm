@@ -92,6 +92,8 @@
             <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" />
             <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" />
         </virtual_machine>
+
+        <irq irq="37" id="5" />
     </protection_domain>
 
     <!-- Serial sDDF regions -->

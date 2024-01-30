@@ -53,13 +53,21 @@ uintptr_t guest_ram_vaddr;
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
 
-#define VIRT_SND_DRIVER_CH 4
+#define SND_CLIENT_CH 4
+#define SND_IRQ_CH 5
+
 // @alexbr: why 50?
 #define UIO_SND_IRQ 50
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
+
+#if defined(BOARD_qemu_arm_virt)
+#define SOUND_IRQ 37
+#else
+#error Need to define sound interrupt
+#endif
 
 uintptr_t serial_rx_free;
 uintptr_t serial_rx_used;
@@ -75,7 +83,16 @@ sddf_serial_ring_handle_t serial_tx_ring_handle;
 static sddf_serial_ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_RING_HANDLES];
 
 static struct virtio_device virtio_console;
-static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+
+static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+    microkit_notify(SND_CLIENT_CH);
+    return true;
+}
+
+static void snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_irq_ack(SND_IRQ_CH);
+}
+
 static void uio_snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 void init(void) {
@@ -146,6 +163,9 @@ void init(void) {
                                       NULL, (void **)serial_ring_handles, SERIAL_MUX_TX_CH);
     assert(success);
 
+    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &snd_virq_ack, NULL);
+    assert(success);
+
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
     assert(success);
 
@@ -158,12 +178,6 @@ void init(void) {
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
-    // LOG_VMM("Got fault from uio driver, notifying proxy\n");
-    microkit_notify(VIRT_SND_DRIVER_CH);
-    return true;
-}
-
 void notified(microkit_channel ch) {
     switch (ch) {
         case SERIAL_MUX_RX_CH: {
@@ -172,10 +186,17 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
-        case VIRT_SND_DRIVER_CH: {
+        case SND_CLIENT_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+            }
+            break;
+        }
+        case SND_IRQ_CH: {
+            bool success = virq_inject(GUEST_VCPU_ID, SOUND_IRQ);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SOUND_IRQ, GUEST_VCPU_ID);
             }
             break;
         }

@@ -6,12 +6,10 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/eventfd.h>
 #include <sys/timerfd.h>
 #include <time.h>
 
 // This queue may have many TX buffers along side commands.
-#define PLAYBACK_QUEUE_SIZE (SDDF_SND_NUM_BUFFERS / 4)
 #define PCM_QUEUE_SIZE 8
 
 // 0.5 seconds
@@ -20,9 +18,6 @@
 #define PERIOD_TIME 100000
 
 #define BITS_PER_BYTE 8
-
-#define COMMAND_FD 0
-#define TIMER_FD 1
 
 #define NS_PER_SECOND 1000000000
 
@@ -132,7 +127,6 @@ static bool send_response(stream_t *stream)
 
     response->latency_bytes = stream->buffer_size;
     response->status = stream->state == STREAM_STATE_IO_ERR ? SDDF_SND_S_IO_ERR : SDDF_SND_S_OK;
-    // response->len = SDDF_SND_PCM_BUFFER_SIZE;
 
     if (sddf_snd_enqueue_pcm_data(stream->pcm_res, response) != 0) {
         printf("UIO SND|ERR: Failed to enqueue tx_free\n");
