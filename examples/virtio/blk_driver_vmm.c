@@ -68,14 +68,6 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
     }
 }
 
-/* sDDF memory regions for virtio blk */
-// uintptr_t cmdq_avail;
-// uintptr_t cmdq_used;
-// uintptr_t cmdq_shm;
-// uintptr_t resp_avail;
-// uintptr_t resp_used;
-// uintptr_t resp_shm;
-
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -103,12 +95,6 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-
-    /* Register serial passthrough */
-    // register_passthrough_irq(33, 1);
-
-    /* Register MMC passthrough */
-    // register_passthrough_irq(75, 1);
 
     /* Register UIO irq */
     virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
