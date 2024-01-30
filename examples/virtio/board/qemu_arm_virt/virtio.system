@@ -6,9 +6,9 @@
 -->
 <system>
     <!-- <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" /> -->
-    <memory_region name="client_vm_ram_1" size="0x5_000_000" page_size="0x200_000" />
-    <memory_region name="client_vm_ram_2" size="0x5_000_000" page_size="0x200_000" />
-    <memory_region name="blk_driver_vm_ram" size="0x5_000_000" page_size="0x200_000" />
+    <memory_region name="client_vm_ram_1" size="0x8_000_000" page_size="0x200_000" />
+    <memory_region name="client_vm_ram_2" size="0x8_000_000" page_size="0x200_000" />
+    <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" />
     <memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
@@ -52,6 +52,7 @@
         <virtual_machine name="client_linux-1" id="0" priority="100">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain>
 
@@ -72,6 +73,7 @@
         <virtual_machine name="client_linux-2" id="0" priority="100">
             <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain>
 
