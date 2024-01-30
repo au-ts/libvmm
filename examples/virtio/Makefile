@@ -111,6 +111,7 @@ SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
 
 BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := blk_driver
+BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE := block.c libuio.c
 CLIENT_VM_1_USERLEVEL_BINS := virtio_blk_test cmdq_test postmark
 CLIENT_VM_2_USERLEVEL_BINS := cmdq_test
 
@@ -142,9 +143,9 @@ CLIENT_VMM_1_OBJS :=	$(VMM_OBJS) \
 					sddf_serial_sharedringbuffer.o \
 					sddf_blk_shared_queue.o \
 
-CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
-					client_images_2.o \
-					client_vmm_2.o \
+BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
+					blk_driver_images.o \
+					blk_driver_vmm.o \
 					virtio.o \
 					console.o \
 					block.o \
@@ -152,9 +153,9 @@ CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
 					sddf_serial_sharedringbuffer.o \
 					sddf_blk_shared_queue.o \
 
-BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
-						blk_driver_images.o \
-						blk_driver_vmm.o \
+CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
+						client_images_2.o \
+						client_vmm_2.o \
 
 TEST_BLK_OBJS := test_blk.o sddf_blk_shared_queue.o printf.o util.o
 
@@ -188,7 +189,7 @@ CFLAGS_USERLEVEL :=	-g3 \
 		  			-O3 \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
-					-target aarch64-linux-gnu
+		  			-I$(SDDF)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -213,7 +214,8 @@ blk_driver_vm_userlevel: $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
+	# cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
+	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 
 client_vm_userlevel: client_vm_1_userlevel client_vm_2_userlevel
@@ -268,8 +270,8 @@ $(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/%: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc $< -o $@
+$(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN): $(addprefix $(BLK_DRIVER_VM_USERLEVEL_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE)) $(BUILD_DIR)/sddf_blk_shared_queue.o Makefile
+	$(TOOLCHAIN)-gcc $(CFLAGS_USERLEVEL) $(addprefix $(BLK_DRIVER_VM_USERLEVEL_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE)) $(BUILD_DIR)/sddf_blk_shared_queue.o -o $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
 
 $(BUILD_DIR)/%: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@

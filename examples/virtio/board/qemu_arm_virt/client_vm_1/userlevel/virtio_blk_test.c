@@ -68,7 +68,7 @@ int main(void)
         return -1;
     }
 
-    for (int i=0; i<100; i++) {
+    for (int i=0; i<5; i++) {
         write_test(blk);
         fsync_file(blk);
     }

@@ -5,28 +5,27 @@
  SPDX-License-Identifier: BSD-2-Clause
 -->
 <system>
+    <memory_region name="client_vm_ram_1" size="0x8_000_000" page_size="0x200_000" />
+    <memory_region name="client_vm_ram_2" size="0x8_000_000" page_size="0x200_000" />
     <!-- <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" /> -->
-    <memory_region name="client_vm_ram_1" size="0x5_000_000" page_size="0x200_000" />
-    <memory_region name="client_vm_ram_2" size="0x5_000_000" page_size="0x200_000" />
-    <memory_region name="blk_driver_vm_ram" size="0x5_000_000" page_size="0x200_000" />
     <memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
-    <protection_domain name="BLK_DRIVER_VMM" priority="200">
-        <program_image path="blk_driver_vmm.elf" />
+    <!-- <protection_domain name="BLK_DRIVER_VMM" priority="200" passive="true">
+        <program_image path="client_vmm_2.elf" />
         <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
-        <virtual_machine name="blk_linux" id="0" priority="100">
+        <virtual_machine name="blk_linux" id="0" priority="200" budget="100" period="400" >
             <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
-    </protection_domain>
+    </protection_domain> -->
 
-    <protection_domain name="TEST_BLK" priority="200">
+    <!-- <protection_domain name="TEST_BLK" priority="100">
         <program_image path="test_blk.elf" />
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_queue" />
         <map mr="data_blk_vmm_1" vaddr="0x8_c00_000" perms="rw" cached="true" />
-    </protection_domain>
+    </protection_domain> -->
 
     <protection_domain name="CLIENT_VMM-1" priority="100">
         <program_image path="client_vmm_1.elf" />
@@ -43,11 +42,13 @@
         <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
         
         <!-- sDDF related regions for virtIO block -->
+        <!-- blk config region -->
+        <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" setvar_vaddr="blk_config" />
+        <!-- sDDF data region -->
+        <map mr="data_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" setvar_vaddr="blk_data" />
         <!-- shared memory for ring buffer mechanism -->
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_queue" />
-        <!-- sDDF data region -->
-        <map mr="data_blk_vmm_1" vaddr="0x8_c00_000" perms="rw" cached="true" setvar_vaddr="blk_data" />
 
         <virtual_machine name="client_linux-1" id="0" priority="100">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
@@ -56,7 +57,7 @@
     </protection_domain>
 
     <protection_domain name="CLIENT_VMM-2" priority="100">
-        <program_image path="client_vmm_2.elf" />
+        <program_image path="blk_driver_vmm.elf" />
         <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
         <!-- sDDF related regions for virtIO console -->
@@ -69,9 +70,19 @@
         <map mr="tx_data_serial_vmm_2" vaddr="0x8_800_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_2" vaddr="0x8_a00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
+        <!-- sDDF block -->
         <virtual_machine name="client_linux-2" id="0" priority="100">
             <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+
+            <!-- sDDF block -->
+            <!-- blk config region -->
+            <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" />
+            <!-- shared memory for ring buffer mechanism -->
+            <map mr="req_blk_vmm_1" vaddr="0x30200000" perms="rw" cached="true" />
+            <map mr="resp_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" />
+            <!-- sDDF data region -->
+            <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" />
         </virtual_machine>
     </protection_domain>
 
@@ -185,6 +196,8 @@
     </channel>
 
     <!-- Block sDDF regions -->
+    <!-- Blk config region -->
+    <memory_region name="blk_config_vmm_1" size="0x1000" page_size="0x1000" />
     <!-- Shared memory for the actual data transfered -->
     <memory_region name="data_blk_vmm_1" size="0x200_000" page_size="0x200_000" />
     <!--
@@ -193,18 +206,8 @@
     <memory_region name="req_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
 
-    <!-- <channel>
-        <end pd="CLIENT_VMM-1" id="3"/>
-        <end pd="BLK_DRIVER_VMM" id="1"/>
-    </channel> -->
-
     <channel>
         <end pd="CLIENT_VMM-1" id="3"/>
-        <end pd="TEST_BLK" id="1"/>
-    </channel>
-
-    <channel>
         <end pd="CLIENT_VMM-2" id="3"/>
-        <end pd="TEST_BLK" id="2"/>
     </channel>
 </system>
