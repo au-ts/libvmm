@@ -95,8 +95,7 @@ qemu: all
 			-device virtio-blk-device,drive=hd0	 \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic \
-			-monitor telnet:localhost:1234,server,nowait
+			-nographic
 # added -monitor for debug			
 
 
