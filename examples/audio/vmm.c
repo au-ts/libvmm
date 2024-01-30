@@ -27,8 +27,7 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#define GUEST_RAM_SIZE 0x08000000
-// #define GUEST_RAM_SIZE 0x10000000
+#define GUEST_RAM_SIZE 0x10000000
 
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x4f000000
