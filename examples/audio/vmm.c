@@ -92,6 +92,10 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
+static void sound_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_irq_ack(SOUND_IRQ_CH);
+}
+
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -125,7 +129,7 @@ void init(void) {
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &serial_ack, NULL);
+    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &sound_ack, NULL);
     microkit_irq_ack(SOUND_IRQ_CH);
 
     /* Finally start the guest */

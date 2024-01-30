@@ -25,6 +25,7 @@ CONFIG ?= debug
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
 QEMU := qemu-system-aarch64
+QEMU_SND_BACKEND := pipewire
 DTC := dtc
 
 # ifndef TOOLCHAIN
@@ -104,7 +105,7 @@ qemu: all
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
-			-audio driver=pipewire,model=hda,id=pipewire \
+			-audio driver=$(QEMU_SND_BACKEND),model=hda,id=$(QEMU_SND_BACKEND) \
 			-m size=2G \
 			-nographic
 
