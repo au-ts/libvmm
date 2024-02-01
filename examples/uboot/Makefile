@@ -96,9 +96,7 @@ qemu: all
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
-# added -monitor for debug			
-
-
+# add -monitor for debugging. The -S flag makes the system wait for GDB to tell it to run
 # The flags for device loader of addr=0x70000000,cpu-num=0 sets the program counter of cpu 0 to this address. As long 
 # as the file here (currently our loader.img file) can be executed this is fine.
 

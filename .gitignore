@@ -3,4 +3,5 @@ zig-out/
 zig-cache/
 *.pdf
 *.dtb
+dummy.img
 rust/target/

@@ -111,12 +111,21 @@ void init(void) {
 }
 
 void notified(microkit_channel ch) {
+    printf("her!\n");
     switch (ch) {
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
             printf("Interrupt from CH 1 recorded\n");
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
+            }
+            break;
+        }
+        case BLOCK_IRQ_CH: {
+            bool success = virq_inject(GUEST_VCPU_ID, BLOCK_IRQ);
+            printf("Interrupt from block recorded\n");
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", BLOCK_IRQ, GUEST_VCPU_ID);
             }
             break;
         }
