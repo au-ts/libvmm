@@ -45,6 +45,34 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+#define MAX_IRQ_CH 63
+int passthrough_irq_map[MAX_IRQ_CH];
+
+static void dummy_ack(size_t vcpu_id, int irq, void *cookie) {
+    return;
+}
+
+static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
+    microkit_irq_ack(irq_ch);
+}
+
+static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
+    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
+    assert(irq_ch < MAX_IRQ_CH);
+    passthrough_irq_map[irq_ch] = irq;
+
+    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
+    if (!err) {
+        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
+        return;
+    }
+}
+
+/* sDDF block */
+#define UIO_BLK_IRQ 50
+#define VSWITCH_BLK 3
+
 /* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
@@ -139,7 +167,10 @@ void init(void) {
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
                                       NULL, NULL, (void **)serial_ring_handles, serial_ch);
     assert(success);
-    
+
+    /* Register UIO irq */
+    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -150,6 +181,10 @@ void notified(microkit_channel ch) {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);
+            break;
+        }
+        case VSWITCH_BLK: {
+            virq_inject(GUEST_VCPU_ID, UIO_BLK_IRQ);
             break;
         }
         default:

@@ -110,7 +110,7 @@ SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
 
-BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := libuio
+BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := blk_driver
 CLIENT_VM_1_USERLEVEL_BINS := virtio_blk_test cmdq_test postmark
 CLIENT_VM_2_USERLEVEL_BINS := cmdq_test
 
@@ -213,7 +213,8 @@ blk_driver_vm_userlevel: $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
+	# cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
+	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 
 client_vm_userlevel: client_vm_1_userlevel client_vm_2_userlevel
@@ -268,8 +269,8 @@ $(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/%: $(BLK_DRIVER_VM_USERLEVEL_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc $(CFLAGS_USERLEVEL) $< -o $@
+$(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN): $(wildcard $(BLK_DRIVER_VM_USERLEVEL_DIR)/*.c) $(BUILD_DIR)/sddf_blk_shared_queue.o Makefile
+	$(TOOLCHAIN)-gcc $(CFLAGS_USERLEVEL) $(wildcard $(BLK_DRIVER_VM_USERLEVEL_DIR)/*.c) $(BUILD_DIR)/sddf_blk_shared_queue.o -o $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
 
 $(BUILD_DIR)/%: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@

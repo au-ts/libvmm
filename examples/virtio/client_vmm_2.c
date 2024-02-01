@@ -41,9 +41,6 @@ extern char _guest_initrd_image_end[];
 /* microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-#define UIO_BLK_IRQ 50
-#define VSWITCH_BLK 1
-
 #define MAX_IRQ_CH 63
 int passthrough_irq_map[MAX_IRQ_CH];
 
@@ -96,18 +93,12 @@ void init(void) {
         return;
     }
 
-    /* Register UIO irq */
-    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
-
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
     switch (ch) {
-        case VSWITCH_BLK:
-            // virq_inject(GUEST_VCPU_ID, UIO_BLK_IRQ);
-            break;
         default:
             if (passthrough_irq_map[ch]) {
                 bool success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
