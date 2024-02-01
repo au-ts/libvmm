@@ -37,7 +37,7 @@ static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
     // Poll ((blk_storage_info_t *)dev->config)->ready until it is ready
     while (!((blk_storage_info_t *)dev->config)->ready) {
-        LOG_BLOCK("waiting for device to be ready\n");
+        // LOG_BLOCK("waiting for device to be ready\n");
     }
 
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = 0;
@@ -491,7 +491,11 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     uint16_t sddf_ret_count;
     uint16_t sddf_ret_success_count;
     uint32_t sddf_ret_id;
+
+    // @ericc: we need to know if we handled any responses so we can inject an interrupt
+    bool handled;
     while (!blk_resp_queue_empty(queue_handle)) {
+        handled = true;
         blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_addr, &sddf_ret_count, &sddf_ret_success_count, &sddf_ret_id);
         
         /* Freeing and retrieving request store */
@@ -531,7 +535,9 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
         virtio_blk_used_buffer(dev, virtio_desc);
     }
 
-    virtio_blk_used_buffer_virq_inject(dev);
+    if (handled) {
+        virtio_blk_used_buffer_virq_inject(dev);
+    }
 }
 
 void virtio_blk_handle_config_change(struct virtio_device *dev) {

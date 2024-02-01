@@ -105,11 +105,11 @@ static struct virtio_device virtio_console;
 uintptr_t blk_req_queue;
 uintptr_t blk_resp_queue;
 uintptr_t blk_data;
+uintptr_t blk_config;
 blk_queue_handle_t blk_queue_handle;
 static blk_queue_handle_t *blk_queue_handles[SDDF_BLK_NUM_HANDLES];
 
 size_t blk_ch[SDDF_BLK_NUM_CH];
-blk_storage_info_t blk_config;
 
 blk_data_region_t blk_data_region;
 bitarray_t blk_data_region_avail_bitarr;
@@ -210,10 +210,6 @@ void init(void) {
     blk_data_region_handlers[SDDF_BLK_DEFAULT_HANDLE] = &blk_data_region;
     /* Initialise channel */
     blk_ch[SDDF_BLK_DEFAULT_CH_INDEX] = BLK_CH; 
-    // @ericc: Grab these values from driver in the future, for now hard code here
-    blk_config.blocksize = 1024;
-    blk_config.size = 10000;
-    blk_config.ready = true;
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
                                       &blk_config, (void **)blk_data_region_handlers, (void **)blk_queue_handles, blk_ch);

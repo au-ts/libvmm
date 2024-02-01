@@ -73,6 +73,13 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
 #define UIO_BLK_IRQ 50
 #define VSWITCH_BLK 3
 
+uintptr_t uio_irq;
+
+void uio_ack(size_t vcpu_id, int irq, void *cookie) {
+    LOG_VMM("uio_ack!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    microkit_irq_ack(VSWITCH_BLK);
+}
+
 /* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
 #define SERIAL_MUX_RX_CH 2
@@ -169,7 +176,7 @@ void init(void) {
     assert(success);
 
     /* Register UIO irq */
-    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &dummy_ack, NULL);
+    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &uio_ack, NULL);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

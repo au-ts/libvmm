@@ -1,10 +1,9 @@
 /*
- * Copyright 2023, UNSW
+ * Copyright 2024, UNSW
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #pragma once
 
-typedef unsigned int microkit_channel;
-
-void microkit_notify(microkit_channel ch);
+/* Notify the VMM */
+void uio_notify();
