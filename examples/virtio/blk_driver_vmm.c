@@ -73,11 +73,8 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
 #define UIO_BLK_IRQ 50
 #define VSWITCH_BLK 3
 
-uintptr_t uio_irq;
-
 void uio_ack(size_t vcpu_id, int irq, void *cookie) {
-    LOG_VMM("uio_ack!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    microkit_irq_ack(VSWITCH_BLK);
+    microkit_notify(VSWITCH_BLK);
 }
 
 /* Virtio Console */

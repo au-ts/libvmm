@@ -42,13 +42,13 @@
         <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
         
         <!-- sDDF related regions for virtIO block -->
+        <!-- blk config region -->
+        <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" setvar_vaddr="blk_config" />
+        <!-- sDDF data region -->
+        <map mr="data_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" setvar_vaddr="blk_data" />
         <!-- shared memory for ring buffer mechanism -->
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_queue" />
-        <!-- sDDF data region -->
-        <map mr="data_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" setvar_vaddr="blk_data" />
-        <!-- blk config region -->
-        <map mr="blk_config_vmm_1" vaddr="0x30600000" perms="rw" cached="false" setvar_vaddr="blk_config" />
 
         <virtual_machine name="client_linux-1" id="0" priority="100">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
@@ -76,13 +76,13 @@
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
 
             <!-- sDDF block -->
-            <!-- shared memory for ring buffer mechanism -->
-            <map mr="req_blk_vmm_1" vaddr="0x30000000" perms="rw" cached="true" />
-            <map mr="resp_blk_vmm_1" vaddr="0x30200000" perms="rw" cached="true" />
-            <!-- sDDF data region -->
-            <map mr="data_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" />
             <!-- blk config region -->
-            <map mr="blk_config_vmm_1" vaddr="0x30600000" perms="rw" cached="false" />
+            <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" />
+            <!-- shared memory for ring buffer mechanism -->
+            <map mr="req_blk_vmm_1" vaddr="0x30200000" perms="rw" cached="true" />
+            <map mr="resp_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" />
+            <!-- sDDF data region -->
+            <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" />
         </virtual_machine>
     </protection_domain>
 
@@ -196,6 +196,8 @@
     </channel>
 
     <!-- Block sDDF regions -->
+    <!-- Blk config region -->
+    <memory_region name="blk_config_vmm_1" size="0x1000" page_size="0x1000" />
     <!-- Shared memory for the actual data transfered -->
     <memory_region name="data_blk_vmm_1" size="0x200_000" page_size="0x200_000" />
     <!--
@@ -203,8 +205,6 @@
     -->
     <memory_region name="req_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
-    <!-- Blk config region -->
-    <memory_region name="blk_config_vmm_1" size="0x1000" page_size="0x1000" />
 
     <channel>
         <end pd="CLIENT_VMM-1" id="3"/>

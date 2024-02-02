@@ -212,7 +212,7 @@ void init(void) {
     blk_ch[SDDF_BLK_DEFAULT_CH_INDEX] = BLK_CH; 
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                      &blk_config, (void **)blk_data_region_handlers, (void **)blk_queue_handles, blk_ch);
+                                      (void *)blk_config, (void **)blk_data_region_handlers, (void **)blk_queue_handles, blk_ch);
     assert(success);
 
     /* Finally start the guest */
