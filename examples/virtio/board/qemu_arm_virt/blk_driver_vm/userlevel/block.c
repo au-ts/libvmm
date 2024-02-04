@@ -1,5 +1,5 @@
 /*
- * Copyright 2023, UNSW
+ * Copyright 2024, UNSW
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -34,12 +34,7 @@ blk_storage_info_t *blk_config;
 blk_queue_handle_t h;
 uintptr_t blk_data;
 
-size_t req_queue_mem_size;
-size_t resp_queue_mem_size;
-size_t blk_data_mem_size;
-size_t blk_config_mem_size;
-
-int driver_init(void **maps, size_t *map_sizes, int num_maps)
+int driver_init(void **maps, int num_maps)
 {    
     if (num_maps != 4) {
         LOG_UIO_BLOCK_ERR("Expecting 4 maps, got %d\n", num_maps);
@@ -52,11 +47,6 @@ int driver_init(void **maps, size_t *map_sizes, int num_maps)
     blk_data = (uintptr_t)maps[3];
 
     blk_queue_init(&h, req_queue, resp_queue, false, BLK_REQ_QUEUE_SIZE, BLK_RESP_QUEUE_SIZE);
-
-    blk_config_mem_size = map_sizes[0];
-    req_queue_mem_size = map_sizes[1];
-    resp_queue_mem_size = map_sizes[2];
-    blk_data_mem_size = map_sizes[3];
 
     // @TODO, @ericc: Query the block device we have and fill in the blk_config
     // just random numbers I've chosen for now
@@ -96,6 +86,7 @@ void driver_notified()
         switch(ret_code) {
             case READ_BLOCKS:
                 // @TODO, @ericc: read from the block device
+                
                 break;
             case WRITE_BLOCKS:
                 // @TODO, @ericc: write to the block device

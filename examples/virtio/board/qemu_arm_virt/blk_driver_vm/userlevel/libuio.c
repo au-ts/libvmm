@@ -44,13 +44,12 @@
 
 static struct pollfd pfd;
 static void *maps[UIO_MAX_MAPS];
-static size_t map_sizes[UIO_MAX_MAPS];
 static int num_maps;
 
 /*
  * Just happily abort if the user can't be bother to provide these functions
  */
-__attribute__((weak)) int driver_init(void **maps, size_t *map_sizes, int num_maps)
+__attribute__((weak)) int driver_init(void **maps, int num_maps)
 {
     assert(!"should not be here!");
 }
@@ -174,14 +173,13 @@ static int uio_map_init(int fd)
             close(fd);
             return -1;
         }
-        map_sizes[i] = size;
 
-        if ((maps[i] = mmap(NULL, map_sizes[i], PROT_READ | PROT_WRITE, MAP_SHARED, fd, i * getpagesize())) == NULL) {
+        if ((maps[i] = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, i * getpagesize())) == NULL) {
             LOG_UIO_ERR("mmap failed, errno: %d\n", errno);
             close(fd);
             return -1;
         }
-        LOG_UIO("mmaped map%d with 0x%x bytes at %p\n", i, (int)map_sizes[i], maps[i]);
+        LOG_UIO("mmaped map%d with 0x%x bytes at %p\n", i, size, maps[i]);
     }
 
     return 0;
@@ -206,7 +204,7 @@ int main() {
     }
     
     /* Initialise driver */
-    if (driver_init(maps, map_sizes, num_maps) != 0) {
+    if (driver_init(maps, num_maps) != 0) {
         LOG_UIO_ERR("Failed to initialise driver\n");
         close(pfd.fd);
         return 1;
