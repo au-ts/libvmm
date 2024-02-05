@@ -5,5 +5,5 @@
  */
 #pragma once
 
-int driver_init(void **maps, int num_maps);
+int driver_init(void **maps, uintptr_t *maps_phys, int num_maps);
 void driver_notified();

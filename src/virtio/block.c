@@ -37,7 +37,7 @@ static void virtio_blk_config_init(struct virtio_device *dev)
 {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->config;
     virtio_blk_config.blk_size = config->blocksize;
-    virtio_blk_config.capacity = (config->blocksize / 512) * config->size; // Number of 512-byte sectors
+    virtio_blk_config.capacity = (config->blocksize / VIRTIO_BLK_SECTOR_SIZE) * config->size; // Number of 512-byte sectors
 }
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
@@ -366,6 +366,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
                 uint16_t sddf_count = virtq->desc[curr_desc_head].len / ((blk_storage_info_t *)dev->config)->blocksize;
+                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
                 // If these all pass then this request can be handled successfully
@@ -398,7 +399,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 // Pass this allocated data buffer to sddf read request, then enqueue it
                 uintptr_t sddf_data;
                 blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
-                blk_enqueue_req(queue_handle, READ_BLOCKS, sddf_data, virtio_req->sector, sddf_count, req_id);
+                blk_enqueue_req(queue_handle, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
@@ -410,6 +411,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 
                 uintptr_t virtio_data = virtq->desc[curr_desc_head].addr;
                 uint16_t sddf_count = virtq->desc[curr_desc_head].len / ((blk_storage_info_t *)dev->config)->blocksize;
+                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
                 // If these all pass then this request can be handled successfully
@@ -439,11 +441,13 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 virtio_blk_req_store_allocate(desc_head, &req_id);
                 
                 // Allocate data buffer from data region based on sddf_count
-                // Copy data from virtio buffer to data buffer, create sddf write request and initialise it with data buffer, then enqueue it
+                // Copy data from virtio buffer to data buffer, create sddf write request and initialise it with data buffer
                 uintptr_t sddf_data;
                 blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
                 memcpy((void *)sddf_data, (void *)virtio_data, sddf_count * ((blk_storage_info_t *)dev->config)->blocksize);
-                blk_enqueue_req(queue_handle, WRITE_BLOCKS, sddf_data, virtio_req->sector, sddf_count, req_id);
+
+                // Now enqueue the sddf write request
+                blk_enqueue_req(queue_handle, WRITE_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
                 break;
             }
             case VIRTIO_BLK_T_FLUSH: {
