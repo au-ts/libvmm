@@ -139,7 +139,7 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
-#define VIRTIO_BLK_CAPACITY 0x100000
+#define VIRTIO_BLK_SECTOR_SIZE 512
 
 /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
 typedef struct blk_data_region {
