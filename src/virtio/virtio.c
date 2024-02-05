@@ -48,7 +48,7 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
             break;
         case SND:
             LOG_VMM("Init sound device at [%#lx, %#lx), irq %lu\n", region_base, region_base + region_size, virq);
-            virtio_snd_init(dev, virtio_snd_queues, VIRTIO_SND_NUM_VIRTQ, virq, data_region_handles, sddf_ring_handles, sddf_ch);
+            virtio_snd_init(dev, virtio_snd_queues, VIRTIO_SND_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
             success = fault_register_vm_exception_handler(region_base,
                                                         region_size,
                                                         &virtio_mmio_fault_handle,
