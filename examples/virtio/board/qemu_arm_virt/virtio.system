@@ -44,11 +44,11 @@
         <!-- sDDF related regions for virtIO block -->
         <!-- blk config region -->
         <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" setvar_vaddr="blk_config" />
-        <!-- sDDF data region -->
-        <map mr="data_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" setvar_vaddr="blk_data" />
         <!-- shared memory for ring buffer mechanism -->
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_queue" />
+        <!-- sDDF data region -->
+        <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" setvar_vaddr="blk_data" />
 
         <virtual_machine name="client_linux-1" id="0" priority="100">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
