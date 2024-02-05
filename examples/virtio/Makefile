@@ -194,7 +194,7 @@ CFLAGS_USERLEVEL :=	-g3 \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories client_vm_userlevel blk_driver_vm_userlevel $(IMAGE_FILE)
+all: directories $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -210,24 +210,22 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
 # Unpack rootfs, put the userlevel binary in /root, repack rootfs
-blk_driver_vm_userlevel: $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
+$(BLK_DRIVER_VM_INITRD_OVERLAYED): $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
 	# cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
 	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
-
-client_vm_userlevel: client_vm_1_userlevel client_vm_2_userlevel
 	
-client_vm_1_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_BINS))
+$(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_BINS))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_1_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null && \
 	cp $^ $(CLIENT_VM_1_ROOTFS_TMP_DIR)/root && \
 	(cd $(CLIENT_VM_1_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_1_INITRD_OVERLAYED))
 
-client_vm_2_userlevel: $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_BINS))
+$(CLIENT_VM_2_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_BINS))
 	rm -r $(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_2_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_2_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null && \

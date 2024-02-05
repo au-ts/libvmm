@@ -16,6 +16,7 @@
 #include <dirent.h>
 #include <regex.h>
 #include <string.h>
+#include <limits.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -44,12 +45,13 @@
 
 static struct pollfd pfd;
 static void *maps[UIO_MAX_MAPS];
+static uintptr_t maps_phys[UIO_MAX_MAPS];
 static int num_maps;
 
 /*
  * Just happily abort if the user can't be bother to provide these functions
  */
-__attribute__((weak)) int driver_init(void **maps, int num_maps)
+__attribute__((weak)) int driver_init(void **maps, uintptr_t *maps_phys, int num_maps)
 {
     assert(!"should not be here!");
 }
@@ -146,7 +148,46 @@ static int uio_map_size(int map_num) {
     }
     close(fd);
 
-    return strtoul(buf, NULL, 0);
+    int size = strtoul(buf, NULL, 0);
+    if (size == 0 || size == ULONG_MAX) {
+        LOG_UIO_ERR("Failed to convert map%d size to integer\n", map_num);
+        return -1;
+    }
+
+    return size;
+}
+
+static int uio_map_addr(int map_num, uintptr_t *addr) {
+    char path[UIO_MAPS_MAX_NAME];
+    char buf[UIO_MAPS_MAX_NAME];
+
+    int len = snprintf(path, sizeof(path), "%s/map%d/addr", UIO_MAPS_DIR, map_num);
+    if (len < 0 || len >= sizeof(path)) {
+        LOG_UIO_ERR("Failed to create map%d addr path string\n", map_num);
+        return -1;
+    }
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        LOG_UIO_ERR("Failed to open %s\n", path);
+        return -1;
+    }
+    ssize_t ret = read(fd, buf, sizeof(buf));
+    if (ret < 0) {
+        LOG_UIO_ERR("Failed to read map%d addr\n", map_num);
+        return -1;
+    }
+    close(fd);
+
+    uintptr_t ret_addr = strtoul(buf, NULL, 0);
+    if (ret_addr == 0 || ret_addr == ULONG_MAX) {
+        LOG_UIO_ERR("Failed to convert map%d addr to integer\n", map_num);
+        return -1;
+    }
+
+    *addr = ret_addr;
+
+    return 0;
 }
 
 static int uio_map_init(int fd)
@@ -170,6 +211,12 @@ static int uio_map_init(int fd)
         int size = uio_map_size(i);
         if (size < 0) {
             LOG_UIO_ERR("Failed to get size of map%d\n", i);
+            close(fd);
+            return -1;
+        }
+        
+        if (uio_map_addr(i, &maps_phys[i]) != 0) {
+            LOG_UIO_ERR("Failed to get addr of map%d\n", i);
             close(fd);
             return -1;
         }
@@ -204,7 +251,7 @@ int main() {
     }
     
     /* Initialise driver */
-    if (driver_init(maps, num_maps) != 0) {
+    if (driver_init(maps, maps_phys, num_maps) != 0) {
         LOG_UIO_ERR("Failed to initialise driver\n");
         close(pfd.fd);
         return 1;

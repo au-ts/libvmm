@@ -9,7 +9,7 @@
 
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial root=/dev/ram0 debug loglevel=8";
+		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8";
 		linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = <0x47000000>;
 		linux,initrd-end = <0x47f00000>;
