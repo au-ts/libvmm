@@ -500,8 +500,6 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     cmd.code = SDDF_SND_CMD_PCM_SET_PARAMS;
     cmd.cookie = id;
     cmd.stream_id = set_params->hdr.stream_id;
-    cmd.set_params.buffer_bytes = set_params->buffer_bytes;
-    cmd.set_params.period_bytes = set_params->period_bytes;
     cmd.set_params.channels = set_params->channels;
     cmd.set_params.format = set_params->format;
     cmd.set_params.rate = set_params->rate;
