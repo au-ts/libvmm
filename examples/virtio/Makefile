@@ -108,7 +108,7 @@ SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 
 SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
-ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf test_blk.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
 BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := blk_driver
 BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE := block.c libuio.c
@@ -156,8 +156,6 @@ BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 CLIENT_VMM_2_OBJS :=	$(VMM_OBJS) \
 						client_images_2.o \
 						client_vmm_2.o \
-
-TEST_BLK_OBJS := test_blk.o sddf_blk_shared_queue.o printf.o util.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
@@ -214,8 +212,7 @@ $(BLK_DRIVER_VM_INITRD_OVERLAYED): $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER
 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	# cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S95$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
-	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
+	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S99$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 	
 $(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_BINS))
@@ -316,9 +313,6 @@ $(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/test_blk.elf: $(addprefix $(BUILD_DIR)/, $(TEST_BLK_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
