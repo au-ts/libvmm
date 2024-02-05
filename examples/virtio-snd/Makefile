@@ -139,7 +139,7 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					block.o \
 					sound.o \
 					mmio.o \
-					sddf_serial_shared_ringbuffer.o \
+					shared_ringbuffer.o \
 					sddf_snd_shared_ringbuffer.o
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
@@ -150,12 +150,12 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						block.o \
 						sound.o \
 						mmio.o \
-						sddf_serial_shared_ringbuffer.o \
+						shared_ringbuffer.o \
 						sddf_snd_shared_ringbuffer.o
 
-SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_shared_ringbuffer.o util.o printf.o
-SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_shared_ringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o sddf_serial_shared_ringbuffer.o
+SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o util.o printf.o
+SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
+SERIAL_DRIVER_OBJS := uart.o shared_ringbuffer.o
 
 USERLEVEL_OBJS := sddf_snd_shared_ringbuffer.o
 
@@ -175,10 +175,10 @@ CFLAGS := -mstrict-align \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
-		  -I$(SDDF_SERIAL_RINGBUFFER)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF_BLOCK_RINGBUFFER)/include \
 		  -I$(SDDF_SOUND_RINGBUFFER)/include \
+		  -I$(SDDF)/include \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -230,7 +230,7 @@ $(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_
 	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
-	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts
+	sh ../../tools/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/snd_driver_vm.dts > $@
 
 $(BUILD_DIR)/snd_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(SND_DRIVER_VM_LINUX) $(SND_DRIVER_VM_DTB) $(SND_DRIVER_VM_INITRD_OVERLAYED)
@@ -242,7 +242,7 @@ $(BUILD_DIR)/snd_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(SND_DRIV
 					$< -o $@
 
 $(CLIENT_VM_DTB): $(CLIENT_VM_BASE_DTS) $(CLIENT_VM_DTS_OVERLAYS)
-	sh ../../scripts/dtscat $^ > $(BUILD_DIR)/client_vm.dts
+	sh ../../tools/dtscat $^ > $(BUILD_DIR)/client_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm.dts > $@
 
 $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LINUX) $(CLIENT_VM_DTB) $(CLIENT_VM_INITRD_OVERLAYED)
@@ -288,7 +288,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DNUM_CLIENTS=2 -DTRANSFER_WITH_COLOUR=1 $< -o $@
+	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
