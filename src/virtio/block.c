@@ -243,7 +243,6 @@ static inline bool blk_data_region_overflow(struct virtio_device *dev, uint16_t 
     return (((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->avail_bitpos + count > ((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->num_buffers);
 }
 
-// TAGGED
 /**
  * Check if the data region is full; it has count number of free buffers available.
  *
