@@ -75,20 +75,20 @@ For acquiring the SDK, you have two options.
 
 On Linux (x86-64):
 ```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-7c679ea-linux-x86-64.tar.gz
+tar xf microkit-sdk-dev-7c679ea-linux-x86-64.tar.gz
 ```
 
 On macOS (Apple Silicon/AArch64):
 ```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-7c679ea-macos-aarch64.tar.gz
+tar xf microkit-sdk-dev-7c679ea-macos-aarch64.tar.gz
 ```
 
 On macOS (Intel/x86-64):
 ```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
+wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-7c679ea-macos-x86-64.tar.gz
+tar xf microkit-sdk-dev-7c679ea-macos-x86-64.tar.gz
 ```
 
 ##### Option 2 - Building the SDK
