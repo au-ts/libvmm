@@ -365,7 +365,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
-                uint16_t sddf_count = virtq->desc[curr_desc_head].len / ((blk_storage_info_t *)dev->config)->blocksize;
+                // Since we are converting bytes to the number of blocks, we need to round up
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->config)->blocksize - 1) / ((blk_storage_info_t *)dev->config)->blocksize;
                 uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
@@ -410,7 +411,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
                 
                 uintptr_t virtio_data = virtq->desc[curr_desc_head].addr;
-                uint16_t sddf_count = virtq->desc[curr_desc_head].len / ((blk_storage_info_t *)dev->config)->blocksize;
+                // Since we are converting bytes to the number of blocks, we need to round up
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->config)->blocksize - 1) / ((blk_storage_info_t *)dev->config)->blocksize;
                 uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
@@ -524,7 +526,7 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
             switch (virtio_req->type) {
                 case VIRTIO_BLK_T_IN: {
                     // Copy successful counts from the data buffer to the virtio buffer
-                    memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)sddf_ret_addr, sddf_ret_success_count * ((blk_storage_info_t *)dev->config)->blocksize);
+                    memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)sddf_ret_addr, virtq->desc[curr_virtio_desc].len);
                     // Free the data buffer
                     blk_data_region_free_buffer(dev, sddf_ret_addr, sddf_ret_count);
                     curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
