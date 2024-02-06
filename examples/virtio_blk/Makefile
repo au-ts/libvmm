@@ -54,21 +54,22 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-VMM := ../../
+VMM := ../..
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 
 CURRENT_DIR := $(shell pwd)
 
+LINUX_DIR := $(VMM_TOOLS)/linux
+UIO_DRIVERS_DIR := $(LINUX_DIR)/uio_drivers
+
 BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
 BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
-BLK_DRIVER_VM_USERLEVEL_DIR := $(BLK_DRIVER_VM_DIR)/userlevel
 BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
 
 CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
 CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
-CLIENT_VM_1_USERLEVEL_DIR := $(CLIENT_VM_1_DIR)/userlevel
 CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
 
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
@@ -98,9 +99,10 @@ SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
 ELFS := client_vmm_1.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
-BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN := blk_driver
-BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE := block.c libuio.c
-CLIENT_VM_1_USERLEVEL_BINS := virtio_blk_test postmark
+CLIENT_VM_1_USERLEVEL := postmark
+CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
+BLK_DRIVER_VM_USERLEVEL := storage
+BLK_DRIVER_VM_USERLEVEL_INIT := uio_blk_driver
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -144,6 +146,8 @@ SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
 
+UIO_BLK_DRIVER_OBJS := blk.o libuio.o sddf_blk_shared_queue.o
+
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
 # FIXME: We should also consider whether -mgeneral-regs-only should be
@@ -160,17 +164,17 @@ CFLAGS := -mstrict-align \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
-		  -I$(SDDF) \
 		  -I$(SDDF)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
 
-CFLAGS_USERLEVEL :=	-g3 \
-		  			-O3 \
-					-Wno-unused-command-line-argument \
-		  			-Wall -Wno-unused-function -Werror \
-		  			-I$(SDDF)/include
+CFLAGS_LINUX :=	-g3 \
+				-O3 \
+				-Wno-unused-command-line-argument \
+				-Wall -Wno-unused-function -Werror \
+				-I$(SDDF)/include \
+				-I$(LINUX_DIR)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -190,21 +194,33 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-# Unpack rootfs, put the userlevel binary in /root, repack rootfs
-$(BLK_DRIVER_VM_INITRD_OVERLAYED): $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
+# Unpack rootfs, put the userlevel in /root and userlevel_init in /etc/init.d/S99, repack rootfs
+$(BLK_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL)) $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT))
 	rm -r $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(BLK_DRIVER_VM_INITRD) | fakeroot cpio -idmv -D$(BLK_DRIVER_VM_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S99$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) && \
-	# cp $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
-	cp $(BLK_DRIVER_VM_USERLEVEL_DIR)/storage $(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root/storage && \
+	for f in $(BLK_DRIVER_VM_USERLEVEL); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root/$$f"; \
+		chmod +x "$(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/root/$$f"; \
+	done && \
+	for f in $(BLK_DRIVER_VM_USERLEVEL_INIT); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+		chmod +x "$(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+	done && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 	
-$(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_BINS))
+$(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL)) $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_1_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null && \
-	cp $^ $(CLIENT_VM_1_ROOTFS_TMP_DIR)/root && \
+	for f in $(CLIENT_VM_1_USERLEVEL); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/root/$$f"; \
+		chmod +x "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/root/$$f";	\
+	done && \
+	for f in $(CLIENT_VM_1_USERLEVEL_INIT); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+		chmod +x "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+	done && \
 	(cd $(CLIENT_VM_1_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_1_INITRD_OVERLAYED))
 
 $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
@@ -230,12 +246,6 @@ $(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_1_INITRD_OVERLAYED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
-
-$(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN): $(addprefix $(BLK_DRIVER_VM_USERLEVEL_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE)) $(BUILD_DIR)/sddf_blk_shared_queue.o Makefile
-	$(TOOLCHAIN)-gcc $(CFLAGS_USERLEVEL) $(addprefix $(BLK_DRIVER_VM_USERLEVEL_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_DRIVER_SOURCE)) $(BUILD_DIR)/sddf_blk_shared_queue.o -o $(BUILD_DIR)/$(BLK_DRIVER_VM_USERLEVEL_DRIVER_BIN)
-
-$(BUILD_DIR)/%: $(CLIENT_VM_1_USERLEVEL_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -283,6 +293,21 @@ $(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS)
 
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
+	$(TOOLCHAIN)-gcc -c $(CFLAGS_LINUX) $< -o $@
+
+$(BUILD_DIR)/postmark: $(LINUX_DIR)/postmark.c Makefile
+	$(TOOLCHAIN)-gcc $< -o $@
+
+$(BUILD_DIR)/storage: $(LINUX_DIR)/storage Makefile
+	cp $< $@
+
+$(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
+	cp $< $@
+
+$(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
+	$(TOOLCHAIN)-gcc $(CFLAGS_LINUX) $^ -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(BLK_DRIVER_VM_DIR)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
