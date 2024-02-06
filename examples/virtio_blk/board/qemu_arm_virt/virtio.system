@@ -27,7 +27,7 @@
         <!-- sDDF related regions for virtIO block -->
         <!-- blk config region -->
         <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" setvar_vaddr="blk_config" />
-        <!-- shared memory for ring buffer mechanism -->
+        <!-- shared memory for queues -->
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="true" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="true" setvar_vaddr="blk_resp_queue" />
         <!-- sDDF data region -->
@@ -61,7 +61,7 @@
             <!-- sDDF block -->
             <!-- blk config region -->
             <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="true" />
-            <!-- shared memory for ring buffer mechanism -->
+            <!-- shared memory for queues -->
             <map mr="req_blk_vmm_1" vaddr="0x30200000" perms="rw" cached="true" />
             <map mr="resp_blk_vmm_1" vaddr="0x30400000" perms="rw" cached="true" />
             <!-- sDDF data region -->
@@ -184,7 +184,7 @@
     <!-- Shared memory for the actual data transfered -->
     <memory_region name="data_blk_vmm_1" size="0x200_000" page_size="0x200_000" />
     <!--
-        Regions for the shared ring buffers used by the driver vm and client vm
+        Regions for the shared queues used by the driver vm and client vm
     -->
     <memory_region name="req_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
