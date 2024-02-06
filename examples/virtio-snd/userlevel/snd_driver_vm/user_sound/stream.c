@@ -311,13 +311,13 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
                snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
-    // err = snd_pcm_hw_params_set_period_size(handle, hw_params, params->period_bytes, 0);
+
     err = snd_pcm_hw_params_get_period_size(hw_params, &size, &dir);
     if (err < 0) {
         LOG_SOUND_ERR("Unable to set period size for playback: %s\n", snd_strerror(err));
         return SDDF_SND_S_IO_ERR;
     }
-    // state->period_size = params->period_bytes;
+
     state->period_size = size;
     /* write the parameters to device */
     err = snd_pcm_hw_params(handle, hw_params);
@@ -340,7 +340,6 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
         return err;
     }
     /* start the transfer when the buffer is almost full: */
-    /* (buffer_size / avail_min) * avail_min */
     unsigned threshold = (state->buffer_size / state->period_size) * state->period_size;
 
     err = snd_pcm_sw_params_set_start_threshold(handle, swparams, threshold);
@@ -397,7 +396,6 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     alsa_params.format = format;
     alsa_params.latency_us = LATENCY;
     alsa_params.period_us = PERIOD_TIME;
-    // alsa_params.period_bytes = params->period_bytes;
     alsa_params.rate = rate;
     alsa_params.resample = 1;
 
