@@ -132,9 +132,12 @@ struct virtio_blk_outhdr {
 /* Backend implementation */
 #define SDDF_BLK_NUM_HANDLES 1
 #define SDDF_BLK_DEFAULT_HANDLE 0
-#define SDDF_BLK_MAX_DATA_BUFFERS 4096
 #define SDDF_BLK_NUM_CH 1
 #define SDDF_BLK_DEFAULT_CH_INDEX 0
+
+// @ericc: This needs to be less than or equal to memory size / blocksize 
+// TODO: auto generate from microkit system file
+#define SDDF_BLK_MAX_DATA_BUFFERS 2048
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
