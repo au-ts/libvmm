@@ -27,8 +27,8 @@ colorlinks: true
 
 # Introduction
 
-This document aims to describe the VMM and how to use it. If you feel there is
-something missing from this document or the VMM itself, feel free to let us
+This document aims to describe the libvmm project and how to use it. If you feel there is
+something missing from this document or libvmm itself, feel free to let us
 know by [opening an issue on the GitHub repository](https://github.com/au-ts/libvmm).
 
 ## Supported architectures and platforms

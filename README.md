@@ -62,7 +62,7 @@ nix-shell --pure
 
 Finally, you will need an experimental Microkit SDK.
 
-* Currently virtualisation support and other patches that the VMM requires are
+* Currently virtualisation support and other patches that libvmm requires are
   not part of mainline Microkit.
 * Upstreaming the required changes is in-progress.
 
