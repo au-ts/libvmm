@@ -58,7 +58,7 @@ int driver_init(void **maps, uintptr_t *maps_phys,  int num_maps)
     // @TODO, @ericc: Query the block device we have and fill in the blk_config
     // just random numbers I've chosen for now
     blk_config->blocksize = 1024;
-    blk_config->size = 1024 * 1024 * 1024;
+    blk_config->size = 1000;
     blk_config->read_only = false;
     
     if ((storage_fd = open("/root/storage", O_CREAT | O_RDWR, 0666)) < 0) {
