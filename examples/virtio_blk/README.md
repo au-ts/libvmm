@@ -32,7 +32,7 @@ This example consist of a guest linux client VM that talks virtIO with a backend
 
 When you boot the example, you will see different coloured output for each guest. The block driver VM in red will boot first. When it is ready, the client VM in green will boot.
 
-After the block client VM boots it will attempt to mount the virtIO block device `/dev/vda`. The block device contains an ext4 filesystem allowing us to test it using block benchmark programs like `postmark`, which has been included in `/root`.
+After the block client VM boots it will attempt to mount the virtIO block device `/dev/vda` into `/mnt`. The block device contains an ext4 filesystem allowing us to test it using block benchmark programs like `postmark`, which has been included in `/root`.
 
 Client VM requests to the virtIO block device will print out debugging messages.
 ```
