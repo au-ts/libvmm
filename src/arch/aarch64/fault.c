@@ -360,6 +360,8 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
     size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
 
+    LOG_VMM("Got fault at %lx with fsr %lx\n", addr, fsr);
+
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
@@ -401,6 +403,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
     size_t label = microkit_msginfo_get_label(msginfo);
     bool success = false;
+    // LOG_VMM("Got fault %s\n", fault_to_string(label));
     switch (label) {
         case seL4_Fault_VMFault:
             success = fault_handle_vm_exception(vcpu_id);

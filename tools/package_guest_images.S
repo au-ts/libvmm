@@ -5,7 +5,7 @@
  */
 
 /*
- * What even is this file?
+ * What even is this file? 
  *
  * The purpose of this file is to include binaries that the VMM needs to setup,
  * such as the Linux kernel image, the DTB, and the initial RAM disk. What
@@ -18,8 +18,8 @@
  * writeable. We also have "@progbits", this is to indicate that the section
  * contains data (rather than code or something else).
  *
- */
-
+ */  
+ 
 #if defined(GUEST_KERNEL_IMAGE_PATH)
 .section .guest_kernel_image, "aw", @progbits
 .global _guest_kernel_image, _guest_kernel_image_end
@@ -43,3 +43,22 @@ _guest_initrd_image:
 .incbin GUEST_INITRD_IMAGE_PATH
 _guest_initrd_image_end:
 #endif
+
+ 
+#if defined(GUEST_BARE_IMAGE_PATH)
+.section .guest_bare_image, "aw", @progbits
+.global _guest_bare_image, _guest_bare_image_end
+_guest_bare_image:
+.incbin GUEST_BARE_IMAGE_PATH
+_guest_bare_image_end:
+#endif
+
+#if defined(GUEST_INTERF_IMAGE_PATH)
+.section .guest_interf_image, "aw", @progbits
+.global _guest_interf_image, _guest_interf_image_end
+_guest_interf_image:
+.incbin GUEST_INTERF_IMAGE_PATH
+_guest_interf_image_end:
+#endif
+
+

@@ -32,6 +32,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
     microkit_vm_restart(boot_vcpu_id, regs.pc);
 
+
     return true;
 }
 

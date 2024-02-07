@@ -93,6 +93,10 @@ void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
+
+    seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
+    seL4_ARM_VSpace_CleanInvalidate_Data(3, (seL4_Word)_guest_kernel_image, (seL4_Word)_guest_kernel_image_end);
+
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
@@ -106,6 +110,10 @@ void init(void) {
                                       GUEST_INIT_RAM_DISK_VADDR,
                                       initrd_size
                                       );
+
+    seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
+    seL4_ARM_VSpace_CleanInvalidate_Data(3, (seL4_Word)_guest_kernel_image, (seL4_Word)_guest_kernel_image_end);
+    
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;

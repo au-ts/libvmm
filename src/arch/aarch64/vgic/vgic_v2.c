@@ -128,5 +128,7 @@ void vgic_init()
     }
     vgic.registers = &dist;
     memset(vgic.registers, 0, sizeof(struct gic_dist_map));
+
     vgic_dist_reset(vgic_get_dist(vgic.registers));
+
 }
