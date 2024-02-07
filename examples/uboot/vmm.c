@@ -111,7 +111,6 @@ void init(void) {
 }
 
 void notified(microkit_channel ch) {
-    printf("her!\n");
     switch (ch) {
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);

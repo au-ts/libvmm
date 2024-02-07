@@ -5,3 +5,4 @@ zig-cache/
 *.dtb
 dummy.img
 rust/target/
+.vscode
