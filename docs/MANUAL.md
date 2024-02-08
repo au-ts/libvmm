@@ -176,6 +176,24 @@ in the device tree. See device tree bindings documentation for the platform's
 interrupt controller (e.g the GIC) or for the specific device you are trying to use.
 Note that not all devices encode interrupts the same.
 
+## Passing through DMA devices
+
+Devices which communicate through DMA see the world through host physical
+addresses, however virtual machines will give devices guest physical addresses
+(i.e., host virtual addresses).  In order for DMA passthrough to work, these two
+addresses must be aligned. This can be done by setting the `phys_addr` of the
+guest's RAM to be the same as its mapped virtual address.
+```xml
+<memory_region name="guest_ram" size="0x10_000_000" phys_addr="0x20000000" page_size="0x200_000" />
+<protection_domain ...>
+    <virtual_machine ...>
+        <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
+        <!-- ... -->
+    </virtual_machine>
+    <!-- ... -->
+</protection_domain>
+```
+
 # Adding platform support
 
 This section will describe how to add support for a new platform to the `simple`
