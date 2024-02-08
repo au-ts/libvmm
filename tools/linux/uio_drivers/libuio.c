@@ -31,19 +31,19 @@
 #define DEBUG_UIO
 
 #if defined(DEBUG_UIO)
-#define LOG_UIO(...) do{ printf("UIO_DRIVER: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO(...) do{ printf("UIO_DRIVER_%d", uio_num); printf(": "); printf(__VA_ARGS__); }while(0)
 #else
 #define LOG_UIO(...) do{}while(0)
 #endif
 
-#define LOG_UIO_ERR(...) do{ printf("UIO_DRIVER|ERROR: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_ERR(...) do{ printf("UIO_DRIVER_%d", uio_num); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 
-#define UIO_DEV_NAME "/dev/uio0"
 #define UIO_MAPS_DIR "/sys/class/uio/uio0/maps"
-#define UIO_MAPS_MAX_NAME 64
+#define MAX_PATHNAME 64
 #define UIO_MAX_MAPS 32
 
+static int uio_num;
 static struct pollfd pfd;
 static void *maps[UIO_MAX_MAPS];
 static uintptr_t maps_phys[UIO_MAX_MAPS];
@@ -52,7 +52,7 @@ static int num_maps;
 /*
  * Just happily abort if the user can't be bother to provide these functions
  */
-__attribute__((weak)) int driver_init(void **maps, uintptr_t *maps_phys, int num_maps)
+__attribute__((weak)) int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
 {
     assert(!"should not be here!");
 }
@@ -74,12 +74,18 @@ void uio_notify()
 }
 
 static int uio_num_maps() {
-    const char *path = UIO_MAPS_DIR;
     DIR *dir;
     struct dirent *entry;
     struct stat statbuf;
     regex_t regex;
     int count = 0;
+
+    char path[MAX_PATHNAME];
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps", uio_num);
+    if (len < 0 || len >= sizeof(path)) {
+        LOG_UIO_ERR("Failed to create maps path string\n");
+        return -1;
+    }
 
     // Compile regex
     if (regcomp(&regex, "^map[0-9]+$", REG_EXTENDED) != 0) {
@@ -96,7 +102,7 @@ static int uio_num_maps() {
 
     // Read directory entries
     while ((entry = readdir(dir)) != NULL) {
-        char fullPath[UIO_MAPS_MAX_NAME];
+        char fullPath[MAX_PATHNAME];
         
         int len = snprintf(fullPath, sizeof(fullPath), "%s/%s", path, entry->d_name);
         if (len < 0 || len >= sizeof(fullPath)) {
@@ -128,12 +134,12 @@ static int uio_num_maps() {
 }
 
 static int uio_map_size(int map_num) {
-    char path[UIO_MAPS_MAX_NAME];
-    char buf[UIO_MAPS_MAX_NAME];
+    char path[MAX_PATHNAME];
+    char buf[MAX_PATHNAME];
 
-    int len = snprintf(path, sizeof(path), "%s/map%d/size", UIO_MAPS_DIR, map_num);
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/size", uio_num, map_num);
     if (len < 0 || len >= sizeof(path)) {
-        LOG_UIO_ERR("Failed to create map%d size path string\n", map_num);
+        LOG_UIO_ERR("Failed to create uio%d map%d size path string\n", uio_num, map_num);
         return -1;
     }
 
@@ -159,12 +165,12 @@ static int uio_map_size(int map_num) {
 }
 
 static int uio_map_addr(int map_num, uintptr_t *addr) {
-    char path[UIO_MAPS_MAX_NAME];
-    char buf[UIO_MAPS_MAX_NAME];
+    char path[MAX_PATHNAME];
+    char buf[MAX_PATHNAME];
 
-    int len = snprintf(path, sizeof(path), "%s/map%d/addr", UIO_MAPS_DIR, map_num);
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/addr", uio_num, map_num);
     if (len < 0 || len >= sizeof(path)) {
-        LOG_UIO_ERR("Failed to create map%d addr path string\n", map_num);
+        LOG_UIO_ERR("Failed to create uio%d map%d addr path string\n", uio_num, map_num);
         return -1;
     }
 
@@ -233,13 +239,36 @@ static int uio_map_init(int fd)
     return 0;
 }
 
-int main() {
-    LOG_UIO("Starting\n");
-    char *uio_device_name = UIO_DEV_NAME;
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        return 1;
+    }
+
+    uio_num = atoi(argv[1]);
+    if (uio_num < 0) {
+        printf("Failed to convert uio number to integer\n");
+        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        close(pfd.fd);
+        return 1;
+    }
+
+    // append argv[1] to "/dev/uio" to get the full path of the uio device, e.g. "/dev/uio0"
+    char uio_device_name[MAX_PATHNAME];
+    int len = snprintf(uio_device_name, sizeof(uio_device_name), "/dev/uio%s", argv[1]);
+    if (len < 0 || len >= sizeof(uio_device_name)) {
+        LOG_UIO_ERR("Failed to create uio device name\n");
+        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        return 1;
+    }
 
     // get the file descriptor for polling
     pfd.fd = open(uio_device_name, O_RDWR);
-    assert(pfd.fd >= 0);
+    if (pfd.fd < 0) {
+        LOG_UIO_ERR("Failed to open %s\n", uio_device_name);
+        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        return 1;
+    }
 
     // the event we are polling for
     pfd.events = POLLIN;
@@ -252,7 +281,7 @@ int main() {
     }
     
     /* Initialise driver */
-    if (driver_init(maps, maps_phys, num_maps) != 0) {
+    if (driver_init(uio_num, maps, maps_phys, num_maps) != 0) {
         LOG_UIO_ERR("Failed to initialise driver\n");
         close(pfd.fd);
         return 1;

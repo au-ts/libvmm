@@ -72,6 +72,10 @@ CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
 CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
 CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
 
+CLIENT_VM_2_DIR := board/$(BOARD)/client_vm_2
+CLIENT_VM_2_DTS_DIR := $(CLIENT_VM_2_DIR)/dts
+CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
+
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_OVERLAYED := $(BLK_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
@@ -86,8 +90,16 @@ CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
 CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
 							$(CLIENT_VM_1_DTS_DIR)/virtio.dts
 
+CLIENT_VM_2_LINUX := $(CLIENT_VM_2_DIR)/linux
+CLIENT_VM_2_INITRD := $(CLIENT_VM_2_DIR)/rootfs.cpio.gz
+CLIENT_VM_2_INITRD_OVERLAYED := $(CLIENT_VM_2_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
+CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
+							$(CLIENT_VM_2_DTS_DIR)/virtio.dts
+
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
+CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
 
@@ -97,12 +109,14 @@ SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 
 SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 
-ELFS := client_vmm_1.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
 CLIENT_VM_1_USERLEVEL := postmark
 CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
-BLK_DRIVER_VM_USERLEVEL := storage
-BLK_DRIVER_VM_USERLEVEL_INIT := uio_blk_driver
+CLIENT_VM_2_USERLEVEL := postmark
+CLIENT_VM_2_USERLEVEL_INIT := blk_client_init
+BLK_DRIVER_VM_USERLEVEL := uio_blk_driver storage_0 storage_1
+BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -125,6 +139,16 @@ VMM_OBJS := printf.o \
 CLIENT_VMM_1_OBJS :=	$(VMM_OBJS) \
 					client_images_1.o \
 					client_vmm_1.o \
+					virtio.o \
+					console.o \
+					block.o \
+					mmio.o \
+					sddf_serial_sharedringbuffer.o \
+					sddf_blk_shared_queue.o \
+
+CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
+					client_images_2.o \
+					client_vmm_2.o \
 					virtio.o \
 					console.o \
 					block.o \
@@ -223,6 +247,20 @@ $(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLE
 	done && \
 	(cd $(CLIENT_VM_1_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_1_INITRD_OVERLAYED))
 
+$(CLIENT_VM_2_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL)) $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_INIT))
+	rm -r $(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null; \
+	mkdir -p $(CLIENT_VM_2_ROOTFS_TMP_DIR) && \
+	gunzip -dc $(CLIENT_VM_2_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_2_ROOTFS_TMP_DIR) 2> /dev/null && \
+	for f in $(CLIENT_VM_2_USERLEVEL); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_2_ROOTFS_TMP_DIR)/root/$$f"; \
+		chmod +x "$(CLIENT_VM_2_ROOTFS_TMP_DIR)/root/$$f";	\
+	done && \
+	for f in $(CLIENT_VM_2_USERLEVEL_INIT); do \
+		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_2_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+		chmod +x "$(CLIENT_VM_2_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
+	done && \
+	(cd $(CLIENT_VM_2_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(CLIENT_VM_2_INITRD_OVERLAYED))
+
 $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
 	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
@@ -230,6 +268,10 @@ $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
 $(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
 	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_1.dts > $@
+
+$(CLIENT_VM_2_DTB): $(CLIENT_VM_2_BASE_DTS) $(CLIENT_VM_2_DTS_OVERLAYS)
+	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_2.dts > $@
 
 $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
@@ -244,6 +286,14 @@ $(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_1_DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_1_INITRD_OVERLAYED)\" \
+					-target aarch64-none-elf \
+					$< -o $@
+
+$(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_2_LINUX) $(CLIENT_VM_2_DTB) $(CLIENT_VM_2_INITRD_OVERLAYED)
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_2_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_2_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_2_INITRD_OVERLAYED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
@@ -282,6 +332,9 @@ $(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
 $(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
+$(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
 $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
@@ -300,14 +353,22 @@ $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
 $(BUILD_DIR)/postmark: $(LINUX_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
-$(BUILD_DIR)/storage: $(LINUX_DIR)/storage Makefile
-	cp $< $@
+$(BUILD_DIR)/storage_0:
+	dd if=/dev/zero of=$(BUILD_DIR)/storage_0 bs=1K count=1000
+	mkfs.ext4 $(BUILD_DIR)/storage_0
+
+$(BUILD_DIR)/storage_1:
+	dd if=/dev/zero of=$(BUILD_DIR)/storage_1 bs=1K count=1000
+	mkfs.ext4 $(BUILD_DIR)/storage_1
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
+	cp $< $@
+
+$(BUILD_DIR)/blk_driver_init: $(LINUX_DIR)/blk_driver_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
 	$(TOOLCHAIN)-gcc $(CFLAGS_LINUX) $^ -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(BLK_DRIVER_VM_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(BLK_DRIVER_VM_DIR) $(CLIENT_VM_1_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) $(BLK_DRIVER_VM_DIR)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) $(BLK_DRIVER_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

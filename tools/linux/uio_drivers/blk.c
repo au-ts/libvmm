@@ -21,13 +21,17 @@
 #define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
-#define LOG_UIO_BLOCK(...) do{ printf("UIO_DRIVER(BLOCK): "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_BLOCK(...) do{ printf("BLK_DRIVER_%d", driver_id); printf(": "); printf(__VA_ARGS__); }while(0)
 #else
 #define LOG_UIO_BLOCK(...) do{}while(0)
 #endif
 
-#define LOG_UIO_BLOCK_ERR(...) do{ printf("UIO_DRIVER(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_BLOCK_ERR(...) do{ printf("BLK_DRIVER_%d", driver_id); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
 
+#define STORAGE_MAX_PATHNAME 64
+#define STORAGE_BASENAME "/root/storage_"
+
+int driver_id;
 blk_storage_info_t *blk_config;
 blk_queue_handle_t h;
 uintptr_t blk_data;
@@ -39,8 +43,10 @@ uintptr_t data_phys_to_virt(uintptr_t phys_addr)
     return phys_addr - blk_data_phys + blk_data;
 }
 
-int driver_init(void **maps, uintptr_t *maps_phys,  int num_maps)
-{    
+int driver_init(int id, void **maps, uintptr_t *maps_phys,  int num_maps)
+{   
+    driver_id = id;
+
     if (num_maps != 4) {
         LOG_UIO_BLOCK_ERR("Expecting 4 maps, got %d\n", num_maps);
         return -1;
@@ -56,18 +62,31 @@ int driver_init(void **maps, uintptr_t *maps_phys,  int num_maps)
 
     blk_queue_init(&h, req_queue, resp_queue, false, BLK_REQ_QUEUE_SIZE, BLK_RESP_QUEUE_SIZE);
 
-    // @TODO, @ericc: Query the block device we have and fill in the blk_config
-    // just random numbers I've chosen for now
-    blk_config->blocksize = 1024;
+    // @TODO, @ericc: Need to figure out how to determine config values.
+    // These numbers will be evaluated depending on the policy of the MUX,
+    // and the actual hardware itself.
+    // For now, I've hardcoded them.
     blk_config->size = 1000;
+    // This number has to match the size of the storage file for FS to work
+    blk_config->blocksize = 1024;
     blk_config->read_only = false;
-    
-    if ((storage_fd = open("/root/storage", O_CREAT | O_RDWR, 0666)) < 0) {
+
+    // @TODO, @ericc: finnicky and error prone, assumes storage file has name
+    // storage_<id>, need to figure out a better way to set this up whilst keeping
+    // driver init generic to all drivers
+    char storage_path[STORAGE_MAX_PATHNAME];
+    int len = snprintf(storage_path, STORAGE_MAX_PATHNAME, "%s%d", STORAGE_BASENAME, driver_id);
+    if (len < 0 || len >= STORAGE_MAX_PATHNAME) {
+        LOG_UIO_BLOCK_ERR("Failed to generate storage path\n");
+        return -1;
+    }
+
+    if ((storage_fd = open(storage_path, O_CREAT | O_RDWR, 0666)) < 0) {
         LOG_UIO_BLOCK_ERR("Failed to open storage file: %s\n", strerror(errno));
         return -1;
     }
     
-    // @ericc: maybe need to flush all writes before this point
+    // @ericc: maybe need to flush all writes before this point of setting ready = true
     blk_config->ready = true;
     
     LOG_UIO_BLOCK("Driver initialized\n");

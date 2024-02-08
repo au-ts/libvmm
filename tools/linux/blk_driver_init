@@ -1,0 +1,4 @@
+#!/bin/sh
+
+/root/uio_blk_driver 0 &
+/root/uio_blk_driver 1 &
