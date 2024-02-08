@@ -2,7 +2,3 @@
 	path = examples/virtio/sddf
 	url = https://github.com/au-ts/sddf
 	branch = main
-[submodule "examples/virtio_blk/sddf"]
-	path = examples/virtio_blk/sddf
-	url = https://github.com/au-ts/sddf
-	branch = main
