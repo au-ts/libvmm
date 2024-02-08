@@ -48,28 +48,29 @@
 #error Need to define guest kernel image address and DTB address
 #endif
 
-/* For simplicity we just enforce the serial IRQ channel number to be the same
- * across platforms. */
-#define SERIAL_IRQ_CH 1
-#define SOUND_IRQ_CH 2
-
 #if defined(BOARD_qemu_arm_virt)
-#define SERIAL_IRQ 33
+#define PASSTHROUGH_IRQ_COUNT 2
+static int passthrough_irqs[PASSTHROUGH_IRQ_COUNT] = {
+    33, // serial
+    37, // pcie
+};
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
-#define SERIAL_IRQ 225
+#define PASSTHROUGH_IRQ_COUNT 5
+static int passthrough_irqs[PASSTHROUGH_IRQ_COUNT] = {
+    225,        // Serial
+    48, 63, 62, // USB (controller, 1, 2)
+    5           // @alexbr: not sure what this is
+};
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
 #elif defined(BOARD_imx8mm_evk_hyp)
 #define SERIAL_IRQ 79
 #else
-#error Need to define serial interrupt
+#error Need to define passthrough IRQs
 #endif
 
-#if defined(BOARD_qemu_arm_virt)
-#define SOUND_IRQ 37
-#else
-#error Need to define sound interrupt
-#endif
+#define MAX_IRQ 128
+static int irq_channels[MAX_IRQ] = {0};
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -83,16 +84,9 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
-    /*
-     * For now we by default simply ack the serial IRQ, we have not
-     * come across a case yet where more than this needs to be done.
-     */
-    microkit_irq_ack(SERIAL_IRQ_CH);
-}
-
-static void sound_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_irq_ack(SOUND_IRQ_CH);
+static void passthrough_ack(size_t vcpu_id, int irq, void *cookie) {
+    int *ch = cookie;
+    microkit_irq_ack(*ch);
 }
 
 void init(void) {
@@ -122,37 +116,35 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    // @ivanv: Note that remove this line causes the VMM to fault if we
-    // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
 
-    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &sound_ack, NULL);
-    microkit_irq_ack(SOUND_IRQ_CH);
+    for (int i = 0; i < PASSTHROUGH_IRQ_COUNT; i++) {
+        int irq = passthrough_irqs[i];
+        int ch = i + 1;
+        irq_channels[irq] = ch;
+
+        success = virq_register(GUEST_VCPU_ID, irq, &passthrough_ack, &irq_channels[irq]);
+        if (!success) {
+            LOG_VMM_ERR("Failed to register IRQ %d\n", i);
+            return;
+        }
+        microkit_irq_ack(ch);
+    }
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
-    switch (ch) {
-        case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
-            }
-            break;
+
+    if (ch > 0 && ch <= PASSTHROUGH_IRQ_COUNT) {
+        int irq = passthrough_irqs[ch - 1];
+
+        bool success = virq_inject(GUEST_VCPU_ID, irq);
+        if (!success) {
+            LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", irq, GUEST_VCPU_ID);
         }
-        case SOUND_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SOUND_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SOUND_IRQ, GUEST_VCPU_ID);
-            }
-            break;
-        }
-        default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+    } else {
+        printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
 
