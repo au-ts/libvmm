@@ -70,11 +70,40 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
 }
 
 /* sDDF block */
-#define UIO_BLK_IRQ 50
-#define VSWITCH_BLK 3
+typedef struct {
+    int irq;
+    int ch;
+} uio_device_t;
+
+#define MAX_UIO_DEVICE 32
+// @ericc: @TODO: autogen these, irq from dts, ch from microkit system file
+#define NUM_UIO_DEVICE 2
+uio_device_t uio_devices[MAX_UIO_DEVICE] = {
+    { .irq = 50, .ch = 3 },
+    { .irq = 51, .ch = 4 },
+};
+
+// @ericc: @TODO: change from linear search to O(1) later
+static int get_uio_ch(int irq) {
+    for (int i = 0; i < MAX_UIO_DEVICE; i++) {
+        if (uio_devices[i].irq == irq) {
+            return uio_devices[i].ch;
+        }
+    }
+    return -1;
+}
+
+static int get_uio_irq_from_ch(int ch) {
+    for (int i = 0; i < MAX_UIO_DEVICE; i++) {
+        if (uio_devices[i].ch == ch) {
+            return uio_devices[i].irq;
+        }
+    }
+    return -1;
+}
 
 void uio_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_notify(VSWITCH_BLK);
+    microkit_notify(get_uio_ch(irq));
 }
 
 /* Virtio Console */
@@ -173,13 +202,22 @@ void init(void) {
     assert(success);
 
     /* Register UIO irq */
-    virq_register(GUEST_VCPU_ID, UIO_BLK_IRQ, &uio_ack, NULL);
+    for (int i = 0; i < NUM_UIO_DEVICE; i++) {
+        virq_register(GUEST_VCPU_ID, uio_devices[i].irq, &uio_ack, NULL);
+    }
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
+    /* Handle notifications from clients of block device */
+    int irq = get_uio_irq_from_ch(ch);
+    if (irq != -1) {
+        virq_inject(GUEST_VCPU_ID, irq);
+        return;
+    }
+
     switch (ch) {
         case SERIAL_MUX_RX_CH: {
             /* We have received an event from the serial multipelxor, so we
@@ -187,12 +225,8 @@ void notified(microkit_channel ch) {
             virtio_console_handle_rx(&virtio_console);
             break;
         }
-        case VSWITCH_BLK: {
-            virq_inject(GUEST_VCPU_ID, UIO_BLK_IRQ);
-            break;
-        }
         default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+            LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
 
