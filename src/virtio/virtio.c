@@ -6,10 +6,14 @@
 #include "fault.h"
 #include "util/util.h"
 #include "virtio/console.h"
+#include "virtio/block.h"
+#include "virtio/sound.h"
 #include "virtio/virtio.h"
 #include "virq.h"
 
 static struct virtio_queue_handler virtio_console_queues[VIRTIO_CONSOLE_NUM_VIRTQ];
+static struct virtio_queue_handler virtio_blk_queues[VIRTIO_BLK_NUM_VIRTQ];
+static struct virtio_queue_handler virtio_snd_queues[VIRTIO_SND_NUM_VIRTQ];
 
 void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {
     // nothing needs to be done
@@ -21,26 +25,43 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
                             uintptr_t region_base,
                             uintptr_t region_size,
                             size_t virq,
-                            ring_handle_t *sddf_rx_ring,
-                            ring_handle_t *sddf_tx_ring,
-                            size_t sddf_mux_tx_ch)
+                            void *config,
+                            void **data_region_handlers,
+                            void **sddf_handlers,
+                            size_t *sddf_ch)
 {
     bool success = true;
     switch (type) {
-    case CONSOLE:
-        virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, sddf_rx_ring, sddf_tx_ring, sddf_mux_tx_ch);
-        success = fault_register_vm_exception_handler(region_base,
-                                                      region_size,
-                                                      &virtio_mmio_fault_handle,
-                                                      dev);
-        if (!success) {
-            LOG_VMM_ERR("Could not register virtual memory fault handler for "
-                        "virtIO region [0x%lx..0x%lx)\n", region_base, region_base + region_size);
+        case CONSOLE:
+            virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
+            success = fault_register_vm_exception_handler(region_base,
+                                                        region_size,
+                                                        &virtio_mmio_fault_handle,
+                                                        dev);
+            break;
+        case BLK:
+            virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
+            success = fault_register_vm_exception_handler(region_base,
+                                                        region_size,
+                                                        &virtio_mmio_fault_handle,
+                                                        dev);
+            break;
+        case SND:
+            LOG_VMM("Init sound device at [%#lx, %#lx), irq %lu\n", region_base, region_base + region_size, virq);
+            virtio_snd_init(dev, virtio_snd_queues, VIRTIO_SND_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
+            success = fault_register_vm_exception_handler(region_base,
+                                                        region_size,
+                                                        &virtio_mmio_fault_handle,
+                                                        dev);
+            break;
+        default:
+            LOG_VMM_ERR("Unsupported virtIO device type given: %d\n", type);
             return false;
         }
-        break;
-    default:
-        LOG_VMM_ERR("Unsupported virtIO device type given: %d\n", type);
+
+    if (!success) {
+        LOG_VMM_ERR("Could not register virtual memory fault handler for "
+                    "virtIO region [0x%lx..0x%lx)\n", region_base, region_base + region_size);
         return false;
     }
 

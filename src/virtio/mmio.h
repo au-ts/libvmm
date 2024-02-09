@@ -49,6 +49,7 @@
 #define DEVICE_ID_VIRTIO_BLOCK        2
 #define DEVICE_ID_VIRTIO_CONSOLE      3
 #define DEVICE_ID_VIRTIO_VSOCK        19
+#define DEVICE_ID_VIRTIO_SOUND        25
 
 /* The maximum size (number of elements) of a virtqueue. It is set
  * to 128 because I copied it from the camkes virtio device. If you find
@@ -115,14 +116,19 @@ typedef struct virtio_device {
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
-    /* Handlers for sDDF ring buffers */
-    ring_handle_t *sddf_rx_ring;
-    ring_handle_t *sddf_tx_ring;
+    /* Pointer to the sDDF config space */
+    void *config;
+    /* Shared data region handlers */
+    void **data_region_handlers;
+    /* Handlers for sDDF structures */
+    void **sddf_handlers;
     /* Microkit channel to the sDDF TX multiplexor */
     // @ivanv: this is microkit specific so maybe should be a callback instead or something.
     // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
     // this is specific to device classes such as serial and networking
-    size_t sddf_mux_tx_ch;
+    // @ericc: on top of potentially changing to a callback, there can be multiple channels, one for each pair
+    // of rings. For now im leaving it as one channel since that's how much block, serial and ethernet use.
+    size_t *sddf_ch;
 } virtio_device_t;
 
 /**

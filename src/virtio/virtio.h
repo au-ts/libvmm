@@ -19,6 +19,8 @@
 /* All the supported virtIO device types. */
 enum virtio_device_type {
     CONSOLE,
+    BLK,
+    SND,
 };
 
 bool virtio_mmio_device_init(virtio_device_t *dev,
@@ -26,6 +28,7 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
                             uintptr_t region_base,
                             uintptr_t region_size,
                             size_t virq,
-                            ring_handle_t *sddf_rx_ring,
-                            ring_handle_t *sddf_tx_ring,
-                            size_t sddf_mux_tx_ch);
+                            void *config,
+                            void **data_region_handlers,
+                            void **sddf_handlers,
+                            size_t *sddf_ch);
