@@ -1,0 +1,339 @@
+/dts-v1/;
+
+/ {
+	interrupt-parent = <0x01>;
+	#address-cells = <0x02>;
+	#size-cells = <0x02>;
+	compatible = "hardkernel,odroid-c4\0amlogic,sm1";
+	model = "Hardkernel ODROID-C4";
+
+	aliases {
+		mmc0 = "/soc/sd@ffe05000";
+		mmc1 = "/soc/mmc@ffe07000";
+		mmc2 = "/soc/sd@ffe03000";
+		serial0 = "/soc/bus@ff800000/serial@3000";
+		ethernet0 = "/soc/ethernet@ff3f0000";
+	};
+
+	efuse {
+		compatible = "amlogic,meson-gxbb-efuse";
+		clocks = <0x02 0x6a>;
+		#address-cells = <0x01>;
+		#size-cells = <0x01>;
+		read-only;
+		secure-monitor = <0x04>;
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	reserved-memory {
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		ranges;
+
+		secmon@5000000 {
+			reg = <0x00 0x5000000 0x00 0x300000>;
+			no-map;
+		};
+
+		secmon@5300000 {
+			reg = <0x00 0x5300000 0x00 0x2000000>;
+			no-map;
+		};
+
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x00 0x1000000>;
+			alignment = <0x00 0x400000>;
+			alloc-ranges = <0x00 0x8000000 0x10000000>;
+			linux,cma-default;
+		};
+	};
+
+	secure-monitor {
+		compatible = "amlogic,meson-gxbb-sm";
+		phandle = <0x04>;
+		status = "disabled";
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		ranges;
+
+		interrupt-controller@ffc01000 {
+			compatible = "arm,gic-400";
+			reg = <0x00 0xffc01000 0x00 0x1000 0x00 0xffc02000 0x00 0x2000 0x00 0xffc04000 0x00 0x2000 0x00 0xffc06000 0x00 0x2000>;
+			interrupt-controller;
+			interrupts = <0x01 0x09 0xff04>;
+			#interrupt-cells = <0x03>;
+			#address-cells = <0x00>;
+			phandle = <0x01>;
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <0x01 0x0d 0xff08 0x01 0x0e 0xff08 0x01 0x0b 0xff08 0x01 0x0a 0xff08>;
+		arm,no-tick-in-suspend;
+	};
+
+	xtal-clk {
+		compatible = "fixed-clock";
+		clock-frequency = <0x16e3600>;
+		clock-output-names = "xtal";
+		#clock-cells = <0x00>;
+		phandle = <0x11>;
+		// status = "disabled";
+	};
+
+	cpus {
+		#address-cells = <0x02>;
+		#size-cells = <0x00>;
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x00>;
+			enable-method = "psci";
+			next-level-cache = <0x3b>;
+			#cooling-cells = <0x02>;
+			cpu-supply = <0x3c>;
+			operating-points-v2 = <0x3d>;
+			clocks = <0x02 0xbb>;
+			clock-latency = <0xc350>;
+			phandle = <0x33>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x01>;
+			enable-method = "psci";
+			next-level-cache = <0x3b>;
+			#cooling-cells = <0x02>;
+			cpu-supply = <0x3c>;
+			operating-points-v2 = <0x3d>;
+			clocks = <0x02 0xfd>;
+			clock-latency = <0xc350>;
+			phandle = <0x34>;
+		};
+
+		cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x02>;
+			enable-method = "psci";
+			next-level-cache = <0x3b>;
+			#cooling-cells = <0x02>;
+			cpu-supply = <0x3c>;
+			operating-points-v2 = <0x3d>;
+			clocks = <0x02 0xfe>;
+			clock-latency = <0xc350>;
+			phandle = <0x35>;
+		};
+
+		cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x00 0x03>;
+			enable-method = "psci";
+			next-level-cache = <0x3b>;
+			#cooling-cells = <0x02>;
+			cpu-supply = <0x3c>;
+			operating-points-v2 = <0x3d>;
+			clocks = <0x02 0xff>;
+			clock-latency = <0xc350>;
+			phandle = <0x36>;
+		};
+
+		l2-cache0 {
+			compatible = "cache";
+			phandle = <0x3b>;
+		};
+	};
+
+	opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+		phandle = <0x3d>;
+
+		opp-1000000000 {
+			opp-hz = <0x00 0x3b9aca00>;
+			opp-microvolt = <0xbbfd0>;
+		};
+
+		opp-1200000000 {
+			opp-hz = <0x00 0x47868c00>;
+			opp-microvolt = <0xbe6e0>;
+		};
+
+		opp-1404000000 {
+			opp-hz = <0x00 0x53af5700>;
+			opp-microvolt = <0xc0df0>;
+		};
+
+		opp-1500000000 {
+			opp-hz = <0x00 0x59682f00>;
+			opp-microvolt = <0xc3500>;
+		};
+
+		opp-1608000000 {
+			opp-hz = <0x00 0x5fd82200>;
+			opp-microvolt = <0xc5c10>;
+		};
+
+		opp-1704000000 {
+			opp-hz = <0x00 0x6590fa00>;
+			opp-microvolt = <0xcf850>;
+		};
+
+		opp-1800000000 {
+			opp-hz = <0x00 0x6b49d200>;
+			opp-microvolt = <0xdbba0>;
+		};
+
+		opp-1908000000 {
+			opp-hz = <0x00 0x71b9c500>;
+			opp-microvolt = <0xe7ef0>;
+		};
+	};
+
+	regulator-tflash_vdd {
+		compatible = "regulator-fixed";
+		regulator-name = "TFLASH_VDD";
+		regulator-min-microvolt = <0x325aa0>;
+		regulator-max-microvolt = <0x325aa0>;
+		gpio = <0x3e 0x03 0x06>;
+		enable-active-high;
+		regulator-always-on;
+		phandle = <0x24>;
+	};
+
+	gpio-regulator-tf_io {
+		compatible = "regulator-gpio";
+		regulator-name = "TF_IO";
+		regulator-min-microvolt = <0x1b7740>;
+		regulator-max-microvolt = <0x325aa0>;
+		vin-supply = <0x0c>;
+		enable-gpio = <0x3e 0x0e 0x06>;
+		enable-active-high;
+		regulator-always-on;
+		gpios = <0x3e 0x06 0x02>;
+		gpios-states = <0x00>;
+		states = <0x325aa0 0x00 0x1b7740 0x01>;
+		phandle = <0x25>;
+	};
+
+	regulator-flash_1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "FLASH_1V8";
+		regulator-min-microvolt = <0x1b7740>;
+		regulator-max-microvolt = <0x1b7740>;
+		vin-supply = <0x2b>;
+		regulator-always-on;
+		phandle = <0x2c>;
+	};
+
+	regulator-main_12v {
+		compatible = "regulator-fixed";
+		regulator-name = "12V";
+		regulator-min-microvolt = <0xb71b00>;
+		regulator-max-microvolt = <0xb71b00>;
+		regulator-always-on;
+		phandle = <0x3f>;
+	};
+
+	regulator-vcc_5v {
+		compatible = "regulator-fixed";
+		regulator-name = "5V";
+		regulator-min-microvolt = <0x4c4b40>;
+		regulator-max-microvolt = <0x4c4b40>;
+		regulator-always-on;
+		vin-supply = <0x3f>;
+		gpio = <0x14 0x18 0x06>;
+		enable-active-high;
+		phandle = <0x0c>;
+	};
+
+	regulator-vcc_1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC_1V8";
+		regulator-min-microvolt = <0x1b7740>;
+		regulator-max-microvolt = <0x1b7740>;
+		vin-supply = <0x2b>;
+		regulator-always-on;
+	};
+
+	regulator-vcc_3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "VCC_3V3";
+		regulator-min-microvolt = <0x325aa0>;
+		regulator-max-microvolt = <0x325aa0>;
+		vin-supply = <0x40>;
+		regulator-always-on;
+		phandle = <0x2b>;
+	};
+
+	regulator-vddcpu {
+		compatible = "pwm-regulator";
+		regulator-name = "VDDCPU";
+		regulator-min-microvolt = <0xb0068>;
+		regulator-max-microvolt = <0xf9830>;
+		pwm-supply = <0x3f>;
+		pwms = <0x41 0x01 0x4e2 0x00>;
+		pwm-dutycycle-range = <0x64 0x00>;
+		regulator-boot-on;
+		regulator-always-on;
+		phandle = <0x3c>;
+	};
+
+	regulator-usb_pwr_en {
+		compatible = "regulator-fixed";
+		regulator-name = "USB_PWR_EN";
+		regulator-min-microvolt = <0x4c4b40>;
+		regulator-max-microvolt = <0x4c4b40>;
+		vin-supply = <0x0c>;
+		gpio = <0x3e 0x02 0x00>;
+		enable-active-high;
+		phandle = <0x2f>;
+	};
+
+	regulator-vddao_1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDDAO_1V8";
+		regulator-min-microvolt = <0x1b7740>;
+		regulator-max-microvolt = <0x1b7740>;
+		vin-supply = <0x40>;
+		regulator-always-on;
+	};
+
+	regulator-vddao_3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "VDDAO_3V3";
+		regulator-min-microvolt = <0x325aa0>;
+		regulator-max-microvolt = <0x325aa0>;
+		vin-supply = <0x3f>;
+		regulator-always-on;
+		phandle = <0x40>;
+	};
+
+	hdmi-connector {
+		compatible = "hdmi-connector";
+		type = [61 00];
+		status = "disabled";
+
+		port {
+
+			endpoint {
+				remote-endpoint = <0x42>;
+				phandle = <0x0e>;
+			};
+		};
+	};
+};

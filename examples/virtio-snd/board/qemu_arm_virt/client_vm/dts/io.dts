@@ -1,0 +1,13 @@
+/ {
+	virtio-console@0130000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x130000 0x00 0x200>;
+		interrupts = <0x00 42 0x04>;
+	};
+
+	virtio-snd@0170000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x170000 0x00 0x200>;
+		interrupts = <0x00 44 0x04>;
+	};
+};

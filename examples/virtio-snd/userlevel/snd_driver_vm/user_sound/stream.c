@@ -119,6 +119,7 @@ static bool send_response(stream_t *stream)
     response->latency_bytes = stream->buffer_size;
     response->status = stream->state == STREAM_STATE_IO_ERR ? SDDF_SND_S_IO_ERR : SDDF_SND_S_OK;
 
+    LOG_SOUND("Responding to TX (cookie %d)\n", response->cookie);
     if (sddf_snd_enqueue_pcm_data(stream->pcm_res, response) != 0) {
         LOG_SOUND_ERR("Failed to enqueue tx_free\n");
         return false;
@@ -216,6 +217,13 @@ static int flush_pcm(stream_t *stream, int max_count)
         stream->frame_offset += consumed;
 
         if (stream->frame_offset == pcm_frames) {
+
+            LOG_SOUND("Consumed frame (cookie %d)\n", pcm->cookie);
+            // TODO: remove
+            if(pcm->cookie == 0) {
+                LOG_SOUND("COOKIE 0\n");
+                while(1);
+            }
 
             queue_enqueue(stream->consumed_frames, pcm);
 
@@ -579,6 +587,8 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
 sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_command_t *cmd, bool *blocked,
                                       bool *notify)
 {
+    LOG_SOUND("Handling command %s\n", sddf_snd_command_code_str(cmd->code));
+
     switch (cmd->code) {
     case SDDF_SND_CMD_PCM_SET_PARAMS:
         return stream_set_params(stream, &cmd->set_params);
@@ -613,10 +623,12 @@ bool stream_flush_commands(stream_t *stream)
         response.cookie = cmd->cookie;
         response.status = status;
 
+        LOG_SOUND("Responding with %s (cookie %d)\n", sddf_snd_status_code_str(status), response.cookie);
         if (sddf_snd_enqueue_response(stream->responses, &response) != 0) {
             LOG_SOUND_ERR("Failed to enqueue response");
             break;
         }
+
         queue_dequeue(stream->commands);
         notify = true;
     }
