@@ -28,7 +28,7 @@
 #include <uio_drivers/blk.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_UIO
+// #define DEBUG_UIO
 
 #if defined(DEBUG_UIO)
 #define LOG_UIO(...) do{ printf("UIO_DRIVER_%d", uio_num); printf(": "); printf(__VA_ARGS__); }while(0)
