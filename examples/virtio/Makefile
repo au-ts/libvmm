@@ -353,13 +353,19 @@ $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
 $(BUILD_DIR)/postmark: $(LINUX_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
-$(BUILD_DIR)/storage_0:
-	dd if=/dev/zero of=$(BUILD_DIR)/storage_0 bs=1K count=1000
-	mkfs.ext4 $(BUILD_DIR)/storage_0
-
-$(BUILD_DIR)/storage_1:
-	dd if=/dev/zero of=$(BUILD_DIR)/storage_1 bs=1K count=1000
-	mkfs.ext4 $(BUILD_DIR)/storage_1
+$(BUILD_DIR)/storage_0: Makefile
+	dd if=/dev/zero of=$@ bs=1K count=1000 && \
+	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
+	dd if=/dev/zero of=$(BUILD_DIR)/ext4fs bs=1K count=1000 seek=1000 && \
+	mkfs.ext4 $(BUILD_DIR)/ext4fs 290 && \
+	dd if=$(BUILD_DIR)/ext4fs of=$@ bs=512 seek=50 conv=notrunc
+	
+$(BUILD_DIR)/storage_1: Makefile
+	dd if=/dev/zero of=$@ bs=1K count=1000 && \
+	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
+	dd if=/dev/zero of=$(BUILD_DIR)/ext4fs bs=1K count=1000 seek=1000 && \
+	mkfs.ext4 $(BUILD_DIR)/ext4fs 290 && \
+	dd if=$(BUILD_DIR)/ext4fs of=$@ bs=512 seek=50 conv=notrunc
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
 	cp $< $@
