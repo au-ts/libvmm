@@ -106,31 +106,6 @@ void uio_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_notify(get_uio_ch(irq));
 }
 
-/* Virtio Console */
-#define SERIAL_MUX_TX_CH 1
-#define SERIAL_MUX_RX_CH 2
-
-#define VIRTIO_CONSOLE_IRQ (74)
-#define VIRTIO_CONSOLE_BASE (0x130000)
-#define VIRTIO_CONSOLE_SIZE (0x1000)
-
-uintptr_t serial_rx_free;
-uintptr_t serial_rx_used;
-uintptr_t serial_tx_free;
-uintptr_t serial_tx_used;
-
-uintptr_t serial_rx_data;
-uintptr_t serial_tx_data;
-
-size_t serial_ch[SDDF_SERIAL_NUM_CH];
-
-ring_handle_t serial_rx_ring_handle;
-ring_handle_t serial_tx_ring_handle;
-
-static ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_HANDLES];
-
-static struct virtio_device virtio_console;
-
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -159,47 +134,6 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    
-    /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(&serial_rx_ring_handle,
-            (ring_buffer_t *)serial_rx_free,
-            (ring_buffer_t *)serial_rx_used,
-            true,
-            NUM_BUFFERS,
-            NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(&serial_rx_ring_handle, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    ring_init(&serial_tx_ring_handle,
-            (ring_buffer_t *)serial_tx_free,
-            (ring_buffer_t *)serial_tx_used,
-            true,
-            NUM_BUFFERS,
-            NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&serial_tx_ring_handle, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
-        assert(ret == 0);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
-    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
-    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!ring_plugged(serial_tx_ring_handle.free_ring));
-    assert(!ring_plugged(serial_tx_ring_handle.used_ring));
-    /* Initialise channel */
-    serial_ch[SDDF_SERIAL_TX_CH_INDEX] = SERIAL_MUX_TX_CH;
-    /* Initialise virtIO console device */
-    success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      NULL, NULL, (void **)serial_ring_handles, serial_ch);
-    assert(success);
 
     /* Register UIO irq */
     for (int i = 0; i < NUM_UIO_DEVICE; i++) {
@@ -219,12 +153,6 @@ void notified(microkit_channel ch) {
     }
 
     switch (ch) {
-        case SERIAL_MUX_RX_CH: {
-            /* We have received an event from the serial multipelxor, so we
-             * call the virtIO console handling */
-            virtio_console_handle_rx(&virtio_console);
-            break;
-        }
         default:
             LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
