@@ -44,6 +44,7 @@ typedef struct driver_state {
 
 static void signal_ready_to_vmm(char *signal_addr)
 {
+    LOG_SOUND("Signalling sound driver VMM\n");
     *signal_addr = 1;
 }
 
@@ -219,7 +220,6 @@ static bool handle_uio_interrupt(driver_state_t *state)
 {
     sddf_snd_command_t cmd;
     sddf_snd_pcm_data_t pcm;
-    bool notify[MAX_STREAMS] = { false };
 
     while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
@@ -227,7 +227,6 @@ static bool handle_uio_interrupt(driver_state_t *state)
             continue;
         }
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
-        notify[cmd.stream_id] = true;
     }
 
     while (sddf_snd_dequeue_pcm_data(state->rings.tx_req, &pcm) == 0) {
@@ -243,12 +242,9 @@ static bool handle_uio_interrupt(driver_state_t *state)
     }
 
     bool notify_client = false;
-    // Avoid notifying a stream more than necessary.
     for (int i = 0; i < state->stream_count; i++) {
-        if (notify[i]) {
-            if (stream_flush_commands(state->streams[i])) {
-                notify_client = true;
-            }
+        if (stream_flush_commands(state->streams[i])) {
+            notify_client = true;
         }
     }
     return notify_client;
@@ -289,20 +285,29 @@ int main(void)
 
     state.stream_count = 0;
 
-    for (int i = 0; i < MAX_STREAMS; i++) {
-        snd_pcm_stream_t direction = stream_directions[i];
+    int tries = 0;
+    while (state.stream_count == 0 && tries < 10) {
+        for (int i = 0; i < MAX_STREAMS; i++) {
+            snd_pcm_stream_t direction = stream_directions[i];
 
-        sddf_snd_pcm_data_ring_t *pcm_responses
-            = direction == SND_PCM_STREAM_PLAYBACK ? state.rings.tx_res : state.rings.rx_res;
+            sddf_snd_pcm_data_ring_t *pcm_responses
+                = direction == SND_PCM_STREAM_PLAYBACK ? state.rings.tx_res : state.rings.rx_res;
 
-        state.streams[state.stream_count] = stream_open(
-            &state.shared_state->stream_info[state.stream_count], SOUND_DEVICE, direction,
-            translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
+            state.streams[state.stream_count] = stream_open(
+                &state.shared_state->stream_info[state.stream_count], SOUND_DEVICE, direction,
+                translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
 
-        if (state.streams[state.stream_count] == NULL)
-            LOG_SOUND_ERR("Failed to initialise target stream %d\n", i);
-        else
-            state.stream_count++;
+            if (state.streams[state.stream_count] == NULL)
+                LOG_SOUND_WARN("Could not initialise target stream %d\n", i);
+            else
+                state.stream_count++;
+        }
+
+        if (state.stream_count == 0) {
+            LOG_SOUND_WARN("Trying again in 1s...\n");
+            sleep(1);
+            tries++;
+        }
     }
 
     state.shared_state->streams = state.stream_count;
@@ -352,18 +357,19 @@ int main(void)
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
             int32_t irq_count;
-            // printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
+            printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
             if (read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
                 LOG_SOUND_ERR("Failed to read interrupt\n");
-                break;
-            }
-            if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
-                LOG_SOUND_ERR("Failed to reenable interrupts\n");
                 break;
             }
 
             if (handle_uio_interrupt(&state)) {
                 signal_vmm = true;
+            }
+
+            if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
+                LOG_SOUND_ERR("Failed to reenable interrupts\n");
+                break;
             }
         }
 

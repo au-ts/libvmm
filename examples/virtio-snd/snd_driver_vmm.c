@@ -33,6 +33,9 @@
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
+#elif defined(BOARD_odroidc4)
+#define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -54,7 +57,6 @@ uintptr_t guest_ram_vaddr;
 #define SERIAL_MUX_RX_CH 2
 
 #define SND_CLIENT_CH 4
-#define SND_IRQ_CH 5
 
 // @alexbr: why 50?
 #define UIO_SND_IRQ 50
@@ -62,12 +64,6 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
-
-#if defined(BOARD_qemu_arm_virt)
-#define SOUND_IRQ 37
-#else
-#error Need to define sound interrupt
-#endif
 
 uintptr_t serial_rx_free;
 uintptr_t serial_rx_used;
@@ -85,20 +81,37 @@ static ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
 
-static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
-    microkit_notify(SND_CLIENT_CH);
-    return true;
+#define MAX_IRQ_CH 63
+int passthrough_irq_map[MAX_IRQ_CH];
+
+static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
+    microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
+    microkit_irq_ack(irq_ch);
 }
 
-static void snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_irq_ack(SND_IRQ_CH);
+static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
+    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
+    assert(irq_ch < MAX_IRQ_CH);
+    passthrough_irq_map[irq_ch] = irq;
+
+    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
+    if (!err) {
+        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
+        return;
+    }
+}
+
+static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+    LOG_VMM("Got fault from UIO sound driver, notifying client (offset %#lx)\n", offset);
+    microkit_notify(SND_CLIENT_CH);
+    return true;
 }
 
 static void uio_snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
-    LOG_VMM("starting \"%s\"\n", microkit_name);
+    LOG_VMM("starting \"%s\" (build %s)\n", microkit_name, BUILD_ID);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -165,9 +178,6 @@ void init(void) {
                                       NULL, NULL, (void **)serial_ring_handles, serial_ch);
     assert(success);
 
-    success = virq_register(GUEST_VCPU_ID, SOUND_IRQ, &snd_virq_ack, NULL);
-    assert(success);
-
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
     assert(success);
 
@@ -175,12 +185,25 @@ void init(void) {
                                                   sizeof(size_t),
                                                   &uio_snd_fault_handler, NULL);
     assert(success);
+
+#if defined(BOARD_qemu_arm_virt)
+    register_passthrough_irq(37, 5);
+#elif defined(BOARD_odroidc4)
+    register_passthrough_irq(48, 5);
+    register_passthrough_irq(63, 6);
+    register_passthrough_irq(62, 7);
+    register_passthrough_irq(5, 8);
+#else
+#error Need to define passthrough IRQs
+#endif
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
+    bool success;
+
     switch (ch) {
         case SERIAL_MUX_RX_CH: {
             /* We have received an event from the serial multipelxor, so we
@@ -189,21 +212,23 @@ void notified(microkit_channel ch) {
             break;
         }
         case SND_CLIENT_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
+            LOG_VMM("Injecting IRQ to UIO sound driver\n");
+            success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
             }
             break;
         }
-        case SND_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SOUND_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SOUND_IRQ, GUEST_VCPU_ID);
-            }
-            break;
-        }
         default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+            if (passthrough_irq_map[ch]) {
+                success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
+                if (!success) {
+                    LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
+                }
+            }
+            else {
+                printf("Unexpected channel, ch: 0x%lx\n", ch);
+            }
     }
 }
 

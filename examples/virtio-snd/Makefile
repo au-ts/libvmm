@@ -80,15 +80,14 @@ SND_DRIVER_VM_INITRD := $(SND_DRIVER_VM_DIR)/rootfs.cpio.gz
 SND_DRIVER_VM_INITRD_OVERLAYED := $(SND_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
 SND_DRIVER_VM_BASE_DTS := $(SND_DRIVER_VM_DTS_DIR)/linux.dts
 SND_DRIVER_VM_DTS_OVERLAYS := $(SND_DRIVER_VM_DTS_DIR)/init.dts \
-							$(SND_DRIVER_VM_DTS_DIR)/virtio.dts \
-							$(SND_DRIVER_VM_DTS_DIR)/passthrough.dts \
+							$(SND_DRIVER_VM_DTS_DIR)/io.dts
 
 CLIENT_VM_LINUX := $(CLIENT_VM_DIR)/linux
 CLIENT_VM_INITRD := $(CLIENT_VM_DIR)/rootfs.cpio.gz
 CLIENT_VM_INITRD_OVERLAYED := $(CLIENT_VM_DIR)/rootfs_overlayed.cpio.gz
 CLIENT_VM_BASE_DTS := $(CLIENT_VM_DTS_DIR)/linux.dts
 CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
-							$(CLIENT_VM_DTS_DIR)/virtio.dts
+							$(CLIENT_VM_DTS_DIR)/io.dts
 
 SND_DRIVER_VM_DTB := $(BUILD_DIR)/snd_driver_vm.dtb
 CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
@@ -97,8 +96,12 @@ SDDF := sddf
 
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
-SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
+
+SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF)/drivers/serial/arm
+SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
+SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
+
 
 SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
 SDDF_SOUND_RINGBUFFER := $(SDDF)/sound/libsoundsharedringbuffer
@@ -182,10 +185,11 @@ CFLAGS := -mstrict-align \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
+		  -DBUILD_ID='"$(shell date)"' \
 		  -target aarch64-none-elf
 
 # @alexbr: currently all userlevel procs link asound. this should instead be done per-process.
-CFLAGS_USERLEVEL :=	-g3 \
+CFLAGS_USERLEVEL :=	-g \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
 					-I$(CURRENT_DIR) \
