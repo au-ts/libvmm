@@ -18,7 +18,7 @@
 #include <uio_drivers/blk.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_UIO_BLOCK
+// #define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
 #define LOG_UIO_BLOCK(...) do{ printf("BLK_DRIVER_%d", driver_id); printf(": "); printf(__VA_ARGS__); }while(0)
