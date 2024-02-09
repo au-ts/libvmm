@@ -1,3 +1,3 @@
 #!/bin/sh
 
-mount /dev/vda /mnt
+mount /dev/vda1 /mnt

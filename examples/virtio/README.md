@@ -61,18 +61,15 @@ The `@` symbol is used to switch between clients of the serial system, in this c
 
 ### virtIO block
 
-Guest 1 and guest 2 also doubles as a client in the block system that talks virtIO to a driver VM (guest 3) that acts as both a block MUX and driver that has passthrough access to the block device.
+Guest 1 and guest 2 also doubles as a client in the block system that talks virtIO to guest 3 that acts as both a block MUX and driver VM that has passthrough access to the block device.
 
 When you boot the example, the block driver VM will boot first. When it is ready, the client VMs will boot together.
 
-After the client VMs boot, they will attempt to mount the virtIO block device `/dev/vda` into `/mnt`. Whilst this is atypical usage of raw block devices (it has no partition tables and only contains an ext4 file system emulated by the driver VM) it is sufficient to demonstrate that the virtIO block implementation works. 
+After the client VMs boot, they will attempt to mount the first partition of the virtIO block device `/dev/vda1` into `/mnt`. This partition contains an ext4 file system. 
 
 ```
 [   22.860300] EXT4-fs (vda): mounted filesystem without journal. Quota mode: none.
 [   22.793574] EXT4-fs (vda): mounted filesystem without journal. Quota mode: none.
 ```
 
-We can further test it using block benchmark programs like `postmark`, which has been included in `/root`, by running it in the `/mnt` directory.
-
-To use a zeroed out emulated raw block device in the clients, replace this line in the Makefile:
-`BLK_DRIVER_VM_USERLEVEL := uio_blk_driver storage_0 storage_1` with this `BLK_DRIVER_VM_USERLEVEL := uio_blk_driver`
+We can further test the virtIO block implementation by using block benchmark programs like `postmark`, which has been included in `/root`, by running it in the `/mnt` directory.
