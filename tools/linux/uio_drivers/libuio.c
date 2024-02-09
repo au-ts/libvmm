@@ -39,7 +39,6 @@
 #define LOG_UIO_ERR(...) do{ printf("UIO_DRIVER_%d", uio_num); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 
-#define UIO_MAPS_DIR "/sys/class/uio/uio0/maps"
 #define MAX_PATHNAME 64
 #define UIO_MAX_MAPS 32
 
