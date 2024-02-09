@@ -36,7 +36,6 @@ static struct virtio_blk_req_store {
 static void virtio_blk_config_init(struct virtio_device *dev) 
 {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->config;
-    virtio_blk_config.blk_size = config->blocksize;
     virtio_blk_config.capacity = (config->blocksize / VIRTIO_BLK_SECTOR_SIZE) * config->size; // Number of 512-byte sectors
 }
 
@@ -62,7 +61,7 @@ static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32
     switch (dev->data.DeviceFeaturesSel) {
         // feature bits 0 to 31
         case 0:
-            *features = BIT_LOW(VIRTIO_BLK_F_FLUSH) | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
+            *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
             break;
         // features bits 32 to 63
         case 1:
@@ -85,7 +84,7 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
     switch (dev->data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
-            success = (features == (BIT_LOW(VIRTIO_BLK_F_FLUSH) | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE)));
+            success = (features == (BIT_LOW(VIRTIO_BLK_F_FLUSH)));
             break;
         // features bits 32 to 63
         case 1:
