@@ -43,7 +43,7 @@ uintptr_t data_phys_to_virt(uintptr_t phys_addr)
     return phys_addr - blk_data_phys + blk_data;
 }
 
-int driver_init(int id, void **maps, uintptr_t *maps_phys,  int num_maps)
+int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
 {   
     driver_id = id;
 
