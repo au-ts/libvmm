@@ -356,16 +356,14 @@ $(BUILD_DIR)/postmark: $(LINUX_DIR)/postmark.c Makefile
 $(BUILD_DIR)/storage_0: Makefile
 	dd if=/dev/zero of=$@ bs=1K count=1000 && \
 	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
-	dd if=/dev/zero of=$(BUILD_DIR)/ext4fs bs=1K count=1000 && \
-	mkfs.ext4 $(BUILD_DIR)/ext4fs_0 290 && \
-	dd if=$(BUILD_DIR)/ext4fs_0 of=$@ bs=512 seek=50 conv=notrunc
+	mkfs.ext4 $@_ext4fs 290 && \
+	dd if=$@_ext4fs of=$@ bs=512 seek=50 conv=notrunc
 	
 $(BUILD_DIR)/storage_1: Makefile
 	dd if=/dev/zero of=$@ bs=1K count=1000 && \
 	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
-	dd if=/dev/zero of=$(BUILD_DIR)/ext4fs bs=1K count=1000 && \
-	mkfs.ext4 $(BUILD_DIR)/ext4fs_1 290 && \
-	dd if=$(BUILD_DIR)/ext4fs_1 of=$@ bs=512 seek=50 conv=notrunc
+	mkfs.ext4 $@_ext4fs 290 && \
+	dd if=$@_ext4fs of=$@ bs=512 seek=50 conv=notrunc
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
 	cp $< $@
