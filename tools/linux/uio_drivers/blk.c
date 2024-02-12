@@ -64,10 +64,9 @@ int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
 
     // @TODO, @ericc: Need to figure out how to determine config values.
     // These numbers will be evaluated depending on the policy of the MUX,
-    // and the actual hardware itself.
+    // and the actual device firmware itself.
     // For now, I've hardcoded them.
     blk_config->size = 1000;
-    // This number has to match the size of the storage file for FS to work
     blk_config->blocksize = 1024;
     blk_config->read_only = false;
 
