@@ -29,8 +29,9 @@ endif
 endif
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
+TEST_BUILD_DIR := output/$(BOARD)/$(TEST)
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
-CONFIG ?= release
+CONFIG ?= debug
 
 # @ivanv: Check for dependencies and make sure they are installed/in the path
 
@@ -94,15 +95,20 @@ IRQLAT := $(IRQLAT_IMAGE_DIR)/baremetal.bin
 IRQSTORM_IMAGE_DIR := irqstorm/build/$(TARGET_BOARD)
 IRQSTORM := $(IRQSTORM_IMAGE_DIR)/baremetal.bin
 
+BOOT_IMAGE_DIR := boot/build/$(TARGET_BOARD)/128k
+BOOT := $(BOOT_IMAGE_DIR)/baremetal.bin
+
 
 DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
+WTF_PATCH ?= no
+
 ELFS := 
 
-IMAGE_FILE = $(BUILD_DIR)/$(PLATFORM)/loader.img
-REPORT_FILE = $(BUILD_DIR)/report.txt
+IMAGE_FILE = $(TEST_BUILD_DIR)/loader.img
+REPORT_FILE = $(TEST_BUILD_DIR)/report.txt
 
 OBJS := printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
 
@@ -148,9 +154,13 @@ ifeq ($(findstring irqstorm,$(TEST)), irqstorm)
 	DEPS += irqstorm
 endif
 
+ifeq ($(findstring boot,$(TEST)), boot)
+	DEPS += boot
+endif
 
 
-all:  $(DEPS) directories wtf_patch $(IMAGE_FILE)
+
+all: $(DEPS) wtf_patch directories $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -164,9 +174,16 @@ qemu: all
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
+	$(shell mkdir -p $(TEST_BUILD_DIR))
 
 wtf_patch:
-	$(shell echo $(DEPS) | sed -e 's/\s\+/\n/g' | xargs --replace=% ./wtf.py % $(TARGET_BOARD))
+	$(shell if [ '$(WTF_PATCH)' = 'yes' ] ; \
+	then \
+		echo boot | sed -e 's/ .*//' | sed -e 's/\s\+/\n/g' | xargs --replace=% ./wtf.py % $(TARGET_BOARD); \
+	fi)
+
+boot:
+	$(MAKE) -C boot IMG_SZ_KB=128 PLATFORM=$(TARGET_BOARD)
 
 interf:
 	$(MAKE) -C interf READ_SWITCH=$(INTERF_DO_READ) PLATFORM=$(TARGET_BOARD)
@@ -231,11 +248,22 @@ ifeq ($(findstring irqstorm,$(TEST)),irqstorm)
 endif
 
 
-$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
+ifeq ($(findstring boot,$(TEST)),boot)
+	PATHS += \
+	-DGUEST_BARE_IMAGE_PATH=\"$(BOOT)\" \
+
+	INTERF_DO_READ = 0
+	ELFS +=  bare_vmm.elf
+
+endif
+
+
+$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)	FORCE
 	$(CC) -c -g3 -x assembler-with-cpp \
 					$(PATHS) \
 					-target aarch64-none-elf \
 					$< -o $@
+FORCE: ;
 
 
 $(BUILD_DIR)/%.o: %.c Makefile

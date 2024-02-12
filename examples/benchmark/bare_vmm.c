@@ -106,17 +106,10 @@ void init(void) {
     size_t kernel_size = _guest_bare_image_end - _guest_bare_image;
 
     LOG_VMM("Invalidating cache for guest RAM at 0x%x (0x%x bytes)\n", guest_ram_vaddr, GUEST_RAM_SIZE);
-
-    seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
-    seL4_ARM_VSpace_CleanInvalidate_Data(3, (seL4_Word)_guest_bare_image, (seL4_Word)_guest_bare_image_end);
-    seL4_ARM_VSpace_Unify_Instruction(3, (seL4_Word)_guest_bare_image, (seL4_Word)_guest_bare_image_end);
-    seL4_ARM_VSpace_Unify_Instruction(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
-
+    
     uintptr_t kernel_pc = (uintptr_t)load_kernel(_guest_bare_image, kernel_size);
 
     seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
-    seL4_ARM_VSpace_CleanInvalidate_Data(3, (seL4_Word)_guest_bare_image, (seL4_Word)_guest_bare_image_end);
-    seL4_ARM_VSpace_Unify_Instruction(3, (seL4_Word)_guest_bare_image, (seL4_Word)_guest_bare_image_end);
     seL4_ARM_VSpace_Unify_Instruction(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
 
     if (!kernel_pc) {

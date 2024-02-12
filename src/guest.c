@@ -3,6 +3,22 @@
 #include "vcpu.h"
 #include "guest.h"
 
+#define SCTLR_EL1_UCI (1 << 26)    /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC, \
+                                    and IC IVAU in AArch64 state   */
+#define SCTLR_EL1_C (1 << 2)       /* Enable data and unified caches */
+#define SCTLR_EL1_I (1 << 12)      /* Enable instruction cache       */
+#define SCTLR_EL1_CP15BEN (1 << 5) /* AArch32 CP15 barrier enable    */
+#define SCTLR_EL1_UTC (1 << 15)    /* Enable EL0 access to CTR_EL0   */
+#define SCTLR_EL1_NTWI (1 << 16)   /* WFI executed as normal         */
+#define SCTLR_EL1_NTWE (1 << 18)   /* WFE executed as normal         */
+
+/* Disable MMU, SP alignment check, and alignment check */
+/* A57 default value */
+#define SCTLR_EL1_RES 0x30d00800 /* Reserved value */
+#define SCTLR_EL1 (SCTLR_EL1_RES | SCTLR_EL1_CP15BEN | SCTLR_EL1_UTC | SCTLR_EL1_NTWI | SCTLR_EL1_NTWE)
+#define SCTLR_EL1_NATIVE (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
+#define SCTLR_DEFAULT SCTLR_EL1_NATIVE
+
 bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd) {
     /*
      * Set the TCB registers to what the virtual machine expects to be started with.
@@ -29,6 +45,10 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     }
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, initrd);
+    printf("Default SCTLR_EL1: 0x%lx\n", SCTLR_EL1);
+    printf("SCTLR_EL1: 0x%lx\n", microkit_arm_vcpu_read_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR));
+    // microkit_arm_vcpu_write_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR, 0);
+    // printf("SCTLR_EL1: 0x%lx\n", microkit_arm_vcpu_read_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR));
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
     microkit_vm_restart(boot_vcpu_id, regs.pc);
 

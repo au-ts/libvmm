@@ -18,6 +18,7 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk TEST=<TEST>
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+* `zcu102`
 
 Where `<TEST>` is one of:
 * `mibench`

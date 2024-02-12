@@ -11,6 +11,6 @@
 #define PLAT_GICD_BASE 0xF9010000
 #define PLAT_GICC_BASE 0xf9020000
 
-#define UART_IRQ_ID 54
+#define UART_IRQ_ID 53
 
 #endif
