@@ -1,5 +1,10 @@
 #!/usr/bin/python3
 
+# Fix for the current bad bug of small guest images breaking libvmm
+# This script appends 30MB of data to the baremetal.bin file
+
+# Used through the MAKEFILE by passing WTF_PATCH=yes to the make command
+
 import sys
 
 if len(sys.argv) < 3:

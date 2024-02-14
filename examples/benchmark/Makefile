@@ -179,7 +179,7 @@ directories:
 wtf_patch:
 	$(shell if [ '$(WTF_PATCH)' = 'yes' ] ; \
 	then \
-		echo boot | sed -e 's/ .*//' | sed -e 's/\s\+/\n/g' | xargs --replace=% ./wtf.py % $(TARGET_BOARD); \
+		echo $(TEST) | sed -e 's/ .*//' | sed -e 's/\s\+/\n/g' | xargs --replace=% ./wtf.py % $(TARGET_BOARD); \
 	fi)
 
 boot:

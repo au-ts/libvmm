@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+    <memory_region name="guest_ram_2" size="0x10_000_000" page_size="0x200_000" />
+
+    <memory_region name="serial" size="0x1_000" phys_addr="0xff000000" />
+    <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xf9060000" />
+    <memory_region name="timer" size="0x1_000" phys_addr="0xFF110000" />
+
+
+    <protection_domain name="irqlat_VMM" priority="254">
+        <program_image path="bare_vmm.elf" />
+
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr"/>
+        <virtual_machine name="irqlat" id="0">
+
+
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx"/>
+
+            <map mr="serial" vaddr="0xFF000000" perms="rw" cached="false" />
+            <map mr="timer" vaddr="0xFF110000" perms="rw" cached="false" />
+
+            <map mr="gic_vcpu" vaddr="0xf9020000" perms="rw" cached="false" />
+        </virtual_machine>
+
+        <irq irq="53" id="1" />
+    </protection_domain>
+
+    <protection_domain name="interf_VMM" priority="254">
+        <program_image path="interf_vmm.elf" />
+
+        <map mr="guest_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="interf" id="0">
+
+            <map mr="guest_ram_2" vaddr="0x40000000" perms="rwx" />
+
+            <map mr="serial" vaddr="0xFF000000" perms="rw" cached="false" />
+
+            <map mr="gic_vcpu" vaddr="0xf9020000" perms="rw" cached="false" />
+        </virtual_machine>
+
+    </protection_domain>
+</system>

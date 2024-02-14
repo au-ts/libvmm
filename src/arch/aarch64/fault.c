@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <microkit.h>
 #include "hsr.h"
 #include "../../util/util.h"
 #include "smc.h"
@@ -12,6 +13,8 @@
 #include "tcb.h"
 #include "vcpu.h"
 #include "fault.h"
+#include "../../sel4bench.h"
+
 
 // #define CPSR_THUMB                 (1 << 5)
 // #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
@@ -26,7 +29,28 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
     // Assume 64-bit instruction
     regs->pc += 4;
+    // ccnt_t before, after;
+    // before = sel4bench_get_cycle_count();
+
+    // __atomic_signal_fence(__ATOMIC_ACQ_REL);
+
+        // SEL4BENCH_READ_CCNT(before);
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
+
+    // after = sel4bench_get_cycle_count();
+    // // SEL4BENCH_READ_CCNT(after);
+    // __atomic_signal_fence(__ATOMIC_ACQ_REL);
+    // printf("TCB Write Registers Cycles diff: %ld\n", after - before);
+    
+
+    // before = sel4bench_get_cycle_count();
+    // for (int i = 0; i < 1000; i++) {
+    //     asm volatile("nop");
+    // }
+    // after = sel4bench_get_cycle_count();
+    // ccnt_t diff = after - before;
+    // printf("NOP cycles: %ld\n", diff);
+
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);

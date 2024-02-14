@@ -14,6 +14,7 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
+#include "sel4bench.h"
 
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
@@ -100,6 +101,16 @@ uintptr_t load_kernel(char *kernel_image, size_t kernel_size) {
 }
 
 void init(void) {
+    sel4bench_init();
+    ccnt_t before, after;
+    for (int i = 0; i < 5; i++) {
+        __atomic_signal_fence(__ATOMIC_ACQ_REL);
+        before = sel4bench_get_cycle_count();
+        seL4_BenchmarkNullSyscall();
+        after = sel4bench_get_cycle_count();
+        __atomic_signal_fence(__ATOMIC_ACQ_REL);
+        printf("Null Syscall Cycles diff: %ld\n", after - before);
+    }
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
@@ -109,8 +120,8 @@ void init(void) {
     
     uintptr_t kernel_pc = (uintptr_t)load_kernel(_guest_bare_image, kernel_size);
 
-    seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
-    seL4_ARM_VSpace_Unify_Instruction(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
+    // seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
+    // seL4_ARM_VSpace_Unify_Instruction(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
 
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
@@ -163,6 +174,7 @@ void fault(microkit_id id, microkit_msginfo msginfo) {
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
+
         microkit_fault_reply(microkit_msginfo_new(0, 0));
     }
 }
