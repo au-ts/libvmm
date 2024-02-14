@@ -4,4 +4,3 @@ zig-cache/
 *.pdf
 *.dtb
 rust/target/
-*overlayed.cpio.gz

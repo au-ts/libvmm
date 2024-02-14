@@ -78,21 +78,21 @@ CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
 
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
-BLK_DRIVER_VM_INITRD_OVERLAYED := $(BLK_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
+BLK_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
 BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
 BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
 								$(BLK_DRIVER_VM_DTS_DIR)/uio.dts
 
 CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
 CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
-CLIENT_VM_1_INITRD_OVERLAYED := $(CLIENT_VM_1_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_1_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_1_rootfs.cpio.gz
 CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
 CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
 							$(CLIENT_VM_1_DTS_DIR)/virtio.dts
 
 CLIENT_VM_2_LINUX := $(CLIENT_VM_2_DIR)/linux
 CLIENT_VM_2_INITRD := $(CLIENT_VM_2_DIR)/rootfs.cpio.gz
-CLIENT_VM_2_INITRD_OVERLAYED := $(CLIENT_VM_2_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_2_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_2_rootfs.cpio.gz
 CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
 CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
 							$(CLIENT_VM_2_DTS_DIR)/virtio.dts
