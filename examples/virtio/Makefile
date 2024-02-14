@@ -374,5 +374,5 @@ $(BUILD_DIR)/blk_driver_init: $(LINUX_DIR)/blk_driver_init Makefile
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
 	$(TOOLCHAIN)-gcc $(CFLAGS_LINUX) $^ -o $@
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) $(BLK_DRIVER_VM_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(CLIENT_VM_1_DIR) $(CLIENT_VM_2_DIR) $(BLK_DRIVER_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
