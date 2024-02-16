@@ -180,6 +180,7 @@ void uart_handler() {
 
 void main(void){
     printf("We are in!\n");
+
     if(!cpu_is_master()) {
         return;
     }
@@ -202,20 +203,23 @@ void main(void){
     //     printf("Press 's' to start...\n");
     //     while(uart_getchar() != 's');
 
-        size_t i = 0;
-        while(i < sample_events_size) {
-            sample_count = 0;
-            next_tick = timer_set(TIMER_INTERVAL);
-            pmu_setup(i, sample_events_size - i);
+    size_t i = 0;
+    while(i < sample_events_size) {
+        sample_count = 0;
+        next_tick = timer_set(TIMER_INTERVAL);
+        pmu_setup(i, sample_events_size - i);
 
-            while(sample_count < NUM_SAMPLES) {
-                for (size_t i = 0; i < L1_CACHE_SIZE; i+= CACHE_LINE_SIZE) {
-                    cache_l1[i] = i;
-                }
+        while(sample_count < NUM_SAMPLES) {
+            for (size_t i = 0; i < L1_CACHE_SIZE; i+= CACHE_LINE_SIZE) {
+                cache_l1[i] = i;
             }
-
-            print_samples();
-            i += pmu_num_counters();
         }
+
+        print_samples();
+        i += pmu_num_counters();
+    }
+    int *x = NULL;
+    *x = 0;
     // }
 }
+

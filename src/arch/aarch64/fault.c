@@ -14,7 +14,10 @@
 #include "vcpu.h"
 #include "fault.h"
 #include "../../sel4bench.h"
+#include "../../temp_bench.h"
 
+
+enum timed_event cur_event = ERROR;
 
 // #define CPSR_THUMB                 (1 << 5)
 // #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
@@ -29,28 +32,14 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
     // Assume 64-bit instruction
     regs->pc += 4;
-    // ccnt_t before, after;
-    // before = sel4bench_get_cycle_count();
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
 
-    // __atomic_signal_fence(__ATOMIC_ACQ_REL);
-
-        // SEL4BENCH_READ_CCNT(before);
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
 
-    // after = sel4bench_get_cycle_count();
-    // // SEL4BENCH_READ_CCNT(after);
-    // __atomic_signal_fence(__ATOMIC_ACQ_REL);
-    // printf("TCB Write Registers Cycles diff: %ld\n", after - before);
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, cur_event, TCB_WriteRegisters);
     
-
-    // before = sel4bench_get_cycle_count();
-    // for (int i = 0; i < 1000; i++) {
-    //     asm volatile("nop");
-    // }
-    // after = sel4bench_get_cycle_count();
-    // ccnt_t diff = after - before;
-    // printf("NOP cycles: %ld\n", diff);
-
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
@@ -268,7 +257,11 @@ bool fault_handle_vppi_event(size_t vcpu_id)
         // @ivanv, make a note that when having a lot of printing on it can cause this error
         LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
         // Acknowledge to unmask it as our guest will not use the interrupt
+        ccnt_t before, after;
+        before = sel4bench_get_cycle_count();
         microkit_arm_vcpu_ack_vppi(vcpu_id, ppi_irq);
+        after = sel4bench_get_cycle_count();
+        add_event(after - before, VPPIEvent, Microkit_Ack_VPPI);
     }
 
     return true;
@@ -312,7 +305,11 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     }
 
     seL4_UserContext regs;
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
     seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, UnknownSyscall, TCB_ReadRegisters);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failure reading TCB registers when handling unknown syscall, error %d", err);
@@ -384,10 +381,14 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
     size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
 
-    LOG_VMM("Got fault at %lx with fsr %lx\n", addr, fsr);
+    // LOG_VMM("Got fault at %lx with fsr %lx\n", addr, fsr);
 
     seL4_UserContext regs;
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, VMFault, TCB_ReadRegisters);
     assert(err == seL4_NoError);
 
     switch (addr) {
@@ -412,6 +413,8 @@ bool fault_handle_vm_exception(size_t vcpu_id)
                 bool is_write = fault_is_write(fsr);
                 LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
                     addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+                // Program ended here!
+                display_results();
                 tcb_print_regs(vcpu_id);
                 vcpu_print_regs(vcpu_id);
             } else {
@@ -430,21 +433,27 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
     // LOG_VMM("Got fault %s\n", fault_to_string(label));
     switch (label) {
         case seL4_Fault_VMFault:
+            cur_event = VMFault;
             success = fault_handle_vm_exception(vcpu_id);
             break;
         case seL4_Fault_UnknownSyscall:
+            cur_event = UnknownSyscall;
             success = fault_handle_unknown_syscall(vcpu_id);
             break;
         case seL4_Fault_UserException:
+            cur_event = UserException;
             success = fault_handle_user_exception(vcpu_id);
             break;
         case seL4_Fault_VGICMaintenance:
+            cur_event = VGICMaintenance;
             success = fault_handle_vgic_maintenance(vcpu_id);
             break;
         case seL4_Fault_VCPUFault:
+            cur_event = VCPUFault;
             success = fault_handle_vcpu_exception(vcpu_id);
             break;
         case seL4_Fault_VPPIEvent:
+            cur_event = VPPIEvent;
             success = fault_handle_vppi_event(vcpu_id);
             break;
         default:

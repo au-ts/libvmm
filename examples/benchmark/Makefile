@@ -110,7 +110,7 @@ ELFS :=
 IMAGE_FILE = $(TEST_BUILD_DIR)/loader.img
 REPORT_FILE = $(TEST_BUILD_DIR)/report.txt
 
-OBJS := printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+OBJS := printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o temp_bench.o
 
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := vmm.o $(OBJS)

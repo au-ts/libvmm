@@ -7,6 +7,8 @@
 #define PLAT_GICD_BASE 0xffc01000
 #define PLAT_GICC_BASE 0xffc02000
 
+#define PLAT_TIMER_FREQ (24000000ull) // 10 MHz
+
 #define UART_IRQ_ID 225
 
 #endif

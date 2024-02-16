@@ -13,7 +13,7 @@
     <memory_region name="timer" size="0x1_000" phys_addr="0xFF110000" />
 
 
-    <protection_domain name="boot_VMM" priority="254">
+    <protection_domain name="boot_VMM" priority="254" >
         <program_image path="bare_vmm.elf" />
         <map mr="serial" vaddr="0xff803000" perms="rw" cached="false" setvar_vaddr="uart_base"/>
 

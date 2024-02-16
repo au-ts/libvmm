@@ -6,6 +6,7 @@
 # Used through the MAKEFILE by passing WTF_PATCH=yes to the make command
 
 import sys
+import os
 
 if len(sys.argv) < 3:
     print("Usage: ./wtf.py <bare test name> <platform>")
@@ -21,7 +22,8 @@ if sys.argv[1] == "boot":
 baremetal_path = f"{test}/build/{platform}/baremetal.bin"
 f = open(baremetal_path, "ab")
 
-f.write(bytes(('!' * (1024 * 1024 * 30)), 'utf-8'))
+if os.stat(baremetal_path).st_size < (1024 * 1024 * 30):
+    f.write(bytes(('!' * (1024 * 1024 * 30)), 'utf-8'))
 
 f.close()
 

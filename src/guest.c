@@ -3,6 +3,7 @@
 #include "vcpu.h"
 #include "guest.h"
 #include "sel4bench.h"
+#include "temp_bench.h"
 
 #define SCTLR_EL1_UCI (1 << 26)    /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC, \
                                     and IC IVAU in AArch64 state   */
@@ -28,17 +29,23 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
      * guests, there is no point in prematurely generalising this code.
      */
     seL4_UserContext regs = {0};
-    regs.x0 = dtb;
+    // regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
     /* Write out all the TCB registers */
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
     seL4_Word err = seL4_TCB_WriteRegisters(
-        BASE_VM_TCB_CAP + boot_vcpu_id,
-        false, // We'll explcitly start the guest below rather than in this call
-        0, // No flags
-        SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
-        &regs
-    );
+            BASE_VM_TCB_CAP + boot_vcpu_id,
+            false, // We'll explcitly start the guest below rather than in this call
+            0, // No flags
+            3, // TEMP: Only works for baremetal guests, need atleast 3 to write spsr register enter EL1 with hypervisor mode
+            // SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
+            &regs
+        );
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, VCPUFault, TCB_WriteRegisters);
+
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", boot_vcpu_id, err);
@@ -46,11 +53,6 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     }
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, initrd);
-    printf("Default SCTLR_EL1: 0x%lx\n", SCTLR_EL1);
-    printf("SCTLR_EL1: 0x%lx\n", microkit_arm_vcpu_read_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR));
-    // microkit_arm_vcpu_write_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR, 0);
-    // printf("SCTLR_EL1: 0x%lx\n", microkit_arm_vcpu_read_reg(boot_vcpu_id, seL4_VCPUReg_SCTLR));
-    /* Restart the boot vCPU to the program counter of the TCB associated with it */
     microkit_vm_restart(boot_vcpu_id, regs.pc);
 
 

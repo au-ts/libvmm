@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "util.h"
+#include "temp_bench.h"
+#include "fault.h"
 
 /* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
  * state, 8 - 15 for secure state), 16 PPIs (interrupt 16 - 31) and 988 SPIs
@@ -206,7 +208,11 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     // @ivanv: why is the priority 0?
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
     microkit_arm_vcpu_inject_irq(vcpu_id, virq->virq, 0, group, idx);
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, cur_event, Microkit_ARM_VCPU_Inject);
     vgic_vcpu->lr_shadow[idx] = *virq;
 
     return true;

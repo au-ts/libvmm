@@ -193,6 +193,7 @@ static FASTFN seL4_Word sel4bench_get_num_counters()
     return SEL4BENCH_ARMV8A_PMCR_N(sel4bench_private_read_pmcr());
 }
 
+
 static FASTFN void sel4bench_init()
 {
     // ensure all counters are in the stopped state
@@ -206,6 +207,12 @@ static FASTFN void sel4bench_init()
 
     // Enable counters globally.
     MODIFY_PMCR(|, SEL4BENCH_ARMV8A_PMCR_ENABLE);
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+    // Select instruction count incl. PL2 by default */
+    sel4bench_private_write_pmnxsel(0x1f);
+    sel4bench_private_write_evtsel(BIT(27));
+#endif
 
     // start CCNT
     sel4bench_private_write_cntens(BIT(SEL4BENCH_ARMV8A_COUNTER_CCNT));

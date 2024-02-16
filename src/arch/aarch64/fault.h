@@ -11,7 +11,9 @@
 #include <stddef.h>
 #include <microkit.h>
 
-/* Fault-handling functions */
+extern enum timed_event cur_event;
+
+    /* Fault-handling functions */
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
 bool fault_handle_vcpu_exception(size_t vcpu_id);

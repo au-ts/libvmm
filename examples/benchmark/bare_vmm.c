@@ -15,6 +15,7 @@
 #include "tcb.h"
 #include "vcpu.h"
 #include "sel4bench.h"
+#include "temp_bench.h"
 
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
@@ -103,12 +104,10 @@ uintptr_t load_kernel(char *kernel_image, size_t kernel_size) {
 void init(void) {
     sel4bench_init();
     ccnt_t before, after;
-    for (int i = 0; i < 5; i++) {
-        __atomic_signal_fence(__ATOMIC_ACQ_REL);
+    for (int i = 0; i < 20; i++) {
         before = sel4bench_get_cycle_count();
         seL4_BenchmarkNullSyscall();
         after = sel4bench_get_cycle_count();
-        __atomic_signal_fence(__ATOMIC_ACQ_REL);
         printf("Null Syscall Cycles diff: %ld\n", after - before);
     }
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -169,12 +168,18 @@ void notified(microkit_channel ch) {
  * whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
+
+
 void fault(microkit_id id, microkit_msginfo msginfo) {
     bool success = fault_handle(id, msginfo);
+    ccnt_t before, after;
+
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
-
+        before = sel4bench_get_cycle_count();
         microkit_fault_reply(microkit_msginfo_new(0, 0));
+        after = sel4bench_get_cycle_count();
+        add_event(after - before, cur_event, Microkit_Reply);
     }
 }
