@@ -80,34 +80,50 @@ BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
 BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
-BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
-								$(BLK_DRIVER_VM_DTS_DIR)/uio.dts
 
 CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
 CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
 CLIENT_VM_1_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_1_rootfs.cpio.gz
 CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
-CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
-							$(CLIENT_VM_1_DTS_DIR)/virtio.dts
 
 CLIENT_VM_2_LINUX := $(CLIENT_VM_2_DIR)/linux
 CLIENT_VM_2_INITRD := $(CLIENT_VM_2_DIR)/rootfs.cpio.gz
 CLIENT_VM_2_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_2_rootfs.cpio.gz
 CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
-CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
-							$(CLIENT_VM_2_DTS_DIR)/virtio.dts
 
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
-
+SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
-SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 
-SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
+ifeq ($(BOARD),qemu_arm_virt)
+	SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
+	BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
+									$(BLK_DRIVER_VM_DTS_DIR)/uio.dts
+	CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
+								$(CLIENT_VM_1_DTS_DIR)/virtio.dts
+	CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
+								$(CLIENT_VM_2_DTS_DIR)/virtio.dts
+	BLK_DRIVER_VM_USERLEVEL_INIT := qemu_blk_driver_init
+else ifeq ($(BOARD),odroidc4)
+	SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/meson
+	BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
+									$(BLK_DRIVER_VM_DTS_DIR)/uio.dts \
+									$(BLK_DRIVER_VM_DTS_DIR)/disable.dts
+	CLIENT_VM_1_DTS_OVERLAYS :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
+								$(CLIENT_VM_1_DTS_DIR)/virtio.dts\
+								$(CLIENT_VM_1_DTS_DIR)/disable.dts
+	CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
+								$(CLIENT_VM_2_DTS_DIR)/virtio.dts \
+								$(CLIENT_VM_2_DTS_DIR)/disable.dts
+	BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
+else
+	$(error "Board $(BOARD) is not supported")
+endif
 
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
 
@@ -116,7 +132,6 @@ CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
 CLIENT_VM_2_USERLEVEL := postmark
 CLIENT_VM_2_USERLEVEL_INIT := blk_client_init
 BLK_DRIVER_VM_USERLEVEL := uio_blk_driver storage_0 storage_1
-BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -136,7 +151,7 @@ VMM_OBJS := printf.o \
 			tcb.o \
 			vcpu.o \
 
-CLIENT_VMM_1_OBJS :=	$(VMM_OBJS) \
+CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					client_images_1.o \
 					client_vmm_1.o \
 					virtio.o \
@@ -156,7 +171,7 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					sddf_serial_sharedringbuffer.o \
 					sddf_blk_shared_queue.o \
 
-BLK_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
+BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o \
 					virtio.o \
@@ -369,6 +384,9 @@ $(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/blk_driver_init: $(LINUX_DIR)/blk_driver_init Makefile
+	cp $< $@
+
+$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_DIR)/qemu_blk_driver_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))

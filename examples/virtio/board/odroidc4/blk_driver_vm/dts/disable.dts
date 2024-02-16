@@ -1,0 +1,37 @@
+/ {
+    secure-monitor {
+		status = "disabled";
+	};
+
+    soc {
+        usb@ffe09000 {
+            status = "disabled";
+        };
+
+        vpu@ff900000 {
+            status = "disabled";
+        };
+
+        gpu@ffe40000 {
+            status = "disabled";
+        };
+
+        bus@ff800000 {
+            serial@3000 {
+                status = "disabled";
+            };
+        };
+
+        ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+        mmc@ffe07000 {
+            status = "disabled";
+        };
+
+        // sd@ffe05000 {
+        //     status = "disabled";
+        // };
+    };
+};

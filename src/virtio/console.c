@@ -112,7 +112,6 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
     size_t idx = tx_queue->last_idx;
 
     ring_handle_t *sddf_tx_ring = ((ring_handle_t **)dev->sddf_handlers)[SDDF_SERIAL_TX_RING];
-
     while (idx != guest_idx) {
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];

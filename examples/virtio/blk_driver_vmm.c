@@ -22,11 +22,14 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#define GUEST_RAM_SIZE 0x8000000
+#define GUEST_RAM_SIZE 0x6000000
 
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47f00000
 #define GUEST_INIT_RAM_DISK_VADDR 0x47000000
+#elif defined(BOARD_odroidc4)
+#define GUEST_DTB_VADDR 0x25f10000
+#define GUEST_INIT_RAM_DISK_VADDR 0x24000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -43,7 +46,7 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-#define MAX_IRQ_CH 63
+#define MAX_IRQ_CH 64
 int passthrough_irq_map[MAX_IRQ_CH];
 
 static void dummy_ack(size_t vcpu_id, int irq, void *cookie) {
@@ -65,6 +68,13 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
         LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
         return;
     }
+}
+
+static int get_passthrough_irq(microkit_channel irq_ch) {
+    if (passthrough_irq_map[irq_ch] != -1) {
+        return passthrough_irq_map[irq_ch];
+    }
+    return -1;
 }
 
 /* sDDF block */
@@ -133,27 +143,45 @@ void init(void) {
         return;
     }
 
+    /* Initialise passthrough IRQ map */
+    for (int i = 0; i < MAX_IRQ_CH; i++) {
+        passthrough_irq_map[i] = -1;
+    }
+
     /* Register UIO irq */
     for (int i = 0; i < NUM_UIO_DEVICE; i++) {
         virq_register(GUEST_VCPU_ID, uio_devices[i].irq, &uio_ack, NULL);
     }
+    
+#if defined(BOARD_odroidc4)
+    // SD
+    register_passthrough_irq(222, 1);
+    // // eMMC
+    // register_passthrough_irq(223, 2);
+#endif
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
+    int irq;
+
     /* Handle notifications from clients of block device */
-    int irq = get_uio_irq_from_ch(ch);
+    irq = get_uio_irq_from_ch(ch);
     if (irq != -1) {
         virq_inject(GUEST_VCPU_ID, irq);
         return;
     }
 
-    switch (ch) {
-        default:
-            LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
+    /* Handle passthrough IRQs */
+    irq = get_passthrough_irq(ch);
+    if (irq != -1) {
+        virq_inject(GUEST_VCPU_ID, irq);
+        return;
     }
+
+    LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
 }
 
 /*

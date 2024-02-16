@@ -3,14 +3,13 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <assert.h>
-#include <unistd.h>
 #include <sys/mman.h>
 #include <sddf/blk/shared_queue.h>
 
@@ -84,7 +83,7 @@ int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, 
         return -1;
     }
 
-    if ((storage_fd = open(storage_path, O_CREAT | O_RDWR, 0666)) < 0) {
+    if ((storage_fd = open(storage_path, O_RDWR)) < 0) {
         LOG_UIO_BLOCK_ERR("Failed to open storage file: %s\n", strerror(errno));
         return -1;
     }

@@ -15,6 +15,7 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
+* `odroidc4`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -73,3 +74,5 @@ After the client VMs boot, they will attempt to mount the first partition of the
 ```
 
 We can further test the virtIO block implementation by using block benchmark programs like `postmark`, which has been included in `/root`, by running it in the `/mnt` directory.
+
+When running on the odroidc4, the system expects to read and write from the SD card, not the eMMC. When running on QEMU, read and writes go to ramdisk instead of a persistent storage device.
