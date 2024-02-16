@@ -15,9 +15,7 @@
 #include "tcb.h"
 #include "vcpu.h"
 #include "virtio/virtio.h"
-#include "virtio/console.h"
 #include "virtio/block.h"
-#include <sddf/serial/shared_ringbuffer.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
