@@ -21,36 +21,43 @@
 // #define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
-#define LOG_UIO_BLOCK(...) do{ printf("BLK_DRIVER_%d", driver_id); printf(": "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_BLOCK(...) do{ printf("UIO_BLK_DRIVER_%d", id); printf(": "); printf(__VA_ARGS__); }while(0)
 #else
 #define LOG_UIO_BLOCK(...) do{}while(0)
 #endif
 
-#define LOG_UIO_BLOCK_ERR(...) do{ printf("BLK_DRIVER_%d", driver_id); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_BLOCK_ERR(...) do{ printf("UIO_BLK_DRIVER_%d", id); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 #define STORAGE_MAX_PATHNAME 64
-#define STORAGE_BASENAME "/root/storage_"
 
-int driver_id;
+int id;
+int storage_fd;
+
 blk_storage_info_t *blk_config;
 blk_queue_handle_t h;
 uintptr_t blk_data;
 uintptr_t blk_data_phys;
-int storage_fd;
 
 uintptr_t data_phys_to_virt(uintptr_t phys_addr)
 {
     return phys_addr - blk_data_phys + blk_data;
 }
 
-int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
+int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {   
-    driver_id = id;
-
+    id = driver_id;
+    
     if (num_maps != 4) {
         LOG_UIO_BLOCK_ERR("Expecting 4 maps, got %d\n", num_maps);
         return -1;
     }
+    
+    if (argc != 1) {
+        LOG_UIO_BLOCK_ERR("Expecting 1 driver argument, got %d\n", argc);
+        return -1;
+    }
+
+    char *storage_base_path = argv[0];
     
     blk_config = (blk_storage_info_t *)maps[0];
     blk_req_queue_t *req_queue = (blk_req_queue_t *)maps[1];
@@ -70,11 +77,8 @@ int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
     blk_config->blocksize = 1024;
     blk_config->read_only = false;
 
-    // @TODO, @ericc: finnicky and error prone, assumes storage file has name
-    // storage_<id>, need to figure out a better way to set this up whilst keeping
-    // driver init generic to all drivers
     char storage_path[STORAGE_MAX_PATHNAME];
-    int len = snprintf(storage_path, STORAGE_MAX_PATHNAME, "%s%d", STORAGE_BASENAME, driver_id);
+    int len = snprintf(storage_path, STORAGE_MAX_PATHNAME, "%s/storage_%d", storage_base_path, driver_id);
     if (len < 0 || len >= STORAGE_MAX_PATHNAME) {
         LOG_UIO_BLOCK_ERR("Failed to generate storage path\n");
         return -1;

@@ -51,7 +51,7 @@ static int num_maps;
 /*
  * Just happily abort if the user can't be bother to provide these functions
  */
-__attribute__((weak)) int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps)
+__attribute__((weak)) int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {
     assert(!"should not be here!");
 }
@@ -239,15 +239,15 @@ static int uio_map_init(int fd)
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
-        printf("Usage: %s <uio_device_number>\n", argv[0]);
+    if (argc < 2) {
+        printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
         return 1;
     }
 
     uio_num = atoi(argv[1]);
     if (uio_num < 0) {
         printf("Failed to convert uio number to integer\n");
-        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
         close(pfd.fd);
         return 1;
     }
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
     int len = snprintf(uio_device_name, sizeof(uio_device_name), "/dev/uio%s", argv[1]);
     if (len < 0 || len >= sizeof(uio_device_name)) {
         LOG_UIO_ERR("Failed to create uio device name\n");
-        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
         return 1;
     }
 
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
     pfd.fd = open(uio_device_name, O_RDWR);
     if (pfd.fd < 0) {
         LOG_UIO_ERR("Failed to open %s\n", uio_device_name);
-        printf("Usage: %s <uio_device_number>\n", argv[0]);
+        printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
         return 1;
     }
 
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
     }
     
     /* Initialise driver */
-    if (driver_init(uio_num, maps, maps_phys, num_maps) != 0) {
+    if (driver_init(uio_num, maps, maps_phys, num_maps, argc - 2, argv + 2) != 0) {
         LOG_UIO_ERR("Failed to initialise driver\n");
         close(pfd.fd);
         return 1;

@@ -7,5 +7,5 @@
 
 #include <stdint.h>
 
-int driver_init(int id, void **maps, uintptr_t *maps_phys, int num_maps);
+int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv);
 void driver_notified();
