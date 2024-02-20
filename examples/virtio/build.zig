@@ -107,13 +107,26 @@ pub fn build(b: *std.Build) void {
         .strip = false,
     });
 
+    // TODO: compile client1
+    // TODO: compile client2
+    // TODO: compile block driver
+    // TODO: compile serial MUXs
+    // TODO: compile serial driver
+
     // For actually compiling the DTS into a DTB
-    const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
-    const dtc_cmd = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-q", "-I", "dts", "-O", "dtb"
-    });
-    dtc_cmd.addFileArg(.{ .path = dts_path });
-    const dtb = dtc_cmd.captureStdOut();
+    const base_dts = fmtPrint("board/{s}/client_vm_1/dts/init.dts", .{ microkit_board });
+    const overlays = &[_][]const u8{
+        fmtPrint("board/{s}/client_vm_1/dts/init.dts", .{ microkit_board }),
+        fmtPrint("board/{s}/client_vm_1/dts/virtio.dts", .{ microkit_board })
+    };
+    const dtscat = libvmm_dep.path("tools/dtscat");
+    const dtc_cmd = b.addSystemCommand(&[_][]const u8{""});
+    dtc_cmd.addFileArg(dtscat);
+    dtc_cmd.addFileArg(.{ .path = base_dts });
+    for (overlays) |overlay| {
+        dtc_cmd.addFileArg(.{ .path = overlay });
+    }
+    const client_1_dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
@@ -128,7 +141,7 @@ pub fn build(b: *std.Build) void {
     exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
 
     exe.addCSourceFiles(.{
-        .files = &.{"vmm.c"},
+        .files = &.{"client_vmm_1.c"},
         .flags = &.{
             "-Wall",
             "-Werror",
@@ -139,19 +152,20 @@ pub fn build(b: *std.Build) void {
     });
 
     const guest_images = b.addObject(.{
-        .name = "guest_images",
+        .name = "client_images_1",
         .target = target,
         .optimize = optimize,
     });
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
-    guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
+    const client_1_dtb_name = "client_1.dtb";
+    guest_images.step.dependOn(&b.addInstallFileWithDir(client_1_dtb, .prefix, client_1_dtb_name).step);
 
-    const linux_image_path = fmtPrint("board/{s}/linux", .{ microkit_board });
+    const linux_image_path = fmtPrint("board/{s}/client_vm_1/linux", .{ microkit_board });
     const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
 
-    const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ microkit_board });
+    const initrd_image_path = fmtPrint("board/{s}/client_vm_1/rootfs.cpio.gz", .{ microkit_board });
     const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
-    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, client_1_dtb_name) });
     guest_images.addCSourceFile(.{
         .file = libvmm_dep.path("tools/package_guest_images.S"),
         .flags = &.{
