@@ -120,7 +120,7 @@ pub fn build(b: *std.Build) void {
         fmtPrint("board/{s}/client_vm_1/dts/virtio.dts", .{ microkit_board })
     };
     const dtscat = libvmm_dep.path("tools/dtscat");
-    const dtc_cmd = b.addSystemCommand(&[_][]const u8{""});
+    const dtc_cmd = std.Build.Step.Run.create(b, "run");
     dtc_cmd.addFileArg(dtscat);
     dtc_cmd.addFileArg(.{ .path = base_dts });
     for (overlays) |overlay| {
