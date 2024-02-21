@@ -24,7 +24,7 @@
 
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
-    // Assume 64-bit instruction
+    // Assume 32-bit instruction
     regs->pc += 4;
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
