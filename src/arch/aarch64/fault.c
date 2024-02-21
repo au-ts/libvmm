@@ -159,7 +159,6 @@ bool fault_is_read(uint64_t fsr)
 
 static int get_rt(uint64_t fsr)
 {
-
     int rt = -1;
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         rt = HSR_SYNDROME_RT(fsr);
@@ -176,7 +175,7 @@ static int get_rt(uint64_t fsr)
 uint64_t fault_get_data(seL4_UserContext *regs, uint64_t fsr)
 {
     /* Get register opearand */
-    int rt  = get_rt(fsr);
+    int rt = get_rt(fsr);
 
     uint64_t data = *decode_rt(rt, regs);
 
@@ -212,8 +211,6 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 
     seL4_Word *reg_ctx = decode_rt(rt, regs);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
-    // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
-    //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
 
     return fault_advance_vcpu(vcpu_id, regs);
 }
