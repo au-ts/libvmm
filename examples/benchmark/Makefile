@@ -19,6 +19,10 @@ ifeq ($(TARGET_BOARD), qemu_arm_virt)
 TARGET_BOARD := qemu-aarch64-virt
 endif
 
+ifeq ($(TARGET_BOARD), imx8mq_evk)
+TARGET_BOARD := imx8qm
+endif
+
 # Tests must be one of
 # - mibench
 # - mibench+interf
@@ -116,6 +120,8 @@ OBJS := printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_
 VMM_OBJS := vmm.o $(OBJS)
 BARE_OBJS := bare_vmm.o $(OBJS)
 INTERF_OBJS := interf_vmm.o $(OBJS)
+BENCH_OBJS := benchmark.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o tcb.o vcpu.o temp_bench.o
+IDLE_OBJS := idle.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o tcb.o vcpu.o temp_bench.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -130,7 +136,7 @@ CFLAGS := -mstrict-align \
 		  -ffreestanding \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
-		  -Wall -Wno-unused-function -Werror \
+		  -Wall -Wno-unused-function \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -219,6 +225,13 @@ ifeq ($(findstring mibench,$(TEST)),mibench)
 
 endif
 
+ifeq ($(findstring +bench,$(TEST)),+bench)
+
+
+	ELFS += benchmark.elf idle.elf
+
+endif
+
 # If the $(TEST) variable contains the string "interf", add the interf image path to paths
 ifeq ($(findstring interf,$(TEST)),interf)
 	PATHS += \
@@ -280,6 +293,12 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/%.c Makefile
 
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/benchmark.elf: $(addprefix $(BUILD_DIR)/, $(BENCH_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/idle.elf: $(addprefix $(BUILD_DIR)/, $(IDLE_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@

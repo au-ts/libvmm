@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+
+    <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
+    <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
+    <memory_region name="timer" size="0x1_000" phys_addr="0x9010000" />
+
+    <memory_region name="cyclecounters" size="0x1000"/>
+
+    <protection_domain name="benchIdle" priority="97" >
+        <program_image path="idle.elf" />
+        <map mr="serial" vaddr="0xFF010000" perms="rw" cached="false" setvar_vaddr="uart_base" />
+        
+        <map mr="cyclecounters" vaddr="0x5_010_000" perms="rw" cached="true" setvar_vaddr="cyclecounters_vaddr" />
+    </protection_domain>
+
+    <protection_domain name="bench" priority="97" >
+        <program_image path="benchmark.elf" />
+        <map mr="serial" vaddr="0xFF010000" perms="rw" cached="false" setvar_vaddr="uart_base" />
+
+        <protection_domain name="irqlat_VMM" priority="97" id="1">
+            <program_image path="bare_vmm.elf" />
+            <map mr="serial" vaddr="0xFF010000" perms="rw" cached="false" setvar_vaddr="uart_base"/>
+
+            <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+            <virtual_machine name="irqlat" priority="97" id="0">
+
+
+                <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+
+                <map mr="serial" vaddr="0xFF010000" perms="rw" cached="false" />
+                <map mr="timer" vaddr="0xFF110000" perms="rw" cached="false" />
+
+                <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            </virtual_machine>
+
+            <map mr="cyclecounters" vaddr="0x5_010_000" perms="rw" cached="true" setvar_vaddr="cyclecounters_vaddr" />
+            <irq irq="33" id="1" trigger="edge" />
+        </protection_domain>
+
+    </protection_domain>
+
+    <channel>
+        <end pd="benchIdle" id="3" />
+        <end pd="bench" id="3" />
+    </channel>
+
+    <channel>
+        <end pd="irqlat_VMM" id="2" />
+        <end pd="bench" id="1" />
+    </channel>
+
+    <channel>
+        <end pd="irqlat_VMM" id="3" />
+        <end pd="bench" id="2" />
+    </channel>
+
+    
+</system>

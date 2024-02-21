@@ -20,9 +20,11 @@
 #include <spinlock.h>
 #include <fences.h>
 #include <irq.h>
+#include <plat.h>
 
-volatile gicd_t* gicd = (void*)0xF9010000;
-volatile gicr_t* gicr = (void*)0xF9020000;
+volatile gicd_t* gicd = (void*)PLAT_GICD_BASE;
+volatile gicr_t* gicr = (void*)PLAT_GICR_BASE;
+volatile gicc_t *gicc = (void *)PLAT_GICC_BASE;
 
 static spinlock_t gicd_lock;
 static spinlock_t gicr_lock;

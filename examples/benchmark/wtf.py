@@ -14,6 +14,10 @@ if len(sys.argv) < 3:
 
 
 test = sys.argv[1]
+
+if '+' in test:
+    test = test.split('+')[0]
+
 platform = sys.argv[2]
 
 if sys.argv[1] == "boot":

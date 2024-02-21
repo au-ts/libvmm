@@ -16,6 +16,10 @@
 #include "vcpu.h"
 #include "sel4bench.h"
 #include "temp_bench.h"
+#include "bench.h"
+
+#define START_PMU 2
+#define STOP_PMU 3
 
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
@@ -46,6 +50,9 @@
 #elif defined(BOARD_imx8mm_evk_hyp)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_imx8mq_evk)
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #elif defined(BOARD_zcu102)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
@@ -65,6 +72,8 @@
 #define SERIAL_IRQ 57
 #elif defined(BOARD_imx8mm_evk_hyp)
 #define SERIAL_IRQ 79
+#elif defined(BOARD_imx8mq_evk)
+#define SERIAL_IRQ 337
 #elif defined(BOARD_zcu102)
 #define SERIAL_IRQ 53
 #else
@@ -77,7 +86,54 @@ extern char _guest_bare_image_end[];
 
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
- 
+// uintptr_t cyclecounters_vaddr;
+
+// struct bench *bench = (void *)(uintptr_t)0x5010000;
+
+// uint64_t start;
+// uint64_t idle_ccount_start;
+// uint64_t idle_overflow_start;
+
+seL4_Word tcb_test(seL4_TCB _service, seL4_Bool suspend_source, seL4_Uint8 arch_flags)
+{
+    seL4_Error result;
+    seL4_MessageInfo_t tag = seL4_MessageInfo_new(TCBReadRegisters, 0, 0, 2);
+    seL4_MessageInfo_t output_tag;
+    seL4_Word mr0;
+    seL4_Word mr1;
+    seL4_Word mr2;
+    seL4_Word mr3;
+
+    /* Marshal and initialise parameters. */
+    mr0 = (suspend_source & 0x1ull) | ((arch_flags & 0xffull) << 8);
+    mr1 = 1;
+    mr2 = 0;
+    mr3 = 0;
+
+    /* Perform the call, passing in-register arguments directly. */
+    output_tag = seL4_CallWithMRs(_service, tag,
+                                  &mr0, &mr1, &mr2, &mr3);
+    result = (seL4_Error)seL4_MessageInfo_get_label(output_tag);
+
+    /* Unmarshal registers into IPC buffer on error. */
+    if (result != seL4_NoError)
+    {
+        seL4_SetMR(0, mr0);
+        seL4_SetMR(1, mr1);
+        seL4_SetMR(2, mr2);
+        seL4_SetMR(3, mr3);
+#ifdef CONFIG_KERNEL_INVOCATION_REPORT_ERROR_IPC
+        if (seL4_CanPrintError())
+        {
+            seL4_DebugPutString(seL4_GetDebugError());
+        }
+#endif
+    }
+
+    /* Unmarshal result. */
+    return mr0;
+}
+
 static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     /*
      * For now we by default simply ack the serial IRQ, we have not
@@ -102,14 +158,7 @@ uintptr_t load_kernel(char *kernel_image, size_t kernel_size) {
 }
 
 void init(void) {
-    sel4bench_init();
-    ccnt_t before, after;
-    for (int i = 0; i < 20; i++) {
-        before = sel4bench_get_cycle_count();
-        seL4_BenchmarkNullSyscall();
-        after = sel4bench_get_cycle_count();
-        printf("Null Syscall Cycles diff: %ld\n", after - before);
-    }
+    
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
@@ -144,8 +193,26 @@ void init(void) {
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
 
+    // microkit_notify(START_PMU);
+
+    // start = bench->ts;
+    // idle_ccount_start = bench->ccount;
+    // idle_overflow_start = bench->overflows;
+
     /* Finally start the guest */
+    sel4bench_init();
+
+    ccnt_t before, after;
+    for (int i = 0; i < 100; i++) {
+        before = sel4bench_get_cycle_count();
+        tcb_test(BASE_VM_TCB_CAP + GUEST_VCPU_ID, false, 0);
+        after = sel4bench_get_cycle_count();
+        add_event(after - before, TestingEvent, TCB_ReadRegisters);
+    }
+
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+
+
 }
 
 void notified(microkit_channel ch) {
@@ -172,14 +239,26 @@ void notified(microkit_channel ch) {
 
 void fault(microkit_id id, microkit_msginfo msginfo) {
     bool success = fault_handle(id, msginfo);
-    ccnt_t before, after;
 
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
-        before = sel4bench_get_cycle_count();
-        microkit_fault_reply(microkit_msginfo_new(0, 0));
-        after = sel4bench_get_cycle_count();
-        add_event(after - before, cur_event, Microkit_Reply);
+        // before = sel4bench_get_cycle_count();
+        // microkit_fault_reply(microkit_msginfo_new(0, 0));
+        // after = sel4bench_get_cycle_count();
+        // add_event(after - before, cur_event, Microkit_Reply);
+        have_reply = true;
+        reply_tag = microkit_msginfo_new(0, 0);
+        // } else {
+        //     printf("rut roh!\n");
+        //     uint64_t total = 0, idle = 0;
+        //     total = bench->ts - start;
+        //     total += (__LONG_MAX__ * 2UL + 1UL) * (bench->overflows - idle_overflow_start);
+        //     idle = bench->ccount - idle_ccount_start;
+
+        //     printf("Total: %lu\n", total);
+        //     printf("Idle: %lu\n", idle);
+
+        //     microkit_notify(STOP_PMU);
     }
 }
