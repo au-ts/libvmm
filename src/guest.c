@@ -19,7 +19,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
         BASE_VM_TCB_CAP + boot_vcpu_id,
         false, // We'll explcitly start the guest below rather than in this call
         0, // No flags
-        SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
+        4, // Writing to x0, pc, and spsr. Due to the ordering of seL4_UserContext the count must be 4.
         &regs
     );
     assert(err == seL4_NoError);
