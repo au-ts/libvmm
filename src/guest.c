@@ -39,7 +39,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
             BASE_VM_TCB_CAP + boot_vcpu_id,
             false, // We'll explcitly start the guest below rather than in this call
             0, // No flags
-            3, // TEMP: Only works for baremetal guests, need atleast 3 to write spsr register enter EL1 with hypervisor mode
+            4, // TEMP: Only works for baremetal guests, need atleast 3 to write spsr register enter EL1 with hypervisor mode
             // SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
             &regs
         );

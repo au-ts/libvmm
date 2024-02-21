@@ -1,0 +1,49 @@
+# This is a baisc script that concatenates the given Device Tree Sources.
+# Useful for when you have a single DTS
+# Author: tim-arney
+#!/bin/bash
+
+usage() {
+    cmd=$(basename "$0")
+    echo "usage: $cmd <base_dts> [<overlay1> ... <overlayN>]" >&2
+    exit 1
+}
+
+if [ "$#" -lt 1 ]
+then
+    usage
+fi
+
+BASE="$1"
+shift
+OVERLAYS="$*"
+
+if [ ! -f "$BASE" ]
+then
+    echo "error: file not found: $BASE" >&2
+    exit 1
+fi 
+
+if ! grep '/dts-v1/;' "$BASE"  > /dev/null
+then
+    echo "error: '/dts-v1/;' tag not found in $BASE, are you sure this is a base file?" >&2
+    exit 1
+fi
+
+for OVERLAY in $OVERLAYS
+do
+    if [ ! -f "$OVERLAY" ]
+    then
+        echo "error: file not found: $OVERLAY" >&2
+        exit 1
+    fi 
+
+    if grep '/dts-v1/;' "$OVERLAY"  > /dev/null
+    then
+        echo "error: '/dts-v1/;' tag found in $OVERLAY, should only be present in the base file" >&2
+        exit 1
+    fi
+done
+
+cat "$BASE" $OVERLAYS
+

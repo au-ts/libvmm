@@ -30,7 +30,7 @@ enum timed_event cur_event = ERROR;
 
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
-    // Assume 64-bit instruction
+    // Assume 32-bit instruction
     regs->pc += 4;
     ccnt_t before, after;
     before = sel4bench_get_cycle_count();
@@ -57,27 +57,22 @@ char *fault_to_string(seL4_Word fault_label) {
     }
 }
 
+/*
+ * Possible 'Syndrome Access Size' defined in ARMv8-A specification. The values
+ * of the enums line up with the SAS encoding of the ISS encoding for an
+ * exception from a Data Abort.
+ */
 enum fault_width {
-    WIDTH_DOUBLEWORD = 0,
-    WIDTH_WORD = 1,
-    WIDTH_HALFWORD = 2,
-    WIDTH_BYTE = 3,
+    WIDTH_BYTE = 0b00,
+    WIDTH_HALFWORD = 0b01,
+    WIDTH_WORD = 0b10,
+    WIDTH_DOUBLEWORD = 0b11,
 };
 
 static enum fault_width fault_get_width(uint64_t fsr)
 {
-    if (HSR_IS_SYNDROME_VALID(fsr)) {
-        switch (HSR_SYNDROME_WIDTH(fsr)) {
-            case 0: return WIDTH_BYTE;
-            case 1: return WIDTH_HALFWORD;
-            case 2: return WIDTH_WORD;
-            case 3: return WIDTH_DOUBLEWORD;
-            default:
-                // @ivanv: reviist
-                // print_fault(f);
-                assert(0);
-                return 0;
-        }
+    if (HSR_IS_SYNDROME_VALID(fsr) && HSR_SYNDROME_WIDTH(fsr) <= WIDTH_DOUBLEWORD) {
+        return (enum fault_width) (HSR_SYNDROME_WIDTH(fsr));
     } else {
         LOG_VMM_ERR("Received invalid FSR: 0x%lx\n", fsr);
         // @ivanv: reviist
@@ -118,9 +113,14 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
 }
 
 static seL4_Word wzr = 0;
-seL4_Word *decode_rt(uint64_t reg, seL4_UserContext *regs)
+seL4_Word *decode_rt(size_t reg_idx, seL4_UserContext *regs)
 {
-    switch (reg) {
+    /*
+     * This switch statement is necessary due to a mismatch between how
+     * seL4 orders the TCB registers compared to what the architecture
+     * encodes the Syndrome Register transfer.
+     */
+    switch (reg_idx) {
         case 0: return &regs->x0;
         case 1: return &regs->x1;
         case 2: return &regs->x2;
@@ -154,8 +154,7 @@ seL4_Word *decode_rt(uint64_t reg, seL4_UserContext *regs)
         case 30: return &regs->x30;
         case 31: return &wzr;
         default:
-            printf("invalid reg %d\n", reg);
-            assert(!"Invalid register");
+            LOG_VMM_ERR("failed to decode Rt, attempted to access invalid register index 0x%lx\n", reg_idx);
             return NULL;
     }
 }
@@ -172,7 +171,6 @@ bool fault_is_read(uint64_t fsr)
 
 static int get_rt(uint64_t fsr)
 {
-
     int rt = -1;
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         rt = HSR_SYNDROME_RT(fsr);
@@ -189,7 +187,7 @@ static int get_rt(uint64_t fsr)
 uint64_t fault_get_data(seL4_UserContext *regs, uint64_t fsr)
 {
     /* Get register opearand */
-    int rt  = get_rt(fsr);
+    int rt = get_rt(fsr);
 
     uint64_t data = *decode_rt(rt, regs);
 
@@ -225,8 +223,6 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 
     seL4_Word *reg_ctx = decode_rt(rt, regs);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
-    // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
-    //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
 
     return fault_advance_vcpu(vcpu_id, regs);
 }

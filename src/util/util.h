@@ -81,7 +81,8 @@ static void assert_fail(
 
 #ifndef CONFIG_DEBUG_BUILD
 
-#define assert(expr)
+#define _unused(x) ((void)(x))
+#define assert(expr) _unused(expr)
 
 #else
 
