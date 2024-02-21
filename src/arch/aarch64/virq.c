@@ -2,6 +2,8 @@
 #include "vgic/vgic.h"
 #include "../../util/util.h"
 #include "../../virq.h"
+#include "temp_bench.h"
+#include "fault.h"
 
 #define SGI_RESCHEDULE_IRQ  0
 #define SGI_FUNC_CALL       1
@@ -9,7 +11,11 @@
 
 static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 {
+    ccnt_t before, after;
+    before = sel4bench_get_cycle_count();
     microkit_arm_vcpu_ack_vppi(vcpu_id, irq);
+    after = sel4bench_get_cycle_count();
+    add_event(after - before, cur_event, Microkit_ARM_VCPU_Ack);
 }
 
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}

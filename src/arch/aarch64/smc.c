@@ -165,7 +165,7 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
     before = sel4bench_get_cycle_count();
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     after = sel4bench_get_cycle_count();
-    add_event(after - before, VCPUFault, TCB_ReadRegisters);
+    add_event(after - before, cur_event, TCB_ReadRegisters);
     assert(err == seL4_NoError);
 
     size_t fn_number = smc_get_function_number(&regs);

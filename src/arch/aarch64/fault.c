@@ -261,7 +261,7 @@ bool fault_handle_vppi_event(size_t vcpu_id)
         before = sel4bench_get_cycle_count();
         microkit_arm_vcpu_ack_vppi(vcpu_id, ppi_irq);
         after = sel4bench_get_cycle_count();
-        add_event(after - before, VPPIEvent, Microkit_Ack_VPPI);
+        add_event(after - before, cur_event, Microkit_Ack_VPPI);
     }
 
     return true;
@@ -309,7 +309,7 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     before = sel4bench_get_cycle_count();
     seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     after = sel4bench_get_cycle_count();
-    add_event(after - before, UnknownSyscall, TCB_ReadRegisters);
+    add_event(after - before, cur_event, TCB_ReadRegisters);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failure reading TCB registers when handling unknown syscall, error %d", err);
@@ -388,7 +388,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     before = sel4bench_get_cycle_count();
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     after = sel4bench_get_cycle_count();
-    add_event(after - before, VMFault, TCB_ReadRegisters);
+    add_event(after - before, cur_event, TCB_ReadRegisters);
     assert(err == seL4_NoError);
 
     switch (addr) {
@@ -430,6 +430,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
     size_t label = microkit_msginfo_get_label(msginfo);
     bool success = false;
+    ccnt_t before, after;
     // LOG_VMM("Got fault %s\n", fault_to_string(label));
     switch (label) {
         case seL4_Fault_VMFault:
@@ -446,7 +447,10 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
             break;
         case seL4_Fault_VGICMaintenance:
             cur_event = VGICMaintenance;
+            before = sel4bench_get_cycle_count();
             success = fault_handle_vgic_maintenance(vcpu_id);
+            after = sel4bench_get_cycle_count();
+            add_event(after - before, cur_event, LibVMM_Total_Event);
             break;
         case seL4_Fault_VCPUFault:
             cur_event = VCPUFault;
@@ -454,7 +458,10 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
             break;
         case seL4_Fault_VPPIEvent:
             cur_event = VPPIEvent;
+            before = sel4bench_get_cycle_count();
             success = fault_handle_vppi_event(vcpu_id);
+            after = sel4bench_get_cycle_count();
+            add_event(after - before, cur_event, LibVMM_Total_Event);
             break;
         default:
             /* We have reached a genuinely unexpected case, stop the guest. */

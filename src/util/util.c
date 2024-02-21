@@ -17,12 +17,25 @@ void _putchar(char character)
 #ifdef CONFIG_PRINTING
     microkit_dbg_putc(character);
 #else
-#define UART_WFIFO 0x0
-#define UART_STATUS 0xC
-#define UART_TX_FULL (1 << 21)
+
+#if defined(BOARD_odroidc4)
+    #define UART_WFIFO 0x0
+    #define UART_STATUS 0xC
+    #define UART_TX_FULL (1 << 21)
 
     while ((*UART_REG(UART_STATUS) & UART_TX_FULL))
         ;
     *UART_REG(UART_WFIFO) = character;
+#elif defined(BOARD_qemu_arm_virt)
+    qemu_arm_virt printing during benchmark mode
+    #define UART_BASE 0x9000000
+    #define UARTDR 0x000
+    #define UARTFR 0x018
+    #define PL011_UARTFR_TXFF (1 << 5)
+
+            while ((*UART_REG(UARTFR) & PL011_UARTFR_TXFF) != 0)
+                ;
+            *UART_REG(UARTDR) = character;
+#endif
 #endif
 }
