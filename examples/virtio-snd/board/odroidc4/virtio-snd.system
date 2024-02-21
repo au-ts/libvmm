@@ -27,10 +27,10 @@
     <memory_region name="snd_shared"   size="0x1000" />
     <memory_region name="snd_commands"  size="0x200_000" page_size="0x200_000"/>
     <memory_region name="snd_responses" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_tx_used"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_tx_free"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_rx_used"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_rx_free"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_tx_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_tx_res"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_rx_res"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_rx_req"  size="0x200_000" page_size="0x200_000"/>
     <!-- Sound data (both sDDF and UIO) -->
     <memory_region name="snd_tx_data" size="0x200_000" page_size="0x200_000" />
     <memory_region name="snd_rx_data" size="0x200_000" page_size="0x200_000" />
@@ -49,16 +49,16 @@
         <map mr="tx_data_serial_vmm_1" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_tx_data"/>
-        <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" setvar_vaddr="sound_rx_data"/>
+        <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="false" setvar_vaddr="sound_tx_data"/>
+        <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="false" setvar_vaddr="sound_rx_data"/>
         
-        <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="true" setvar_vaddr="sound_shared_state" />
-        <map mr="snd_commands"  vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="sound_commands" />
-        <map mr="snd_responses" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="sound_responses" />
-        <map mr="snd_tx_used"   vaddr="0x4_400_000"  perms="rw" cached="true" setvar_vaddr="sound_tx_used" />
-        <map mr="snd_tx_free"   vaddr="0x4_600_000"  perms="rw" cached="true" setvar_vaddr="sound_tx_free" />
-        <map mr="snd_rx_used"   vaddr="0x4_800_000"  perms="rw" cached="true" setvar_vaddr="sound_rx_used" />
-        <map mr="snd_rx_free"   vaddr="0x4_a00_000"  perms="rw" cached="true" setvar_vaddr="sound_rx_free" />
+        <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
+        <map mr="snd_commands"  vaddr="0x4_000_000" perms="rw" cached="false" setvar_vaddr="sound_commands" />
+        <map mr="snd_responses" vaddr="0x4_200_000" perms="rw" cached="false" setvar_vaddr="sound_responses" />
+        <map mr="snd_tx_req"   vaddr="0x4_400_000"  perms="rw" cached="false" setvar_vaddr="sound_tx_req" />
+        <map mr="snd_tx_res"   vaddr="0x4_600_000"  perms="rw" cached="false" setvar_vaddr="sound_tx_res" />
+        <map mr="snd_rx_res"   vaddr="0x4_800_000"  perms="rw" cached="false" setvar_vaddr="sound_rx_res" />
+        <map mr="snd_rx_req"   vaddr="0x4_a00_000"  perms="rw" cached="false" setvar_vaddr="sound_rx_req" />
 
         <virtual_machine name="client_linux" id="0" priority="100">
             <map mr="client_vm_ram" vaddr="0x20000000" perms="rwx" />
@@ -92,15 +92,15 @@
             <map mr="usb_2"    vaddr="0xff500000" perms="rw" cached="false" />
 
             <map mr="snd_shared" vaddr="0x6_f00_000" perms="rw" cached="false" />
-            <map mr="snd_commands"  vaddr="0x7_000_000" perms="rw" cached="true" />
-            <map mr="snd_responses" vaddr="0x7_200_000" perms="rw" cached="true" />
-            <map mr="snd_tx_used"   vaddr="0x7_400_000"  perms="rw" cached="true" />
-            <map mr="snd_tx_free"   vaddr="0x7_600_000"  perms="rw" cached="true" />
-            <map mr="snd_rx_used"   vaddr="0x7_800_000"  perms="rw" cached="true" />
-            <map mr="snd_rx_free"   vaddr="0x7_a00_000"  perms="rw" cached="true" />
+            <map mr="snd_commands"  vaddr="0x7_000_000" perms="rw" cached="false" />
+            <map mr="snd_responses" vaddr="0x7_200_000" perms="rw" cached="false" />
+            <map mr="snd_tx_req"   vaddr="0x7_400_000"  perms="rw" cached="false" />
+            <map mr="snd_tx_res"   vaddr="0x7_600_000"  perms="rw" cached="false" />
+            <map mr="snd_rx_res"   vaddr="0x7_800_000"  perms="rw" cached="false" />
+            <map mr="snd_rx_req"   vaddr="0x7_a00_000"  perms="rw" cached="false" />
 
-            <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="true" />
-            <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="true" />
+            <map mr="snd_tx_data" vaddr="0x9_200_000" perms="rw" cached="false" />
+            <map mr="snd_rx_data" vaddr="0x9_600_000" perms="rw" cached="false" />
         </virtual_machine>
 
         <!-- USB -->

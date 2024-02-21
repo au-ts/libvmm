@@ -44,7 +44,6 @@ typedef struct driver_state {
 
 static void signal_ready_to_vmm(char *signal_addr)
 {
-    LOG_SOUND("Signalling sound driver VMM\n");
     *signal_addr = 1;
 }
 
@@ -357,7 +356,6 @@ int main(void)
 
         if (fds[UIO_POLLFD].revents & POLLIN) {
             int32_t irq_count;
-            printf("UIO SND|INFO: Got UIO interrupt (new commands!)\n");
             if (read(uio_fd, &irq_count, sizeof(irq_count)) != sizeof(irq_count)) {
                 LOG_SOUND_ERR("Failed to read interrupt\n");
                 break;

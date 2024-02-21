@@ -102,7 +102,6 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
 }
 
 static bool uio_snd_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
-    LOG_VMM("Got fault from UIO sound driver, notifying client (offset %#lx)\n", offset);
     microkit_notify(SND_CLIENT_CH);
     return true;
 }
@@ -212,7 +211,6 @@ void notified(microkit_channel ch) {
             break;
         }
         case SND_CLIENT_CH: {
-            LOG_VMM("Injecting IRQ to UIO sound driver\n");
             success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);

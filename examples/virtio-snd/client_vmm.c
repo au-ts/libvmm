@@ -79,10 +79,10 @@ static ring_handle_t *serial_ring_handles[SDDF_SERIAL_NUM_HANDLES];
 
 uintptr_t sound_commands;
 uintptr_t sound_responses;
-uintptr_t sound_tx_used;
-uintptr_t sound_tx_free;
-uintptr_t sound_rx_used;
-uintptr_t sound_rx_free;
+uintptr_t sound_tx_req;
+uintptr_t sound_tx_res;
+uintptr_t sound_rx_res;
+uintptr_t sound_rx_req;
 
 uintptr_t sound_rx_data;
 uintptr_t sound_tx_data;
@@ -171,9 +171,9 @@ void init(void) {
 
     assert(sound_commands);
     assert(sound_responses);
-    assert(sound_rx_free);
-    assert(sound_rx_used);
-    assert(sound_tx_free);
+    assert(sound_rx_req);
+    assert(sound_rx_res);
+    assert(sound_tx_res);
     assert(sound_rx_data);
     assert(sound_tx_data);
 
@@ -181,10 +181,10 @@ void init(void) {
     snd_state.rings = (sddf_snd_rings_t){
         .commands  = (void *)sound_commands,
         .responses = (void *)sound_responses,
-        .tx_req   = (void *)sound_tx_used,
-        .tx_res   = (void *)sound_tx_free,
-        .rx_res   = (void *)sound_rx_used,
-        .rx_req   = (void *)sound_rx_free,
+        .tx_req   = (void *)sound_tx_req,
+        .tx_res   = (void *)sound_tx_res,
+        .rx_res   = (void *)sound_rx_res,
+        .rx_req   = (void *)sound_rx_req,
     };
     sddf_snd_rings_init_default(&snd_state.rings);
 

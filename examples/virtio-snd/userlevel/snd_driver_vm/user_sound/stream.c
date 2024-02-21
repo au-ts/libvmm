@@ -47,7 +47,6 @@ struct stream {
     snd_pcm_sframes_t period_size;
     unsigned rate;
 
-    pcm_op_t pcm_op;
     queue_t *consumed_frames;
     snd_pcm_sframes_t frame_offset;
     int drain_count;
@@ -77,7 +76,6 @@ struct buffer_state {
     snd_pcm_sframes_t period_size;
 };
 
-#define ZERO_COUNT 4096
 
 static const char *stream_state_str(stream_state_t state);
 static char *snd_state_str(snd_pcm_t *handle);
@@ -119,7 +117,6 @@ static bool send_response(stream_t *stream)
     response->latency_bytes = stream->buffer_size;
     response->status = stream->state == STREAM_STATE_IO_ERR ? SDDF_SND_S_IO_ERR : SDDF_SND_S_OK;
 
-    LOG_SOUND("Responding to TX (cookie %d)\n", response->cookie);
     if (sddf_snd_enqueue_pcm_data(stream->pcm_res, response) != 0) {
         LOG_SOUND_ERR("Failed to enqueue tx_free\n");
         return false;
@@ -128,60 +125,84 @@ static bool send_response(stream_t *stream)
     return true;
 }
 
-static snd_pcm_sframes_t stream_read(stream_t *stream, void *pcm_data, snd_pcm_sframes_t to_read)
+/** memcpy implementation safe for device memory */
+static void* device_copy(void *dst, void const *src, size_t len)
 {
-    snd_pcm_sframes_t offset = 0;
+    long *l_dst = (long *)dst;
+    long const *l_src = (long const *)src;
 
-    while (to_read > 0) {
-        snd_pcm_sframes_t read
-            = snd_pcm_readi(stream->handle, pcm_data + offset * stream->frame_size, to_read);
-
-        if (read == -EAGAIN) {
-            return offset;
-        } else if (read < 0) {
-            LOG_SOUND_ERR("Failed to read pcm: %s, state %s\n", snd_strerror(read),
-                          snd_state_str(stream->handle));
-
-            stream->state = STREAM_STATE_IO_ERR;
-            return offset;
+    if (((uintptr_t)src % sizeof(long) == 0) && ((uintptr_t)dst % sizeof(long) == 0))
+    {
+        while (len >= sizeof(long))
+        {
+            *l_dst++ = *l_src++;
+            len -= sizeof(long);
         }
-
-        if (read < to_read) {
-            LOG_SOUND_WARN("Tried to write %ld but wrote %ld\n", to_read, read);
-        }
-
-        to_read -= read;
-        offset += read;
     }
-    return offset;
+
+    char *c_dst = (char *)l_dst;
+    char const *c_src = (char const *)l_src;
+
+    while (len--)
+    {
+        *c_dst++ = *c_src++;
+    }
+
+    return dst;
 }
 
-static snd_pcm_sframes_t stream_write(stream_t *stream, void *pcm_data, snd_pcm_sframes_t to_write)
+static snd_pcm_sframes_t stream_xfer(stream_t *stream,
+                                     void *user_pcm,
+                                     snd_pcm_sframes_t frames,
+                                     bool write)
 {
-    snd_pcm_sframes_t offset = 0;
+    snd_pcm_sframes_t user_offset = 0;
 
-    while (to_write > 0) {
+    while (frames > 0) {
+        const snd_pcm_channel_area_t *areas;
+        snd_pcm_uframes_t alsa_offset;
+        snd_pcm_uframes_t avail = (snd_pcm_uframes_t)frames;
+
+        int err = snd_pcm_mmap_begin(stream->handle, &areas, &alsa_offset, &avail);
+        if (err == -EAGAIN) {
+            return user_offset;
+        } else if (err < 0) {
+            LOG_SOUND_ERR("Failed to mmap pcm data: %s, state %s\n", snd_strerror(err),
+                   snd_state_str(stream->handle));
+
+            stream->state = STREAM_STATE_IO_ERR;
+            return user_offset;
+        }
+
+        snd_pcm_sframes_t to_write = min((snd_pcm_sframes_t)avail, frames);
+        size_t nbytes = to_write * stream->frame_size;
+
+        void *alsa_data = areas[0].addr + (areas[0].first + alsa_offset * areas[0].step) / 8;
+        void *user_data = user_pcm + user_offset * stream->frame_size;
+
+        if (write) {
+            device_copy(alsa_data, user_data, nbytes);
+        } else {
+            device_copy(user_data, alsa_data, nbytes);
+        }
+
         snd_pcm_sframes_t written
-            = snd_pcm_writei(stream->handle, pcm_data + offset * stream->frame_size, to_write);
+            = snd_pcm_mmap_commit(stream->handle, alsa_offset, to_write);
 
         if (written == -EAGAIN) {
-            return offset;
+            return user_offset;
         } else if (written < 0) {
             LOG_SOUND_ERR("Failed to flush pcm: %s, state %s\n", snd_strerror(written),
                    snd_state_str(stream->handle));
 
             stream->state = STREAM_STATE_IO_ERR;
-            return offset;
+            return user_offset;
         }
 
-        if (written < to_write) {
-            LOG_SOUND_WARN("Tried to write %ld but wrote %ld\n", to_write, written);
-        }
-
-        to_write -= written;
-        offset += written;
+        frames -= written;
+        user_offset += written;
     }
-    return offset;
+    return user_offset;
 }
 
 static int flush_pcm(stream_t *stream, int max_count)
@@ -195,7 +216,7 @@ static int flush_pcm(stream_t *stream, int max_count)
         return response_count;
     }
 
-    while (!queue_empty(stream->pcm_req) && max_count-- > 0) {
+    while (!queue_empty(stream->pcm_req) && max_count-- > 0 && avail > 0) {
 
         sddf_snd_pcm_data_t *pcm = queue_front(stream->pcm_req);
 
@@ -206,8 +227,8 @@ static int flush_pcm(stream_t *stream, int max_count)
         void *addr_offset = (void *)pcm->addr + (stream->frame_offset * stream->frame_size);
         void *pcm_data = translate_addr(stream, addr_offset);
 
-        snd_pcm_sframes_t consumed = stream->pcm_op(stream, pcm_data, to_consume);
-
+        snd_pcm_sframes_t consumed = stream_xfer(stream, pcm_data, to_consume,
+                                                 stream->direction == SND_PCM_STREAM_PLAYBACK);
         if (consumed < to_consume) {
             LOG_SOUND_ERR("Failed to read/write whole rx/tx\n");
             break;
@@ -217,13 +238,6 @@ static int flush_pcm(stream_t *stream, int max_count)
         stream->frame_offset += consumed;
 
         if (stream->frame_offset == pcm_frames) {
-
-            LOG_SOUND("Consumed frame (cookie %d)\n", pcm->cookie);
-            // TODO: remove
-            if(pcm->cookie == 0) {
-                LOG_SOUND("COOKIE 0\n");
-                while(1);
-            }
 
             queue_enqueue(stream->consumed_frames, pcm);
 
@@ -239,8 +253,14 @@ static int flush_pcm(stream_t *stream, int max_count)
 
             stream->frame_offset = 0;
         }
-        if (avail <= 0) {
-            break;
+    }
+
+    // Autoplay once buffer is full
+    if (avail == 0 && stream->state == STREAM_STATE_PLAYING && snd_pcm_state(stream->handle) == SND_PCM_STATE_PREPARED) {
+        int err = snd_pcm_start(stream->handle);
+        if (err < 0) {
+            LOG_SOUND_ERR("Failed to start ALSA stream for playback\n");
+            return SDDF_SND_S_IO_ERR;
         }
     }
 
@@ -410,7 +430,7 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     struct buffer_state buffer_state;
     sddf_snd_status_code_t code;
 
-    code = set_hwparams(handle, stream->hw_params, SND_PCM_ACCESS_RW_INTERLEAVED, &alsa_params,
+    code = set_hwparams(handle, stream->hw_params, SND_PCM_ACCESS_MMAP_INTERLEAVED, &alsa_params,
                         &buffer_state);
 
     if (code != SDDF_SND_S_OK) {
@@ -587,8 +607,6 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
 sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_command_t *cmd, bool *blocked,
                                       bool *notify)
 {
-    LOG_SOUND("Handling command %s\n", sddf_snd_command_code_str(cmd->code));
-
     switch (cmd->code) {
     case SDDF_SND_CMD_PCM_SET_PARAMS:
         return stream_set_params(stream, &cmd->set_params);
@@ -623,7 +641,6 @@ bool stream_flush_commands(stream_t *stream)
         response.cookie = cmd->cookie;
         response.status = status;
 
-        LOG_SOUND("Responding with %s (cookie %d)\n", sddf_snd_status_code_str(status), response.cookie);
         if (sddf_snd_enqueue_response(stream->responses, &response) != 0) {
             LOG_SOUND_ERR("Failed to enqueue response");
             break;
@@ -731,7 +748,6 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
     stream->translate_offset = translate_offset;
 
     stream->timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
-    stream->pcm_op = direction == SND_PCM_STREAM_PLAYBACK ? stream_write : stream_read;
 
     stream->commands = queue_create(sizeof(sddf_snd_command_t), SDDF_SND_NUM_BUFFERS / 4);
     stream->responses = cmd_responses;

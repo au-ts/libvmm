@@ -504,7 +504,6 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     cmd.set_params.format = set_params->format;
     cmd.set_params.rate = set_params->rate;
 
-    LOG_SOUND("Enqueuing set params (cookie %d)\n", id);
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
@@ -540,7 +539,6 @@ static int handle_basic_cmd(struct virtio_device *dev,
     cmd.cookie = id;
     cmd.stream_id = stream_id;
 
-    LOG_SOUND("Enqueuing command (cookie %d)\n", id);
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
@@ -769,12 +767,6 @@ static void handle_xfer(struct virtio_device *dev,
                     goto abort_xfer;
                 }
 
-                // TODO: remove
-                // if (transmit)
-                LOG_SOUND("Enqueing %u bytes (cookie %d)\n", pcm_transmitted, msg_id);
-                // if (transmit) {
-                //     print_bytes((void *)pcm_buffer.addr);
-                // }
                 msg->ref_count++;
                 *notify_driver = true;
 
@@ -785,19 +777,11 @@ static void handle_xfer(struct virtio_device *dev,
 
                 pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
                 pcm_transmitted = 0;
-                // LOG_SOUND("Refreshed PCM, xfer %u\n", to_transmit);
             }
         }
     }
 
     if (pcm_transmitted > 0) {
-        // if (transmit)
-        LOG_SOUND("Enqueing last %u bytes (cookie %d)\n", pcm_transmitted, msg_id);
-        // // TODO: remove
-        // if (transmit) {
-        //     print_bytes((void *)pcm_buffer.addr);
-        // }
-
         sddf_snd_pcm_data_t pcm;
         pcm.addr = pcm_buffer.addr;
         pcm.len = pcm_transmitted;
@@ -881,16 +865,11 @@ static void handle_virtq(struct virtio_device *dev,
 
 static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
 {
-    LOG_SOUND("virtIO device notified by virtIO driver (client VM)\n");
-
     if (dev->data.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
         // @alexbr: handle error appropriately
         LOG_SOUND_ERR("Invalid queue\n");
         return 0;
     }
-
-    // debug_device_info(&dev->data);
-    // debug_virq_contents(dev);
 
     bool notify_driver = false;
     bool respond = false;
@@ -898,11 +877,9 @@ static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
     handle_virtq(dev, dev->data.QueueNotify, &notify_driver, &respond);
 
     if (notify_driver) {
-        LOG_SOUND("Notifying sound driver\n");
         microkit_notify(dev->sddf_ch[VIRTIO_SND_CH_INDEX]);
     }
     if (respond) {
-        LOG_SOUND("Responding\n");
         virtio_snd_respond(dev);
     }
 
@@ -951,9 +928,9 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
     msg_handle_t *msg = msg_store_get(&messages, cookie);
     // TODO: msg might be invalid on tx error if already removed
 
-    LOG_SOUND("Got response with status %s, cookie %u, ref_count %u, desc_head %u\n",
-        sddf_snd_status_code_str(status), cookie,
-        msg->ref_count, msg->desc_head);
+    // LOG_SOUND("Got response with status %s, cookie %u, ref_count %u, desc_head %u\n",
+    //     sddf_snd_status_code_str(status), cookie,
+    //     msg->ref_count, msg->desc_head);
 
     if (status != SDDF_SND_S_OK) {
         msg->status = status;
@@ -1128,8 +1105,8 @@ void virtio_snd_notified(struct virtio_device *dev)
     sddf_snd_state_t *state = get_state(dev);
     bool respond = false;
 
-    LOG_SOUND("virtIO sound device notified by server (responses %p of len %lu)\n",
-        state->rings.responses, sddf_snd_ring_size(&state->rings.responses->state));
+    // LOG_SOUND("virtIO sound device notified by server (responses %p of len %lu)\n",
+    //     state->rings.responses, sddf_snd_ring_size(&state->rings.responses->state));
 
     snd_config.streams = state->shared_state->streams;
 
@@ -1138,7 +1115,6 @@ void virtio_snd_notified(struct virtio_device *dev)
 
         uint32_t virtio_response = virtio_status_from_sddf(response.status);
 
-        LOG_SOUND("Got command response\n");
         respond_to_message(&dev->vqs[CONTROLQ].virtq, response.status, response.cookie,
                     &virtio_response, sizeof(virtio_response), &respond);
     }
@@ -1152,7 +1128,6 @@ void virtio_snd_notified(struct virtio_device *dev)
         response.status = virtio_status_from_sddf(pcm.status);
         response.latency_bytes = pcm.latency_bytes;
 
-        LOG_SOUND("Got tx response\n");
         respond_to_message(&dev->vqs[TXQ].virtq, pcm.status, pcm.cookie,
                     &response, sizeof(response), &respond);
     }
@@ -1162,10 +1137,7 @@ void virtio_snd_notified(struct virtio_device *dev)
         buffer_queue_enqueue(&rx_buffers, pcm.addr, pcm.len);
     }
 
-    // LOG_SOUND("Outlying TX|RX: %d|%d\n", outlying_tx, outlying_rx);
-
     if (respond) {
-        LOG_SOUND("virtIO device responding to virtio driver\n");
         virtio_snd_respond(dev);
     }
 }
