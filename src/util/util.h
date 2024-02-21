@@ -58,6 +58,13 @@ static void assert_fail(
     while (1) {}
 }
 
+#ifndef CONFIG_DEBUG_BUILD
+
+#define _unused(x) ((void)(x))
+#define assert(expr) _unused(expr)
+
+#else
+
 #define assert(expr) \
     do { \
         if (!(expr)) { \
@@ -65,3 +72,4 @@ static void assert_fail(
         } \
     } while(0)
 
+#endif
