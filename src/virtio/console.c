@@ -16,10 +16,6 @@
 
 #define LOG_CONSOLE_ERR(...) do{ printf("VIRTIO(CONSOLE)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
-
 static void virtio_console_features_print(uint32_t features) {
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);

@@ -15,6 +15,9 @@
 #define GUEST_VCPU_ID 0
 #define GUEST_NUM_VCPUS 1
 
+#define BIT_LOW(n)  (1ul << (n))
+#define BIT_HIGH(n) (1ul << (n - 32))
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
 
 #define CTZ(x) __builtin_ctz(x)
