@@ -73,7 +73,6 @@ fn init() -> VmmHandler {
                                             dtb_addr, GUEST_DTB_VADDR, dtb.len(),
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
                                          );
-        // @ivanv, deal with unused vars
         _ = virq_controller_init(GUEST_VCPU_ID);
         _ = virq_register(GUEST_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
         match UART_CH.irq_ack() {
