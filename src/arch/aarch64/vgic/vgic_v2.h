@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include "util.h"
+#include "guest.h"
 
 #define GIC_ENABLED 1
 

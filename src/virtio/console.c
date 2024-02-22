@@ -2,6 +2,7 @@
 #include "virtio/mmio.h"
 #include "virtio/console.h"
 #include "util/util.h"
+#include "guest.h"
 #include "virq.h"
 
 /* Uncomment this to enable debug logging */

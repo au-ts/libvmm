@@ -9,6 +9,7 @@
 #include "linux.h"
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
+		                     uintptr_t ram_size,
                              uintptr_t kernel,
                              size_t kernel_size,
                              uintptr_t dtb_src,
@@ -18,14 +19,41 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t initrd_dest,
                              size_t initrd_size)
 {
+    // First we inspect the kernel image header to confirm it is a valid image
+    // and to determine where in memory to place the image.
+    struct linux_image_header *image_header = (struct linux_image_header *) kernel;
+    assert(image_header->magic == LINUX_IMAGE_MAGIC);
+    if (image_header->magic != LINUX_IMAGE_MAGIC) {
+        LOG_VMM_ERR("Linux kernel image magic check failed\n");
+        return 0;
+    }
+    uintptr_t kernel_dest = ram_start + image_header->text_offset;
     // Before doing any copying, let's sanity check the addresses.
     // First we'll check that everything actually lives inside RAM.
-    // @ivanv: TODO
-    // Check that the kernel and DTB to do not overlap
+    uintptr_t ram_end = ram_start + ram_size;
     uintptr_t dtb_start = dtb_dest;
     uintptr_t dtb_end = dtb_start + dtb_size;
     uintptr_t kernel_start = kernel;
     uintptr_t kernel_end = kernel_start + kernel_size;
+    uintptr_t initrd_start = initrd_dest;
+    uintptr_t initrd_end = initrd_start + initrd_size;
+    if (kernel_dest < ram_start || kernel_dest + kernel_size > ram_end) {
+        LOG_VMM_ERR("Linux kernel image destination [0x%lx..0x%lx) is not"
+		    " within guest RAM [0x%lx..0x%lx)\n",
+		    kernel_dest, kernel_dest + kernel_size, ram_start, ram_end);
+        return 0;
+    }
+    if (dtb_dest < ram_start || dtb_dest + dtb_size > ram_end) {
+        LOG_VMM_ERR("Linux DTB destination [0x%lx..0x%lx) is not within guest RAM [0x%lx..0x%lx)\n",
+		    dtb_dest, dtb_dest + dtb_size, ram_start, ram_end);
+        return 0;
+    }
+    if (initrd_dest < ram_start || initrd_dest + initrd_size > ram_end) {
+        LOG_VMM_ERR("Linux initial RAM disk destination [0x%lx..0x%lx) is not within guest RAM [0x%lx..0x%lx)\n",
+		    initrd_dest, initrd_dest + initrd_size, ram_start, ram_end);
+        return 0;
+    }
+    // Check that the kernel and DTB to do not overlap
     if (!(dtb_start >= kernel_end || dtb_end <= kernel_start)) {
         LOG_VMM_ERR("Linux kernel image [0x%lx..0x%lx)"
                     " overlaps with the destination of the DTB [0x%lx, 0x%lx)\n",
@@ -33,8 +61,6 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
         return 0;
     }
     // Check that the kernel and initrd do not overlap
-    uintptr_t initrd_start = initrd_dest;
-    uintptr_t initrd_end = initrd_start + initrd_size;
     if (!(initrd_start >= kernel_end || initrd_end <= kernel_start)) {
         LOG_VMM_ERR("Linux kernel image [0x%lx..0x%lx) overlaps"
                     " with the destination of the initial RAM disk [0x%lx, 0x%lx)\n",
@@ -48,16 +74,7 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
                     dtb_start, dtb_end, initrd_start, initrd_end);
         return 0;
     }
-    // First we inspect the kernel image header to confirm it is a valid image
-    // and to determine where in memory to place the image.
-    struct linux_image_header *image_header = (struct linux_image_header *) kernel;
-    assert(image_header->magic == LINUX_IMAGE_MAGIC);
-    if (image_header->magic != LINUX_IMAGE_MAGIC) {
-        LOG_VMM_ERR("Linux kernel image magic check failed\n");
-        return 0;
-    }
     // Copy the guest kernel image into the right location
-    uintptr_t kernel_dest = ram_start + image_header->text_offset;
     // This check is because the Linux kernel image requires to be placed at text_offset of
     // a 2MB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,

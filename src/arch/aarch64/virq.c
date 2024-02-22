@@ -1,4 +1,5 @@
 #include <microkit.h>
+#include "guest.h"
 #include "vgic/vgic.h"
 #include "../../util/util.h"
 #include "../../virq.h"

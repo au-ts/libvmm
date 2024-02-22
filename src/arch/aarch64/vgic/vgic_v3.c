@@ -39,6 +39,7 @@
 
 #include <stdint.h>
 
+#include "guest.h"
 #include "../fault.h"
 #include "virq.h"
 #include "vgic_v3.h"

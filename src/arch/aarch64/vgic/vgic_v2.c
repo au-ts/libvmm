@@ -43,6 +43,7 @@
 #include <stdint.h>
 #include <microkit.h>
 
+#include "guest.h"
 #include "vgic.h"
 #include "vgic_v2.h"
 #include "virq.h"
