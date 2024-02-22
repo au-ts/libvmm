@@ -26,7 +26,7 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
     // Assume 32-bit instruction
     regs->pc += 4;
-    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
+    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
@@ -284,7 +284,7 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     }
 
     seL4_UserContext regs;
-    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failure reading TCB registers when handling unknown syscall, error %d", err);
@@ -357,7 +357,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
 
     seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
     assert(err == seL4_NoError);
 
     switch (addr) {
