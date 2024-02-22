@@ -24,3 +24,4 @@ bool virq_inject(size_t vcpu_id, int irq);
  */
 bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_ch);
 bool virq_handle_passthrough(microkit_channel irq_ch);
+
