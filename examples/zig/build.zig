@@ -1,12 +1,5 @@
 const std = @import("std");
 
-var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-const gpa = general_purpose_allocator.allocator();
-
-fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
-    return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
-}
-
 const ConfigOptions = enum {
     debug,
     release,
@@ -38,11 +31,11 @@ pub fn build(b: *std.Build) void {
     const microkit_config = @tagName(microkit_config_option);
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const microkit_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
-    const microkit_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
-    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
-    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ microkit_board_dir });
-    const sdk_board_include_dir = fmtPrint("{s}/include", .{ microkit_board_dir });
+    const microkit_board_dir = b.fmt("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const microkit_tool = b.fmt("{s}/bin/microkit", .{ microkit_sdk });
+    const libmicrokit = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const sdk_board_include_dir = b.fmt("{s}/include", .{ microkit_board_dir });
 
     const zig_libmicrokit = b.addObject(.{
         .name = "zig_libmicrokit",
@@ -53,48 +46,14 @@ pub fn build(b: *std.Build) void {
     zig_libmicrokit.addIncludePath(.{ .path = "src/" });
     zig_libmicrokit.addIncludePath(.{ .path = sdk_board_include_dir });
 
-    const libvmm = b.addStaticLibrary(.{
-        .name = "vmm",
+    const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
+        .sdk = microkit_sdk,
+        .config = @as([]const u8, microkit_config),
+        .board = @as([]const u8, microkit_board),
     });
-
-    const libvmm_path = "../..";
-    const libvmm_src = libvmm_path ++ "/src/";
-    // Right now we only support AArch64 so this is a safe assumption.
-    const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
-    libvmm.addCSourceFiles(.{
-        .files = &.{
-            libvmm_src ++ "guest.c",
-            libvmm_src ++ "util/util.c",
-            libvmm_src ++ "util/printf.c",
-            libvmm_src_arch ++ "vgic/vgic.c",
-            libvmm_src_arch ++ "vgic/vgic_v2.c",
-            libvmm_src_arch ++ "fault.c",
-            libvmm_src_arch ++ "psci.c",
-            libvmm_src_arch ++ "smc.c",
-            libvmm_src_arch ++ "virq.c",
-            libvmm_src_arch ++ "linux.c",
-            libvmm_src_arch ++ "tcb.c",
-            libvmm_src_arch ++ "vcpu.c",
-        },
-        .flags = &.{
-            "-Wall",
-            "-Werror",
-            "-Wno-unused-function",
-            "-mstrict-align",
-            "-DBOARD_qemu_arm_virt", // @ivanv: should not be necessary
-            "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
-        }
-    });
-
-    libvmm.addIncludePath(.{ .path = libvmm_src });
-    libvmm.addIncludePath(.{ .path = libvmm_src ++ "util/" });
-    libvmm.addIncludePath(.{ .path = libvmm_src_arch });
-    libvmm.addIncludePath(.{ .path = libvmm_src_arch ++ "vgic/" });
-    libvmm.addIncludePath(.{ .path = sdk_board_include_dir });
-
-    b.installArtifact(libvmm);
+    const libvmm = libvmm_dep.artifact("vmm");
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
@@ -122,9 +81,9 @@ pub fn build(b: *std.Build) void {
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
-    exe.addIncludePath(.{ .path = "../../src/" });
-    exe.addIncludePath(.{ .path = "../../src/util/" });
-    exe.addIncludePath(.{ .path = "../../src/arch/aarch64/" });
+    exe.addIncludePath(libvmm_dep.path("src"));
+    // @ivanv: shouldn't need to do this! fix our includes
+    exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .path = libmicrokit });
@@ -160,7 +119,7 @@ pub fn build(b: *std.Build) void {
     b.default_step = microkit_step;
 
     // This is setting up a `qemu` command for running the system using QEMU.
-    const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
+    const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     const qemu_cmd = b.addSystemCommand(&[_][]const u8{
         "qemu-system-aarch64",
         "-machine",

@@ -1,12 +1,5 @@
 const std = @import("std");
 
-var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-const gpa = general_purpose_allocator.allocator();
-
-fn fmtPrint(comptime fmt: []const u8, args: anytype) []const u8 {
-    return std.fmt.allocPrint(gpa, fmt, args) catch "Could not format print!";
-}
-
 const MicrokitBoard = enum {
     qemu_arm_virt,
     odroidc4
@@ -56,7 +49,6 @@ const ConfigOptions = enum {
 };
 
 pub fn build(b: *std.Build) void {
-    // @ivanv: need to somehow relate Microkit config with this optimisation level?
     const optimize = b.standardOptimizeOption(.{});
 
     // Getting the path to the Microkit SDK before doing anything else
@@ -82,55 +74,20 @@ pub fn build(b: *std.Build) void {
 
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
-    const microkit_board_dir = fmtPrint("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
-    const microkit_tool = fmtPrint("{s}/bin/microkit", .{ microkit_sdk });
-    const libmicrokit = fmtPrint("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
-    const libmicrokit_linker_script = fmtPrint("{s}/lib/microkit.ld", .{ microkit_board_dir });
-    const sdk_board_include_dir = fmtPrint("{s}/include", .{ microkit_board_dir });
+    const microkit_board_dir = b.fmt("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
+    const microkit_tool = b.fmt("{s}/bin/microkit", .{ microkit_sdk });
+    const libmicrokit = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const sdk_board_include_dir = b.fmt("{s}/include", .{ microkit_board_dir });
 
-    const libvmm = b.addStaticLibrary(.{
-        .name = "vmm",
+    const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
+        .sdk = microkit_sdk,
+        .config = @as([]const u8, microkit_config),
+        .board = @as([]const u8, microkit_board),
     });
-
-    const libvmm_path = "../..";
-    const libvmm_tools = libvmm_path ++ "/tools/";
-    const libvmm_src = libvmm_path ++ "/src/";
-    // Right now we only support AArch64 so this is a safe assumption.
-    const libvmm_src_arch = libvmm_src ++ "arch/aarch64/";
-    libvmm.addCSourceFiles(.{
-        .files = &.{
-            libvmm_src ++ "guest.c",
-            libvmm_src ++ "util/util.c",
-            libvmm_src ++ "util/printf.c",
-            libvmm_src_arch ++ "vgic/vgic.c",
-            libvmm_src_arch ++ "vgic/vgic_v2.c",
-            libvmm_src_arch ++ "fault.c",
-            libvmm_src_arch ++ "psci.c",
-            libvmm_src_arch ++ "smc.c",
-            libvmm_src_arch ++ "virq.c",
-            libvmm_src_arch ++ "linux.c",
-            libvmm_src_arch ++ "tcb.c",
-            libvmm_src_arch ++ "vcpu.c",
-        },
-        .flags = &.{
-            "-Wall",
-            "-Werror",
-            "-Wno-unused-function",
-            "-mstrict-align",
-            "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
-            fmtPrint("-DBOARD_{s}", .{ microkit_board }) // @ivanv: shouldn't be needed as the library should not depend on the board
-        }
-    });
-
-    libvmm.addIncludePath(.{ .path = libvmm_src });
-    libvmm.addIncludePath(.{ .path = libvmm_src ++ "util/" });
-    libvmm.addIncludePath(.{ .path = libvmm_src_arch });
-    libvmm.addIncludePath(.{ .path = libvmm_src_arch ++ "vgic/" });
-    libvmm.addIncludePath(.{ .path = sdk_board_include_dir });
-
-    b.installArtifact(libvmm);
+    const libvmm = libvmm_dep.artifact("vmm");
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
@@ -143,7 +100,7 @@ pub fn build(b: *std.Build) void {
     });
 
     // For actually compiling the DTS into a DTB
-    const dts_path = fmtPrint("board/{s}/linux.dts", .{ microkit_board });
+    const dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
     const dtc_cmd = b.addSystemCommand(&[_][]const u8{
         "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
@@ -152,8 +109,9 @@ pub fn build(b: *std.Build) void {
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
-    exe.addIncludePath(.{ .path = libvmm_src });
-    exe.addIncludePath(.{ .path = libvmm_src_arch });
+    exe.addIncludePath(libvmm_dep.path("src"));
+    // @ivanv: shouldn't need to do this! fix our includes
+    exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .path = libmicrokit });
@@ -168,7 +126,7 @@ pub fn build(b: *std.Build) void {
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
-            fmtPrint("-DBOARD_{s}", .{ microkit_board })
+            b.fmt("-DBOARD_{s}", .{ microkit_board })
         }
     });
 
@@ -180,14 +138,14 @@ pub fn build(b: *std.Build) void {
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
     guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
 
-    const linux_image_path = fmtPrint("board/{s}/linux", .{ microkit_board });
-    const kernel_image_arg = fmtPrint("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
+    const linux_image_path = b.fmt("board/{s}/linux", .{ microkit_board });
+    const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
 
-    const initrd_image_path = fmtPrint("board/{s}/rootfs.cpio.gz", .{ microkit_board });
-    const initrd_image_arg = fmtPrint("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
-    const dtb_image_arg = fmtPrint("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
-    guest_images.addCSourceFiles(.{
-        .files = &.{ libvmm_tools ++ "package_guest_images.S" },
+    const initrd_image_path = b.fmt("board/{s}/rootfs.cpio.gz", .{ microkit_board });
+    const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
+    const dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    guest_images.addCSourceFile(.{
+        .file = libvmm_dep.path("tools/package_guest_images.S"),
         .flags = &.{
             kernel_image_arg,
             dtb_image_arg,
@@ -200,7 +158,7 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = fmtPrint("board/{s}/simple.system", .{ microkit_board });
+    const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
        microkit_tool,
@@ -224,7 +182,7 @@ pub fn build(b: *std.Build) void {
 
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    const loader_arg = fmtPrint("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
+    const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     if (std.mem.eql(u8, microkit_board, "qemu_arm_virt")) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
