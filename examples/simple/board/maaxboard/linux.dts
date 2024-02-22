@@ -528,7 +528,6 @@
 			};
 
 			pinctrl@30330000 {
-				status = "disabled";
 				compatible = "fsl,imx8mq-iomuxc";
 				reg = <0x30330000 0x10000>;
 				phandle = <0x13>;
@@ -686,7 +685,6 @@
 			};
 
 			syscon@30360000 {
-				status = "disabled";
 				compatible = "fsl,imx8mq-anatop\0syscon";
 				reg = <0x30360000 0x10000>;
 				interrupts = <0x00 0x31 0x04>;
@@ -719,7 +717,6 @@
 			};
 
 			clock-controller@30380000 {
-				status = "disabled";
 				compatible = "fsl,imx8mq-ccm";
 				reg = <0x30380000 0x10000>;
 				interrupts = <0x00 0x55 0x04 0x00 0x56 0x04>;
@@ -741,7 +738,6 @@
 			};
 
 			gpc@303a0000 {
-				status = "disabled";
 				compatible = "fsl,imx8mq-gpc";
 				reg = <0x303a0000 0x10000>;
 				interrupts = <0x00 0x57 0x04>;
@@ -877,7 +873,6 @@
 			};
 
 			timer@306a0000 {
-				status = "disabled";
 				compatible = "nxp,sysctr-timer";
 				reg = <0x306a0000 0x20000>;
 				interrupts = <0x00 0x2f 0x04>;
@@ -1761,9 +1756,9 @@
 	chosen {
 		linux,stdout-path = "/soc@0/bus@30800000/serial@30860000";
 		stdout-path = "/soc@0/bus@30800000/serial@30860000";
-        linux,initrd-start = <0x00000000 0x4d700000>;
+        linux,initrd-start = <0x00000000 0x4c000000>;
 		linux,initrd-end = <0x00000000 0x4e000000>;
-        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 root=/dev/ram0 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
 	};
 
 	memory@40000000 {
