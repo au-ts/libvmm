@@ -120,6 +120,12 @@ build_simple_make "odroidc4" "release"
 build_simple_zig "odroidc4" "debug"
 build_simple_zig "odroidc4" "release"
 
+build_simple_make "maaxboard" "debug"
+build_simple_make "maaxboard" "release"
+
+build_simple_zig "maaxboard" "debug"
+build_simple_zig "maaxboard" "release"
+
 build_rust "debug"
 simulate_rust "debug"
 build_rust "release"
