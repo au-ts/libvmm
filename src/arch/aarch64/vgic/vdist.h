@@ -172,11 +172,15 @@ static void vgic_dist_disable_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 
 static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 {
-    // @ivanv: I believe this function causes a fault in the VMM if the IRQ has not
-    // been registered. This is not good.
     /* STATE c) */
-
+    /* First check that we find vIRQ data in case the vIRQ has not been
+     * registered yet. */
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu_id, irq);
+    assert(virq_data);
+    if (!virq_data) {
+        LOG_VMM_ERR("could not find vIRQ data for vIRQ 0x%lx on vCPU 0x%lx\n", irq, vcpu_id);
+        return false;
+    }
     struct gic_dist_map *dist = vgic_get_dist(vgic->registers);
 
     if (virq_data->virq == VIRQ_INVALID || !vgic_dist_is_enabled(dist) || !is_enabled(dist, irq, vcpu_id)) {
