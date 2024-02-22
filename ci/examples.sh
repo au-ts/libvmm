@@ -23,14 +23,16 @@ build_simple_make() {
 build_simple_zig() {
     BOARD=$1
     CONFIG=$2
-    echo "CI|INFO: building simple example via Zig with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}"
+    ZIG_OPTIMIZE=$3
+    echo "CI|INFO: building simple example via Zig with board: $BOARD, config: $CONFIG, Zig optimize: $ZIG_OPTIMIZE"
+    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}/${ZIG_OPTIMIZE}"
     EXAMPLE_DIR="${PWD}/examples/simple"
     pushd ${EXAMPLE_DIR}
     zig build \
         -Dsdk=${SDK_PATH} \
         -Dboard=${BOARD} \
         -Dconfig=${CONFIG} \
+	-Doptimize=${ZIG_OPTIMIZE} \
         -p ${BUILD_DIR}
     popd
 }
@@ -108,11 +110,14 @@ simulate_simple_make "qemu_arm_virt" "debug"
 build_simple_make "qemu_arm_virt" "release"
 simulate_simple_make "qemu_arm_virt" "release"
 
-# @ivanv: we should incorporate the zig optimisation levels as well
-build_simple_zig "qemu_arm_virt" "debug"
-simulate_simple_zig "qemu_arm_virt" "debug"
-build_simple_zig "qemu_arm_virt" "release"
-simulate_simple_zig "qemu_arm_virt" "release"
+build_simple_zig "qemu_arm_virt" "debug" "Debug"
+simulate_simple_zig "qemu_arm_virt" "debug" "Debug"
+build_simple_zig "qemu_arm_virt" "release" "ReleaseFast"
+simulate_simple_zig "qemu_arm_virt" "release" "ReleaseFast"
+build_simple_zig "qemu_arm_virt" "release" "ReleaseSafe"
+simulate_simple_zig "qemu_arm_virt" "release" "ReleaseSafe"
+build_simple_zig "qemu_arm_virt" "release" "ReleaseSmall"
+simulate_simple_zig "qemu_arm_virt" "release" "ReleaseSmall"
 
 build_simple_make "odroidc4" "debug"
 build_simple_make "odroidc4" "release"
