@@ -96,6 +96,7 @@ CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
 SDDF := sddf
+SDDF_BLK_COMPONENTS := $(SDDF)/blk/components
 SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
@@ -125,7 +126,7 @@ else
 	$(error "Board $(BOARD) is not supported")
 endif
 
-ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf blk_virt.elf
 
 CLIENT_VM_1_USERLEVEL := postmark
 CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
@@ -149,7 +150,7 @@ VMM_OBJS := printf.o \
 			vgic.o \
 			vgic_v2.o \
 			tcb.o \
-			vcpu.o \
+			vcpu.o
 
 CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					client_images_1.o \
@@ -159,7 +160,7 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o \
+					sddf_blk_shared_queue.o
 
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
@@ -169,8 +170,13 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o \
+					sddf_blk_shared_queue.o
 
+SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
+SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
+SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
+
+BLK_VIRT_OBJS := virt.o sddf_blk_shared_queue.o
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o \
@@ -179,12 +185,7 @@ BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o \
-
-SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
-SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
-
+					sddf_blk_shared_queue.o
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o sddf_blk_shared_queue.o
 
 # Toolchain flags
@@ -340,6 +341,9 @@ $(BUILD_DIR)/sddf_serial_sharedringbuffer.o: Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
 	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK)
 	cp $(SDDF_BLK_SHAREDQUEUE)/sddf_blk_shared_queue.o $(BUILD_DIR)/sddf_blk_shared_queue.o
@@ -351,6 +355,9 @@ $(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/blk_virt.elf: $(addprefix $(BUILD_DIR)/, $(BLK_VIRT_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
