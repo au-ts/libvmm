@@ -93,8 +93,6 @@ static void smc_set_arg(seL4_UserContext *u, size_t arg, size_t val)
 // @ivanv: print out which SMC call as a string we can't handle.
 bool handle_smc(size_t vcpu_id, uint32_t hsr)
 {
-    // @ivanv: An optimisation to be made is to store the TCB registers so we don't
-    // end up reading them multiple times
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
     assert(err == seL4_NoError);
