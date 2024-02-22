@@ -11,10 +11,6 @@
 #include <microkit.h>
 #include "printf.h"
 
-// @ivanv: these are here for convience, should not be here though
-#define GUEST_VCPU_ID 0
-#define GUEST_NUM_VCPUS 1
-
 #define BIT_LOW(n)  (1ul << (n))
 #define BIT_HIGH(n) (1ul << (n - 32))
 
