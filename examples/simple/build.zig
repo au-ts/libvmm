@@ -110,8 +110,6 @@ pub fn build(b: *std.Build) void {
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .path = sdk_board_include_dir });
     exe.addIncludePath(libvmm_dep.path("src"));
-    // @ivanv: shouldn't need to do this! fix our includes
-    exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .path = libmicrokit });
