@@ -104,6 +104,7 @@ static void smc_set_arg(seL4_UserContext *u, size_t arg, size_t val)
         case 6: u->x6 = val; break;
         default:
             LOG_VMM_ERR("trying to set SMC arg: 0x%lx, with val: 0x%lx, SMC only has 6 argument registers\n", arg, val);
+            assert(arg <= 6);
     }
 }
 
