@@ -120,6 +120,12 @@ build_simple_make "odroidc4" "release"
 build_simple_zig "odroidc4" "debug"
 build_simple_zig "odroidc4" "release"
 
+build_simple_make "zcu102" "debug"
+build_simple_make "zcu102" "release"
+
+build_simple_zig "zcu102" "debug"
+build_simple_zig "zcu102" "release"
+
 build_rust "debug"
 simulate_rust "debug"
 build_rust "release"
