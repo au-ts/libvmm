@@ -385,8 +385,8 @@ bool fault_handle_vm_exception(size_t vcpu_id)
                 tcb_print_regs(vcpu_id);
                 vcpu_print_regs(vcpu_id);
             } else {
-                /* @ivanv, is it correct to unconditionally advance the CPU here? */
-                fault_advance_vcpu(vcpu_id, &regs);
+                success = fault_advance_vcpu(vcpu_id, &regs);
+		assert(success);
             }
 
             return success;
