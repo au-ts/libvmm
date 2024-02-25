@@ -32,6 +32,23 @@ typedef enum {
     SMC_CALL_RESERVED = 64,
 } smc_call_id_t;
 
+static char *smc_call_to_string(smc_call_id_t service)
+{
+    switch (service) {
+        case SMC_CALL_ARM_ARCH: return "Arm Architecture Service";
+        case SMC_CALL_CPU_SERVICE: return "CPU Service";
+        case SMC_CALL_SIP_SERVICE: return "SiP Service";
+        case SMC_CALL_OEM_SERVICE: return "OEM Service";
+        case SMC_CALL_STD_SERVICE: return "Standard Secure Sesrvice";
+        case SMC_CALL_STD_HYP_SERVICE: return "Standard Hypervisor Service";
+        case SMC_CALL_VENDOR_HYP_SERVICE: return "Vendor Specific Hypervisor Service";
+        case SMC_CALL_TRUSTED_APP: return "Trusted Applications";
+        case SMC_CALL_TRUSTED_OS: return "Trusted OS";
+        case SMC_CALL_RESERVED: return "Reserved Service";
+        default: return "unknown service";
+    }
+}
+
 static smc_call_id_t smc_get_call(size_t func_id)
 {
     uint64_t service = ((func_id >> SMC_SERVICE_CALL_SHIFT) & SMC_SERVICE_CALL_MASK);
@@ -90,7 +107,6 @@ static void smc_set_arg(seL4_UserContext *u, size_t arg, size_t val)
     }
 }
 
-// @ivanv: print out which SMC call as a string we can't handle.
 bool handle_smc(size_t vcpu_id, uint32_t hsr)
 {
     seL4_UserContext regs;
@@ -105,10 +121,10 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
             if (fn_number < PSCI_MAX) {
                 return handle_psci(vcpu_id, &regs, fn_number, hsr);
             }
-            LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
+            LOG_VMM_ERR("Could not handle SMC service 'Standard Secure Service' with function number 0x%lx\n", fn_number);
             break;
         default:
-            LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
+            LOG_VMM_ERR("Could not handle SMC service (0x%lx) '%s' with function number 0x%lx\n", service, smc_call_to_string(service), fn_number);
             break;
     }
 
