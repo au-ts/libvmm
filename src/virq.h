@@ -22,6 +22,16 @@ bool virq_inject(size_t vcpu_id, int irq);
  * @ivanv: currently this API assumes a Microkit environment. This should be changed
  * if/when we make libvmm agnostic to the seL4 environment it is running in.
  */
+/*
+ * Registers an IRQ given the Microkit channel identifier associated with the IRQ.
+ * Returns whether or not registration was successful.
+ */
 bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_ch);
+/*
+ * Injects the virtual IRQ associated with the Microkit channel provided when
+ * registered.
+ * Returns whether or not the vIRQ could be injected. Returns false if there is no
+ * vIRQ associated with the Microkit channel given.
+ */
 bool virq_handle_passthrough(microkit_channel irq_ch);
 
