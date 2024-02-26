@@ -8,6 +8,7 @@ The example currently works on the following platforms:
 * QEMU ARM virt
 * HardKernel Odroid-C4
 * Xilinx ZCU102 Evaluation Kit
+* Avnet MaaXBoard
 
 ## Building with Make
 
@@ -18,7 +19,11 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+<<<<<<< HEAD
 * `zcu102`
+=======
+* `maaxboard`
+>>>>>>> 60e55cbabac51d5b4ffe23de896038fdf0c774c5
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -49,7 +54,11 @@ zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+<<<<<<< HEAD
 * `zcu102`
+=======
+* `maaxboard`
+>>>>>>> 60e55cbabac51d5b4ffe23de896038fdf0c774c5
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh

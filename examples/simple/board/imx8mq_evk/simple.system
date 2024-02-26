@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+    <!-- We allocate 256MiB of RAM for the guest. -->
+    <memory_region name="guest_ram" size="0x20000000" page_size="0x200000" />
+    <!-- We want to map in the UART to get input/output. -->
+    <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
+    <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
+    <memory_region name="gic_vcpu" size="0x1000" phys_addr="0x31020000" />
+
+    <!-- <memory_region name="gpc" size="0x10000" phys_addr="0x303a0000" /> -->
+    <!-- <memory_region name="timer" size="0x20000" phys_addr="0x306a0000" /> -->
+    <!-- <memory_region name="syscon" size="0x10000" phys_addr="0x30360000" /> -->
+    <!-- <memory_region name="clock_controller" size="0x10000" phys_addr="0x30380000" /> -->
+
+    <protection_domain name="VMM" priority="254">
+        <program_image path="vmm.elf" />
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="linux" id="0">
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+            <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" />
+            <!-- The guest needs to view what is actually the vCPU interface as the CPU interface. -->
+            <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
+
+            <!-- <map mr="gpc" vaddr="0x303a0000" perms="rw" cached="false" /> -->
+            <!-- <map mr="timer" vaddr="0x306a0000" perms="rw" cached="false" /> -->
+            <!-- <map mr="syscon" vaddr="0x30360000" perms="rw" cached="false" /> -->
+            <!-- <map mr="clock_controller" vaddr="0x30380000" perms="rw" cached="false" /> -->
+        </virtual_machine>
+        <!-- UART interrupt -->
+        <irq irq="58" id="1" />
+    </protection_domain>
+</system>

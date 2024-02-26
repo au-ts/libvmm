@@ -11,6 +11,16 @@ const MicrokitBoard = enum {
     qemu_arm_virt,
     odroidc4,
     zcu102,
+    maaxboard,
+
+    /// We need to compile the vGIC code differently depending on the version
+    /// of the GIC hardware on the platform we are targeting.
+    fn gicVersion(board: MicrokitBoard) usize {
+        return switch (board) {
+            .qemu_arm_virt, .odroidc4 => 2,
+            .maaxboard => 3,
+        };
+    }
 };
 
 const Target = struct {
@@ -38,10 +48,17 @@ const targets = [_]Target {
         },
     },
     .{
+<<<<<<< HEAD
         .board = MicrokitBoard.zcu102,
         .zig_target = std.zig.CrossTarget{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+=======
+        .board = MicrokitBoard.maaxboard,
+        .zig_target = std.zig.CrossTarget{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
+>>>>>>> 60e55cbabac51d5b4ffe23de896038fdf0c774c5
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -115,7 +132,7 @@ pub fn build(b: *std.Build) void {
             libvmm_src ++ "util/util.c",
             libvmm_src ++ "util/printf.c",
             libvmm_src_arch ++ "vgic/vgic.c",
-            libvmm_src_arch ++ "vgic/vgic_v2.c",
+            fmtPrint("{s}/vgic/vgic_v{d}.c", .{ libvmm_src_arch, microkit_board_option.?.gicVersion() }),
             libvmm_src_arch ++ "fault.c",
             libvmm_src_arch ++ "psci.c",
             libvmm_src_arch ++ "smc.c",

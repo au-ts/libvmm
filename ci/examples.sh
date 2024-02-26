@@ -125,6 +125,11 @@ build_simple_make "zcu102" "release"
 
 build_simple_zig "zcu102" "debug"
 build_simple_zig "zcu102" "release"
+build_simple_make "maaxboard" "debug"
+build_simple_make "maaxboard" "release"
+
+build_simple_zig "maaxboard" "debug"
+build_simple_zig "maaxboard" "release"
 
 build_rust "debug"
 simulate_rust "debug"

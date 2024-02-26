@@ -41,12 +41,12 @@
 #elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_imx8mm_evk_hyp)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #elif defined(BOARD_zcu102)
 #define GUEST_DTB_VADDR 0x1f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x1d700000
+#elif defined(BOARD_imx8mq_evk) || defined(BOARD_maaxboard)
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -61,10 +61,17 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
+<<<<<<< HEAD
 #elif defined(BOARD_imx8mm_evk_hyp)
 #define SERIAL_IRQ 79
 #elif defined(BOARD_zcu102)
 #define SERIAL_IRQ 53
+=======
+#elif defined(BOARD_imx8mm_evk)
+#define SERIAL_IRQ 59
+#elif defined(BOARD_imx8mq_evk) || defined(BOARD_maaxboard)
+#define SERIAL_IRQ 58
+>>>>>>> 60e55cbabac51d5b4ffe23de896038fdf0c774c5
 #else
 #error Need to define serial interrupt
 #endif
@@ -124,8 +131,6 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    // @ivanv: Note that remove this line causes the VMM to fault if we
-    // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
@@ -148,8 +153,8 @@ void notified(microkit_channel ch) {
 }
 
 /*
- * The primary purpose of the VMM after initialisation is to act as a fault-handler,
- * whenever our guest causes an exception, it gets delivered to this entry point for
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {
