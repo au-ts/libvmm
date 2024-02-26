@@ -202,13 +202,7 @@ void init(void) {
     /* Finally start the guest */
     sel4bench_init();
 
-    ccnt_t before, after;
-    for (int i = 0; i < 100; i++) {
-        before = sel4bench_get_cycle_count();
-        tcb_test(BASE_VM_TCB_CAP + GUEST_VCPU_ID, false, 0);
-        after = sel4bench_get_cycle_count();
-        add_event(after - before, TestingEvent, TCB_ReadRegisters);
-    }
+    
 
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 

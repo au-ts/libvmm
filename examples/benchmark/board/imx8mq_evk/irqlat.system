@@ -17,11 +17,11 @@
         <program_image path="bare_vmm.elf" />
         <map mr="serial" vaddr="0xff803000" perms="rw" cached="false" setvar_vaddr="uart_base"/>
 
-        <map mr="guest_ram" vaddr="0x00000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="guest_ram" vaddr="0x41000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         <virtual_machine name="irqlat" id="0">
 
 
-            <map mr="guest_ram" vaddr="0x00000000" perms="rwx" />
+            <map mr="guest_ram" vaddr="0x41000000" perms="rwx" />
 
             <map mr="serial" vaddr="0x30860000" perms="rw" cached="false" />
             <map mr="timer" vaddr="0x306a0000" perms="rw" cached="false" />
@@ -29,6 +29,6 @@
             <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
         </virtual_machine>
 
-        <irq irq="377" id="1" trigger="edge" />
+        <irq irq="100" id="1" trigger="edge" />
     </protection_domain>
 </system>

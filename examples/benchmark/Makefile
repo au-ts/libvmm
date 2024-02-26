@@ -140,6 +140,7 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
+		  -DBENCH_$(BENCH) \
 		  -target aarch64-none-elf
 
 LDFLAGS := -L$(BOARD_DIR)/lib

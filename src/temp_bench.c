@@ -6,11 +6,20 @@
 
 #define NUM_EVENTS 2000
 
+#if defined(BENCH_vmm)
+#define RUN 1
+#else
+#define RUN 0
+#endif
+
 bench_event_t events[NUM_EVENTS];
 int event_count = 0;
 int event_loop_count = 0;
 
 void add_event(ccnt_t cycles, enum timed_event event, enum sel4_timed_syscall syscall) {
+    if (!RUN) {
+        return;
+    }
     events[event_count].cycles = cycles;
     events[event_count].event = event;
     events[event_count].syscall = syscall;
@@ -22,6 +31,11 @@ void add_event(ccnt_t cycles, enum timed_event event, enum sel4_timed_syscall sy
 }
 
 void display_results() {
+    if (!RUN)
+    {
+        return;
+    }
+    printf("START_RESULTS\n");
     ccnt_t total_k_cycles = 0;
     for (int i = 0; i < event_count; i++) {
         // Format print nicely
@@ -84,6 +98,10 @@ void display_results() {
         total_k_cycles += events[i].cycles;
 
     }
+    printf("END_RESULTS\n");
+
     printf("\tNum events: %d. Event loop count: %d\n", event_count, event_loop_count);
     printf("\tTotal cycles: %lu\n", total_k_cycles);
+
+
 }

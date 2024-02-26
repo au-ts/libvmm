@@ -41,9 +41,19 @@ struct virq_handle {
 // @ivanv: revisit
 static inline void virq_ack(size_t vcpu_id, struct virq_handle *irq)
 {
-    // printf("VGIC|INFO: Acking for vIRQ %d\n", irq->virq);
-    assert(irq->ack_fn);
-    irq->ack_fn(vcpu_id, irq->virq, irq->ack_data);
+    // if (irq->virq == 27)
+    // {
+    //     ccnt_t before, after;
+    //     before = sel4bench_get_cycle_count();
+    //     microkit_arm_vcpu_ack_vppi(vcpu_id, 27);
+    //     after = sel4bench_get_cycle_count();
+    //     add_event(after - before, cur_event, Microkit_ARM_VCPU_Ack);
+    // }
+    // else
+    // {
+        assert(irq->ack_fn);
+        irq->ack_fn(vcpu_id, irq->virq, irq->ack_data);
+    // }
 }
 
 /* TODO: A typical number of list registers supported by GIC is four, but not
