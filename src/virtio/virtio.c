@@ -23,22 +23,19 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
                             uintptr_t region_base,
                             uintptr_t region_size,
                             size_t virq,
-                            void *config,
-                            void **data_region_handlers,
-                            void **sddf_handlers,
-                            size_t *sddf_ch)
+                            sddf_handler_t *sddf_handlers)
 {
     bool success = true;
     switch (type) {
         case CONSOLE:
-            virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
+            virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, sddf_handlers);
             success = fault_register_vm_exception_handler(region_base,
                                                         region_size,
                                                         &virtio_mmio_fault_handle,
                                                         dev);
             break;
-        case BLK:
-            virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq, config, data_region_handlers, sddf_handlers, sddf_ch);
+        case BLOCK:
+            virtio_blk_init(dev, virtio_blk_queues, VIRTIO_BLK_NUM_VIRTQ, virq, sddf_handlers);
             success = fault_register_vm_exception_handler(region_base,
                                                         region_size,
                                                         &virtio_mmio_fault_handle,

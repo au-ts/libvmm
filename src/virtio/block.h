@@ -129,11 +129,11 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_S_IOERR          1
 #define VIRTIO_BLK_S_UNSUPP         2
 
+#define VIRTIO_BLK_SECTOR_SIZE 512
+
 /* Backend implementation */
 #define SDDF_BLK_NUM_HANDLES 1
 #define SDDF_BLK_DEFAULT_HANDLE 0
-#define SDDF_BLK_NUM_CH 1
-#define SDDF_BLK_DEFAULT_CH_INDEX 0
 
 // @ericc: This needs to be less than or equal to memory size / blocksize 
 // TODO: auto generate from microkit system file
@@ -141,8 +141,6 @@ struct virtio_blk_outhdr {
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
-
-#define VIRTIO_BLK_SECTOR_SIZE 512
 
 /* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
 typedef struct blk_data_region {
@@ -155,7 +153,5 @@ typedef struct blk_data_region {
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void *config,
-                    void **data_region_handlers,
-                    void **sddf_handlers, size_t *sddf_ch);
+                    sddf_handler_t *sddf_handlers);
 void virtio_blk_handle_resp(struct virtio_device *dev);

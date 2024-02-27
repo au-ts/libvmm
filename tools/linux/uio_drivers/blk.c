@@ -83,7 +83,7 @@ int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, 
         return -1;
     }
 
-    if ((storage_fd = open(storage_path, O_RDWR)) < 0) {
+    if ((storage_fd = open(storage_path, O_RDWR) < 0)) {
         LOG_UIO_BLOCK_ERR("Failed to open storage file: %s\n", strerror(errno));
         return -1;
     }

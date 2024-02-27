@@ -1,9 +1,10 @@
 #!/bin/sh
 
 NUM_CLIENTS=2
-for i in $(seq 0 $NUM_CLIENTS); do
+for i in $(seq 0 $((NUM_CLIENTS-1))); do
   if [ ! -f "/mnt/storage_$i" ]; then
-    mv "/root/storage_$i" /mnt
+    mv "/root/storage_$i" /mnt &&
+    echo "FILE $i MOVED"
   fi
   /root/uio_blk_driver $i /mnt &
 done

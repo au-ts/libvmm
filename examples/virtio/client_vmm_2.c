@@ -156,8 +156,8 @@ void init(void) {
             microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_ring_handles[SDDF_SERIAL_RX_RING] = &serial_rx_ring_handle;
-    serial_ring_handles[SDDF_SERIAL_TX_RING] = &serial_tx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_TX_HANDLE] = &serial_rx_ring_handle;
+    serial_ring_handles[SDDF_SERIAL_TX_HANDLE] = &serial_tx_ring_handle;
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
     assert(!ring_plugged(serial_tx_ring_handle.free_ring));
     assert(!ring_plugged(serial_tx_ring_handle.used_ring));

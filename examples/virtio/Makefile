@@ -211,6 +211,7 @@ CFLAGS := -mstrict-align \
 
 CFLAGS_LINUX :=	-g3 \
 				-O3 \
+				-D_GNU_SOURCE \
 				-Wno-unused-command-line-argument \
 				-Wall -Wno-unused-function -Werror \
 				-I$(SDDF)/include \

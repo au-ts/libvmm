@@ -145,7 +145,7 @@
         <map mr="tx_free_serial_driver" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="tx_free" />
         <map mr="tx_used_serial_driver" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="tx_used" />
         <!-- UART IRQ -->
-        <irq irq="33" id="1" />
+        <!-- <irq irq="33" id="1" /> -->
     </protection_domain>
 
     <channel>
@@ -214,7 +214,10 @@
             <!-- sDDF data region -->
             <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" />
             <map mr="data_blk_vmm_2" vaddr="0x31600000" perms="rw" cached="true" />
+
+            <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
         </virtual_machine>
+        <irq irq="33" id="1" />
     </protection_domain>
     
     <channel>
