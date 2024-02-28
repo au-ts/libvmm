@@ -1,8 +1,7 @@
 #include <alsa/asoundlib.h>
 #include <stdio.h>
  
-static char *device = "default";            /* playback device */
-unsigned char buffer[16*1024];              /* some random data */
+unsigned char buffer[16*1024];
 
 typedef struct wavfile_header_s
 {
@@ -24,7 +23,7 @@ typedef struct wavfile_header_s
 } wavfile_header_t;
 
 #define NUM_CHANNELS 1
-#define BITS_PER_SAMPLE 8
+#define BITS_PER_SAMPLE 16
 #define SUBCHUNK1SIZE 16
 
 #define SAMPLE_RATE 48000
@@ -85,19 +84,26 @@ int write_header(FILE *file_p,
 }
 
  
-int main(void)
+int main(int argc, char **argv)
 {
     int err;
     unsigned int i;
     snd_pcm_t *handle;
     snd_pcm_sframes_t frames;
+
+    char *device;
+    if (argc > 1) {
+        device = argv[1];
+    } else {
+        device = "default";
+    }
  
     if ((err = snd_pcm_open(&handle, device, SND_PCM_STREAM_CAPTURE, 0)) < 0) {
         printf("Capture open error: %s\n", snd_strerror(err));
         exit(EXIT_FAILURE);
     }
     if ((err = snd_pcm_set_params(handle,
-                      SND_PCM_FORMAT_U8,
+                      SND_PCM_FORMAT_S16,
                       SND_PCM_ACCESS_RW_INTERLEAVED,
                       1,
                       SAMPLE_RATE,
@@ -115,17 +121,19 @@ int main(void)
 
     const int buffer_count = 16;
     write_header(file, SAMPLE_RATE, sizeof(buffer) * buffer_count);
+
+    const int frame_size = 2;
  
     for (i = 0; i < buffer_count; i++) {
-        frames = snd_pcm_readi(handle, buffer, sizeof(buffer));
+        frames = snd_pcm_readi(handle, buffer, sizeof(buffer) / frame_size);
         if (frames < 0)
             frames = snd_pcm_recover(handle, frames, 0);
         if (frames < 0) {
             printf("snd_pcm_readi failed: %s\n", snd_strerror(frames));
             break;
         }
-        if (frames > 0 && frames < (long)sizeof(buffer))
-            printf("Short write (expected %li, wrote %li)\n", (long)sizeof(buffer), frames);
+        if (frames > 0 && frames < (long)sizeof(buffer) / frame_size)
+            printf("Short write (expected %li, wrote %li)\n", (long)sizeof(buffer) / frame_size, frames);
 
         fwrite(buffer, 1, sizeof(buffer), file);
     }
