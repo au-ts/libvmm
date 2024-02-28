@@ -66,7 +66,7 @@ Guest 1 and guest 2 also doubles as a client in the block system that talks virt
 
 When you boot the example, the block driver VM will boot first. When it is ready, the client VMs will boot together.
 
-After the client VMs boot, they will attempt to mount the first partition of the virtIO block device `/dev/vda1` into `/mnt`. This partition contains an ext4 file system. 
+After the client VMs boot, they will attempt to mount the virtIO block device `/dev/vda` into `/mnt`. The virtIO block device contains an EXT4 file system.
 
 ```
 [   22.860300] EXT4-fs (vda): mounted filesystem without journal. Quota mode: none.

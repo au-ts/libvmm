@@ -72,8 +72,8 @@ int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, 
     // These numbers will be evaluated depending on the policy of the MUX,
     // and the actual device firmware itself.
     // For now, I've hardcoded them.
-    blk_config->size = 1000;
-    blk_config->blocksize = 1024;
+    blk_config->size = 4000;
+    blk_config->blocksize = 512;
     blk_config->read_only = false;
 
     char storage_path[STORAGE_MAX_PATHNAME];
@@ -83,14 +83,14 @@ int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, 
         return -1;
     }
 
-    if ((storage_fd = open(storage_path, O_RDWR) < 0)) {
+    if ((storage_fd = open(storage_path, O_RDWR)) < 0) {
         LOG_UIO_BLOCK_ERR("Failed to open storage file: %s\n", strerror(errno));
         return -1;
     }
     
     // @ericc: maybe need to flush all writes before this point of setting ready = true
     blk_config->ready = true;
-    
+
     LOG_UIO_BLOCK("Driver initialized\n");
     
     return 0;

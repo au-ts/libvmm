@@ -62,6 +62,7 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 CURRENT_DIR := $(shell pwd)
 
 LINUX_DIR := $(VMM_TOOLS)/linux
+LINUX_BLK_DIR := $(LINUX_DIR)/blk
 UIO_DRIVERS_DIR := $(LINUX_DIR)/uio_drivers
 
 BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
@@ -110,6 +111,8 @@ ifeq ($(BOARD),qemu_arm_virt)
 	CLIENT_VM_2_DTS_OVERLAYS :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
 								$(CLIENT_VM_2_DTS_DIR)/virtio.dts
 	BLK_DRIVER_VM_USERLEVEL_INIT := qemu_blk_driver_init
+	CLIENT_VM_1_USERLEVEL_INIT := qemu_blk_client_init
+	CLIENT_VM_2_USERLEVEL_INIT := qemu_blk_client_init
 else ifeq ($(BOARD),odroidc4)
 	SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/meson
 	BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
@@ -122,6 +125,8 @@ else ifeq ($(BOARD),odroidc4)
 								$(CLIENT_VM_2_DTS_DIR)/virtio.dts \
 								$(CLIENT_VM_2_DTS_DIR)/disable.dts
 	BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
+	CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
+	CLIENT_VM_2_USERLEVEL_INIT := blk_client_init
 else
 	$(error "Board $(BOARD) is not supported")
 endif
@@ -140,6 +145,7 @@ REPORT_FILE = $(BUILD_DIR)/report.txt
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := printf.o \
 			bitarray.o \
+			fsm.o \
 			virq.o \
 			linux.o \
 			guest.o \
@@ -211,7 +217,6 @@ CFLAGS := -mstrict-align \
 
 CFLAGS_LINUX :=	-g3 \
 				-O3 \
-				-D_GNU_SOURCE \
 				-Wno-unused-command-line-argument \
 				-Wall -Wno-unused-function -Werror \
 				-I$(SDDF)/include \
@@ -343,7 +348,7 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
 $(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
 	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK)
@@ -373,28 +378,24 @@ $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc -c $(CFLAGS_LINUX) $< -o $@
 
-$(BUILD_DIR)/postmark: $(LINUX_DIR)/postmark.c Makefile
+$(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/storage_0: Makefile
 	dd if=/dev/zero of=$@ bs=1K count=1000 && \
-	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
-	mkfs.ext4 $@_ext4fs 290 && \
-	dd if=$@_ext4fs of=$@ bs=512 seek=50 conv=notrunc
-	
+	mkfs.ext4 -F $@ -b 4096
+
 $(BUILD_DIR)/storage_1: Makefile
 	dd if=/dev/zero of=$@ bs=1K count=1000 && \
-	echo -e "g\nn\n1\n50\n\nw" | fdisk $@ && \
-	mkfs.ext4 $@_ext4fs 290 && \
-	dd if=$@_ext4fs of=$@ bs=512 seek=50 conv=notrunc
+	mkfs.ext4 -F $@ -b 4096 
 
-$(BUILD_DIR)/blk_client_init: $(LINUX_DIR)/blk_client_init Makefile
+$(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@
 
-$(BUILD_DIR)/blk_driver_init: $(LINUX_DIR)/blk_driver_init Makefile
+$(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_DIR)/blk_driver_init Makefile
 	cp $< $@
 
-$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_DIR)/qemu_blk_driver_init Makefile
+$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))

@@ -142,14 +142,6 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
-/* Data struct that handles allocation and freeing of data buffers in sDDF shared memory region */
-typedef struct blk_data_region {
-    uint32_t avail_bitpos; /* bit position of next avail buffer */
-    bitarray_t *avail_bitarr; /* bit array representing avail data buffers */
-    uint32_t num_buffers; /* number of buffers in data region */
-    uintptr_t addr; /* encoded base address of data region */
-} blk_data_region_t;
-
 void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,

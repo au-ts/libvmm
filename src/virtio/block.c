@@ -2,8 +2,9 @@
 #include "virtio/virtq.h"
 #include "virtio/mmio.h"
 #include "virtio/block.h"
-#include "util/util.h"
 #include "virq.h"
+#include <util/util.h>
+#include <util/fsm.h>
 #include <sddf/blk/shared_queue.h>
 
 /* Uncomment this to enable debug logging */
@@ -17,12 +18,12 @@
 
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
-
-// @ericc: Maybe move this into virtio.c, and store a pointer in virtio_device struct?
 static struct virtio_blk_config virtio_blk_config;
+
+/* Data struct that handles allocation and freeing of fixed size data cells in memory region */
+static fsm_t fsm_data;
+static bitarray_t fsm_avail_bitarr;
+static word_t fsm_avail_bitarr_words[roundup_bits2words64(SDDF_BLK_MAX_DATA_BUFFERS)];
 
 /* Mapping for request ID and its virtio descriptor */
 static struct virtio_blk_req_store {
@@ -35,7 +36,7 @@ static struct virtio_blk_req_store {
 
 static void virtio_blk_config_init(struct virtio_device *dev) 
 {
-    blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config;
+    blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
     virtio_blk_config.capacity = (config->blocksize / VIRTIO_BLK_SECTOR_SIZE) * config->size; // Number of 512-byte sectors
 }
 
@@ -43,11 +44,21 @@ static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
     // Busy wait until device is ready
     // Need to put an empty assembly line to prevent compiler from optimising out the busy wait
+    // @ericc: Figure out a better way to do this
     LOG_BLOCK("device begin busy wait\n");
-    while (!((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->ready) asm("");
+    while (!((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->ready) asm("");
     LOG_BLOCK("device is done busy waiting\n");
 
     virtio_blk_config_init(dev);
+
+    fsm_init(&fsm_data,
+             dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].data,
+             ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize,
+             SDDF_BLK_MAX_DATA_BUFFERS,
+             &fsm_avail_bitarr,
+             fsm_avail_bitarr_words,
+             roundup_bits2words64(SDDF_BLK_MAX_DATA_BUFFERS));
+
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = 0;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
@@ -209,126 +220,6 @@ static inline uint16_t virtio_blk_req_store_retrieve(uint32_t id)
     return req_store.sent_reqs[id];
 }
 
-/**
- * Convert a bit position to the address of the corresponding data buffer.
- * 
- * @param bitpos bit position of the data buffer
- * @return address of the data buffer
- */
-static inline uintptr_t blk_data_region_bitpos_to_addr(struct virtio_device *dev, uint32_t bitpos)
-{
-    return ((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->addr + ((uintptr_t)bitpos * ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize);
-}
-
-/**
- * Convert an address to the bit position of the corresponding data buffer.
- * 
- * @param addr address of the data buffer
- * @return bit position of the data buffer
- */
-static inline uint32_t blk_data_region_addr_to_bitpos(struct virtio_device *dev, uintptr_t addr)
-{
-    return (uint32_t)((addr - ((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->addr) / ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize);
-}
-
-/**
- * Check if count number of buffers will overflow the end of the data region.
- * 
- * @param count number of buffers to check
- * @return true if count number of buffers will overflow the end of the data region, false otherwise
- */
-static inline bool blk_data_region_overflow(struct virtio_device *dev, uint16_t count)
-{
-    return (((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->avail_bitpos + count > ((blk_data_region_t *)dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE])->num_buffers);
-}
-
-/**
- * Check if the data region is full; it has count number of free buffers available.
- *
- * @param count number of buffers to check.
- *
- * @return true indicates the data region is full, false otherwise.
- */
-static bool blk_data_region_full(struct virtio_device *dev, uint16_t count)
-{
-    blk_data_region_t *blk_data_region = dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE];
-
-    if (count > blk_data_region->num_buffers) {
-        return true;
-    }
-    
-    unsigned int start_bitpos = blk_data_region->avail_bitpos;
-    if (blk_data_region_overflow(dev, count)) {
-        start_bitpos = 0;
-    }
-
-    // Create a bit mask with count many 1's
-    bitarray_t bitarr_mask;
-    word_t words[roundup_bits2words64(count)];
-    bitarray_init(&bitarr_mask, words, roundup_bits2words64(count));
-    bitarray_set_region(&bitarr_mask, 0, count);
-
-    if (bitarray_cmp_region(blk_data_region->avail_bitarr, start_bitpos, &bitarr_mask, 0, count)) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Get count many free buffers in the data region.
- *
- * @param addr pointer to base address of the resulting contiguous buffer.
- * @param count number of free buffers to get.
- *
- * @return -1 when data region is full, 0 on success.
- */
-static int blk_data_region_get_buffer(struct virtio_device *dev, uintptr_t *addr, uint16_t count)
-{
-    blk_data_region_t *blk_data_region = dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE];
-
-    if (blk_data_region_full(dev, count)) {
-        return -1;
-    }
-
-    if (blk_data_region_overflow(dev, count)) {
-        blk_data_region->avail_bitpos = 0;
-    }
-
-    *addr = blk_data_region_bitpos_to_addr(dev, blk_data_region->avail_bitpos);
-    
-    // Set the next count many bits as unavailable
-    bitarray_clear_region(blk_data_region->avail_bitarr, blk_data_region->avail_bitpos, count);
-
-    // Update the bitpos
-    uint32_t new_bitpos = blk_data_region->avail_bitpos + count;
-    if (new_bitpos == blk_data_region->num_buffers) {
-        new_bitpos = 0;
-    }
-    blk_data_region->avail_bitpos = new_bitpos;
-
-    return 0;
-}
-
-/**
- * Free count many available buffers in the data region.
- *
- * @param addr base address of the contiguous buffer to free.
- * @param count number of buffers to free.
- */
-static void blk_data_region_free_buffer(struct virtio_device *dev, uintptr_t addr, uint16_t count)
-{   
-    blk_data_region_t *blk_data_region = dev->data_region_handlers[SDDF_BLK_DEFAULT_HANDLE];
-
-    unsigned int start_bitpos = blk_data_region_addr_to_bitpos(dev, addr);
-
-    // Assert here in case we try to free buffers that overflow the data region
-    assert(start_bitpos + count <= blk_data_region->num_buffers);
-
-    // Set the next count many bits as available
-    bitarray_set_region(blk_data_region->avail_bitarr, start_bitpos, count);
-}
-
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
     // @ericc: If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
@@ -364,8 +255,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
                 // Since we are converting bytes to the number of blocks, we need to round up
-                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize - 1) / ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize;
-                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize - 1) / ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize;
+                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
                 // If these all pass then this request can be handled successfully
@@ -383,7 +274,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     break;
                 }
 
-                if (blk_data_region_full(dev, sddf_count)) {
+                if (fsm_full(&fsm_data, sddf_count)) {
                     LOG_BLOCK_ERR("Data region is full\n");
                     virtio_blk_set_req_fail(dev, desc_head);
                     has_error = true;
@@ -397,7 +288,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 // Allocate data buffer from data region based on sddf_count
                 // Pass this allocated data buffer to sddf read request, then enqueue it
                 uintptr_t sddf_data;
-                blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
+                fsm_alloc(&fsm_data, &sddf_data, sddf_count);
                 blk_enqueue_req(queue_handle, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
                 break;
             }
@@ -410,8 +301,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 
                 uintptr_t virtio_data = virtq->desc[curr_desc_head].addr;
                 // Since we are converting bytes to the number of blocks, we need to round up
-                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize - 1) / ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize;
-                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize - 1) / ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize;
+                uint32_t sddf_block_number = virtio_req->sector / (((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config)->blocksize / VIRTIO_BLK_SECTOR_SIZE);
                 
                 // Check if req store is full, if data region is full, if req queue is full
                 // If these all pass then this request can be handled successfully
@@ -429,7 +320,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     break;
                 }
 
-                if (blk_data_region_full(dev, sddf_count)) {
+                if (fsm_full(&fsm_data, sddf_count)) {
                     LOG_BLOCK_ERR("Data region is full\n");
                     virtio_blk_set_req_fail(dev, desc_head);
                     has_error = true;
@@ -443,8 +334,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 // Allocate data buffer from data region based on sddf_count
                 // Copy data from virtio buffer to data buffer, create sddf write request and initialise it with data buffer
                 uintptr_t sddf_data;
-                blk_data_region_get_buffer(dev, &sddf_data, sddf_count);
-                memcpy((void *)sddf_data, (void *)virtio_data, sddf_count * ((blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE]->config)->blocksize);
+                fsm_alloc(&fsm_data, &sddf_data, sddf_count);
+                memcpy((void *)sddf_data, (void *)virtio_data, virtq->desc[curr_desc_head].len);
 
                 // Now enqueue the sddf write request
                 blk_enqueue_req(queue_handle, WRITE_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
@@ -526,14 +417,14 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
                     // Copy successful counts from the data buffer to the virtio buffer
                     memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)sddf_ret_addr, virtq->desc[curr_virtio_desc].len);
                     // Free the data buffer
-                    blk_data_region_free_buffer(dev, sddf_ret_addr, sddf_ret_count);
+                    fsm_free(&fsm_data, sddf_ret_addr, sddf_ret_count);
                     curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
                     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;
                 }
                 case VIRTIO_BLK_T_OUT: {
                     // Free the data buffer
-                    blk_data_region_free_buffer(dev, sddf_ret_addr, sddf_ret_count);
+                    fsm_free(&fsm_data, sddf_ret_addr, sddf_ret_count);
                     curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
                     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;

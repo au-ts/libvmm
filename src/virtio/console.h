@@ -90,7 +90,7 @@ struct virtio_console_control {
 
 /* Backend implementation */
 #define SDDF_SERIAL_NUM_HANDLES 2
-#define SDDF_SERIAL_TX_HANDLE 0
+#define SDDF_SERIAL_RX_HANDLE 0
 #define SDDF_SERIAL_TX_HANDLE 1
 
 void virtio_console_init(struct virtio_device *dev,

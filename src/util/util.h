@@ -59,17 +59,20 @@ static void assert_fail(
     while (1) {}
 }
 
+#define BIT_LOW(n)  (1ul<<(n))
+#define BIT_HIGH(n) (1ul<<(n - 32 ))
+
+/* Convenience function to print a bit array */
+void print_bitarray(bitarray_t* bitarr);
+/* Convenience function to print word in bits */
+void print_binary(word_t word);
+
 #ifndef CONFIG_DEBUG_BUILD
 
 #define _unused(x) ((void)(x))
 #define assert(expr) _unused(expr)
 
 #else
-
-/* Convenience function to print a bit array */
-void print_bitarray(bitarray_t* bitarr);
-/* Convenience function to print word in bits */
-void print_binary(word_t word);
 
 #define assert(expr) \
     do { \

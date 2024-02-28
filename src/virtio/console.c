@@ -16,10 +16,6 @@
 
 #define LOG_CONSOLE_ERR(...) do{ printf("VIRTIO(CONSOLE)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
-
 static void virtio_console_features_print(uint32_t features) {
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
@@ -195,7 +191,7 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
      * Our job is to inspect the sDDF used RX ring, and dequeue everything
      * we can and give it to the guest driver.
      */
-    ring_handle_t *sddf_rx_ring = (ring_handle_t *)dev->sddf_handlers[SDDF_SERIAL_TX_HANDLE].queue_h;
+    ring_handle_t *sddf_rx_ring = (ring_handle_t *)dev->sddf_handlers[SDDF_SERIAL_RX_HANDLE].queue_h;
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
     void *sddf_cookie = NULL;
