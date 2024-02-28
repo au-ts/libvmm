@@ -11,7 +11,7 @@
 #define PAGE_SIZE_4K 0x1000
 #define RING_BYTES 0x200000
 
-#define SOUND_DEVICE "default"
+#define DEFAULT_DEVICE "default"
 #define MAX_STREAMS 2
 #define UIO_POLLFD 0
 
@@ -249,7 +249,7 @@ static bool handle_uio_interrupt(driver_state_t *state)
     return notify_client;
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     system("alsactl init -U");
 
@@ -292,14 +292,23 @@ int main(void)
             sddf_snd_pcm_data_ring_t *pcm_responses
                 = direction == SND_PCM_STREAM_PLAYBACK ? state.rings.tx_res : state.rings.rx_res;
 
+            char *device_name;
+            if (argc - 1 > i) {
+                device_name = argv[i+1];
+            } else {
+                device_name = DEFAULT_DEVICE;
+            }
+
             state.streams[state.stream_count] = stream_open(
-                &state.shared_state->stream_info[state.stream_count], SOUND_DEVICE, direction,
+                &state.shared_state->stream_info[state.stream_count], device_name, direction,
                 translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
 
-            if (state.streams[state.stream_count] == NULL)
-                LOG_SOUND_WARN("Could not initialise target stream %d\n", i);
-            else
+            if (state.streams[state.stream_count] == NULL) {
+                LOG_SOUND_WARN("Could not initialise target stream %d (%s)\n", i, device_name);
+            } else {
+                LOG_SOUND("Initialised stream %d (%s)\n", i, device_name);
                 state.stream_count++;
+            }
         }
 
         if (state.stream_count == 0) {
@@ -360,14 +369,13 @@ int main(void)
                 LOG_SOUND_ERR("Failed to read interrupt\n");
                 break;
             }
-
-            if (handle_uio_interrupt(&state)) {
-                signal_vmm = true;
-            }
-
             if (write(uio_fd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
                 LOG_SOUND_ERR("Failed to reenable interrupts\n");
                 break;
+            }
+
+            if (handle_uio_interrupt(&state)) {
+                signal_vmm = true;
             }
         }
 

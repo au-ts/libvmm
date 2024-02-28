@@ -62,9 +62,6 @@ static buffer_queue_t rx_buffers;
 static buffer_t tx_buffer_data[BUFFER_QUEUE_SIZE];
 static buffer_t rx_buffer_data[BUFFER_QUEUE_SIZE];
 
-static int outlying_tx = 0;
-static int outlying_rx = 0;
-
 static sddf_snd_state_t *get_state(struct virtio_device *dev)
 {
     // @alexbr: currently this casts from a void ** which doesn't make sense.
@@ -156,8 +153,6 @@ static void virtio_snd_config_init(void)
 static void fetch_buffers(struct virtio_device *dev)
 {
     sddf_snd_state_t *state = get_state(dev);
-
-    LOG_SOUND("Fetching buffers\n");
 
     sddf_snd_pcm_data_t pcm;
     while (sddf_snd_dequeue_pcm_data(state->rings.tx_res, &pcm) == 0) {
@@ -577,8 +572,6 @@ static void handle_control_msg(struct virtio_device *dev,
     struct virtq_desc *status_desc = &virtq->desc[req_desc->next];
     uint32_t *status_ptr = (void *)status_desc->addr;
 
-    LOG_SOUND("Got command %s\n", code_to_str(hdr->code));
-
     switch (hdr->code) {
     case VIRTIO_SND_R_PCM_INFO: {
 
@@ -700,11 +693,6 @@ static void handle_xfer(struct virtio_device *dev,
 
     msg_handle_t *msg = msg_store_get(&messages, msg_id);
 
-    if (transmit)
-        outlying_tx++;
-    else
-        outlying_rx++;
-
     buffer_t pcm_buffer;
     if (!buffer_queue_dequeue(free_buffers, &pcm_buffer)) {
         LOG_SOUND_ERR("No free buffers\n");
@@ -716,7 +704,7 @@ static void handle_xfer(struct virtio_device *dev,
     uint32_t pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
 
     // if (transmit)
-    //     LOG_SOUND("XFER desc_head %u, cookie %d\n", desc_head, msg_id);
+    // LOG_SOUND("XFER desc_head %u, cookie %d\n", desc_head, msg_id);
 
     // int desc_idx = 0;
 
@@ -741,7 +729,7 @@ static void handle_xfer(struct virtio_device *dev,
             int to_xfer = MIN(desc_remaining, pcm_remaining);
 
             // LOG_SOUND("Transmitting chunk of len %u (pcm %u/%u, desc %u/%u)\n", to_transmit,
-            //     pcm_written, pcm_buffer.len, desc_transmitted, desc->len);
+                // pcm_written, pcm_buffer.len, desc_transmitted, desc->len);
 
             if (transmit) {
                 memcpy((void *)pcm_buffer.addr + pcm_transmitted, (void *)desc->addr + desc_transmitted, to_xfer);
@@ -767,6 +755,7 @@ static void handle_xfer(struct virtio_device *dev,
                     goto abort_xfer;
                 }
 
+                // LOG_SOUND("XFER request cookie %d\n", pcm.cookie);
                 msg->ref_count++;
                 *notify_driver = true;
 
@@ -789,6 +778,8 @@ static void handle_xfer(struct virtio_device *dev,
         pcm.cookie = msg_id;
         pcm.status = 0;
         pcm.latency_bytes = 0;
+
+        // LOG_SOUND("XFER request cookie %d\n", pcm.cookie);
 
         if (sddf_snd_enqueue_pcm_data(req_ring, &pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue to tx used\n");
@@ -936,16 +927,15 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
         msg->status = status;
     }
     
-    assert(msg->ref_count > 0);
+    if (msg->ref_count == 0) {
+        LOG_SOUND_ERR("Message with cookie %d's ref count is 0 (too many responses)\n", cookie);
+        return;
+    }
     if (--msg->ref_count > 0)
         return;
 
     uint16_t desc_head = msg->desc_head;
     msg_store_remove(&messages, cookie);
-
-    // TODO: remove
-    if (len > sizeof(uint32_t))
-        outlying_tx--;
 
     if (msg->replied) {
         LOG_SOUND_ERR("UIO SND|WARN: message already replied to\n");
@@ -981,14 +971,18 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
 
 void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, bool *respond)
 {
+    // LOG_SOUND("Got RX response with len %u, cookie %d\n", pcm->len, pcm->cookie);
+
     msg_handle_t *msg = msg_store_get(&messages, pcm->cookie);
 
     if (pcm->status != SDDF_SND_S_OK) {
         msg->status = pcm->status;
     }
     
-    // TODO: respond
-    assert(msg->ref_count > 0);
+    if (msg->ref_count == 0) {
+        LOG_SOUND_ERR("RX message with cookie %d's ref count is 0 (too many responses)\n", pcm->cookie);
+        return;
+    }
     --msg->ref_count;
 
     virtio_queue_handler_t *vq = &dev->vqs[RXQ];
@@ -1006,9 +1000,6 @@ void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, boo
 
     void *pcm_data = (void *)pcm->addr;
     unsigned pcm_remaining = pcm->len;
-
-    // LOG_SOUND("RX: pcm len: %u, desc_head %u, bytes_received %u (start)\n", pcm->len, msg->desc_head, msg->bytes_received);
-    // print_bytes(pcm_data);
 
     for (;
         desc->flags & VIRTQ_DESC_F_NEXT;
@@ -1075,7 +1066,7 @@ void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, boo
 
         memcpy((void *)desc->addr, &response, sizeof(response));
 
-        // LOG_SOUND("Responding to RX with %s, desc %u, cookie %u, desc_position %u, outlying %d\n",
+        // LOG_SOUND("Responding to RX with %s, desc %u, cookie %u, desc_position (len) %u, outlying %d\n",
         //         sddf_snd_status_code_str(msg->status), msg->desc_head, pcm->cookie, desc_position,
         //         msg_store_size(&messages));
         
@@ -1083,8 +1074,6 @@ void handle_rx_response(struct virtio_device *dev, sddf_snd_pcm_data_t *pcm, boo
         used_elem->id = msg->desc_head;
         used_elem->len = desc_position + sizeof(response);
         virtq->used->idx++;
-
-        outlying_rx--;
 
         msg_store_remove(&messages, pcm->cookie);
 

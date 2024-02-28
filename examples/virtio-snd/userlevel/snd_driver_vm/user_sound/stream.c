@@ -213,6 +213,7 @@ static int flush_pcm(stream_t *stream, int max_count)
 
     if (avail < 0) {
         LOG_SOUND_ERR("Failed to get avail: %s\n", snd_strerror(avail));
+        stream->state = STREAM_STATE_IO_ERR;
         return response_count;
     }
 
@@ -260,6 +261,7 @@ static int flush_pcm(stream_t *stream, int max_count)
         int err = snd_pcm_start(stream->handle);
         if (err < 0) {
             LOG_SOUND_ERR("Failed to start ALSA stream for playback\n");
+            stream->state = STREAM_STATE_IO_ERR;
             return SDDF_SND_S_IO_ERR;
         }
     }
@@ -486,6 +488,39 @@ static sddf_snd_status_code_t stream_release(stream_t *stream)
     return SDDF_SND_S_OK;
 }
 
+static sddf_snd_status_code_t timer_start(stream_t *stream)
+{
+    // Repeat every period, start immediately.
+    struct itimerspec timer;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_nsec = (NS_PER_SECOND / (long)stream->rate) * stream->period_size;
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_nsec = 1;
+
+    if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
+        LOG_SOUND_ERR("Failed to set period timer\n");
+        return SDDF_SND_S_IO_ERR;
+    }
+    stream->timer_enabled = true;
+    return SDDF_SND_S_OK;
+}
+
+static sddf_snd_status_code_t timer_stop(stream_t *stream)
+{
+    // Finished drain, disable timer.
+    struct itimerspec timer;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_nsec = 0;
+    timer.it_value.tv_sec = 0;
+    timer.it_value.tv_nsec = 0;
+    if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
+        LOG_SOUND_ERR("Failed to set period timer\n");
+        return SDDF_SND_S_IO_ERR;
+    }
+    stream->timer_enabled = false;
+    return SDDF_SND_S_OK;
+}
+
 static sddf_snd_status_code_t stream_start(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED) {
@@ -505,17 +540,7 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
     LOG_SOUND("[%s] Starting stream\n", stream_name(stream));
     stream->state = STREAM_STATE_PLAYING;
 
-    // Repeat every period, start immediately.
-    struct itimerspec timer;
-    timer.it_interval.tv_sec = 0;
-    timer.it_interval.tv_nsec = (NS_PER_SECOND / (long)stream->rate) * stream->period_size;
-    timer.it_value.tv_sec = 0;
-    timer.it_value.tv_nsec = 1;
-
-    if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
-        LOG_SOUND_ERR("Failed to set period timer\n");
-    }
-    stream->timer_enabled = true;
+    sddf_snd_status_code_t status = timer_start(stream);
 
     // Drop any TX frames sent before START.
     if (stream->direction == SND_PCM_STREAM_PLAYBACK) {
@@ -529,7 +554,7 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
         }
     }
 
-    return SDDF_SND_S_OK;
+    return status;
 }
 
 static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool *notify)
@@ -552,17 +577,19 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
                stream->drain_count);
     }
 
-    int nflushed = flush_pcm(stream, stream->drain_count);
-    if (nflushed > 0) {
-        *notify = true;
-    }
+    if (stream->state != STREAM_STATE_IO_ERR) {
+        int nflushed = flush_pcm(stream, stream->drain_count);
+        if (nflushed > 0) {
+            *notify = true;
+        }
 
-    stream->drain_count -= nflushed;
-    assert(stream->drain_count >= 0);
+        stream->drain_count -= nflushed;
+        assert(stream->drain_count >= 0);
 
-    if (stream->drain_count > 0) {
-        *blocked = true;
-        return SDDF_SND_S_OK;
+        if (stream->drain_count > 0) {
+            *blocked = true;
+            return SDDF_SND_S_OK;
+        }
     }
 
     // Flush remaining responses gradually
@@ -581,22 +608,19 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
 
     } else if (err < 0) {
         LOG_SOUND_ERR("Failed to drain stream: %s\n", snd_strerror(err));
+        stream->state = STREAM_STATE_IO_ERR;
         return SDDF_SND_S_IO_ERR;
     } else {
         // Flush remaining responses immediately
         while (send_response(stream))
             ;
 
-        // Finished drain, disable timer.
-        struct itimerspec timer;
-        timer.it_interval.tv_sec = 0;
-        timer.it_interval.tv_nsec = 0;
-        timer.it_value.tv_sec = 0;
-        timer.it_value.tv_nsec = 0;
-        if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
-            LOG_SOUND_ERR("Failed to set period timer\n");
+        sddf_snd_status_code_t status = timer_stop(stream);
+
+        if (status == SDDF_SND_S_IO_ERR) {
+            stream->state = STREAM_STATE_IO_ERR;
+            return SDDF_SND_S_IO_ERR;
         }
-        stream->timer_enabled = false;
 
         stream->state = STREAM_STATE_PAUSED;
         LOG_SOUND("[%s] Stream stopped\n", stream_name(stream));

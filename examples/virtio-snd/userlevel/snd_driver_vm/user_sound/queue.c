@@ -47,9 +47,7 @@ static void pcm_queue_resize(queue_t *queue)
     queue->data = realloc(queue->data, queue->item_size * queue->capacity);
     assert(queue->data);
 
-    if (queue->head > tail) {
-        memcpy(queue->data + queue->item_size * queue->len, queue->data, tail * queue->item_size);
-    }
+    memcpy(queue->data + queue->item_size * queue->len, queue->data, tail * queue->item_size);
 }
 
 void queue_enqueue(queue_t *queue, const void *item)
