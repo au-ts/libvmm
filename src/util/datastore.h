@@ -2,6 +2,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/**
+ * This file provides a "datastore" implementation that stores data in an array
+ * and provides an ID to the caller to retrieve the data later. The implementation
+ * uses a linked list to keep track of free storage slots.
+ */
+
 typedef struct datastore {
     void *storage; /* Array of data to be stored */
     size_t data_type_size; /* Size in bytes of storage array */
