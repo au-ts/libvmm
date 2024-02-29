@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 /**
- * A bit array is a data structure that represents an array of bits, where each bit can be either 0 or 1.
  * This file provides functions and macros to manipulate bit arrays efficiently.
  * In a bit array, the bits are stored in a sequence of words, where each word is typically a machine word
  * (e.g., 32 bits or 64 bits). This implementation uses 64 bits.
