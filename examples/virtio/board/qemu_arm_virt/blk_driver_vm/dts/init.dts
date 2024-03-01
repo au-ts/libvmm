@@ -15,7 +15,7 @@
 		linux,initrd-end = <0x47f00000>;
 	};
 
-	// enable/disable console serial
+	// enable/disable console serial for debugging
 	/delete-node/ pl011@9000000;
 	pl011@9000000 {
 		clock-names = "uartclk\0apb_pclk";
