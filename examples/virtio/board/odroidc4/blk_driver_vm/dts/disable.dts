@@ -19,7 +19,7 @@
         bus@ff800000 {
             // enable/disable console serial for debugging 
             serial@3000 {
-                // status = "disabled";
+                status = "disabled";
             };
         };
 
