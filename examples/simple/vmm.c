@@ -14,6 +14,7 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
+#include "sel4bench.h"
 
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
@@ -61,17 +62,12 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
-<<<<<<< HEAD
-#elif defined(BOARD_imx8mm_evk_hyp)
-#define SERIAL_IRQ 79
 #elif defined(BOARD_zcu102)
 #define SERIAL_IRQ 53
-=======
 #elif defined(BOARD_imx8mm_evk)
 #define SERIAL_IRQ 59
 #elif defined(BOARD_imx8mq_evk) || defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
->>>>>>> 60e55cbabac51d5b4ffe23de896038fdf0c774c5
 #else
 #error Need to define serial interrupt
 #endif
@@ -132,9 +128,13 @@ void init(void) {
         return;
     }
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    LOG_VMM("Registered vCPU serial IRQ: 0x%lx\n", SERIAL_IRQ);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+    LOG_VMM("Acked vCPU serial IRQ: 0x%lx\n", SERIAL_IRQ);
     /* Finally start the guest */
+    // sel4bench_init();
+
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 

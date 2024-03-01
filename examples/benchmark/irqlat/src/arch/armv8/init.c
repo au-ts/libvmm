@@ -5,11 +5,13 @@
 #include <gic.h>
 #include <timer.h>
 #include <sysregs.h>
+#include <stdio.h>
 
 void _start();
 
 __attribute__((weak))
 void arch_init(){
+    printf("arch_init\n");
     uint64_t cpuid = get_cpuid();
     gic_init();
     TIMER_FREQ = MRS(CNTFRQ_EL0);

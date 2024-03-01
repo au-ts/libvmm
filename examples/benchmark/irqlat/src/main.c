@@ -134,17 +134,15 @@ void pmu_print_samples(size_t i) { }
 #endif
 
 void timer_handler(unsigned id){
-
     timer_disable();
     curr_time = timer_get();
     irqlat_samples[sample_count] = curr_time - next_tick;
-    gic_eoi(id);
+
     for(volatile size_t i = 0; i < 15; i++);
     curr_time = timer_get();
     irqlat_end_samples[sample_count] = curr_time - next_tick;
 
     pmu_sample();
-
     sample_count += 1;
     if (sample_count < NUM_SAMPLES) {
         next_tick = timer_set(TIMER_INTERVAL);
@@ -153,7 +151,6 @@ void timer_handler(unsigned id){
         timer_disable();
         pmu_stop();
     }
-
     asm volatile("ic iallu\n\t");
 }
 
@@ -191,14 +188,14 @@ void main(void){
     irq_set_handler(TIMER_IRQ_ID, timer_handler);
     irq_enable(TIMER_IRQ_ID);
     irq_set_prio(TIMER_IRQ_ID, IRQ_MAX_PRIO);
+    
 
     // irq_set_handler(UART_IRQ_ID, uart_handler);
     // irq_enable(UART_IRQ_ID);
     // irq_set_prio(UART_IRQ_ID, IRQ_MAX_PRIO);
     sample_count = 0;
     next_tick = timer_set(TIMER_INTERVAL);
-    while(sample_count < NUM_WARMUPS);
-
+    while (sample_count < NUM_WARMUPS);
     // while(1) {
     //     printf("Press 's' to start...\n");
     //     while(uart_getchar() != 's');

@@ -35,3 +35,4 @@ typedef struct bench_event_
 
 void add_event(ccnt_t cycles, enum timed_event event, enum sel4_timed_syscall syscall);
 void display_results();
+ccnt_t get_cycles();

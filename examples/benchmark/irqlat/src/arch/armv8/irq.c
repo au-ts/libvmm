@@ -7,11 +7,12 @@
 #endif
 
 void irq_enable(unsigned id) {
-   gic_set_enable(id, true); 
-   if(GIC_VERSION == GICV2) {
-       gic_set_trgt(id, gic_get_trgt(id) | (1 << get_cpuid()));
-   } else {
-       gic_set_route(id, get_cpuid());
+    gic_set_enable(id, true); 
+    if(GIC_VERSION == GICV2) {
+        gic_set_trgt(id, gic_get_trgt(id) | (1 << get_cpuid()));
+    } else {
+        printf("Setting route for IRQ %d to CPU %d\n", id, get_cpuid());
+        gic_set_route(id, get_cpuid());
    }
 }
 

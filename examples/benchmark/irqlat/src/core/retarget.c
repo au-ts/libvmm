@@ -98,7 +98,7 @@ static spinlock_t init_lock = SPINLOCK_INITVAL;
 
 __attribute__((weak))
 void _init(){
-
+    printf("In C Code\n");
     spin_lock(&init_lock);
     if(!init_done) {
         init_done = true;

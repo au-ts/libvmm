@@ -21,6 +21,8 @@
 #include <fences.h>
 #include <irq.h>
 #include <plat.h>
+#include <stdio.h>
+
 
 volatile gicd_t* gicd = (void*)PLAT_GICD_BASE;
 volatile gicr_t* gicr = (void*)PLAT_GICR_BASE;
@@ -133,16 +135,17 @@ void gicd_init()
     /* No need to setup gicd->NSACR as all interrupts are  setup to group 1 */
 
     /* Enable distributor and affinity routing */
-    gicd->CTLR |= GICD_CTLR_ARE_NS_BIT | GICD_CTLR_ENA_BIT;
+    // gicd->CTLR |= GICD_CTLR_ARE_NS_BIT | GICD_CTLR_ENA_BIT;
+    gicd->CTLR |= (1 << 0) | (1 << 1) | (1 << 4);
 }
 
 void gic_init()
 {
-    gic_cpu_init();
-
     if (get_cpuid() == 0) {
         gicd_init();
     }
+    gic_cpu_init();
+
 
 }
 
@@ -156,7 +159,6 @@ void gic_handle()
     irq_handle(id);
 
     MSR(ICC_EOIR1_EL1, ack);
-    //MSR(ICC_DIR_EL1, ack);
 }
 
 uint64_t gicd_get_prio(uint64_t int_id)
@@ -280,7 +282,6 @@ void gicd_set_trgt(uint64_t int_id, uint8_t trgt)
 void gicd_set_route(uint64_t int_id, uint64_t trgt)
 {
     if (gic_is_priv(int_id)) return;
-
     gicd->IROUTER[int_id] = trgt;
 }
 
@@ -322,7 +323,6 @@ uint64_t gicr_get_prio(uint64_t int_id, uint32_t gicr_id)
         gicr[gicr_id].IPRIORITYR[reg_ind] >> off & BIT_MASK(off, GIC_PRIO_BITS);
 
     spin_unlock(&gicr_lock);
-
     return prio;
 }
 

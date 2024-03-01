@@ -16,7 +16,15 @@ bench_event_t events[NUM_EVENTS];
 int event_count = 0;
 int event_loop_count = 0;
 
-void add_event(ccnt_t cycles, enum timed_event event, enum sel4_timed_syscall syscall) {
+ccnt_t get_cycles() {
+    if (!RUN) {
+        return 0;
+    }
+    return sel4bench_get_cycle_count();
+}
+
+    void add_event(ccnt_t cycles, enum timed_event event, enum sel4_timed_syscall syscall)
+{
     if (!RUN) {
         return;
     }

@@ -15,9 +15,9 @@ int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};
 static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 {
     ccnt_t before, after;
-    before = sel4bench_get_cycle_count();
+    before = get_cycles();
     microkit_arm_vcpu_ack_vppi(vcpu_id, irq);
-    after = sel4bench_get_cycle_count();
+    after = get_cycles();
     add_event(after - before, cur_event, Microkit_ARM_VCPU_Ack);
 }
 
@@ -39,16 +39,19 @@ bool virq_controller_init(size_t boot_vcpu_id) {
         LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
         return false;
     }
+    LOG_VMM("Registered vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
     success = vgic_register_irq(boot_vcpu_id, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
         return false;
     }
+    LOG_VMM("Registered vCPU SGI 0 IRQ\n");
     success = vgic_register_irq(boot_vcpu_id, SGI_FUNC_CALL, &sgi_ack, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
         return false;
     }
+    LOG_VMM("Registered vCPU SGI 1 IRQ\n");
 
     return true;
 }

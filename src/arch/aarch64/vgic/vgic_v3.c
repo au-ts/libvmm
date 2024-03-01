@@ -76,13 +76,18 @@ static bool handle_vgic_redist_read_fault(size_t vcpu_id, vgic_t *vgic, uint64_t
         reg_ptr = (uint32_t *)(base_reg + (offset - GICR_IGROUPR0));
         reg = *reg_ptr;
         break;
+    case RANGE32(GICR_IPRIORITYR0, GICR_IPRIORITYRN):
+        ;
+        int reg_offset = GIC_DIST_REGN(offset, GIC_DIST_IPRIORITYR0);
+        reg = gic_dist->priority0[vcpu_id][reg_offset];
+        break;
     case RANGE32(GICR_ICFGR1, GICR_ICFGR1):
         base_reg = (uintptr_t) & (gic_dist->config[1]);
         reg_ptr = (uint32_t *)(base_reg + (offset - GICR_ICFGR1));
         reg = *reg_ptr;
         break;
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x\n", offset);
+        LOG_VMM_ERR("Unknown redist register read offset 0x%x\n", offset);
         // @ivanv: used to be ignore_fault, double check this is right
         bool success = fault_advance_vcpu(vcpu_id, regs);
         // @ivanv: todo error handling
@@ -115,7 +120,9 @@ static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_
         break;
     case RANGE32(GICR_ISENABLER0, GICR_ISENABLER0):
         data = fault_get_data(regs, fsr);
+        LOG_VMM("GICR_ISENABLER0 write with irq %d\n", CTZ(data));
         /* Mask the data to write */
+        LOG_VMM("Data is %x Mask is %x Masked is %x\n", data, mask, data & mask);
         data &= mask;
         while (data) {
             int irq;
@@ -134,6 +141,20 @@ static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_
             data &= ~(1U << irq);
             set_enable(gic_dist, irq, false, vcpu_id);
         }
+
+            break;
+    case RANGE32(GICR_ICPENDR0, GICR_ICPENDR0):
+        // @damo190: new added case, need to check if this is correct
+        // Seems like doing this only changes the distributor, as the redistrubutor is not used
+        data = fault_get_data(regs, fsr);
+        /* Mask the data to write */
+        data &= mask;
+        while (data) {
+            int irq;
+            irq = CTZ(data);
+            data &= ~(1U << irq);
+            set_pending(gic_dist, irq, false, vcpu_id);
+        }
         break;
     case RANGE32(GICR_ICACTIVER0, GICR_ICACTIVER0):
     // @ivanv: understand, this is a comment left over from kent
@@ -143,7 +164,7 @@ static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_
     case RANGE32(GICR_IPRIORITYR0, GICR_IPRIORITYRN):
         break;
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
+        LOG_VMM_ERR("Unknown redist write register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
     }
 
     bool success = fault_advance_vcpu(vcpu_id, regs);

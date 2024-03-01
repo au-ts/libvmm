@@ -1,7 +1,7 @@
 #ifndef PLAT_H
 #define PLAT_H
 
-#define PLAT_MEM_BASE 0x41000000
+#define PLAT_MEM_BASE 0x50000000
 #define PLAT_MEM_SIZE 0x1000000
 
 #define PLAT_GICD_BASE 0x38800000

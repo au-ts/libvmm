@@ -162,9 +162,9 @@ bool handle_smc(size_t vcpu_id, uint32_t hsr)
     // end up reading them multiple times
     seL4_UserContext regs;
     ccnt_t before, after;
-    before = sel4bench_get_cycle_count();
+    before = get_cycles();
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    after = sel4bench_get_cycle_count();
+    after = get_cycles();
     add_event(after - before, cur_event, TCB_ReadRegisters);
     assert(err == seL4_NoError);
 

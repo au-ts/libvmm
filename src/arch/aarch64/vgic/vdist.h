@@ -399,7 +399,7 @@ static bool vgic_dist_reg_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, ui
         break;
 #endif
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register dist offset 0x%x", offset);
         // err = ignore_fault(fault);
         success = fault_advance_vcpu(vcpu_id, regs);
         assert(success);
@@ -615,7 +615,7 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
         break;
 #endif
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register dist write offset 0x%x", offset);
         assert(0);
     }
 ignore_fault:

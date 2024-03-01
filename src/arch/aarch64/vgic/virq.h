@@ -219,9 +219,9 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     // @ivanv: why is the priority 0?
     ccnt_t before, after;
-    before = sel4bench_get_cycle_count();
+    before = get_cycles();
     microkit_arm_vcpu_inject_irq(vcpu_id, virq->virq, 0, group, idx);
-    after = sel4bench_get_cycle_count();
+    after = get_cycles();
     add_event(after - before, cur_event, Microkit_ARM_VCPU_Inject);
     vgic_vcpu->lr_shadow[idx] = *virq;
 

@@ -29,12 +29,12 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
      * guests, there is no point in prematurely generalising this code.
      */
     seL4_UserContext regs = {0};
-    // regs.x0 = dtb;
+    regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
     /* Write out all the TCB registers */
     ccnt_t before, after;
-    before = sel4bench_get_cycle_count();
+    before = get_cycles();
     seL4_Word err = seL4_TCB_WriteRegisters(
             BASE_VM_TCB_CAP + boot_vcpu_id,
             false, // We'll explcitly start the guest below rather than in this call
@@ -43,9 +43,9 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
             // SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
             &regs
         );
-    after = sel4bench_get_cycle_count();
+    after = get_cycles();
     add_event(after - before, VCPUFault, TCB_WriteRegisters);
-
+    LOG_VMM("Wrote registers to boot vCPU's TCB (id is 0x%lx)\n", boot_vcpu_id);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", boot_vcpu_id, err);

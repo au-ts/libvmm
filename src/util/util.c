@@ -36,6 +36,17 @@ void _putchar(char character)
             while ((*UART_REG(UARTFR) & PL011_UARTFR_TXFF) != 0)
                 ;
             *UART_REG(UARTDR) = character;
+#elif defined(BOARD_maaxboard)
+#define UART_BASE 0x30860000
+#define STAT 0x98
+#define TRANSMIT 0x40
+#define STAT_TDRE (1 << 14)
+        while (!(*UART_REG(STAT) & STAT_TDRE))
+        {
+        }
+        *UART_REG(TRANSMIT) = character;
 #endif
+
+
 #endif
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import numpy as np
 
-patch_f = open("logfile_patch", 'r')
-no_patch_f = open("logfile_no_patch", 'r')
+patch_f = open("logfile_gicv3", 'r')
+no_patch_f = open("logfile_patch", 'r')
 
 # READ every line between thelines that say START_RESULTS and END_RESULTS
 # and store them in a list
@@ -80,9 +80,9 @@ def compile_data(data):
         median = np.median(d[d[:,1] == event,2].astype(int))
         print('\t', event, 'Mean', f'{avg:.2f}', 'sd', f'{std:.2f}', 'Median', median)
 
-print("\nWith Ivan's patch:")
+print("\nOn GICv3 System:")
 print('-' * 100)
 compile_data(patch_d)
-print("\nWithout Ivan's patch:")
+print("\nOn GICv2 System:")
 print('-' * 100)
 compile_data(no_patch_d)

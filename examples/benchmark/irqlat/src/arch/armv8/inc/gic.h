@@ -21,6 +21,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <bit.h>
+#include <stdio.h>
 
 #define GICV2 (2)
 #define GICV3 (3)
@@ -336,6 +337,7 @@ static inline bool gic_is_priv(uint64_t int_id)
 extern volatile gicc_t *gicc;
 
 static inline void gic_eoi(uint64_t id) {
+    printf("Writing EOI for interrupt %d to %p\n", id, &gicc->EOIR);
     gicc->EOIR = id;
 }
 

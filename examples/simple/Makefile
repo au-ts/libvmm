@@ -72,7 +72,7 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v3.o package_guest_images.o tcb.o vcpu.o
+VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v3.o package_guest_images.o tcb.o vcpu.o temp_bench.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -91,6 +91,7 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
+		  -DBENCH_$(BENCH) \
 		  -target aarch64-none-elf
 
 LDFLAGS := -L$(BOARD_DIR)/lib

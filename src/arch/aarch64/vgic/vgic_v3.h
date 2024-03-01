@@ -203,6 +203,7 @@ struct gic_redist_map {          /* Starting */
 #define GICR_IGROUPR0       0x10080
 #define GICR_ISENABLER0     0x10100
 #define GICR_ICENABLER0     0x10180
+#define GICR_ICPENDR0       0x10280
 #define GICR_ICACTIVER0     0x10380
 #define GICR_IPRIORITYR0    0x10400
 #define GICR_IPRIORITYRN    0x1041C
