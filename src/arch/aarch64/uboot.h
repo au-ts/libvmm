@@ -41,6 +41,7 @@ struct linux_image_header {
 uintptr_t uboot_setup_images(uintptr_t ram_start,
                              uintptr_t uboot,
                              size_t uboot_size,
+                             size_t uboot_offset,
                              uintptr_t dtb_src,
                              uintptr_t dtb_dest,
                              size_t dtb_size

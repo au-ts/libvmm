@@ -40,6 +40,7 @@
 #define BLOCK_IRQ 79
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
 #define SERIAL_IRQ 225
+#define BLOCK_IRQ 79
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
 #elif defined(BOARD_imx8mm_evk_hyp)

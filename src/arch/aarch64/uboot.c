@@ -9,13 +9,14 @@
 uintptr_t uboot_setup_images(uintptr_t ram_start,
                              uintptr_t uboot,
                              size_t uboot_size,
+                             size_t uboot_offset,
                              uintptr_t dtb_src,
                              uintptr_t dtb_dest,
                              size_t dtb_size
                              )
 {
     //TODO: need to work out where in RAM does uboot go??? Seems like this would be board specific? Could just try loading it into ram start
-    uintptr_t uboot_dest = ram_start + 0x200000; // we shift uboot so we can put the devic tree blob at the start of RAM
+    uintptr_t uboot_dest = ram_start + uboot_offset; // we shift uboot so we can put the devic tree blob at the start of RAM
     LOG_VMM("Copying u-boot to 0x%x (0x%x bytes)\n", uboot_dest, uboot_size);
     memcpy((char *)uboot_dest, (char *)uboot, uboot_size);
 

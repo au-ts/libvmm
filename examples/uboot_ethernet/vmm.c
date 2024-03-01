@@ -21,7 +21,18 @@
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
 #define GUEST_RAM_SIZE 0x10000000
+#define UBOOT_OFFSET 0x200000
+
+#if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x40000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#elif defined(BOARD_odroidc4)
+// #define GUEST_DTB_VADDR 0x2f000000
+#define GUEST_DTB_VADDR 0x20000000
+// #define GUEST_INIT_RAM_DISK_VADDR 0x1d700000
+#else
+#error Need to define VM image address and DTB address
+#endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
@@ -30,8 +41,16 @@
 #define ETHERNET_PHY_IRQ_CH 3
 
 /* IRQs */
+#if defined(BOARD_qemu_arm_virt)
 #define SERIAL_IRQ 33
 #define ETHERNET_IRQ 79
+#elif defined(BOARD_odroidc4)
+#define SERIAL_IRQ 225
+#define ETHERNET_IRQ 40
+#define ETHERNET_PHY_IRQ 96
+#else
+#error Need to define serial interrupt
+#endif
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -71,6 +90,7 @@ void init(void) {
     uintptr_t uboot_pc = uboot_setup_images(guest_ram_vaddr,
                                             (uintptr_t) _guest_kernel_image,
                                             kernel_size,
+                                            UBOOT_OFFSET,
                                             (uintptr_t) _guest_dtb_image,
                                             GUEST_DTB_VADDR,
                                             dtb_size);
@@ -94,6 +114,7 @@ void init(void) {
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
+
     uboot_start(GUEST_VCPU_ID, uboot_pc, GUEST_DTB_VADDR);
 }
 

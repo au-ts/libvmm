@@ -55,6 +55,7 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
+$(info $$BOARD_DIR is [${BOARD_DIR}])
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
 VMM_SRC_DIR := $(VMM)/src
@@ -62,6 +63,7 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/ethernet.system
 
 IMAGE_DIR := board/$(BOARD)
 UBOOT := $(IMAGE_DIR)/u-boot.bin
+$(info $$UBOOT is [${UBOOT}])
 DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz

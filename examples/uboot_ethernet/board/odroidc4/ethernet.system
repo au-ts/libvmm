@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+    <!-- We need to make sure we map the guest ram into physical ram such that everything is accessible.
+         Seems like OdroidC4 RAM does start at 0, though we'll still map in at 0x20000000 -->
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" phys_addr="0x20000000"/>
+    <memory_region name="ethernet" size="0x1000" phys_addr="0xa003000" />
+    <memory_region name="serial" size="0x1_000" phys_addr="0xff803000" /> 
+    <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
+
+    <protection_domain name="VMM" priority="254">
+        <program_image path="vmm.elf" />
+        <map mr="guest_ram" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="bootloader" id="0">
+            <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
+            <map mr="serial" vaddr="0xff803000" perms="rw" cached="false" />
+            <map mr="ethernet" vaddr="0xa003000" perms="rw" cached="false" />
+            <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
+        </virtual_machine>
+        <irq irq="225" id="1" />
+        <irq irq="40" id="2" trigger="edge" />
+        <irq irq="96" id="3" trigger="edge" />
+    </protection_domain>
+</system>
+
+<!-- Plan is to start vaddress of VMM at 0x0 and make sure it has enough memory to access everything UBoot wants.
+Initial stack pointer starts at 0x20000000 so we want to make sure we support that-->
+
+<!-- What's the relationship between the RAM sizes in different files??? -->
