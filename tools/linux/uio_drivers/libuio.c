@@ -277,6 +277,9 @@ int main(int argc, char **argv) {
         close(pfd.fd);
         return 1;
     }
+
+    // Enable the uio interrupt
+    uio_notify();
     
     /* Initialise driver */
     if (driver_init(uio_num, maps, maps_phys, num_maps, argc - 2, argv + 2) != 0) {
@@ -284,9 +287,6 @@ int main(int argc, char **argv) {
         close(pfd.fd);
         return 1;
     }
-
-    // Enable the uio interrupt
-    uio_notify();
 
     while (true) {
         // poll() returns when there is something to read, in our case, when there is an IRQ occur.
