@@ -1,8 +1,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "util.h"
 #include "datastore.h"
+
+// @ericc: When we have libc implementation replace this
+static void *memcpy(void *restrict dest, const void *restrict src, size_t n)
+{
+    unsigned char *d = dest;
+    const unsigned char *s = src;
+    for (; n; n--) *d++ = *s++;
+    return dest;
+}
 
 int datastore_alloc(datastore_t *ds, void *data, uint64_t *id)
 {
