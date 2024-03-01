@@ -220,6 +220,7 @@ CFLAGS_LINUX :=	-g3 \
 				-O3 \
 				-Wno-unused-command-line-argument \
 				-Wall -Wno-unused-function -Werror \
+				-D_GNU_SOURCE \
 				-I$(SDDF)/include \
 				-I$(LINUX_DIR)/include
 
