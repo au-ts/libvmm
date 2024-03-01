@@ -9,25 +9,10 @@
  * (e.g., 32 bits or 64 bits). This implementation uses 64 bits.
  */
 
-/**
- * Word in the bitarray.
- */
-typedef uint64_t word_t;
-
-/**
- * Index of a word in the bitarray.
- */
-typedef uint64_t word_index_t;
-
-/**
- * Index of a bit in the bitarray.
- */
-typedef uint64_t bit_index_t;
-
-/**
- * Offset of a bit within a word in the bitarray.
- */
-typedef uint8_t word_offset_t;
+typedef uint64_t word_t; /* type of word in the bitarray. */
+typedef uint64_t word_index_t; /* type for index of a word in the bitarray. */
+typedef uint64_t bit_index_t; /* type for index of a bit in the bitarray. */
+typedef uint8_t word_offset_t; /* type for offset of a bit within a word in the bitarray. */
 
 /**
  * Rounds up the number of bits to the nearest number of bytes.
