@@ -156,11 +156,8 @@ void init(void) {
 #if defined(BOARD_odroidc4)
     // SD
     register_passthrough_irq(222, 1);
-    // // eMMC
+    // eMMC
     // register_passthrough_irq(223, 2);
-#endif
-#if defined(BOARD_qemu_arm_virt)
-    // register_passthrough_irq(33, 1);
 #endif
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

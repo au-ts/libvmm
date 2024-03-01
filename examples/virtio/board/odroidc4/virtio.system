@@ -216,6 +216,7 @@
             <map mr="mmc" vaddr="0xffe07000" perms="rw" cached="false" />
             <map mr="bus1" vaddr="0xff600000" perms="rw" cached="false" />
             <map mr="bus2-1" vaddr="0xff800000" perms="rw" cached="false" />
+            <map mr="uart" vaddr="0xff803000" perms="rw" cached="false" />
             <map mr="bus2-2" vaddr="0xff804000" perms="rw" cached="false" />
             <map mr="bus3" vaddr="0xffd00000" perms="rw" cached="false" />
             <!-- sDDF block -->
