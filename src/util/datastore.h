@@ -3,26 +3,26 @@
 #include <stddef.h>
 
 /**
- * This file provides a "datastore" implementation that stores data in an array
+ * This file provides a "datastore" implementation that stores any data type in an array
  * and provides an ID to the caller to retrieve the data later. The implementation
  * uses a linked list to keep track of free storage slots.
  */
 
 typedef struct datastore {
-    void *storage; /* Array of data to be stored */
-    size_t data_type_size; /* Size in bytes of storage array */
-    uint64_t *nextfree; /* Linked list pointing to next free slot */
-    bool *used; /* Array indicating whether storage index is occupied */
-    uint64_t size; /* Length of storage, nextfree, used */
-    uint64_t head; /* Index of first free slot in storage */
-    uint64_t tail; /* Index of last free slot in storage */
-    uint64_t num_free; /* Number of free slots in storage */
+    void *storage; /* array of custom data to be stored */
+    size_t data_type_size; /* size in bytes of storage data type */
+    uint64_t *nextfree; /* linked list pointing to next free slot */
+    bool *used; /* array indicating whether storage index is occupied */
+    uint64_t size; /* length of storage, nextfree, used arrays */
+    uint64_t head; /* index of first free slot in storage */
+    uint64_t tail; /* index of last free slot in storage */
+    uint64_t num_free; /* number of free slots in storage */
 } datastore_t;
 
 /**
- * Check if the reference store is full.
+ * Check if the data store is full.
  * 
- * @return true if request store is full, false otherwise.
+ * @return true if data store is full, false otherwise.
  */
 static inline bool datastore_full(datastore_t *rs)
 {
@@ -48,7 +48,7 @@ int datastore_alloc(datastore_t *ds, void *data, uint64_t *id);
 int datastore_retrieve(datastore_t *ds, uint64_t id, void *data);
 
 /**
- * Initialise the reference store.
+ * Initialise the data store.
  * 
  * @param ds pointer to the data store struct.
  * @param storage pointer to the storage array.
