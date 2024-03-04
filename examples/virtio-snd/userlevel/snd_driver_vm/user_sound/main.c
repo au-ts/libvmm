@@ -242,7 +242,7 @@ static bool handle_uio_interrupt(driver_state_t *state)
 
     bool notify_client = false;
     for (int i = 0; i < state->stream_count; i++) {
-        if (stream_flush_commands(state->streams[i])) {
+        if (stream_update(state->streams[i])) {
             notify_client = true;
         }
     }
@@ -390,7 +390,7 @@ int main(int argc, char **argv)
                     continue;
                 }
 
-                if (stream_tick(state.streams[i - 1])) {
+                if (stream_update(state.streams[i - 1])) {
                     signal_vmm = true;
                 }
             }

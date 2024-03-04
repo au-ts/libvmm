@@ -21,7 +21,6 @@ void stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm);
 int stream_timer_fd(stream_t *stream);
 
 /** Returns true to signal client notify */
-bool stream_flush_commands(stream_t *stream);
-bool stream_tick(stream_t *stream);
+bool stream_update(stream_t *stream);
 
 snd_pcm_stream_t stream_direction(stream_t *stream);
