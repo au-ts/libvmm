@@ -109,7 +109,7 @@ typedef struct sddf_handler {
     void *queue_h;
     /* Pointer to the sDDF config space */
     void *config;
-    /* Shared data region handlers */
+    /* Shared data region address */
     uintptr_t data;
     /* Microkit channel to the sDDF Virtualiser */
     size_t ch; // @ivanv: this is microkit specific so maybe should be a callback instead or something.
