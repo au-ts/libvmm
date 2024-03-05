@@ -89,6 +89,7 @@ sddf_handler_t sddf_blk_handlers[SDDF_BLK_NUM_HANDLES];
 static struct virtio_device virtio_blk;
 
 void init(void) {
+    // return;
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */

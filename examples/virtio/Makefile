@@ -99,6 +99,7 @@ CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 SDDF := sddf
 SDDF_BLK_COMPONENTS := $(SDDF)/blk/components
 SDDF_BLK_SHAREDQUEUE := $(SDDF)/blk/libblksharedqueue
+SDDF_BLK_UTIL := $(SDDF)/blk/util
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 
@@ -113,6 +114,7 @@ ifeq ($(BOARD),qemu_arm_virt)
 	BLK_DRIVER_VM_USERLEVEL_INIT := qemu_blk_driver_init
 	CLIENT_VM_1_USERLEVEL_INIT := qemu_blk_client_init
 	CLIENT_VM_2_USERLEVEL_INIT := qemu_blk_client_init
+	BLK_DRIVER_VM_USERLEVEL := uio_blk_driver storage
 else ifeq ($(BOARD),odroidc4)
 	SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/meson
 	BLK_DRIVER_VM_DTS_OVERLAYS :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
@@ -127,6 +129,7 @@ else ifeq ($(BOARD),odroidc4)
 	BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 	CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
 	CLIENT_VM_2_USERLEVEL_INIT := blk_client_init
+	BLK_DRIVER_VM_USERLEVEL := uio_blk_driver
 else
 	$(error "Board $(BOARD) is not supported")
 endif
@@ -134,10 +137,7 @@ endif
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf blk_virt.elf
 
 CLIENT_VM_1_USERLEVEL := postmark
-CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
 CLIENT_VM_2_USERLEVEL := postmark
-CLIENT_VM_2_USERLEVEL_INIT := blk_client_init
-BLK_DRIVER_VM_USERLEVEL := uio_blk_driver storage_0 storage_1
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -183,7 +183,7 @@ SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
 
-BLK_VIRT_OBJS := virt.o sddf_blk_shared_queue.o
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_shared_queue.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o \
@@ -349,12 +349,15 @@ $(BUILD_DIR)/sddf_serial_sharedringbuffer.o: Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
+$(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
 $(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
 	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK)
 	cp $(SDDF_BLK_SHAREDQUEUE)/sddf_blk_shared_queue.o $(BUILD_DIR)/sddf_blk_shared_queue.o
+
+$(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -383,18 +386,17 @@ $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
 $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
-$(BUILD_DIR)/storage_0: Makefile
+$(BUILD_DIR)/storage: Makefile
 	dd if=/dev/zero of=$@ bs=1K count=1000 && \
 	mkfs.ext4 -F $@ -b 4096
-
-$(BUILD_DIR)/storage_1: Makefile
-	dd if=/dev/zero of=$@ bs=1K count=1000 && \
-	mkfs.ext4 -F $@ -b 4096 
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_DIR)/blk_driver_init Makefile
+	cp $< $@
+
+$(BUILD_DIR)/qemu_blk_client_init: $(LINUX_BLK_DIR)/qemu_blk_client_init Makefile
 	cp $< $@
 
 $(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init Makefile

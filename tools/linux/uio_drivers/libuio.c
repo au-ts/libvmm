@@ -30,18 +30,18 @@
 // #define DEBUG_UIO
 
 #if defined(DEBUG_UIO)
-#define LOG_UIO(...) do{ printf("UIO_DRIVER_%d", uio_num); printf(": "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO(...) do{ printf("UIO_DRIVER"); printf(": "); printf(__VA_ARGS__); }while(0)
 #else
 #define LOG_UIO(...) do{}while(0)
 #endif
 
-#define LOG_UIO_ERR(...) do{ printf("UIO_DRIVER_%d", uio_num); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_ERR(...) do{ printf("UIO_DRIVER"); printf("|ERROR: "); printf(__VA_ARGS__); }while(0)
 
+#define UIO_NUM 0
 
 #define MAX_PATHNAME 64
 #define UIO_MAX_MAPS 32
 
-static int uio_num;
 static struct pollfd pfd;
 static void *maps[UIO_MAX_MAPS];
 static uintptr_t maps_phys[UIO_MAX_MAPS];
@@ -50,7 +50,7 @@ static int num_maps;
 /*
  * Just happily abort if the user can't be bother to provide these functions
  */
-__attribute__((weak)) int driver_init(int driver_id, void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
+__attribute__((weak)) int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {
     assert(!"should not be here!");
 }
@@ -79,7 +79,7 @@ static int uio_num_maps() {
     int count = 0;
 
     char path[MAX_PATHNAME];
-    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps", uio_num);
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps", UIO_NUM);
     if (len < 0 || len >= sizeof(path)) {
         LOG_UIO_ERR("Failed to create maps path string\n");
         return -1;
@@ -135,9 +135,9 @@ static int uio_map_size(int map_num) {
     char path[MAX_PATHNAME];
     char buf[MAX_PATHNAME];
 
-    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/size", uio_num, map_num);
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/size", UIO_NUM, map_num);
     if (len < 0 || len >= sizeof(path)) {
-        LOG_UIO_ERR("Failed to create uio%d map%d size path string\n", uio_num, map_num);
+        LOG_UIO_ERR("Failed to create uio%d map%d size path string\n", UIO_NUM, map_num);
         return -1;
     }
 
@@ -166,9 +166,9 @@ static int uio_map_addr(int map_num, uintptr_t *addr) {
     char path[MAX_PATHNAME];
     char buf[MAX_PATHNAME];
 
-    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/addr", uio_num, map_num);
+    int len = snprintf(path, sizeof(path), "/sys/class/uio/uio%d/maps/map%d/addr", UIO_NUM, map_num);
     if (len < 0 || len >= sizeof(path)) {
-        LOG_UIO_ERR("Failed to create uio%d map%d addr path string\n", uio_num, map_num);
+        LOG_UIO_ERR("Failed to create uio%d map%d addr path string\n", UIO_NUM, map_num);
         return -1;
     }
 
@@ -243,17 +243,9 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    uio_num = atoi(argv[1]);
-    if (uio_num < 0) {
-        printf("Failed to convert uio number to integer\n");
-        printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
-        close(pfd.fd);
-        return 1;
-    }
-
-    // append argv[1] to "/dev/uio" to get the full path of the uio device, e.g. "/dev/uio0"
+    // append UIO_NUM to "/dev/uio" to get the full path of the uio device, e.g. "/dev/uio0"
     char uio_device_name[MAX_PATHNAME];
-    int len = snprintf(uio_device_name, sizeof(uio_device_name), "/dev/uio%s", argv[1]);
+    int len = snprintf(uio_device_name, sizeof(uio_device_name), "/dev/uio%d", UIO_NUM);
     if (len < 0 || len >= sizeof(uio_device_name)) {
         LOG_UIO_ERR("Failed to create uio device name\n");
         printf("Usage: %s <uio_device_number> [driver_args...]\n", argv[0]);
@@ -282,7 +274,8 @@ int main(int argc, char **argv) {
     uio_notify();
     
     /* Initialise driver */
-    if (driver_init(uio_num, maps, maps_phys, num_maps, argc - 2, argv + 2) != 0) {
+    // Here we pass the UIO device mappings to the driver, skipping the first one which only contains UIO's irq status
+    if (driver_init(maps + 1, maps_phys + 1, num_maps - 1, argc - 1, argv + 1) != 0) {
         LOG_UIO_ERR("Failed to initialise driver\n");
         close(pfd.fd);
         return 1;

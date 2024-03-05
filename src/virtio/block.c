@@ -164,6 +164,15 @@ static void virtio_blk_set_req_fail(struct virtio_device *dev, uint16_t desc)
     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_IOERR;
 }
 
+static void virtio_blk_set_req_success(struct virtio_device *dev, uint16_t desc)
+{
+    struct virtq *virtq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].virtq;
+
+    uint16_t curr_virtio_desc = desc;
+    for (;virtq->desc[curr_virtio_desc].flags & VIRTQ_DESC_F_NEXT; curr_virtio_desc = virtq->desc[curr_virtio_desc].next){}
+    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+}
+
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
     // @ericc: If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
@@ -349,40 +358,41 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
         handled = true;
         blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_addr, &sddf_ret_count, &sddf_ret_success_count, &sddf_ret_id);
         
-        /* Freeing and retrieving request store */
+        /* Freeing and retrieving data store */
         req_data_t req_data;
         int ret = datastore_retrieve(&reqstore, sddf_ret_id, &req_data);
         assert(ret == 0);
         struct virtq *virtq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].virtq;
         struct virtio_blk_outhdr *virtio_req = (void *)virtq->desc[req_data.virtio_desc_head].addr;
-
-        /* Responding error to virtio if needed */
-        if (sddf_ret_status == SEEK_ERROR) {
-            virtio_blk_set_req_fail(dev, req_data.virtio_desc_head);
-        } else {
+        
+        // Free corresponding bookkeeping structures regardless of the request's success status
+        switch (virtio_req->type) {
+            case VIRTIO_BLK_T_IN:
+            case VIRTIO_BLK_T_OUT: {
+                // Free the data buffer
+                fsmem_free(&fsmem_data, req_data.sddf_data, req_data.sddf_count);
+                break;
+            }
+            case VIRTIO_BLK_T_FLUSH:
+                break;
+        }
+        
+        if (sddf_ret_status == SUCCESS) {
             uint16_t curr_virtio_desc = virtq->desc[req_data.virtio_desc_head].next;
             switch (virtio_req->type) {
                 case VIRTIO_BLK_T_IN: {
                     // Copy successful counts from the data buffer to the virtio buffer
                     memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)req_data.sddf_data, virtq->desc[curr_virtio_desc].len);
-                    // Free the data buffer
-                    fsmem_free(&fsmem_data, req_data.sddf_data, req_data.sddf_count);
-                    curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
-                    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
                     break;
                 }
-                case VIRTIO_BLK_T_OUT: {
-                    // Free the data buffer
-                    fsmem_free(&fsmem_data, req_data.sddf_data, req_data.sddf_count);
-                    curr_virtio_desc = virtq->desc[curr_virtio_desc].next;
-                    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+                case VIRTIO_BLK_T_OUT:
                     break;
-                }
-                case VIRTIO_BLK_T_FLUSH: {
-                    *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
+                case VIRTIO_BLK_T_FLUSH:
                     break;
-                }
             }
+            virtio_blk_set_req_success(dev, req_data.virtio_desc_head);
+        } else {
+            virtio_blk_set_req_fail(dev, req_data.virtio_desc_head);
         }
         
         virtio_blk_used_buffer(dev, req_data.virtio_desc_head);

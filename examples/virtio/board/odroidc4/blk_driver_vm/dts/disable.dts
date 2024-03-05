@@ -30,9 +30,5 @@
         mmc@ffe07000 {
             status = "disabled";
         };
-
-        // sd@ffe05000 {
-        //     status = "disabled";
-        // };
     };
 };

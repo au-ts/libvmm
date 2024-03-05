@@ -17,6 +17,8 @@
 #include "virtio/virtio.h"
 #include "virtio/block.h"
 
+// #define DEBUG_BLK_DRIVER_VM
+
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
@@ -46,72 +48,18 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-#define MAX_IRQ_CH 64
-int passthrough_irq_map[MAX_IRQ_CH];
-
-static void dummy_ack(size_t vcpu_id, int irq, void *cookie) {
-    return;
-}
-
-static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
-    microkit_irq_ack(irq_ch);
-}
-
-static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
-    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
-    assert(irq_ch < MAX_IRQ_CH);
-    passthrough_irq_map[irq_ch] = irq;
-
-    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
-    if (!err) {
-        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
-        return;
-    }
-}
-
-static int get_passthrough_irq(microkit_channel irq_ch) {
-    if (passthrough_irq_map[irq_ch] != -1) {
-        return passthrough_irq_map[irq_ch];
-    }
-    return -1;
-}
-
 /* sDDF block */
-typedef struct {
-    int irq;
-    int ch;
-} uio_device_t;
+#if defined(BOARD_odroidc4)
+#define SD_IRQ 222
+#define SD_CH 1 // @ericc: autogen
+#endif
 
-#define MAX_UIO_DEVICE 32
-// @ericc: @TODO: autogen these, irq from dts, ch from microkit system file
-#define NUM_UIO_DEVICE 2
-uio_device_t uio_devices[MAX_UIO_DEVICE] = {
-    { .irq = 50, .ch = 3 },
-    { .irq = 51, .ch = 4 },
-};
-
-// @ericc: @TODO: change from linear search to O(1) later
-static int get_uio_ch(int irq) {
-    for (int i = 0; i < MAX_UIO_DEVICE; i++) {
-        if (uio_devices[i].irq == irq) {
-            return uio_devices[i].ch;
-        }
-    }
-    return -1;
-}
-
-static int get_uio_irq_from_ch(int ch) {
-    for (int i = 0; i < MAX_UIO_DEVICE; i++) {
-        if (uio_devices[i].ch == ch) {
-            return uio_devices[i].irq;
-        }
-    }
-    return -1;
-}
+// @ericc: autogen
+#define UIO_IRQ 50
+#define UIO_CH 3
 
 void uio_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_notify(get_uio_ch(irq));
+    microkit_notify(UIO_CH);
 }
 
 void init(void) {
@@ -143,44 +91,34 @@ void init(void) {
         return;
     }
 
-    /* Initialise passthrough IRQ map */
-    for (int i = 0; i < MAX_IRQ_CH; i++) {
-        passthrough_irq_map[i] = -1;
-    }
+    /* Register the UIO IRQ */
+    virq_register(GUEST_VCPU_ID, UIO_IRQ, uio_ack, NULL);
 
-    /* Register UIO irq */
-    for (int i = 0; i < NUM_UIO_DEVICE; i++) {
-        virq_register(GUEST_VCPU_ID, uio_devices[i].irq, &uio_ack, NULL);
-    }
-    
 #if defined(BOARD_odroidc4)
-    // SD
-    register_passthrough_irq(222, 1);
-    // eMMC
-    // register_passthrough_irq(223, 2);
+    /* Register the SD card IRQ */
+    virq_register_passthrough(GUEST_VCPU_ID, SD_IRQ, SD_CH);
+#if defined(DEBUG_BLK_DRIVER_VM)
+    virq_register_passthrough(GUEST_VCPU_ID, 225, 10);
 #endif
+#endif
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
-    int irq;
+    bool handled = false;
 
-    /* Handle notifications from clients of block device */
-    irq = get_uio_irq_from_ch(ch);
-    if (irq != -1) {
-        virq_inject(GUEST_VCPU_ID, irq);
-        return;
+    handled = virq_handle_passthrough(ch);
+
+    if (ch == UIO_CH) {
+        virq_inject(GUEST_VCPU_ID, UIO_IRQ);
+        handled = true;
     }
 
-    /* Handle passthrough IRQs */
-    irq = get_passthrough_irq(ch);
-    if (irq != -1) {
-        virq_inject(GUEST_VCPU_ID, irq);
-        return;
+    if (!handled) {
+        LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
-
-    LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
 }
 
 /*

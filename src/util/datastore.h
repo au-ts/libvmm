@@ -22,6 +22,7 @@ typedef struct datastore {
 /**
  * Check if the data store is full.
  * 
+ * @param rs pointer to the data store struct.
  * @return true if data store is full, false otherwise.
  */
 static inline bool datastore_full(datastore_t *rs)
@@ -30,9 +31,11 @@ static inline bool datastore_full(datastore_t *rs)
 }
 
 /**
- * Allocate a storage slot for a new data entry.
+ * Allocate a storage slot for a new data entry by copying what
+ * the data pointer points to into the storage array.
  * 
- * @param data poiner to data to store in a storage slot 
+ * @param ds pointer to the data store struct.
+ * @param data pointer to data to store in a storage slot 
  * @param id pointer to data ID allocated
  * @return 0 on success, -1 if storage is full
  */
@@ -41,6 +44,7 @@ int datastore_alloc(datastore_t *ds, void *data, uint64_t *id);
 /**
  * Retrieve and free a storage slot.
  * 
+ * @param ds pointer to the data store struct.
  * @param id data ID to be freed
  * @param data pointer to data to be retrieved
  * @return 0 on success, -1 if data ID is invalid
