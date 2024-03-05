@@ -129,6 +129,8 @@ VMM_OBJS := printf.o \
 			util.o \
 			bitarray.o \
 			buffer_queue.o \
+			fsmem.o \
+			datastore.o \
 			vgic.o \
 			vgic_v2.o \
 			tcb.o \
@@ -185,7 +187,6 @@ CFLAGS := -mstrict-align \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
-		  -DBUILD_ID='"$(shell date)"' \
 		  -target aarch64-none-elf
 
 # @alexbr: currently all userlevel procs link asound. this should instead be done per-process.

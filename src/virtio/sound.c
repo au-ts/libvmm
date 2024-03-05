@@ -17,10 +17,6 @@
 
 #define LOG_SOUND_ERR(...) do{ printf("VIRTIO(SOUND)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32))
-
 #define CONTROLQ 0
 #define EVENTQ 1
 #define TXQ 2
@@ -64,9 +60,8 @@ static buffer_t rx_buffer_data[BUFFER_QUEUE_SIZE];
 
 static sddf_snd_state_t *get_state(struct virtio_device *dev)
 {
-    // @alexbr: currently this casts from a void ** which doesn't make sense.
-    // I prefer to have a struct instead of array however, need to discuss.
-    return (sddf_snd_state_t *)dev->sddf_handlers;
+    // @alexbr: make this fit better into handlers struct
+    return (sddf_snd_state_t *)dev->sddf_handlers->queue_h;
 }
 
 static void msg_store_init(msg_store_t *msg_store, unsigned int num_buffers)
@@ -868,7 +863,7 @@ static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
     handle_virtq(dev, dev->data.QueueNotify, &notify_driver, &respond);
 
     if (notify_driver) {
-        microkit_notify(dev->sddf_ch[VIRTIO_SND_CH_INDEX]);
+        microkit_notify(dev->sddf_handlers->ch);
     }
     if (respond) {
         virtio_snd_respond(dev);
@@ -887,12 +882,9 @@ static virtio_device_funs_t functions = {
 };
 
 void virtio_snd_init(struct virtio_device *dev,
-                    struct virtio_queue_handler *vqs,
-                    size_t num_vqs,
+                    struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void *config,
-                    void **data_region_handlers,
-                    void **sddf_handlers, size_t *sddf_ch)
+                    sddf_handler_t *sddf_handlers)
 {
     dev->data.DeviceID = DEVICE_ID_VIRTIO_SOUND;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
@@ -900,10 +892,7 @@ void virtio_snd_init(struct virtio_device *dev,
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
-    dev->config = config;
-    dev->data_region_handlers = data_region_handlers;
     dev->sddf_handlers = sddf_handlers;
-    dev->sddf_ch = sddf_ch;
     
     virtio_snd_config_init();
     msg_store_init(&messages, SDDF_SND_NUM_BUFFERS);

@@ -36,8 +36,6 @@
 #include "virtio/mmio.h"
 
 #define VIRTIO_SND_NUM_VIRTQ 4
-#define VIRTIO_SND_CH_INDEX 0
-#define VIRTIO_SND_NUM_CH 1
 
 struct virtio_snd_config {
     uint32_t jacks;
@@ -286,11 +284,8 @@ struct virtio_snd_chmap_info {
 
 
 void virtio_snd_init(struct virtio_device *dev,
-                    struct virtio_queue_handler *vqs,
-                    size_t num_vqs,
+                    struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
-                    void *config,
-                    void **data_region_handlers,
-                    void **sddf_handlers, size_t *sddf_ch);
+                    sddf_handler_t *sddf_handlers);
 
 void virtio_snd_notified(struct virtio_device *dev);
