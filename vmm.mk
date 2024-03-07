@@ -60,4 +60,4 @@ libvmm.a: ${CFILES:.c=.o}
 
 ${CFILES:.c=.o}: src/arch/aarch64/vgic/stamp
 
--include ${FILES:.c=.d}
+-include ${CFILES:.c=.d}
