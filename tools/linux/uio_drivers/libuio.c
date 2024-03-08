@@ -94,7 +94,7 @@ static int uio_num_maps() {
     // Open directory
     dir = opendir(path);
     if (dir == NULL) {
-        LOG_UIO_ERR("Failed to open directory\n");
+        LOG_UIO_ERR("Failed to open uio maps directory\n");
         return -1;
     }
 
@@ -104,7 +104,7 @@ static int uio_num_maps() {
         
         int len = snprintf(fullPath, sizeof(fullPath), "%s/%s", path, entry->d_name);
         if (len < 0 || len >= sizeof(fullPath)) {
-            LOG_UIO_ERR("Failed to create full path\n");
+            LOG_UIO_ERR("Failed to create full uio maps path\n");
             return -1;
         };
 

@@ -198,7 +198,6 @@
         <program_image path="blk_driver_vmm.elf" />
         <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
-        <!-- sDDF block -->
         <virtual_machine name="blk_driver_linux" id="0" priority="200">
             <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
