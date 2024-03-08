@@ -343,8 +343,7 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/sddf_serial_sharedringbuffer.o: Makefile
-	$(MAKE) -C $(SDDF_SERIAL_RINGBUFFER) MICROKIT_INCLUDE=$(MICROKIT_SDK)
-	cp $(SDDF_SERIAL_RINGBUFFER)/sddf_serial_sharedringbuffer.o $(BUILD_DIR)/sddf_serial_sharedringbuffer.o
+	$(MAKE) -C $(SDDF_SERIAL_RINGBUFFER) MICROKIT_INCLUDE=$(MICROKIT_SDK) BUILD_DIR=$(CURRENT_DIR)/$(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -353,8 +352,7 @@ $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
 $(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
-	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK)
-	cp $(SDDF_BLK_SHAREDQUEUE)/sddf_blk_shared_queue.o $(BUILD_DIR)/sddf_blk_shared_queue.o
+	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK) BUILD_DIR=$(CURRENT_DIR)/$(BUILD_DIR)
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
