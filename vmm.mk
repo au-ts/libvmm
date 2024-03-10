@@ -45,6 +45,7 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/guest.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
+OBJECTS := ${CFILES:.c=.o}
 
 # Generate dependencies automatically
 CFLAGS += -MD
@@ -55,9 +56,15 @@ src/arch/aarch64/vgic/stamp:
 	mkdir -p src/virtio
 	touch $@
 
-libvmm.a: ${CFILES:.c=.o}
+libvmm.a: ${OBJECTS}
 	ar rv $@ ${CFILES:.c=.o}
 
-${CFILES:.c=.o}: src/arch/aarch64/vgic/stamp
+${OBJECTS}: src/arch/aarch64/vgic/stamp
 
 -include ${CFILES:.c=.d}
+
+clean::
+	rm -f ${OBJECTS} ${CFILES:.c=.d}
+
+clobber:: clean
+	rm -f src/arch/aarch64/vgic/stamp
