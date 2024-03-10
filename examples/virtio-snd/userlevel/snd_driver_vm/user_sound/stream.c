@@ -649,7 +649,7 @@ sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_command_t *cmd,
                                       bool *notify)
 {
     switch (cmd->code) {
-    case SDDF_SND_CMD_PCM_SET_PARAMS:
+    case SDDF_SND_CMD_PCM_TAKE:
         return stream_set_params(stream, &cmd->set_params);
     case SDDF_SND_CMD_PCM_PREPARE:
         return stream_prepare(stream);

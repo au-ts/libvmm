@@ -20,7 +20,7 @@
 #include "virtio/block.h"
 #include "virtio/sound.h"
 #include <sddf/serial/shared_ringbuffer.h>
-#include "sddf_snd_shared_ringbuffer.h"
+#include <sddf/sound/sound_queue.h>
 #include "uio.h"
 
 /*

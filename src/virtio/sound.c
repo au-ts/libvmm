@@ -3,9 +3,9 @@
 #include "microkit.h"
 #include "virtio/mmio.h"
 #include "virq.h"
-#include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
 #include "virtio/virtq.h"
 #include "util/buffer_queue.h"
+#include <sddf/sound/sound_queue.h>
 
 #define DEBUG_SOUND
 
@@ -30,7 +30,6 @@ typedef struct msg_handle {
     uint16_t desc_head;
     uint16_t ref_count;
     uint16_t status;
-    uint16_t replied;
     // RX only
     uint32_t bytes_received;
 } msg_handle_t;
@@ -406,6 +405,7 @@ static uint32_t virtio_status_from_sddf(sddf_snd_status_code_t status)
         case SDDF_SND_S_BAD_MSG: return VIRTIO_SND_S_BAD_MSG;
         case SDDF_SND_S_NOT_SUPP: return VIRTIO_SND_S_NOT_SUPP;
         case SDDF_SND_S_IO_ERR: return VIRTIO_SND_S_IO_ERR;
+        case SDDF_SND_S_BUSY: return VIRTIO_SND_S_IO_ERR;
     }
     return (uint32_t)-1;
 }
@@ -432,20 +432,17 @@ static void debug_pcm_info(struct virtio_snd_pcm_info *info)
     LOG_SOUND("----------------\n");
 }
 
-static uint32_t handle_pcm_info(struct virtio_device *dev,
-                                struct virtq *virtq,
-                                struct virtio_snd_query_info *query_info,
-                                struct virtio_snd_pcm_info *responses,
-                                uint32_t response_count,
-                                uint32_t *bytes_written)
+static int handle_pcm_info(struct virtio_device *dev,
+                           struct virtq *virtq,
+                           struct virtio_snd_query_info *query_info,
+                           struct virtio_snd_pcm_info *responses,
+                           uint32_t response_count,
+                           uint32_t *bytes_written)
 {
-    uint32_t status = VIRTIO_SND_S_OK;
-
     if (response_count < query_info->count) {
-        // If too small, fill up what we can
-        LOG_SOUND_ERR("Control message response descriptor too small\n");
-        LOG_SOUND_ERR("res count %d, query count %d\n", response_count, query_info->count);
-        status = VIRTIO_SND_S_BAD_MSG;
+        LOG_SOUND_ERR("Control message response descriptor too small (%d < %d)\n",
+            response_count, query_info->count);
+        return -SDDF_SND_S_BAD_MSG;
     }
 
     sddf_snd_state_t *state = get_state(dev);
@@ -463,31 +460,28 @@ static uint32_t handle_pcm_info(struct virtio_device *dev,
         get_pcm_info(&responses[i], pcm_info);
     }
 
-    *bytes_written += i * sizeof(*responses);
-    return status;
+    return i;
 }
 
 static int handle_pcm_set_params(struct virtio_device *dev,
                                  uint16_t desc_head,
-                                 struct virtio_snd_pcm_set_params *set_params,
-                                 bool *is_async)
+                                 struct virtio_snd_pcm_set_params *set_params)
 {
     uint32_t id;
     msg_handle_t handle;
     handle.desc_head = desc_head;
     handle.ref_count = 1;
     handle.status = SDDF_SND_S_OK;
-    handle.replied = 0;
     handle.bytes_received = 0;
 
     int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return -1;
+        return -SDDF_SND_S_IO_ERR;
     }
 
     sddf_snd_command_t cmd;
-    cmd.code = SDDF_SND_CMD_PCM_SET_PARAMS;
+    cmd.code = SDDF_SND_CMD_PCM_TAKE;
     cmd.cookie = id;
     cmd.stream_id = set_params->hdr.stream_id;
     cmd.set_params.channels = set_params->channels;
@@ -497,31 +491,28 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
-        return -1;
+        return -SDDF_SND_S_IO_ERR;
     }
 
-    *is_async = true;
     return 0;
 }
 
 static int handle_basic_cmd(struct virtio_device *dev,
                             uint16_t desc_head,
                             uint32_t stream_id,
-                            sddf_snd_command_code_t code,
-                            bool *is_async)
+                            sddf_snd_command_code_t code)
 {
     uint32_t id;
     msg_handle_t handle;
     handle.desc_head = desc_head;
     handle.ref_count = 1;
     handle.status = SDDF_SND_S_OK;
-    handle.replied = 0;
     handle.bytes_received = 0;
 
     int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return -1;
+        return -SDDF_SND_S_IO_ERR;
     }
 
     sddf_snd_command_t cmd;
@@ -532,17 +523,10 @@ static int handle_basic_cmd(struct virtio_device *dev,
     if (sddf_snd_enqueue_cmd(get_state(dev)->rings.commands, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
-        return -1;
+        return -SDDF_SND_S_IO_ERR;
     }
 
-    *is_async = true;
     return 0;
-}
-
-static void write_error(uint32_t *status_ptr, uint32_t *bytes_written, uint32_t err)
-{
-    *status_ptr = err;
-    *bytes_written += sizeof(uint32_t);
 }
 
 // Returns number of bytes written to virtq
@@ -554,8 +538,9 @@ static void handle_control_msg(struct virtio_device *dev,
 {
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
     struct virtio_snd_hdr *hdr = (void *)req_desc->addr;
+    struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
     
-    bool is_async = false;
+    bool immediate = false;
 
     uint32_t bytes_written = 0;
 
@@ -567,164 +552,112 @@ static void handle_control_msg(struct virtio_device *dev,
     struct virtq_desc *status_desc = &virtq->desc[req_desc->next];
     uint32_t *status_ptr = (void *)status_desc->addr;
 
+    int result;
+
     switch (hdr->code) {
     case VIRTIO_SND_R_PCM_INFO: {
 
         if ((status_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
             LOG_SOUND_ERR("Control message missing response descriptor\n");
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_BAD_MSG);
+            result = -VIRTIO_SND_S_BAD_MSG;
             break;
         }
 
         struct virtq_desc *response_desc = &virtq->desc[status_desc->next];
-        *status_ptr = handle_pcm_info(dev, virtq,
-                                      (void *)hdr,
-                                      (void *)response_desc->addr,
-                                      response_desc->len / sizeof(struct virtio_snd_pcm_info),
-                                      &bytes_written);
-        bytes_written += sizeof(uint32_t);
+        result = handle_pcm_info(dev, virtq,
+                                 (void *)hdr,
+                                 (void *)response_desc->addr,
+                                 response_desc->len / sizeof(struct virtio_snd_pcm_info),
+                                 &bytes_written);
+        if (result >= 0) {
+            bytes_written += result * sizeof(struct virtio_snd_pcm_info);
+        }
+        immediate = true;
         break;
     }
-    case VIRTIO_SND_R_PCM_SET_PARAMS: {
-        int err = handle_pcm_set_params(dev, desc_head, (void *)hdr, &is_async);
-        if (err)
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_IO_ERR);
+    case VIRTIO_SND_R_PCM_SET_PARAMS:
+        result = handle_pcm_set_params(dev, desc_head, (void *)hdr);
         break;
-    }
-    case VIRTIO_SND_R_PCM_PREPARE: {
-        struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
-        int err = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_PREPARE, &is_async);
-        if (err)
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_IO_ERR);
+    case VIRTIO_SND_R_PCM_PREPARE:
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_PREPARE);
         break;
-    }
-    case VIRTIO_SND_R_PCM_RELEASE: {
-        struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
-        int err = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_RELEASE, &is_async);
-        if (err)
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_IO_ERR);
+    case VIRTIO_SND_R_PCM_RELEASE:
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_RELEASE);
         break;
-    }
-    case VIRTIO_SND_R_PCM_START: {
-        struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
-        int err = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_START, &is_async);
-        if (err)
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_IO_ERR);
+    case VIRTIO_SND_R_PCM_START:
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_START);
         break;
-    }
-    case VIRTIO_SND_R_PCM_STOP: {
-        struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
-        int err = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_STOP, &is_async);
-        if (err)
-            write_error(status_ptr, &bytes_written, VIRTIO_SND_S_IO_ERR);
+    case VIRTIO_SND_R_PCM_STOP:
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_STOP);
         break;
-    }
     case VIRTIO_SND_R_JACK_INFO:
     case VIRTIO_SND_R_JACK_REMAP:
     case VIRTIO_SND_R_CHMAP_INFO:
         LOG_SOUND_ERR("Control message not implemented: %s\n", code_to_str(hdr->code));
-        *status_ptr = VIRTIO_SND_S_NOT_SUPP;
-        bytes_written += sizeof(uint32_t);
+        result = -VIRTIO_SND_S_NOT_SUPP;
         break;
     default:
         LOG_SOUND_ERR("Unknown control message %s\n", code_to_str(hdr->code));
-        *status_ptr = VIRTIO_SND_S_BAD_MSG;
-        bytes_written += sizeof(uint32_t);
+        result = -VIRTIO_SND_S_BAD_MSG;
         break;
     }
 
-    if (is_async) {
-        *notify_driver = true;
-        *respond = false;
-        assert(bytes_written == 0);
-    } else {
+    uint32_t status = VIRTIO_SND_S_OK;
+    if (result < 0) {
+        LOG_SOUND("Command failed with result %d\n", -result);
+        immediate = true;
+        status = -result;
+    }
+
+    if (immediate) {
+        *status_ptr = status;
+        bytes_written += sizeof(uint32_t);
+
         struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
         used_elem->id = desc_head;
         used_elem->len = bytes_written;
         virtq->used->idx++;
 
-        *respond = true;
+    } else {
+        *notify_driver = true;
+        assert(bytes_written == 0);
     }
+    *respond = immediate;
 }
 
-static void print_bytes(void *data)
-{
-    for (int i = 0; i < 16; i++) {
-        printf("%02x ", ((uint8_t *)data)[i]);
-    }
-    printf("\n");
-}
-
-static void handle_xfer(struct virtio_device *dev,
-                        struct virtq *virtq,
-                        uint16_t desc_head,
+static bool perform_xfer(struct virtq *virtq,
+                        struct virtq_desc *desc,
                         sddf_snd_pcm_data_ring_t *req_ring,
                         buffer_queue_t *free_buffers,
                         bool transmit,
-                        bool *notify_driver,
-                        bool *respond)
+                        int stream_id,
+                        int msg_id,
+                        int *sent)
 {
-    struct virtq_desc *req_desc = &virtq->desc[desc_head];
-    struct virtio_snd_pcm_xfer *hdr = (void *)req_desc->addr;
-
-    if ((req_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
-        LOG_SOUND_ERR("XFER message missing data\n");
-        return;
-    }
-
-    uint32_t msg_id;
-    msg_handle_t handle;
-    handle.desc_head = desc_head;
-    handle.ref_count = 0;
-    handle.status = SDDF_SND_S_OK;
-    handle.replied = 0;
-    handle.bytes_received = 0;
-
-    int err = msg_store_allocate(&messages, handle, &msg_id);
-    if (err != 0) {
-        LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return;
-    }
-
-    msg_handle_t *msg = msg_store_get(&messages, msg_id);
-
     buffer_t pcm_buffer;
     if (!buffer_queue_dequeue(free_buffers, &pcm_buffer)) {
         LOG_SOUND_ERR("No free buffers\n");
-        msg_store_remove(&messages, msg_id);
-        return;
+        return false;
     }
 
     uint32_t pcm_transmitted = 0;
     uint32_t pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
 
-    // if (transmit)
-    // LOG_SOUND("XFER desc_head %u, cookie %d\n", desc_head, msg_id);
-
-    // int desc_idx = 0;
-
-    struct virtq_desc *desc;
-    for (desc = &virtq->desc[req_desc->next];
+    for (;
          desc->flags & VIRTQ_DESC_F_NEXT;
          desc = &virtq->desc[desc->next])
     {
         if (!!(desc->flags & VIRTQ_DESC_F_WRITE) == transmit) {
             LOG_SOUND_ERR("Incorrect xfer buffer type\n");
-            goto abort_xfer;
+            return false;
         }
 
         uint32_t desc_transmitted = 0;
         uint32_t desc_remaining = desc->len;
 
-        // if (transmit)
-        // LOG_SOUND("Transmitting desc %d of len %u\n", desc_idx++, desc_remaining);
-
         while (desc_remaining > 0) {
 
             int to_xfer = MIN(desc_remaining, pcm_remaining);
-
-            // LOG_SOUND("Transmitting chunk of len %u (pcm %u/%u, desc %u/%u)\n", to_transmit,
-                // pcm_written, pcm_buffer.len, desc_transmitted, desc->len);
 
             if (transmit) {
                 memcpy((void *)pcm_buffer.addr + pcm_transmitted, (void *)desc->addr + desc_transmitted, to_xfer);
@@ -740,23 +673,22 @@ static void handle_xfer(struct virtio_device *dev,
                 sddf_snd_pcm_data_t pcm;
                 pcm.addr = pcm_buffer.addr;
                 pcm.len = pcm_transmitted;
-                pcm.stream_id = hdr->stream_id;
+                pcm.stream_id = stream_id;
                 pcm.cookie = msg_id;
                 pcm.status = 0;
                 pcm.latency_bytes = 0;
 
                 if (sddf_snd_enqueue_pcm_data(req_ring, &pcm) != 0) {
                     LOG_SOUND_ERR("Failed to enqueue to pcm request\n");
-                    goto abort_xfer;
+                    return false;
                 }
 
                 // LOG_SOUND("XFER request cookie %d\n", pcm.cookie);
-                msg->ref_count++;
-                *notify_driver = true;
+                (*sent)++;
 
                 if (!buffer_queue_dequeue(free_buffers, &pcm_buffer)) {
                     LOG_SOUND_ERR("Failed to dequeue free buffer\n");
-                    goto abort_xfer;
+                    return false;
                 }
 
                 pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
@@ -769,51 +701,87 @@ static void handle_xfer(struct virtio_device *dev,
         sddf_snd_pcm_data_t pcm;
         pcm.addr = pcm_buffer.addr;
         pcm.len = pcm_transmitted;
-        pcm.stream_id = hdr->stream_id;
+        pcm.stream_id = stream_id;
         pcm.cookie = msg_id;
         pcm.status = 0;
         pcm.latency_bytes = 0;
 
-        // LOG_SOUND("XFER request cookie %d\n", pcm.cookie);
-
         if (sddf_snd_enqueue_pcm_data(req_ring, &pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue to tx used\n");
-            goto abort_xfer;
+            return false;
         }
-        msg->ref_count++;
+        // LOG_SOUND("XFER request cookie %d\n", pcm.cookie);
+        (*sent)++;
+    }
+    return true;
+}
+
+/** Returns true if messages were sent */
+static void handle_xfer(struct virtio_device *dev,
+                        struct virtq *virtq,
+                        uint16_t desc_head,
+                        sddf_snd_pcm_data_ring_t *req_ring,
+                        buffer_queue_t *free_buffers,
+                        bool transmit,
+                        bool *notify_driver, bool *respond)
+{
+    struct virtq_desc *req_desc = &virtq->desc[desc_head];
+    struct virtio_snd_pcm_xfer *hdr = (void *)req_desc->addr;
+
+    if ((req_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
+        LOG_SOUND_ERR("XFER message missing data\n");
+        return;
+    }
+
+    uint32_t msg_id;
+    msg_handle_t handle;
+    handle.desc_head = desc_head;
+    handle.ref_count = 0;
+    handle.status = SDDF_SND_S_OK;
+    handle.bytes_received = 0;
+
+    int err = msg_store_allocate(&messages, handle, &msg_id);
+    if (err != 0) {
+        LOG_SOUND_ERR("Failed to allocate command store slot\n");
+        return;
+    }
+
+    msg_handle_t *msg = msg_store_get(&messages, msg_id);
+
+    struct virtq_desc *desc = &virtq->desc[req_desc->next];
+    int sent = 0;
+    bool success = perform_xfer(virtq, desc, req_ring, free_buffers, transmit,
+                                hdr->stream_id, msg_id, &sent);
+
+    if (sent == 0) {
+        for (;
+            desc->flags & VIRTQ_DESC_F_NEXT;
+            desc = &virtq->desc[desc->next]);
+            
+        assert(desc->flags & VIRTQ_DESC_F_WRITE);
+
+        uint32_t *status_ptr = (void *)desc->addr;
+        *status_ptr = VIRTIO_SND_S_IO_ERR;
+
+        struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
+        used_elem->id = desc_head;
+        used_elem->len = sizeof(uint32_t);
+        virtq->used->idx++;
+
+        msg_store_remove(&messages, msg_id);
+
+        *respond = true;
+        return;
+    } else {
+        assert(sent > 0);
         *notify_driver = true;
     }
 
-    if (msg->ref_count == 0) {
-        LOG_SOUND_ERR("XFER sent no data\n");
-        goto abort_xfer;
+    msg->ref_count = sent;
+
+    if (!success) {
+        msg->status = VIRTIO_SND_S_IO_ERR;
     }
-
-    if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
-        LOG_SOUND_ERR("No status buffer\n");
-        return;
-    }
-    // LOG_SOUND("Sent tx data, desc %u\n", desc_head);
-    return;
-    
-abort_xfer:
-    for (;
-         desc->flags & VIRTQ_DESC_F_NEXT;
-         desc = &virtq->desc[desc->next]);
-        
-    assert(desc->flags & VIRTQ_DESC_F_WRITE);
-    
-    uint32_t *status_ptr = (void *)desc->addr;
-    *status_ptr = VIRTIO_SND_S_IO_ERR;
-
-    struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
-    used_elem->id = desc_head;
-    used_elem->len = sizeof(uint32_t);
-    virtq->used->idx++;
-
-    // Any inbound replies will be ignored.
-    handle.replied = 1;
-    *respond = true;
 }
 
 static void handle_virtq(struct virtio_device *dev,
@@ -823,11 +791,7 @@ static void handle_virtq(struct virtio_device *dev,
     struct virtq *virtq = &vq->virtq;
 
     uint16_t idx = vq->last_idx;
-
-    // LOG_SOUND("Handle VQ %s: idx=%u, avail->idx=%u\n", queue_name[index], idx, virtq->avail->idx);
-
     for (; idx != virtq->avail->idx; idx++) {
-        // LOG_SOUND("Queue %s message %i\n", queue_name[index], idx);
 
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
 
@@ -836,16 +800,17 @@ static void handle_virtq(struct virtio_device *dev,
             handle_control_msg(dev, virtq, desc_head, notify_driver, respond);
             break;
         case TXQ:
-            handle_xfer(dev, virtq, desc_head, get_state(dev)->rings.tx_req, &tx_buffers, true, notify_driver, respond);
+            handle_xfer(dev, virtq, desc_head, get_state(dev)->rings.tx_req,
+                        &tx_buffers, true, notify_driver, respond);
             break;
         case RXQ:
-            handle_xfer(dev, virtq, desc_head, get_state(dev)->rings.rx_req, &rx_buffers, false, notify_driver, respond);
+            handle_xfer(dev, virtq, desc_head, get_state(dev)->rings.rx_req,
+                        &rx_buffers, false, notify_driver, respond);
             break;
         default:
             LOG_SOUND("Queue %d not implemented", index);
         }
     }
-
     vq->last_idx = idx;
 }
 
@@ -926,11 +891,6 @@ static void respond_to_message(struct virtq *virtq, uint8_t status,
     uint16_t desc_head = msg->desc_head;
     msg_store_remove(&messages, cookie);
 
-    if (msg->replied) {
-        LOG_SOUND_ERR("UIO SND|WARN: message already replied to\n");
-        return;
-    }
-    
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
 
     if ((req_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {

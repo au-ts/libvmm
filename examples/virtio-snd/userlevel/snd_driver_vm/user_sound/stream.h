@@ -1,5 +1,5 @@
 #pragma once
-#include "sddf_snd_shared_ringbuffer.h"
+#include <sddf/sound/sound_queue.h>
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
 

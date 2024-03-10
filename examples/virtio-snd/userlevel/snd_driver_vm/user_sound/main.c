@@ -1,7 +1,7 @@
 #include "log.h"
-#include "sddf_snd_shared_ringbuffer.h"
 #include "stream.h"
 #include "uio.h"
+#include <sddf/sound/sound_queue.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

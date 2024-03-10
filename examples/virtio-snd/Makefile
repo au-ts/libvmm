@@ -96,6 +96,7 @@ SDDF := sddf
 
 SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
+SDDF_SOUND_COMPONENTS := $(SDDF)/sound/components
 SDDF_UTIL := $(SDDF)/util
 
 SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF)/drivers/serial/arm
@@ -103,13 +104,14 @@ SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
 
-SDDF_BLOCK_RINGBUFFER := $(SDDF)/block/libblocksharedringbuffer
+SDDF_BLOCK_RINGBUFFER := $(SDDF)/blk/libblksharedqueue
 SDDF_SOUND_RINGBUFFER := $(SDDF)/sound/libsoundsharedringbuffer
 
 ELFS := client_vmm.elf \
 		serial_mux_tx.elf \
 		serial_mux_rx.elf \
 		uart_driver.elf \
+		sound_virtualiser.elf \
 		snd_driver_vmm.elf
 
 SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf feedback.elf
@@ -145,7 +147,9 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					sound.o \
 					mmio.o \
 					shared_ringbuffer.o \
-					sddf_snd_shared_ringbuffer.o
+					sound_queue.o
+
+SOUND_VIRTUALISER_OBJS := sound_virtualiser.o sound_queue.o
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
@@ -156,13 +160,13 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						sound.o \
 						mmio.o \
 						shared_ringbuffer.o \
-						sddf_snd_shared_ringbuffer.o
+						sound_queue.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o util.o printf.o
 SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o shared_ringbuffer.o
 
-USERLEVEL_OBJS := sddf_snd_shared_ringbuffer.o
+USERLEVEL_OBJS := sound_queue.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -181,8 +185,6 @@ CFLAGS := -mstrict-align \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
-		  -I$(SDDF_BLOCK_RINGBUFFER)/include \
-		  -I$(SDDF_SOUND_RINGBUFFER)/include \
 		  -I$(SDDF)/include \
 		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
@@ -195,7 +197,7 @@ CFLAGS_USERLEVEL :=	-g \
 		  			-Wall -Wno-unused-function -Werror \
 					-I$(CURRENT_DIR) \
 					-I$(SDDF) \
-					-I$(SDDF_SOUND_RINGBUFFER)/include \
+					-I$(SDDF)/include \
 					-lasound \
 					-lm \
 					-target aarch64-linux-gnu \
@@ -262,7 +264,7 @@ $(BUILD_DIR)/user_sound/%.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound/%.c
 	mkdir -p $(BUILD_DIR)/user_sound
 	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
 
-$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/user_sound/queue.o $(BUILD_DIR)/user_sound/convert.o $(BUILD_DIR)/sddf_snd_shared_ringbuffer.o
+$(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/user_sound/queue.o $(BUILD_DIR)/user_sound/convert.o $(BUILD_DIR)/sound_queue.o
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
@@ -295,6 +297,9 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
+$(BUILD_DIR)/%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
@@ -308,6 +313,9 @@ $(BUILD_DIR)/%.o: $(SDDF_SOUND_RINGBUFFER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/sound_virtualiser.elf: $(addprefix $(BUILD_DIR)/, $(SOUND_VIRTUALISER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/snd_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VMM_OBJS))

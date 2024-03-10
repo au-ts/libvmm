@@ -18,7 +18,7 @@
 #include "virtio/console.h"
 #include "virtio/sound.h"
 #include "sddf/serial/shared_ringbuffer.h"
-#include "sound/libsoundsharedringbuffer/include/sddf_snd_shared_ringbuffer.h"
+#include <sddf/sound/sound_queue.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -87,8 +87,6 @@ uintptr_t sound_tx_data;
 
 uintptr_t sound_shared_state;
 
-// @alexbr: currently SDDF_SERIAL_NUM_CH is defined in virtio...
-// doesn't make sense
 static sddf_handler_t sddf_snd_handler;
 static sddf_snd_state_t snd_state;
 
