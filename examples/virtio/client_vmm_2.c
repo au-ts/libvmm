@@ -89,7 +89,13 @@ sddf_handler_t sddf_blk_handlers[SDDF_BLK_NUM_HANDLES];
 static struct virtio_device virtio_blk;
 
 void init(void) {
-    // return;
+    // Busy wait until blk device is ready
+    // Need to put an empty assembly line to prevent compiler from optimising out the busy wait
+    // @ericc: Figure out a better way to do this
+    LOG_VMM("begin busy wait\n");
+    while (!((blk_storage_info_t *)blk_config)->ready) asm("");
+    LOG_VMM("done busy waiting\n");
+    
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
