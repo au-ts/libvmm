@@ -174,12 +174,10 @@ int init_mappings(driver_state_t *state, int uio_fd)
     }
 
     int offset = 0;
-    state->rings.commands = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.responses = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_req = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.tx_res = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.rx_res = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.rx_req = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.cmd_req = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.cmd_res = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.pcm_req = (void *)(ring_buffers + RING_BYTES * offset++);
+    state->rings.pcm_res = (void *)(ring_buffers + RING_BYTES * offset++);
 
     state->translate.tx_offset = tx_data - (void *)tx_data_physical;
     state->translate.rx_offset = rx_data - (void *)rx_data_physical;
@@ -217,10 +215,10 @@ static bool handle_pcm_request(driver_state_t *state, sddf_snd_pcm_data_ring_t *
 
 static bool handle_uio_interrupt(driver_state_t *state)
 {
-    sddf_snd_command_t cmd;
+    sddf_snd_cmd_t cmd;
     sddf_snd_pcm_data_t pcm;
 
-    while (sddf_snd_dequeue_cmd(state->rings.commands, &cmd) == 0) {
+    while (sddf_snd_dequeue_cmd(state->rings.cmd_req, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
             continue;
@@ -228,14 +226,8 @@ static bool handle_uio_interrupt(driver_state_t *state)
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
     }
 
-    while (sddf_snd_dequeue_pcm_data(state->rings.tx_req, &pcm) == 0) {
-        if (!handle_pcm_request(state, state->rings.tx_res, &pcm, SND_PCM_STREAM_PLAYBACK)) {
-            break;
-        }
-    }
-
-    while (sddf_snd_dequeue_pcm_data(state->rings.rx_req, &pcm) == 0) {
-        if (!handle_pcm_request(state, state->rings.rx_res, &pcm, SND_PCM_STREAM_CAPTURE)) {
+    while (sddf_snd_dequeue_pcm_data(state->rings.pcm_req, &pcm) == 0) {
+        if (!handle_pcm_request(state, state->rings.pcm_res, &pcm, SND_PCM_STREAM_PLAYBACK)) {
             break;
         }
     }
@@ -289,9 +281,6 @@ int main(int argc, char **argv)
         for (int i = 0; i < MAX_STREAMS; i++) {
             snd_pcm_stream_t direction = stream_directions[i];
 
-            sddf_snd_pcm_data_ring_t *pcm_responses
-                = direction == SND_PCM_STREAM_PLAYBACK ? state.rings.tx_res : state.rings.rx_res;
-
             char *device_name;
             if (argc - 1 > i) {
                 device_name = argv[i+1];
@@ -301,7 +290,7 @@ int main(int argc, char **argv)
 
             state.streams[state.stream_count] = stream_open(
                 &state.shared_state->stream_info[state.stream_count], device_name, direction,
-                translate_offset(&state.translate, direction), state.rings.responses, pcm_responses);
+                translate_offset(&state.translate, direction), state.rings.cmd_res, state.rings.pcm_res);
 
             if (state.streams[state.stream_count] == NULL) {
                 LOG_SOUND_WARN("Could not initialise target stream %d (%s)\n", i, device_name);

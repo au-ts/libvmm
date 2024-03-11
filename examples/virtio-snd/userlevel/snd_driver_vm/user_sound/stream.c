@@ -58,10 +58,10 @@ struct stream {
     int timer_fd;
 
     // Communication
-    queue_t *commands;
+    queue_t *cmd_req;
     queue_t *pcm_req;
 
-    sddf_snd_response_ring_t *responses;
+    sddf_snd_cmd_ring_t *cmd_res;
     sddf_snd_pcm_data_ring_t *pcm_res;
 };
 
@@ -645,7 +645,7 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
     }
 }
 
-sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_command_t *cmd, bool *blocked,
+sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_cmd_t *cmd, bool *blocked,
                                       bool *notify)
 {
     switch (cmd->code) {
@@ -669,8 +669,8 @@ static bool stream_flush_commands(stream_t *stream)
 {
     bool notify = false;
 
-    sddf_snd_command_t *cmd;
-    while ((cmd = queue_front(stream->commands))) {
+    sddf_snd_cmd_t *cmd;
+    while ((cmd = queue_front(stream->cmd_req))) {
 
         bool blocked = false;
         sddf_snd_status_code_t status = handle_command(stream, cmd, &blocked, &notify);
@@ -678,16 +678,14 @@ static bool stream_flush_commands(stream_t *stream)
         if (blocked) {
             break;
         }
-        sddf_snd_response_t response;
-        response.cookie = cmd->cookie;
-        response.status = status;
+        cmd->status = status;
 
-        if (sddf_snd_enqueue_response(stream->responses, &response) != 0) {
+        if (sddf_snd_enqueue_cmd(stream->cmd_res, cmd) != 0) {
             LOG_SOUND_ERR("Failed to enqueue response");
             break;
         }
 
-        queue_dequeue(stream->commands);
+        queue_dequeue(stream->cmd_req);
         notify = true;
     }
 
@@ -712,7 +710,7 @@ bool stream_update(stream_t *stream)
 }
 
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
-                      ssize_t translate_offset, sddf_snd_response_ring_t *cmd_responses,
+                      ssize_t translate_offset, sddf_snd_cmd_ring_t *cmd_responses,
                       sddf_snd_pcm_data_ring_t *pcm_responses)
 {
     stream_t *stream = malloc(sizeof(stream_t));
@@ -784,8 +782,8 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
 
     stream->timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    stream->commands = queue_create(sizeof(sddf_snd_command_t), SDDF_SND_NUM_BUFFERS / 4);
-    stream->responses = cmd_responses;
+    stream->cmd_req = queue_create(sizeof(sddf_snd_cmd_t), SDDF_SND_NUM_BUFFERS / 4);
+    stream->cmd_res = cmd_responses;
 
     stream->pcm_req = queue_create(sizeof(sddf_snd_pcm_data_t), SDDF_SND_NUM_BUFFERS / 4);
     stream->pcm_res = pcm_responses;
@@ -806,9 +804,9 @@ fail:
     return NULL;
 }
 
-void stream_enqueue_command(stream_t *stream, sddf_snd_command_t *cmd)
+void stream_enqueue_command(stream_t *stream, sddf_snd_cmd_t *cmd)
 {
-    queue_enqueue(stream->commands, cmd);
+    queue_enqueue(stream->cmd_req, cmd);
 }
 
 void stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm)

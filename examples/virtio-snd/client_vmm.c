@@ -75,15 +75,12 @@ static ring_handle_t serial_rx_h;
 static ring_handle_t serial_tx_h;
 static sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
 
-uintptr_t sound_commands;
-uintptr_t sound_responses;
-uintptr_t sound_tx_req;
-uintptr_t sound_tx_res;
-uintptr_t sound_rx_res;
-uintptr_t sound_rx_req;
+uintptr_t sound_cmd_req;
+uintptr_t sound_cmd_res;
+uintptr_t sound_pcm_req;
+uintptr_t sound_pcm_res;
 
-uintptr_t sound_rx_data;
-uintptr_t sound_tx_data;
+uintptr_t sound_data;
 
 uintptr_t sound_shared_state;
 
@@ -175,22 +172,18 @@ void init(void) {
                                       VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
     assert(success);
 
-    assert(sound_commands);
-    assert(sound_responses);
-    assert(sound_rx_req);
-    assert(sound_rx_res);
-    assert(sound_tx_res);
-    assert(sound_rx_data);
-    assert(sound_tx_data);
+    assert(sound_cmd_req);
+    assert(sound_cmd_res);
+    assert(sound_pcm_req);
+    assert(sound_pcm_res);
+    assert(sound_data);
 
     snd_state.shared_state = (sddf_snd_shared_state_t *)sound_shared_state;
     snd_state.rings = (sddf_snd_rings_t){
-        .commands  = (void *)sound_commands,
-        .responses = (void *)sound_responses,
-        .tx_req   = (void *)sound_tx_req,
-        .tx_res   = (void *)sound_tx_res,
-        .rx_res   = (void *)sound_rx_res,
-        .rx_req   = (void *)sound_rx_req,
+        .cmd_req  = (void *)sound_cmd_req,
+        .cmd_res = (void *)sound_cmd_res,
+        .pcm_req   = (void *)sound_pcm_req,
+        .pcm_res   = (void *)sound_pcm_res,
     };
     sddf_snd_rings_init_default(&snd_state.rings);
 
@@ -200,12 +193,8 @@ void init(void) {
         memset(&pcm, 0, sizeof(pcm));
         pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
 
-        pcm.addr = sound_rx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
-        int ret = sddf_snd_enqueue_pcm_data(snd_state.rings.rx_res, &pcm);
-        assert(ret == 0);
-
-        pcm.addr = sound_tx_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
-        ret = sddf_snd_enqueue_pcm_data(snd_state.rings.tx_res, &pcm);
+        pcm.addr = sound_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
+        int ret = sddf_snd_enqueue_pcm_data(snd_state.rings.pcm_res, &pcm);
         assert(ret == 0);
     }
 
