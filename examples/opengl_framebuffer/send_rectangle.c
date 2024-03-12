@@ -26,25 +26,25 @@ size_t num_draws = 0;
 
 void fbwrite() {
     // Draw triangle
-    // int start = 100 + (num_draws * 2);
-    // int end = 300 + (num_draws * 2);
-    // for (int y = start; y < end; y++) {
-    //     for (int x = start; x < end; x++) {
+    int start = 100 + (num_draws * 2);
+    int end = 300 + (num_draws * 2);
+    for (int y = start; y < end; y++) {
+        for (int x = start; x < end; x++) {
 
-    //         uint64_t location = (x * (config->bpp/8)) + (y * line_len);
+            uint64_t location = (x * (config->bpp/8)) + (y * line_len);
 
-    //         *(fb_base + location) = 100;        // Some blue
-    //         *(fb_base + location + 1) = 15+(x-100)/2;     // A little green
-    //         *(fb_base + location + 2) = 200-(y-100)/5;    // A lot of red
-    //         *(fb_base + location + 3) = 0;      // No transparency
-    //     }
-    // }
-    if (num_draws == config->xres * config->yres - 1) {
-        printf("END\n");
+            *(fb_base + location) = 100;        // Some blue
+            *(fb_base + location + 1) = 15+(x-100)/2;     // A little green
+            *(fb_base + location + 2) = 200-(y-100)/5;    // A lot of red
+            *(fb_base + location + 3) = 0;      // No transparency
+        }
     }
+    // if (num_draws == config->xres * config->yres - 1) {
+    //     printf("END\n");
+    // }
 
-    *(fb_base + num_draws * 4) = 255;
-    num_draws += 1;
+    // *(fb_base + num_draws * 4) = 255;
+    // num_draws += 1;
 }
 
 bool readconfig() {

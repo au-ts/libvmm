@@ -6,12 +6,9 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <string.h>
-#include "uio.h"
-#include <poll.h>
-#include <assert.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include <stdbool.h>
+#include <linux/fb.h>
+#include <sys/ioctl.h>
+#include "../uio.h"
 
 void signal_ready_to_vmm() {
     printf("UIO FB|INFO: ready to receive data, faulting on VMM buffer\n");
@@ -45,8 +42,8 @@ int get_uio_map_addr(char *path, void **addr) {
     }
 
     addr_str[addr_str_values_read] = '\0'; // Null-terminate the string to be safe
-    unsigned long addr_val; // Use this to hold the actual address value
-    sscanf(addr_str, "%lx", &addr_val);
+    unsigned long long addr_val; // Use this to hold the actual address value
+    sscanf(addr_str, "%llx", &addr_val);
     *addr = (void *)addr_val;
 
     close(addr_fp);
@@ -77,7 +74,7 @@ int get_uio_map_size(char *path, size_t *size) {
     }
 
     size_str[size_str_values_read] = '\0'; // Null-terminate the string to be safe
-    sscanf(size_str, "%lx", size);
+    sscanf(size_str, "%llx", size);
 
     close(size_fp);
 }
@@ -107,41 +104,10 @@ int get_uio_map_offset(char *path, size_t *offset) {
     }
 
     offset_str[offset_str_values_read] = '\0'; // Null-terminate the string to be safe
-    sscanf(offset_str, "%lx", offset);
+    sscanf(offset_str, "%llx", offset);
 
     close(offset_fp);
 }
-
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
-    glViewport(0, 0, width, height);
-}
-
-// settings
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
-
-const char *vertexShaderSource = "#version 330 core\n"
-    "layout (location = 0) in vec2 aPos;\n"
-    "layout (location = 1) in vec2 aTexCoords;\n"
-    "out vec2 TexCoords;\n"
-    "void main()\n"
-    "{\n"
-    "   gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
-    "   TexCoords = aTexCoords;\n"
-    "}\n\0";
-const char *fragmentShaderSource = "#version 330 core\n"
-    "out vec4 FragColor;\n"
-    "in vec2 TexCoords;\n"
-    "uniform sampler2D screenTexture;\n"
-    "void main()\n"
-    "{\n"
-    "   FragColor = texture(screenTexture, TexCoords);\n"
-    "}\n\0";
 
 int main() {
     void *addr;
@@ -153,15 +119,48 @@ int main() {
     get_uio_map_offset("/sys/class/uio/uio0/maps/map0/offset", &offset);
 
     printf("addr: %p\n", addr);
-    printf("size: 0x%lu\n", size);
-    printf("offset: 0x%lu\n", offset);
+    printf("size: 0x%llx\n", size);
+    printf("offset: 0x%llx\n", offset);
     /*****************************************************************************/
-    uint32_t screensize = 0;
+    struct fb_var_screeninfo vinfo;
+    long int screensize = 0;
+
+    // Open /dev/fb0 device to read config info and allow mmap
+    int fb_fp = open("/dev/fb0", O_RDWR);
+    if (fb_fp == -1) {
+        perror("Error opening file");
+        return 10;
+    }
+    printf("UIO FB|INFO: opened /dev/fb0\n");
+
+    // Get variable screen information
+    if (ioctl(fb_fp, FBIOGET_VSCREENINFO, &vinfo) == -1) {
+        perror("Error reading variable information");
+        return 21;
+    }
+
+    // Figure out the size of the screen in bytes
+    screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
+
+    if (screensize > size) {
+        printf("UIO FB|ERROR: screensize is larger than size of uio map0\n");
+        return 22;
+    }
+
+    void *fbmap = mmap(NULL, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fp, 0);
+    printf("UIO FB|INFO: screensize: 0x%x\n", screensize);
+    if (fbmap == MAP_FAILED) {
+        printf("UIO FB|ERROR: failed to mmap frame buffer: %s\n", strerror(errno));
+        return -1;
+    }
+    printf("UIO FB|INFO: mmaped /dev/fb0\n");
+
+    close(fb_fp);
     /*****************************************************************************/
     // Open UIO device to allow read write and mmap
     int uio_fp = open("/dev/uio0", O_RDWR);
     if (uio_fp == -1) {
-        perror("Error opening /dev/uio0");
+        perror("Error opening uio0");
         return 11;
     }
     printf("UIO FB|INFO: opened /dev/uio0\n");
@@ -178,194 +177,49 @@ int main() {
     /*****************************************************************************/
     // Initialise framebuffer config
     fb_config_t config = {
-        .yres = SCR_HEIGHT,
-        .xres = SCR_WIDTH,
-        .bpp = 32,
+        .yres = vinfo.yres,
+        .xres = vinfo.xres,
+        .bpp = vinfo.bits_per_pixel,
     };
     set_fb_config(map0, config);
 
     void *fb_base;
     get_fb_base_addr(map0, &fb_base);
     /*****************************************************************************/
-    // glfw: initialize and configure
-    // ------------------------------
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)
-    {
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
-    // glad: load all OpenGL function pointers
-    // ---------------------------------------
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        printf("GLAD could not use GLFW's loader to load OpenGL functions\n");
-    }
-
-    // Other stuff
-    // Set the clear color buffer value, this will ensure glClear will reset the color buffer to a dark green colour
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glDisable(GL_STENCIL_TEST);
-    glDisable(GL_DEPTH_TEST);
-
-    // set up vertex and fragment shaders
-    // ------------------------------------------------------------------
-    // vertex shader
-    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    // check for shader compile errors
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        printf("vertex shader compilation failed:\n%s\n", infoLog);
-    }
-    // fragment shader
-    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    // check for shader compile errors
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        printf("fragment shader compilation failed:\n%s\n", infoLog);
-    }
-    // link shaders
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    // check for linking errors
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        printf("shader program linking failed:\n%s\n", infoLog);
-    }
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-        // positions   // texCoords
-        -1.0f,  1.0f,  0.0f, 1.0f,
-        -1.0f, -1.0f,  0.0f, 0.0f,
-         1.0f, -1.0f,  1.0f, 0.0f,
-
-        -1.0f,  1.0f,  0.0f, 1.0f,
-         1.0f, -1.0f,  1.0f, 0.0f,
-         1.0f,  1.0f,  1.0f, 1.0f
-    };
-
-    GLuint VBO, VAO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-    
-    // Unbind VBO, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-    glBindBuffer(GL_ARRAY_BUFFER, 0); 
-    // You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-    // VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
-    glBindVertexArray(0);
-
-    // set up framebuffer stuff
-    // ------------------------------------------------------------------
-    GLuint texo;
-    glGenTextures(1, &texo);
-    glBindTexture(GL_TEXTURE_2D, texo);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    uint32_t enable_uio_value = 1;
+    uint32_t enable_uio_value = 1; // 4-byte integer value to write to file
     // Enable UIO interrupts first, incase it is already disabled
     if (write(uio_fp, &enable_uio_value, sizeof(uint32_t)) != sizeof(uint32_t)) {
-        perror("Error writing to /dev/uio0");
+        perror("Error writing to uio0");
         close(uio_fp);
         return 13;
     }
 
     signal_ready_to_vmm();
 
-    glUseProgram(shaderProgram);
-    glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-    glBindTexture(GL_TEXTURE_2D, texo);
-
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    // render loop
-    // -----------
-    while (!glfwWindowShouldClose(window))
-    {
-        // render
-        // ------
-        // glClear(GL_COLOR_BUFFER_BIT); // Clear the color buffer from previous frame before drawing new stuff this frame
-
-        // Read from device, this blocks until interrupt
-        int32_t read_value;
-        int32_t irq_count = 0;
-
-        struct pollfd fds[1] = {
-            { .fd = uio_fp, .events = POLLIN },
-        };
-        
-        if (poll(fds, 1, 0) && fds->revents & POLLIN) {
-            read_value = read(fds->fd, &irq_count, sizeof(irq_count));
-            if (read_value != sizeof(uint32_t)) {
-                perror("Error did not read 4 bytes from /dev/uio0");
-                close(uio_fp);
-                return 14;
-            }
-
-            printf("UIO FB|INFO: received interrupt, irq_count: %d\n", irq_count);
-
-            // Copy from fb_base into texo
-            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, SCR_WIDTH, SCR_HEIGHT, GL_RGBA, GL_UNSIGNED_BYTE, fb_base);
-
-            // Enable interrupts again
-            if (write(uio_fp, &enable_uio_value, sizeof(uint32_t)) != sizeof(uint32_t)) {
-                perror("UIO FB|ERROR: could not write to uio_fp\n");
-                close(uio_fp);
-                return 15;
-            }
-
-            signal_ready_to_vmm();
+    // Read from device, this blocks until interrupt
+    int32_t read_value;
+    int32_t irq_count = 0;
+    while (read(uio_fp, &read_value, sizeof(uint32_t)) == sizeof(uint32_t)) {
+        if (read_value >= irq_count) {
+            // Copy contents of map0 into fbmap
+            printf("UIO FB|INFO: Copying from map0 to fbmap\n");
+            memcpy(fbmap, fb_base, screensize);
+            printf("UIO FB|INFO: finished copying\n");
+            msync(fbmap, screensize, MS_SYNC);
+            printf("UIO FB|INFO: finished msyncing fbmap\n");
         }
-        
-        // Draw into default FB
-        glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        irq_count = read_value;
+
+        // Enable interrupts again
+        if (write(uio_fp, &enable_uio_value, sizeof(uint32_t)) != sizeof(uint32_t)) {
+            perror("UIO FB|ERROR: could not write to uio_fp\n");
+            close(uio_fp);
+            return 14;
+        }
+
+        signal_ready_to_vmm();
     }
 
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
-    glfwTerminate();
-
-    // close UIO device
     close(uio_fp);
-    return 0;
 }
