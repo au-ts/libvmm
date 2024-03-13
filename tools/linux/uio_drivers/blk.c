@@ -140,8 +140,14 @@ void driver_notified()
 
         // TODO: @ericc: workout what error status are appropriate, sDDF block only contains SEEK_ERROR right now
         switch(req_code) {
-            case READ_BLOCKS:
-                lseek(storage_fd, req_block_number * blocksize, SEEK_SET);
+            case READ_BLOCKS: {
+                int ret = lseek(storage_fd, (off_t)req_block_number * (off_t)blocksize, SEEK_SET);
+                if (ret < 0) {
+                    LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
+                    status = SEEK_ERROR;
+                    success_count = 0;
+                    break;
+                }
                 LOG_UIO_BLOCK("Reading from storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
                 int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * blocksize);
                 LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
@@ -154,8 +160,15 @@ void driver_notified()
                     success_count = bytes_read / blocksize;
                 }
                 break;
-            case WRITE_BLOCKS:
-                lseek(storage_fd, req_block_number * blocksize, SEEK_SET);
+            }
+            case WRITE_BLOCKS: {
+                int ret = lseek(storage_fd, (off_t)req_block_number * (off_t)blocksize, SEEK_SET);
+                if (ret < 0) {
+                    LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
+                    status = SEEK_ERROR;
+                    success_count = 0;
+                    break;
+                }
                 LOG_UIO_BLOCK("Writing to storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
                 int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * blocksize);
                 LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
@@ -168,6 +181,7 @@ void driver_notified()
                     success_count = bytes_written / blocksize;
                 }
                 break;
+            }
             case FLUSH:
                 fsync(storage_fd);
                 status = SUCCESS;
@@ -180,6 +194,15 @@ void driver_notified()
                 LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
                 continue;
         }
+        // if (req_id == 1) {
+        //     printf("UIO_DRIVER(BLOCK): First sector in hexadecimal format:\n");
+        //     for (int i = 0; i < 512; i++) {
+        //         printf("%02X ", ((uint8_t *)data_phys_to_virt(addr))[i]);
+        //         if ((i + 1) % 16 == 0) {
+        //             printf("\n");
+        //         }
+        //     }
+        // }
         blk_enqueue_resp(&h, status, addr, count, success_count, id);
         LOG_UIO_BLOCK("Enqueued response: status=%d, addr=%p, count=%d, success_count=%d, id=%d\n", status, (void *)addr, count, success_count, id);
     }
