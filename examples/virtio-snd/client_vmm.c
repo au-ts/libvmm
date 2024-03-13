@@ -180,10 +180,10 @@ void init(void) {
 
     snd_state.shared_state = (sddf_snd_shared_state_t *)sound_shared_state;
     snd_state.rings = (sddf_snd_rings_t){
-        .cmd_req  = (void *)sound_cmd_req,
+        .cmd_req = (void *)sound_cmd_req,
         .cmd_res = (void *)sound_cmd_res,
-        .pcm_req   = (void *)sound_pcm_req,
-        .pcm_res   = (void *)sound_pcm_res,
+        .pcm_req = (void *)sound_pcm_req,
+        .pcm_res = (void *)sound_pcm_res,
     };
     sddf_snd_rings_init_default(&snd_state.rings);
 

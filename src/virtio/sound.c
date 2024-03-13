@@ -230,7 +230,7 @@ static int virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t
     return 0;
 }
 
-static const char *queue_name[] = { "controlq", "eventq", "txq", "rxq", NULL };
+// static const char *queue_name[] = { "controlq", "eventq", "txq", "rxq", NULL };
 
 static const char *code_to_str(uint32_t code)
 {
@@ -257,60 +257,6 @@ static const char *code_to_str(uint32_t code)
         return "<unknown>";
     }
 }
-
-static void debug_device_info(virtio_device_info_t *info)
-{
-    LOG_SOUND("--- Sound device info ---\n");
-    LOG_SOUND("\tDeviceID %#x\n", info->DeviceID);
-    LOG_SOUND("\tVendorID %#x\n", info->VendorID);
-    LOG_SOUND("\tDeviceFeaturesSel %#x\n", info->DeviceFeaturesSel);
-    LOG_SOUND("\tDriverFeaturesSel %#x\n", info->DriverFeaturesSel);
-    LOG_SOUND("\tfeatures_happy %i\n", info->features_happy);
-    LOG_SOUND("\tQueueSel %#x\n", info->QueueSel);
-    LOG_SOUND("\tQueueNotify %#x\n", info->QueueNotify);
-    LOG_SOUND("\tInterruptStatus %#x\n", info->InterruptStatus);
-    LOG_SOUND("\tStatus %#x\n", info->InterruptStatus);
-    LOG_SOUND("-------------------------\n");
-}
-
-static void debug_virq_contents(struct virtio_device *dev)
-{
-    LOG_SOUND("--- Virtq Contents ---\n");
-    for (int i = 0; i < VIRTIO_SND_NUM_VIRTQ; i++) {
-        virtio_queue_handler_t *vq = &dev->vqs[i];
-        struct virtq *virtq = &vq->virtq;
-
-        uint16_t idx = vq->last_idx;
-
-        for (; idx != virtq->avail->idx; idx++) {
-            uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-
-            uint16_t curr_desc_head = desc_head;
-
-            if (i == CONTROLQ) {
-                struct virtio_snd_hdr *virtio_cmd = (void *)virtq->desc[curr_desc_head].addr;
-                LOG_SOUND("\t[%s] %s\n", queue_name[i], code_to_str(virtio_cmd->code));
-            }
-            else if (i == TXQ) {
-                LOG_SOUND("\t[%s] \n", queue_name[i]);
-                struct virtq_desc *desc = &virtq->desc[desc_head];
-                uint32_t flags;
-                do {
-                    const char *write = desc->flags & VIRTQ_DESC_F_WRITE ? "write" : "read";
-                    LOG_SOUND("\t\t%s %d [%#x, %#x) ->\n",
-                            write, desc->len, desc->addr, desc->addr + desc->len);
-
-                    flags = desc->flags; 
-                    desc = &virtq->desc[desc->next];
-                }
-                while (flags & VIRTQ_DESC_F_NEXT);
-                LOG_SOUND("\t\tNULL\n");
-            }
-        }
-    }
-    LOG_SOUND("-------------------------\n");
-}
-
 
 static void virtio_snd_respond(struct virtio_device *dev)
 {
@@ -413,18 +359,6 @@ static void get_pcm_info(struct virtio_snd_pcm_info *dest, const sddf_snd_pcm_in
     dest->direction = virtio_direction_from_sddf(src->direction);
     dest->channels_min = src->channels_min;
     dest->channels_max = src->channels_max;
-}
-
-static void debug_pcm_info(struct virtio_snd_pcm_info *info)
-{
-    LOG_SOUND("--- PCM Info ---\n");
-    LOG_SOUND("\tfeatures    \t%x\n", info->features);
-    LOG_SOUND("\tformats     \t%lx\n", info->formats);
-    LOG_SOUND("\trates       \t%lx\n", info->rates);
-    LOG_SOUND("\tdirection   \t%x\n", info->direction);
-    LOG_SOUND("\tchannels_min\t%d\n", info->channels_min);
-    LOG_SOUND("\tchannels_max\t%d\n", info->channels_max);
-    LOG_SOUND("----------------\n");
 }
 
 static int handle_pcm_info(struct virtio_device *dev,
