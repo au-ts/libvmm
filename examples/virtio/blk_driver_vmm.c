@@ -102,6 +102,12 @@ void init(void) {
 #endif
 #endif
 
+#if defined(BOARD_qemu_arm_virt)
+#if defined(DEBUG_BLK_DRIVER_VM)
+    virq_register_passthrough(GUEST_VCPU_ID, 33, 1);
+#endif
+#endif
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }

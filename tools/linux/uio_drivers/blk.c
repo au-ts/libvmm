@@ -194,15 +194,6 @@ void driver_notified()
                 LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
                 continue;
         }
-        // if (req_id == 1) {
-        //     printf("UIO_DRIVER(BLOCK): First sector in hexadecimal format:\n");
-        //     for (int i = 0; i < 512; i++) {
-        //         printf("%02X ", ((uint8_t *)data_phys_to_virt(addr))[i]);
-        //         if ((i + 1) % 16 == 0) {
-        //             printf("\n");
-        //         }
-        //     }
-        // }
         blk_enqueue_resp(&h, status, addr, count, success_count, id);
         LOG_UIO_BLOCK("Enqueued response: status=%d, addr=%p, count=%d, success_count=%d, id=%d\n", status, (void *)addr, count, success_count, id);
     }

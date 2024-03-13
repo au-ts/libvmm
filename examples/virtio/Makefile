@@ -183,7 +183,7 @@ SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_shared_queue.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_shared_queue.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o # @ericc: util.o printf.o only needed during debug mode
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o \
@@ -385,8 +385,7 @@ $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/storage: Makefile
-	dd if=/dev/zero of=$@ bs=1K count=1000 && \
-	mkfs.ext4 -F $@ -b 4096
+	sh $(VMM_TOOLS)/mkvirtdisk storage $(BUILD_DIR)
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@
