@@ -24,12 +24,9 @@
 #define SHARED_STATE_SIZE UIO_SIZE("0")
 #define RINGS_SLOT 1
 #define RINGS_SIZE UIO_SIZE("1")
-#define TX_DATA_SLOT 2
-#define TX_DATA_ADDR UIO_ADDR("2")
-#define TX_DATA_SIZE UIO_SIZE("2")
-#define RX_DATA_SLOT 3
-#define RX_DATA_ADDR UIO_ADDR("3")
-#define RX_DATA_SIZE UIO_SIZE("3")
+#define PCM_DATA_SLOT 2
+#define PCM_DATA_ADDR UIO_ADDR("2")
+#define PCM_DATA_SIZE UIO_SIZE("2")
 
 typedef struct driver_state {
     stream_t *streams[MAX_STREAMS];
@@ -37,7 +34,7 @@ typedef struct driver_state {
 
     sddf_snd_shared_state_t *shared_state;
     sddf_snd_rings_t rings;
-    translation_state_t translate;
+    ssize_t translate;
 
     char *signal_addr;
 } driver_state_t;
@@ -45,16 +42,6 @@ typedef struct driver_state {
 static void signal_ready_to_vmm(char *signal_addr)
 {
     *signal_addr = 1;
-}
-
-static ssize_t translate_offset(translation_state_t *translate, snd_pcm_stream_t direction)
-{
-    switch (direction) {
-    case SND_PCM_STREAM_PLAYBACK:
-        return translate->tx_offset;
-    case SND_PCM_STREAM_CAPTURE:
-        return translate->rx_offset;
-    }
 }
 
 static int get_uio_map_value(const char *path, size_t *value)
@@ -147,29 +134,17 @@ int init_mappings(driver_state_t *state, int uio_fd)
     // TODO: tx and rx data are now in wrong position
     // need to add back get addr functions
     // then either fix address or use offset
-    void *tx_data = map_uio(TX_DATA_SLOT, TX_DATA_SIZE, uio_fd);
-    if (tx_data == MAP_FAILED) {
-        perror("Error mapping tx_data");
+    void *pcm_data = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
+    if (pcm_data == MAP_FAILED) {
+        perror("Error mapping pcm_data");
         return -1;
     }
 
-    void *rx_data = map_uio(RX_DATA_SLOT, RX_DATA_SIZE, uio_fd);
-    if (rx_data == MAP_FAILED) {
-        perror("Error mapping rx_data");
-        return -1;
-    }
+    size_t pcm_data_physical;
 
-    size_t tx_data_physical, rx_data_physical;
-
-    err = get_uio_map_value(TX_DATA_ADDR, &tx_data_physical);
+    err = get_uio_map_value(PCM_DATA_ADDR, &pcm_data_physical);
     if (err) {
-        perror("Error getting tx_data_physical");
-        return -1;
-    }
-
-    err = get_uio_map_value(RX_DATA_ADDR, &rx_data_physical);
-    if (err) {
-        perror("Error getting rx_data_physical");
+        perror("Error getting pcm_data_physical");
         return -1;
     }
 
@@ -179,10 +154,17 @@ int init_mappings(driver_state_t *state, int uio_fd)
     state->rings.pcm_req = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.pcm_res = (void *)(ring_buffers + RING_BYTES * offset++);
 
-    state->translate.tx_offset = tx_data - (void *)tx_data_physical;
-    state->translate.rx_offset = rx_data - (void *)rx_data_physical;
+    state->translate = pcm_data - (void *)pcm_data_physical;
 
     return 0;
+}
+
+static void fail_cmd(sddf_snd_cmd_ring_t *ring, sddf_snd_cmd_t *cmd)
+{
+    cmd->status = SDDF_SND_S_BAD_MSG;
+    if (sddf_snd_enqueue_cmd(ring, cmd) != 0) {
+        LOG_SOUND_ERR("Failed to send fail response\n");
+    }
 }
 
 static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
@@ -194,25 +176,6 @@ static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
     }
 }
 
-static bool handle_pcm_request(driver_state_t *state, sddf_snd_pcm_data_ring_t *res_ring,
-                               sddf_snd_pcm_data_t *pcm, snd_pcm_stream_t expected_direction)
-{
-    if (pcm->stream_id >= state->stream_count) {
-        LOG_SOUND_ERR("Invalid tx request\n");
-        fail_pcm(res_ring, pcm);
-        return false;
-    }
-    stream_t *stream = state->streams[pcm->stream_id];
-    if (stream_direction(stream) != expected_direction) {
-        LOG_SOUND_ERR("Failed to enqueue tx_used to stream\n");
-        fail_pcm(res_ring, pcm);
-        return false;
-    }
-    stream_enqueue_pcm_req(stream, pcm);
-
-    return true;
-}
-
 static bool handle_uio_interrupt(driver_state_t *state)
 {
     sddf_snd_cmd_t cmd;
@@ -221,15 +184,19 @@ static bool handle_uio_interrupt(driver_state_t *state)
     while (sddf_snd_dequeue_cmd(state->rings.cmd_req, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
+            fail_cmd(state->rings.cmd_res, &cmd);
             continue;
         }
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
     }
 
     while (sddf_snd_dequeue_pcm_data(state->rings.pcm_req, &pcm) == 0) {
-        if (!handle_pcm_request(state, state->rings.pcm_res, &pcm, SND_PCM_STREAM_PLAYBACK)) {
-            break;
+        if (pcm.stream_id >= state->stream_count) {
+            LOG_SOUND_ERR("Invalid stream id\n");
+            fail_pcm(state->rings.pcm_res, &pcm);
+            continue;
         }
+        stream_enqueue_pcm_req(state->streams[pcm.stream_id], &pcm);
     }
 
     bool notify_client = false;
@@ -290,7 +257,7 @@ int main(int argc, char **argv)
 
             state.streams[state.stream_count] = stream_open(
                 &state.shared_state->stream_info[state.stream_count], device_name, direction,
-                translate_offset(&state.translate, direction), state.rings.cmd_res, state.rings.pcm_res);
+                state.translate, state.rings.cmd_res, state.rings.pcm_res);
 
             if (state.streams[state.stream_count] == NULL) {
                 LOG_SOUND_WARN("Could not initialise target stream %d (%s)\n", i, device_name);

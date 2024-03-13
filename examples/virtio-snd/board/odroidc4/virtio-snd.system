@@ -25,11 +25,23 @@
 
     <!-- Sound sDDF regions -->
     <memory_region name="snd_shared"   size="0x1000" />
-    <memory_region name="snd_cmd_req"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_cmd_res" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_pcm_req"  size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="snd_pcm_res"  size="0x200_000" page_size="0x200_000"/>
-    <!-- Sound data (both sDDF and UIO) -->
+
+    <memory_region name="snd_drv_cmd_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_drv_cmd_res" size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_drv_pcm_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_drv_pcm_res"  size="0x200_000" page_size="0x200_000"/>
+
+    <memory_region name="snd_c0_cmd_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c0_cmd_res" size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c0_pcm_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c0_pcm_res"  size="0x200_000" page_size="0x200_000"/>
+
+    <memory_region name="snd_c1_cmd_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c1_cmd_res" size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c1_pcm_req"  size="0x200_000" page_size="0x200_000"/>
+    <memory_region name="snd_c1_pcm_res"  size="0x200_000" page_size="0x200_000"/>
+
+    <!-- Sound data regions -->
     <memory_region name="snd_data" size="0x200_000" page_size="0x200_000" />
 
     <protection_domain name="CLIENT_VMM" priority="100">
@@ -49,15 +61,39 @@
         <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="false" setvar_vaddr="sound_data"/>
         
         <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
-        <map mr="snd_cmd_req"  vaddr="0x4_000_000" perms="rw" cached="false" setvar_vaddr="sound_cmd_req" />
-        <map mr="snd_cmd_res" vaddr="0x4_200_000" perms="rw" cached="false" setvar_vaddr="sound_cmd_res" />
-        <map mr="snd_pcm_req"   vaddr="0x4_400_000"  perms="rw" cached="false" setvar_vaddr="sound_pcm_req" />
-        <map mr="snd_pcm_res"   vaddr="0x4_600_000"  perms="rw" cached="false" setvar_vaddr="sound_pcm_res" />
+        <map mr="snd_c0_cmd_req"  vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="sound_cmd_req" />
+        <map mr="snd_c0_cmd_res" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="sound_cmd_res" />
+        <map mr="snd_c0_pcm_req"   vaddr="0x4_400_000"  perms="rw" cached="true" setvar_vaddr="sound_pcm_req" />
+        <map mr="snd_c0_pcm_res"   vaddr="0x4_600_000"  perms="rw" cached="true" setvar_vaddr="sound_pcm_res" />
 
         <virtual_machine name="client_linux" id="0" priority="100">
             <map mr="client_vm_ram" vaddr="0x20000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
+    </protection_domain>
+
+    <!-- TODO: Client 2 -->
+
+    <protection_domain name="sound_virtualiser" priority="100" pp="true">
+        <program_image path="sound_virtualiser.elf" />
+
+        <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
+
+        <map mr="snd_c0_cmd_req"  vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_req" />
+        <map mr="snd_c0_cmd_res" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_res" />
+        <map mr="snd_c0_pcm_req"   vaddr="0x6_400_000"  perms="rw" cached="true" setvar_vaddr="c0_pcm_req" />
+        <map mr="snd_c0_pcm_res"   vaddr="0x6_600_000"  perms="rw" cached="true" setvar_vaddr="c0_pcm_res" />
+
+        <map mr="snd_c1_cmd_req"  vaddr="0x7_000_000" perms="rw" cached="true" setvar_vaddr="c1_cmd_req" />
+        <map mr="snd_c1_cmd_res" vaddr="0x7_200_000" perms="rw" cached="true" setvar_vaddr="c1_cmd_res" />
+        <map mr="snd_c1_pcm_req"   vaddr="0x7_400_000"  perms="rw" cached="true" setvar_vaddr="c1_pcm_req" />
+        <map mr="snd_c1_pcm_res"   vaddr="0x7_600_000"  perms="rw" cached="true" setvar_vaddr="c1_pcm_res" />
+
+        <map mr="snd_drv_cmd_req"  vaddr="0x8_000_000" perms="rw" cached="false" setvar_vaddr="drv_cmd_req" />
+        <map mr="snd_drv_cmd_res" vaddr="0x8_200_000" perms="rw" cached="false" setvar_vaddr="drv_cmd_res" />
+        <map mr="snd_drv_pcm_req"   vaddr="0x8_400_000"  perms="rw" cached="false" setvar_vaddr="drv_pcm_req" />
+        <map mr="snd_drv_pcm_res"   vaddr="0x8_600_000"  perms="rw" cached="false" setvar_vaddr="drv_pcm_res" />
+
     </protection_domain>
 
     <protection_domain name="SND_DRIVER_VMM" priority="100">
@@ -86,10 +122,10 @@
             <map mr="usb_2"    vaddr="0xff500000" perms="rw" cached="false" />
 
             <map mr="snd_shared" vaddr="0x6_f00_000" perms="rw" cached="false" />
-            <map mr="snd_cmd_req"  vaddr="0x7_000_000" perms="rw" cached="false" />
-            <map mr="snd_cmd_res" vaddr="0x7_200_000" perms="rw" cached="false" />
-            <map mr="snd_pcm_req"   vaddr="0x7_400_000"  perms="rw" cached="false" />
-            <map mr="snd_pcm_res"   vaddr="0x7_600_000"  perms="rw" cached="false" />
+            <map mr="snd_drv_cmd_req"  vaddr="0x7_000_000" perms="rw" cached="false" />
+            <map mr="snd_drv_cmd_res" vaddr="0x7_200_000" perms="rw" cached="false" />
+            <map mr="snd_drv_pcm_req"   vaddr="0x7_400_000"  perms="rw" cached="false" />
+            <map mr="snd_drv_pcm_res"   vaddr="0x7_600_000"  perms="rw" cached="false" />
 
             <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="false" />
         </virtual_machine>
@@ -213,7 +249,12 @@
 
     <!-- Sound -->
     <channel>
-        <end pd="SND_DRIVER_VMM" id="4"/>
         <end pd="CLIENT_VMM" id="4"/>
+        <end pd="sound_virtualiser" id="1"/>
+    </channel>
+
+    <channel>
+        <end pd="sound_virtualiser" id="3"/>
+        <end pd="SND_DRIVER_VMM" id="4"/>
     </channel>
 </system>

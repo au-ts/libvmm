@@ -935,11 +935,13 @@ static bool respond_to_message(msg_handle_t *msg,
 
     assert(msg->virtq_idx < VIRTIO_SND_NUM_VIRTQ);
     struct virtq *virtq = &dev->vqs[msg->virtq_idx].virtq;
+
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
+    struct virtq_desc *res_desc = &virtq->desc[req_desc->next];
 
     unsigned used;
     if (msg->virtq_idx == RXQ) {
-        used = copy_rx_data(virtq, req_desc, msg, pcm, pcm_len);
+        used = copy_rx_data(virtq, res_desc, msg, pcm, pcm_len);
     } else {
         used = 0;
     }
@@ -947,7 +949,7 @@ static bool respond_to_message(msg_handle_t *msg,
     if (--msg->ref_count > 0)
         return false;
 
-    struct virtq_desc *status_desc = req_desc;
+    struct virtq_desc *status_desc = res_desc;
     for (;
         status_desc->flags & VIRTQ_DESC_F_NEXT;
         status_desc = &virtq->desc[status_desc->next]);
@@ -972,8 +974,7 @@ void virtio_snd_notified(struct virtio_device *dev)
     sddf_snd_state_t *state = get_state(dev);
     bool respond = false;
 
-    // LOG_SOUND("virtIO sound device notified by server (responses %p of len %lu)\n",
-    //     state->rings.responses, sddf_snd_ring_size(&state->rings.responses->state));
+    // LOG_SOUND("virtIO sound device notified by server\n");
 
     snd_config.streams = state->shared_state->streams;
 

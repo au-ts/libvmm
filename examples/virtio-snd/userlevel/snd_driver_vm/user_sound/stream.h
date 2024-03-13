@@ -3,11 +3,6 @@
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
 
-typedef struct translation_state {
-    ssize_t tx_offset;
-    ssize_t rx_offset;
-} translation_state_t;
-
 typedef struct stream stream_t;
 
 stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device,
