@@ -66,6 +66,8 @@ static void assert_fail(
 void print_bitarray(bitarray_t* bitarr);
 /* Convenience function to print word in bits */
 void print_binary(word_t word);
+/* Convenience function to print memory region in hex */
+void print_mem_hex(uintptr_t addr, size_t size);
 
 #ifndef CONFIG_DEBUG_BUILD
 
