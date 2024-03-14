@@ -88,8 +88,13 @@ struct virtio_console_control {
 #define VIRTIO_CONSOLE_PORT_OPEN    6
 #define VIRTIO_CONSOLE_PORT_NAME    7
 
+/* Backend implementation */
+#define SDDF_SERIAL_NUM_HANDLES 2
+#define SDDF_SERIAL_RX_HANDLE 0
+#define SDDF_SERIAL_TX_HANDLE 1
+
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
-                         ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_mux_tx_ch);
+                         sddf_handler_t *sddf_handlers);
 int virtio_console_handle_rx(struct virtio_device *dev);
