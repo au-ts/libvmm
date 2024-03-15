@@ -1,7 +1,7 @@
-# This is a baisc script that concatenates the given Device Tree Sources.
+#!/bin/sh
+# This is a basic script that concatenates the given Device Tree Sources.
 # Useful for when you have a single DTS
 # Author: tim-arney
-#!/bin/bash
 
 usage() {
     cmd=$(basename "$0")
@@ -16,7 +16,7 @@ fi
 
 BASE="$1"
 shift
-OVERLAYS="$*"
+OVERLAYS="$@"
 
 if [ ! -f "$BASE" ]
 then
@@ -46,4 +46,3 @@ do
 done
 
 cat "$BASE" $OVERLAYS
-
