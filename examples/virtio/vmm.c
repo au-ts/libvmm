@@ -91,7 +91,7 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    /* Initialise our sDDF ring buffers for the serial device */
+    /* Initialise our sDDF ring buffers for the serial virtualiser */
     ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
     for (int i = 0; i < NUM_BUFFERS - 1; i++) {
         int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
@@ -102,8 +102,7 @@ void init(void) {
     }
     ring_init(&serial_tx_ring, (ring_buffer_t *)serial_tx_free, (ring_buffer_t *)serial_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
     for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
