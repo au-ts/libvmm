@@ -18,7 +18,7 @@
 #include "virtio/console.h"
 #include "virtio/sound.h"
 #include "sddf/serial/shared_ringbuffer.h"
-#include <sddf/sound/sound_queue.h>
+#include <sddf/sound/queue.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the

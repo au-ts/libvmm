@@ -5,7 +5,7 @@
 #include "virq.h"
 #include "virtio/virtq.h"
 #include "util/buffer_queue.h"
-#include <sddf/sound/sound_queue.h>
+#include <sddf/sound/queue.h>
 
 #define DEBUG_SOUND
 

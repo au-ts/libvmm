@@ -18,7 +18,7 @@
 #include "virtio/virtio.h"
 #include "virtio/block.h"
 #include "virtio/sound.h"
-#include <sddf/sound/sound_queue.h>
+#include <sddf/sound/queue.h>
 #include "uio.h"
 
 /*

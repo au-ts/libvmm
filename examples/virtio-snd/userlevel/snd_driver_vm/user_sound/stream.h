@@ -1,5 +1,5 @@
 #pragma once
-#include <sddf/sound/sound_queue.h>
+#include <sddf/sound/queue.h>
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
 
