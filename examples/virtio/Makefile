@@ -71,7 +71,7 @@ SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
 
-ELFS := vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf
+ELFS := vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -95,11 +95,16 @@ VMM_OBJS := vmm.o \
 			console.o \
 			virtio.o
 
-SERIAL_MUX_TX_OBJS := virt_tx.o
-SERIAL_MUX_RX_OBJS := virt_rx.o
-SERIAL_DRIVER_OBJS := uart.o
+SERIAL_VIRT_TX_OBJS := virt_tx.o
+SERIAL_VIRT_RX_OBJS := virt_rx.o
+SERIAL_DRIVER_OBJS := uart.o sddf_printf.o putchar_debug.o
+
+ALL_OBJS := $(addprefix ${BUILD_DIR}/,${VMM_OBJS} ${SERIAL_VIRT_TX_OBJS} ${SERIAL_VIRT_RX_OBJS} ${SERIAL_DRIVER_OBJS})
+
+DEPENDS := ${ALL_OBJS:.o=.d}
 
 # Toolchain flags
+
 # FIXME: For optimisation we should consider providing the flag -mcpu.
 # FIXME: We should also consider whether -mgeneral-regs-only should be
 # used to avoid the use of the FPU and therefore seL4 does not have to
@@ -113,18 +118,21 @@ CFLAGS := -mstrict-align \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -I$(VMM_SRC_DIR)/arch/aarch64 \
+		  -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util \
+		  -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF) \
 		  -I$(SDDF)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-none-elf
+		  -target aarch64-none-elf \
+		  -MD
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories $(IMAGE_FILE)
+all: $(IMAGE_FILE)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -136,8 +144,9 @@ qemu: all
 			-m size=2G \
 			-nographic
 
-directories:
-	$(shell mkdir -p $(BUILD_DIR))
+${BUILD_DIR}/directories: 
+	mkdir -p $(BUILD_DIR)
+	touch $@
 
 $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
@@ -152,40 +161,26 @@ $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE
 					-target aarch64-none-elf \
 					$< -o $@
 
+VPATH=${VMM_SRC_DIR}:${VMM_SRC_DIR}/util:${VMM_SRC_DIR}/arch/aarch64:${SDDF_SERIAL_DRIVER}:${SDDF_UTIL}:${VMM_SRC_DIR}/arch/aarch64/vgic:${VMM_SRC_DIR}/virtio
+
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/%.c Makefile
+${BUILD_DIR}/sddf_printf.o: ${SDDF_UTIL}/printf.c
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/util/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
+$(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS))
+$(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
@@ -193,3 +188,8 @@ $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+
+${ALL_OBJS}: ${BUILD_DIR}/directories ${MAKEFILE}
+
+
+-include ${DEPENDS}
