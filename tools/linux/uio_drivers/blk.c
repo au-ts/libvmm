@@ -96,7 +96,10 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         blk_config->size = storageStat.st_size;
         LOG_UIO_BLOCK("Emulated file storage device size: %d\n", (int)blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
-        ioctl(storage_fd, BLKGETSIZE, &blk_config->size);
+        if (ioctl(storage_fd, BLKGETSIZE, &blk_config->size) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
+            return -1;
+        }
         LOG_UIO_BLOCK("Raw storage device size: %d\n", (int)blk_config->size);
     } else {
         LOG_UIO_BLOCK_ERR("Storage file is of an unsupported type\n");
