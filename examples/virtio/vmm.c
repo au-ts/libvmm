@@ -16,7 +16,7 @@
 #include "vcpu.h"
 #include "virtio/virtio.h"
 #include "virtio/console.h"
-#include <sddf/serial/shared_ringbuffer.h>
+#include <sddf/serial/queue.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -45,18 +45,18 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 uintptr_t serial_rx_free;
-uintptr_t serial_rx_used;
+uintptr_t serial_rx_active;
 uintptr_t serial_tx_free;
-uintptr_t serial_tx_used;
+uintptr_t serial_tx_active;
 
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-ring_handle_t serial_rx_ring;
-ring_handle_t serial_tx_ring;
+serial_queue_handle_t serial_rx_queue;
+serial_queue_handle_t serial_tx_queue;
 
-#define SERIAL_MUX_TX_CH 1
-#define SERIAL_MUX_RX_CH 2
+#define SERIAL_VIRT_TX_CH 1
+#define SERIAL_VIRT_RX_CH 2
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
@@ -91,19 +91,19 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(&serial_rx_ring, (ring_buffer_t *)serial_rx_free, (ring_buffer_t *)serial_rx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(&serial_rx_ring, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+    /* Initialise our sDDF queue for the serial device */
+    serial_queue_init(&serial_rx_queue, (serial_queue_t *)serial_rx_free, (serial_queue_t *)serial_rx_active, true, NUM_ENTRIES, NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
+        int ret = serial_enqueue_free(&serial_rx_queue, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    ring_init(&serial_tx_ring, (ring_buffer_t *)serial_tx_free, (ring_buffer_t *)serial_tx_used, true, NUM_BUFFERS, NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+    serial_queue_init(&serial_tx_queue, (serial_queue_t *)serial_tx_free, (serial_queue_t *)serial_tx_active, true, NUM_ENTRIES, NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(&serial_tx_ring, serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE), BUFFER_SIZE, NULL);
+        int ret = serial_enqueue_free(&serial_tx_queue, serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE), BUFFER_SIZE);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
@@ -111,11 +111,11 @@ void init(void) {
         }
     }
     /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!ring_plugged(serial_tx_ring.free_ring));
-    assert(!ring_plugged(serial_tx_ring.used_ring));
+    assert(!serial_queue_plugged(serial_tx_queue.free));
+    assert(!serial_queue_plugged(serial_tx_queue.active));
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ,
-                                      &serial_rx_ring, &serial_tx_ring, SERIAL_MUX_TX_CH);
+                                      &serial_rx_queue, &serial_tx_queue, SERIAL_VIRT_TX_CH);
     assert(success);
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -123,7 +123,7 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     switch (ch) {
-        case SERIAL_MUX_RX_CH: {
+        case SERIAL_VIRT_RX_CH: {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);

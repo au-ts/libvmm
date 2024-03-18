@@ -66,8 +66,7 @@ DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
-SDDF := sddf
-SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
+SDDF ?= $(realpath ${VMM}/../sddf)
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SERIAL_DRIVER := $(SDDF)/drivers/serial/arm
 SDDF_UTIL := $(SDDF)/util
@@ -94,12 +93,11 @@ VMM_OBJS := vmm.o \
 			vcpu.o \
 			mmio.o \
 			console.o \
-			virtio.o \
-			shared_ringbuffer.o
+			virtio.o
 
-SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o
-SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o shared_ringbuffer.o
+SERIAL_MUX_TX_OBJS := virt_tx.o
+SERIAL_MUX_RX_OBJS := virt_rx.o
+SERIAL_DRIVER_OBJS := uart.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -116,7 +114,6 @@ CFLAGS := -mstrict-align \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
-		  -I$(SDDF_SERIAL_RINGBUFFER)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF) \
 		  -I$(SDDF)/include \

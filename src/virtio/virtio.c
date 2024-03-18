@@ -21,14 +21,14 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
                             uintptr_t region_base,
                             uintptr_t region_size,
                             size_t virq,
-                            ring_handle_t *sddf_rx_ring,
-                            ring_handle_t *sddf_tx_ring,
-                            size_t sddf_mux_tx_ch)
+                            serial_queue_handle_t *sddf_rx_queue,
+                            serial_queue_handle_t *sddf_tx_queue,
+                            size_t sddf_virt_tx_ch)
 {
     bool success = true;
     switch (type) {
     case CONSOLE:
-        virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, sddf_rx_ring, sddf_tx_ring, sddf_mux_tx_ch);
+        virtio_console_init(dev, virtio_console_queues, VIRTIO_CONSOLE_NUM_VIRTQ, virq, sddf_rx_queue, sddf_tx_queue, sddf_virt_tx_ch);
         success = fault_register_vm_exception_handler(region_base,
                                                       region_size,
                                                       &virtio_mmio_fault_handle,
