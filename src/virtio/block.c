@@ -328,8 +328,6 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     blk_queue_handle_t *queue_handle = dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h;
 
     blk_response_status_t sddf_ret_status;
-    uintptr_t sddf_ret_addr;
-    uint16_t sddf_ret_count;
     uint16_t sddf_ret_success_count;
     uint32_t sddf_ret_id;
 
@@ -337,7 +335,7 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
     bool handled = false;
     while (!blk_resp_queue_empty(queue_handle)) {
         handled = true;
-        blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_addr, &sddf_ret_count, &sddf_ret_success_count, &sddf_ret_id);
+        blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_success_count, &sddf_ret_id);
         
         /* Freeing and retrieving data store */
         req_data_t req_data;

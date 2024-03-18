@@ -68,7 +68,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     LOG_UIO_BLOCK("maps_phys[0]: 0x%lx, maps_phys[1]: 0x%lx, maps_phys[2]: 0x%lx, maps_phys[3]: 0x%lx\n", maps_phys[0], maps_phys[1], maps_phys[2], maps_phys[3]);
 
-    blk_queue_init(&h, req_queue, resp_queue, false, BLK_REQ_QUEUE_SIZE, BLK_RESP_QUEUE_SIZE);
+    blk_queue_init(&h, req_queue, resp_queue);
 
     storage_fd = open(storage_path, O_RDWR);
     if (storage_fd < 0) {
@@ -126,11 +126,6 @@ void driver_notified()
 
         blk_response_status_t status = SUCCESS;
         uint16_t success_count = 0;
-
-        // @ericc: These should be the same across all requests - we return what the request gives us
-        uintptr_t addr = req_addr;
-        uint16_t count = req_count;
-        uint32_t id = req_id;
         
         //@ericc: what happens if this response is dropped? should we have a timeout in client?
         if (blk_resp_queue_full(&h)) {
@@ -194,8 +189,8 @@ void driver_notified()
                 LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
                 continue;
         }
-        blk_enqueue_resp(&h, status, addr, count, success_count, id);
-        LOG_UIO_BLOCK("Enqueued response: status=%d, addr=%p, count=%d, success_count=%d, id=%d\n", status, (void *)addr, count, success_count, id);
+        blk_enqueue_resp(&h, status, success_count, req_id);
+        LOG_UIO_BLOCK("Enqueued response: status=%d, success_count=%d, id=%d\n", status, success_count, id);
     }
 
     uio_notify();
