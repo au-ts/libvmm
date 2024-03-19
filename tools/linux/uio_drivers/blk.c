@@ -77,15 +77,8 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     }
     LOG_UIO_BLOCK("Opened storage file: %s\n", storage_path);
 
-    // @TODO, @ericc: Need to figure out how to determine config values.
-    // These numbers will be evaluated depending on the policy of the MUX,
-    // and the actual device firmware itself.
-    // For now, I've hardcoded them.
-    blk_config->blocksize = 512;
-    blk_config->read_only = false;
-
     // Determine whether storage file is a block device or regular file
-    // and set the size accordingly
+    // and set the blk queue configuration fields accordingly
     struct stat storageStat;
     if (fstat(storage_fd, &storageStat) < 0) {
         LOG_UIO_BLOCK_ERR("Failed to get storage file status: %s\n", strerror(errno));
@@ -94,13 +87,35 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     if (S_ISREG(storageStat.st_mode)) {
         blk_config->size = storageStat.st_size;
-        LOG_UIO_BLOCK("Emulated file storage device size: %d\n", (int)blk_config->size);
+        blk_config->blocksize = 4096;
+        blk_config->read_only = false;
+        LOG_UIO_BLOCK("Emulated file storage device: blocksize=%d size=%d\n", blk_config->blocksize, blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
-        if (ioctl(storage_fd, BLKGETSIZE, &blk_config->size) == -1) {
+        long size;
+        if (ioctl(storage_fd, BLKGETSIZE, &size) != -1) {
             LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
             return -1;
         }
-        LOG_UIO_BLOCK("Raw storage device size: %d\n", (int)blk_config->size);
+        blk_config->size = (uint64_t)size * 512;
+
+        long blocksize;
+        if (ioctl(storage_fd, BLKSSZGET, &blocksize) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device block size: %s\n", strerror(errno));
+            return -1;
+        }
+        // if (blocksize < 4096) {
+        //     // LOG_UIO_BLOCK("Device optimal sector");
+        // }
+        blk_config->blocksize = (uint16_t)blocksize;
+        
+        long read_only;
+        if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device read only status: %s\n", strerror(errno));
+            return -1;
+        }
+        blk_config->read_only = (bool)read_only;
+
+        LOG_UIO_BLOCK("Raw storage device: blocksize=%d size=%d readonly=%d\n", blk_config->blocksize, blk_config->size, blk_config->read_only);
     } else {
         LOG_UIO_BLOCK_ERR("Storage file is of an unsupported type\n");
         return -1;
