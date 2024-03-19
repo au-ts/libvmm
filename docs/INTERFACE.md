@@ -13,12 +13,14 @@ The virtual machine library provides the following interfaces:
 							 
 
 
-`linux_setup_images` is used to copy Linux kernel, initial RAM disc
+`linux_setup_images` is used to copy Linux kernel, initial RAM disk
 and device tree into guest RAM ready for execution.  The first
 argument *ram\_start* is the virtual address of the guest RAM.
 
 The memory pointed to by *kernel* is checked to see that it is a Linux
+kernel `vmlinux`-style
 image before it is copied into an appropriate place in the guest RAM.
+
 
 *initrd\_dest* and *dtb\_dest* should match what is in the Device
 Tree.
@@ -50,14 +52,15 @@ The arguments are:
 
 `bool virq_inject(size_t vcpu_id, int irq)`
 
-Inject interrupt `irq` into the virtul interrupt controller on cpu `vcpu_id`
+Inject interrupt `irq` into the virtual interrupt controller on virtual
+cpu `vcpu_id`
 
 `bool virq_register_passthrough(size_t vcpu_id, size_t irq,
 microkit_channel irq_ch);`
 
 Tell the system that interrupt request `irq` is a hardware interrupt
-that will be passed through to the guest.  `irq_ch` is he channel in
-the System XML file that maps to that interrupt.
+that will be passed through to the guest.  `irq_ch` is the channel in
+the System Description File that maps to that interrupt.
 
 `bool virq_handle_passthrough(microkit_channel irq_ch)`
 Perform an interrupt injection for the interrupt registered with 
@@ -69,7 +72,7 @@ Start a guest Linux system, by passing control to the kernel entry
 point.
 
 `void guest_stop(size_t boot_vcpu_id);`
-Pause the guest.
+Stop executing the guest on virtual CPU *vcpu_id*.
 
 `bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr,
 size_t guest_ram_size);`
