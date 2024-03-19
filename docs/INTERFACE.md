@@ -72,7 +72,7 @@ Start a guest Linux system, by passing control to the kernel entry
 point.
 
 `void guest_stop(size_t boot_vcpu_id);`
-Stop executing the guest on virtual CPU *vcpu_id*.
+Stop executing the guest.
 
 `bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr,
 size_t guest_ram_size);`
