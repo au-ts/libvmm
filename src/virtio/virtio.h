@@ -26,6 +26,6 @@ bool virtio_mmio_device_init(virtio_device_t *dev,
                             uintptr_t region_base,
                             uintptr_t region_size,
                             size_t virq,
-                            ring_handle_t *sddf_rx_ring,
-                            ring_handle_t *sddf_tx_ring,
+                            serial_queue_handle_t *sddf_rx_queue,
+                            serial_queue_handle_t *sddf_tx_queue,
                             size_t sddf_mux_tx_ch);
