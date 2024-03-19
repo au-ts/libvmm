@@ -28,11 +28,7 @@ AARCH64_FILES := src/arch/aarch64/fault.c \
 
 # VIRTIO MMIO depends on sddf
 ifeq ($(strip $(SDDF)),)
-  ifneq (,$(wildcard ${LionsOS}/sddf))
-    SDDF := ${LionsOS}/sddf
-  else
     $(error libvmm needs the location of the SDDF to build virtIO components)
-  endif
 endif
 
 CFLAGS += -I${SDDF}/include
