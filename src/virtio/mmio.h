@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include "util/util.h"
 #include "virtio/virtq.h"
-#include <sddf/serial/shared_ringbuffer.h>
+#include <sddf/serial/queue.h>
 
 // table 4.1
 #define VIRTIO_MMIO_DEV_MAGIC               0x74726976 // "virt"
@@ -115,14 +115,14 @@ typedef struct virtio_device {
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
-    /* Handlers for sDDF ring buffers */
-    ring_handle_t *sddf_rx_ring;
-    ring_handle_t *sddf_tx_ring;
-    /* Microkit channel to the sDDF TX multiplexor */
+    /* Handlers for sDDF queues */
+    serial_queue_handle_t *sddf_rx_queue;
+    serial_queue_handle_t *sddf_tx_queue;
+    /* Microkit channel to the sDDF TX virtualiser */
     // @ivanv: this is microkit specific so maybe should be a callback instead or something.
     // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
     // this is specific to device classes such as serial and networking
-    size_t sddf_mux_tx_ch;
+    size_t sddf_virt_tx_ch;
 } virtio_device_t;
 
 /**
