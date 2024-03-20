@@ -88,27 +88,32 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     if (S_ISREG(storageStat.st_mode)) {
         blk_config->size = storageStat.st_size;
-        blk_config->blocksize = 4096;
+        blk_config->blocksize = BLK_BLOCK_SIZE;
         blk_config->read_only = false;
         LOG_UIO_BLOCK("Emulated file storage device: blocksize=%d size=%d\n", blk_config->blocksize, blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
-        long size;
-        if (ioctl(storage_fd, BLKGETSIZE, &size) != -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
-            return -1;
-        }
-        blk_config->size = (uint64_t)size * 512;
-
+        /* Get blocksize */
         long blocksize;
         if (ioctl(storage_fd, BLKSSZGET, &blocksize) == -1) {
             LOG_UIO_BLOCK_ERR("Failed to get raw storage device block size: %s\n", strerror(errno));
             return -1;
         }
-        // if (blocksize < 4096) {
-        //     // LOG_UIO_BLOCK("Device optimal sector");
-        // }
+        if (blocksize < BLK_BLOCK_SIZE) {
+            blocksize = 1;
+        } else {
+            blocksize = blocksize / BLK_BLOCK_SIZE;
+        }
         blk_config->blocksize = (uint16_t)blocksize;
-        
+
+        /* Get size */
+        long size;
+        if (ioctl(storage_fd, BLKGETSIZE64, &size) != -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
+            return -1;
+        }
+        blk_config->size = (uint64_t)size / BLK_BLOCK_SIZE;
+
+        /* Get read only status */
         long read_only;
         if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
             LOG_UIO_BLOCK_ERR("Failed to get raw storage device read only status: %s\n", strerror(errno));
