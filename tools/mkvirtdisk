@@ -3,16 +3,13 @@
 # This bash script creates a virtual disk image with a MBR
 
 # Usage instructions
-if [ $# -ne 2 ]; then
-    echo "Usage: $0 <virtual_disk_name> <build_directory>"
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <virtual_disk_name>"
     exit 1
 fi
 
-# Create the build directory if it doesn't exist
-mkdir -p "$2"
-
-# Change to the build directory
-cd "$2"
+DISK_IMAGE="$1"
+BUILD_DIR=$(dirname $DISK_IMAGE)
 
 BLOCKSIZE=512
 COUNT=4100
@@ -22,10 +19,9 @@ P1OFFSET=1
 P2OFFSET=$((FS_COUNT + P1OFFSET + 1))
 
 # Create the FAT filesystem
-mkfs.fat -C fat.img -S $BLOCKSIZE $FS_COUNT
+mkfs.fat -C $BUILD_DIR/fat.img -S $BLOCKSIZE $FS_COUNT
 
 # Create a file to act as a virtual disk
-DISK_IMAGE="$1"
 dd if=/dev/zero of=$DISK_IMAGE bs=$BLOCKSIZE count=$COUNT
 
 # Create MBR partition table and two partitions
@@ -49,5 +45,5 @@ fdisk -l $DISK_IMAGE
 
 # Copy the FAT filesystem to the virtual disk
 
-dd if=fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P1OFFSET count=$FS_COUNT
-dd if=fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P2OFFSET count=$FS_COUNT
+dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P1OFFSET count=$FS_COUNT
+dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P2OFFSET count=$FS_COUNT
