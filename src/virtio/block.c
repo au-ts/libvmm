@@ -6,7 +6,7 @@
 #include <util/util.h>
 #include <util/fsmem.h>
 #include <util/datastore.h>
-#include <sddf/blk/shared_queue.h>
+#include <sddf/blk/queue.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_BLOCK

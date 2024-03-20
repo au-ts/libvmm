@@ -180,7 +180,6 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o
 
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
@@ -190,7 +189,6 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
@@ -200,14 +198,13 @@ BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					block.o \
 					mmio.o \
 					sddf_serial_sharedringbuffer.o \
-					sddf_blk_shared_queue.o
 
 SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
 SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
 SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_shared_queue.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o # @ericc: util.o printf.o only needed during debug mode
-UIO_BLK_DRIVER_OBJS := blk.o libuio.o sddf_blk_shared_queue.o
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o # @ericc: util.o printf.o only needed during debug mode
+UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -365,9 +362,6 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
-$(BUILD_DIR)/sddf_blk_shared_queue.o: Makefile
-	$(MAKE) -C $(SDDF_BLK_SHAREDQUEUE) MICROKIT_INCLUDE=$(MICROKIT_SDK) BUILD_DIR=$(CURRENT_DIR)/$(BUILD_DIR)
-
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
@@ -399,7 +393,7 @@ $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/storage: Makefile
-	sh $(VMM_TOOLS)/mkvirtdisk storage $(BUILD_DIR)
+	sh $(VMM_TOOLS)/mkvirtdisk $@
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@

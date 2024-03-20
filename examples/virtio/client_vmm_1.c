@@ -18,7 +18,7 @@
 #include "virtio/console.h"
 #include "virtio/block.h"
 #include <sddf/serial/shared_ringbuffer.h>
-#include <sddf/blk/shared_queue.h>
+#include <sddf/blk/queue.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the

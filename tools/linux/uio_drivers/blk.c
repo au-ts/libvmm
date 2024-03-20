@@ -14,7 +14,8 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <linux/fs.h>
-#include <sddf/blk/shared_queue.h>
+
+#include <sddf/blk/queue.h>
 
 #include <uio_drivers/libuio.h>
 #include <uio_drivers/blk.h>
