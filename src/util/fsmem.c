@@ -40,6 +40,10 @@ bool fsmem_full(fsmem_t *fsmem, uint64_t count)
     if (count > fsmem->num_cells) {
         return true;
     }
+
+    if (count == 0) {
+        return false;
+    }
     
     unsigned int start_bitpos = fsmem->avail_bitpos;
     if (fsmem_overflow(fsmem, count)) {
