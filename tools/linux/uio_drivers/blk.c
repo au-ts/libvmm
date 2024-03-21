@@ -21,7 +21,7 @@
 #include <uio_drivers/blk.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_UIO_BLOCK
+#define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
 #define LOG_UIO_BLOCK(...) do{ printf("UIO_DRIVER(BLOCK)"); printf(": "); printf(__VA_ARGS__); }while(0)
@@ -90,7 +90,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         blk_config->size = storageStat.st_size;
         blk_config->blocksize = BLK_BLOCK_SIZE;
         blk_config->read_only = false;
-        LOG_UIO_BLOCK("Emulated file storage device: blocksize=%d size=%d\n", blk_config->blocksize, blk_config->size);
+        LOG_UIO_BLOCK("Emulated file storage device: blocksize=%d size=%d\n", blk_config->blocksize, (int)blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
         /* Get blocksize */
         long blocksize;
@@ -121,7 +121,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         }
         blk_config->read_only = (bool)read_only;
 
-        LOG_UIO_BLOCK("Raw storage device: blocksize=%d size=%d readonly=%d\n", blk_config->blocksize, blk_config->size, blk_config->read_only);
+        LOG_UIO_BLOCK("Raw storage device: blocksize=%d size=%d readonly=%d\n", blk_config->blocksize, (int)blk_config->size, blk_config->read_only);
     } else {
         LOG_UIO_BLOCK_ERR("Storage file is of an unsupported type\n");
         return -1;
@@ -137,7 +137,6 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
 void driver_notified()
 {
-    uint16_t blocksize = blk_config->blocksize;
     blk_request_code_t req_code;
     uintptr_t req_addr;
     uint32_t req_block_number;
@@ -160,7 +159,7 @@ void driver_notified()
         // TODO: @ericc: workout what error status are appropriate, sDDF block only contains SEEK_ERROR right now
         switch(req_code) {
             case READ_BLOCKS: {
-                int ret = lseek(storage_fd, (off_t)req_block_number * (off_t)blocksize, SEEK_SET);
+                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_BLOCK_SIZE, SEEK_SET);
                 if (ret < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
                     status = SEEK_ERROR;
@@ -168,7 +167,7 @@ void driver_notified()
                     break;
                 }
                 LOG_UIO_BLOCK("Reading from storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-                int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * blocksize);
+                int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_BLOCK_SIZE);
                 LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
                 if (bytes_read < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
@@ -176,12 +175,12 @@ void driver_notified()
                     success_count = 0;
                 } else {
                     status = SUCCESS;
-                    success_count = bytes_read / blocksize;
+                    success_count = bytes_read / BLK_BLOCK_SIZE;
                 }
                 break;
             }
             case WRITE_BLOCKS: {
-                int ret = lseek(storage_fd, (off_t)req_block_number * (off_t)blocksize, SEEK_SET);
+                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_BLOCK_SIZE, SEEK_SET);
                 if (ret < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
                     status = SEEK_ERROR;
@@ -189,7 +188,7 @@ void driver_notified()
                     break;
                 }
                 LOG_UIO_BLOCK("Writing to storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-                int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * blocksize);
+                int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_BLOCK_SIZE);
                 LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
                 if (bytes_written < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
@@ -197,7 +196,7 @@ void driver_notified()
                     success_count = 0;
                 } else {
                     status = SUCCESS;
-                    success_count = bytes_written / blocksize;
+                    success_count = bytes_written / BLK_BLOCK_SIZE;
                 }
                 break;
             }
@@ -214,7 +213,7 @@ void driver_notified()
                 continue;
         }
         blk_enqueue_resp(&h, status, success_count, req_id);
-        LOG_UIO_BLOCK("Enqueued response: status=%d, success_count=%d, id=%d\n", status, success_count, id);
+        LOG_UIO_BLOCK("Enqueued response: status=%d, success_count=%d, id=%d\n", status, success_count, req_id);
     }
 
     uio_notify();

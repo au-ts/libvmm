@@ -136,7 +136,7 @@ struct virtio_blk_outhdr {
 
 // @ericc: This needs to be less than or equal to memory size / blocksize 
 // TODO: auto generate from microkit system file
-#define SDDF_BLK_MAX_DATA_BUFFERS 2048
+#define SDDF_BLK_MAX_DATA_BUFFERS 512
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0

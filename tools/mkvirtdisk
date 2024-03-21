@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This bash script creates a virtual disk image with a MBR
+# This bash script creates a virtual disk image with an MBR
 
 # Usage instructions
 if [ $# -ne 1 ]; then
@@ -12,11 +12,18 @@ DISK_IMAGE="$1"
 BUILD_DIR=$(dirname $DISK_IMAGE)
 
 BLOCKSIZE=512
-COUNT=4100
-FS_COUNT=$(((COUNT - 3)/2))
+# @ericc: This has to be multiple of 8
+COUNT=4104
 
-P1OFFSET=1
-P2OFFSET=$((FS_COUNT + P1OFFSET + 1))
+P1OFFSET=8
+
+# @ericc: This ensures that both FAT filesystems are a multiple of 8 blocks
+FS_COUNT=$(( (COUNT - P1OFFSET - 1) / 2 ))
+FS_COUNT=$(( FS_COUNT / 8 * 8 ))
+FS_COUNT_ADD=$(( FS_COUNT - 1 ))
+
+
+P2OFFSET=$((FS_COUNT_ADD + P1OFFSET + 1))
 
 # Create the FAT filesystem
 mkfs.fat -C $BUILD_DIR/fat.img -S $BLOCKSIZE $FS_COUNT
@@ -31,12 +38,12 @@ echo n # Add a new partition
 echo p # Primary partition
 echo 1 # Partition number 1
 echo $P1OFFSET  # First sector (Accept default: 1)
-echo +$FS_COUNT # Last sector
+echo +$FS_COUNT_ADD # Last sector
 echo n # Add a new partition
 echo p # Primary partition
 echo 2 # Partition number 2
 echo $P2OFFSET  # First sector (Accept default: next available)
-echo +$FS_COUNT # Last sector
+echo +$FS_COUNT_ADD # Last sector
 echo w # Write changes
 } | fdisk $DISK_IMAGE
 
