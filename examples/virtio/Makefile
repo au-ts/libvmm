@@ -122,18 +122,18 @@ CLIENT_VM_2_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
 CLIENT_VM_2_DTS_OVERLAYS := ${CLIENT_VM_2_DTS_OVERLAYS_${BOARD}}
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
+SDDF_UTIL := $(SDDF_DIR)/util
+
 SDDF_BLK_COMPONENTS := $(SDDF_DIR)/blk/components
-SDDF_BLK_SHAREDQUEUE := $(SDDF_DIR)/blk/libblksharedqueue
 SDDF_BLK_UTIL := $(SDDF_DIR)/blk/util
 
-SDDF_SERIAL_RINGBUFFER := $(SDDF_DIR)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF_DIR)/serial/components
 
 SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
-ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_mux_tx.elf serial_mux_rx.elf uart_driver.elf blk_virt.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
 BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver storage
 BLK_DRIVER_VM_USERLEVEL_odroidc4 := uio_blk_driver
@@ -179,7 +179,6 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_serial_sharedringbuffer.o \
 
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
@@ -188,7 +187,6 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_serial_sharedringbuffer.o \
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
@@ -197,13 +195,13 @@ BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_serial_sharedringbuffer.o \
 
-SERIAL_MUX_TX_OBJS := mux_tx.o sddf_serial_sharedringbuffer.o
-SERIAL_MUX_RX_OBJS := mux_rx.o sddf_serial_sharedringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o sddf_serial_sharedringbuffer.o
+# @ericc: sddf_printf.o sdd_putchar_debug.o only needed during debug mode
+SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
+SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
+SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o printf.o util.o # @ericc: util.o printf.o only needed during debug mode
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
@@ -350,11 +348,11 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
-
-$(BUILD_DIR)/sddf_serial_sharedringbuffer.o: Makefile
-	$(MAKE) -C $(SDDF_SERIAL_RINGBUFFER) MICROKIT_INCLUDE=$(MICROKIT_SDK) BUILD_DIR=$(CURRENT_DIR)/$(BUILD_DIR)
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -377,10 +375,10 @@ $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJ
 $(BUILD_DIR)/blk_virt.elf: $(addprefix $(BUILD_DIR)/, $(BLK_VIRT_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
+$(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS))
+$(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))

@@ -17,7 +17,7 @@
 #include "virtio/virtio.h"
 #include "virtio/console.h"
 #include "virtio/block.h"
-#include <sddf/serial/shared_ringbuffer.h>
+#include <sddf/serial/queue.h>
 #include <sddf/blk/queue.h>
 
 /*
@@ -59,14 +59,14 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
 uintptr_t serial_rx_free;
-uintptr_t serial_rx_used;
+uintptr_t serial_rx_active;
 uintptr_t serial_tx_free;
-uintptr_t serial_tx_used;
+uintptr_t serial_tx_active;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-ring_handle_t serial_rx_h;
-ring_handle_t serial_tx_h;
+serial_queue_handle_t serial_rx_h;
+serial_queue_handle_t serial_tx_h;
 sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
@@ -135,32 +135,32 @@ void init(void) {
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data = (uintptr_t)serial_tx_data;
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].ch = SERIAL_MUX_TX_CH;
 
-    /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-            (ring_buffer_t *)serial_rx_free,
-            (ring_buffer_t *)serial_rx_used,
+    /* Initialise our sDDF queues for the serial device */
+    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
+            (serial_queue_t *)serial_rx_free,
+            (serial_queue_t *)serial_rx_active,
             true,
-            NUM_BUFFERS,
-            NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+            NUM_ENTRIES,
+            NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
+        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h, serial_rx_data + (i * BUFFER_SIZE), BUFFER_SIZE);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
+            microkit_dbg_puts(": server rx buffer population, unable to enqueue\n");
         }
     }
-    ring_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-            (ring_buffer_t *)serial_tx_free,
-            (ring_buffer_t *)serial_tx_used,
+    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
+            (serial_queue_t *)serial_tx_free,
+            (serial_queue_t *)serial_tx_active,
             true,
-            NUM_BUFFERS,
-            NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h, serial_tx_data + (i * BUFFER_SIZE), BUFFER_SIZE, NULL);
+            NUM_ENTRIES,
+            NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
+        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h, serial_tx_data + (i * BUFFER_SIZE), BUFFER_SIZE);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
+            microkit_dbg_puts(": server tx buffer population, unable to enqueue\n");
         }
     }
 
@@ -174,7 +174,7 @@ void init(void) {
     sddf_blk_handlers[SDDF_BLK_DEFAULT_HANDLE].data = (uintptr_t)blk_data;
     sddf_blk_handlers[SDDF_BLK_DEFAULT_HANDLE].ch = BLK_CH;
     
-    /* Initialise our sDDF ring buffers for the block device */
+    /* Initialise our sDDF queues for the block device */
     blk_queue_init(sddf_blk_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h,
                 (blk_req_queue_t *)blk_req_queue,
                 (blk_resp_queue_t *)blk_resp_queue);
