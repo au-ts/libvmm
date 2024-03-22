@@ -19,12 +19,16 @@
 
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
+/* Maximum number of buffers in sddf data region */
+#define SDDF_MAX_DATA_BUFFERS 4096
+
+/* Virtio blk configuration space */
 static struct virtio_blk_config virtio_blk_config;
 
 /* Data struct that handles allocation and freeing of fixed size data cells in sDDF memory region */
 static fsmem_t fsmem_data;
 static bitarray_t fsmem_avail_bitarr;
-static word_t fsmem_avail_bitarr_words[roundup_bits2words64(SDDF_BLK_MAX_DATA_BUFFERS)];
+static word_t fsmem_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_BUFFERS)];
 
 /* Handle storing and retrieving of request data between virtIO and sDDF */
 typedef struct data {
@@ -37,9 +41,9 @@ typedef struct data {
     bool not_aligned;
 } data_t;
 static datastore_t datastore;
-static data_t datastore_data[SDDF_BLK_MAX_DATA_BUFFERS];
-static uint64_t datastore_nextfree[SDDF_BLK_MAX_DATA_BUFFERS];
-static bool datastore_used[SDDF_BLK_MAX_DATA_BUFFERS];
+static data_t datastore_data[SDDF_MAX_DATA_BUFFERS];
+static uint64_t datastore_nextfree[SDDF_MAX_DATA_BUFFERS];
+static bool datastore_used[SDDF_MAX_DATA_BUFFERS];
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -436,15 +440,18 @@ void virtio_blk_init(struct virtio_device *dev,
     dev->virq = virq;
     dev->sddf_handlers = sddf_handlers;
 
+    size_t sddf_data_buffers = dev->sddf_handlers->data_size / BLK_BLOCK_SIZE;
+    assert(sddf_data_buffers <= SDDF_MAX_DATA_BUFFERS);
+
     virtio_blk_config_init(dev);
 
     fsmem_init(&fsmem_data,
              dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].data,
              BLK_BLOCK_SIZE,
-             SDDF_BLK_MAX_DATA_BUFFERS,
+             sddf_data_buffers,
              &fsmem_avail_bitarr,
              fsmem_avail_bitarr_words,
-             roundup_bits2words64(SDDF_BLK_MAX_DATA_BUFFERS));
+             roundup_bits2words64(sddf_data_buffers));
 
-    datastore_init(&datastore, datastore_data, sizeof(data_t), datastore_nextfree, datastore_used, SDDF_BLK_MAX_DATA_BUFFERS);
+    datastore_init(&datastore, datastore_data, sizeof(data_t), datastore_nextfree, datastore_used, sddf_data_buffers);
 }
