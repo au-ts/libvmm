@@ -9,7 +9,7 @@
 #include <sddf/blk/queue.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_BLOCK
+// #define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...) do{ printf("VIRTIO(BLOCK): "); printf(__VA_ARGS__); }while(0)
