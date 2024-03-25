@@ -65,6 +65,10 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/virtio-snd.system
 
 CURRENT_DIR := $(shell pwd)
 
+LINUX_DIR := $(VMM_TOOLS)/linux
+LINUX_SND_DIR := $(LINUX_DIR)/snd
+UIO_DRIVERS_DIR := $(LINUX_DIR)/uio_drivers
+
 SND_DRIVER_VM_DIR := board/$(BOARD)/snd_driver_vm
 SND_DRIVER_VM_DTS_DIR := $(SND_DRIVER_VM_DIR)/dts
 SND_DRIVER_VM_USERLEVEL_DIR := userlevel/snd_driver_vm
@@ -228,12 +232,23 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-# Unpack rootfs, put the userlevel binary in /root, repack rootfs
+# Append to rootfs
 
-$(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS))
-	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)" "$^"
+UIO_ASOUND_CONF := $(LINUX_SND_DIR)/asound_$(BOARD).conf
 
-$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) userlevel/client_vm/record.sh
+$(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) $(LINUX_SND_DIR)/S95sound $(UIO_ASOUND_CONF)
+	rm -rf $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && \
+	mkdir -p $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d && \
+	cp $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
+	cp $(LINUX_SND_DIR)/S95sound $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d && \
+	chmod +x $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/* && \
+	cp $(UIO_ASOUND_CONF) $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/asound.conf && \
+	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)"
+
+$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
+	rm -rf $(CLIENT_VM_ROOTFS_TMP_DIR) && \
+	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
+	cp $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
 	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
@@ -260,7 +275,7 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/user_sound/%.o: $(SND_DRIVER_VM_USERLEVEL_DIR)/user_sound/%.c
+$(BUILD_DIR)/user_sound/%.o: $(UIO_DRIVERS_DIR)/snd/%.c
 	mkdir -p $(BUILD_DIR)/user_sound
 	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
 
@@ -295,7 +310,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
+	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@

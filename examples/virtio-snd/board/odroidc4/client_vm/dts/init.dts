@@ -8,7 +8,7 @@
 		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8";
         linux,stdout-path = "/virtio-console@0130000";
         stdout-path = "/virtio-console@0130000";
-		linux,initrd-start = <0x2d700000>;
-		linux,initrd-end = <0x2f000000>;
+		linux,initrd-start = <0x26000000>;
+		linux,initrd-end = <0x27000000>;
 	};
 };

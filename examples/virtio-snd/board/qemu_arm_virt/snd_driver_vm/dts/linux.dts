@@ -51,13 +51,6 @@
 		#address-cells = <0x02>;
 		interrupt-controller;
 		#interrupt-cells = <0x03>;
-
-		// v2m@8020000 {
-		// 	phandle = <0x8003>;
-		// 	reg = <0x00 0x8020000 0x00 0x1000>;
-		// 	msi-controller;
-		// 	compatible = "arm,gic-v2m-frame";
-		// };
 	};
 
 	flash@0 {

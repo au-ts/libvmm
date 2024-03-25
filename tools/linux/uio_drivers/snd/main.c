@@ -222,6 +222,8 @@ int main(int argc, char **argv)
     LOG_SOUND("Opened /dev/uio0\n");
 
     driver_state_t state;
+    memset(&state, 0, sizeof(state));
+
     int err = init_mappings(&state, uio_fd);
     if (err) {
         printf("UIO SND|ERR: failed to initialise mappings\n");
@@ -241,12 +243,19 @@ int main(int argc, char **argv)
         SND_PCM_STREAM_CAPTURE,
     };
 
+    bool stream_ready[MAX_STREAMS];
+    memset(stream_ready, 0, sizeof(bool) * MAX_STREAMS);
+
     state.stream_count = 0;
 
     int tries = 0;
-    while (state.stream_count == 0 && tries < 10) {
+    while (state.stream_count != MAX_STREAMS && tries < 10) {
         for (int i = 0; i < MAX_STREAMS; i++) {
+
             snd_pcm_stream_t direction = stream_directions[i];
+            if (stream_ready[i]) {
+                continue;
+            }
 
             char *device_name;
             if (argc - 1 > i) {
@@ -263,11 +272,12 @@ int main(int argc, char **argv)
                 LOG_SOUND_WARN("Could not initialise target stream %d (%s)\n", i, device_name);
             } else {
                 LOG_SOUND("Initialised stream %d (%s)\n", i, device_name);
+                stream_ready[i] = true;
                 state.stream_count++;
             }
         }
 
-        if (state.stream_count == 0) {
+        if (state.stream_count != MAX_STREAMS) {
             LOG_SOUND_WARN("Trying again in 1s...\n");
             sleep(1);
             tries++;

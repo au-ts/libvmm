@@ -20,19 +20,12 @@
 #include "sddf/serial/shared_ringbuffer.h"
 #include <sddf/sound/queue.h>
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
-#define GUEST_RAM_SIZE 0x10000000
-
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
 #elif defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
+#define GUEST_DTB_VADDR 0x27000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x26000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
