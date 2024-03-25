@@ -88,31 +88,11 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     if (S_ISREG(storageStat.st_mode)) {
         blk_config->size = storageStat.st_size;
-        blk_config->blocksize = BLK_BLOCK_SIZE;
+        blk_config->sector_size = 4096;
+        blk_config->block_size = 1;
         blk_config->read_only = false;
-        LOG_UIO_BLOCK("Emulated file storage device: blocksize=%d size=%d\n", blk_config->blocksize, (int)blk_config->size);
+        LOG_UIO_BLOCK("Emulated file storage device: read_only=%d, sector_size=%d, block_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->block_size, blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
-        /* Get blocksize */
-        long blocksize;
-        if (ioctl(storage_fd, BLKSSZGET, &blocksize) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device block size: %s\n", strerror(errno));
-            return -1;
-        }
-        if (blocksize < BLK_BLOCK_SIZE) {
-            blocksize = 1;
-        } else {
-            blocksize = blocksize / BLK_BLOCK_SIZE;
-        }
-        blk_config->blocksize = (uint16_t)blocksize;
-
-        /* Get size */
-        long size;
-        if (ioctl(storage_fd, BLKGETSIZE64, &size) != -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
-            return -1;
-        }
-        blk_config->size = (uint64_t)size / BLK_BLOCK_SIZE;
-
         /* Get read only status */
         long read_only;
         if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
@@ -121,7 +101,32 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         }
         blk_config->read_only = (bool)read_only;
 
-        LOG_UIO_BLOCK("Raw storage device: blocksize=%d size=%d readonly=%d\n", blk_config->blocksize, (int)blk_config->size, blk_config->read_only);
+        /* Get sector size */
+        long sector_size;
+        if (ioctl(storage_fd, BLKSSZGET, &sector_size) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device sector size: %s\n", strerror(errno));
+            return -1;
+        }
+        blk_config->sector_size = (uint16_t)sector_size;
+
+        /* Get size */
+        long size;
+        if (ioctl(storage_fd, BLKGETSIZE, &size) != -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
+            return -1;
+        }
+        blk_config->size = (uint64_t)size * sector_size / BLK_TRANSFER_SIZE;
+
+        /* Get blocksize */
+        long block_size;
+        if (sector_size < BLK_TRANSFER_SIZE) {
+            block_size = 1;
+        } else {
+            block_size = sector_size / BLK_TRANSFER_SIZE;
+        }
+        blk_config->block_size = (uint16_t)block_size;
+
+        LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, block_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->block_size, blk_config->size);
     } else {
         LOG_UIO_BLOCK_ERR("Storage file is of an unsupported type\n");
         return -1;
@@ -159,7 +164,7 @@ void driver_notified()
         // TODO: @ericc: workout what error status are appropriate, sDDF block only contains SEEK_ERROR right now
         switch(req_code) {
             case READ_BLOCKS: {
-                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_BLOCK_SIZE, SEEK_SET);
+                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
                 if (ret < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
                     status = SEEK_ERROR;
@@ -167,7 +172,7 @@ void driver_notified()
                     break;
                 }
                 LOG_UIO_BLOCK("Reading from storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-                int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_BLOCK_SIZE);
+                int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_TRANSFER_SIZE);
                 LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
                 if (bytes_read < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
@@ -175,12 +180,12 @@ void driver_notified()
                     success_count = 0;
                 } else {
                     status = SUCCESS;
-                    success_count = bytes_read / BLK_BLOCK_SIZE;
+                    success_count = bytes_read / BLK_TRANSFER_SIZE;
                 }
                 break;
             }
             case WRITE_BLOCKS: {
-                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_BLOCK_SIZE, SEEK_SET);
+                int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
                 if (ret < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
                     status = SEEK_ERROR;
@@ -188,7 +193,7 @@ void driver_notified()
                     break;
                 }
                 LOG_UIO_BLOCK("Writing to storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-                int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_BLOCK_SIZE);
+                int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_TRANSFER_SIZE);
                 LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
                 if (bytes_written < 0) {
                     LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
@@ -196,7 +201,7 @@ void driver_notified()
                     success_count = 0;
                 } else {
                     status = SUCCESS;
-                    success_count = bytes_written / BLK_BLOCK_SIZE;
+                    success_count = bytes_written / BLK_TRANSFER_SIZE;
                 }
                 break;
             }

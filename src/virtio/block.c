@@ -214,9 +214,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
                 // Converting virtio sector number to sddf block number, we are rounding down
-                uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_BLOCK_SIZE;
+                uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
                 // Converting bytes to the number of blocks, we are rounding up
-                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_BLOCK_SIZE - 1) / BLK_BLOCK_SIZE;
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
                 // Check if request can be handled
                 if (!sddf_make_req_check(queue_handle, sddf_count)) {
@@ -230,7 +230,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 fsmem_alloc(&fsmem_data, &sddf_data, sddf_count);
                 
                 // Bookkeep the virtio sddf block size translation
-                uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_BLOCK_SIZE;
+                uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 // Book keep the request
@@ -250,11 +250,11 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
                 // Converting virtio sector number to sddf block number, we are rounding down
-                uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_BLOCK_SIZE;
+                uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
                 // Converting bytes to the number of blocks, we are rounding up
-                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_BLOCK_SIZE - 1) / BLK_BLOCK_SIZE;
+                uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
                 
-                bool not_aligned = ((virtio_req->sector % (BLK_BLOCK_SIZE / VIRTIO_BLK_SECTOR_SIZE)) != 0);
+                bool not_aligned = ((virtio_req->sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) != 0);
 
                 // @ericc: If the write request is not aligned to the sddf block size, we need to first read the surrounding aligned memory, overwrite that 
                 // read memory on the unaligned areas we want write to, and then write the entire memory back to disk
@@ -271,7 +271,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     fsmem_alloc(&fsmem_data, &sddf_data, sddf_count);
 
                     // Bookkeep the virtio sddf block size translation
-                    uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_BLOCK_SIZE;
+                    uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                     uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                     // Book keep the request
@@ -293,7 +293,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     fsmem_alloc(&fsmem_data, &sddf_data, sddf_count);
 
                     // Bookkeep the virtio sddf block size translation
-                    uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_BLOCK_SIZE;
+                    uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                     uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                     // Book keep the request
@@ -415,8 +415,8 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
 
 static void virtio_blk_config_init(struct virtio_device *dev) {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
-    virtio_blk_config.capacity = (BLK_BLOCK_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
-    virtio_blk_config.blk_size = BLK_BLOCK_SIZE * (uint32_t)config->blocksize;
+    virtio_blk_config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
+    virtio_blk_config.blk_size = BLK_TRANSFER_SIZE * (uint32_t)config->block_size;
 }
 
 static virtio_device_funs_t functions = {
@@ -440,14 +440,14 @@ void virtio_blk_init(struct virtio_device *dev,
     dev->virq = virq;
     dev->sddf_handlers = sddf_handlers;
 
-    size_t sddf_data_buffers = dev->sddf_handlers->data_size / BLK_BLOCK_SIZE;
+    size_t sddf_data_buffers = dev->sddf_handlers->data_size / BLK_TRANSFER_SIZE;
     assert(sddf_data_buffers <= SDDF_MAX_DATA_BUFFERS);
 
     virtio_blk_config_init(dev);
 
     fsmem_init(&fsmem_data,
              dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].data,
-             BLK_BLOCK_SIZE,
+             BLK_TRANSFER_SIZE,
              sddf_data_buffers,
              &fsmem_avail_bitarr,
              fsmem_avail_bitarr_words,
