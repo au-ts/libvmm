@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
     const microkit_sdk_arg = b.option([]const u8, "sdk", "Path to Microkit SDK");
     if (microkit_sdk_arg == null) {
         std.log.err("Missing -Dsdk=/path/to/sdk argument being passed\n", .{});
-        std.os.exit(1);
+        std.posix.exit(1);
     }
     const microkit_sdk = microkit_sdk_arg.?;
 
