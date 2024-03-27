@@ -18,7 +18,8 @@ $(error "Board $(BOARD) is not supported")
 endif
 
 ifeq ($(BOARD), qemu_arm_virt)
-BLK_SIZE ?= 512
+NUM_PART ?= 2
+BLK_SIZE ?= 4096
 BLK_MEM ?= 2101248
 endif
 
@@ -389,14 +390,11 @@ $(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJ
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc -c $(CFLAGS_LINUX) $< -o $@
-
 $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/storage: Makefile
-	sh $(VMM_TOOLS)/mkvirtdisk $@ $(BLK_SIZE) $(BLK_MEM)
+	sh $(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@
@@ -410,8 +408,12 @@ $(BUILD_DIR)/qemu_blk_client_init: $(LINUX_BLK_DIR)/qemu_blk_client_init Makefil
 $(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init Makefile
 	cp $< $@
 
+$(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
+	$(TOOLCHAIN)-gcc $(if $(filter $(BOARD),qemu_arm_virt),-DSECTOR_SIZE=$(BLK_SIZE)) -c $(CFLAGS_LINUX) $< -o $@
+
+
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
-	$(TOOLCHAIN)-gcc $(CFLAGS_LINUX) $^ -o $@
+	$(TOOLCHAIN)-gcc $^ -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

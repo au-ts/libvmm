@@ -9,7 +9,7 @@
 #include <sddf/blk/queue.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_BLOCK
+// #define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...) do{ printf("VIRTIO(BLOCK): "); printf(__VA_ARGS__); }while(0)
@@ -422,11 +422,7 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
 static void virtio_blk_config_init(struct virtio_device *dev) {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
     virtio_blk_config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
-    if (config->sector_size < BLK_TRANSFER_SIZE) {
-        virtio_blk_config.blk_size = config->sector_size;
-    } else {
-        virtio_blk_config.blk_size = BLK_TRANSFER_SIZE * (uint32_t)config->block_size;
-    }
+    virtio_blk_config.blk_size = config->sector_size;
 }
 
 static virtio_device_funs_t functions = {

@@ -1,60 +1,73 @@
 #!/bin/bash
 
-# This bash script creates a virtual disk image with an MBR
+# This bash script creates a virtual disk image with an msdos partition table
 
 # Usage instructions
-if [ $# -ne 3 ]; then
-    echo "Usage: $0 <virtual_disk_name> <sectorsize> <memsize>"
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <virtual_disk_name> <num_partitions> <blocksize> <memsize>"
     exit 1
 fi
 
-DISK_IMAGE="$1"
+DISK_IMAGE=$1
+NUM_PARTITIONS=$2
+BLOCKSIZE=$3
+MEMSIZE=$4
+
+if [ $((BLOCKSIZE % 512)) -ne 0 ] || [ $BLOCKSIZE -lt 512 ]; then
+    echo "BLOCKSIZE must be a multiple of 512 and greater than or equal to 512"
+    exit 1
+fi
+
 BUILD_DIR=$(dirname $DISK_IMAGE)
 
-SECTORSIZE=$2
 SDDF_TRANSFER_SIZE=4096
+SECTORSIZE=512
 MULTIPLE=$(( SDDF_TRANSFER_SIZE / SECTORSIZE ))
 
-MEMSIZE=$3
 COUNT=$(( MEMSIZE / SECTORSIZE ))
-# @ericc: Ensure that the disk size is a multiple of $MULTIPLE blocks
-COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE ))
+COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE )) # @ericc: Ensure that the disk size is a multiple of $MULTIPLE blocks
 
-P1OFFSET=$MULTIPLE
-
-FS_COUNT=$(( (COUNT - P1OFFSET - 1) / 2 ))
-# @ericc: This ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
-FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE ))
-FS_COUNT_ADD=$(( FS_COUNT - 1 ))
-
-P2OFFSET=$((FS_COUNT + P1OFFSET))
-
-# Create the FAT filesystem
-mkfs.fat -C $BUILD_DIR/fat.img -S $SECTORSIZE $FS_COUNT
+POFFSET=$MULTIPLE
 
 # Create a file to act as a virtual disk
 dd if=/dev/zero of=$DISK_IMAGE bs=$SECTORSIZE count=$COUNT
 
-# Create MBR partition table and two partitions
+FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
+FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE )) # @ericc: This ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
+FS_COUNT_ADD=$(( FS_COUNT - 1 ))
+
+FS_COUNT_BLOCKSIZE=$(( FS_COUNT / (BLOCKSIZE / SECTORSIZE) ))
+
+# Create MBR partition table
+PREV=$POFFSET
 {
 echo o # Create a new empty DOS partition table
-echo n # Add a new partition
-echo p # Primary partition
-echo 1 # Partition number 1
-echo $P1OFFSET  # First sector (Accept default: 1)
-echo +$FS_COUNT_ADD # Last sector
-echo n # Add a new partition
-echo p # Primary partition
-echo 2 # Partition number 2
-echo $P2OFFSET  # First sector (Accept default: next available)
-echo +$FS_COUNT_ADD # Last sector
+
+# Loop to create each partition
+for i in $(seq 1 $NUM_PARTITIONS)
+do
+    echo n # Add a new partition
+    echo p # Primary partition
+    if [ $i != 4 ]; then
+        echo $i # Partition number
+    fi
+    echo $PREV # First sector
+    echo +$FS_COUNT_ADD # Last sector
+    PREV=$(( PREV + FS_COUNT_ADD + 1 ))
+done
+
 echo w # Write changes
 } | fdisk $DISK_IMAGE
 
-# Display the partition table
 fdisk -l $DISK_IMAGE
 
-# Copy the FAT filesystem to the virtual disk
+# Create the FAT filesystem
+rm -f $BUILD_DIR/fat.img
+mkfs.fat -C $BUILD_DIR/fat.img -S $BLOCKSIZE $(( (FS_COUNT_BLOCKSIZE * BLOCKSIZE) / 1024 ))
 
-dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek=$P1OFFSET count=$FS_COUNT
-dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek=$P2OFFSET count=$FS_COUNT
+# Copy the FAT filesystem to the virtual disk
+for i in $(seq 0 $(( NUM_PARTITIONS - 1 )))
+do
+    echo "Copying FAT filesystem to partition $i, seek $((POFFSET + i * FS_COUNT)), count $FS_COUNT, blocksize $SECTORSIZE"
+    dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek="$((POFFSET + i * FS_COUNT))" count=$FS_COUNT
+done

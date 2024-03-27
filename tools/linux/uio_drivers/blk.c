@@ -88,8 +88,12 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     if (S_ISREG(storageStat.st_mode)) {
         blk_config->size = storageStat.st_size / BLK_TRANSFER_SIZE;
-        blk_config->sector_size = 512;
-        blk_config->block_size = 0;
+#ifdef SECTOR_SIZE
+        blk_config->sector_size = SECTOR_SIZE;
+#else
+        blk_config->sector_size = BLK_TRANSFER_SIZE;
+#endif
+        blk_config->block_size = 1;
         blk_config->read_only = false;
         LOG_UIO_BLOCK("Emulated file storage device: read_only=%d, sector_size=%d, block_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->block_size, blk_config->size);
     } else if (S_ISBLK(storageStat.st_mode)) {
