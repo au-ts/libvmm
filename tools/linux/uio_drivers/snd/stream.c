@@ -20,7 +20,7 @@
 #define BITS_PER_BYTE 8
 #define NS_PER_SECOND 1000000000
 
-typedef snd_pcm_sframes_t (*pcm_op_t)(stream_t *stream, void *pcm_data, snd_pcm_sframes_t to_read);
+typedef snd_pcm_sframes_t (*pcm_op_t)(stream_t *stream, void *pcm, snd_pcm_sframes_t to_read);
 
 typedef enum stream_state {
     STREAM_STATE_UNSET,
@@ -61,8 +61,8 @@ struct stream {
     queue_t *cmd_req;
     queue_t *pcm_req;
 
-    sddf_snd_cmd_ring_t *cmd_res;
-    sddf_snd_pcm_data_ring_t *pcm_res;
+    sound_cmd_queue_t *cmd_res;
+    sound_pcm_queue_t *pcm_res;
 };
 
 struct alsa_params {
@@ -112,15 +112,15 @@ static const char *stream_name(stream_t *stream)
 
 static bool send_response(stream_t *stream)
 {
-    sddf_snd_pcm_data_t *response = queue_front(stream->staged_responses);
+    sound_pcm_t *response = queue_front(stream->staged_responses);
     if (!response) {
         return false;
     }
 
     response->latency_bytes = stream->buffer_size;
-    response->status = stream->state == STREAM_STATE_IO_ERR ? SDDF_SND_S_IO_ERR : SDDF_SND_S_OK;
+    response->status = stream->state == STREAM_STATE_IO_ERR ? SOUND_S_IO_ERR : SOUND_S_OK;
 
-    if (sddf_snd_enqueue_pcm_data(stream->pcm_res, response) != 0) {
+    if (sound_enqueue_pcm(stream->pcm_res, response) != 0) {
         LOG_SOUND_ERR("Failed to enqueue pcm_res\n");
         return false;
     }
@@ -140,13 +140,13 @@ static int stream_fail(stream_t *stream)
     // Respond to unhandled responses with error.
     while (!queue_empty(stream->pcm_req)) {
 
-        sddf_snd_pcm_data_t *pcm = queue_front(stream->pcm_req);
+        sound_pcm_t *pcm = queue_front(stream->pcm_req);
 
         pcm->latency_bytes = stream->buffer_size;
-        pcm->status = SDDF_SND_S_IO_ERR;
+        pcm->status = SOUND_S_IO_ERR;
         LOG_SOUND("Sending fail response cookie %d\n", pcm->cookie);
 
-        if (sddf_snd_enqueue_pcm_data(stream->pcm_res, pcm) != 0) {
+        if (sound_enqueue_pcm(stream->pcm_res, pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue pcm_res\n");
             return responses_sent;
         }
@@ -162,7 +162,7 @@ static int stream_fail(stream_t *stream)
     return responses_sent;
 }
 
-/** memcpy implementation safe for device memory */
+/** Aligned memcpy implementation for device memory */
 static void* device_copy(void *dst, void const *src, size_t len)
 {
     long *l_dst = (long *)dst;
@@ -230,7 +230,7 @@ static snd_pcm_sframes_t stream_xfer(stream_t *stream,
     return written;
 }
 
-static int next_buffer(stream_t *stream, sddf_snd_pcm_data_t *pcm)
+static int next_buffer(stream_t *stream, sound_pcm_t *pcm)
 {
     snd_pcm_sframes_t pcm_frames = pcm->len / stream->frame_size;
 
@@ -256,7 +256,7 @@ static int flush_pcm(stream_t *stream, int max_count)
 
     while (!queue_empty(stream->pcm_req) && max_count-- > 0) {
 
-        sddf_snd_pcm_data_t *pcm = queue_front(stream->pcm_req);
+        sound_pcm_t *pcm = queue_front(stream->pcm_req);
 
         snd_pcm_sframes_t pcm_frames = pcm->len / stream->frame_size;
 
@@ -297,9 +297,9 @@ static int flush_pcm(stream_t *stream, int max_count)
     return response_count;
 }
 
-static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_t *hw_params,
-                                           snd_pcm_access_t access, struct alsa_params *params,
-                                           struct buffer_state *state)
+static sound_status_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_t *hw_params,
+                                   snd_pcm_access_t access, struct alsa_params *params,
+                                   struct buffer_state *state)
 {
     unsigned int rrate;
     snd_pcm_uframes_t size;
@@ -310,55 +310,55 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     if (err < 0) {
         LOG_SOUND_ERR("Broken configuration for playback: no configurations available: %s\n",
                snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
     /* set hardware resampling */
     err = snd_pcm_hw_params_set_rate_resample(handle, hw_params, params->resample);
     if (err < 0) {
         LOG_SOUND_ERR("Resampling setup failed for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     /* set the interleaved read/write format */
     err = snd_pcm_hw_params_set_access(handle, hw_params, access);
     if (err < 0) {
         LOG_SOUND_ERR("Access type not available for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     /* set the sample format */
     err = snd_pcm_hw_params_set_format(handle, hw_params, params->format);
     if (err < 0) {
         LOG_SOUND_ERR("Sample format not available for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     /* set the count of channels */
     err = snd_pcm_hw_params_set_channels(handle, hw_params, params->channels);
     if (err < 0) {
         LOG_SOUND_ERR("Channels count (%u) not available for playbacks: %s\n", params->channels,
                snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     /* set the stream rate */
     rrate = params->rate;
     err = snd_pcm_hw_params_set_rate_near(handle, hw_params, &rrate, 0);
     if (err < 0) {
         LOG_SOUND_ERR("Rate %uHz not available for playback: %s\n", params->rate, snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     if (rrate != params->rate) {
         LOG_SOUND_ERR("Rate doesn't match (requested %uHz, get %iHz)\n", params->rate, err);
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     /* set the buffer time */
     err = snd_pcm_hw_params_set_buffer_time_near(handle, hw_params, &params->latency_us, &dir);
     if (err < 0) {
         LOG_SOUND_ERR("Unable to set buffer time %u for playback: %s\n", params->latency_us,
                snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
     err = snd_pcm_hw_params_get_buffer_size(hw_params, &size);
     if (err < 0) {
         LOG_SOUND_ERR("Unable to get buffer size for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
     state->buffer_size = size;
 
@@ -367,13 +367,13 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     if (err < 0) {
         LOG_SOUND_ERR("Unable to set period time %u for playback: %s\n", params->period_us,
                snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
 
     err = snd_pcm_hw_params_get_period_size(hw_params, &size, &dir);
     if (err < 0) {
         LOG_SOUND_ERR("Unable to set period size for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
 
     state->period_size = size;
@@ -381,13 +381,13 @@ static sddf_snd_status_code_t set_hwparams(snd_pcm_t *handle, snd_pcm_hw_params_
     err = snd_pcm_hw_params(handle, hw_params);
     if (err < 0) {
         LOG_SOUND_ERR("Unable to set hw params for playback: %s\n", snd_strerror(err));
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
     return 0;
 }
 
-static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams,
-                                           struct buffer_state *state)
+static sound_status_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_t *swparams,
+                                   struct buffer_state *state)
 {
     int err;
 
@@ -421,17 +421,20 @@ static sddf_snd_status_code_t set_swparams(snd_pcm_t *handle, snd_pcm_sw_params_
     return 0;
 }
 
-static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_set_params_t *params)
+static sound_status_t stream_set_params(stream_t *stream, sound_pcm_set_params_t *params)
 {
     LOG_SOUND("[%s] Set parameters: format %s, rate %u, channels %d\n",
-           stream_name(stream), sddf_snd_pcm_fmt_str(params->format),
+           stream_name(stream), sound_pcm_fmt_str(params->format),
            sddf_rate_to_alsa(params->rate), params->channels);
 
-    bool state_valid = stream->state == STREAM_STATE_UNSET || stream->state == STREAM_STATE_SET
-        || stream->state == STREAM_STATE_PAUSED;
+    bool state_valid =
+        stream->state == STREAM_STATE_UNSET ||
+        stream->state == STREAM_STATE_SET ||
+        stream->state == STREAM_STATE_PAUSED;
+
     if (!state_valid) {
         LOG_SOUND_ERR("Cannot set params, invalid state\n");
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 
     snd_pcm_t *handle = stream->handle;
@@ -440,13 +443,13 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     snd_pcm_format_t format = sddf_format_to_alsa(params->format);
     if (format == SND_PCM_FORMAT_UNKNOWN) {
         LOG_SOUND_ERR("Invalid format %d\n", params->format);
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
 
     unsigned rate = sddf_rate_to_alsa(params->rate);
     if (rate == INVALID_RATE) {
         LOG_SOUND_ERR("Invalid rate %d\n", params->rate);
-        return SDDF_SND_S_NOT_SUPP;
+        return SOUND_S_NOT_SUPP;
     }
 
     struct alsa_params alsa_params;
@@ -458,19 +461,19 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     alsa_params.resample = 1;
 
     struct buffer_state buffer_state;
-    sddf_snd_status_code_t code;
+    sound_status_t code;
 
     code = set_hwparams(handle, stream->hw_params, SND_PCM_ACCESS_MMAP_INTERLEAVED, &alsa_params,
                         &buffer_state);
 
-    if (code != SDDF_SND_S_OK) {
+    if (code != SOUND_S_OK) {
         LOG_SOUND_ERR("Failed to set hardware params\n");
         return code;
     }
 
     code = set_swparams(handle, stream->sw_params, &buffer_state);
 
-    if (code != SDDF_SND_S_OK) {
+    if (code != SOUND_S_OK) {
         LOG_SOUND_ERR("Failed to set software params\n");
         return code;
     }
@@ -481,20 +484,20 @@ static sddf_snd_status_code_t stream_set_params(stream_t *stream, sddf_snd_pcm_s
     stream->period_size = buffer_state.period_size;
     stream->rate = rate;
 
-    return SDDF_SND_S_OK;
+    return SOUND_S_OK;
 }
 
-static sddf_snd_status_code_t stream_prepare(stream_t *stream)
+static sound_status_t stream_prepare(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_SET && stream->state != STREAM_STATE_PAUSED) {
         LOG_SOUND_ERR("Cannot prepare in state '%s'\n", stream_state_str(stream->state));
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 
     int err = snd_pcm_prepare(stream->handle);
     if (err) {
         LOG_SOUND_ERR("Failed to prepare stream: %s\n", snd_strerror(err));
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
 
     LOG_SOUND("[%s] Prepared stream\n", stream_name(stream));
@@ -503,23 +506,23 @@ static sddf_snd_status_code_t stream_prepare(stream_t *stream)
     stream->consumed = 0;
     stream->buffer_offset = 0;
 
-    return SDDF_SND_S_OK;
+    return SOUND_S_OK;
 }
 
-static sddf_snd_status_code_t stream_release(stream_t *stream)
+static sound_status_t stream_release(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED && stream->state != STREAM_STATE_IO_ERR) {
         LOG_SOUND_ERR("Cannot release stream now, not paused\n");
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 
     LOG_SOUND("[%s] Released stream\n", stream_name(stream));
     stream->state = STREAM_STATE_SET;
 
-    return SDDF_SND_S_OK;
+    return SOUND_S_OK;
 }
 
-static sddf_snd_status_code_t timer_start(stream_t *stream)
+static sound_status_t timer_start(stream_t *stream)
 {
     // Repeat every period, start immediately.
     struct itimerspec timer;
@@ -530,13 +533,13 @@ static sddf_snd_status_code_t timer_start(stream_t *stream)
 
     if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
         LOG_SOUND_ERR("Failed to set period timer\n");
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
     stream->timer_enabled = true;
-    return SDDF_SND_S_OK;
+    return SOUND_S_OK;
 }
 
-static sddf_snd_status_code_t timer_stop(stream_t *stream)
+static sound_status_t timer_stop(stream_t *stream)
 {
     // Finished drain, disable timer.
     struct itimerspec timer;
@@ -546,17 +549,17 @@ static sddf_snd_status_code_t timer_stop(stream_t *stream)
     timer.it_value.tv_nsec = 0;
     if (timerfd_settime(stream->timer_fd, 0, &timer, NULL) != 0) {
         LOG_SOUND_ERR("Failed to set period timer\n");
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
     stream->timer_enabled = false;
-    return SDDF_SND_S_OK;
+    return SOUND_S_OK;
 }
 
-static sddf_snd_status_code_t stream_start(stream_t *stream)
+static sound_status_t stream_start(stream_t *stream)
 {
     if (stream->state != STREAM_STATE_PAUSED) {
         LOG_SOUND_ERR("Cannot start stream now, invalid state\n");
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 
     LOG_SOUND("[%s] Starting stream\n", stream_name(stream));
@@ -564,17 +567,17 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
     int err = snd_pcm_start(stream->handle);
     if (err < 0) {
         LOG_SOUND_ERR("Failed to start ALSA stream\n");
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     }
 
-    sddf_snd_status_code_t status = timer_start(stream);
+    sound_status_t status = timer_start(stream);
 
     // Drop any TX frames sent before START.
     if (stream->direction == SND_PCM_STREAM_PLAYBACK) {
         LOG_SOUND("[%s] Skipping %d early TX buffers\n", stream_name(stream),
                queue_size(stream->pcm_req));
 
-        sddf_snd_pcm_data_t *pcm;
+        sound_pcm_t *pcm;
         while ((pcm = queue_front(stream->pcm_req))) {
             queue_enqueue(stream->staged_responses, pcm);
             queue_dequeue(stream->pcm_req);
@@ -587,16 +590,18 @@ static sddf_snd_status_code_t stream_start(stream_t *stream)
     return status;
 }
 
-static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool *notify)
+static sound_status_t stream_stop(stream_t *stream, bool *blocked, bool *notify)
 {
-    bool state_valid = stream->state == STREAM_STATE_PLAYING
-        || stream->state == STREAM_STATE_DRAINING || stream->state == STREAM_STATE_IO_ERR;
+    bool state_valid =
+        stream->state == STREAM_STATE_PLAYING ||
+        stream->state == STREAM_STATE_DRAINING ||
+        stream->state == STREAM_STATE_IO_ERR;
 
     if (!state_valid) {
         LOG_SOUND_ERR("Cannot stop stream at %s, invalid state\n",
                stream_state_str(stream->state));
 
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 
     // Initiate stop
@@ -609,7 +614,7 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
 
     if (stream->state != STREAM_STATE_IO_ERR && stream->drain_count > 0) {
         *blocked = true;
-        return SDDF_SND_S_OK;
+        return SOUND_S_OK;
     }
 
     int err;
@@ -621,47 +626,47 @@ static sddf_snd_status_code_t stream_stop(stream_t *stream, bool *blocked, bool 
 
     if (err == -EAGAIN) {
         *blocked = true;
-        return SDDF_SND_S_OK;
+        return SOUND_S_OK;
 
     } else if (err < 0) {
         LOG_SOUND_ERR("Failed to drain stream: %s\n", snd_strerror(err));
         stream->state = STREAM_STATE_IO_ERR;
-        return SDDF_SND_S_IO_ERR;
+        return SOUND_S_IO_ERR;
     } else {
         // Flush remaining responses immediately
         while (send_response(stream))
             ;
 
-        sddf_snd_status_code_t status = timer_stop(stream);
+        sound_status_t status = timer_stop(stream);
 
-        if (status == SDDF_SND_S_IO_ERR) {
+        if (status == SOUND_S_IO_ERR) {
             stream->state = STREAM_STATE_IO_ERR;
-            return SDDF_SND_S_IO_ERR;
+            return SOUND_S_IO_ERR;
         }
 
         stream->state = STREAM_STATE_PAUSED;
         LOG_SOUND("[%s] Stream stopped\n", stream_name(stream));
-        return SDDF_SND_S_OK;
+        return SOUND_S_OK;
     }
 }
 
-sddf_snd_status_code_t handle_command(stream_t *stream, sddf_snd_cmd_t *cmd, bool *blocked,
-                                      bool *notify)
+sound_status_t handle_command(stream_t *stream, sound_cmd_t *cmd,
+                              bool *blocked, bool *notify)
 {
     switch (cmd->code) {
-    case SDDF_SND_CMD_PCM_TAKE:
+    case SOUND_CMD_TAKE:
         return stream_set_params(stream, &cmd->set_params);
-    case SDDF_SND_CMD_PCM_PREPARE:
+    case SOUND_CMD_PREPARE:
         return stream_prepare(stream);
-    case SDDF_SND_CMD_PCM_RELEASE:
+    case SOUND_CMD_RELEASE:
         return stream_release(stream);
-    case SDDF_SND_CMD_PCM_START:
+    case SOUND_CMD_START:
         return stream_start(stream);
-    case SDDF_SND_CMD_PCM_STOP:
+    case SOUND_CMD_STOP:
         return stream_stop(stream, blocked, notify);
     default:
         LOG_SOUND_ERR("Unknown command %d\n", cmd->code);
-        return SDDF_SND_S_BAD_MSG;
+        return SOUND_S_BAD_MSG;
     }
 }
 
@@ -669,18 +674,18 @@ static bool stream_flush_commands(stream_t *stream)
 {
     bool notify = false;
 
-    sddf_snd_cmd_t *cmd;
+    sound_cmd_t *cmd;
     while ((cmd = queue_front(stream->cmd_req))) {
 
         bool blocked = false;
-        sddf_snd_status_code_t status = handle_command(stream, cmd, &blocked, &notify);
+        sound_status_t status = handle_command(stream, cmd, &blocked, &notify);
 
         if (blocked) {
             break;
         }
         cmd->status = status;
 
-        if (sddf_snd_enqueue_cmd(stream->cmd_res, cmd) != 0) {
+        if (sound_enqueue_cmd(stream->cmd_res, cmd) != 0) {
             LOG_SOUND_ERR("Failed to enqueue response");
             break;
         }
@@ -709,9 +714,9 @@ bool stream_update(stream_t *stream)
     return notify;
 }
 
-stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
-                      ssize_t translate_offset, sddf_snd_cmd_ring_t *cmd_responses,
-                      sddf_snd_pcm_data_ring_t *pcm_responses)
+stream_t *stream_open(sound_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
+                      ssize_t translate_offset, sound_cmd_queue_t *cmd_responses,
+                      sound_pcm_queue_t *pcm_responses)
 {
     stream_t *stream = malloc(sizeof(stream_t));
     if (stream == NULL) {
@@ -719,7 +724,7 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
         return NULL;
     }
 
-    memset(info, 0, sizeof(sddf_snd_pcm_info_t));
+    memset(info, 0, sizeof(sound_pcm_info_t));
     memset(stream, 0, sizeof(stream_t));
 
     int err;
@@ -769,7 +774,7 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
 
     info->formats = formats;
     info->rates = rates;
-    info->direction = direction == SND_PCM_STREAM_PLAYBACK ? SDDF_SND_D_OUTPUT : SDDF_SND_D_INPUT;
+    info->direction = direction == SND_PCM_STREAM_PLAYBACK ? SOUND_D_OUTPUT : SOUND_D_INPUT;
     info->channels_min = channels_min;
     info->channels_max = channels_max;
 
@@ -782,13 +787,13 @@ stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device, snd_pcm_str
 
     stream->timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    stream->cmd_req = queue_create(sizeof(sddf_snd_cmd_t), SDDF_SND_NUM_BUFFERS / 4);
+    stream->cmd_req = queue_create(sizeof(sound_cmd_t), SOUND_NUM_BUFFERS / 4);
     stream->cmd_res = cmd_responses;
 
-    stream->pcm_req = queue_create(sizeof(sddf_snd_pcm_data_t), SDDF_SND_NUM_BUFFERS / 4);
+    stream->pcm_req = queue_create(sizeof(sound_pcm_t), SOUND_NUM_BUFFERS / 4);
     stream->pcm_res = pcm_responses;
 
-    stream->staged_responses = queue_create(sizeof(sddf_snd_pcm_data_t), PCM_QUEUE_SIZE);
+    stream->staged_responses = queue_create(sizeof(sound_pcm_t), PCM_QUEUE_SIZE);
 
     return stream;
 
@@ -804,12 +809,12 @@ fail:
     return NULL;
 }
 
-void stream_enqueue_command(stream_t *stream, sddf_snd_cmd_t *cmd)
+void stream_enqueue_command(stream_t *stream, sound_cmd_t *cmd)
 {
     queue_enqueue(stream->cmd_req, cmd);
 }
 
-void stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm)
+void stream_enqueue_pcm_req(stream_t *stream, sound_pcm_t *pcm)
 {
     queue_enqueue(stream->pcm_req, pcm);
 }

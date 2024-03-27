@@ -106,9 +106,7 @@ SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
-
-SDDF_BLOCK_RINGBUFFER := $(SDDF)/blk/libblksharedqueue
-SDDF_SOUND_RINGBUFFER := $(SDDF)/sound/libsoundsharedringbuffer
+SDDF_SOUND_QUEUE := $(SDDF)/sound/lib
 
 ELFS := client_vmm.elf \
 		serial_virt_tx.elf \
@@ -312,13 +310,10 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
 $(BUILD_DIR)/%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(SDDF_SOUND_RINGBUFFER)/%.c Makefile
+$(BUILD_DIR)/sound_queue.o: $(SDDF_SOUND_QUEUE)/queue.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))

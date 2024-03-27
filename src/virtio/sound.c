@@ -21,7 +21,7 @@
 #define EVENTQ 1
 #define TXQ 2
 #define RXQ 3
-#define BUFFER_QUEUE_SIZE SDDF_SND_NUM_BUFFERS
+#define BUFFER_QUEUE_SIZE SOUND_NUM_BUFFERS
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
@@ -42,9 +42,9 @@ typedef struct msg_handle {
 // this is a bit overkill. Could change to a simple circular queue.
 typedef struct virtio_snd_msg_store {
     // Index is command ID, maps to virtio descriptor head
-    msg_handle_t sent_msgs[SDDF_SND_NUM_BUFFERS]; 
+    msg_handle_t sent_msgs[SOUND_NUM_BUFFERS]; 
     // Index is free message ID, maps to next free command ID
-    uint32_t freelist[SDDF_SND_NUM_BUFFERS];
+    uint32_t freelist[SOUND_NUM_BUFFERS];
     uint32_t head;
     uint32_t tail;
     uint32_t num_free;
@@ -55,10 +55,10 @@ static buffer_queue_t free_buffers;
 static buffer_t buffer_data[BUFFER_QUEUE_SIZE];
 
 
-static sddf_snd_state_t *get_state(struct virtio_device *dev)
+static sound_state_t *get_state(struct virtio_device *dev)
 {
     // @alexbr: make this fit better into handlers struct
-    return (sddf_snd_state_t *)dev->sddf_handlers->queue_h;
+    return (sound_state_t *)dev->sddf_handlers->queue_h;
 }
 
 static void msg_store_init(msg_store_t *msg_store, unsigned int num_buffers)
@@ -117,7 +117,7 @@ static msg_handle_t *msg_store_get(msg_store_t *msg_store, uint32_t id)
  */
 static void msg_store_remove(msg_store_t *msg_store, uint32_t id)
 {
-    assert(msg_store->num_free < SDDF_SND_NUM_BUFFERS);
+    assert(msg_store->num_free < SOUND_NUM_BUFFERS);
 
     if (msg_store->num_free == 0) {
         // Head points to stale index, so restore it
@@ -132,7 +132,7 @@ static void msg_store_remove(msg_store_t *msg_store, uint32_t id)
 
 static int msg_store_size(msg_store_t *msg_store)
 {
-    return SDDF_SND_NUM_BUFFERS - msg_store->num_free;
+    return SOUND_NUM_BUFFERS - msg_store->num_free;
 }
 
 static void virtio_snd_config_init(void)
@@ -144,10 +144,10 @@ static void virtio_snd_config_init(void)
 
 static void fetch_buffers(struct virtio_device *dev)
 {
-    sddf_snd_state_t *state = get_state(dev);
+    sound_state_t *state = get_state(dev);
 
-    sddf_snd_pcm_data_t pcm;
-    while (sddf_snd_dequeue_pcm_data(state->rings.pcm_res, &pcm) == 0) {
+    sound_pcm_t pcm;
+    while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
         buffer_queue_enqueue(&free_buffers, pcm.addr, pcm.len);
     }
 }
@@ -249,10 +249,10 @@ static const char *code_to_str(uint32_t code)
     case VIRTIO_SND_EVT_JACK_DISCONNECTED:  return "VIRTIO_SND_EVT_JACK_DISCONNECTED";
     case VIRTIO_SND_EVT_PCM_PERIOD_ELAPSED: return "VIRTIO_SND_EVT_PCM_PERIOD_ELAPSED";
     case VIRTIO_SND_EVT_PCM_XRUN:           return "VIRTIO_SND_EVT_PCM_XRUN";
-    case VIRTIO_SND_S_OK:                   return "VIRTIO_SND_S_OK";
-    case VIRTIO_SND_S_BAD_MSG:              return "VIRTIO_SND_S_BAD_MSG";
-    case VIRTIO_SND_S_NOT_SUPP:             return "VIRTIO_SND_S_NOT_SUPP";
-    case VIRTIO_SND_S_IO_ERR:               return "VIRTIO_SND_S_IO_ERR";
+    case VIRTIO_SOUND_S_OK:                   return "VIRTIO_SOUND_S_OK";
+    case VIRTIO_SOUND_S_BAD_MSG:              return "VIRTIO_SOUND_S_BAD_MSG";
+    case VIRTIO_SOUND_S_NOT_SUPP:             return "VIRTIO_SOUND_S_NOT_SUPP";
+    case VIRTIO_SOUND_S_IO_ERR:               return "VIRTIO_SOUND_S_IO_ERR";
     default:
         return "<unknown>";
     }
@@ -278,31 +278,31 @@ static uint64_t virtio_formats_from_sddf(uint64_t formats)
 
     // @alexbr: Currently the enums are identical, but explicitly converting
     // allows us to change the enum values in the future.
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_IMA_ADPCM, formats, SDDF_SND_PCM_FMT_IMA_ADPCM);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_MU_LAW,    formats, SDDF_SND_PCM_FMT_MU_LAW);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_A_LAW,     formats, SDDF_SND_PCM_FMT_A_LAW);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S8,        formats, SDDF_SND_PCM_FMT_S8);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U8,        formats, SDDF_SND_PCM_FMT_U8);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S16,       formats, SDDF_SND_PCM_FMT_S16);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U16,       formats, SDDF_SND_PCM_FMT_U16);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S18_3,     formats, SDDF_SND_PCM_FMT_S18_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U18_3,     formats, SDDF_SND_PCM_FMT_U18_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S20_3,     formats, SDDF_SND_PCM_FMT_S20_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U20_3,     formats, SDDF_SND_PCM_FMT_U20_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S24_3,     formats, SDDF_SND_PCM_FMT_S24_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U24_3,     formats, SDDF_SND_PCM_FMT_U24_3);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S20,       formats, SDDF_SND_PCM_FMT_S20);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U20,       formats, SDDF_SND_PCM_FMT_U20);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S24,       formats, SDDF_SND_PCM_FMT_S24);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U24,       formats, SDDF_SND_PCM_FMT_U24);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_S32,       formats, SDDF_SND_PCM_FMT_S32);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_U32,       formats, SDDF_SND_PCM_FMT_U32);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_FLOAT,     formats, SDDF_SND_PCM_FMT_FLOAT);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_FLOAT64,   formats, SDDF_SND_PCM_FMT_FLOAT64);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U8,    formats, SDDF_SND_PCM_FMT_DSD_U8);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U16,   formats, SDDF_SND_PCM_FMT_DSD_U16);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U32,   formats, SDDF_SND_PCM_FMT_DSD_U32);
-    convert_flag(&result, VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME, formats, SDDF_SND_PCM_FMT_IEC958_SUBFRAME);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_IMA_ADPCM, formats, SOUND_PCM_FMT_IMA_ADPCM);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_MU_LAW,    formats, SOUND_PCM_FMT_MU_LAW);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_A_LAW,     formats, SOUND_PCM_FMT_A_LAW);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S8,        formats, SOUND_PCM_FMT_S8);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U8,        formats, SOUND_PCM_FMT_U8);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S16,       formats, SOUND_PCM_FMT_S16);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U16,       formats, SOUND_PCM_FMT_U16);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S18_3,     formats, SOUND_PCM_FMT_S18_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U18_3,     formats, SOUND_PCM_FMT_U18_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S20_3,     formats, SOUND_PCM_FMT_S20_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U20_3,     formats, SOUND_PCM_FMT_U20_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S24_3,     formats, SOUND_PCM_FMT_S24_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U24_3,     formats, SOUND_PCM_FMT_U24_3);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S20,       formats, SOUND_PCM_FMT_S20);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U20,       formats, SOUND_PCM_FMT_U20);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S24,       formats, SOUND_PCM_FMT_S24);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U24,       formats, SOUND_PCM_FMT_U24);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_S32,       formats, SOUND_PCM_FMT_S32);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_U32,       formats, SOUND_PCM_FMT_U32);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_FLOAT,     formats, SOUND_PCM_FMT_FLOAT);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_FLOAT64,   formats, SOUND_PCM_FMT_FLOAT64);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U8,    formats, SOUND_PCM_FMT_DSD_U8);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U16,   formats, SOUND_PCM_FMT_DSD_U16);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_DSD_U32,   formats, SOUND_PCM_FMT_DSD_U32);
+    convert_flag(&result, VIRTIO_SND_PCM_FMT_IEC958_SUBFRAME, formats, SOUND_PCM_FMT_IEC958_SUBFRAME);
 
     return result;
 }
@@ -311,20 +311,20 @@ static uint64_t virtio_rates_from_sddf(uint64_t rates)
 {
     uint64_t result = 0;
 
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_5512, rates, SDDF_SND_PCM_RATE_5512);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_8000, rates, SDDF_SND_PCM_RATE_8000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_11025, rates, SDDF_SND_PCM_RATE_11025);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_16000, rates, SDDF_SND_PCM_RATE_16000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_22050, rates, SDDF_SND_PCM_RATE_22050);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_32000, rates, SDDF_SND_PCM_RATE_32000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_44100, rates, SDDF_SND_PCM_RATE_44100);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_48000, rates, SDDF_SND_PCM_RATE_48000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_64000, rates, SDDF_SND_PCM_RATE_64000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_88200, rates, SDDF_SND_PCM_RATE_88200);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_96000, rates, SDDF_SND_PCM_RATE_96000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_176400, rates, SDDF_SND_PCM_RATE_176400);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_192000, rates, SDDF_SND_PCM_RATE_192000);
-    convert_flag(&result, VIRTIO_SND_PCM_RATE_384000, rates, SDDF_SND_PCM_RATE_384000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_5512, rates, SOUND_PCM_RATE_5512);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_8000, rates, SOUND_PCM_RATE_8000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_11025, rates, SOUND_PCM_RATE_11025);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_16000, rates, SOUND_PCM_RATE_16000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_22050, rates, SOUND_PCM_RATE_22050);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_32000, rates, SOUND_PCM_RATE_32000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_44100, rates, SOUND_PCM_RATE_44100);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_48000, rates, SOUND_PCM_RATE_48000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_64000, rates, SOUND_PCM_RATE_64000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_88200, rates, SOUND_PCM_RATE_88200);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_96000, rates, SOUND_PCM_RATE_96000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_176400, rates, SOUND_PCM_RATE_176400);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_192000, rates, SOUND_PCM_RATE_192000);
+    convert_flag(&result, VIRTIO_SND_PCM_RATE_384000, rates, SOUND_PCM_RATE_384000);
 
     return result;
 }
@@ -332,26 +332,26 @@ static uint64_t virtio_rates_from_sddf(uint64_t rates)
 static uint8_t virtio_direction_from_sddf(uint8_t direction)
 {
     switch (direction) {
-        case SDDF_SND_D_INPUT: return VIRTIO_SND_D_INPUT;
-        case SDDF_SND_D_OUTPUT: return VIRTIO_SND_D_OUTPUT;
+        case SOUND_D_INPUT: return VIRTIO_SND_D_INPUT;
+        case SOUND_D_OUTPUT: return VIRTIO_SND_D_OUTPUT;
     }
     LOG_SOUND_ERR("Unknown direction %u\n", direction);
     return (uint8_t)-1;
 }
 
-static uint32_t virtio_status_from_sddf(sddf_snd_status_code_t status)
+static uint32_t virtio_status_from_sddf(sound_status_t status)
 {
     switch (status) {
-        case SDDF_SND_S_OK: return VIRTIO_SND_S_OK;
-        case SDDF_SND_S_BAD_MSG: return VIRTIO_SND_S_BAD_MSG;
-        case SDDF_SND_S_NOT_SUPP: return VIRTIO_SND_S_NOT_SUPP;
-        case SDDF_SND_S_IO_ERR: return VIRTIO_SND_S_IO_ERR;
-        case SDDF_SND_S_BUSY: return VIRTIO_SND_S_IO_ERR;
+        case SOUND_S_OK: return VIRTIO_SOUND_S_OK;
+        case SOUND_S_BAD_MSG: return VIRTIO_SOUND_S_BAD_MSG;
+        case SOUND_S_NOT_SUPP: return VIRTIO_SOUND_S_NOT_SUPP;
+        case SOUND_S_IO_ERR: return VIRTIO_SOUND_S_IO_ERR;
+        case SOUND_S_BUSY: return VIRTIO_SOUND_S_IO_ERR;
     }
     return (uint32_t)-1;
 }
 
-static void get_pcm_info(struct virtio_snd_pcm_info *dest, const sddf_snd_pcm_info_t *src)
+static void get_pcm_info(struct virtio_snd_pcm_info *dest, const sound_pcm_info_t *src)
 {
     dest->features = 0;
     dest->formats = virtio_formats_from_sddf(src->formats);
@@ -371,11 +371,11 @@ static int handle_pcm_info(struct virtio_device *dev,
     if (response_count < query_info->count) {
         LOG_SOUND_ERR("Control message response descriptor too small (%d < %d)\n",
             response_count, query_info->count);
-        return -SDDF_SND_S_BAD_MSG;
+        return -SOUND_S_BAD_MSG;
     }
 
-    sddf_snd_state_t *state = get_state(dev);
-    sddf_snd_shared_state_t *shared_state = state->shared_state;
+    sound_state_t *state = get_state(dev);
+    sound_shared_state_t *shared_state = state->shared_state;
 
     memset(responses, 0, sizeof(*responses) * response_count);
 
@@ -383,7 +383,7 @@ static int handle_pcm_info(struct virtio_device *dev,
     for (i = 0; i < response_count && i < query_info->count; i++) {
 
         int stream = i + query_info->start_id;
-        sddf_snd_pcm_info_t *pcm_info = &shared_state->stream_info[stream];
+        sound_pcm_info_t *pcm_info = &shared_state->stream_info[stream];
 
         responses[i].hdr.hda_fn_nid = stream;
         get_pcm_info(&responses[i], pcm_info);
@@ -400,28 +400,28 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     msg_handle_t handle;
     handle.desc_head = desc_head;
     handle.ref_count = 1;
-    handle.status = SDDF_SND_S_OK;
+    handle.status = SOUND_S_OK;
     handle.virtq_idx = CONTROLQ;
     handle.bytes_received = 0;
 
     int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return -SDDF_SND_S_IO_ERR;
+        return -SOUND_S_IO_ERR;
     }
 
-    sddf_snd_cmd_t cmd;
-    cmd.code = SDDF_SND_CMD_PCM_TAKE;
+    sound_cmd_t cmd;
+    cmd.code = SOUND_CMD_TAKE;
     cmd.cookie = id;
     cmd.stream_id = set_params->hdr.stream_id;
     cmd.set_params.channels = set_params->channels;
     cmd.set_params.format = set_params->format;
     cmd.set_params.rate = set_params->rate;
 
-    if (sddf_snd_enqueue_cmd(get_state(dev)->rings.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(get_state(dev)->queues.cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
-        return -SDDF_SND_S_IO_ERR;
+        return -SOUND_S_IO_ERR;
     }
 
     return 0;
@@ -430,31 +430,31 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 static int handle_basic_cmd(struct virtio_device *dev,
                             uint16_t desc_head,
                             uint32_t stream_id,
-                            sddf_snd_command_code_t code)
+                            sound_cmd_code_t code)
 {
     uint32_t id;
     msg_handle_t handle;
     handle.desc_head = desc_head;
     handle.ref_count = 1;
-    handle.status = SDDF_SND_S_OK;
+    handle.status = SOUND_S_OK;
     handle.virtq_idx = CONTROLQ;
     handle.bytes_received = 0;
 
     int err = msg_store_allocate(&messages, handle, &id);
     if (err != 0) {
         LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return -SDDF_SND_S_IO_ERR;
+        return -SOUND_S_IO_ERR;
     }
 
-    sddf_snd_cmd_t cmd;
+    sound_cmd_t cmd;
     cmd.code = code;
     cmd.cookie = id;
     cmd.stream_id = stream_id;
 
-    if (sddf_snd_enqueue_cmd(get_state(dev)->rings.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(get_state(dev)->queues.cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         msg_store_remove(&messages, id);
-        return -SDDF_SND_S_IO_ERR;
+        return -SOUND_S_IO_ERR;
     }
 
     return 0;
@@ -490,7 +490,7 @@ static void handle_control_msg(struct virtio_device *dev,
 
         if ((status_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
             LOG_SOUND_ERR("Control message missing response descriptor\n");
-            result = -VIRTIO_SND_S_BAD_MSG;
+            result = -VIRTIO_SOUND_S_BAD_MSG;
             break;
         }
 
@@ -510,30 +510,30 @@ static void handle_control_msg(struct virtio_device *dev,
         result = handle_pcm_set_params(dev, desc_head, (void *)hdr);
         break;
     case VIRTIO_SND_R_PCM_PREPARE:
-        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_PREPARE);
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SOUND_CMD_PREPARE);
         break;
     case VIRTIO_SND_R_PCM_RELEASE:
-        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_RELEASE);
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SOUND_CMD_RELEASE);
         break;
     case VIRTIO_SND_R_PCM_START:
-        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_START);
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SOUND_CMD_START);
         break;
     case VIRTIO_SND_R_PCM_STOP:
-        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SDDF_SND_CMD_PCM_STOP);
+        result = handle_basic_cmd(dev, desc_head, pcm_hdr->stream_id, SOUND_CMD_STOP);
         break;
     case VIRTIO_SND_R_JACK_INFO:
     case VIRTIO_SND_R_JACK_REMAP:
     case VIRTIO_SND_R_CHMAP_INFO:
         LOG_SOUND_ERR("Control message not implemented: %s\n", code_to_str(hdr->code));
-        result = -VIRTIO_SND_S_NOT_SUPP;
+        result = -VIRTIO_SOUND_S_NOT_SUPP;
         break;
     default:
         LOG_SOUND_ERR("Unknown control message %s\n", code_to_str(hdr->code));
-        result = -VIRTIO_SND_S_BAD_MSG;
+        result = -VIRTIO_SOUND_S_BAD_MSG;
         break;
     }
 
-    uint32_t status = VIRTIO_SND_S_OK;
+    uint32_t status = VIRTIO_SOUND_S_OK;
     if (result < 0) {
         LOG_SOUND("Command failed with result %d\n", -result);
         immediate = true;
@@ -558,7 +558,7 @@ static void handle_control_msg(struct virtio_device *dev,
 
 static bool perform_xfer(struct virtq *virtq,
                         struct virtq_desc *desc,
-                        sddf_snd_pcm_data_ring_t *req_ring,
+                        sound_pcm_queue_t *req_ring,
                         bool transmit,
                         int stream_id,
                         int msg_id,
@@ -571,7 +571,7 @@ static bool perform_xfer(struct virtq *virtq,
     }
 
     uint32_t pcm_transmitted = 0;
-    uint32_t pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
+    uint32_t pcm_remaining = SOUND_PCM_BUFFER_SIZE;
 
     for (;
          desc->flags & VIRTQ_DESC_F_NEXT;
@@ -600,7 +600,7 @@ static bool perform_xfer(struct virtq *virtq,
 
             if (pcm_remaining == 0) {
 
-                sddf_snd_pcm_data_t pcm;
+                sound_pcm_t pcm;
                 pcm.addr = pcm_buffer.addr;
                 pcm.len = pcm_transmitted;
                 pcm.stream_id = stream_id;
@@ -608,7 +608,7 @@ static bool perform_xfer(struct virtq *virtq,
                 pcm.status = 0;
                 pcm.latency_bytes = 0;
 
-                if (sddf_snd_enqueue_pcm_data(req_ring, &pcm) != 0) {
+                if (sound_enqueue_pcm(req_ring, &pcm) != 0) {
                     LOG_SOUND_ERR("Failed to enqueue to pcm request\n");
                     return false;
                 }
@@ -621,14 +621,14 @@ static bool perform_xfer(struct virtq *virtq,
                     return false;
                 }
 
-                pcm_remaining = SDDF_SND_PCM_BUFFER_SIZE;
+                pcm_remaining = SOUND_PCM_BUFFER_SIZE;
                 pcm_transmitted = 0;
             }
         }
     }
 
     if (pcm_transmitted > 0) {
-        sddf_snd_pcm_data_t pcm;
+        sound_pcm_t pcm;
         pcm.addr = pcm_buffer.addr;
         pcm.len = pcm_transmitted;
         pcm.stream_id = stream_id;
@@ -636,7 +636,7 @@ static bool perform_xfer(struct virtq *virtq,
         pcm.status = 0;
         pcm.latency_bytes = 0;
 
-        if (sddf_snd_enqueue_pcm_data(req_ring, &pcm) != 0) {
+        if (sound_enqueue_pcm(req_ring, &pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue to tx used\n");
             return false;
         }
@@ -655,7 +655,7 @@ static void handle_xfer(struct virtio_device *dev,
 {
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
     struct virtio_snd_pcm_xfer *hdr = (void *)req_desc->addr;
-    sddf_snd_pcm_data_ring_t *req_ring = get_state(dev)->rings.pcm_req;
+    sound_pcm_queue_t *req_ring = get_state(dev)->queues.pcm_req;
 
     if ((req_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
         LOG_SOUND_ERR("XFER message missing data\n");
@@ -666,7 +666,7 @@ static void handle_xfer(struct virtio_device *dev,
     msg_handle_t handle;
     handle.desc_head = desc_head;
     handle.ref_count = 0;
-    handle.status = SDDF_SND_S_OK;
+    handle.status = SOUND_S_OK;
     handle.virtq_idx = transmit ? TXQ : RXQ;
     handle.bytes_received = 0;
 
@@ -691,7 +691,7 @@ static void handle_xfer(struct virtio_device *dev,
         assert(desc->flags & VIRTQ_DESC_F_WRITE);
 
         uint32_t *status_ptr = (void *)desc->addr;
-        *status_ptr = VIRTIO_SND_S_IO_ERR;
+        *status_ptr = VIRTIO_SOUND_S_IO_ERR;
 
         struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
         used_elem->id = desc_head;
@@ -710,7 +710,7 @@ static void handle_xfer(struct virtio_device *dev,
     msg->ref_count = sent;
 
     if (!success) {
-        msg->status = VIRTIO_SND_S_IO_ERR;
+        msg->status = VIRTIO_SOUND_S_IO_ERR;
     }
 }
 
@@ -788,7 +788,7 @@ void virtio_snd_init(struct virtio_device *dev,
     dev->sddf_handlers = sddf_handlers;
     
     virtio_snd_config_init();
-    msg_store_init(&messages, SDDF_SND_NUM_BUFFERS);
+    msg_store_init(&messages, SOUND_NUM_BUFFERS);
 
     buffer_queue_create(&free_buffers, buffer_data, BUFFER_QUEUE_SIZE);
     fetch_buffers(dev);
@@ -797,7 +797,7 @@ void virtio_snd_init(struct virtio_device *dev,
 static unsigned copy_rx_data(struct virtq *virtq,
                          struct virtq_desc *desc,
                          msg_handle_t *msg,
-                         void *pcm_data, unsigned pcm_len)
+                         void *pcm, unsigned pcm_len)
 {
     uint32_t desc_position = 0;
 
@@ -807,7 +807,7 @@ static unsigned copy_rx_data(struct virtq *virtq,
     {
         if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
             LOG_SOUND_ERR("Expected VIRTQ_DESC_F_WRITE on RX buffer\n");
-            msg->status = SDDF_SND_S_BAD_MSG;
+            msg->status = SOUND_S_BAD_MSG;
             continue;
         }
 
@@ -821,8 +821,8 @@ static unsigned copy_rx_data(struct virtq *virtq,
             uint32_t offset = msg->bytes_received - desc_position;
             uint32_t to_write = MIN(pcm_len, desc->len - offset);
 
-            memcpy((void *)desc->addr + offset, pcm_data, to_write);
-            pcm_data += to_write;
+            memcpy((void *)desc->addr + offset, pcm, to_write);
+            pcm += to_write;
             msg->bytes_received += to_write;
             pcm_len -= to_write;
         }
@@ -834,22 +834,22 @@ static unsigned copy_rx_data(struct virtq *virtq,
     if (msg->ref_count == 0) {
         if (pcm_len != 0) {
             LOG_SOUND_ERR("Received too much PCM for RX\n");
-            msg->status = SDDF_SND_S_BAD_MSG;
+            msg->status = SOUND_S_BAD_MSG;
         }
         if (desc_position != msg->bytes_received) {
             LOG_SOUND_ERR(
                 "Did not receive enough PCM for RX: desc_position %u, bytes_received %u\n",
                 desc_position, msg->bytes_received);
 
-            msg->status = SDDF_SND_S_BAD_MSG;
+            msg->status = SOUND_S_BAD_MSG;
         }
         if (desc->flags & VIRTQ_DESC_F_NEXT) {
             LOG_SOUND_ERR("Desc not fully advanced\n");
-            msg->status = SDDF_SND_S_BAD_MSG;
+            msg->status = SOUND_S_BAD_MSG;
         }
         if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
             LOG_SOUND_ERR("Expected VIRTQ_DESC_F_WRITE on status buffer\n");
-            msg->status = SDDF_SND_S_BAD_MSG;
+            msg->status = SOUND_S_BAD_MSG;
         }
     }
     return desc_position;
@@ -905,18 +905,18 @@ static bool respond_to_message(msg_handle_t *msg,
 
 void virtio_snd_notified(struct virtio_device *dev)
 {
-    sddf_snd_state_t *state = get_state(dev);
+    sound_state_t *state = get_state(dev);
     bool respond = false;
 
     // LOG_SOUND("virtIO sound device notified by server\n");
 
     snd_config.streams = state->shared_state->streams;
 
-    sddf_snd_cmd_t cmd;
-    while (sddf_snd_dequeue_cmd(state->rings.cmd_res, &cmd) == 0) {
+    sound_cmd_t cmd;
+    while (sound_dequeue_cmd(state->queues.cmd_res, &cmd) == 0) {
 
         msg_handle_t *msg = msg_store_get(&messages, cmd.cookie);
-        if (cmd.status != SDDF_SND_S_OK) {
+        if (cmd.status != SOUND_S_OK) {
             msg->status = cmd.status;
         }
         
@@ -930,11 +930,11 @@ void virtio_snd_notified(struct virtio_device *dev)
         }
     }
 
-    sddf_snd_pcm_data_t pcm;
-    while (sddf_snd_dequeue_pcm_data(state->rings.pcm_res, &pcm) == 0) {
+    sound_pcm_t pcm;
+    while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
 
         msg_handle_t *msg = msg_store_get(&messages, pcm.cookie);
-        if (pcm.status != SDDF_SND_S_OK) {
+        if (pcm.status != SOUND_S_OK) {
             msg->status = pcm.status;
         }
 

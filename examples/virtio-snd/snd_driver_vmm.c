@@ -99,7 +99,7 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
     }
 }
 
-static bool uio_snd_fault_handler(size_t vcpu_id,
+static bool uio_sound_fault_handler(size_t vcpu_id,
                                   size_t offset,
                                   size_t fsr,
                                   seL4_UserContext *regs,
@@ -108,7 +108,7 @@ static bool uio_snd_fault_handler(size_t vcpu_id,
     return true;
 }
 
-static void uio_snd_virq_ack(size_t vcpu_id, int irq, void *cookie) {}
+static void uio_sound_virq_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -197,12 +197,12 @@ void init(void) {
                                       VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
     assert(success);
     
-    success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_snd_virq_ack, NULL);
+    success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
     assert(success);
 
     success = fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS,
                                                   sizeof(size_t),
-                                                  &uio_snd_fault_handler, NULL);
+                                                  &uio_sound_fault_handler, NULL);
     assert(success);
 
 #if defined(BOARD_qemu_arm_virt)

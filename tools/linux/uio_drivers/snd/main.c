@@ -32,8 +32,8 @@ typedef struct driver_state {
     stream_t *streams[MAX_STREAMS];
     int stream_count;
 
-    sddf_snd_shared_state_t *shared_state;
-    sddf_snd_rings_t rings;
+    sound_shared_state_t *shared_state;
+    sound_queues_t rings;
     ssize_t translate;
 
     char *signal_addr;
@@ -134,17 +134,17 @@ int init_mappings(driver_state_t *state, int uio_fd)
     // TODO: tx and rx data are now in wrong position
     // need to add back get addr functions
     // then either fix address or use offset
-    void *pcm_data = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
-    if (pcm_data == MAP_FAILED) {
-        perror("Error mapping pcm_data");
+    void *pcm = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
+    if (pcm == MAP_FAILED) {
+        perror("Error mapping pcm");
         return -1;
     }
 
-    size_t pcm_data_physical;
+    size_t pcm_physical;
 
-    err = get_uio_map_value(PCM_DATA_ADDR, &pcm_data_physical);
+    err = get_uio_map_value(PCM_DATA_ADDR, &pcm_physical);
     if (err) {
-        perror("Error getting pcm_data_physical");
+        perror("Error getting pcm_physical");
         return -1;
     }
 
@@ -154,34 +154,34 @@ int init_mappings(driver_state_t *state, int uio_fd)
     state->rings.pcm_req = (void *)(ring_buffers + RING_BYTES * offset++);
     state->rings.pcm_res = (void *)(ring_buffers + RING_BYTES * offset++);
 
-    state->translate = pcm_data - (void *)pcm_data_physical;
+    state->translate = pcm - (void *)pcm_physical;
 
     return 0;
 }
 
-static void fail_cmd(sddf_snd_cmd_ring_t *ring, sddf_snd_cmd_t *cmd)
+static void fail_cmd(sound_cmd_queue_t *ring, sound_cmd_t *cmd)
 {
-    cmd->status = SDDF_SND_S_BAD_MSG;
-    if (sddf_snd_enqueue_cmd(ring, cmd) != 0) {
+    cmd->status = SOUND_S_BAD_MSG;
+    if (sound_enqueue_cmd(ring, cmd) != 0) {
         LOG_SOUND_ERR("Failed to send fail response\n");
     }
 }
 
-static void fail_pcm(sddf_snd_pcm_data_ring_t *ring, sddf_snd_pcm_data_t *pcm)
+static void fail_pcm(sound_pcm_queue_t *ring, sound_pcm_t *pcm)
 {
-    pcm->status = SDDF_SND_S_BAD_MSG;
+    pcm->status = SOUND_S_BAD_MSG;
     pcm->latency_bytes = 0;
-    if (sddf_snd_enqueue_pcm_data(ring, pcm) != 0) {
+    if (sound_enqueue_pcm(ring, pcm) != 0) {
         LOG_SOUND_ERR("Failed to send fail response\n");
     }
 }
 
 static bool handle_uio_interrupt(driver_state_t *state)
 {
-    sddf_snd_cmd_t cmd;
-    sddf_snd_pcm_data_t pcm;
+    sound_cmd_t cmd;
+    sound_pcm_t pcm;
 
-    while (sddf_snd_dequeue_cmd(state->rings.cmd_req, &cmd) == 0) {
+    while (sound_dequeue_cmd(state->rings.cmd_req, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
             fail_cmd(state->rings.cmd_res, &cmd);
@@ -190,7 +190,7 @@ static bool handle_uio_interrupt(driver_state_t *state)
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
     }
 
-    while (sddf_snd_dequeue_pcm_data(state->rings.pcm_req, &pcm) == 0) {
+    while (sound_dequeue_pcm(state->rings.pcm_req, &pcm) == 0) {
         if (pcm.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
             fail_pcm(state->rings.pcm_res, &pcm);

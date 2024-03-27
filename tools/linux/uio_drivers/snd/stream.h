@@ -5,13 +5,13 @@
 
 typedef struct stream stream_t;
 
-stream_t *stream_open(sddf_snd_pcm_info_t *info, const char *device,
+stream_t *stream_open(sound_pcm_info_t *info, const char *device,
                       snd_pcm_stream_t direction, ssize_t translate_offset,
-                      sddf_snd_cmd_ring_t *cmd_responses,
-                      sddf_snd_pcm_data_ring_t *pcm_responses);
+                      sound_cmd_queue_t *cmd_responses,
+                      sound_pcm_queue_t *pcm_responses);
 
-void stream_enqueue_command(stream_t *stream, sddf_snd_cmd_t *cmd);
-void stream_enqueue_pcm_req(stream_t *stream, sddf_snd_pcm_data_t *pcm);
+void stream_enqueue_command(stream_t *stream, sound_cmd_t *cmd);
+void stream_enqueue_pcm_req(stream_t *stream, sound_pcm_t *pcm);
 
 int stream_timer_fd(stream_t *stream);
 

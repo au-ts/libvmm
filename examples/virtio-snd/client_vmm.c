@@ -77,8 +77,8 @@ uintptr_t sound_data;
 
 uintptr_t sound_shared_state;
 
-static sddf_handler_t sddf_snd_handler;
-static sddf_snd_state_t snd_state;
+static sddf_handler_t sound_handler;
+static sound_state_t sound_state;
 
 static struct virtio_device virtio_console;
 static struct virtio_device virtio_sound;
@@ -171,34 +171,34 @@ void init(void) {
     assert(sound_pcm_res);
     assert(sound_data);
 
-    snd_state.shared_state = (sddf_snd_shared_state_t *)sound_shared_state;
-    snd_state.rings = (sddf_snd_rings_t){
+    sound_state.shared_state = (sound_shared_state_t *)sound_shared_state;
+    sound_state.queues = (sound_queues_t){
         .cmd_req = (void *)sound_cmd_req,
         .cmd_res = (void *)sound_cmd_res,
         .pcm_req = (void *)sound_pcm_req,
         .pcm_res = (void *)sound_pcm_res,
     };
-    sddf_snd_rings_init_default(&snd_state.rings);
+    sound_queues_init_default(&sound_state.queues);
 
     // @alexbr: why -1?
-    for (int i = 0; i < SDDF_SND_NUM_BUFFERS - 1; i++) {
-        sddf_snd_pcm_data_t pcm;
+    for (int i = 0; i < SOUND_NUM_BUFFERS - 1; i++) {
+        sound_pcm_t pcm;
         memset(&pcm, 0, sizeof(pcm));
-        pcm.len = SDDF_SND_PCM_BUFFER_SIZE;
+        pcm.len = SOUND_PCM_BUFFER_SIZE;
 
-        pcm.addr = sound_data + (i * SDDF_SND_PCM_BUFFER_SIZE);
-        int ret = sddf_snd_enqueue_pcm_data(snd_state.rings.pcm_res, &pcm);
+        pcm.addr = sound_data + (i * SOUND_PCM_BUFFER_SIZE);
+        int ret = sound_enqueue_pcm(sound_state.queues.pcm_res, &pcm);
         assert(ret == 0);
     }
 
-    sddf_snd_handler.queue_h = &snd_state;
-    sddf_snd_handler.config = NULL;
-    sddf_snd_handler.data = 0;
-    sddf_snd_handler.ch = SOUND_DRIVER_CH;
+    sound_handler.queue_h = &sound_state;
+    sound_handler.config = NULL;
+    sound_handler.data = 0;
+    sound_handler.ch = SOUND_DRIVER_CH;
 
     success = virtio_mmio_device_init(&virtio_sound, SOUND,
                                       VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE,
-                                      VIRTIO_SOUND_IRQ, &sddf_snd_handler);
+                                      VIRTIO_SOUND_IRQ, &sound_handler);
     assert(success);
     
     /* Don't start the guest until driver VM is ready. */
