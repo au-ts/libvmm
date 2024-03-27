@@ -98,7 +98,6 @@ CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
 SDDF := sddf
 
-SDDF_SERIAL_RINGBUFFER := $(SDDF)/serial/libserialsharedringbuffer
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SOUND_COMPONENTS := $(SDDF)/sound/components
 SDDF_UTIL := $(SDDF)/util
@@ -112,8 +111,8 @@ SDDF_BLOCK_RINGBUFFER := $(SDDF)/blk/libblksharedqueue
 SDDF_SOUND_RINGBUFFER := $(SDDF)/sound/libsoundsharedringbuffer
 
 ELFS := client_vmm.elf \
-		serial_mux_tx.elf \
-		serial_mux_rx.elf \
+		serial_virt_tx.elf \
+		serial_virt_rx.elf \
 		uart_driver.elf \
 		sound_virtualiser.elf \
 		snd_driver_vmm.elf
@@ -150,7 +149,6 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					block.o \
 					sound.o \
 					mmio.o \
-					shared_ringbuffer.o \
 					sound_queue.o
 
 SOUND_VIRTUALISER_OBJS := sound_virtualiser.o sound_queue.o
@@ -163,12 +161,11 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						block.o \
 						sound.o \
 						mmio.o \
-						shared_ringbuffer.o \
 						sound_queue.o
 
-SERIAL_MUX_TX_OBJS := mux_tx.o shared_ringbuffer.o util.o printf.o
-SERIAL_MUX_RX_OBJS := mux_rx.o shared_ringbuffer.o
-SERIAL_DRIVER_OBJS := uart.o shared_ringbuffer.o
+SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
+SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
+SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
 USERLEVEL_OBJS := sound_queue.o
 
@@ -190,7 +187,6 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF)/include \
-		  -I$(SDDF) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -207,8 +203,6 @@ CFLAGS_USERLEVEL :=	-g \
 					-target aarch64-linux-gnu \
 					$(NIX_LDFLAGS) \
 					$(NIX_CFLAGS_COMPILE)
-
-# -O3 \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -309,19 +303,19 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_RINGBUFFER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_BLOCK_RINGBUFFER)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SOUND_RINGBUFFER)/%.c Makefile
@@ -336,10 +330,10 @@ $(BUILD_DIR)/sound_virtualiser.elf: $(addprefix $(BUILD_DIR)/, $(SOUND_VIRTUALIS
 $(BUILD_DIR)/snd_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_TX_OBJS))
+$(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial_mux_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_MUX_RX_OBJS))
+$(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))

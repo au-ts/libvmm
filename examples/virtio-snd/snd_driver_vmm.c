@@ -19,7 +19,7 @@
 #include "virtio/block.h"
 #include "virtio/sound.h"
 #include "virtio/console.h"
-#include "sddf/serial/shared_ringbuffer.h"
+#include <sddf/serial/queue.h>
 #include <sddf/sound/queue.h>
 #include "uio.h"
 
@@ -69,15 +69,15 @@ int passthrough_irq_map[MAX_IRQ_CH];
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
 uintptr_t serial_rx_free;
-uintptr_t serial_rx_used;
+uintptr_t serial_rx_active;
 uintptr_t serial_tx_free;
-uintptr_t serial_tx_used;
+uintptr_t serial_tx_active;
 
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-static ring_handle_t serial_rx_h;
-static ring_handle_t serial_tx_h;
+static serial_queue_handle_t serial_rx_h;
+static serial_queue_handle_t serial_tx_h;
 static sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
@@ -142,9 +142,9 @@ void init(void) {
 
     assert(serial_rx_data);
     assert(serial_tx_data);
-    assert(serial_rx_used);
+    assert(serial_rx_active);
     assert(serial_rx_free);
-    assert(serial_tx_used);
+    assert(serial_tx_active);
     assert(serial_tx_free);
 
     /* virtIO console */
@@ -159,32 +159,32 @@ void init(void) {
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].ch = SERIAL_MUX_TX_CH;
     
     /* Initialise our sDDF ring buffers for the serial device */
-    ring_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-        (ring_buffer_t *)serial_rx_free,
-        (ring_buffer_t *)serial_rx_used,
+    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
+        (serial_queue_t *)serial_rx_free,
+        (serial_queue_t *)serial_rx_active,
         true,
-        NUM_BUFFERS,
-        NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
-        int ret = enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-                               serial_rx_data + (i * BUFFER_SIZE),
-                               BUFFER_SIZE, NULL);
+        NUM_ENTRIES,
+        NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
+        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
+                                      serial_rx_data + (i * BUFFER_SIZE),
+                                      BUFFER_SIZE);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    ring_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-            (ring_buffer_t *)serial_tx_free,
-            (ring_buffer_t *)serial_tx_used,
+    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
+            (serial_queue_t *)serial_tx_free,
+            (serial_queue_t *)serial_tx_active,
             true,
-            NUM_BUFFERS,
-            NUM_BUFFERS);
-    for (int i = 0; i < NUM_BUFFERS - 1; i++) {
+            NUM_ENTRIES,
+            NUM_ENTRIES);
+    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-                               serial_tx_data + ((i + NUM_BUFFERS) * BUFFER_SIZE),
-                               BUFFER_SIZE, NULL);
+        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
+                                      serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
+                                      BUFFER_SIZE);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
