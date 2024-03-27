@@ -3,33 +3,37 @@
 # This bash script creates a virtual disk image with an MBR
 
 # Usage instructions
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <virtual_disk_name>"
+if [ $# -ne 3 ]; then
+    echo "Usage: $0 <virtual_disk_name> <sectorsize> <memsize>"
     exit 1
 fi
 
 DISK_IMAGE="$1"
 BUILD_DIR=$(dirname $DISK_IMAGE)
 
-BLOCKSIZE=512
-# @ericc: This has to be multiple of 8
-COUNT=4104
+SECTORSIZE=$2
+SDDF_TRANSFER_SIZE=4096
+MULTIPLE=$(( SDDF_TRANSFER_SIZE / SECTORSIZE ))
 
-P1OFFSET=8
+MEMSIZE=$3
+COUNT=$(( MEMSIZE / SECTORSIZE ))
+# @ericc: Ensure that the disk size is a multiple of $MULTIPLE blocks
+COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE ))
 
-# @ericc: This ensures that both FAT filesystems are a multiple of 8 blocks
+P1OFFSET=$MULTIPLE
+
 FS_COUNT=$(( (COUNT - P1OFFSET - 1) / 2 ))
-FS_COUNT=$(( FS_COUNT / 8 * 8 ))
+# @ericc: This ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
+FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE ))
 FS_COUNT_ADD=$(( FS_COUNT - 1 ))
 
-
-P2OFFSET=$((FS_COUNT_ADD + P1OFFSET + 1))
+P2OFFSET=$((FS_COUNT + P1OFFSET))
 
 # Create the FAT filesystem
-mkfs.fat -C $BUILD_DIR/fat.img -S $BLOCKSIZE $FS_COUNT
+mkfs.fat -C $BUILD_DIR/fat.img -S $SECTORSIZE $FS_COUNT
 
 # Create a file to act as a virtual disk
-dd if=/dev/zero of=$DISK_IMAGE bs=$BLOCKSIZE count=$COUNT
+dd if=/dev/zero of=$DISK_IMAGE bs=$SECTORSIZE count=$COUNT
 
 # Create MBR partition table and two partitions
 {
@@ -52,5 +56,5 @@ fdisk -l $DISK_IMAGE
 
 # Copy the FAT filesystem to the virtual disk
 
-dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P1OFFSET count=$FS_COUNT
-dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$BLOCKSIZE seek=$P2OFFSET count=$FS_COUNT
+dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek=$P1OFFSET count=$FS_COUNT
+dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek=$P2OFFSET count=$FS_COUNT

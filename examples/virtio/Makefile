@@ -9,12 +9,17 @@ ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
 
-ifeq ($(strip $(BOARD)),)
+ifndef BOARD
 $(error BOARD must be specified)
 endif
 
 ifeq ($(filter $(BOARD), odroidc4 qemu_arm_virt),)
 $(error "Board $(BOARD) is not supported")
+endif
+
+ifeq ($(BOARD), qemu_arm_virt)
+BLK_SIZE ?= 512
+BLK_MEM ?= 2101248
 endif
 
 # Default build directory, pass BUILD_DIR=<dir> to override
@@ -391,7 +396,7 @@ $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
 	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/storage: Makefile
-	sh $(VMM_TOOLS)/mkvirtdisk $@
+	sh $(VMM_TOOLS)/mkvirtdisk $@ $(BLK_SIZE) $(BLK_MEM)
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
 	cp $< $@

@@ -9,7 +9,7 @@
 #include <sddf/blk/queue.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_BLOCK
+#define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...) do{ printf("VIRTIO(BLOCK): "); printf(__VA_ARGS__); }while(0)
@@ -20,6 +20,7 @@
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 /* Maximum number of buffers in sddf data region */
+//@ericc: as long as this number is higher than any sddf_handler->data_size we should be fine
 #define SDDF_MAX_DATA_BUFFERS 4096
 
 /* Virtio blk configuration space */
@@ -61,6 +62,7 @@ static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32
         // feature bits 0 to 31
         case 0:
             *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
+            *features = *features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
             break;
         // features bits 32 to 63
         case 1:
@@ -77,13 +79,17 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
 {
     // According to virtio initialisation protocol,
     // this should check what device features were set, and return the subset of features understood
-    // by the driver. However, for now we ignore what the driver sets, and just return the features we support.
+    // by the driver.
     int success = 1;
+
+    uint32_t device_features = 0;
+    device_features = device_features | BIT_LOW(VIRTIO_BLK_F_FLUSH);
+    device_features = device_features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
 
     switch (dev->data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
-            success = (features == (BIT_LOW(VIRTIO_BLK_F_FLUSH)));
+            success = (features == device_features);
             break;
         // features bits 32 to 63
         case 1:
@@ -416,7 +422,11 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
 static void virtio_blk_config_init(struct virtio_device *dev) {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
     virtio_blk_config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
-    virtio_blk_config.blk_size = BLK_TRANSFER_SIZE * (uint32_t)config->block_size;
+    if (config->sector_size < BLK_TRANSFER_SIZE) {
+        virtio_blk_config.blk_size = config->sector_size;
+    } else {
+        virtio_blk_config.blk_size = BLK_TRANSFER_SIZE * (uint32_t)config->block_size;
+    }
 }
 
 static virtio_device_funs_t functions = {
