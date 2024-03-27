@@ -55,7 +55,7 @@
         <map mr="tx_data_serial_vmm_1" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="false" setvar_vaddr="sound_data"/>
+        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_data"/>
         
         <map mr="snd_shared"     vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
         <map mr="snd_c0_cmd_req" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="sound_cmd_req" />
@@ -81,7 +81,7 @@
         <map mr="tx_data_serial_vmm_2" vaddr="0x8_800_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_2" vaddr="0x8_a00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="false" setvar_vaddr="sound_data"/>
+        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_data"/>
         
         <map mr="snd_shared"     vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
         <map mr="snd_c1_cmd_req" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="sound_cmd_req" />
@@ -99,6 +99,7 @@
         <program_image path="sound_virtualiser.elf" />
 
         <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
+        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" />
 
         <map mr="snd_c0_cmd_req" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_req" />
         <map mr="snd_c0_cmd_res" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_res" />
@@ -145,7 +146,7 @@
             <map mr="snd_drv_pcm_req" vaddr="0x7_400_000" perms="rw" cached="false" />
             <map mr="snd_drv_pcm_res" vaddr="0x7_600_000" perms="rw" cached="false" />
 
-            <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="false" />
+            <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" />
         </virtual_machine>
 
         <irq irq="48" id="5" trigger="level" />
