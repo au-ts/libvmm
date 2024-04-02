@@ -15,62 +15,15 @@
 #include "tcb.h"
 #include "vcpu.h"
 
-// @ivanv: ideally we would have none of these hardcoded values
-// initrd, ram size come from the DTB
-// We can probably add a node for the DTB addr and then use that.
-// Part of the problem is that we might need multiple DTBs for the same example
-// e.g one DTB for VMM one, one DTB for VMM two. we should be able to hide all
-// of this in the build system to avoid doing any run-time DTB stuff.
-
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
-#define GUEST_RAM_SIZE 0x10000000
-
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
-#elif defined(BOARD_rpi4b_hyp)
-#define GUEST_DTB_VADDR 0x2e000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_odroidc2_hyp)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_imx8mm_evk_hyp)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
-
-#if defined(BOARD_qemu_arm_virt)
-#define PASSTHROUGH_IRQ_COUNT 2
-static int passthrough_irqs[PASSTHROUGH_IRQ_COUNT] = {
-    33, // serial
-    37, // pcie
-};
-#elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
-#define PASSTHROUGH_IRQ_COUNT 5
-static int passthrough_irqs[PASSTHROUGH_IRQ_COUNT] = {
-    225,        // Serial
-    48, 63, 62, // USB (controller, 1, 2)
-    5           // @alexbr: not sure what this is
-};
-#elif defined(BOARD_rpi4b_hyp)
-#define SERIAL_IRQ 57
-#elif defined(BOARD_imx8mm_evk_hyp)
-#define SERIAL_IRQ 79
-#else
-#error Need to define passthrough IRQs
-#endif
-
-#define MAX_IRQ 128
-static int irq_channels[MAX_IRQ] = {0};
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -83,11 +36,6 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
-
-static void passthrough_ack(size_t vcpu_id, int irq, void *cookie) {
-    int *ch = cookie;
-    microkit_irq_ack(*ch);
-}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -117,34 +65,26 @@ void init(void) {
         return;
     }
 
-    for (int i = 0; i < PASSTHROUGH_IRQ_COUNT; i++) {
-        int irq = passthrough_irqs[i];
-        int ch = i + 1;
-        irq_channels[irq] = ch;
-
-        success = virq_register(GUEST_VCPU_ID, irq, &passthrough_ack, &irq_channels[irq]);
-        if (!success) {
-            LOG_VMM_ERR("Failed to register IRQ %d\n", i);
-            return;
-        }
-        microkit_irq_ack(ch);
-    }
+#if defined(BOARD_qemu_arm_virt)
+    virq_register_passthrough(GUEST_VCPU_ID, 33, 1); // serial
+    virq_register_passthrough(GUEST_VCPU_ID, 37, 2); // pcie
+#elif defined(BOARD_odroidc4)
+    virq_register_passthrough(GUEST_VCPU_ID, 225, 1); // serial
+    virq_register_passthrough(GUEST_VCPU_ID, 48, 2);  // USB controller
+    virq_register_passthrough(GUEST_VCPU_ID, 63, 3);  // USB 1
+    virq_register_passthrough(GUEST_VCPU_ID, 62, 4);  // USB 2
+    virq_register_passthrough(GUEST_VCPU_ID, 5, 5);   // @alexbr: not sure what this is
+#else
+#error Need to define passthrough IRQs
+#endif
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
-
-    if (ch > 0 && ch <= PASSTHROUGH_IRQ_COUNT) {
-        int irq = passthrough_irqs[ch - 1];
-
-        bool success = virq_inject(GUEST_VCPU_ID, irq);
-        if (!success) {
-            LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", irq, GUEST_VCPU_ID);
-        }
-    } else {
-        printf("Unexpected channel, ch: 0x%lx\n", ch);
+    if (!virq_handle_passthrough(ch)) {
+        LOG_VMM_ERR("Unexpected channel, ch: %#lx\n", ch);
     }
 }
 
