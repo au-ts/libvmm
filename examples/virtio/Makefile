@@ -207,7 +207,7 @@ SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
