@@ -69,7 +69,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     LOG_UIO_BLOCK("maps_phys[0]: 0x%lx, maps_phys[1]: 0x%lx, maps_phys[2]: 0x%lx, maps_phys[3]: 0x%lx\n", maps_phys[0], maps_phys[1], maps_phys[2], maps_phys[3]);
 
-    blk_queue_init(&h, req_queue, resp_queue, BLK_REQ_QUEUE_SIZE, BLK_RESP_QUEUE_SIZE);
+    blk_queue_init(&h, req_queue, resp_queue, BLK_QUEUE_SIZE);
 
     storage_fd = open(storage_path, O_RDWR);
     if (storage_fd < 0) {

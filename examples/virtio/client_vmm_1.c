@@ -185,7 +185,7 @@ void init(void) {
     blk_queue_init(sddf_blk_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h,
                 (blk_req_queue_t *)blk_req_queue,
                 (blk_resp_queue_t *)blk_resp_queue,
-                BLK_REQ_QUEUE_SIZE, BLK_RESP_QUEUE_SIZE);
+                BLK_QUEUE_SIZE);
 
     /* Initialise virtIO block device */
     success = virtio_mmio_device_init(&virtio_blk, BLOCK, VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ, sddf_blk_handlers);
