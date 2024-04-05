@@ -111,8 +111,8 @@ qemu: all
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-device virtio-gpu-pci \
-			-device virtio-keyboard-pci \
-			-device virtio-mouse-pci \
+			# -device virtio-keyboard-pci \
+			# -device virtio-mouse-pci \
 			-display spice-app
 
 directories:

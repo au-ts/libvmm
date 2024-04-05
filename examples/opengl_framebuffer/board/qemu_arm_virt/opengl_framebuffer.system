@@ -43,8 +43,8 @@
         <!-- For pass-through graphics -->
         <irq irq="37" id="2" />
         <!-- mouse and keyboard (only needed if you want to run a display server) -->
-        <irq irq="38" id="3" />
-        <irq irq="35" id="4" />
+        <!-- <irq irq="38" id="3" />
+        <irq irq="35" id="4" /> -->
     </protection_domain>
 
     <channel>
