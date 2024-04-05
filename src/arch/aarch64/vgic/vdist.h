@@ -164,11 +164,6 @@ static void vgic_dist_disable_irq(vgic_t *vgic, size_t vcpu_id, int irq)
      * part of the platform initialization, no dedicated messages are logged
      * here to avoid bloating the logs.
      */
-    // @ericc: Hack to not let UIO disable their IRQ, should be done by registering
-    // this IRQ
-    if (irq == 50) {
-        return;
-    }
     if (irq >= NUM_SGI_VIRQS) {
         LOG_DIST("Disabling IRQ %d\n", irq);
         set_enable(vgic_get_dist(vgic->registers), irq, false, vcpu_id);
