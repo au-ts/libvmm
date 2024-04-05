@@ -113,8 +113,6 @@ qemu: all
 			-device virtio-gpu-pci \
 			-device virtio-keyboard-pci \
 			-device virtio-mouse-pci \
-			-netdev user,id=mynet0 \
-			-device virtio-net-device,netdev=mynet0,mac=52:55:00:d1:55:01 \
 			-display spice-app
 
 directories:

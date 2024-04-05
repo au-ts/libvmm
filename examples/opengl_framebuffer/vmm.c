@@ -103,10 +103,10 @@ void init(void) {
 
 #if defined(BOARD_qemu_arm_virt)
     register_passthrough_irq(33, 1);
-    register_passthrough_irq(79, 2);
-    register_passthrough_irq(36, 3);
-    register_passthrough_irq(37, 4);
-    register_passthrough_irq(38, 5);
+    register_passthrough_irq(36, 5);
+    register_passthrough_irq(37, 2);
+    register_passthrough_irq(38, 3);
+    register_passthrough_irq(35, 4);
 #elif defined(BOARD_odroidc4)
     // // @ivanv minimise
     register_passthrough_irq(225, 1);

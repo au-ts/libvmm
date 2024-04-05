@@ -49,12 +49,12 @@
 		compatible = "virtio,mmio";
 	};
 
-	virtio_mmio@a000400 {
-		dma-coherent;
-		interrupts = <0x00 0x12 0x01>;
-		reg = <0x00 0xa000400 0x00 0x200>;
-		compatible = "virtio,mmio";
-	};
+	// virtio_mmio@a000400 {
+	// 	dma-coherent;
+	// 	interrupts = <0x00 0x12 0x01>;
+	// 	reg = <0x00 0xa000400 0x00 0x200>;
+	// 	compatible = "virtio,mmio";
+	// };
 
 	virtio_mmio@a000600 {
 		dma-coherent;
@@ -379,9 +379,10 @@
 
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial uio_pdrv_genirq.of_id=generic-uio debug pci=nomsi loglevel=8 ip=192.168.1.1";
+		bootargs = "console=ttyAMA0,115200 uio_pdrv_genirq.of_id=generic-uio pci=nomsi vt.global_cursor_default=0 logo.nologo";
 		linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = <0x5d700000>;
 		linux,initrd-end = <0x60000000>;
+		// vt.global_cursor_default=0 logo.nologo
 	};
 };

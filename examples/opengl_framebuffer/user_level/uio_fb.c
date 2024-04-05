@@ -139,6 +139,13 @@ int main() {
         return 21;
     }
 
+    // Activate framebuffer
+    vinfo.activate |= FB_ACTIVATE_NOW | FB_ACTIVATE_FORCE;
+    if (0 > ioctl(fb_fp, FBIOPUT_VSCREENINFO, &vinfo)) {
+        printf("Failed to refresh\n");
+        return 21;
+    }
+
     // Figure out the size of the screen in bytes
     screensize = vinfo.xres * vinfo.yres * vinfo.bits_per_pixel / 8;
 
