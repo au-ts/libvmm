@@ -39,7 +39,7 @@
         <!-- For the pass-through UART -->
         <irq irq="33" id="1" />
         <!-- Unknown -->
-        <irq irq="36" id="5" />
+        <!-- <irq irq="36" id="5" /> -->
         <!-- For pass-through graphics -->
         <irq irq="37" id="2" />
         <!-- mouse and keyboard (only needed if you want to run a display server) -->
