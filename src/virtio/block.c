@@ -260,7 +260,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 
                 bool not_aligned = ((virtio_req->sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) != 0);
 
-                // @ericc: If the write request is not aligned to the sddf block size, we need to first read the surrounding aligned memory, overwrite that 
+                // If the write request is not aligned to the sddf block size, we need to first read the surrounding aligned memory, overwrite that 
                 // read memory on the unaligned areas we want write to, and then write the entire memory back to disk
                 if (not_aligned) {
                     // Check if request can be handled
@@ -338,7 +338,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
     int success = 1;
     
-    // @ericc: if any request has to be dropped due to any number of reasons, we inject an interrupt
+    // If any request has to be dropped due to any number of reasons, we inject an interrupt
     if (has_dropped) {
         success = virtio_blk_used_buffer_virq_inject(dev);
     }
@@ -415,7 +415,7 @@ int virtio_blk_handle_resp(struct virtio_device *dev) {
 
     int success = 1;
 
-    // @ericc: we need to know if we handled any responses, if we did we inject an interrupt, if we didn't we don't inject
+    // We need to know if we handled any responses, if we did we inject an interrupt, if we didn't we don't inject
     if (handled) {
         success = virtio_blk_used_buffer_virq_inject(dev);
     }
