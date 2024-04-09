@@ -384,7 +384,7 @@ int virtio_blk_handle_resp(struct virtio_device *dev) {
                         datastore_alloc(&datastore, &parsed_data, &new_sddf_id);
 
                         blk_enqueue_req(queue_handle, WRITE_BLOCKS, data.sddf_data, data.sddf_block_number, data.sddf_count, new_sddf_id);
-                        microkit_notify_delayed(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
+                        microkit_notify(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
                         continue;
                     }
                     break;
