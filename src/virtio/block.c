@@ -211,7 +211,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         
         // Parse different requests
         switch (virtio_req->type) {
-            // header -> body -> reply
+            /* There are three parts with each block request. The header, body (which contains the data) and reply. */
             case VIRTIO_BLK_T_IN: {
                 LOG_BLOCK("Request type is VIRTIO_BLK_T_IN\n");
                 LOG_BLOCK("Sector (read/write offset) is %d\n", virtio_req->sector);
