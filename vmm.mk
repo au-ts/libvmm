@@ -46,6 +46,14 @@ OBJECTS := ${CFILES:.c=.o}
 # Generate dependencies automatically
 CFLAGS += -MD
 
+# Force rebuid if CFLAGS changes.
+# This will pick up (among other things} changes
+# to Microkit BOARD and CONFIG.
+CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS}|md5sum -|sed 's/ *-$$//')
+.libvmm_cflags.%:
+	rm -f .libvmm_cflags.*
+	echo ${CFLAGS} > $@
+
 src/arch/aarch64/vgic/stamp:
 	mkdir -p src/arch/aarch64/vgic/
 	mkdir -p src/util
@@ -55,7 +63,7 @@ src/arch/aarch64/vgic/stamp:
 libvmm.a: ${OBJECTS}
 	ar rv $@ ${CFILES:.c=.o}
 
-${OBJECTS}: src/arch/aarch64/vgic/stamp
+${OBJECTS}: src/arch/aarch64/vgic/stamp ${CHECK_LIBVMM_CFLAGS}
 
 -include ${CFILES:.c=.d}
 
