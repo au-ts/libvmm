@@ -141,4 +141,4 @@ void virtio_blk_init(struct virtio_device *dev,
                     struct virtio_queue_handler *vqs, size_t num_vqs,
                     size_t virq,
                     sddf_handler_t *sddf_handlers);
-void virtio_blk_handle_resp(struct virtio_device *dev);
+int virtio_blk_handle_resp(struct virtio_device *dev);

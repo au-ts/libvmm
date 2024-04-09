@@ -136,13 +136,11 @@ static void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t desc)
     virtq->used->idx++;
 }
 
-static void virtio_blk_used_buffer_virq_inject(struct virtio_device *dev)
+static bool virtio_blk_used_buffer_virq_inject(struct virtio_device *dev)
 {
     // set the reason of the irq: used buffer notification to virtio
     dev->data.InterruptStatus = BIT_LOW(0);
-
-    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    assert(success);
+    return virq_inject(GUEST_VCPU_ID, dev->virq);
 }
 
 /* Set response to virtio request to error */
@@ -337,10 +335,12 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
     // Update virtq index to the next available request to be handled
     vq->last_idx = idx;
+
+    int success = 1;
     
     // @ericc: if any request has to be dropped due to any number of reasons, we inject an interrupt
     if (has_dropped) {
-        virtio_blk_used_buffer_virq_inject(dev);
+        success = virtio_blk_used_buffer_virq_inject(dev);
     }
     
     if (!blk_req_queue_plugged(queue_handle)) {
@@ -348,10 +348,10 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         microkit_notify(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
     }
     
-    return 1;
+    return success;
 }
 
-void virtio_blk_handle_resp(struct virtio_device *dev) {
+int virtio_blk_handle_resp(struct virtio_device *dev) {
     blk_queue_handle_t *queue_handle = dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h;
 
     blk_response_status_t sddf_ret_status;
@@ -413,10 +413,14 @@ void virtio_blk_handle_resp(struct virtio_device *dev) {
         handled = true;
     }
 
+    int success = 1;
+
     // @ericc: we need to know if we handled any responses, if we did we inject an interrupt, if we didn't we don't inject
     if (handled) {
-        virtio_blk_used_buffer_virq_inject(dev);
+        success = virtio_blk_used_buffer_virq_inject(dev);
     }
+
+    return success;
 }
 
 static void virtio_blk_config_init(struct virtio_device *dev) {
