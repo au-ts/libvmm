@@ -2,7 +2,8 @@ const std = @import("std");
 
 const MicrokitBoard = enum {
     qemu_arm_virt,
-    odroidc4
+    odroidc4,
+    zcu102,
 };
 
 const Target = struct {
@@ -28,7 +29,16 @@ const targets = [_]Target {
             .os_tag = .freestanding,
             .abi = .none,
         },
-    }
+    },
+    .{
+        .board = MicrokitBoard.zcu102,
+        .zig_target = std.zig.CrossTarget{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
 };
 
 fn findTarget(board: MicrokitBoard) std.zig.CrossTarget {
