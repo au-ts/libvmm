@@ -82,6 +82,7 @@ SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
 ELFS := client_vmm.elf \
+	    native_client.elf \
 		serial_virt_tx.elf \
 		serial_virt_rx.elf \
 		uart_driver.elf \
@@ -114,6 +115,12 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					console.o \
 					sound.o \
 					mmio.o
+
+NATIVE_CLIENT_OBJS := native_client.o \
+					buffer_queue.o \
+					printf.o \
+					bitarray.o \
+					util.o
 
 SOUND_VIRT_OBJS :=	sound_virt.o \
 					sddf_printf.o \
@@ -275,6 +282,9 @@ $(BUILD_DIR)/sound_%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/native_client.elf: $(addprefix $(BUILD_DIR)/, $(NATIVE_CLIENT_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/sound_virt.elf: $(addprefix $(BUILD_DIR)/, $(SOUND_VIRT_OBJS))
