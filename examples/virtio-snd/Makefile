@@ -16,7 +16,7 @@ endif
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
-CONFIG ?= debug
+CONFIG ?= benchmark
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
@@ -81,8 +81,14 @@ SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
+SDDF_FLAGS_odroidc4 := -DCONFIG_PLAT_ODROIDC4
+SDDF_FLAGS_qemu_arm_virt := -DCONFIG_PLAT_QEMU
+SDDF_FLAGS := ${SDDF_FLAGS_${BOARD}}
+
 ELFS := client_vmm.elf \
 	    native_client.elf \
+		benchmark.elf \
+		idle.elf \
 		serial_virt_tx.elf \
 		serial_virt_rx.elf \
 		uart_driver.elf \
@@ -134,6 +140,9 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						mmio.o \
 						sddf_cache.o
 
+BENCH_OBJS := benchmark.o sddf_printf.o sddf_putchar_serial.o
+IDLE_OBJS := idle.o sddf_printf.o sddf_putchar_debug.o
+
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
@@ -152,7 +161,7 @@ CFLAGS := -mstrict-align \
 		  -fno-stack-protector \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
-		  -Wall -Wno-unused-function -Werror \
+		  -Wall -Wno-unused-function \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF)/include \
@@ -270,7 +279,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CC) -c $(CFLAGS) $(SDDF_FLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
@@ -285,6 +294,12 @@ $(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/native_client.elf: $(addprefix $(BUILD_DIR)/, $(NATIVE_CLIENT_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/benchmark.elf: $(addprefix $(BUILD_DIR)/, $(BENCH_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/idle.elf: $(addprefix $(BUILD_DIR)/, $(IDLE_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/sound_virt.elf: $(addprefix $(BUILD_DIR)/, $(SOUND_VIRT_OBJS))
