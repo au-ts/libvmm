@@ -57,10 +57,6 @@ static void assert_fail(
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
-/* Convenience function to print a bit array */
-void print_bitarray(bitarray_t* bitarr);
-/* Convenience function to print word in bits */
-void print_binary(word_t word);
 /* Convenience function to print memory region in hex */
 void print_mem_hex(uintptr_t addr, size_t size);
 
