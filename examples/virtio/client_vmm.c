@@ -6,10 +6,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
-#include <util/util.h>
-#include <arch/aarch64/vgic/vgic.h>
-#include <arch/aarch64/linux.h>
-#include <arch/aarch64/fault.h>
+#include <util.h>
+#include <vgic/vgic.h>
+#include <linux.h>
+#include <fault.h>
 #include <guest.h>
 #include <virq.h>
 #include <tcb.h>
@@ -20,11 +20,6 @@
 #include <sddf/serial/queue.h>
 #include <sddf/blk/queue.h>
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
 #define GUEST_RAM_SIZE 0x6000000
 
 #if defined(BOARD_qemu_arm_virt)
