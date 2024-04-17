@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "util.h"
-#include "printf.h"
+#include <util.h>
+#include <printf.h>
 
 /* This is required to use the printf library we brought in, it is
    simply for convenience since there's a lot of logging/debug printing

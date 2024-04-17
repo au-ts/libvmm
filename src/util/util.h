@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <microkit.h>
-#include "printf.h"
-#include "bitarray.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <printf.h>
 
 // @ivanv: these are here for convience, should not be here though
 #define GUEST_VCPU_ID 0
