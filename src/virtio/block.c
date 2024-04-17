@@ -140,11 +140,17 @@ static void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t desc)
     virtq->used->idx++;
 }
 
-static bool virtio_blk_used_buffer_virq_inject(struct virtio_device *dev)
+static bool virtio_blk_virq_inject(struct virtio_device *dev)
 {
-    /* Set the reason of the irq: used buffer notification to virtio */
-    dev->data.InterruptStatus = BIT_LOW(0);
     return virq_inject(GUEST_VCPU_ID, dev->virq);
+}
+
+static void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
+{
+    /* Set the reason of the irq.
+       bit 0: used buffer
+       bit 1: configuration change */
+    dev->data.InterruptStatus = used_buffer | (config_change << 1);
 }
 
 /* Set response to virtio request to error */
@@ -342,7 +348,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     
     /* If any request has to be dropped due to any number of reasons, we inject an interrupt */
     if (has_dropped) {
-        success = virtio_blk_used_buffer_virq_inject(dev);
+        virtio_blk_set_interrupt_status(dev, true, false);
+        success = virtio_blk_virq_inject(dev);
     }
     
     if (!blk_req_queue_plugged(queue_handle)) {
@@ -417,7 +424,8 @@ int virtio_blk_handle_resp(struct virtio_device *dev) {
 
     /* We need to know if we handled any responses, if we did we inject an interrupt, if we didn't we don't inject */
     if (handled) {
-        success = virtio_blk_used_buffer_virq_inject(dev);
+        virtio_blk_set_interrupt_status(dev, true, false);
+        success = virtio_blk_virq_inject(dev);
     }
 
     return success;
