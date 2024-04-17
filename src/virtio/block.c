@@ -173,10 +173,10 @@ static void virtio_blk_set_req_success(struct virtio_device *dev, uint16_t desc)
 }
 
 static bool sddf_make_req_check(blk_queue_handle_t *h, uint16_t sddf_count) {
-    // Check if req store is full, if data region is full, if req queue is full
+    // Check if ialloc is full, if data region is full, if req queue is full
     // If these all pass then this request can be handled successfully
     if (ialloc_full(&ialloc)) {
-        LOG_BLOCK_ERR("Request store is full\n");
+        LOG_BLOCK_ERR("Request bookkeeping array is full\n");
         return false;
     }
 
