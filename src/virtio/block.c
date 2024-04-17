@@ -173,8 +173,8 @@ static void virtio_blk_set_req_success(struct virtio_device *dev, uint16_t desc)
 }
 
 static bool sddf_make_req_check(blk_queue_handle_t *h, uint16_t sddf_count) {
-    // Check if ialloc is full, if data region is full, if req queue is full
-    // If these all pass then this request can be handled successfully
+    /* Check if ialloc is full, if data region is full, if req queue is full.
+       If these all pass then this request can be handled successfully */
     if (ialloc_full(&ialloc)) {
         LOG_BLOCK_ERR("Request bookkeeping array is full\n");
         return false;
@@ -227,9 +227,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 curr_desc_head = virtq->desc[curr_desc_head].next;
                 LOG_BLOCK("Descriptor index is %d, Descriptor flags are: 0x%x, length is 0x%x\n", curr_desc_head, (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
-                // Converting virtio sector number to sddf block number, we are rounding down */
+                /* Converting virtio sector number to sddf block number, we are rounding down */
                 uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
-                // Converting bytes to the number of blocks, we are rounding up */
+                /* Converting bytes to the number of blocks, we are rounding up */
                 uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
                 if (!sddf_make_req_check(queue_handle, sddf_count)) {
@@ -246,7 +246,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
-                // Book keep the request
+                /* Book keep the request */
                 reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, false};
                 uint64_t req_id;
                 ialloc_alloc(&ialloc, &req_id);
@@ -286,7 +286,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                     uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
-                    // Book keep the request
+                    /* Book keep the request */
                     reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, not_aligned};
                     uint64_t req_id;
                     ialloc_alloc(&ialloc, &req_id);
@@ -308,7 +308,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                     uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
-                    // Book keep the request
+                    /* Book keep the request */
                     reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, not_aligned};
                     uint64_t req_id;
                     ialloc_alloc(&ialloc, &req_id);
@@ -329,7 +329,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     break;
                 }
 
-                // Book keep the request, @ericc: except for virtio desc, nothing else needs to be retrieved later so leave as 0
+                /* Book keep the request */ //@ericc: except for virtio desc, nothing else needs to be retrieved later so leave as 0
                 reqbk_t data = {desc_head, 0, 0, 0, 0, 0};
                 uint64_t req_id;
                 ialloc_alloc(&ialloc, &req_id);
