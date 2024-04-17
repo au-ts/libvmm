@@ -163,9 +163,6 @@ REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
 VMM_OBJS := printf.o \
-			bitarray.o \
-			fsmem.o \
-			datastore.o \
 			virq.o \
 			linux.o \
 			guest.o \
@@ -185,6 +182,8 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
+					sddf_blk_bitarray.o \
+					sddf_blk_fsmalloc.o \
 
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
@@ -193,21 +192,19 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
+					sddf_blk_bitarray.o \
+					sddf_blk_fsmalloc.o \
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
-					blk_driver_vmm.o \
-					virtio.o \
-					console.o \
-					block.o \
-					mmio.o \
+					blk_driver_vmm.o
 
 # @ericc: sddf_printf.o sdd_putchar_debug.o only needed during debug mode
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_datastore.o sddf_blk_fsmem.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_fsmalloc.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
@@ -410,7 +407,6 @@ $(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init Makefil
 
 $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
 	$(TOOLCHAIN)-gcc $(if $(filter $(BOARD),qemu_arm_virt),-DSECTOR_SIZE=$(BLK_SIZE)) -c $(CFLAGS_LINUX) $< -o $@
-
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
 	$(TOOLCHAIN)-gcc $^ -o $@
