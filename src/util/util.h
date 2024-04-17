@@ -42,12 +42,7 @@ static void *memcpy(void *restrict dest, const void *restrict src, size_t n)
     return dest;
 }
 
-static void *memset(void *dest, int c, size_t n)
-{
-    unsigned char *s = dest;
-    for (; n; n--, s++) *s = c;
-    return dest;
-}
+void *memset(void *dest, int c, size_t n);
 
 static void assert_fail(
     const char  *assertion,

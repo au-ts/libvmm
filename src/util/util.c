@@ -40,6 +40,11 @@ void print_binary(word_t word) {
     }
     printf("\n");
 #endif
+void *memset(void *dest, int c, size_t n)
+{
+    unsigned char *s = dest;
+    for (; n; n--, s++) *s = c;
+    return dest;
 }
 
 void print_mem_hex(uintptr_t addr, size_t size) {
