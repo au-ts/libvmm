@@ -42,9 +42,11 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 /* sDDF block */
+#define SD_CH 1
 #if defined(BOARD_odroidc4)
 #define SD_IRQ 222
-#define SD_CH 1 // @ericc: autogen
+#elif defined(BOARD_qemu_arm_virt)
+#define SD_IRQ 79
 #endif
 
 // @ericc: autogen
@@ -96,8 +98,10 @@ void init(void) {
 #endif
 
 #if defined(BOARD_qemu_arm_virt)
+    /* Register the SD card IRQ */
+    virq_register_passthrough(GUEST_VCPU_ID, SD_IRQ, SD_CH);
 #if defined(DEBUG_BLK_DRIVER_VM)
-    virq_register_passthrough(GUEST_VCPU_ID, 33, 1);
+    virq_register_passthrough(GUEST_VCPU_ID, 33, 10);
 #endif
 #endif
 

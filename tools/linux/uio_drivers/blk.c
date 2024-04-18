@@ -73,62 +73,47 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
     storage_fd = open(storage_path, O_RDWR);
     if (storage_fd < 0) {
-        LOG_UIO_BLOCK_ERR("Failed to open storage file: %s\n", strerror(errno));
+        LOG_UIO_BLOCK_ERR("Failed to open storage drive: %s\n", strerror(errno));
         return -1;
     }
-    LOG_UIO_BLOCK("Opened storage file: %s\n", storage_path);
+    LOG_UIO_BLOCK("Opened storage drive: %s\n", storage_path);
 
-    // Determine whether storage file is a block device or regular file
+    // Determine whether storage drive is a block device or regular file
     // and set the blk queue configuration fields accordingly
     struct stat storageStat;
     if (fstat(storage_fd, &storageStat) < 0) {
-        LOG_UIO_BLOCK_ERR("Failed to get storage file status: %s\n", strerror(errno));
+        LOG_UIO_BLOCK_ERR("Failed to get storage drive status: %s\n", strerror(errno));
         return -1;
     }
 
-    if (S_ISREG(storageStat.st_mode)) {
-        blk_config->size = storageStat.st_size / BLK_TRANSFER_SIZE;
-#ifdef SECTOR_SIZE
-        blk_config->sector_size = SECTOR_SIZE;
-#else
-        blk_config->sector_size = BLK_TRANSFER_SIZE;
-#endif
-        blk_config->block_size = 1;
-        blk_config->read_only = false;
-        LOG_UIO_BLOCK("Emulated file storage device: read_only=%d, sector_size=%d, block_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->block_size, blk_config->size);
-    } else if (S_ISBLK(storageStat.st_mode)) {
+    if (S_ISBLK(storageStat.st_mode)) {
         /* Get read only status */
-        long read_only;
+        int read_only;
         if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device read only status: %s\n", strerror(errno));
+            LOG_UIO_BLOCK_ERR("Failed to get storage drive read only status: %s\n", strerror(errno));
             return -1;
         }
         blk_config->read_only = (bool)read_only;
 
-        /* Get sector size */
-        long sector_size;
+        /* Get logical sector size */
+        int sector_size;
         if (ioctl(storage_fd, BLKSSZGET, &sector_size) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device sector size: %s\n", strerror(errno));
+            LOG_UIO_BLOCK_ERR("Failed to get storage drive sector size: %s\n", strerror(errno));
             return -1;
         }
         blk_config->sector_size = (uint16_t)sector_size;
 
         /* Get size */
-        long size;
-        if (ioctl(storage_fd, BLKGETSIZE, &size) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get raw storage device size: %s\n", strerror(errno));
+        uint64_t size;
+        if (ioctl(storage_fd, BLKGETSIZE64, &size) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to get storage drive size: %s\n", strerror(errno));
             return -1;
         }
-        blk_config->size = ((uint64_t)size * 512) / BLK_TRANSFER_SIZE;
+        blk_config->size = size / BLK_TRANSFER_SIZE;
 
-        /* Get blocksize */
-        long block_size;
-        block_size = sector_size / BLK_TRANSFER_SIZE;
-        blk_config->block_size = (uint16_t)block_size;
-
-        LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, block_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->block_size, blk_config->size);
+        LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only, blk_config->sector_size, blk_config->size);
     } else {
-        LOG_UIO_BLOCK_ERR("Storage file is of an unsupported type\n");
+        LOG_UIO_BLOCK_ERR("Storage drive is of an unsupported type\n");
         return -1;
     }    
 

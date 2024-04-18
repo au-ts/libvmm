@@ -5,38 +5,24 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-ifeq ($(strip $(MICROKIT_SDK)),)
-$(error MICROKIT_SDK must be specified)
-endif
-
-ifndef BOARD
-$(error BOARD must be specified)
-endif
-
-ifeq ($(filter $(BOARD), odroidc4 qemu_arm_virt),)
-$(error "Board $(BOARD) is not supported")
-endif
-
-ifeq ($(BOARD), qemu_arm_virt)
-NUM_PART ?= 2
-BLK_SIZE ?= 4096
-BLK_MEM ?= 2101248
-endif
-
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
 CONFIG ?= debug
 
+ifeq ($(strip $(MICROKIT_SDK)),)
+	$(error MICROKIT_SDK must be specified)
+endif
+
+ifndef BOARD
+	$(error BOARD must be specified)
+endif
+
+ifeq ($(filter $(BOARD), odroidc4 qemu_arm_virt),)
+	$(error "Board $(BOARD) is not supported")
+endif
+
 # @ivanv: Check for dependencies and make sure they are installed/in the path
-
-# @ivanv: check that all dependencies exist
-# Specify that we use bash for all shell commands
-SHELL=/bin/bash
-# All dependencies needed to compile the VMM
-QEMU := qemu-system-aarch64
-DTC := dtc
-
 ifndef TOOLCHAIN
 	# Get whether the common toolchain triples exist
 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
@@ -50,6 +36,13 @@ ifndef TOOLCHAIN
 		$(error "Could not find an AArch64 cross-compiler")
 	endif
 endif
+
+# @ivanv: check that all dependencies exist
+# Specify that we use bash for all shell commands
+SHELL=/bin/bash
+# All dependencies needed to compile the VMM
+QEMU := qemu-system-aarch64
+DTC := dtc
 
 CC := clang
 LD := ld.lld
@@ -95,7 +88,8 @@ BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
 BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
 BLK_DRIVER_VM_DTS_OVERLAYS_qemu_arm_virt :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
-											$(BLK_DRIVER_VM_DTS_DIR)/uio.dts
+											$(BLK_DRIVER_VM_DTS_DIR)/uio.dts \
+											$(BLK_DRIVER_VM_DTS_DIR)/disable.dts
 BLK_DRIVER_VM_DTS_OVERLAYS_odroidc4 :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
 										$(BLK_DRIVER_VM_DTS_DIR)/uio.dts \
 										$(BLK_DRIVER_VM_DTS_DIR)/disable.dts
@@ -141,7 +135,7 @@ SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
-BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver storage
+BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL_odroidc4 := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL := ${BLK_DRIVER_VM_USERLEVEL_${BOARD}}
 BLK_DRIVER_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_driver_init
@@ -204,7 +198,7 @@ SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_fsmalloc.o sddf_blk_bitarray.o sddf_printf.o sddf_putchar_debug.o 
+BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_fsmalloc.o sddf_blk_bitarray.o sddf_blk_util.o sddf_printf.o sddf_putchar_debug.o 
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
@@ -239,7 +233,16 @@ CFLAGS_LINUX :=	-g3 \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
 
-all: directories $(IMAGE_FILE)
+ifeq ($(BOARD), qemu_arm_virt)
+	NUM_PART = 2
+	BLK_SIZE = 512
+	BLK_MEM ?= 2101248
+endif
+
+all: directories $(IMAGE_FILE) $(BUILD_DIR)/storage
+
+clean:
+	rm -rf $(BUILD_DIR)
 
 qemu: all
 	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
@@ -249,10 +252,15 @@ qemu: all
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic
+			-nographic \
+			-drive file=$(BUILD_DIR)/storage,format=raw,if=none,id=drive0 \
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
+
+$(BUILD_DIR)/storage:
+	sh $(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM);
 
 # Unpack rootfs, put the userlevel in /root and userlevel_init in /etc/init.d/S99, repack rootfs
 $(BLK_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL)) $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT))
@@ -387,26 +395,23 @@ $(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJ
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c Makefile
+$(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
 	$(TOOLCHAIN)-gcc $< -o $@
 
-$(BUILD_DIR)/storage: Makefile
-	sh $(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
-
-$(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init Makefile
+$(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init
 	cp $< $@
 
-$(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_DIR)/blk_driver_init Makefile
+$(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_DIR)/blk_driver_init
 	cp $< $@
 
-$(BUILD_DIR)/qemu_blk_client_init: $(LINUX_BLK_DIR)/qemu_blk_client_init Makefile
+$(BUILD_DIR)/qemu_blk_client_init: $(LINUX_BLK_DIR)/qemu_blk_client_init
 	cp $< $@
 
-$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init Makefile
+$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init
 	cp $< $@
 
 $(BUILD_DIR)/%.o: $(UIO_DRIVERS_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc $(if $(filter $(BOARD),qemu_arm_virt),-DSECTOR_SIZE=$(BLK_SIZE)) -c $(CFLAGS_LINUX) $< -o $@
+	$(TOOLCHAIN)-gcc -c $(CFLAGS_LINUX) $< -o $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
 	$(TOOLCHAIN)-gcc $^ -o $@

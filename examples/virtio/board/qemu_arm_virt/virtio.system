@@ -7,9 +7,10 @@
 <system>
     <memory_region name="client_vm_ram_1" size="0x8_000_000" page_size="0x200_000" />
     <memory_region name="client_vm_ram_2" size="0x8_000_000" page_size="0x200_000" />
-    <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" />
+    <memory_region name="blk_driver_vm_ram" size="0x8_000_000" page_size="0x200_000" phys_addr="0x40000000" />
     <memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
+    <memory_region name="virtio_blk" size="0x4000" phys_addr="0xa000000" />
 
     <protection_domain name="CLIENT_VMM-1" priority="100">
         <program_image path="client_vmm_1.elf" />
@@ -201,6 +202,7 @@
         <virtual_machine name="blk_driver_linux" id="0" priority="200">
             <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            <map mr="virtio_blk" vaddr="0xa000000" perms="rw" cached="false" />
             <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
 
             <!-- sDDF block -->
@@ -212,7 +214,10 @@
             <!-- UIO irq status -->
             <map mr="uio_irq_status" vaddr="0x29800000" perms="rw" cached="true" />
         </virtual_machine>
-        <!-- <irq irq="33" id="1" /> -->
+        <!-- SD card IRQ -->
+        <irq irq="79" id="1" trigger="edge" />
+        <!-- Serial -->
+        <!-- <irq irq="33" id="10" /> -->
     </protection_domain>
 
     <protection_domain name="BLK_VIRT" priority="150" budget="100" period="400">
