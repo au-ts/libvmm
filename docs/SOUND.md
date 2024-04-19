@@ -142,6 +142,11 @@ protocol.
 *[here](https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-56700014)
 *to learn about the VirtIO sound protocol.*
 
+Currently, the VirtIO device implementation at `src/virtio/sound.c` only
+supports streams. It does not provide jacks, channel maps, control elements, or
+any other extensions. The VirtIO device acts as an sDDF audio client
+converting VirtIO requests to the sDDF protocol.
+
 Similar to the sDDF protocol, VirtIO uses a request / response model for
 commands and PCM data. In contrast, VirtIO's requests and responses come in the
 form of a scatter-gather array of buffers where sDDF expects a single
