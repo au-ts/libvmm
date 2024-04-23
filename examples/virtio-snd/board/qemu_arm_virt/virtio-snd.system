@@ -76,7 +76,6 @@
 
     <protection_domain name="benchIdle" priority="1" >
         <program_image path="idle.elf" />
-        <!-- benchmark.c puts PMU data in here for lwip to collect -->
         <map mr="cyclecounters" vaddr="0x5_010_000" perms="rw" cached="true" setvar_vaddr="cyclecounters_vaddr" />
     </protection_domain>
 

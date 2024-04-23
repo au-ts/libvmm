@@ -16,10 +16,10 @@
 
 uintptr_t cyclecounters_vaddr;
 
-struct bench *b = (void *)(uintptr_t)0x5010000;
-
-void count_idle(void)
+static void count_idle(void)
 {
+    struct bench *b = (void *)cyclecounters_vaddr;
+
     b->prev = sel4bench_get_cycle_count();
     b->ccount = 0;
     b->overflows = 0;
@@ -52,12 +52,13 @@ void count_idle(void)
 void notified(microkit_channel ch)
 {
     switch(ch) {
-        case INIT:
-            // init is complete so we can start counting.
-            count_idle();
-            break;
-        default:
-            sddf_dprintf("Idle thread notified on unexpected channel: %llu\n", ch);
+    case INIT:
+        // init is complete so we can start counting.
+        sddf_dprintf("Starting idle timer\n");
+        count_idle();
+        break;
+    default:
+        sddf_dprintf("Idle thread notified on unexpected channel: %llu\n", ch);
     }
 }
 

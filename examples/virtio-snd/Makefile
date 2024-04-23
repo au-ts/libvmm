@@ -123,7 +123,6 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					mmio.o
 
 NATIVE_CLIENT_OBJS := native_client.o \
-					buffer_queue.o \
 					printf.o \
 					bitarray.o \
 					util.o

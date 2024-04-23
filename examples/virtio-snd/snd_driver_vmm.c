@@ -14,8 +14,7 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
-#include "virtio/console.h"
-#include <sddf/serial/queue.h>
+#include "virtio/virtio.h"
 #include <sddf/sound/queue.h>
 #include <sddf/util/cache.h>
 #include <uio/sound.h>
@@ -59,25 +58,8 @@ int passthrough_irq_map[MAX_IRQ_CH];
 bool suspended;
 size_t suspend_pc;
 
-#define SERIAL_TX_CH 1
-#define SERIAL_RX_CH 2
-
-#define VIRTIO_CONSOLE_IRQ (74)
-#define VIRTIO_CONSOLE_BASE (0x130000)
-#define VIRTIO_CONSOLE_SIZE (0x1000)
-
-uintptr_t serial_rx_free;
-uintptr_t serial_rx_active;
-uintptr_t serial_tx_free;
-uintptr_t serial_tx_active;
-
-uintptr_t serial_rx_data;
-uintptr_t serial_tx_data;
-
-uintptr_t sound_shared_state;
-uintptr_t sound_data_paddr;
-
-static struct virtio_console_device virtio_console;
+uintptr_t sound_shared_state; 
+uintptr_t sound_data_paddr; 
 
 static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
@@ -137,57 +119,6 @@ void init(void) {
         return;
     }
 
-    assert(serial_rx_data);
-    assert(serial_tx_data);
-    assert(serial_rx_active);
-    assert(serial_rx_free);
-    assert(serial_tx_active);
-    assert(serial_tx_free);
-
-    /* Initialise our sDDF ring buffers for the serial device */
-    serial_queue_handle_t rxq, txq;
-    serial_queue_init(&rxq,
-                      (serial_queue_t *)serial_rx_free,
-                      (serial_queue_t *)serial_rx_active,
-                      true,
-                      NUM_ENTRIES,
-                      NUM_ENTRIES);
-    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        int ret = serial_enqueue_free(&rxq,
-                               serial_rx_data + (i * BUFFER_SIZE),
-                               BUFFER_SIZE);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    serial_queue_init(&txq,
-                      (serial_queue_t *)serial_tx_free,
-                      (serial_queue_t *)serial_tx_active,
-                      true,
-                      NUM_ENTRIES,
-                      NUM_ENTRIES);
-    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = serial_enqueue_free(&txq,
-                               serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
-                               BUFFER_SIZE);
-        assert(ret == 0);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-        }
-    }
-
-    /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(&virtio_console,
-                                  VIRTIO_CONSOLE_BASE,
-                                  VIRTIO_CONSOLE_SIZE,
-                                  VIRTIO_CONSOLE_IRQ,
-                                  &rxq, &txq,
-                                  SERIAL_TX_CH);
-    assert(success);
-
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
     assert(success);
 
@@ -227,11 +158,6 @@ void notified(microkit_channel ch) {
     }
 
     switch (ch) {
-    case SERIAL_RX_CH:
-        /* We have received an event from the serial multiplexer, so we
-            * call the virtIO console handling */
-        virtio_console_handle_rx(&virtio_console);
-        break;
     case SND_CLIENT_CH:
         success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
         if (!success) {

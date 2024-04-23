@@ -13,7 +13,6 @@
 #include <sddf/util/util.h>
 #include <sddf/util/printf.h>
 
-#define CONFIG_BENCHMARK_TRACK_UTILISATION
 #define LOG_BUFFER_CAP 7
 
 /* Notification channels and TCB CAP offsets - ensure these align with .system file! */
@@ -29,14 +28,14 @@
 uintptr_t uart_base;
 uintptr_t cyclecounters_vaddr;
 
-ccnt_t counter_values[8];
-counter_bitfield_t benchmark_bf;
+static ccnt_t counter_values[8];
+static counter_bitfield_t benchmark_bf;
 
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-benchmark_track_kernel_entry_t *log_buffer;
+static benchmark_track_kernel_entry_t *log_buffer;
 #endif
 
-char *counter_names[] = {
+static char *counter_names[] = {
     "L1 i-cache misses",
     "L1 d-cache misses",
     "L1 i-tlb misses",
@@ -46,13 +45,16 @@ char *counter_names[] = {
 };
 
 #define PD_ID_COUNT 3
-int pd_ids[PD_ID_COUNT] = {
+static int pd_ids[PD_ID_COUNT] = {
     PD_CLIENT_ID,
     PD_VIRT_ID,
     PD_SND_DRV_ID
 };
 
-event_id_t benchmarking_events[] = {
+static uint64_t start_cycles; 
+static uint64_t start_ccount; 
+
+static event_id_t benchmarking_events[] = {
     SEL4BENCH_EVENT_CACHE_L1I_MISS,
     SEL4BENCH_EVENT_CACHE_L1D_MISS,
     SEL4BENCH_EVENT_TLB_L1I_MISS,
@@ -99,12 +101,12 @@ static void print_benchmark_details(uint64_t pd_id, uint64_t kernel_util, uint64
     if (pd_id == PD_TOTAL) sddf_printf("Total utilisation details: ");
     else sddf_printf("Utilisation details for PD: ");
     switch (pd_id) {
-        case PD_CLIENT_ID: sddf_printf("PD_CLIENT_ID"); break;
-        case PD_VIRT_ID: sddf_printf("PD_VIRT_ID"); break;
-        case PD_SND_DRV_ID: sddf_printf("PD_SND_DRV_ID"); break;
+    case PD_CLIENT_ID: sddf_printf("PD_CLIENT_ID"); break;
+    case PD_VIRT_ID: sddf_printf("PD_VIRT_ID"); break;
+    case PD_SND_DRV_ID: sddf_printf("PD_SND_DRV_ID"); break;
     }
     if (pd_id != PD_TOTAL) sddf_printf(" ( %llx)", pd_id);
-    sddf_printf("\n{\nKernelUtilisation:  %llx\nKernelEntries:  %llx\nNumberSchedules:  %llx\nTotalUtilisation:  %llx\n}\n", 
+    sddf_printf("\r\n{\r\nKernelUtilisation:  %llu\r\nKernelEntries:  %llu\r\nNumberSchedules:  %llu\r\nTotalUtilisation:  %llu\r\n}\r\n", 
             kernel_util, kernel_entries, number_schedules, total_util);
 }
 #endif
@@ -146,70 +148,85 @@ static inline void seL4_BenchmarkTrackDumpSummary(benchmark_track_kernel_entry_t
 
 void notified(microkit_channel ch)
 {
-    sddf_printf("BENCH NOTIFIED\n");
+    struct bench *bench = (void *)cyclecounters_vaddr;
+    uint64_t end_cycles, end_ccount;
+
     switch(ch) {
-        case START:
-            sddf_printf("Starting\n");
-            sel4bench_reset_counters();
-            sddf_printf("Reset counters\n");
-            THREAD_MEMORY_RELEASE();
-            sel4bench_start_counters(benchmark_bf);
-            sddf_printf("Started counters\n");
+    case START:
+        sddf_printf("Starting\n");
+        sel4bench_reset_counters();
+        THREAD_MEMORY_RELEASE();
+        sel4bench_start_counters(benchmark_bf);
 
-            #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-            microkit_benchmark_start();
-            sddf_printf("Tracking utilisation\n");
-            #endif
+        #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+        microkit_benchmark_start();
+        #endif
 
-            #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-            seL4_BenchmarkResetLog();
-            sddf_printf("Resetting log\n");
-            #endif
+        #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+        seL4_BenchmarkResetLog();
+        #endif
 
-            break;
-        case STOP:
-            sddf_printf("Stopping\n");
-            sel4bench_get_counters(benchmark_bf, &counter_values[0]);
-            sel4bench_stop_counters(benchmark_bf);
+        #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+        start_cycles = bench->ts;
+        start_ccount = bench->ccount;
+        #endif
 
-            sddf_printf("{\n");
-            for (int i = 0; i < ARRAY_SIZE(benchmarking_events); i++) {
-                sddf_printf("%s: %llX\n", counter_names[i], counter_values[i]);
-            }
-            sddf_printf("}\n");
+        break;
+    case STOP:
 
-            #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-            uint64_t total;
-            uint64_t kernel;
-            uint64_t entries;
-            uint64_t number_schedules;
+        #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+        end_cycles = bench->ts;
+        end_ccount = bench->ccount;
+        #endif
 
-            microkit_benchmark_stop(&total, &number_schedules, &kernel, &entries);
-            print_benchmark_details(PD_TOTAL, kernel, entries, number_schedules, total);
+        sel4bench_get_counters(benchmark_bf, &counter_values[0]);
+        sel4bench_stop_counters(benchmark_bf);
 
-            for (int i = 0; i < PD_ID_COUNT; i++) {
-                microkit_benchmark_stop_tcb(pd_ids[i], &total, &number_schedules, &kernel, &entries);
-                print_benchmark_details(pd_ids[i], kernel, entries, number_schedules, total);
-            }
+        // sddf_printf("Counter values: {\n");
+        // for (int i = 0; i < ARRAY_SIZE(benchmarking_events); i++) {
+        //     sddf_printf("%s: %llX\n", counter_names[i], counter_values[i]);
+        // }
+        // sddf_printf("}\n");
 
-            #endif
+        #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+        uint64_t total;
+        uint64_t kernel;
+        uint64_t entries;
+        uint64_t number_schedules;
 
-            #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-            entries = seL4_BenchmarkFinalizeLog();
-            sddf_printf("KernelEntries:  %llx\n", entries);
-            seL4_BenchmarkTrackDumpSummary(log_buffer, entries);
-            #endif
+        sddf_printf("Benchmark details\r\n");
 
-            break;
-        default:
-            sddf_printf("Bench thread notified on unexpected channel\n");
+        microkit_benchmark_stop(&total, &number_schedules, &kernel, &entries);
+        print_benchmark_details(PD_TOTAL, kernel, entries, number_schedules, total);
+
+        // for (int i = 0; i < PD_ID_COUNT; i++) {
+        //     microkit_benchmark_stop_tcb(pd_ids[i], &total, &number_schedules, &kernel, &entries);
+        //     print_benchmark_details(pd_ids[i], kernel, entries, number_schedules, total);
+        // }
+
+        // sddf_printf("s_cy %20lu\r\n", start_cycles);
+        // sddf_printf("e_cy %20lu\r\n", end_cycles);
+        // sddf_printf("s_ccount %20lu\r\n", start_ccount);
+        // sddf_printf("e_ccount %20lu\r\n", end_ccount);
+        sddf_printf("total %16lu\r\n", end_cycles - start_cycles);
+        sddf_printf("idle  %16lu\r\n", end_ccount - start_ccount);
+
+        #endif
+
+        #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+        entries = seL4_BenchmarkFinalizeLog();
+        sddf_printf("KernelEntries:  %llx\n", entries);
+        seL4_BenchmarkTrackDumpSummary(log_buffer, entries);
+        #endif
+
+        break;
+    default:
+        sddf_printf("Bench thread notified on unexpected channel\n");
     }
-    sddf_printf("Finish notify\n");
 }
 
 void init(void)
 {
-    sddf_printf("INIT BENCH\n");
     sel4bench_init();
     seL4_Word n_counters = sel4bench_get_num_counters();
 
@@ -226,6 +243,7 @@ void init(void)
     benchmark_bf = mask;
 
     /* Notify the idle thread that the sel4bench library is initialised. */
+    sddf_printf("STARTING IDLE");
     microkit_notify(INIT);
 
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
