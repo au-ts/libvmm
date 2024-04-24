@@ -6,6 +6,7 @@
 #include <microkit.h>
 #include "util.h"
 #include "fault.h"
+#include "virq.h"
 #include "virtio/config.h"
 #include "virtio/mmio.h"
 #include "virtio/virtq.h"
@@ -315,4 +316,32 @@ bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
     } else {
         return handle_virtio_mmio_reg_write(dev, vcpu_id, offset, fsr, regs);
     }
+}
+
+static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
+
+// Assumes device struct has been populated and virq has been initialised
+bool virtio_mmio_register_device(virtio_device_t *dev,
+                                 uintptr_t region_base,
+                                 uintptr_t region_size,
+                                 size_t virq)
+{
+    bool success;
+    success = fault_register_vm_exception_handler(region_base,
+                                                  region_size,
+                                                  &virtio_mmio_fault_handle,
+                                                  dev);
+    if (!success) {
+        LOG_VMM_ERR("Could not register virtual memory fault handler for "
+                    "virtIO region [0x%lx..0x%lx)\n", region_base, region_base + region_size);
+        return false;
+    }
+
+    /* Register the virtual IRQ that will be used to communicate from the device
+     * to the guest. This assumes that the interrupt controller is already setup. */
+    // @ivanv: we should check that (on AArch64) the virq is an SPI.
+    success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
+    assert(success);
+
+    return success;
 }

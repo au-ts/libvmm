@@ -1,10 +1,9 @@
 #include "sound.h"
 #include "config.h"
 #include "microkit.h"
-#include "virtio/mmio.h"
 #include "virq.h"
+#include "virtio/mmio.h"
 #include "virtio/virtq.h"
-#include "util/buffer_queue.h"
 #include <sddf/sound/queue.h>
 
 #define DEBUG_SOUND
@@ -21,134 +20,21 @@
 #define EVENTQ 1
 #define TXQ 2
 #define RXQ 3
-#define BUFFER_QUEUE_SIZE SOUND_NUM_BUFFERS
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-
-static struct virtio_snd_config snd_config;
-
-typedef struct msg_handle {
-    uint16_t desc_head;
-    uint16_t ref_count;
-    uint16_t status;
-    uint16_t virtq_idx;
-    // RX only
-    uint32_t bytes_received;
-} msg_handle_t;
-
-/* Mapping for command ID and its virtio descriptor */
-// @alexbr: currently commands and PCM frames are responded to synchronously, so
-// this is a bit overkill. Could change to a simple circular queue.
-typedef struct virtio_snd_msg_store {
-    // Index is command ID, maps to virtio descriptor head
-    msg_handle_t sent_msgs[SOUND_NUM_BUFFERS]; 
-    // Index is free message ID, maps to next free command ID
-    uint32_t freelist[SOUND_NUM_BUFFERS];
-    uint32_t head;
-    uint32_t tail;
-    uint32_t num_free;
-} msg_store_t;
-
-static msg_store_t messages;
-static buffer_queue_t free_buffers;
-static buffer_t buffer_data[BUFFER_QUEUE_SIZE];
-
-
-static sound_state_t *get_state(struct virtio_device *dev)
+static inline struct virtio_snd_device *device_state(struct virtio_device *dev)
 {
-    // @alexbr: make this fit better into handlers struct
-    return (sound_state_t *)dev->sddf_handlers->queue_h;
+    return (struct virtio_snd_device *)dev->device_data;
 }
 
-static void msg_store_init(msg_store_t *msg_store, unsigned int num_buffers)
+static void fetch_buffers(struct virtio_snd_device *state)
 {
-    msg_store->head = 0;
-    msg_store->tail = num_buffers - 1;
-    msg_store->num_free = num_buffers;
-    for (unsigned int i = 0; i < num_buffers - 1; i++) {
-        msg_store->freelist[i] = i + 1;
-    }
-    msg_store->freelist[num_buffers - 1] = -1;
-}
-
-/** Check if the command store is full. */
-static bool msg_store_full(msg_store_t *msg_store)
-{
-    return msg_store->num_free == 0;
-}
-
-/**
- * Allocate a command store slot for a new virtio command.
- * 
- * @param desc virtio descriptor to store in a command store slot 
- * @param id pointer to command ID allocated
- * @return 0 on success, -1 on failure
- */
-static int msg_store_allocate(msg_store_t *msg_store, msg_handle_t handle, uint32_t *id)
-{
-    if (msg_store_full(msg_store)) {
-        return -1;
-    }
-
-    // Store descriptor into head of command store
-    msg_store->sent_msgs[msg_store->head] = handle;
-    *id = msg_store->head;
-
-    // Update head to next free command store slot
-    msg_store->head = msg_store->freelist[msg_store->head];
-
-    // Update number of free command store slots
-    msg_store->num_free--;
-    
-    return 0;
-}
-
-static msg_handle_t *msg_store_get(msg_store_t *msg_store, uint32_t id)
-{
-    return &msg_store->sent_msgs[id];
-}
-
-/**
- * Retrieve and free a command store slot.
- * 
- * @param id command ID to be retrieved
- * @return virtio descriptor stored in slot
- */
-static void msg_store_remove(msg_store_t *msg_store, uint32_t id)
-{
-    assert(msg_store->num_free < SOUND_NUM_BUFFERS);
-
-    if (msg_store->num_free == 0) {
-        // Head points to stale index, so restore it
-        msg_store->head = id;
-    }
-
-    msg_store->freelist[msg_store->tail] = id;
-    msg_store->tail = id;
-
-    msg_store->num_free++;
-}
-
-static int msg_store_size(msg_store_t *msg_store)
-{
-    return SOUND_NUM_BUFFERS - msg_store->num_free;
-}
-
-static void virtio_snd_config_init(void)
-{
-    snd_config.jacks = 0;
-    snd_config.streams = 0;
-    snd_config.chmaps = 0;
-}
-
-static void fetch_buffers(struct virtio_device *dev)
-{
-    sound_state_t *state = get_state(dev);
-
     sound_pcm_t pcm;
     while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
-        buffer_queue_enqueue(&free_buffers, pcm.addr, pcm.len);
+        buffer_t *buffer = queue_enqueue_raw(&state->free_buffers);
+        buffer->addr = pcm.addr;
+        buffer->len = pcm.len;
     }
 }
 
@@ -206,27 +92,18 @@ static int virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32
 static int virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     // @alexbr: duplicated from block. can we abstract this?
-    uintptr_t config_base_addr = (uintptr_t)&snd_config;
+    struct virtio_snd_device *state = device_state(dev);
+    uintptr_t config_base_addr = (uintptr_t)&state->config;
     uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
 
-    // LOG_SOUND("get device config with base_addr 0x%x and field_address 0x%x has value %d\n", config_base_addr, config_field_addr, *ret_val);
     return 1;
 }
 
 static int virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
-    // @alexbr: we should be checking that the config update is valid
-    // e.g., why are they allowed to change number of streams?
     LOG_SOUND_ERR("Not allowed to change sound config.");
-
-    // uintptr_t config_base_addr = (uintptr_t)&snd_config;
-    // uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
-    // uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
-    // *config_field_addr = val;
-    // LOG_SOUND("set device config with base_addr 0x%x and field_address 0x%x with value %d\n", config_base_addr, config_field_addr, val);
-
     return 0;
 }
 
@@ -374,7 +251,7 @@ static int handle_pcm_info(struct virtio_device *dev,
         return -SOUND_S_BAD_MSG;
     }
 
-    sound_state_t *state = get_state(dev);
+    struct virtio_snd_device *state = device_state(dev);
     sound_shared_state_t *shared_state = state->shared_state;
 
     memset(responses, 0, sizeof(*responses) * response_count);
@@ -396,31 +273,32 @@ static int handle_pcm_set_params(struct virtio_device *dev,
                                  uint16_t desc_head,
                                  struct virtio_snd_pcm_set_params *set_params)
 {
-    uint32_t id;
-    msg_handle_t handle;
-    handle.desc_head = desc_head;
-    handle.ref_count = 1;
-    handle.status = SOUND_S_OK;
-    handle.virtq_idx = CONTROLQ;
-    handle.bytes_received = 0;
+    struct virtio_snd_device *state = device_state(dev);
 
-    int err = msg_store_allocate(&messages, handle, &id);
-    if (err != 0) {
-        LOG_SOUND_ERR("Failed to allocate command store slot\n");
+    virtio_snd_request_t *req = queue_enqueue_raw(&state->cmd_requests);
+    if (req == NULL) {
+        LOG_SOUND_ERR("Failed to allocate CMD request\n");
         return -SOUND_S_IO_ERR;
     }
 
+    req->cookie = state->curr_cookie++;
+    req->desc_head = desc_head;
+    req->ref_count = 1;
+    req->status = SOUND_S_OK;
+    req->virtq_idx = CONTROLQ;
+    req->bytes_received = 0;
+
     sound_cmd_t cmd;
     cmd.code = SOUND_CMD_TAKE;
-    cmd.cookie = id;
+    cmd.cookie = req->cookie;
     cmd.stream_id = set_params->hdr.stream_id;
     cmd.set_params.channels = set_params->channels;
     cmd.set_params.format = set_params->format;
     cmd.set_params.rate = set_params->rate;
 
-    if (sound_enqueue_cmd(get_state(dev)->queues.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(device_state(dev)->queues.cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        msg_store_remove(&messages, id);
+        queue_dequeue_back(&state->cmd_requests);
         return -SOUND_S_IO_ERR;
     }
 
@@ -432,28 +310,29 @@ static int handle_basic_cmd(struct virtio_device *dev,
                             uint32_t stream_id,
                             sound_cmd_code_t code)
 {
-    uint32_t id;
-    msg_handle_t handle;
-    handle.desc_head = desc_head;
-    handle.ref_count = 1;
-    handle.status = SOUND_S_OK;
-    handle.virtq_idx = CONTROLQ;
-    handle.bytes_received = 0;
+    struct virtio_snd_device *state = device_state(dev);
 
-    int err = msg_store_allocate(&messages, handle, &id);
-    if (err != 0) {
-        LOG_SOUND_ERR("Failed to allocate command store slot\n");
+    virtio_snd_request_t *req = queue_enqueue_raw(&state->cmd_requests);
+    if (req == NULL) {
+        LOG_SOUND_ERR("Failed to allocate CMD request\n");
         return -SOUND_S_IO_ERR;
     }
 
+    req->cookie = state->curr_cookie++;
+    req->desc_head = desc_head;
+    req->ref_count = 1;
+    req->status = SOUND_S_OK;
+    req->virtq_idx = CONTROLQ;
+    req->bytes_received = 0;
+
     sound_cmd_t cmd;
     cmd.code = code;
-    cmd.cookie = id;
+    cmd.cookie = req->cookie;
     cmd.stream_id = stream_id;
 
-    if (sound_enqueue_cmd(get_state(dev)->queues.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(device_state(dev)->queues.cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        msg_store_remove(&messages, id);
+        queue_dequeue_back(&state->cmd_requests);
         return -SOUND_S_IO_ERR;
     }
 
@@ -559,16 +438,18 @@ static void handle_control_msg(struct virtio_device *dev,
     *respond = immediate;
 }
 
-static bool perform_xfer(struct virtq *virtq,
+static bool perform_xfer(struct virtio_device *dev,
+                         struct virtq *virtq,
                          struct virtq_desc *desc,
-                         sound_pcm_queue_t *req_ring,
                          bool transmit,
                          int stream_id,
-                         int msg_id,
+                         int cookie,
                          int *sent)
 {
+    struct virtio_snd_device *state = device_state(dev);
+
     buffer_t pcm_buffer;
-    if (!buffer_queue_dequeue(&free_buffers, &pcm_buffer)) {
+    if (!queue_dequeue_front(&state->free_buffers, &pcm_buffer)) {
         LOG_SOUND_ERR("No free buffers\n");
         return false;
     }
@@ -609,18 +490,18 @@ static bool perform_xfer(struct virtq *virtq,
                 pcm.addr = pcm_buffer.addr;
                 pcm.len = pcm_transmitted;
                 pcm.stream_id = stream_id;
-                pcm.cookie = msg_id;
+                pcm.cookie = cookie;
                 pcm.status = 0;
                 pcm.latency_bytes = 0;
 
-                if (sound_enqueue_pcm(req_ring, &pcm) != 0) {
+                if (sound_enqueue_pcm(state->queues.pcm_req, &pcm) != 0) {
                     LOG_SOUND_ERR("Failed to enqueue to pcm request\n");
                     return false;
                 }
 
                 (*sent)++;
 
-                if (!buffer_queue_dequeue(&free_buffers, &pcm_buffer)) {
+                if (!queue_dequeue_front(&state->free_buffers, &pcm_buffer)) {
                     LOG_SOUND_ERR("Failed to dequeue free buffer\n");
                     return false;
                 }
@@ -637,11 +518,11 @@ static bool perform_xfer(struct virtq *virtq,
         pcm.addr = pcm_buffer.addr;
         pcm.len = pcm_transmitted;
         pcm.stream_id = stream_id;
-        pcm.cookie = msg_id;
+        pcm.cookie = cookie;
         pcm.status = 0;
         pcm.latency_bytes = 0;
 
-        if (sound_enqueue_pcm(req_ring, &pcm) != 0) {
+        if (sound_enqueue_pcm(state->queues.pcm_req, &pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue to tx used\n");
             return false;
         }
@@ -658,35 +539,23 @@ static void handle_xfer(struct virtio_device *dev,
 {
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
     struct virtio_snd_pcm_xfer *hdr = (void *)req_desc->addr;
-    sound_pcm_queue_t *req_ring = get_state(dev)->queues.pcm_req;
+
+    struct virtio_snd_device *state = device_state(dev);
 
     if ((req_desc->flags & VIRTQ_DESC_F_NEXT) == 0) {
         LOG_SOUND_ERR("XFER message missing data\n");
         return;
     }
 
-    uint32_t msg_id;
-    msg_handle_t handle;
-    handle.desc_head = desc_head;
-    handle.ref_count = 0;
-    handle.status = SOUND_S_OK;
-    handle.virtq_idx = transmit ? TXQ : RXQ;
-    handle.bytes_received = 0;
-
-    int err = msg_store_allocate(&messages, handle, &msg_id);
-    if (err != 0) {
-        LOG_SOUND_ERR("Failed to allocate command store slot\n");
-        return;
-    }
-
-    msg_handle_t *msg = msg_store_get(&messages, msg_id);
+    uint32_t cookie = state->curr_cookie++;
 
     struct virtq_desc *desc = &virtq->desc[req_desc->next];
     int sent = 0;
-    bool success = perform_xfer(virtq, desc, req_ring, transmit,
-                                hdr->stream_id, msg_id, &sent);
+    bool success = perform_xfer(dev, virtq, desc, transmit,
+                                hdr->stream_id, cookie, &sent);
 
     if (sent == 0) {
+        // If we sent zero, respond immediately.
         for (;
             desc->flags & VIRTQ_DESC_F_NEXT;
             desc = &virtq->desc[desc->next]);
@@ -698,20 +567,27 @@ static void handle_xfer(struct virtio_device *dev,
 
         virtq_enqueue_used(virtq, desc_head, sizeof(uint32_t));
 
-        msg_store_remove(&messages, msg_id);
-
         *respond = true;
         return;
-    } else {
-        assert(sent > 0);
-        *notify_driver = true;
     }
 
-    msg->ref_count = sent;
+    virtio_snd_request_t *req = queue_enqueue_raw(&state->pcm_requests);
+    if (req == NULL) {
+        LOG_SOUND_ERR("Failed to allocate PCM request\n");
+        return;
+    }
 
+    req->cookie = cookie;
+    req->desc_head = desc_head;
+    req->ref_count = sent;
+    req->status = SOUND_S_OK;
+    req->virtq_idx = transmit ? TXQ : RXQ;
+    req->bytes_received = 0;
     if (!success) {
-        msg->status = VIRTIO_SOUND_S_IO_ERR;
+        req->status = VIRTIO_SOUND_S_IO_ERR;
     }
+
+    *notify_driver = true;
 }
 
 static void handle_virtq(struct virtio_device *dev,
@@ -744,6 +620,8 @@ static void handle_virtq(struct virtio_device *dev,
 
 static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
 {
+    struct virtio_snd_device *state = device_state(dev);
+
     if (dev->data.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
         // @alexbr: handle error appropriately
         LOG_SOUND_ERR("Invalid queue\n");
@@ -756,7 +634,7 @@ static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
     handle_virtq(dev, dev->data.QueueNotify, &notify_driver, &respond);
 
     if (notify_driver) {
-        microkit_notify(dev->sddf_handlers->ch);
+        microkit_notify(state->server_ch);
     }
     if (respond) {
         virtio_snd_respond(dev);
@@ -774,29 +652,57 @@ static virtio_device_funs_t functions = {
     .queue_notify = virtio_snd_mmio_queue_notify,
 };
 
-void virtio_snd_init(struct virtio_device *dev,
-                    struct virtio_queue_handler *vqs, size_t num_vqs,
-                    size_t virq,
-                    sddf_handler_t *sddf_handlers)
+bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
+                     uintptr_t region_base,
+                     uintptr_t region_size,
+                     size_t virq,
+                     sound_shared_state_t *shared_state,
+                     sound_queues_t *queues,
+                     int server_ch)
 {
+    struct virtio_device *dev = &sound_dev->virtio_device;
+
     dev->data.DeviceID = DEVICE_ID_VIRTIO_SOUND;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = sound_dev->vqs;
+    dev->num_vqs = VIRTIO_SND_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_handlers = sddf_handlers;
-    
-    virtio_snd_config_init();
-    msg_store_init(&messages, SOUND_NUM_BUFFERS);
+    dev->device_data = sound_dev;
 
-    buffer_queue_create(&free_buffers, buffer_data, BUFFER_QUEUE_SIZE);
-    fetch_buffers(dev);
+    sound_dev->config.jacks = 0;
+    sound_dev->config.streams = 0;
+    sound_dev->config.chmaps = 0;
+
+    // Queue of virtio_snd_request_t
+    queue_init(&sound_dev->cmd_requests,
+               sizeof(virtio_snd_request_t),
+               &sound_dev->cmd_requests_data,
+               VIRTIO_SND_MAX_CMD_REQUESTS);
+    // Queue of virtio_snd_request_t
+    queue_init(&sound_dev->pcm_requests,
+               sizeof(virtio_snd_request_t),
+               &sound_dev->pcm_requests_data,
+               VIRTIO_SND_MAX_PCM_REQUESTS);
+    // Queue of buffer_t structs
+    queue_init(&sound_dev->free_buffers,
+               sizeof(buffer_t),
+               &sound_dev->free_buffers_data,
+               SOUND_NUM_BUFFERS);
+
+    sound_dev->curr_cookie = 0;
+    sound_dev->shared_state = shared_state;
+    sound_dev->queues = *queues;
+    sound_dev->server_ch = server_ch;
+
+    fetch_buffers(sound_dev);
+
+    return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
 static unsigned copy_rx_data(struct virtq *virtq,
                          struct virtq_desc *desc,
-                         msg_handle_t *msg,
+                         virtio_snd_request_t *req,
                          void *pcm, unsigned pcm_len)
 {
     uint32_t desc_position = 0;
@@ -807,7 +713,7 @@ static unsigned copy_rx_data(struct virtq *virtq,
     {
         if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
             LOG_SOUND_ERR("Expected VIRTQ_DESC_F_WRITE on RX buffer\n");
-            msg->status = SOUND_S_BAD_MSG;
+            req->status = SOUND_S_BAD_MSG;
             continue;
         }
 
@@ -815,15 +721,15 @@ static unsigned copy_rx_data(struct virtq *virtq,
             break;
         }
 
-        if (desc_position + desc->len > msg->bytes_received) {
-            assert(desc_position <= msg->bytes_received);
+        if (desc_position + desc->len > req->bytes_received) {
+            assert(desc_position <= req->bytes_received);
 
-            uint32_t offset = msg->bytes_received - desc_position;
+            uint32_t offset = req->bytes_received - desc_position;
             uint32_t to_write = MIN(pcm_len, desc->len - offset);
 
             memcpy((void *)desc->addr + offset, pcm, to_write);
             pcm += to_write;
-            msg->bytes_received += to_write;
+            req->bytes_received += to_write;
             pcm_len -= to_write;
         }
         
@@ -831,56 +737,56 @@ static unsigned copy_rx_data(struct virtq *virtq,
     }
 
     // Sanity check when RX request is complete.
-    if (msg->ref_count == 0) {
+    if (req->ref_count == 0) {
         if (pcm_len != 0) {
             LOG_SOUND_ERR("Received too much PCM for RX\n");
-            msg->status = SOUND_S_BAD_MSG;
+            req->status = SOUND_S_BAD_MSG;
         }
-        if (desc_position != msg->bytes_received) {
+        if (desc_position != req->bytes_received) {
             LOG_SOUND_ERR(
                 "Did not receive enough PCM for RX: desc_position %u, bytes_received %u\n",
-                desc_position, msg->bytes_received);
+                desc_position, req->bytes_received);
 
-            msg->status = SOUND_S_BAD_MSG;
+            req->status = SOUND_S_BAD_MSG;
         }
         if (desc->flags & VIRTQ_DESC_F_NEXT) {
             LOG_SOUND_ERR("Desc not fully advanced\n");
-            msg->status = SOUND_S_BAD_MSG;
+            req->status = SOUND_S_BAD_MSG;
         }
         if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
             LOG_SOUND_ERR("Expected VIRTQ_DESC_F_WRITE on status buffer\n");
-            msg->status = SOUND_S_BAD_MSG;
+            req->status = SOUND_S_BAD_MSG;
         }
     }
     return desc_position;
 }
 
-static bool respond_to_message(msg_handle_t *msg,
+static bool respond_to_request(virtio_snd_request_t *req,
                                struct virtio_device *dev,
                                void *pcm, unsigned pcm_len,
                                void *response, unsigned response_len)
 {
-    if (msg->ref_count == 0) {
+    if (req->ref_count == 0) {
         LOG_SOUND_ERR("Message ref count is 0 (too many responses)\n");
         return false;
     }
 
-    uint16_t desc_head = msg->desc_head;
+    uint16_t desc_head = req->desc_head;
 
-    assert(msg->virtq_idx < VIRTIO_SND_NUM_VIRTQ);
-    struct virtq *virtq = &dev->vqs[msg->virtq_idx].virtq;
+    assert(req->virtq_idx < VIRTIO_SND_NUM_VIRTQ);
+    struct virtq *virtq = &dev->vqs[req->virtq_idx].virtq;
 
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
     struct virtq_desc *res_desc = &virtq->desc[req_desc->next];
 
     unsigned used;
-    if (msg->virtq_idx == RXQ) {
-        used = copy_rx_data(virtq, res_desc, msg, pcm, pcm_len);
+    if (req->virtq_idx == RXQ) {
+        used = copy_rx_data(virtq, res_desc, req, pcm, pcm_len);
     } else {
         used = 0;
     }
 
-    if (--msg->ref_count > 0)
+    if (--req->ref_count > 0)
         return false;
 
     struct virtq_desc *status_desc = res_desc;
@@ -900,29 +806,33 @@ static bool respond_to_message(msg_handle_t *msg,
     return true;
 }
 
-void virtio_snd_notified(struct virtio_device *dev)
+void virtio_snd_notified(struct virtio_snd_device *state)
 {
-    sound_state_t *state = get_state(dev);
+    struct virtio_device *dev = &state->virtio_device;
     bool respond = false;
 
-    // LOG_SOUND("virtIO sound device notified by server\n");
-
-    snd_config.streams = state->shared_state->streams;
+    state->config.streams = state->shared_state->streams;
 
     sound_cmd_t cmd;
     while (sound_dequeue_cmd(state->queues.cmd_res, &cmd) == 0) {
 
-        msg_handle_t *msg = msg_store_get(&messages, cmd.cookie);
+        virtio_snd_request_t *req = queue_front(&state->cmd_requests);
+        if (req == NULL) {
+            LOG_SOUND_ERR("Received unexpected CMD response");
+        }
+        if (req->cookie != cmd.cookie) {
+            LOG_SOUND_ERR("Received out of order CMD response");
+        }
         if (cmd.status != SOUND_S_OK) {
-            msg->status = cmd.status;
+            req->status = cmd.status;
         }
         
-        uint32_t response = virtio_status_from_sddf(msg->status);
+        uint32_t response = virtio_status_from_sddf(req->status);
 
-        bool responded = respond_to_message(msg, dev, NULL, 0,
+        bool responded = respond_to_request(req, dev, NULL, 0,
                                             &response, sizeof(response));
         if (responded) {
-            msg_store_remove(&messages, cmd.cookie);
+            queue_dequeue(&state->cmd_requests);
             respond = true;
         }
     }
@@ -930,24 +840,32 @@ void virtio_snd_notified(struct virtio_device *dev)
     sound_pcm_t pcm;
     while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
 
-        msg_handle_t *msg = msg_store_get(&messages, pcm.cookie);
+        virtio_snd_request_t *req = queue_front(&state->pcm_requests);
+        if (req == NULL) {
+            LOG_SOUND_ERR("Received unexpected PCM response");
+        }
+        if (req->cookie != pcm.cookie) {
+            LOG_SOUND_ERR("Received out of order PCM response");
+        }
         if (pcm.status != SOUND_S_OK) {
-            msg->status = pcm.status;
+            req->status = pcm.status;
         }
 
         struct virtio_snd_pcm_status response;
-        response.status = virtio_status_from_sddf(msg->status);
+        response.status = virtio_status_from_sddf(req->status);
         response.latency_bytes = pcm.latency_bytes;
 
-        bool responded = respond_to_message(msg, dev,
+        bool responded = respond_to_request(req, dev,
                                             (void *)pcm.addr, pcm.len,
                                             &response, sizeof(response));
         if (responded) {
-            msg_store_remove(&messages, pcm.cookie);
+            queue_dequeue(&state->pcm_requests);
             respond = true;
         }
 
-        buffer_queue_enqueue(&free_buffers, pcm.addr, pcm.len);
+        buffer_t *buffer = queue_enqueue_raw(&state->free_buffers);
+        buffer->addr = pcm.addr;
+        buffer->len = pcm.len;
     }
 
     if (respond) {

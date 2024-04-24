@@ -14,7 +14,6 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
-#include "virtio/virtio.h"
 #include "virtio/console.h"
 #include "virtio/sound.h"
 #include <sddf/serial/queue.h>
@@ -64,24 +63,16 @@ uintptr_t serial_tx_active;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-static serial_queue_handle_t serial_rx_h;
-static serial_queue_handle_t serial_tx_h;
-static sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
-
 uintptr_t sound_cmd_req;
 uintptr_t sound_cmd_res;
 uintptr_t sound_pcm_req;
 uintptr_t sound_pcm_res;
 
 uintptr_t sound_data;
-
 uintptr_t sound_shared_state;
 
-static sddf_handler_t sound_handler;
-static sound_state_t sound_state;
-
-static struct virtio_device virtio_console;
-static struct virtio_device virtio_sound;
+static struct virtio_console_device virtio_console;
+static struct virtio_snd_device virtio_sound;
 
 static bool guest_started = false;
 uintptr_t kernel_pc = 0;
@@ -115,26 +106,16 @@ void init(void) {
         return;
     }
 
-    /* virtIO console */
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h = &serial_rx_h;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].config = NULL;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data = (uintptr_t)serial_rx_data;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].ch = SERIAL_MUX_RX_CH;
-    
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h = &serial_tx_h;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].config = NULL;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data = (uintptr_t)serial_tx_data;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].ch = SERIAL_MUX_TX_CH;
-    
     /* Initialise our sDDF ring buffers for the serial device */
-    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-        (serial_queue_t *)serial_rx_free,
-        (serial_queue_t *)serial_rx_active,
-        true,
-        NUM_ENTRIES,
-        NUM_ENTRIES);
+    serial_queue_handle_t rxq, txq;
+    serial_queue_init(&rxq,
+                      (serial_queue_t *)serial_rx_free,
+                      (serial_queue_t *)serial_rx_active,
+                      true,
+                      NUM_ENTRIES,
+                      NUM_ENTRIES);
     for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
+        int ret = serial_enqueue_free(&rxq,
                                serial_rx_data + (i * BUFFER_SIZE),
                                BUFFER_SIZE);
         if (ret != 0) {
@@ -142,15 +123,15 @@ void init(void) {
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-            (serial_queue_t *)serial_tx_free,
-            (serial_queue_t *)serial_tx_active,
-            true,
-            NUM_ENTRIES,
-            NUM_ENTRIES);
+    serial_queue_init(&txq,
+                      (serial_queue_t *)serial_tx_free,
+                      (serial_queue_t *)serial_tx_active,
+                      true,
+                      NUM_ENTRIES,
+                      NUM_ENTRIES);
     for (int i = 0; i < NUM_ENTRIES - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
+        int ret = serial_enqueue_free(&txq,
                                serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
                                BUFFER_SIZE);
         assert(ret == 0);
@@ -161,8 +142,12 @@ void init(void) {
     }
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE,
-                                      VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
+    success = virtio_mmio_console_init(&virtio_console,
+                                  VIRTIO_CONSOLE_BASE,
+                                  VIRTIO_CONSOLE_SIZE,
+                                  VIRTIO_CONSOLE_IRQ,
+                                  &rxq, &txq,
+                                  SERIAL_MUX_TX_CH);
     assert(success);
 
     assert(sound_cmd_req);
@@ -171,14 +156,13 @@ void init(void) {
     assert(sound_pcm_res);
     assert(sound_data);
 
-    sound_state.shared_state = (sound_shared_state_t *)sound_shared_state;
-    sound_state.queues = (sound_queues_t){
-        .cmd_req = (void *)sound_cmd_req,
-        .cmd_res = (void *)sound_cmd_res,
-        .pcm_req = (void *)sound_pcm_req,
-        .pcm_res = (void *)sound_pcm_res,
-    };
-    sound_queues_init_default(&sound_state.queues);
+    sound_queues_t sound_queues;
+    sound_queues.cmd_req = (void *)sound_cmd_req;
+    sound_queues.cmd_res = (void *)sound_cmd_res;
+    sound_queues.pcm_req = (void *)sound_pcm_req;
+    sound_queues.pcm_res = (void *)sound_pcm_res;
+
+    sound_queues_init_default(&sound_queues);
 
     // @alexbr: why -1?
     for (int i = 0; i < SOUND_NUM_BUFFERS - 1; i++) {
@@ -187,18 +171,17 @@ void init(void) {
         pcm.len = SOUND_PCM_BUFFER_SIZE;
 
         pcm.addr = sound_data + (i * SOUND_PCM_BUFFER_SIZE);
-        int ret = sound_enqueue_pcm(sound_state.queues.pcm_res, &pcm);
+        int ret = sound_enqueue_pcm(sound_queues.pcm_res, &pcm);
         assert(ret == 0);
     }
 
-    sound_handler.queue_h = &sound_state;
-    sound_handler.config = NULL;
-    sound_handler.data = 0;
-    sound_handler.ch = SOUND_DRIVER_CH;
-
-    success = virtio_mmio_device_init(&virtio_sound, SOUND,
-                                      VIRTIO_SOUND_BASE, VIRTIO_SOUND_SIZE,
-                                      VIRTIO_SOUND_IRQ, &sound_handler);
+    success = virtio_mmio_snd_init(&virtio_sound,
+                              VIRTIO_SOUND_BASE,
+                              VIRTIO_SOUND_SIZE,
+                              VIRTIO_SOUND_IRQ,
+                              (void *)sound_shared_state,
+                              &sound_queues,
+                              SOUND_DRIVER_CH);
     assert(success);
     
     /* Don't start the guest until driver VM is ready. */
@@ -207,7 +190,7 @@ void init(void) {
 void notified(microkit_channel ch) {
     switch (ch) {
         case SERIAL_MUX_RX_CH: {
-            /* We have received an event from the serial multipelxor, so we
+            /* We have received an event from the serial multiplexer, so we
              * call the virtIO console handling */
             virtio_console_handle_rx(&virtio_console);
             break;

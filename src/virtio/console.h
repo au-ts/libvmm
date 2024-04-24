@@ -36,6 +36,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sddf/serial/queue.h>
 #include "virtio/mmio.h"
 
 #define RX_QUEUE 0
@@ -88,13 +89,20 @@ struct virtio_console_control {
 #define VIRTIO_CONSOLE_PORT_OPEN    6
 #define VIRTIO_CONSOLE_PORT_NAME    7
 
-/* Backend implementation */
-#define SDDF_SERIAL_NUM_HANDLES 2
-#define SDDF_SERIAL_RX_HANDLE 0
-#define SDDF_SERIAL_TX_HANDLE 1
+struct virtio_console_device {
+    struct virtio_device virtio_device;
+    struct virtio_queue_handler vqs[VIRTIO_CONSOLE_NUM_VIRTQ];
+    serial_queue_handle_t rxq;
+    serial_queue_handle_t txq;
+    int tx_ch;
+};
 
-void virtio_console_init(struct virtio_device *dev,
-                         struct virtio_queue_handler *vqs, size_t num_vqs,
+bool virtio_mmio_console_init(struct virtio_console_device *console,
+                         uintptr_t region_base,
+                         uintptr_t region_size,
                          size_t virq,
-                         sddf_handler_t *sddf_handlers);
-int virtio_console_handle_rx(struct virtio_device *dev);
+                         serial_queue_handle_t *rxq,
+                         serial_queue_handle_t *txq,
+                         int tx_ch);
+
+int virtio_console_handle_rx(struct virtio_console_device *console);
