@@ -307,13 +307,13 @@ $(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
+	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=1 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
+	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=1 $< -o $@
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
