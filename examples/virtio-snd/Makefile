@@ -129,7 +129,6 @@ VMM_OBJS := printf.o \
 			fault.o \
 			util.o \
 			bitarray.o \
-			buffer_queue.o \
 			fsmem.o \
 			datastore.o \
 			vgic.o \
@@ -140,21 +139,17 @@ VMM_OBJS := printf.o \
 CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					client_images.o \
 					client_vmm.o \
-					virtio.o \
 					console.o \
-					block.o \
 					sound.o \
 					mmio.o
+# block.o
 
 SOUND_VIRT_OBJS := sound_virt.o
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
 						snd_driver_vmm.o \
-						virtio.o \
 						console.o \
-						block.o \
-						sound.o \
 						mmio.o
 
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o

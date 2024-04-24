@@ -33,7 +33,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <sddf/sound/queue.h>
 #include "virtio/mmio.h"
+#include "util/queue.h"
+#include "util/buffer.h"
 
 #define VIRTIO_SND_NUM_VIRTQ 4
 
@@ -282,10 +285,49 @@ struct virtio_snd_chmap_info {
     uint8_t positions[VIRTIO_SND_CHMAP_MAX_SIZE];
 };
 
+typedef struct virtio_snd_request {
+    uint32_t cookie;
+    uint16_t desc_head;
+    uint16_t ref_count;
+    uint16_t status;
+    uint16_t virtq_idx;
+    // RX only
+    uint32_t bytes_received;
+} virtio_snd_request_t;
 
-void virtio_snd_init(struct virtio_device *dev,
-                    struct virtio_queue_handler *vqs, size_t num_vqs,
-                    size_t virq,
-                    sddf_handler_t *sddf_handlers);
+#define VIRTIO_SND_MAX_CMD_REQUESTS 6
+#define VIRTIO_SND_MAX_PCM_REQUESTS 32
 
-void virtio_snd_notified(struct virtio_device *dev);
+struct virtio_snd_device {
+    struct virtio_device virtio_device;
+
+    struct virtio_snd_config config;
+    struct virtio_queue_handler vqs[VIRTIO_SND_NUM_VIRTQ];
+    // Only one command can be in-flight at a time.
+    // Queue of virtio_snd_request_t
+    // PCM requests must be responded to in order.
+    queue_t cmd_requests;
+    buffer_t cmd_requests_data[VIRTIO_SND_MAX_CMD_REQUESTS];
+    // Queue of virtio_snd_request_t
+    // PCM requests must be responded to in order.
+    queue_t pcm_requests;
+    buffer_t pcm_requests_data[VIRTIO_SND_MAX_PCM_REQUESTS];
+    uint32_t curr_cookie;
+    // Queue of buffer_t structs
+    queue_t free_buffers;
+    buffer_t free_buffers_data[SOUND_NUM_BUFFERS];
+    // sDDF state
+    sound_shared_state_t *shared_state;
+    sound_queues_t queues;
+    int server_ch;
+};
+
+bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
+                     uintptr_t region_base,
+                     uintptr_t region_size,
+                     size_t virq,
+                     sound_shared_state_t *shared_state,
+                     sound_queues_t *queues,
+                     int server_ch);
+
+void virtio_snd_notified(struct virtio_snd_device *sound_dev);

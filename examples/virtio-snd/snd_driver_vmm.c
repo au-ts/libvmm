@@ -15,9 +15,6 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
-#include "virtio/virtio.h"
-#include "virtio/block.h"
-#include "virtio/sound.h"
 #include "virtio/console.h"
 #include <sddf/serial/queue.h>
 #include <sddf/sound/queue.h>
@@ -76,11 +73,7 @@ uintptr_t serial_tx_active;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-static serial_queue_handle_t serial_rx_h;
-static serial_queue_handle_t serial_tx_h;
-static sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
-
-static struct virtio_device virtio_console;
+static struct virtio_console_device virtio_console;
 
 static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
@@ -147,44 +140,35 @@ void init(void) {
     assert(serial_tx_active);
     assert(serial_tx_free);
 
-    /* virtIO console */
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h = &serial_rx_h;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].config = NULL;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data = (uintptr_t)serial_rx_data;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].ch = SERIAL_MUX_RX_CH;
-    
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h = &serial_tx_h;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].config = NULL;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data = (uintptr_t)serial_tx_data;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].ch = SERIAL_MUX_TX_CH;
     
     /* Initialise our sDDF ring buffers for the serial device */
-    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-        (serial_queue_t *)serial_rx_free,
-        (serial_queue_t *)serial_rx_active,
-        true,
-        NUM_ENTRIES,
-        NUM_ENTRIES);
+    serial_queue_handle_t rxq, txq;
+    serial_queue_init(&rxq,
+                      (serial_queue_t *)serial_rx_free,
+                      (serial_queue_t *)serial_rx_active,
+                      true,
+                      NUM_ENTRIES,
+                      NUM_ENTRIES);
     for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h,
-                                      serial_rx_data + (i * BUFFER_SIZE),
-                                      BUFFER_SIZE);
+        int ret = serial_enqueue_free(&rxq,
+                               serial_rx_data + (i * BUFFER_SIZE),
+                               BUFFER_SIZE);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
             microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
         }
     }
-    serial_queue_init(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-            (serial_queue_t *)serial_tx_free,
-            (serial_queue_t *)serial_tx_active,
-            true,
-            NUM_ENTRIES,
-            NUM_ENTRIES);
+    serial_queue_init(&txq,
+                      (serial_queue_t *)serial_tx_free,
+                      (serial_queue_t *)serial_tx_active,
+                      true,
+                      NUM_ENTRIES,
+                      NUM_ENTRIES);
     for (int i = 0; i < NUM_ENTRIES - 1; i++) {
         // Have to start at the memory region left of by the rx ring
-        int ret = serial_enqueue_free(sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h,
-                                      serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
-                                      BUFFER_SIZE);
+        int ret = serial_enqueue_free(&txq,
+                               serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
+                               BUFFER_SIZE);
         assert(ret == 0);
         if (ret != 0) {
             microkit_dbg_puts(microkit_name);
@@ -193,8 +177,12 @@ void init(void) {
     }
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE,
-                                      VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
+    success = virtio_mmio_console_init(&virtio_console,
+                                  VIRTIO_CONSOLE_BASE,
+                                  VIRTIO_CONSOLE_SIZE,
+                                  VIRTIO_CONSOLE_IRQ,
+                                  &rxq, &txq,
+                                  SERIAL_MUX_TX_CH);
     assert(success);
     
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
