@@ -16,6 +16,11 @@
 
 #define LOG_CONSOLE_ERR(...) do{ printf("VIRTIO(CONSOLE)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
+static inline struct virtio_console_device *device_state(struct virtio_device *dev)
+{
+    return (struct virtio_console_device *)dev->device_data;
+}
+
 static void virtio_console_features_print(uint32_t features)
 {
     /* Dump the features given in a human-readable format */
@@ -114,7 +119,9 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
     uint16_t guest_idx = virtq->avail->idx;
     size_t idx = tx_queue->last_idx;
 
-    serial_queue_handle_t *sddf_tx_queue = (serial_queue_handle_t *)dev->sddf_handlers[SDDF_SERIAL_TX_HANDLE].queue_h;
+    struct virtio_console_device *state = device_state(dev);
+    serial_queue_handle_t *sddf_tx_queue = &state->txq;
+
     while (idx != guest_idx) {
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
@@ -131,7 +138,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
             /* We first need a free buffer from the TX queue */
             uintptr_t sddf_buffer = 0;
             unsigned int sddf_buffer_len = 0;
-            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue active size: 0x%lx\n", serial_queue_size(sddf_tx_queue->free),
+            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue used size: 0x%lx\n", serial_queue_size(state->txq->free),
                         serial_queue_size(sddf_tx_queue->active));
             assert(!serial_queue_empty(sddf_tx_queue->free));
             int ret = serial_dequeue_free(sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
@@ -159,7 +166,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
 
             if (is_empty) {
                 // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(dev->sddf_handlers[SDDF_SERIAL_TX_HANDLE].ch);
+                microkit_notify(state->tx_ch);
             }
 
             /* Lastly, move to the next descriptor in the chain */
@@ -192,14 +199,16 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
     return success;
 }
 
-int virtio_console_handle_rx(struct virtio_device *dev)
+int virtio_console_handle_rx(struct virtio_console_device *console)
 {
     // @ivanv: revisit this whole function, it works but is very hacky.
     /* We have received something from the real console driver.
      * Our job is to inspect the sDDF active RX queue, and dequeue everything
      * we can and give it to the guest driver.
      */
-    serial_queue_handle_t *sddf_rx_queue = (serial_queue_handle_t *)dev->sddf_handlers[SDDF_SERIAL_RX_HANDLE].queue_h;
+    struct virtio_device *dev = &console->virtio_device;
+    serial_queue_handle_t *sddf_rx_queue = &console->rxq;
+
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
     int ret = serial_dequeue_active(sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
@@ -240,7 +249,7 @@ int virtio_console_handle_rx(struct virtio_device *dev)
         rx_queue->last_idx++;
 
         // 3. Inject IRQ to guest
-        // @ivanv: is setting interrupt status necesary?
+        // @ivanv: is setting interrupt status necessary?
         dev->data.InterruptStatus = BIT_LOW(0);
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
@@ -263,17 +272,27 @@ virtio_device_funs_t functions = {
     .queue_notify = virtio_console_handle_tx,
 };
 
-void virtio_console_init(struct virtio_device *dev,
-                         struct virtio_queue_handler *vqs, size_t num_vqs,
+bool virtio_mmio_console_init(struct virtio_console_device *console,
+                         uintptr_t region_base,
+                         uintptr_t region_size,
                          size_t virq,
-                         sddf_handler_t *sddf_handlers)
+                         serial_queue_handle_t *rxq,
+                         serial_queue_handle_t *txq,
+                         int tx_ch)
 {
+    struct virtio_device *dev = &console->virtio_device;
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = console->vqs;
+    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_handlers = sddf_handlers;
+    dev->device_data = console;
+
+    console->rxq = *rxq;
+    console->txq = *txq;
+    console->tx_ch = tx_ch;
+
+    return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
