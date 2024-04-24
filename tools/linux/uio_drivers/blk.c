@@ -87,6 +87,13 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     }
 
     if (S_ISBLK(storageStat.st_mode)) {
+        /* Set drive as read-write */
+        int read_only_set = 0;
+        if (ioctl(storage_fd, BLKROSET, &read_only_set) == -1) {
+            LOG_UIO_BLOCK_ERR("Failed to set storage drive as read-write: %s\n", strerror(errno));
+            return -1;
+        }
+        
         /* Get read only status */
         int read_only;
         if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
