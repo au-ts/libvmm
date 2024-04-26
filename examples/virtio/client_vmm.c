@@ -132,7 +132,7 @@ void init(void)
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data = (uintptr_t)serial_rx_data;
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data_size = 0; // @ericc: unused
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].ch = SERIAL_VIRT_RX_CH;
-    
+
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h = &serial_tx_h;
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].config = NULL;
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data = (uintptr_t)serial_tx_data;
@@ -206,18 +206,18 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
-        case SERIAL_VIRT_RX_CH: {
-            /* We have received an event from the serial multipelxor, so we
-             * call the virtIO console handling */
-            virtio_console_handle_rx(&virtio_console);
-            break;
-        }
-        case BLK_CH: {
-            virtio_blk_handle_resp(&virtio_blk);
-            break;
-        }
-        default:
-            LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
+    case SERIAL_VIRT_RX_CH: {
+        /* We have received an event from the serial multipelxor, so we
+         * call the virtIO console handling */
+        virtio_console_handle_rx(&virtio_console);
+        break;
+    }
+    case BLK_CH: {
+        virtio_blk_handle_resp(&virtio_blk);
+        break;
+    }
+    default:
+        LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
 

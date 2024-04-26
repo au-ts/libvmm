@@ -20,7 +20,7 @@
 // that sizeof seL4_UserContext is 0x24
 // Note that this is AArch64 specific
 #if defined(CONFIG_ARCH_AARCH64)
-    #define SEL4_USER_CONTEXT_SIZE 0x24
+#define SEL4_USER_CONTEXT_SIZE 0x24
 #endif
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))

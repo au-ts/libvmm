@@ -21,60 +21,63 @@ static void virtio_console_features_print(uint32_t features)
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_SIZE set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_MULTIPORT set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_EMERG_WRITE set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
 }
 
-static void virtio_console_reset(struct virtio_device *dev) {
+static void virtio_console_reset(struct virtio_device *dev)
+{
     LOG_CONSOLE("operation: reset\n");
     LOG_CONSOLE_ERR("virtio_console_reset is not implemented!\n");
 
     // @ivanv reset vqs?
 }
 
-static int virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features) {
+static int virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
+{
     LOG_CONSOLE("operation: get device features\n");
 
     switch (dev->data.DeviceFeaturesSel) {
-        case 0:
-            *features = 0;
-            break;
-        case 1:
-            *features = BIT_HIGH(VIRTIO_F_VERSION_1);
-            break;
-        default:
-            // @ivanv: audit
-            LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
-            return 0;
+    case 0:
+        *features = 0;
+        break;
+    case 1:
+        *features = BIT_HIGH(VIRTIO_F_VERSION_1);
+        break;
+    default:
+        // @ivanv: audit
+        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
+        return 0;
     }
 
     return 1;
 }
 
-static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features) {
+static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features)
+{
     LOG_CONSOLE("operation: set driver features\n");
     virtio_console_features_print(features);
 
     int success = 1;
 
     switch (dev->data.DriverFeaturesSel) {
-        // feature bits 0 to 31
-        case 0:
-            // The device initialisation protocol says the driver should read device feature bits,
-            // and write the subset of feature bits understood by the OS and driver to the device.
-            // Currently we only have one feature to check.
-            // success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
-            break;
-        // features bits 32 to 63
-        case 1:
-            success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
-            break;
-        default:
-            LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
-            return false;
+    // feature bits 0 to 31
+    case 0:
+        // The device initialisation protocol says the driver should read device feature bits,
+        // and write the subset of feature bits understood by the OS and driver to the device.
+        // Currently we only have one feature to check.
+        // success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
+        break;
+    // features bits 32 to 63
+    case 1:
+        success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
+        break;
+    default:
+        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
+        return false;
     }
 
     if (success) {
@@ -85,18 +88,21 @@ static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_
     return success;
 }
 
-static int virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config) {
+static int virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config)
+{
     LOG_CONSOLE("operation: get device config\n");
     return -1;
 }
 
-static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config) {
+static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config)
+{
     LOG_CONSOLE("operation: set device config\n");
     return -1;
 }
 
 /* The guest has notified us that it has placed something in the transmit queue. */
-static int virtio_console_handle_tx(struct virtio_device *dev) {
+static int virtio_console_handle_tx(struct virtio_device *dev)
+{
     LOG_CONSOLE("operation: handle transmit\n");
 
     // @ivanv: we need to check the pre-conditions before doing anything. e.g check
@@ -125,7 +131,8 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             /* We first need a free buffer from the TX queue */
             uintptr_t sddf_buffer = 0;
             unsigned int sddf_buffer_len = 0;
-            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue active size: 0x%lx\n", serial_queue_size(sddf_tx_queue->free), serial_queue_size(sddf_tx_queue->active));
+            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue active size: 0x%lx\n", serial_queue_size(sddf_tx_queue->free),
+                        serial_queue_size(sddf_tx_queue->active));
             assert(!serial_queue_empty(sddf_tx_queue->free));
             int ret = serial_dequeue_free(sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
             assert(!ret);
@@ -185,7 +192,8 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
     return success;
 }
 
-int virtio_console_handle_rx(struct virtio_device *dev) {
+int virtio_console_handle_rx(struct virtio_device *dev)
+{
     // @ivanv: revisit this whole function, it works but is very hacky.
     /* We have received something from the real console driver.
      * Our job is to inspect the sDDF active RX queue, and dequeue everything
