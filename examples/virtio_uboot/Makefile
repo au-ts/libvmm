@@ -79,7 +79,6 @@ CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
 CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
 
 # The block driver seems to run a linux VM - want to separate this from the client
-# UBoot only wants a DTB --> don't need the rootfs 
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
@@ -93,14 +92,14 @@ BLK_DRIVER_VM_DTS_OVERLAYS_odroidc4 :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
 BLK_DRIVER_VM_DTS_OVERLAYS := ${BLK_DRIVER_VM_DTS_OVERLAYS_${BOARD}}
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 
+# UBoot only wants a DTB --> don't need the rootfs 
 # The client is going to use UBoot instead of linux
 CLIENT_VM_1_UBOOT := $(CLIENT_VM_1_DIR)/u-boot.bin
- # updated all references of this to above
-CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
- # remove this
+
+# KEEPING THESE IN ATM SO THE package_guets_images.S file has something to insert but we don't actually use it in this case
 CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
- # remove this
 CLIENT_VM_1_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_1_rootfs.cpio.gz
+
  # this is the dts passed to Linux after booting?
 CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
 # these are the dts files for booting?
@@ -110,7 +109,7 @@ CLIENT_VM_1_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
 										$(CLIENT_VM_1_DTS_DIR)/virtio.dts\
 										$(CLIENT_VM_1_DTS_DIR)/disable.dts
 CLIENT_VM_1_DTS_OVERLAYS := ${CLIENT_VM_1_DTS_OVERLAYS_${BOARD}}
- # not sure what this one is for?
+ # not sure what this one is for? Is this the dts files after we've built them
 CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 
 SDDF_UTIL := $(SDDF_DIR)/util
@@ -165,6 +164,7 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					mmio.o \
 					sddf_blk_bitarray.o \
 					sddf_blk_fsmalloc.o \
+					uboot.o
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
@@ -255,7 +255,7 @@ $(BLK_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_US
 	done && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 
-# Not sure what this is doing -- should find out and see if still need it
+# THIS IS CURRENTLY HERE BUT WE DONT USE INITRD IN UBOOT
 $(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
@@ -282,9 +282,9 @@ $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIV
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_OVERLAYED)
+$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_UBOOT) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_LINUX)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_UBOOT)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_1_DTB)\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_1_INITRD_OVERLAYED)\" \
 					-target aarch64-none-elf \

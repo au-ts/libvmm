@@ -7,7 +7,7 @@
 #include "../../util/util.h"
 #include "uboot.h"
 
-uintptr_t uboot_setup_images(uintptr_t ram_start,
+uintptr_t uboot_setup_image(uintptr_t ram_start,
                              uintptr_t uboot,
                              size_t uboot_size,
                              size_t uboot_offset,

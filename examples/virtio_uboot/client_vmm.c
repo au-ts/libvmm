@@ -8,7 +8,7 @@
 #include <microkit.h>
 #include <util.h>
 #include <vgic/vgic.h>
-#include <linux.h>
+#include <uboot.h>
 #include <fault.h>
 #include <guest.h>
 #include <virq.h>
@@ -22,23 +22,37 @@
 
 #define GUEST_RAM_SIZE 0x6000000
 
+/******
+ * 
+ * 
+ * 
+ * THIS FILE USES THE UBOOT VARIANTS OF THE INSTRUCTIONS TO LOAD INSTEAD OF
+ * THE LINUX VARIANTS. NOTE THAT WE CURRENTLY USE THE FILE client_vmm.c AND THIS IS
+ * JUST KEPT AS AN EXAMPLE.
+ * 
+ * 
+ * 
+*/
+
+// TODO - PROBABLY NEED TO CHANGE THESE ADDRESSES
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47f00000
-#define GUEST_INIT_RAM_DISK_VADDR 0x47000000
+#define UBOOT_OFFSET 0x200000
 #elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x25f10000
-#define GUEST_INIT_RAM_DISK_VADDR 0x24000000
+#define UBOOT_OFFSET 0x200000
 #else
-#error Need to define guest kernel image address and DTB address
+#error Need to define DTB address
 #endif
 
+// TODO - WOULD LIKE TO GENERALISE THIS FILE SO NOT SPECIFIC TO LOADING LINUX KERNEL
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
 /* Data for the device tree to be passed to the kernel. */
 extern char _guest_dtb_image[];
 extern char _guest_dtb_image_end[];
-/* Data for the initial RAM disk to be passed to the kernel. */
+/* Data for the initial RAM disk to be passed to the kernel. NOTE: THIS IS UNUSED FOR UBOOT */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
@@ -98,20 +112,18 @@ void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
-    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
+    size_t uboot_size = _guest_kernel_image_end - _guest_kernel_image; // TODO - UPDATE NAMING FOR THESE
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
-    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
-                                      (uintptr_t) _guest_kernel_image,
-                                      kernel_size,
-                                      (uintptr_t) _guest_dtb_image,
-                                      GUEST_DTB_VADDR,
-                                      dtb_size,
-                                      (uintptr_t) _guest_initrd_image,
-                                      GUEST_INIT_RAM_DISK_VADDR,
-                                      initrd_size
-                                      );
-    if (!kernel_pc) {
+
+    uintptr_t uboot_pc = uboot_setup_image(guest_ram_vaddr,
+                                            (uintptr_t) _guest_kernel_image,
+                                            uboot_size,
+                                            UBOOT_OFFSET,
+                                            (uintptr_t) _guest_dtb_image,
+                                            GUEST_DTB_VADDR,
+                                            dtb_size
+                                            );
+    if (!uboot_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
@@ -187,7 +199,7 @@ void init(void) {
     assert(success);
 
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    uboot_start(GUEST_VCPU_ID, uboot_pc, GUEST_DTB_VADDR);
 }
 
 void notified(microkit_channel ch) {

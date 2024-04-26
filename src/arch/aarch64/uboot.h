@@ -14,7 +14,7 @@
     uboot: this is filled in via the package_guest_image.S file and is the uboot binary
     uboot_size: we can calculate this and its just how large the uboot binary is
 */
-uintptr_t uboot_setup_images(uintptr_t ram_start,
+uintptr_t uboot_setup_image(uintptr_t ram_start,
                              uintptr_t uboot,
                              size_t uboot_size,
                              size_t uboot_offset,
