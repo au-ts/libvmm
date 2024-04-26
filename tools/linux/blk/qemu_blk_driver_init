@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/root/uio_blk_driver /dev/vda &
