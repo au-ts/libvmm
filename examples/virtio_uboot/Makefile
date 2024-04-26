@@ -125,7 +125,6 @@ BLK_DRIVER_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_driver_init
 BLK_DRIVER_VM_USERLEVEL_INIT_odroidc4 := blk_driver_init
 BLK_DRIVER_VM_USERLEVEL_INIT := ${BLK_DRIVER_VM_USERLEVEL_INIT_${BOARD}}
 
-CLIENT_VM_1_USERLEVEL := postmark
 CLIENT_VM_1_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
 CLIENT_VM_1_USERLEVEL_INIT_odroidc4 := blk_client_init
 CLIENT_VM_1_USERLEVEL_INIT := ${CLIENT_VM_1_USERLEVEL_INIT_${BOARD}}
@@ -246,15 +245,10 @@ $(BLK_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_US
 	done && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
 	
-$(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL)) \
-								 $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
+$(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
 	gunzip -dc $(CLIENT_VM_1_INITRD) | fakeroot cpio -idmv -D$(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null && \
-	for f in $(CLIENT_VM_1_USERLEVEL); do \
-		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/root/$$f"; \
-		chmod +x "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/root/$$f";	\
-	done && \
 	for f in $(CLIENT_VM_1_USERLEVEL_INIT); do \
 		cp -- "$(BUILD_DIR)/$$f" "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
 		chmod +x "$(CLIENT_VM_1_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
@@ -335,9 +329,6 @@ $(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJ
 
 $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
-	$(TOOLCHAIN)-gcc $< -o $@
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init
 	cp $< $@
