@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <microkit.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "printf.h"
 
 // @ivanv: these are here for convience, should not be here though

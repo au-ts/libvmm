@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
-#include "util/util.h"
+#include "util.h"
 #include "fault.h"
 #include "virtio/config.h"
 #include "virtio/mmio.h"
