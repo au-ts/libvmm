@@ -124,7 +124,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             // @ivanv: to the debug logging, we should actually print out teh buffer contents
 
             /* Now that we have a buffer, we can transfer the data to the sDDF multiplexor */
-            /* We first need a free buffer from the TX ring */
+            /* We first need a free buffer from the TX queue */
             uintptr_t sddf_buffer = 0;
             unsigned int sddf_buffer_len = 0;
             LOG_CONSOLE("tx ring free size: 0x%lx, tx ring active size: 0x%lx\n", ring_size(dev->sddf_tx_queue->free), serial_queue_size(dev->sddf_tx_queue->active));
@@ -132,7 +132,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             int ret = serial_dequeue_free(dev->sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
             assert(!ret);
             if (ret != 0) {
-                LOG_CONSOLE_ERR("could not dequeue from the TX free ring\n");
+                LOG_CONSOLE_ERR("could not dequeue from the TX free queue\n");
                 // @ivanv: todo, handle this properly
             }
 
@@ -147,8 +147,8 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             memcpy((char *) sddf_buffer, (char *) desc.addr, desc.len);
 
             bool is_empty = serial_queue_empty(dev->sddf_tx_queue->active);
-            /* Now we can enqueue our buffer into the used TX ring */
             ret = serial_enqueue_active(dev->sddf_tx_queue, sddf_buffer, desc.len);
+            /* Now we can enqueue our buffer into the active TX queue */
             // @ivanv: handle case in release made
             assert(ret == 0);
 
@@ -190,7 +190,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
 int virtio_console_handle_rx(struct virtio_device *dev) {
     // @ivanv: revisit this whole function, it works but is very hacky.
     /* We have received something from the real console driver.
-     * Our job is to inspect the sDDF used RX ring, and dequeue everything
+     * Our job is to inspect the sDDF active RX queue, and dequeue everything
      * we can and give it to the guest driver.
      */
 
@@ -240,8 +240,8 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
         assert(success);
     }
 
-    // 4. Enqueue sDDF buffer into RX free ring
     ret = serial_enqueue_free(dev->sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
+    // 4. Enqueue sDDF buffer into RX free queue
     assert(!ret);
     // @ivanv: error handle for release mode
 
