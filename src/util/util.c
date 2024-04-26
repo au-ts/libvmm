@@ -34,3 +34,15 @@ void *memcpy(void *restrict dest, const void *restrict src, size_t n)
     return dest;
 }
 
+void print_mem_hex(uintptr_t addr, size_t size)
+{
+#ifdef CONFIG_DEBUG_BUILD
+    for (size_t i = 0; i < size; i++) {
+        printf("%02X ", *((uint8_t *)addr + i));
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
+    printf("\n");
+#endif
+}
