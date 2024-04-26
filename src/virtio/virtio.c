@@ -3,10 +3,10 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include "fault.h"
-#include "util/util.h"
 #include "virtio/console.h"
 #include "virtio/virtio.h"
+#include "fault.h"
+#include "util.h"
 #include "virq.h"
 
 static struct virtio_queue_handler virtio_console_queues[VIRTIO_CONSOLE_NUM_VIRTQ];

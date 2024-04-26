@@ -1,8 +1,9 @@
 #include "virtio/config.h"
 #include "virtio/mmio.h"
 #include "virtio/console.h"
-#include "util/util.h"
 #include "virq.h"
+#include "util.h"
+#include <sddf/serial/queue.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_CONSOLE
