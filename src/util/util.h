@@ -59,6 +59,9 @@ static void assert_fail(
     while (1) {}
 }
 
+#define BIT_LOW(n)  (1ul<<(n))
+#define BIT_HIGH(n) (1ul<<(n - 32 ))
+
 #ifndef CONFIG_DEBUG_BUILD
 
 #define _unused(x) ((void)(x))

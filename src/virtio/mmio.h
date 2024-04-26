@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include "util.h"
 #include "virtio/virtq.h"
-#include <sddf/serial/queue.h>
 
 // table 4.1
 #define VIRTIO_MMIO_DEV_MAGIC               0x74726976 // "virt"
@@ -104,25 +103,31 @@ typedef struct virtio_device_info {
     // uint32_t ConfigGeneration;
 } virtio_device_info_t;
 
+typedef struct sddf_handler {
+    /* Pointer to the sDDF queue handle */
+    void *queue_h;
+    /* Pointer to the sDDF config space */
+    void *config;
+    /* Shared data region address */
+    uintptr_t data;
+    /* Shared data region size */
+    size_t data_size;
+    /* Microkit channel to the sDDF Virtualiser */
+    size_t ch; // @ivanv: this is microkit specific so maybe should be a callback instead or something.
+} sddf_handler_t;
+
 /* Everything needed at runtime for a virtIO device to function. */
 typedef struct virtio_device {
     virtio_device_info_t data;
     virtio_device_funs_t *funs;
-
     /* List of virt queues for the device */
     virtio_queue_handler_t *vqs;
     /* Length of the vqs list */
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
     size_t virq;
-    /* Handlers for sDDF queues */
-    serial_queue_handle_t *sddf_rx_queue;
-    serial_queue_handle_t *sddf_tx_queue;
-    /* Microkit channel to the sDDF TX virtualiser */
-    // @ivanv: this is microkit specific so maybe should be a callback instead or something.
-    // @ivanv: my worry here is that the device struct is supposed to be for all devices, but
-    // this is specific to device classes such as serial and networking
-    size_t sddf_virt_tx_ch;
+    /* Handlers for sDDF structures */
+    sddf_handler_t *sddf_handlers;
 } virtio_device_t;
 
 /**
