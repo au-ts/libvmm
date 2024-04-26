@@ -6,7 +6,7 @@
 #pragma once
 
 #include <stdint.h>
-#include "util/util.h"
+#include "util.h"
 #include "virtio/virtq.h"
 #include <sddf/serial/queue.h>
 
