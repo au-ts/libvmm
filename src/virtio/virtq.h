@@ -35,67 +35,67 @@
 #include <stdint.h>
 
 /* This marks a buffer as continuing via the next field. */
-#define VIRTQ_DESC_F_NEXT	1
+#define VIRTQ_DESC_F_NEXT   1
 /* This marks a buffer as write-only (otherwise read-only). */
-#define VIRTQ_DESC_F_WRITE	2
+#define VIRTQ_DESC_F_WRITE  2
 /* This means the buffer contains a list of buffer descriptors. */
-#define VIRTQ_DESC_F_INDIRECT	4
+#define VIRTQ_DESC_F_INDIRECT   4
 
 /* The Host uses this in used->flags to advise the Guest: don't kick me when
  * you add a buffer.  It's unreliable, so it's simply an optimization.  Guest
  * will still kick if it's out of buffers. */
-#define VIRTQ_USED_F_NO_NOTIFY	1
+#define VIRTQ_USED_F_NO_NOTIFY  1
 /* The Guest uses this in avail->flags to advise the Host: don't interrupt me
  * when you consume a buffer.  It's unreliable, so it's simply an
  * optimization.  */
-#define virtq_AVAIL_F_NO_INTERRUPT	1
+#define virtq_AVAIL_F_NO_INTERRUPT  1
 
 /* We support indirect buffer descriptors */
-#define VIRTQ_AVAIL_F_NO_INTERRUPT	28
+#define VIRTQ_AVAIL_F_NO_INTERRUPT  28
 
 /* The Guest publishes the used index for which it expects an interrupt
  * at the end of the avail ring. Host should ignore the avail->flags field. */
 /* The Host publishes the avail index for which it expects a kick
  * at the end of the used ring. Guest should ignore the used->flags field. */
-#define VIRTIO_RING_F_EVENT_IDX		29
+#define VIRTIO_RING_F_EVENT_IDX     29
 
 /* Virtio ring descriptors: 16 bytes.  These can chain together via "next". */
 struct virtq_desc {
-	/* Address (guest-physical). */
-	uint64_t addr;
-	/* Length. */
-	uint32_t len;
-	/* The flags as indicated above. */
-	uint16_t flags;
-	/* We chain unused descriptors via this, too */
-	uint16_t next;
+    /* Address (guest-physical). */
+    uint64_t addr;
+    /* Length. */
+    uint32_t len;
+    /* The flags as indicated above. */
+    uint16_t flags;
+    /* We chain unused descriptors via this, too */
+    uint16_t next;
 };
 
 struct virtq_avail {
-	uint16_t flags;
-	uint16_t idx;
-	uint16_t ring[];
+    uint16_t flags;
+    uint16_t idx;
+    uint16_t ring[];
 };
 
 /* u32 is used here for ids for padding reasons. */
 struct virtq_used_elem {
-	/* Index of start of used descriptor chain. */
-	uint32_t id;
-	/* Total length of the descriptor chain which was used (written to) */
-	uint32_t len;
+    /* Index of start of used descriptor chain. */
+    uint32_t id;
+    /* Total length of the descriptor chain which was used (written to) */
+    uint32_t len;
 };
 
 struct virtq_used {
-	uint16_t flags;
-	uint16_t idx;
-	struct virtq_used_elem ring[];
+    uint16_t flags;
+    uint16_t idx;
+    struct virtq_used_elem ring[];
 };
 
 struct virtq {
-	unsigned int num;
-	struct virtq_desc *desc;
-	struct virtq_avail *avail;
-	struct virtq_used *used;
+    unsigned int num;
+    struct virtq_desc *desc;
+    struct virtq_avail *avail;
+    struct virtq_used *used;
 };
 
 /* The standard layout for the ring is a continuous chunk of memory which looks
@@ -103,23 +103,23 @@ struct virtq {
  *
  * struct virtq
  * {
- *	// The actual descriptors (16 bytes each)
- *	struct virtq_desc desc[num];
+ *  // The actual descriptors (16 bytes each)
+ *  struct virtq_desc desc[num];
  *
- *	// A ring of available descriptor heads with free-running index.
- *	uint16_t avail_flags;
- *	uint16_t avail_idx;
- *	uint16_t available[num];
- *	uint16_t used_event_idx;
+ *  // A ring of available descriptor heads with free-running index.
+ *  uint16_t avail_flags;
+ *  uint16_t avail_idx;
+ *  uint16_t available[num];
+ *  uint16_t used_event_idx;
  *
- *	// Padding to the next align boundary.
- *	char pad[];
+ *  // Padding to the next align boundary.
+ *  char pad[];
  *
- *	// A ring of used descriptor heads with free-running index.
- *	uint16_t used_flags;
- *	uint16_t used_idx;
- *	struct virtq_used_elem used[num];
- *	uint16_t avail_event_idx;
+ *  // A ring of used descriptor heads with free-running index.
+ *  uint16_t used_flags;
+ *  uint16_t used_idx;
+ *  struct virtq_used_elem used[num];
+ *  uint16_t avail_event_idx;
  * };
  */
 /* We publish the used event index at the end of the available ring, and vice
@@ -128,20 +128,20 @@ struct virtq {
 #define virtq_avail_event(vr) (*(uint16_t *)&(vr)->used->ring[(vr)->num])
 
 static inline void virtq_init(struct virtq *vr, unsigned int num, void *p,
-			      unsigned long align)
+                              unsigned long align)
 {
-	vr->num = num;
-	vr->desc = p;
-	vr->avail = p + num*sizeof(struct virtq_desc);
-	vr->used = (void *)(((unsigned long)&vr->avail->ring[num] + sizeof(uint16_t)
-		+ align-1) & ~(align - 1));
+    vr->num = num;
+    vr->desc = p;
+    vr->avail = p + num * sizeof(struct virtq_desc);
+    vr->used = (void *)(((unsigned long)&vr->avail->ring[num] + sizeof(uint16_t)
+                         + align - 1) & ~(align - 1));
 }
 
 static inline unsigned virtq_size(unsigned int num, unsigned long align)
 {
-	return ((sizeof(struct virtq_desc) * num + sizeof(uint16_t) * (3 + num)
-		 + align - 1) & ~(align - 1))
-		+ sizeof(uint16_t) * 3 + sizeof(struct virtq_used_elem) * num;
+    return ((sizeof(struct virtq_desc) * num + sizeof(uint16_t) * (3 + num)
+             + align - 1) & ~(align - 1))
+           + sizeof(uint16_t) * 3 + sizeof(struct virtq_used_elem) * num;
 }
 
 /* The following is used with USED_EVENT_IDX and AVAIL_EVENT_IDX */
@@ -150,11 +150,11 @@ static inline unsigned virtq_size(unsigned int num, unsigned long align)
  * should we trigger an event? */
 static inline int virtq_need_event(uint16_t event_idx, uint16_t new_idx, uint16_t old)
 {
-	/* Note: Xen has similar logic for notification hold-off
-	 * in include/xen/interface/io/ring.h with req_event and req_prod
-	 * corresponding to event_idx + 1 and new_idx respectively.
-	 * Note also that req_event and req_prod in Xen start at 1,
-	 * event indexes in virtio start at 0. */
-	return (uint16_t)(new_idx - event_idx - 1) < (uint16_t)(new_idx - old);
+    /* Note: Xen has similar logic for notification hold-off
+     * in include/xen/interface/io/ring.h with req_event and req_prod
+     * corresponding to event_idx + 1 and new_idx respectively.
+     * Note also that req_event and req_prod in Xen start at 1,
+     * event indexes in virtio start at 0. */
+    return (uint16_t)(new_idx - event_idx - 1) < (uint16_t)(new_idx - old);
 }
 
