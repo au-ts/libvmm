@@ -78,6 +78,8 @@ CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
 CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
 CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
 
+# The block driver seems to run a linux VM - want to separate this from the client
+# UBoot only wants a DTB --> don't need the rootfs 
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
 BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
@@ -91,17 +93,24 @@ BLK_DRIVER_VM_DTS_OVERLAYS_odroidc4 :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
 BLK_DRIVER_VM_DTS_OVERLAYS := ${BLK_DRIVER_VM_DTS_OVERLAYS_${BOARD}}
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 
-
+# The client is going to use UBoot instead of linux
+CLIENT_VM_1_UBOOT := $(CLIENT_VM_1_DIR)/u-boot.bin
+ # updated all references of this to above
 CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
+ # remove this
 CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
+ # remove this
 CLIENT_VM_1_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_1_rootfs.cpio.gz
+ # this is the dts passed to Linux after booting?
 CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
+# these are the dts files for booting?
 CLIENT_VM_1_DTS_OVERLAYS_qemu_arm_virt :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
 											$(CLIENT_VM_1_DTS_DIR)/virtio.dts
 CLIENT_VM_1_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
 										$(CLIENT_VM_1_DTS_DIR)/virtio.dts\
 										$(CLIENT_VM_1_DTS_DIR)/disable.dts
 CLIENT_VM_1_DTS_OVERLAYS := ${CLIENT_VM_1_DTS_OVERLAYS_${BOARD}}
+ # not sure what this one is for?
 CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
 
 SDDF_UTIL := $(SDDF_DIR)/util
@@ -115,7 +124,7 @@ SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
-# UPDATE THIS
+# think these can stay the same atm since we'll just put UBoot in the elf instead of Linux
 ELFS := client_vmm_1.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
 BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver
@@ -133,6 +142,7 @@ IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
 # @ivanv: should only compile printf.o in debug
+# might need to move linux.o to blk_driver_vmm_objs and have UBoot as part of client_vmm_1_objs
 VMM_OBJS := printf.o \
 			virq.o \
 			linux.o \
@@ -244,7 +254,8 @@ $(BLK_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_US
 		chmod +x "$(BLK_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/S99$$f"; \
 	done && \
 	(cd $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) && find . | cpio -o -H newc -R root:root 2> /dev/null | gzip > $(CURRENT_DIR)/$(BLK_DRIVER_VM_INITRD_OVERLAYED))
-	
+
+# Not sure what this is doing -- should find out and see if still need it
 $(CLIENT_VM_1_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
 	rm -r $(CLIENT_VM_1_ROOTFS_TMP_DIR) 2> /dev/null; \
 	mkdir -p $(CLIENT_VM_1_ROOTFS_TMP_DIR) && \
