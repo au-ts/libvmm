@@ -16,11 +16,8 @@
 
 #define LOG_CONSOLE_ERR(...) do{ printf("VIRTIO(CONSOLE)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
-
-static void virtio_console_features_print(uint32_t features) {
+static void virtio_console_features_print(uint32_t features)
+{
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_SIZE set to %s\n",
@@ -111,6 +108,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
     uint16_t guest_idx = virtq->avail->idx;
     size_t idx = tx_queue->last_idx;
 
+    serial_queue_handle_t *sddf_tx_queue = (serial_queue_handle_t *)dev->sddf_handlers[SDDF_SERIAL_TX_HANDLE].queue_h;
     while (idx != guest_idx) {
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
@@ -127,9 +125,9 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
             /* We first need a free buffer from the TX queue */
             uintptr_t sddf_buffer = 0;
             unsigned int sddf_buffer_len = 0;
-            LOG_CONSOLE("tx ring free size: 0x%lx, tx ring active size: 0x%lx\n", ring_size(dev->sddf_tx_queue->free), serial_queue_size(dev->sddf_tx_queue->active));
-            assert(!serial_queue_empty(dev->sddf_tx_queue->free));
-            int ret = serial_dequeue_free(dev->sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
+            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue active size: 0x%lx\n", serial_queue_size(sddf_tx_queue->free), serial_queue_size(sddf_tx_queue->active));
+            assert(!serial_queue_empty(sddf_tx_queue->free));
+            int ret = serial_dequeue_free(sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
             assert(!ret);
             if (ret != 0) {
                 LOG_CONSOLE_ERR("could not dequeue from the TX free queue\n");
@@ -146,15 +144,15 @@ static int virtio_console_handle_tx(struct virtio_device *dev) {
              * by the multiplexor. */
             memcpy((char *) sddf_buffer, (char *) desc.addr, desc.len);
 
-            bool is_empty = serial_queue_empty(dev->sddf_tx_queue->active);
-            ret = serial_enqueue_active(dev->sddf_tx_queue, sddf_buffer, desc.len);
+            bool is_empty = serial_queue_empty(sddf_tx_queue->active);
             /* Now we can enqueue our buffer into the active TX queue */
+            ret = serial_enqueue_active(sddf_tx_queue, sddf_buffer, desc.len);
             // @ivanv: handle case in release made
             assert(ret == 0);
 
             if (is_empty) {
                 // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(dev->sddf_virt_tx_ch);
+                microkit_notify(dev->sddf_handlers[SDDF_SERIAL_TX_HANDLE].ch);
             }
 
             /* Lastly, move to the next descriptor in the chain */
@@ -193,10 +191,10 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
      * Our job is to inspect the sDDF active RX queue, and dequeue everything
      * we can and give it to the guest driver.
      */
-
+    serial_queue_handle_t *sddf_rx_queue = (serial_queue_handle_t *)dev->sddf_handlers[SDDF_SERIAL_RX_HANDLE].queue_h;
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
-    int ret = serial_dequeue_active(dev->sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
+    int ret = serial_dequeue_active(sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
     assert(!ret);
     if (ret != 0) {
         LOG_CONSOLE_ERR("could not dequeue from RX active queue\n");
@@ -240,8 +238,8 @@ int virtio_console_handle_rx(struct virtio_device *dev) {
         assert(success);
     }
 
-    ret = serial_enqueue_free(dev->sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
     // 4. Enqueue sDDF buffer into RX free queue
+    ret = serial_enqueue_free(sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
     assert(!ret);
     // @ivanv: error handle for release mode
 
@@ -260,7 +258,8 @@ virtio_device_funs_t functions = {
 void virtio_console_init(struct virtio_device *dev,
                          struct virtio_queue_handler *vqs, size_t num_vqs,
                          size_t virq,
-                         serial_queue_handle_t *sddf_rx_queue, serial_queue_handle_t *sddf_tx_queue, size_t sddf_virt_tx_ch) {
+                         sddf_handler_t *sddf_handlers)
+{
     // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
@@ -268,7 +267,5 @@ void virtio_console_init(struct virtio_device *dev,
     dev->vqs = vqs;
     dev->num_vqs = num_vqs;
     dev->virq = virq;
-    dev->sddf_rx_queue = sddf_rx_queue;
-    dev->sddf_tx_queue = sddf_tx_queue;
-    dev->sddf_virt_tx_ch = sddf_virt_tx_ch;
+    dev->sddf_handlers = sddf_handlers;
 }
