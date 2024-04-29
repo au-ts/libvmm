@@ -4,5 +4,6 @@ zig-out/
 zig-cache/
 *.pdf
 *.dtb
+*.xlsx
 rust/target/
 logfile*
