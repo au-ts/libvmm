@@ -14,7 +14,7 @@
 #include "virq.h"
 #include "tcb.h"
 #include "vcpu.h"
-#include "virtio/virtio.h"
+#include "virtio/console.h"
 #include <sddf/sound/queue.h>
 #include <sddf/util/cache.h>
 #include <uio/sound.h>
