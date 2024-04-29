@@ -33,19 +33,25 @@
 void main(void){
 
     printf("Welcome to the No-Op Benchmark!\n");
-    // pmu_start();
-    // pmu_reset();
+    pmu_start();
+    pmu_reset();
     char *what = (char *)NO_OP_FAULT; // No-Op Fault
     ccnt_t before, after;
+    ccnt_t results[100];
     printf("START_DATA\n");
-    while (1) {
+    for (int i = 0; i < 100; i++) {
 
-        // before = pmu_cycle_get();
+        before = pmu_cycle_get();
         *what = '!'; 
-        // after = pmu_cycle_get();
-        // printf("Cycles: %d\n", after - before);
+        asm("nop");
+        after = pmu_cycle_get();
+        results[i] = after - before;
+    }
+    for (int i = 0; i < 100; i++) {
+        printf("Cycles: %llu\n", results[i]);
     }
     printf("END_DATA\n");
+
     int *x = 0;
     *x = 4;
 }
