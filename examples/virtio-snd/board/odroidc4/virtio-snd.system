@@ -299,7 +299,7 @@
     </channel>
 
     <channel>
-        <end pd="sound_virt" id="3"/>
+        <end pd="sound_virt" id="0"/>
         <end pd="SND_DRIVER_VMM" id="4"/>
     </channel>
 </system>
