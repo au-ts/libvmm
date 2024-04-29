@@ -209,7 +209,8 @@ void notified(microkit_channel ch) {
  * the VMM to handle.
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {
-    bool success = fault_handle(id, msginfo);
+    bool wfi = false;
+    bool success = fault_handle(id, msginfo, &wfi);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */

@@ -56,6 +56,8 @@ uintptr_t guest_ram_vaddr;
 #define MAX_IRQ_CH 63
 int passthrough_irq_map[MAX_IRQ_CH];
 
+bool suspended;
+size_t suspend_pc;
 
 #define SERIAL_TX_CH 1
 #define SERIAL_RX_CH 2
@@ -208,13 +210,21 @@ void init(void) {
     uintptr_t *data_paddr = &((vm_shared_state_t *)sound_shared_state)->data_paddr;
     *data_paddr = sound_data_paddr;
     cache_clean((uintptr_t)data_paddr, sizeof(uintptr_t));
-
+    
+    suspended = false;
+    suspend_pc = 0;
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
     bool success;
+
+    if (suspended) {
+        LOG_VMM("waking\n");
+        microkit_vm_restart(GUEST_VCPU_ID, suspend_pc);
+        suspended = false;
+    }
 
     switch (ch) {
     case SERIAL_RX_CH:
@@ -246,8 +256,15 @@ void notified(microkit_channel ch) {
  * the VMM to handle.
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {
-    bool success = fault_handle(id, msginfo);
+    bool wfi = false;
+    bool success = fault_handle(id, msginfo, &wfi);
     if (success) {
+        if (wfi) {
+            LOG_VMM("sleeping\n");
+            microkit_vm_stop(GUEST_VCPU_ID);
+            suspend_pc = microkit_mr_get(seL4_VMFault_IP);
+            suspended = true;
+        }
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
         microkit_fault_reply(microkit_msginfo_new(0, 0));
