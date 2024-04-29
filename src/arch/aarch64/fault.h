@@ -12,9 +12,9 @@
 #include <microkit.h>
 
 /* Fault-handling functions */
-bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
+bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo, bool *wfi);
 
-bool fault_handle_vcpu_exception(size_t vcpu_id);
+bool fault_handle_vcpu_exception(size_t vcpu_id, bool *wfi);
 bool fault_handle_vppi_event(size_t vcpu_id);
 bool fault_handle_user_exception(size_t vcpu_id);
 bool fault_handle_unknown_syscall(size_t vcpu_id);

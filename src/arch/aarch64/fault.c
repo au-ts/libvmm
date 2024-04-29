@@ -214,7 +214,7 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
     return fault_advance_vcpu(vcpu_id, regs);
 }
 
-bool fault_handle_vcpu_exception(size_t vcpu_id)
+bool fault_handle_vcpu_exception(size_t vcpu_id, bool *wfi)
 {
     uint32_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
@@ -223,6 +223,7 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
             return handle_smc(vcpu_id, hsr);
         case HSR_WFx_EXCEPTION:
             // If we get a WFI exception, we just do nothing in the VMM.
+            *wfi = true;
             return true;
         default:
             LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
@@ -394,7 +395,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     }
 }
 
-bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
+bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo, bool *wfi) {
     size_t label = microkit_msginfo_get_label(msginfo);
     bool success = false;
     switch (label) {
@@ -411,7 +412,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
             success = fault_handle_vgic_maintenance(vcpu_id);
             break;
         case seL4_Fault_VCPUFault:
-            success = fault_handle_vcpu_exception(vcpu_id);
+            success = fault_handle_vcpu_exception(vcpu_id, wfi);
             break;
         case seL4_Fault_VPPIEvent:
             success = fault_handle_vppi_event(vcpu_id);
