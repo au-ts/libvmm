@@ -38,12 +38,13 @@ bool fault_handle_vgic_maintenance(size_t vcpu_id)
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     struct virq_handle *slot = &vgic_vcpu->lr_shadow[idx];
     assert(slot->virq != VIRQ_INVALID);
+    // printf("VGIC|INFO: Maintenance IRQ %d in shadow index %d\n", slot->virq, idx);
     struct virq_handle lr_virq = *slot;
     slot->virq = VIRQ_INVALID;
     slot->ack_fn = NULL;
     slot->ack_data = NULL;
     /* Clear pending */
-    LOG_IRQ("Maintenance IRQ %d\n", lr_virq.virq);
+    // LOG_IRQ("Maintenance IRQ %d\n", lr_virq.virq);
     set_pending(vgic_get_dist(vgic.registers), lr_virq.virq, false, vcpu_id);
     virq_ack(vcpu_id, &lr_virq);
     /* Check the overflow list for pending IRQs */
@@ -58,6 +59,7 @@ bool fault_handle_vgic_maintenance(size_t vcpu_id)
 #endif
 
     if (virq) {
+        printf("I don't think this happens\n");
         success = vgic_vcpu_load_list_reg(&vgic, vcpu_id, idx, group, virq);
     }
 

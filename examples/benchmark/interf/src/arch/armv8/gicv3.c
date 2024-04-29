@@ -20,13 +20,14 @@
 #include <spinlock.h>
 #include <fences.h>
 #include <irq.h>
+#include <plat.h>
 
-volatile gicd_t* gicd = (void*)0xF9010000;
-volatile gicr_t* gicr = (void*)0xF9020000;
+volatile gicd_t *gicd = (void *)PLAT_GICD_BASE;
+volatile gicr_t *gicr = (void *)PLAT_GICR_BASE;
+volatile gicc_t *gicc = (void *)PLAT_GICC_BASE;
 
 static spinlock_t gicd_lock;
 static spinlock_t gicr_lock;
-
 
 inline uint64_t gic_num_irqs()
 {
@@ -34,7 +35,6 @@ inline uint64_t gic_num_irqs()
         bit_extract(gicd->TYPER, GICD_TYPER_ITLN_OFF, GICD_TYPER_ITLN_LEN);
     return 32 * itlinenumber + 1;
 }
-
 
 static inline void gicc_init()
 {
@@ -50,52 +50,53 @@ static inline void gicr_init()
     gicr[get_cpuid()].ICPENDR0 = -1;
     gicr[get_cpuid()].ICACTIVER0 = -1;
 
-    for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++) {
+    for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++)
+    {
         gicr[get_cpuid()].IPRIORITYR[i] = -1;
     }
 }
 
-//void gicc_save_state(gicc_state_t *state)
+// void gicc_save_state(gicc_state_t *state)
 //{
-//    state->CTLR = MRS(ICC_CTLR_EL1);
-//    state->PMR = MRS(ICC_PMR_EL1);
-//    //state->IAR = MRS(ICC_IAR1_EL1);
-//    state->BPR = MRS(ICC_BPR1_EL1);
-//    //state->EOIR = MRS(ICC_EOIR1_EL1);
-//    state->RPR = MRS(ICC_RPR_EL1);
-//    state->HPPIR = MRS(ICC_HPPIR1_EL1);
-//    state->priv_ISENABLER = gicr[get_cpuid()].ISENABLER0;
+//     state->CTLR = MRS(ICC_CTLR_EL1);
+//     state->PMR = MRS(ICC_PMR_EL1);
+//     //state->IAR = MRS(ICC_IAR1_EL1);
+//     state->BPR = MRS(ICC_BPR1_EL1);
+//     //state->EOIR = MRS(ICC_EOIR1_EL1);
+//     state->RPR = MRS(ICC_RPR_EL1);
+//     state->HPPIR = MRS(ICC_HPPIR1_EL1);
+//     state->priv_ISENABLER = gicr[get_cpuid()].ISENABLER0;
 //
-//    for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++) {
-//        state->priv_IPRIORITYR[i] = gicr[get_cpuid()].IPRIORITYR[i];
-//    }
+//     for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++) {
+//         state->priv_IPRIORITYR[i] = gicr[get_cpuid()].IPRIORITYR[i];
+//     }
 //
-//    state->HCR = MRS(ICH_HCR_EL2);
-//    for (int i = 0; i < gich_num_lrs(); i++) {
-//        state->LR[i] = gich_read_lr(i);
-//    }
-//}
+//     state->HCR = MRS(ICH_HCR_EL2);
+//     for (int i = 0; i < gich_num_lrs(); i++) {
+//         state->LR[i] = gich_read_lr(i);
+//     }
+// }
 //
-//void gicc_restore_state(gicc_state_t *state)
+// void gicc_restore_state(gicc_state_t *state)
 //{
-//    MSR(ICC_CTLR_EL1, state->CTLR);
-//    MSR(ICC_PMR_EL1, state->PMR);
-//    MSR(ICC_BPR1_EL1, state->BPR);
-//    //MSR(ICC_EOIR1_EL1, state->EOIR);
-//    //MSR(ICC_IAR1_EL1, state->IAR);
-//    MSR(ICC_RPR_EL1, state->RPR);
-//    MSR(ICC_HPPIR1_EL1, state->HPPIR);
-//    gicr[get_cpuid()].ISENABLER0 = state->priv_ISENABLER;
+//     MSR(ICC_CTLR_EL1, state->CTLR);
+//     MSR(ICC_PMR_EL1, state->PMR);
+//     MSR(ICC_BPR1_EL1, state->BPR);
+//     //MSR(ICC_EOIR1_EL1, state->EOIR);
+//     //MSR(ICC_IAR1_EL1, state->IAR);
+//     MSR(ICC_RPR_EL1, state->RPR);
+//     MSR(ICC_HPPIR1_EL1, state->HPPIR);
+//     gicr[get_cpuid()].ISENABLER0 = state->priv_ISENABLER;
 //
-//    for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++) {
-//        gicr[get_cpuid()].IPRIORITYR[i] = state->priv_IPRIORITYR[i];
-//    }
+//     for (int i = 0; i < GIC_NUM_PRIO_REGS(GIC_CPU_PRIV); i++) {
+//         gicr[get_cpuid()].IPRIORITYR[i] = state->priv_IPRIORITYR[i];
+//     }
 //
-//    MSR(ICH_HCR_EL2, state->HCR);
-//    for (int i = 0; i < gich_num_lrs(); i++) {
-//        gich_write_lr(i, state->LR[i]);
-//    }
-//}
+//     MSR(ICH_HCR_EL2, state->HCR);
+//     for (int i = 0; i < gich_num_lrs(); i++) {
+//         gich_write_lr(i, state->LR[i]);
+//     }
+// }
 
 void gic_cpu_init()
 {
@@ -108,7 +109,8 @@ void gicd_init()
     size_t int_num = gic_num_irqs();
 
     /* Bring distributor to known state */
-    for (int i = GIC_NUM_PRIVINT_REGS; i < GIC_NUM_INT_REGS(int_num); i++) {
+    for (int i = GIC_NUM_PRIVINT_REGS; i < GIC_NUM_INT_REGS(int_num); i++)
+    {
         /**
          * Make sure all interrupts are not enabled, non pending,
          * non active.
@@ -131,30 +133,31 @@ void gicd_init()
     /* No need to setup gicd->NSACR as all interrupts are  setup to group 1 */
 
     /* Enable distributor and affinity routing */
-    gicd->CTLR |= GICD_CTLR_ARE_NS_BIT | GICD_CTLR_ENA_BIT;
+    gicd->CTLR |= GICD_CTLR_ARE_NS_BIT | GICD_CTLR_ENA_BIT | GICD_CTLR_EN_BIT;
 }
 
 void gic_init()
 {
     gic_cpu_init();
 
-    if (get_cpuid() == 0) {
+    if (get_cpuid() == 0)
+    {
         gicd_init();
     }
-
 }
 
 void gic_handle()
 {
     uint64_t ack = MRS(ICC_IAR1_EL1);
-    uint64_t id = ack & ((1UL << 24) -1);
+    uint64_t id = ack & ((1UL << 24) - 1);
 
-    if (id >= 1022) return;
+    if (id >= 1022)
+        return;
 
     irq_handle(id);
 
     MSR(ICC_EOIR1_EL1, ack);
-    //MSR(ICC_DIR_EL1, ack);
+    // MSR(ICC_DIR_EL1, ack);
 }
 
 uint64_t gicd_get_prio(uint64_t int_id)
@@ -218,21 +221,30 @@ static void gicd_set_pend(uint64_t int_id, bool pend)
 {
     spin_lock(&gicd_lock);
 
-    if (gic_is_sgi(int_id)) {
+    if (gic_is_sgi(int_id))
+    {
         uint64_t reg_ind = GICD_SGI_REG(int_id);
         uint64_t off = GICD_SGI_OFF(int_id);
 
-        if (pend) {
+        if (pend)
+        {
             gicd->SPENDSGIR[reg_ind] = (1U) << (off + get_cpuid());
-        } else {
+        }
+        else
+        {
             gicd->CPENDSGIR[reg_ind] = BIT_MASK(off, 8);
         }
-    } else {
+    }
+    else
+    {
         uint64_t reg_ind = GIC_INT_REG(int_id);
 
-        if (pend) {
+        if (pend)
+        {
             gicd->ISPENDR[reg_ind] = GIC_INT_MASK(int_id);
-        } else {
+        }
+        else
+        {
             gicd->ICPENDR[reg_ind] = GIC_INT_MASK(int_id);
         }
     }
@@ -246,9 +258,12 @@ void gicd_set_act(uint64_t int_id, bool act)
 
     spin_lock(&gicd_lock);
 
-    if (act) {
+    if (act)
+    {
         gicd->ISACTIVER[reg_ind] = GIC_INT_MASK(int_id);
-    } else {
+    }
+    else
+    {
         gicd->ICACTIVER[reg_ind] = GIC_INT_MASK(int_id);
     }
 
@@ -277,7 +292,8 @@ void gicd_set_trgt(uint64_t int_id, uint8_t trgt)
 
 void gicd_set_route(uint64_t int_id, uint64_t trgt)
 {
-    if (gic_is_priv(int_id)) return;
+    if (gic_is_priv(int_id))
+        return;
 
     gicd->IROUTER[int_id] = trgt;
 }
@@ -332,10 +348,13 @@ void gicr_set_icfgr(uint64_t int_id, uint8_t cfg, uint32_t gicr_id)
     uint64_t off = (int_id * GIC_CONFIG_BITS) % (sizeof(uint32_t) * 8);
     uint64_t mask = ((1U << GIC_CONFIG_BITS) - 1) << off;
 
-    if (reg_ind == 0) {
+    if (reg_ind == 0)
+    {
         gicr[gicr_id].ICFGR0 =
             (gicr[gicr_id].ICFGR0 & ~mask) | ((cfg << off) & mask);
-    } else {
+    }
+    else
+    {
         gicr[gicr_id].ICFGR1 =
             (gicr[gicr_id].ICFGR1 & ~mask) | ((cfg << off) & mask);
     }
@@ -360,9 +379,12 @@ enum int_state gicr_get_state(uint64_t int_id, uint32_t gicr_id)
 static void gicr_set_pend(uint64_t int_id, bool pend, uint32_t gicr_id)
 {
     spin_lock(&gicr_lock);
-    if (pend) {
+    if (pend)
+    {
         gicr[gicr_id].ISPENDR0 = (1U) << (int_id);
-    } else {
+    }
+    else
+    {
         gicr[gicr_id].ICPENDR0 = (1U) << (int_id);
     }
     spin_unlock(&gicr_lock);
@@ -372,9 +394,12 @@ void gicr_set_act(uint64_t int_id, bool act, uint32_t gicr_id)
 {
     spin_lock(&gicr_lock);
 
-    if (act) {
+    if (act)
+    {
         gicr[gicr_id].ISACTIVER0 = GIC_INT_MASK(int_id);
-    } else {
+    }
+    else
+    {
         gicr[gicr_id].ICACTIVER0 = GIC_INT_MASK(int_id);
     }
 
@@ -413,86 +438,113 @@ void gicr_set_enable(uint64_t int_id, bool en, uint32_t gicr_id)
 
 static bool irq_in_gicd(uint64_t int_id)
 {
-    if (int_id > 32 && int_id < 1025) return true;
-    else return false;
+    if (int_id > 32 && int_id < 1025)
+        return true;
+    else
+        return false;
 }
 
 void gic_send_sgi(uint64_t cpu_target, uint64_t sgi_num)
 {
-    if (sgi_num >= GIC_MAX_SGIS) return;
-    
+    if (sgi_num >= GIC_MAX_SGIS)
+        return;
+
     uint64_t sgi = (1UL << (cpu_target & 0xffull)) | (sgi_num << 24);
-    MSR(ICC_SGI1R_EL1, sgi); 
+    MSR(ICC_SGI1R_EL1, sgi);
 }
 
 void gic_set_prio(uint64_t int_id, uint8_t prio)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_prio(int_id, prio);
-    } else {
+    }
+    else
+    {
         return gicr_set_prio(int_id, prio, get_cpuid());
     }
 }
 
 uint64_t gic_get_prio(uint64_t int_id)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_get_prio(int_id);
-    } else {
+    }
+    else
+    {
         return gicr_get_prio(int_id, get_cpuid());
     }
 }
 
 void gic_set_icfgr(uint64_t int_id, uint8_t cfg)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_icfgr(int_id, cfg);
-    } else {
+    }
+    else
+    {
         return gicr_set_icfgr(int_id, cfg, get_cpuid());
     }
 }
 
 enum int_state gic_get_state(uint64_t int_id)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_get_state(int_id);
-    } else {
+    }
+    else
+    {
         return gicr_get_state(int_id, get_cpuid());
     }
 }
 
 static void gic_set_pend(uint64_t int_id, bool pend)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_pend(int_id, pend);
-    } else {
+    }
+    else
+    {
         return gicr_set_pend(int_id, pend, get_cpuid());
     }
 }
 
 void gic_set_act(uint64_t int_id, bool act)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_act(int_id, act);
-    } else {
+    }
+    else
+    {
         return gicr_set_act(int_id, act, get_cpuid());
     }
 }
 
 void gic_set_state(uint64_t int_id, enum int_state state)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_state(int_id, state);
-    } else {
+    }
+    else
+    {
         return gicr_set_state(int_id, state, get_cpuid());
     }
 }
 
 void gic_set_trgt(uint64_t int_id, uint8_t trgt)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_trgt(int_id, trgt);
-    } else {
+    }
+    else
+    {
         return gicr_set_trgt(int_id, trgt, get_cpuid());
     }
 }
@@ -504,10 +556,12 @@ void gic_set_route(uint64_t int_id, uint64_t trgt)
 
 void gic_set_enable(uint64_t int_id, bool en)
 {
-    if (irq_in_gicd(int_id)) {
+    if (irq_in_gicd(int_id))
+    {
         return gicd_set_enable(int_id, en);
-    } else {
+    }
+    else
+    {
         return gicr_set_enable(int_id, en, get_cpuid());
     }
 }
-

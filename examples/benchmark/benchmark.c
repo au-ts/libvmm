@@ -242,7 +242,7 @@ void notified(microkit_channel ch)
 
         printf("}\n");
         printf("Before %lx, Middle %lx, After %lx\n", before, middle, after);
-        printf("Init to start time: %ld\nInit to stop time: %ld\n", middle - before, after - before);
+        printf("Init to start time: %lx\nInit to stop time: %lx\n", middle - before, after - before);
         seL4_BenchmarkResetThreadUtilisation(TCB_CAP);
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION

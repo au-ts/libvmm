@@ -7,6 +7,7 @@
 #include <bit.h>
 #include <sysregs.h>
 #include <fences.h>
+#include <stdio.h>
 
 #define PMU_MAX_NUM_COUNTERS    (32)
 
@@ -16,6 +17,20 @@
 #define NO_EL10 (0x3 << 30)
 #define WITH_EL2 (1 << 27)
 #define EL2_ONLY (NO_EL10 | WITH_EL2)
+
+typedef uint64_t ccnt_t;
+#define PMCCNTR "PMCCNTR_EL0"
+
+#define PMU_WRITE(reg, v)                           \
+    do                                              \
+    {                                               \
+        uint64_t _v = v;                           \
+        asm volatile("msr  " reg ", %0" ::"r"(_v)); \
+    } while (0)
+
+#define PMU_READ(reg, v) asm volatile("mrs %0, " reg : "=r"(v))
+
+#define READ_CCNT(var) PMU_READ(PMCCNTR, var);
 
 enum PMU_EVENT {
     SW_INCR = 0x0, 
@@ -259,8 +274,9 @@ static inline void pmu_cycle_enable(bool en){
 }
 
 static inline uint64_t pmu_cycle_get(){
-    uint64_t val = 0;
-    return MRS(PMCCNTR_EL0);
+    uint64_t val;
+    READ_CCNT(val);
+    return val;
 }
 
 #endif /* __PMU_H__ */

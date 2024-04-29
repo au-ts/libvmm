@@ -94,47 +94,8 @@ uintptr_t guest_ram_vaddr;
 // uint64_t idle_ccount_start;
 // uint64_t idle_overflow_start;
 
-seL4_Word tcb_test(seL4_TCB _service, seL4_Bool suspend_source, seL4_Uint8 arch_flags)
+static void serial_ack(size_t vcpu_id, int irq, void *cookie)
 {
-    seL4_Error result;
-    seL4_MessageInfo_t tag = seL4_MessageInfo_new(TCBReadRegisters, 0, 0, 2);
-    seL4_MessageInfo_t output_tag;
-    seL4_Word mr0;
-    seL4_Word mr1;
-    seL4_Word mr2;
-    seL4_Word mr3;
-
-    /* Marshal and initialise parameters. */
-    mr0 = (suspend_source & 0x1ull) | ((arch_flags & 0xffull) << 8);
-    mr1 = 1;
-    mr2 = 0;
-    mr3 = 0;
-
-    /* Perform the call, passing in-register arguments directly. */
-    output_tag = seL4_CallWithMRs(_service, tag,
-                                  &mr0, &mr1, &mr2, &mr3);
-    result = (seL4_Error)seL4_MessageInfo_get_label(output_tag);
-
-    /* Unmarshal registers into IPC buffer on error. */
-    if (result != seL4_NoError)
-    {
-        seL4_SetMR(0, mr0);
-        seL4_SetMR(1, mr1);
-        seL4_SetMR(2, mr2);
-        seL4_SetMR(3, mr3);
-#ifdef CONFIG_KERNEL_INVOCATION_REPORT_ERROR_IPC
-        if (seL4_CanPrintError())
-        {
-            seL4_DebugPutString(seL4_GetDebugError());
-        }
-#endif
-    }
-
-    /* Unmarshal result. */
-    return mr0;
-}
-
-static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     /*
      * For now we by default simply ack the serial IRQ, we have not
      * come across a case yet where more than this needs to be done.
@@ -142,56 +103,64 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
-uintptr_t load_kernel(char *kernel_image, size_t kernel_size) {
+uintptr_t load_kernel(char *kernel_image, size_t kernel_size)
+{
     uintptr_t kernel_dest = guest_ram_vaddr;
 
     LOG_VMM("Copying guest kernel image to 0x%x (0x%x bytes)\n", kernel_dest, kernel_size);
-    
+
     memcpy((char *)kernel_dest, kernel_image, kernel_size);
 
     long checksum = 0;
-    for (int i = 0; i < kernel_size; i++) {
+    for (int i = 0; i < kernel_size; i++)
+    {
         checksum += ((char *)kernel_dest)[i];
     }
     LOG_VMM("Checksum: %ld\n", checksum);
     return kernel_dest;
 }
 
-void init(void) {
-    
+void init(void)
+{
+#ifdef CONFIG_PROFILER_ENABLE
+    seL4_ProfilerRegisterThread(1);
+#endif
+
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_bare_image_end - _guest_bare_image;
 
     LOG_VMM("Invalidating cache for guest RAM at 0x%x (0x%x bytes)\n", guest_ram_vaddr, GUEST_RAM_SIZE);
-    
+
     uintptr_t kernel_pc = (uintptr_t)load_kernel(_guest_bare_image, kernel_size);
 
     // seL4_ARM_VSpace_CleanInvalidate_Data(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
     // seL4_ARM_VSpace_Unify_Instruction(3, guest_ram_vaddr, guest_ram_vaddr + GUEST_RAM_SIZE);
 
-    if (!kernel_pc) {
+    if (!kernel_pc)
+    {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init(GUEST_VCPU_ID);
-    if (!success) {
+    if (!success)
+    {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
     // @ivanv: Note that remove this line causes the VMM to fault if we
     // actually get the interrupt. This should be avoided by making the VGIC driver more stable.
 
-    LOG_VMM("Registering IRQ %d on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    if (!success) {
-        LOG_VMM_ERR("Failed to register serial IRQ\n");
-        return;
-    }
-    /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    // LOG_VMM("Registering IRQ %d on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
+    // success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    // if (!success) {
+    //     LOG_VMM_ERR("Failed to register serial IRQ\n");
+    //     return;
+    // }
+    // /* Just in case there is already an interrupt available to handle, we ack it here. */
+    // microkit_irq_ack(SERIAL_IRQ_CH);
 
     // microkit_notify(START_PMU);
 
@@ -202,25 +171,27 @@ void init(void) {
     /* Finally start the guest */
     sel4bench_init();
 
-    
+    microkit_notify(10);
 
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
-
-
 }
 
-void notified(microkit_channel ch) {
+void notified(microkit_channel ch)
+{
     LOG_VMM("Got notified on channel %d\n", ch);
-    switch (ch) {
-        case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
-            }
-            break;
+    switch (ch)
+    {
+    case SERIAL_IRQ_CH:
+    {
+        bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
+        if (!success)
+        {
+            LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
         }
-        default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+        break;
+    }
+    default:
+        printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
 
@@ -230,11 +201,16 @@ void notified(microkit_channel ch) {
  * the VMM to handle.
  */
 
-
-void fault(microkit_id id, microkit_msginfo msginfo) {
+void fault(microkit_id id, microkit_msginfo msginfo)
+{
+    ccnt_t before, after;
+    before = get_cycles();
     bool success = fault_handle(id, msginfo);
+    after = get_cycles();
+    add_event(after - before, cur_event, LibVMM_Total_Event);
 
-    if (success) {
+    if (success)
+    {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
         // before = sel4bench_get_cycle_count();
@@ -243,16 +219,19 @@ void fault(microkit_id id, microkit_msginfo msginfo) {
         // add_event(after - before, cur_event, Microkit_Reply);
         have_reply = true;
         reply_tag = microkit_msginfo_new(0, 0);
-        // } else {
-        //     printf("rut roh!\n");
-        //     uint64_t total = 0, idle = 0;
-        //     total = bench->ts - start;
-        //     total += (__LONG_MAX__ * 2UL + 1UL) * (bench->overflows - idle_overflow_start);
-        //     idle = bench->ccount - idle_ccount_start;
+    }
+    else
+    {
+        // printf("rut roh!\n");
+        // uint64_t total = 0, idle = 0;
+        // total = bench->ts - start;
+        // total += (__LONG_MAX__ * 2UL + 1UL) * (bench->overflows - idle_overflow_start);
+        // idle = bench->ccount - idle_ccount_start;
 
-        //     printf("Total: %lu\n", total);
-        //     printf("Idle: %lu\n", idle);
+        // printf("Total: %lu\n", total);
+        // printf("Idle: %lu\n", idle);
 
-        //     microkit_notify(STOP_PMU);
+        // microkit_notify(STOP_PMU);
+        microkit_notify(20);
     }
 }

@@ -96,6 +96,9 @@ BARE_IS_INTERF := 0
 IRQLAT_IMAGE_DIR := irqlat/build/$(TARGET_BOARD)
 IRQLAT := $(IRQLAT_IMAGE_DIR)/baremetal.bin
 
+NOOP_IMAGE_DIR := no-op/build/$(TARGET_BOARD)
+NOOP := $(NOOP_IMAGE_DIR)/baremetal.bin
+
 IRQSTORM_IMAGE_DIR := irqstorm/build/$(TARGET_BOARD)
 IRQSTORM := $(IRQSTORM_IMAGE_DIR)/baremetal.bin
 
@@ -148,6 +151,7 @@ CFLAGS := -mstrict-align \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -DBENCH_$(BENCH) \
+		  -DSPECIAL_$(SPECIAL) \
 		  -target aarch64-none-elf
 
 LDFLAGS := -L$(BOARD_DIR)/lib
@@ -162,6 +166,10 @@ endif
 
 ifeq ($(findstring irqlat,$(TEST)), irqlat)
 	DEPS += irqlat
+endif
+
+ifeq ($(findstring no-op,$(TEST)), no-op)
+	DEPS += no-op
 endif
 
 ifeq ($(findstring irqstorm,$(TEST)), irqstorm)
@@ -205,6 +213,9 @@ interf:
 irqlat:
 	$(MAKE) -C irqlat PLATFORM=$(TARGET_BOARD)
 
+no-op:
+	$(MAKE) -C no-op PLATFORM=$(TARGET_BOARD)
+
 irqstorm:
 	$(MAKE) -C irqstorm PLATFORM=$(TARGET_BOARD)
 
@@ -213,6 +224,7 @@ clean:
 	$(MAKE) -C interf clean
 	$(MAKE) -C irqlat clean
 	$(MAKE) -C irqstorm clean
+	$(MAKE) -C no-op clean
 
 $(DTB): $(DTS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
@@ -272,6 +284,15 @@ endif
 ifeq ($(findstring boot,$(TEST)),boot)
 	PATHS += \
 	-DGUEST_BARE_IMAGE_PATH=\"$(BOOT)\" \
+
+	INTERF_DO_READ = 0
+	ELFS +=  bare_vmm.elf
+
+endif
+
+ifeq ($(findstring no-op,$(TEST)),no-op)
+	PATHS += \
+	-DGUEST_BARE_IMAGE_PATH=\"$(NOOP)\" \
 
 	INTERF_DO_READ = 0
 	ELFS +=  bare_vmm.elf

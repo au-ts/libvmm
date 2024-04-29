@@ -440,6 +440,8 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
         } else if (data == 0) {
             vgic_dist_disable(gic_dist);
         } else {
+            vgic_dist_enable(gic_dist);
+            LOG_VMM("Data is %u", data);
             LOG_VMM_ERR("Unknown enable register encoding");
             // @ivanv: goto ignore fault?
         }

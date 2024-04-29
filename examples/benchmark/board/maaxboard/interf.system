@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+
+
+    <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
+
+
+    <memory_region name="gic_vcpu" size="0x1000" phys_addr="0x31020000" />
+
+
+    <protection_domain name="interf_VMM" priority="254">
+        <program_image path="interf_vmm.elf" />
+
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" setvar_vaddr="uart_base"/>
+        <virtual_machine name="interf" id="0">
+
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+
+            <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" />
+
+            <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
+        </virtual_machine>
+
+    </protection_domain>
+</system>
