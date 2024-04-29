@@ -144,7 +144,10 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					mmio.o
 # block.o
 
-SOUND_VIRT_OBJS := sound_virt.o
+SOUND_VIRT_OBJS :=	sound_virt.o \
+					sddf_printf.o \
+					sddf_putchar_debug.o \
+					sddf_cache.o
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
