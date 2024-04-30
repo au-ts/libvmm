@@ -36,7 +36,7 @@
 
 // TODO - PROBABLY NEED TO CHANGE THESE ADDRESSES
 #if defined(BOARD_qemu_arm_virt)
-#define GUEST_DTB_VADDR 0x47f00000
+#define GUEST_DTB_VADDR 0x40000000 // UBoot for qemu_arm_virt seems to expect the DTB to be here
 #define UBOOT_OFFSET 0x200000
 #elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x25f10000
@@ -204,10 +204,11 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     switch (ch) {
+        // GIVEN WE HAVE PASSTHROUGH TO THE UART WE SHOULDNT BE CALLING THIS - CAN COMMENT OUT FOR NOW
         case SERIAL_MUX_RX_CH: {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
-            virtio_console_handle_rx(&virtio_console);
+            // virtio_console_handle_rx(&virtio_console);
             break;
         }
         case BLK_CH: {
