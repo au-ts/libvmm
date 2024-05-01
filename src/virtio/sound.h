@@ -307,18 +307,21 @@ struct virtio_snd_device {
     // Queue of virtio_snd_request_t
     // PCM requests must be responded to in order.
     queue_t cmd_requests;
-    buffer_t cmd_requests_data[VIRTIO_SND_MAX_CMD_REQUESTS];
+    virtio_snd_request_t cmd_requests_data[VIRTIO_SND_MAX_CMD_REQUESTS];
     // Queue of virtio_snd_request_t
     // PCM requests must be responded to in order.
     queue_t pcm_requests;
-    buffer_t pcm_requests_data[VIRTIO_SND_MAX_PCM_REQUESTS];
+    virtio_snd_request_t pcm_requests_data[VIRTIO_SND_MAX_PCM_REQUESTS];
     uint32_t curr_cookie;
     // Queue of buffer_t structs
     queue_t free_buffers;
-    buffer_t free_buffers_data[SOUND_NUM_BUFFERS];
+    buffer_t free_buffers_data[SOUND_PCM_QUEUE_SIZE];
     // sDDF state
     sound_shared_state_t *shared_state;
-    sound_queues_t queues;
+    sound_cmd_queue_handle_t cmd_req;
+    sound_cmd_queue_handle_t cmd_res;
+    sound_pcm_queue_handle_t pcm_req;
+    sound_pcm_queue_handle_t pcm_res;
     int server_ch;
 };
 
