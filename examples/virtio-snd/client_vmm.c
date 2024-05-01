@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
+#include "util/atomic.h"
 #include "util/util.h"
 #include "arch/aarch64/vgic/vgic.h"
 #include "arch/aarch64/linux.h"
@@ -74,7 +75,6 @@ uintptr_t sound_shared_state;
 static struct virtio_console_device virtio_console;
 static struct virtio_snd_device virtio_sound;
 
-static bool guest_started = false;
 uintptr_t kernel_pc = 0;
 
 void init(void) {
@@ -174,17 +174,23 @@ void init(void) {
         int ret = sound_enqueue_pcm(sound_queues.pcm_res, &pcm);
         assert(ret == 0);
     }
+    
+    /* Don't start the guest until driver VM is ready. */
+    sound_shared_state_t *shared_state = (void *)sound_shared_state;
+
+    while (!ATOMIC_LOAD(&shared_state->ready, __ATOMIC_ACQUIRE));
 
     success = virtio_mmio_snd_init(&virtio_sound,
                               VIRTIO_SOUND_BASE,
                               VIRTIO_SOUND_SIZE,
                               VIRTIO_SOUND_IRQ,
-                              (void *)sound_shared_state,
+                              shared_state,
                               &sound_queues,
                               SOUND_DRIVER_CH);
     assert(success);
-    
-    /* Don't start the guest until driver VM is ready. */
+
+    success = guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    assert(success);
 }
 
 void notified(microkit_channel ch) {
@@ -197,10 +203,6 @@ void notified(microkit_channel ch) {
         }
         case SOUND_DRIVER_CH: {
             virtio_snd_notified(&virtio_sound);
-            if (!guest_started) {
-                guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
-                guest_started = true;
-            }
             break;
         }
         default:

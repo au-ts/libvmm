@@ -322,6 +322,21 @@ struct virtio_snd_device {
     int server_ch;
 };
 
+/**
+ * Initialise a virtIO sound device with MMIO.
+ * This must be called *after* driver has finished initialisation.
+ * 
+ * @param sound_dev Preallocated memory for the sound device,
+ *                  does not need to be pre-initialised.
+ * @param region_base Start of the MMIO fault region.
+ * @param region_size Size of the MMIO fault region.
+ * @param virq The virtual IRQ used to notify the VM.
+ * @param shared_state Pointer to the sDDF sound shared data region.
+ * @param queues Pointer to sDDF sound queues.
+ * @param server_ch Channel of the sound server.
+ * 
+ * @return `true` on success, `false` otherwise.
+ */
 bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
                      uintptr_t region_base,
                      uintptr_t region_size,
