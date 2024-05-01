@@ -475,7 +475,8 @@ static bool perform_xfer(struct virtio_device *dev,
             int to_xfer = MIN(desc_remaining, pcm_remaining);
 
             if (transmit) {
-                memcpy((void *)pcm_buffer.addr + pcm_transmitted, (void *)desc->addr + desc_transmitted, to_xfer);
+                memcpy((void *)pcm_buffer.addr + pcm_transmitted,
+                       (void *)desc->addr + desc_transmitted, to_xfer);
             }
             desc_transmitted += to_xfer;
             desc_remaining -= to_xfer;
@@ -671,7 +672,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     dev->device_data = sound_dev;
 
     sound_dev->config.jacks = 0;
-    sound_dev->config.streams = 0;
+    sound_dev->config.streams = shared_state->streams;
     sound_dev->config.chmaps = 0;
 
     // Queue of virtio_snd_request_t
@@ -810,8 +811,6 @@ void virtio_snd_notified(struct virtio_snd_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
     bool respond = false;
-
-    state->config.streams = state->shared_state->streams;
 
     sound_cmd_t cmd;
     while (sound_dequeue_cmd(state->queues.cmd_res, &cmd) == 0) {
