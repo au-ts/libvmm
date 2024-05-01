@@ -157,21 +157,24 @@ void init(void) {
     assert(sound_data);
 
     sound_queues_t sound_queues;
-    sound_queues.cmd_req = (void *)sound_cmd_req;
-    sound_queues.cmd_res = (void *)sound_cmd_res;
-    sound_queues.pcm_req = (void *)sound_pcm_req;
-    sound_queues.pcm_res = (void *)sound_pcm_res;
 
-    sound_queues_init_default(&sound_queues);
+    sound_queues_init(&sound_queues,
+                      (void *)sound_cmd_req,
+                      (void *)sound_cmd_res,
+                      (void *)sound_pcm_req,
+                      (void *)sound_pcm_res,
+                      SOUND_CMD_QUEUE_SIZE,
+                      SOUND_PCM_QUEUE_SIZE);
 
-    // @alexbr: why -1?
-    for (int i = 0; i < SOUND_NUM_BUFFERS - 1; i++) {
+    sound_queues_init_buffers(&sound_queues);
+
+    for (int i = 0; i < SOUND_PCM_QUEUE_SIZE; i++) {
         sound_pcm_t pcm;
         memset(&pcm, 0, sizeof(pcm));
         pcm.len = SOUND_PCM_BUFFER_SIZE;
 
         pcm.addr = sound_data + (i * SOUND_PCM_BUFFER_SIZE);
-        int ret = sound_enqueue_pcm(sound_queues.pcm_res, &pcm);
+        int ret = sound_enqueue_pcm(&sound_queues.pcm_res, &pcm);
         assert(ret == 0);
     }
     

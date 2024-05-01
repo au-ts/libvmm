@@ -63,8 +63,8 @@ struct stream {
     queue_t *cmd_req;
     queue_t *pcm_req;
 
-    sound_cmd_queue_t *cmd_res;
-    sound_pcm_queue_t *pcm_res;
+    sound_cmd_queue_handle_t cmd_res;
+    sound_pcm_queue_handle_t pcm_res;
 };
 
 struct alsa_params {
@@ -122,7 +122,7 @@ static bool send_response(stream_t *stream)
     response->latency_bytes = stream->buffer_size;
     response->status = stream->state == STREAM_STATE_IO_ERR ? SOUND_S_IO_ERR : SOUND_S_OK;
 
-    if (sound_enqueue_pcm(stream->pcm_res, response) != 0) {
+    if (sound_enqueue_pcm(&stream->pcm_res, response) != 0) {
         LOG_SOUND_ERR("Failed to enqueue pcm_res\n");
         return false;
     }
@@ -148,7 +148,7 @@ static int stream_fail(stream_t *stream)
         pcm->status = SOUND_S_IO_ERR;
         LOG_SOUND("Sending fail response cookie %d\n", pcm->cookie);
 
-        if (sound_enqueue_pcm(stream->pcm_res, pcm) != 0) {
+        if (sound_enqueue_pcm(&stream->pcm_res, pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue pcm_res\n");
             return responses_sent;
         }
@@ -687,7 +687,7 @@ static bool stream_flush_commands(stream_t *stream)
         }
         cmd->status = status;
 
-        if (sound_enqueue_cmd(stream->cmd_res, cmd) != 0) {
+        if (sound_enqueue_cmd(&stream->cmd_res, cmd) != 0) {
             LOG_SOUND_ERR("Failed to enqueue response");
             break;
         }
@@ -717,8 +717,8 @@ bool stream_update(stream_t *stream)
 }
 
 stream_t *stream_open(sound_pcm_info_t *info, const char *device, snd_pcm_stream_t direction,
-                      ssize_t translate_offset, sound_cmd_queue_t *cmd_responses,
-                      sound_pcm_queue_t *pcm_responses)
+                      ssize_t translate_offset, sound_cmd_queue_handle_t *cmd_res,
+                      sound_pcm_queue_handle_t *pcm_res)
 {
     stream_t *stream = malloc(sizeof(stream_t));
     if (stream == NULL) {
@@ -789,11 +789,11 @@ stream_t *stream_open(sound_pcm_info_t *info, const char *device, snd_pcm_stream
 
     stream->timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
 
-    stream->cmd_req = queue_create(sizeof(sound_cmd_t), SOUND_NUM_BUFFERS / 4);
-    stream->cmd_res = cmd_responses;
+    stream->cmd_req = queue_create(sizeof(sound_cmd_t), SOUND_PCM_QUEUE_SIZE / 4);
+    stream->cmd_res = *cmd_res;
 
-    stream->pcm_req = queue_create(sizeof(sound_pcm_t), SOUND_NUM_BUFFERS / 4);
-    stream->pcm_res = pcm_responses;
+    stream->pcm_req = queue_create(sizeof(sound_pcm_t), SOUND_PCM_QUEUE_SIZE / 4);
+    stream->pcm_res = *pcm_res;
 
     stream->staged_responses = queue_create(sizeof(sound_pcm_t), PCM_QUEUE_SIZE);
 
