@@ -43,7 +43,7 @@
     <!-- Sound data regions -->
     <memory_region name="snd_data" size="0x200_000" page_size="0x200_000" />
 
-    <protection_domain name="CLIENT_VMM_1" priority="100">
+    <protection_domain name="CLIENT_VMM_1" priority="90">
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_1" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
@@ -63,13 +63,13 @@
         <map mr="snd_c0_pcm_req" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="sound_pcm_req" />
         <map mr="snd_c0_pcm_res" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="sound_pcm_res" />
 
-        <virtual_machine name="client_linux_1" id="0" priority="100">
+        <virtual_machine name="client_linux_1" id="0" priority="90">
             <map mr="client_vm_ram_1" vaddr="0x20000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain>
 
-    <protection_domain name="CLIENT_VMM_2" priority="100">
+    <protection_domain name="CLIENT_VMM_2" priority="90">
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_2" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
@@ -89,7 +89,7 @@
         <map mr="snd_c1_pcm_req" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="sound_pcm_req" />
         <map mr="snd_c1_pcm_res" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="sound_pcm_res" />
 
-        <virtual_machine name="client_linux_2" id="0" priority="100">
+        <virtual_machine name="client_linux_2" id="0" priority="90">
             <map mr="client_vm_ram_2" vaddr="0x20000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
         </virtual_machine>
@@ -98,7 +98,6 @@
     <protection_domain name="sound_virt" priority="100" pp="true">
         <program_image path="sound_virt.elf" />
 
-        <map mr="snd_shared" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
         <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" />
 
         <map mr="snd_c0_cmd_req" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_req" />
@@ -117,7 +116,7 @@
         <map mr="snd_drv_pcm_res" vaddr="0x8_600_000" perms="rw" cached="false" setvar_vaddr="drv_pcm_res" />
     </protection_domain>
 
-    <protection_domain name="SND_DRIVER_VMM" priority="100">
+    <protection_domain name="SND_DRIVER_VMM" priority="110" budget="400" period="2000">
         <program_image path="snd_driver_vmm.elf" />
         <map mr="snd_driver_vm_ram" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
@@ -129,7 +128,7 @@
         <map mr="tx_data_serial_vmm_3" vaddr="0x8_c00_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_3" vaddr="0x8_e00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <virtual_machine name="snd_linux" id="0" priority="100">
+        <virtual_machine name="snd_linux" id="0" priority="110">
             <map mr="snd_driver_vm_ram" vaddr="0x20000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
             <map mr="bus1" vaddr="0xff600000" perms="rw" cached="false" />

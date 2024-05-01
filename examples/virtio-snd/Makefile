@@ -188,6 +188,8 @@ CFLAGS_USERLEVEL :=	-g \
 					-I$(CURRENT_DIR) \
 					-I$(SDDF) \
 					-I$(SDDF)/include \
+					-I$(VMM_SRC_DIR) \
+					-DBOARD_$(BOARD) \
 					-lasound \
 					-lm \
 					-target aarch64-linux-gnu \

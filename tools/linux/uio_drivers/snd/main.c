@@ -1,6 +1,7 @@
 #include "log.h"
 #include "stream.h"
 #include "uio_fault_addr.h"
+#include "util/atomic.h"
 #include <sddf/sound/queue.h>
 #include <assert.h>
 #include <stdio.h>
@@ -285,10 +286,9 @@ int main(int argc, char **argv)
     }
 
     state.shared_state->streams = state.stream_count;
-    LOG_SOUND("Initialised %d streams\n", state.stream_count);
+    ATOMIC_STORE(&state.shared_state->ready, true, __ATOMIC_RELEASE);
 
-    // Signal ready even if we don't create all streams.
-    signal_ready_to_vmm(state.signal_addr);
+    LOG_SOUND("Initialised %d streams\n", state.stream_count);
 
     if (state.stream_count == 0) {
         LOG_SOUND_ERR("No streams available, exiting\n");
