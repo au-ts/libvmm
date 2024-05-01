@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #define PAGE_SIZE_4K 0x1000
-#define RING_BYTES 0x200000
+#define QUEUE_BYTES 0x200000
 
 #define DEFAULT_DEVICE "default"
 #define MAX_STREAMS 2
@@ -23,8 +23,8 @@
 
 #define SHARED_STATE_SLOT 0
 #define SHARED_STATE_SIZE UIO_SIZE("0")
-#define RINGS_SLOT 1
-#define RINGS_SIZE UIO_SIZE("1")
+#define QUEUES_SLOT 1
+#define QUEUES_SIZE UIO_SIZE("1")
 #define PCM_DATA_SLOT 2
 #define PCM_DATA_ADDR UIO_ADDR("2")
 #define PCM_DATA_SIZE UIO_SIZE("2")
@@ -34,7 +34,7 @@ typedef struct driver_state {
     int stream_count;
 
     sound_shared_state_t *shared_state;
-    sound_queues_t rings;
+    sound_queues_t queues;
     ssize_t translate;
 
     char *signal_addr;
@@ -126,15 +126,12 @@ int init_mappings(driver_state_t *state, int uio_fd)
         return -1;
     }
 
-    void *ring_buffers = map_uio(RINGS_SLOT, RINGS_SIZE, uio_fd);
-    if (ring_buffers == MAP_FAILED) {
-        perror("Error mapping ring_buffers");
+    void *queues = map_uio(QUEUES_SLOT, QUEUES_SIZE, uio_fd);
+    if (queues == MAP_FAILED) {
+        perror("Error mapping queues");
         return -1;
     }
 
-    // TODO: tx and rx data are now in wrong position
-    // need to add back get addr functions
-    // then either fix address or use offset
     void *pcm = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
     if (pcm == MAP_FAILED) {
         perror("Error mapping pcm");
@@ -150,29 +147,37 @@ int init_mappings(driver_state_t *state, int uio_fd)
     }
 
     int offset = 0;
-    state->rings.cmd_req = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.cmd_res = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.pcm_req = (void *)(ring_buffers + RING_BYTES * offset++);
-    state->rings.pcm_res = (void *)(ring_buffers + RING_BYTES * offset++);
+    sound_cmd_queue_t *cmd_req = (void *)(queues + QUEUE_BYTES * offset++);
+    sound_cmd_queue_t *cmd_res = (void *)(queues + QUEUE_BYTES * offset++);
+    sound_pcm_queue_t *pcm_req = (void *)(queues + QUEUE_BYTES * offset++);
+    sound_pcm_queue_t *pcm_res = (void *)(queues + QUEUE_BYTES * offset++);
+
+    sound_queues_init(&state->queues,
+                      cmd_req,
+                      cmd_res,
+                      pcm_req,
+                      pcm_res,
+                      SOUND_CMD_QUEUE_SIZE,
+                      SOUND_PCM_QUEUE_SIZE);
 
     state->translate = pcm - (void *)pcm_physical;
 
     return 0;
 }
 
-static void fail_cmd(sound_cmd_queue_t *ring, sound_cmd_t *cmd)
+static void fail_cmd(sound_cmd_queue_handle_t *h, sound_cmd_t *cmd)
 {
     cmd->status = SOUND_S_BAD_MSG;
-    if (sound_enqueue_cmd(ring, cmd) != 0) {
+    if (sound_enqueue_cmd(h, cmd) != 0) {
         LOG_SOUND_ERR("Failed to send fail response\n");
     }
 }
 
-static void fail_pcm(sound_pcm_queue_t *ring, sound_pcm_t *pcm)
+static void fail_pcm(sound_pcm_queue_handle_t *h, sound_pcm_t *pcm)
 {
     pcm->status = SOUND_S_BAD_MSG;
     pcm->latency_bytes = 0;
-    if (sound_enqueue_pcm(ring, pcm) != 0) {
+    if (sound_enqueue_pcm(h, pcm) != 0) {
         LOG_SOUND_ERR("Failed to send fail response\n");
     }
 }
@@ -182,19 +187,19 @@ static bool handle_uio_interrupt(driver_state_t *state)
     sound_cmd_t cmd;
     sound_pcm_t pcm;
 
-    while (sound_dequeue_cmd(state->rings.cmd_req, &cmd) == 0) {
+    while (sound_dequeue_cmd(&state->queues.cmd_req, &cmd) == 0) {
         if (cmd.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
-            fail_cmd(state->rings.cmd_res, &cmd);
+            fail_cmd(&state->queues.cmd_res, &cmd);
             continue;
         }
         stream_enqueue_command(state->streams[cmd.stream_id], &cmd);
     }
 
-    while (sound_dequeue_pcm(state->rings.pcm_req, &pcm) == 0) {
+    while (sound_dequeue_pcm(&state->queues.pcm_req, &pcm) == 0) {
         if (pcm.stream_id >= state->stream_count) {
             LOG_SOUND_ERR("Invalid stream id\n");
-            fail_pcm(state->rings.pcm_res, &pcm);
+            fail_pcm(&state->queues.pcm_res, &pcm);
             continue;
         }
         stream_enqueue_pcm_req(state->streams[pcm.stream_id], &pcm);
@@ -267,7 +272,7 @@ int main(int argc, char **argv)
 
             state.streams[state.stream_count] = stream_open(
                 &state.shared_state->stream_info[state.stream_count], device_name, direction,
-                state.translate, state.rings.cmd_res, state.rings.pcm_res);
+                state.translate, &state.queues.cmd_res, &state.queues.pcm_res);
 
             if (state.streams[state.stream_count] == NULL) {
                 LOG_SOUND_WARN("Could not initialise target stream %d (%s)\n", i, device_name);

@@ -31,7 +31,7 @@ static inline struct virtio_snd_device *device_state(struct virtio_device *dev)
 static void fetch_buffers(struct virtio_snd_device *state)
 {
     sound_pcm_t pcm;
-    while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
+    while (sound_dequeue_pcm(&state->pcm_res, &pcm) == 0) {
         buffer_t *buffer = queue_enqueue_raw(&state->free_buffers);
         buffer->addr = pcm.addr;
         buffer->len = pcm.len;
@@ -296,7 +296,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     cmd.set_params.format = set_params->format;
     cmd.set_params.rate = set_params->rate;
 
-    if (sound_enqueue_cmd(device_state(dev)->queues.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         queue_dequeue_back(&state->cmd_requests);
         return -SOUND_S_IO_ERR;
@@ -330,7 +330,7 @@ static int handle_basic_cmd(struct virtio_device *dev,
     cmd.cookie = req->cookie;
     cmd.stream_id = stream_id;
 
-    if (sound_enqueue_cmd(device_state(dev)->queues.cmd_req, &cmd) != 0) {
+    if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
         queue_dequeue_back(&state->cmd_requests);
         return -SOUND_S_IO_ERR;
@@ -495,7 +495,7 @@ static bool perform_xfer(struct virtio_device *dev,
                 pcm.status = 0;
                 pcm.latency_bytes = 0;
 
-                if (sound_enqueue_pcm(state->queues.pcm_req, &pcm) != 0) {
+                if (sound_enqueue_pcm(&state->pcm_req, &pcm) != 0) {
                     LOG_SOUND_ERR("Failed to enqueue to pcm request\n");
                     return false;
                 }
@@ -523,7 +523,7 @@ static bool perform_xfer(struct virtio_device *dev,
         pcm.status = 0;
         pcm.latency_bytes = 0;
 
-        if (sound_enqueue_pcm(state->queues.pcm_req, &pcm) != 0) {
+        if (sound_enqueue_pcm(&state->pcm_req, &pcm) != 0) {
             LOG_SOUND_ERR("Failed to enqueue to tx used\n");
             return false;
         }
@@ -689,11 +689,15 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     queue_init(&sound_dev->free_buffers,
                sizeof(buffer_t),
                &sound_dev->free_buffers_data,
-               SOUND_NUM_BUFFERS);
+               SOUND_PCM_QUEUE_SIZE);
 
     sound_dev->curr_cookie = 0;
+
     sound_dev->shared_state = shared_state;
-    sound_dev->queues = *queues;
+    sound_dev->cmd_req = queues->cmd_req;
+    sound_dev->cmd_res = queues->cmd_res;
+    sound_dev->pcm_req = queues->pcm_req;
+    sound_dev->pcm_res = queues->pcm_res;
     sound_dev->server_ch = server_ch;
 
     fetch_buffers(sound_dev);
@@ -813,7 +817,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
     bool respond = false;
 
     sound_cmd_t cmd;
-    while (sound_dequeue_cmd(state->queues.cmd_res, &cmd) == 0) {
+    while (sound_dequeue_cmd(&state->cmd_res, &cmd) == 0) {
 
         virtio_snd_request_t *req = queue_front(&state->cmd_requests);
         if (req == NULL) {
@@ -837,7 +841,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
     }
 
     sound_pcm_t pcm;
-    while (sound_dequeue_pcm(state->queues.pcm_res, &pcm) == 0) {
+    while (sound_dequeue_pcm(&state->pcm_res, &pcm) == 0) {
 
         virtio_snd_request_t *req = queue_front(&state->pcm_requests);
         if (req == NULL) {
