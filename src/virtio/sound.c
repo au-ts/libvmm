@@ -275,13 +275,13 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    virtio_snd_request_t *req = queue_enqueue_raw(&state->cmd_requests);
-    if (req == NULL) {
-        LOG_SOUND_ERR("Failed to allocate CMD request\n");
+    uint32_t cookie = freelist_allocate(&state->free_requests);
+    if (cookie == FREELIST_INVALID) {
+        LOG_SOUND_ERR("Failed to allocate cookie\n");
         return -SOUND_S_IO_ERR;
     }
 
-    req->cookie = state->curr_cookie++;
+    virtio_snd_request_t *req = &state->requests[cookie];
     req->desc_head = desc_head;
     req->ref_count = 1;
     req->status = SOUND_S_OK;
@@ -290,7 +290,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 
     sound_cmd_t cmd;
     cmd.code = SOUND_CMD_TAKE;
-    cmd.cookie = req->cookie;
+    cmd.cookie = cookie;
     cmd.stream_id = set_params->hdr.stream_id;
     cmd.set_params.channels = set_params->channels;
     cmd.set_params.format = set_params->format;
@@ -298,7 +298,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 
     if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        queue_dequeue_back(&state->cmd_requests);
+        freelist_return(&state->free_requests, cookie);
         return -SOUND_S_IO_ERR;
     }
 
@@ -312,13 +312,13 @@ static int handle_basic_cmd(struct virtio_device *dev,
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    virtio_snd_request_t *req = queue_enqueue_raw(&state->cmd_requests);
-    if (req == NULL) {
-        LOG_SOUND_ERR("Failed to allocate CMD request\n");
+    uint32_t cookie = freelist_allocate(&state->free_requests);
+    if (cookie == FREELIST_INVALID) {
+        LOG_SOUND_ERR("Failed to allocate cookie\n");
         return -SOUND_S_IO_ERR;
     }
 
-    req->cookie = state->curr_cookie++;
+    virtio_snd_request_t *req = &state->requests[cookie];
     req->desc_head = desc_head;
     req->ref_count = 1;
     req->status = SOUND_S_OK;
@@ -327,12 +327,12 @@ static int handle_basic_cmd(struct virtio_device *dev,
 
     sound_cmd_t cmd;
     cmd.code = code;
-    cmd.cookie = req->cookie;
+    cmd.cookie = cookie;
     cmd.stream_id = stream_id;
 
     if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        queue_dequeue_back(&state->cmd_requests);
+        freelist_return(&state->free_requests, cookie);
         return -SOUND_S_IO_ERR;
     }
 
@@ -548,7 +548,11 @@ static void handle_xfer(struct virtio_device *dev,
         return;
     }
 
-    uint32_t cookie = state->curr_cookie++;
+    uint32_t cookie = freelist_allocate(&state->free_requests);
+    if (cookie == FREELIST_INVALID) {
+        LOG_SOUND_ERR("Failed to allocate cookie\n");
+        return;
+    }
 
     struct virtq_desc *desc = &virtq->desc[req_desc->next];
     int sent = 0;
@@ -567,18 +571,13 @@ static void handle_xfer(struct virtio_device *dev,
         *status_ptr = VIRTIO_SOUND_S_IO_ERR;
 
         virtq_enqueue_used(virtq, desc_head, sizeof(uint32_t));
+        freelist_return(&state->free_requests, cookie);
 
         *respond = true;
         return;
     }
 
-    virtio_snd_request_t *req = queue_enqueue_raw(&state->pcm_requests);
-    if (req == NULL) {
-        LOG_SOUND_ERR("Failed to allocate PCM request\n");
-        return;
-    }
-
-    req->cookie = cookie;
+    virtio_snd_request_t *req = &state->requests[cookie];
     req->desc_head = desc_head;
     req->ref_count = sent;
     req->status = SOUND_S_OK;
@@ -675,23 +674,14 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     sound_dev->config.streams = shared_state->streams;
     sound_dev->config.chmaps = 0;
 
-    // Queue of virtio_snd_request_t
-    queue_init(&sound_dev->cmd_requests,
-               sizeof(virtio_snd_request_t),
-               &sound_dev->cmd_requests_data,
-               VIRTIO_SND_MAX_CMD_REQUESTS);
-    // Queue of virtio_snd_request_t
-    queue_init(&sound_dev->pcm_requests,
-               sizeof(virtio_snd_request_t),
-               &sound_dev->pcm_requests_data,
-               VIRTIO_SND_MAX_PCM_REQUESTS);
-    // Queue of buffer_t structs
+    freelist_init(&sound_dev->free_requests,
+                  sound_dev->free_requests_data,
+                  VIRTIO_SND_MAX_REQUESTS);
+    
     queue_init(&sound_dev->free_buffers,
                sizeof(buffer_t),
-               &sound_dev->free_buffers_data,
+               sound_dev->free_buffers_data,
                SOUND_PCM_QUEUE_SIZE);
-
-    sound_dev->curr_cookie = 0;
 
     sound_dev->shared_state = shared_state;
     sound_dev->cmd_req = queues->cmd_req;
@@ -819,13 +809,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
     sound_cmd_t cmd;
     while (sound_dequeue_cmd(&state->cmd_res, &cmd) == 0) {
 
-        virtio_snd_request_t *req = queue_front(&state->cmd_requests);
-        if (req == NULL) {
-            LOG_SOUND_ERR("Received unexpected CMD response");
-        }
-        if (req->cookie != cmd.cookie) {
-            LOG_SOUND_ERR("Received out of order CMD response");
-        }
+        virtio_snd_request_t *req = &state->requests[cmd.cookie];
         if (cmd.status != SOUND_S_OK) {
             req->status = cmd.status;
         }
@@ -835,7 +819,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
         bool responded = respond_to_request(req, dev, NULL, 0,
                                             &response, sizeof(response));
         if (responded) {
-            queue_dequeue(&state->cmd_requests);
+            freelist_return(&state->free_requests, cmd.cookie);
             respond = true;
         }
     }
@@ -843,13 +827,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
     sound_pcm_t pcm;
     while (sound_dequeue_pcm(&state->pcm_res, &pcm) == 0) {
 
-        virtio_snd_request_t *req = queue_front(&state->pcm_requests);
-        if (req == NULL) {
-            LOG_SOUND_ERR("Received unexpected PCM response");
-        }
-        if (req->cookie != pcm.cookie) {
-            LOG_SOUND_ERR("Received out of order PCM response");
-        }
+        virtio_snd_request_t *req = &state->requests[pcm.cookie];
         if (pcm.status != SOUND_S_OK) {
             req->status = pcm.status;
         }
@@ -862,7 +840,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
                                             (void *)pcm.addr, pcm.len,
                                             &response, sizeof(response));
         if (responded) {
-            queue_dequeue(&state->pcm_requests);
+            freelist_return(&state->free_requests, pcm.cookie);
             respond = true;
         }
 
