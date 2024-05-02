@@ -37,6 +37,7 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/block.c \
 		    src/virtio/console.c \
 		    src/virtio/mmio.c \
+		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/guest.c
 
