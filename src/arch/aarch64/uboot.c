@@ -58,3 +58,20 @@ bool uboot_start(size_t boot_vcpu_id, uintptr_t pc, uintptr_t dtb) {
 
     return true;
 }
+
+bool pl011_emulation_init(uintptr_t base, size_t size, pl011_device_t *dev) {
+
+    // ATM all we're doing is registering this exception handler
+    bool success = fault_register_vm_exception_handler(base,
+                                                        size,
+                                                        &pl011_fault_handle,
+                                                        dev);
+    assert(success);
+
+    return success;
+}
+
+bool pl011_fault_handle() {
+    LOG_VMM_ERR("THIS FAULT HAS BEEN HANDLED\n"); // TODO - work out why we're looping on this
+    return true;
+}

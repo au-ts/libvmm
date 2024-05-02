@@ -31,15 +31,9 @@
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue" />
         <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" setvar_vaddr="blk_data" />
 
-        <!-- MAP THE UART IN HERE AS A TEMPORARY SOLUTION -->
-        <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
-        <!-- Think I need the ring buffers mapped in as well? -->
-
         <virtual_machine name="client-1" id="0" priority="100">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
-            <!-- MAP THE UART IN HERE AS A TEMPORARY SOLUTION -->
-            <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain>
 

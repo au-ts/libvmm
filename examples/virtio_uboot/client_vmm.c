@@ -80,6 +80,12 @@ sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
 
+/* PL011 Console*/
+#define PL011_CONSOLE_BASE (0x9000000)
+#define PL011_CONSOLE_SIZE (0x1000000) // TODO - HOW BIG SHOULD THIS BE?
+
+static struct pl011_device pl011_console;
+
 /* Virtio Block */
 #define BLK_CH 3
 
@@ -176,6 +182,10 @@ void init(void) {
             microkit_dbg_puts(": server tx buffer population, unable to enqueue\n");
         }
     }
+    
+    /* Initialise pl011 emulated console device */
+    success = pl011_emulation_init(PL011_CONSOLE_BASE, PL011_CONSOLE_SIZE, &pl011_console);
+    assert(success);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
