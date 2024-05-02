@@ -50,6 +50,16 @@ static void assert_fail(
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
+#define MIN(a,b) \
+    ({ typeof (a) _a = (a); \
+       typeof (b) _b = (b); \
+       _a < _b ? _a : _b; })
+
+#define MAX(a,b) \
+    ({ typeof (a) _a = (a); \
+       typeof (b) _b = (b); \
+       _a > _b ? _a : _b; })
+
 /* Convenience function to print memory region in hex */
 void print_mem_hex(uintptr_t addr, size_t size);
 
