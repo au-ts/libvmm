@@ -207,6 +207,7 @@ and implements the following devices:
 * Console
 * Block
 * Sound
+* Network
 
 These devices are implemented using MMIO, we do not use any PCI devices at this stage.
 
@@ -260,6 +261,18 @@ The sound device makes use of the 'sound' device class in sDDF.
 There are no feature bits to implement. The legacy interface is not supported.
 
 The sound device communicates with a hardware sound device via a sDDF sound virtualiser.
+
+### Network
+
+The network device makes use of the 'net' device class in sDDF.
+
+The device supports `VIRTIO_NET_F_MAC`. No other features are available.
+
+The legacy interface is not supported.
+
+The network device communicates with a hardware network card via a pair of sDDF RX and TX
+net virtualisers. In the future, this communication may be done through
+intermediary components such as a virtual network switch (VSwitch).
 
 # Adding platform support
 
