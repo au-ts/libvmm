@@ -199,8 +199,8 @@ static bool sddf_make_req_check(blk_queue_handle_t *h, uint16_t sddf_count)
 
 static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
-    // @ericc: If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
-    // but for now we just assume it's the one and only default queue
+    /* If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
+       but for now we just assume it's the one and only default queue */
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ];
     struct virtq *virtq = &vq->virtq;
 
@@ -339,7 +339,8 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 break;
             }
 
-            /* Book keep the request */ //@ericc: except for virtio desc, nothing else needs to be retrieved later so leave as 0
+            /* Book keep the request */
+            /* except for virtio desc, nothing else needs to be retrieved later so leave as 0 */
             reqbk_t data = {desc_head, 0, 0, 0, 0, 0};
             uint64_t req_id;
             ialloc_alloc(&ialloc, &req_id);
@@ -363,7 +364,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     }
 
     if (!blk_req_queue_plugged(queue_handle)) {
-        // @ericc: there is a world where all requests to be handled during this batch are dropped and hence this notify to the other PD would be redundant
+        /* there is a world where all requests to be handled during this batch are dropped and hence this notify to the other PD would be redundant */
         microkit_notify(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
     }
 

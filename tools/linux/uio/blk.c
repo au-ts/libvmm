@@ -130,7 +130,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         return -1;
     }
 
-    // @ericc: maybe need to flush all writes before this point of setting ready = true
+    /* May need to barrier all writes before this point of setting ready = true */
     blk_config->ready = true;
 
     LOG_UIO_BLOCK("Driver initialized\n");
@@ -154,13 +154,11 @@ void driver_notified()
         blk_response_status_t status = SUCCESS;
         uint16_t success_count = 0;
 
-        //@ericc: what happens if this response is dropped? should we have a timeout in client?
         if (blk_resp_queue_full(&h)) {
             LOG_UIO_BLOCK_ERR("Response ring is full, dropping response\n");
             continue;
         }
 
-        // TODO: @ericc: workout what error status are appropriate, sDDF block only contains SEEK_ERROR right now
         switch (req_code) {
         case READ_BLOCKS: {
             int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
