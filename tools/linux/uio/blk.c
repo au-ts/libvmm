@@ -204,14 +204,26 @@ void driver_notified()
             }
             break;
         }
-        case FLUSH:
-            fsync(storage_fd);
-            status = SUCCESS;
+        case FLUSH: {
+            int ret = fsync(storage_fd);
+            if (ret != 0) {
+                LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
+                status = SEEK_ERROR;
+            } else {
+                status = SUCCESS;
+            }
             break;
-        case BARRIER:
-            fsync(storage_fd);
-            status = SUCCESS;
+        }
+        case BARRIER: {
+            int ret = fsync(storage_fd);
+            if (ret != 0) {
+                LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
+                status = SEEK_ERROR;
+            } else {
+                status = SUCCESS;
+            }
             break;
+        }
         default:
             LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
             continue;
