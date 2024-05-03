@@ -23,7 +23,6 @@
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 /* Maximum number of buffers in sddf data region */
-//@ericc: as long as this number is higher than any sddf_handler->data_size we should be fine
 #define SDDF_MAX_DATA_BUFFERS 4096
 
 /* Virtio blk configuration space */
@@ -480,6 +479,8 @@ void virtio_blk_init(struct virtio_device *dev,
     dev->sddf_handlers = sddf_handlers;
 
     size_t sddf_data_buffers = dev->sddf_handlers->data_size / BLK_TRANSFER_SIZE;
+    /* This assert is necessary as the bookkeeping data structures need to have a defined size at compile time
+       and that depends on the number of buffers passed to us during initialisation. */
     assert(sddf_data_buffers <= SDDF_MAX_DATA_BUFFERS);
 
     virtio_blk_config_init(dev);
