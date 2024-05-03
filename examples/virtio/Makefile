@@ -195,7 +195,7 @@ BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o
 
-# @ericc: sddf_printf.o sdd_putchar_debug.o only needed during debug mode
+# sddf_printf.o sdd_putchar_debug.o only needed during debug mode
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o

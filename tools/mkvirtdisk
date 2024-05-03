@@ -25,7 +25,7 @@ SECTORSIZE=512
 MULTIPLE=$(( SDDF_TRANSFER_SIZE / SECTORSIZE ))
 
 COUNT=$(( MEMSIZE / SECTORSIZE ))
-COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE )) # @ericc: Ensure that the disk size is a multiple of $MULTIPLE blocks
+COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE )) # Ensures that the disk size is a multiple of $MULTIPLE blocks
 
 POFFSET=$MULTIPLE
 
@@ -33,7 +33,7 @@ POFFSET=$MULTIPLE
 dd if=/dev/zero of=$DISK_IMAGE bs=$SECTORSIZE count=$COUNT
 
 FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
-FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE )) # @ericc: This ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
+FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE )) # Ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
 FS_COUNT_ADD=$(( FS_COUNT - 1 ))
 
 FS_COUNT_BLOCKSIZE=$(( FS_COUNT / (BLOCKSIZE / SECTORSIZE) ))

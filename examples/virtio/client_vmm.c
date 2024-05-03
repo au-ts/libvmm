@@ -69,8 +69,6 @@ static struct virtio_device virtio_console;
 /* Virtio Block */
 #define BLK_CH 3
 
-// @ericc: This needs to be less than or equal to memory size / blocksize == 4096
-// TODO: auto generate from microkit system file
 #define BLK_DATA_SIZE 0x200000
 
 #define VIRTIO_BLK_IRQ (75)
@@ -89,9 +87,8 @@ static struct virtio_device virtio_blk;
 
 void init(void)
 {
-    // Busy wait until blk device is ready
-    // Need to put an empty assembly line to prevent compiler from optimising out the busy wait
-    // @ericc: Figure out a better way to do this
+    /* Busy wait until blk device is ready
+       Need to put an empty assembly line to prevent compiler from optimising out the busy wait */
     LOG_VMM("begin busy wait\n");
     while (!((blk_storage_info_t *)blk_config)->ready) {
         asm("");
@@ -130,13 +127,13 @@ void init(void)
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h = &serial_rx_h;
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].config = NULL;
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data = (uintptr_t)serial_rx_data;
-    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data_size = 0; // @ericc: unused
+    sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].data_size = 0; /* Unused */
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].ch = SERIAL_VIRT_RX_CH;
 
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].queue_h = &serial_tx_h;
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].config = NULL;
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data = (uintptr_t)serial_tx_data;
-    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data_size = 0; // @ericc: unused
+    sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].data_size = 0; /* Unusued */
     sddf_serial_handlers[SDDF_SERIAL_TX_HANDLE].ch = SERIAL_VIRT_TX_CH;
 
     /* Initialise our sDDF queues for the serial device */
