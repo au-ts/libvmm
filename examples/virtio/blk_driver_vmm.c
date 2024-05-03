@@ -49,7 +49,6 @@ uintptr_t guest_ram_vaddr;
 #define BLOCK_IRQ 79
 #endif
 
-// @ericc: autogen
 #define UIO_IRQ 50
 #define UIO_CH 3
 
