@@ -52,12 +52,12 @@ static int num_maps;
  */
 __attribute__((weak)) int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {
-    assert(!"should not be here!");
+    assert(!"UIO driver did not implement driver_init");
 }
 
 __attribute__((weak)) void driver_notified()
 {
-    assert(!"should not be here!");
+    assert(!"UIO driver did not implement driver_notified");
 }
 
 void uio_notify()
