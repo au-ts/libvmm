@@ -121,6 +121,10 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
         LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only,
                       blk_config->sector_size, blk_config->size);
+
+        /* Optimal size */
+        /* As far as I know linux does not let you query this from userspace, set as 0 to mean undefined */
+        blk_config->block_size = 0;
     } else {
         LOG_UIO_BLOCK_ERR("Storage drive is of an unsupported type\n");
         return -1;
