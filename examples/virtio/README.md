@@ -4,8 +4,13 @@ This example shows off the virtIO support that libvmm provides using the
 [seL4 Device Driver Framework](https://github.com/au-ts/sddf) to talk to the
 actual hardware.
 
+The system has two Linux guests that are exactly the same, but we have separate sets of
+Linux images and initrd for both to ease experimentation when you want to only modify
+a single client.
+
 The example currently works on the following platforms:
 * QEMU ARM virt
+* ODROIDC4
 
 ## Building
 
