@@ -450,8 +450,11 @@ static void virtio_blk_config_init(struct virtio_device *dev)
 {
     blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
     virtio_blk_config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
-    // @ericc: @TODO: work out how to use optimal block size instead, for now just use the device's logical sector size
-    virtio_blk_config.blk_size = config->sector_size;
+    if (config->block_size != 0) {
+        virtio_blk_config.blk_size = config->block_size * BLK_TRANSFER_SIZE;
+    } else {
+        virtio_blk_config.blk_size = config->sector_size;
+    }
 }
 
 static virtio_device_funs_t functions = {
