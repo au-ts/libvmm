@@ -198,12 +198,12 @@ void init(void) {
     assert(success);
 
 #if defined(BOARD_qemu_arm_virt)
-    register_passthrough_irq(37, 5);
+    register_passthrough_irq(37, 5); // Serial
 #elif defined(BOARD_odroidc4)
-    register_passthrough_irq(48, 5);
-    register_passthrough_irq(63, 6);
-    register_passthrough_irq(62, 7);
-    register_passthrough_irq(5, 8);
+    register_passthrough_irq(48, 5); // USB controller
+    register_passthrough_irq(63, 6); // USB 1
+    register_passthrough_irq(62, 7); // USB 2
+    register_passthrough_irq(5, 8);  // Unknown
 #else
 #error Need to define passthrough IRQs
 #endif
