@@ -1,6 +1,6 @@
 #include "log.h"
 #include "stream.h"
-#include "uio_fault_addr.h"
+#include "uio_sound.h"
 #include "util/atomic.h"
 #include <sddf/sound/queue.h>
 #include <assert.h>
@@ -33,7 +33,7 @@ typedef struct driver_state {
     stream_t *streams[MAX_STREAMS];
     int stream_count;
 
-    sound_shared_state_t *shared_state;
+    vm_shared_state_t *shared_state;
     sound_queues_t queues;
     ssize_t translate;
 
@@ -118,8 +118,6 @@ static char *map_mem(uintptr_t target, int *out_fd)
 
 int init_mappings(driver_state_t *state, int uio_fd)
 {
-    int err;
-
     state->shared_state = map_uio(SHARED_STATE_SLOT, SHARED_STATE_SIZE, uio_fd);
     if (state->shared_state == MAP_FAILED) {
         perror("Error mapping shared_state");
@@ -132,19 +130,13 @@ int init_mappings(driver_state_t *state, int uio_fd)
         return -1;
     }
 
-    void *pcm = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
-    if (pcm == MAP_FAILED) {
+    void *pcm_guest_virtual = map_uio(PCM_DATA_SLOT, PCM_DATA_SIZE, uio_fd);
+    if (pcm_guest_virtual == MAP_FAILED) {
         perror("Error mapping pcm");
         return -1;
     }
 
-    size_t pcm_physical;
-
-    err = get_uio_map_value(PCM_DATA_ADDR, &pcm_physical);
-    if (err) {
-        perror("Error getting pcm_physical");
-        return -1;
-    }
+    uintptr_t pcm_host_physical = state->shared_state->data_paddr;
 
     int offset = 0;
     sound_cmd_queue_t *cmd_req = (void *)(queues + QUEUE_BYTES * offset++);
@@ -160,7 +152,8 @@ int init_mappings(driver_state_t *state, int uio_fd)
                       SOUND_CMD_QUEUE_SIZE,
                       SOUND_PCM_QUEUE_SIZE);
 
-    state->translate = pcm - (void *)pcm_physical;
+    // Offset from host physical to guest virtual addresses
+    state->translate = pcm_guest_virtual - (void *)pcm_host_physical;
 
     return 0;
 }
@@ -271,7 +264,7 @@ int main(int argc, char **argv)
             }
 
             state.streams[state.stream_count] = stream_open(
-                &state.shared_state->stream_info[state.stream_count], device_name, direction,
+                &state.shared_state->sound.stream_info[state.stream_count], device_name, direction,
                 state.translate, &state.queues.cmd_res, &state.queues.pcm_res);
 
             if (state.streams[state.stream_count] == NULL) {
@@ -290,8 +283,8 @@ int main(int argc, char **argv)
         }
     }
 
-    state.shared_state->streams = state.stream_count;
-    ATOMIC_STORE(&state.shared_state->ready, true, __ATOMIC_RELEASE);
+    state.shared_state->sound.streams = state.stream_count;
+    ATOMIC_STORE(&state.shared_state->sound.ready, true, __ATOMIC_RELEASE);
 
     LOG_SOUND("Initialised %d streams\n", state.stream_count);
 

@@ -168,16 +168,6 @@ void init(void) {
 
     sound_queues_init_buffers(&sound_queues);
 
-    for (int i = 0; i < SOUND_PCM_QUEUE_SIZE; i++) {
-        sound_pcm_t pcm;
-        memset(&pcm, 0, sizeof(pcm));
-        pcm.len = SOUND_PCM_BUFFER_SIZE;
-
-        pcm.addr = sound_data + (i * SOUND_PCM_BUFFER_SIZE);
-        int ret = sound_enqueue_pcm(&sound_queues.pcm_res, &pcm);
-        assert(ret == 0);
-    }
-    
     /* Don't start the guest until driver VM is ready. */
     sound_shared_state_t *shared_state = (void *)sound_shared_state;
 
@@ -189,6 +179,7 @@ void init(void) {
                               VIRTIO_SOUND_IRQ,
                               shared_state,
                               &sound_queues,
+                              sound_data,
                               SOUND_DRIVER_CH);
     assert(success);
 

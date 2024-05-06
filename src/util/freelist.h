@@ -1,4 +1,6 @@
 #pragma once
+#include <stdint.h>
+#include <stdbool.h>
 
 #define FREELIST_INVALID ((uint32_t)-1)
 
