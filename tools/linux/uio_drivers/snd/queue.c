@@ -12,11 +12,6 @@ struct queue
     void *data;
 };
 
-static int min(int a, int b)
-{
-    return a <= b ? a : b;
-}
-
 queue_t *queue_create(int item_size, int initial_capacity)
 {
     void *data = calloc(initial_capacity, item_size);
