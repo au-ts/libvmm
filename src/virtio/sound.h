@@ -35,7 +35,6 @@
 #include <stdint.h>
 #include <sddf/sound/queue.h>
 #include "virtio/mmio.h"
-#include "util/buffer.h"
 #include "util/freelist.h"
 #include "util/queue.h"
 
@@ -308,15 +307,16 @@ struct virtio_snd_device {
     uint32_t free_requests_data[VIRTIO_SND_MAX_REQUESTS];
     freelist_t free_requests;
 
-    // Queue of buffer_t structs
+    // Queue of uintptr_t buffer offsets
     queue_t free_buffers;
-    buffer_t free_buffers_data[SOUND_PCM_QUEUE_SIZE];
+    uintptr_t free_buffers_data[SOUND_PCM_QUEUE_SIZE];
     // sDDF state
     sound_shared_state_t *shared_state;
     sound_cmd_queue_handle_t cmd_req;
     sound_cmd_queue_handle_t cmd_res;
     sound_pcm_queue_handle_t pcm_req;
     sound_pcm_queue_handle_t pcm_res;
+    void *data_region;
     int server_ch;
 };
 
@@ -341,6 +341,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
                      size_t virq,
                      sound_shared_state_t *shared_state,
                      sound_queues_t *queues,
+                     uintptr_t data_region,
                      int server_ch);
 
 void virtio_snd_notified(struct virtio_snd_device *sound_dev);

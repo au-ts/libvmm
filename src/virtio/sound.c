@@ -28,16 +28,6 @@ static inline struct virtio_snd_device *device_state(struct virtio_device *dev)
     return (struct virtio_snd_device *)dev->device_data;
 }
 
-static void fetch_buffers(struct virtio_snd_device *state)
-{
-    sound_pcm_t pcm;
-    while (sound_dequeue_pcm(&state->pcm_res, &pcm) == 0) {
-        buffer_t *buffer = queue_enqueue_raw(&state->free_buffers);
-        buffer->addr = pcm.addr;
-        buffer->len = pcm.len;
-    }
-}
-
 static void virtio_snd_mmio_reset(struct virtio_device *dev)
 {
     LOG_SOUND("Resetting virtIO sound device\n");
@@ -448,8 +438,8 @@ static bool perform_xfer(struct virtio_device *dev,
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    buffer_t pcm_buffer;
-    if (!queue_dequeue_front(&state->free_buffers, &pcm_buffer)) {
+    uintptr_t buf_offset;
+    if (!queue_dequeue_front(&state->free_buffers, &buf_offset)) {
         LOG_SOUND_ERR("No free buffers\n");
         return false;
     }
@@ -475,7 +465,8 @@ static bool perform_xfer(struct virtio_device *dev,
             int to_xfer = MIN(desc_remaining, pcm_remaining);
 
             if (transmit) {
-                memcpy((void *)pcm_buffer.addr + pcm_transmitted,
+                void *pcm_buffer = state->data_region + buf_offset;
+                memcpy(pcm_buffer + pcm_transmitted,
                        (void *)desc->addr + desc_transmitted, to_xfer);
             }
             desc_transmitted += to_xfer;
@@ -488,7 +479,7 @@ static bool perform_xfer(struct virtio_device *dev,
             if (pcm_remaining == 0) {
 
                 sound_pcm_t pcm;
-                pcm.addr = pcm_buffer.addr;
+                pcm.io_or_offset = buf_offset;
                 pcm.len = pcm_transmitted;
                 pcm.stream_id = stream_id;
                 pcm.cookie = cookie;
@@ -502,8 +493,8 @@ static bool perform_xfer(struct virtio_device *dev,
 
                 (*sent)++;
 
-                if (!queue_dequeue_front(&state->free_buffers, &pcm_buffer)) {
-                    LOG_SOUND_ERR("Failed to dequeue free buffer\n");
+                if (!queue_dequeue_front(&state->free_buffers, &buf_offset)) {
+                    LOG_SOUND_ERR("No free buffers\n");
                     return false;
                 }
 
@@ -516,7 +507,7 @@ static bool perform_xfer(struct virtio_device *dev,
     // Transmit remaining PCM data.
     if (pcm_transmitted > 0) {
         sound_pcm_t pcm;
-        pcm.addr = pcm_buffer.addr;
+        pcm.io_or_offset = buf_offset;
         pcm.len = pcm_transmitted;
         pcm.stream_id = stream_id;
         pcm.cookie = cookie;
@@ -658,6 +649,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
                      size_t virq,
                      sound_shared_state_t *shared_state,
                      sound_queues_t *queues,
+                     uintptr_t data_region,
                      int server_ch)
 {
     struct virtio_device *dev = &sound_dev->virtio_device;
@@ -679,7 +671,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
                   VIRTIO_SND_MAX_REQUESTS);
     
     queue_init(&sound_dev->free_buffers,
-               sizeof(buffer_t),
+               sizeof(uintptr_t),
                sound_dev->free_buffers_data,
                SOUND_PCM_QUEUE_SIZE);
 
@@ -688,9 +680,13 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     sound_dev->cmd_res = queues->cmd_res;
     sound_dev->pcm_req = queues->pcm_req;
     sound_dev->pcm_res = queues->pcm_res;
+    sound_dev->data_region = (void *)data_region;
     sound_dev->server_ch = server_ch;
 
-    fetch_buffers(sound_dev);
+    for (uintptr_t i = 0; i < sound_dev->pcm_req.size; i++) {
+        uintptr_t offset = i * SOUND_PCM_BUFFER_SIZE;
+        queue_enqueue(&sound_dev->free_buffers, &offset);
+    }
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
@@ -836,17 +832,17 @@ void virtio_snd_notified(struct virtio_snd_device *state)
         response.status = virtio_status_from_sddf(req->status);
         response.latency_bytes = pcm.latency_bytes;
 
+        void *pcm_buffer = state->data_region + pcm.io_or_offset;
         bool responded = respond_to_request(req, dev,
-                                            (void *)pcm.addr, pcm.len,
+                                            pcm_buffer, pcm.len,
                                             &response, sizeof(response));
         if (responded) {
             freelist_return(&state->free_requests, pcm.cookie);
             respond = true;
         }
 
-        buffer_t *buffer = queue_enqueue_raw(&state->free_buffers);
-        buffer->addr = pcm.addr;
-        buffer->len = pcm.len;
+        uintptr_t buf_offset = (uintptr_t)pcm.io_or_offset;
+        queue_enqueue(&state->free_buffers, &buf_offset);
     }
 
     if (respond) {

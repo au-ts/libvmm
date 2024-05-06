@@ -153,7 +153,8 @@ SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
 						snd_driver_vmm.o \
 						console.o \
-						mmio.o
+						mmio.o \
+						sddf_cache.o
 
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
 SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
