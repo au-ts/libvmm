@@ -92,8 +92,8 @@
     <protection_domain name="sound_virt" priority="100" pp="true">
         <program_image path="sound_virt.elf" />
 
-        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="data_vaddr"/>
-        <setvar symbol="data_paddr" region_paddr="snd_data" />
+        <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="data_region_vaddr"/>
+        <setvar symbol="data_region_paddr" region_paddr="snd_data" />
 
         <map mr="snd_c0_cmd_req" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_req" />
         <map mr="snd_c0_cmd_res" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="c0_cmd_res" />
