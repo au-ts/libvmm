@@ -270,7 +270,7 @@ static int flush_pcm(stream_t *stream, int max_count)
             continue;
         }
 
-        void *addr_offset = (void *)pcm->addr + (begin * stream->frame_size);
+        void *addr_offset = (void *)pcm->io_or_offset + (begin * stream->frame_size);
         void *pcm_data = translate_addr(stream, addr_offset);
 
         snd_pcm_sframes_t consumed = stream_xfer(stream, pcm_data, to_consume,

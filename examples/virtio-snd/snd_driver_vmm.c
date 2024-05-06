@@ -18,7 +18,8 @@
 #include "virtio/console.h"
 #include <sddf/serial/queue.h>
 #include <sddf/sound/queue.h>
-#include "uio_fault_addr.h"
+#include <sddf/util/cache.h>
+#include "uio_sound.h"
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -72,6 +73,9 @@ uintptr_t serial_tx_active;
 
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
+
+uintptr_t sound_shared_state; 
+uintptr_t sound_data_paddr; 
 
 static struct virtio_console_device virtio_console;
 
@@ -203,6 +207,10 @@ void init(void) {
 #else
 #error Need to define passthrough IRQs
 #endif
+
+    uintptr_t *data_paddr = &((vm_shared_state_t *)sound_shared_state)->data_paddr;
+    *data_paddr = sound_data_paddr;
+    cache_clean((uintptr_t)data_paddr, sizeof(uintptr_t));
     
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
