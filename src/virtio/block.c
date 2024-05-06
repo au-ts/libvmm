@@ -41,7 +41,7 @@ typedef struct reqbk {
     uint32_t sddf_block_number;
     uintptr_t virtio_data;
     uint16_t virtio_data_size;
-    bool not_aligned;
+    bool aligned; /* Only used for unaligned write from virtIO, if not true, this request is the "read" part of the read-modify-write */
 } reqbk_t;
 static reqbk_t reqbk[SDDF_MAX_DATA_BUFFERS];
 
@@ -253,7 +253,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
             /* Book keep the request */
-            reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, false};
+            reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, 0};
             uint64_t req_id;
             ialloc_alloc(&ialloc, &req_id);
             reqbk[req_id] = data;
@@ -275,11 +275,12 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             /* Converting bytes to the number of blocks, we are rounding up */
             uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
-            bool not_aligned = ((virtio_req->sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) != 0);
+            bool aligned = ((virtio_req->sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) == 0);
 
-            /* If the write request is not aligned to the sddf block size, we need to first read the surrounding aligned memory, overwrite that
-            read memory on the unaligned areas we want write to, and then write the entire memory back to disk */
-            if (not_aligned) {
+            /* If the write request is not aligned to the sddf transfer size, we need to do a read-modify-write:
+            we need to first read the surrounding aligned memory, overwrite that read memory on the unaligned areas
+            we want write to, and then write the entire memory back to disk. */
+            if (!aligned) {
                 if (!sddf_make_req_check(queue_handle, sddf_count)) {
                     virtio_blk_set_req_fail(dev, desc_head);
                     has_dropped = true;
@@ -295,7 +296,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, not_aligned};
+                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, aligned};
                 uint64_t req_id;
                 ialloc_alloc(&ialloc, &req_id);
                 reqbk[req_id] = data;
@@ -318,7 +319,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, not_aligned};
+                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, aligned};
                 uint64_t req_id;
                 ialloc_alloc(&ialloc, &req_id);
                 reqbk[req_id] = data;
@@ -347,6 +348,12 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             reqbk[req_id] = data;
 
             err = blk_enqueue_req(queue_handle, FLUSH, 0, 0, 0, req_id);
+            break;
+        }
+        default: {
+            LOG_BLOCK_ERR("Handling VirtIO block request, but virtIO request type is not recognised: %d\n", virtio_req->type);
+            virtio_blk_set_req_fail(dev, desc_head);
+            has_dropped = true;
             break;
         }
         }
@@ -395,18 +402,20 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
 
         uint16_t curr_virtio_desc = virtq->desc[data.virtio_desc_head].next;
 
+        bool resp_success = false;
         if (sddf_ret_status == SUCCESS) {
+            resp_success = true;
             switch (virtio_req->type) {
             case VIRTIO_BLK_T_IN: {
                 memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)data.virtio_data, data.virtio_data_size);
                 break;
             }
-            case VIRTIO_BLK_T_OUT:
-                if (data.not_aligned) {
+            case VIRTIO_BLK_T_OUT: {
+                if (!data.aligned) {
                     /* Copy the write data into an offset into the allocated sddf data buffer */
                     memcpy((void *)data.virtio_data, (void *)virtq->desc[curr_virtio_desc].addr, data.virtio_data_size);
 
-                    reqbk_t parsed_data = {data.virtio_desc_head, data.sddf_data, data.sddf_count, data.sddf_block_number, 0, 0, false};
+                    reqbk_t parsed_data = {data.virtio_desc_head, data.sddf_data, data.sddf_count, data.sddf_block_number, 0, 0, true};
                     uint64_t new_sddf_id;
                     ialloc_alloc(&ialloc, &new_sddf_id);
                     reqbk[new_sddf_id] = parsed_data;
@@ -417,9 +426,18 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
                     continue;
                 }
                 break;
+            }
             case VIRTIO_BLK_T_FLUSH:
                 break;
+            default: {
+                LOG_BLOCK_ERR("Retrieving sDDF block response, but virtIO request type is not recognised: %d\n", virtio_req->type);
+                resp_success = false;
+                break;
             }
+            }
+        }
+
+        if (resp_success) {
             virtio_blk_set_req_success(dev, data.virtio_desc_head);
         } else {
             virtio_blk_set_req_fail(dev, data.virtio_desc_head);

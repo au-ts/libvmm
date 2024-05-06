@@ -15,8 +15,6 @@
 #include <tcb.h>
 #include <vcpu.h>
 
-// #define DEBUG_BLK_DRIVER_VM
-
 #define GUEST_RAM_SIZE 0x6000000
 
 #if defined(BOARD_qemu_arm_virt)
@@ -93,17 +91,11 @@ void init(void)
 #if defined(BOARD_odroidc4)
     /* Register the SD card IRQ */
     virq_register_passthrough(GUEST_VCPU_ID, SD_IRQ, BLOCK_CH);
-#if defined(DEBUG_BLK_DRIVER_VM)
-    virq_register_passthrough(GUEST_VCPU_ID, 225, 10);
-#endif
 #endif
 
 #if defined(BOARD_qemu_arm_virt)
-    /* Register the SD card IRQ */
+    /* Register the block device IRQ */
     virq_register_passthrough(GUEST_VCPU_ID, BLOCK_IRQ, BLOCK_CH);
-#if defined(DEBUG_BLK_DRIVER_VM)
-    virq_register_passthrough(GUEST_VCPU_ID, 33, 10);
-#endif
 #endif
 
     /* Finally start the guest */

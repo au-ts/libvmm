@@ -216,8 +216,6 @@
         </virtual_machine>
         <!-- SD card IRQ -->
         <irq irq="79" id="1" trigger="edge" />
-        <!-- Serial -->
-        <!-- <irq irq="33" id="10" /> -->
     </protection_domain>
 
     <protection_domain name="BLK_VIRT" priority="150" budget="100" period="400">
