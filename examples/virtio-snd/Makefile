@@ -128,9 +128,6 @@ VMM_OBJS := printf.o \
 			smc.o \
 			fault.o \
 			util.o \
-			bitarray.o \
-			fsmem.o \
-			datastore.o \
 			vgic.o \
 			vgic_v2.o \
 			tcb.o \
