@@ -11,10 +11,11 @@
 		#address-cells = <0x02>;
 		#size-cells = <0x02>;
 		ranges;
-		stdout-path = "/soc/bus@ff800000/serial@3000";
+        stdout-path = "/virtio-console@0130000";
+        linux,stdout-path = "/virtio-console@0130000";
 		linux,initrd-end = <0x00000000 0x25f00000>;
         linux,initrd-start = <0x00000000 0x24000000>;
-        bootargs = "console=ttyAML0 earlycon=ttyAML0 root=/dev/ram0 nosmp rw pci=nomsi maxcpus=1 loglevel=8 earlyprintk=serial uio_pdrv_genirq.of_id=generic-uio";
+        bootargs = "console=hvc0 earlycon=hvc0 root=/dev/ram0 nosmp rw pci=nomsi maxcpus=1 loglevel=8 earlyprintk=serial uio_pdrv_genirq.of_id=generic-uio";
 		// root=/dev/nfs nfsroot=/vmm-rfs
 		// root=/dev/mmcblk0p1 rootwait
 
