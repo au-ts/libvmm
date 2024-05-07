@@ -70,7 +70,7 @@ LOGFILE_NAME="logfile_$BOARD"
 LOGFILE_NAME+="_$TEST"
 
 echo "Compiling with command: $COMPILE_COMMAND"
-$COMPILE_COMMAND
+$COMPILE_COMMAND || exit 1
 
 
 MQ_COMMAND="mq run -f output/$BOARD/$TEST/loader.img -s $MQ_BOARD -c $END_STR -l $LOGFILE_NAME"

@@ -7,3 +7,4 @@ zig-cache/
 *.xlsx
 rust/target/
 logfile*
+pyenv/

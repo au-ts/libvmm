@@ -58,6 +58,8 @@ def main():
 
     if len(sys.argv) == 3:
         output_excel = sys.argv[2]
+    else:
+        output_excel = output_excel.split(".")[0]
 
     if not output_excel.endswith(".xlsx"):
         output_excel += ".xlsx"
