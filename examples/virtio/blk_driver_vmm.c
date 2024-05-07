@@ -178,12 +178,18 @@ void notified(microkit_channel ch)
 
     handled = virq_handle_passthrough(ch);
 
-    if (ch == UIO_CH) {
+    switch (ch) {
+    case UIO_CH: {
         int success = virq_inject(GUEST_VCPU_ID, UIO_IRQ);
         if (!success) {
             LOG_VMM_ERR("Failed to inject UIO IRQ 0x%lx\n", UIO_IRQ);
         }
         handled = true;
+        break;
+    }
+    case SERIAL_MUX_RX_CH:
+        virtio_console_handle_rx(&virtio_console);
+        break;
     }
 
     if (!handled) {
