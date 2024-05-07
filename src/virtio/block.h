@@ -33,6 +33,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <sddf/blk/fsmalloc.h>
+#include <sddf/util/ialloc.h>
+#include <sddf/blk/queue.h>
 #include "virtio/mmio.h"
 
 /* Feature bits */
@@ -133,12 +136,54 @@ struct virtio_blk_outhdr {
 /* Backend implementation */
 #define SDDF_BLK_NUM_HANDLES 1
 #define SDDF_BLK_DEFAULT_HANDLE 0
+/* Maximum number of buffers in sddf data region */
+#define SDDF_MAX_DATA_BUFFERS 4096
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
-void virtio_blk_init(struct virtio_device *dev,
-                     struct virtio_queue_handler *vqs, size_t num_vqs,
+/* Bookkeeping request data between virtIO and sDDF */
+typedef struct reqbk {
+    uint16_t virtio_desc_head;
+    uintptr_t sddf_data;
+    uint16_t sddf_count;
+    uint32_t sddf_block_number;
+    uintptr_t virtio_data;
+    uint16_t virtio_data_size;
+    /* Only used for unaligned write from virtIO, if not true, this request is the
+    * "read" part of the read-modify-write */
+    bool aligned; 
+} reqbk_t;
+
+struct virtio_blk_device {
+    struct virtio_device virtio_device;
+
+    struct virtio_blk_config config;
+    struct virtio_queue_handler vqs[VIRTIO_BLK_NUM_VIRTQ];
+
+    reqbk_t reqbk[SDDF_MAX_DATA_BUFFERS];
+    /* Data struct that handles allocation and freeing of fixed size data cells
+     * in sDDF memory region */
+    fsmalloc_t fsmalloc;
+    bitarray_t fsmalloc_avail_bitarr;
+    word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_BUFFERS)];
+    /* Index allocator */
+    ialloc_t ialloc;
+    uint64_t ialloc_idxlist[SDDF_MAX_DATA_BUFFERS];
+
+    blk_storage_info_t *storage_info;
+    blk_queue_handle_t queue_h;
+    int server_ch;
+};
+
+bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
+                     uintptr_t region_base,
+                     uintptr_t region_size,
                      size_t virq,
-                     sddf_handler_t *sddf_handlers);
-int virtio_blk_handle_resp(struct virtio_device *dev);
+                     uintptr_t data_region,
+                     size_t data_region_size,
+                     blk_storage_info_t *storage_info,
+                     blk_queue_handle_t *queue_h,
+                     int server_ch);
+
+bool virtio_blk_handle_resp(struct virtio_blk_device *blk_dev);
