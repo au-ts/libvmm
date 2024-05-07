@@ -172,7 +172,6 @@ VMM_OBJS := printf.o \
 CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					client_images_1.o \
 					client_vmm.o \
-					virtio.o \
 					console.o \
 					block.o \
 					mmio.o \
@@ -183,7 +182,6 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
 					client_vmm.o \
-					virtio.o \
 					console.o \
 					block.o \
 					mmio.o \
