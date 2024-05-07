@@ -22,21 +22,6 @@ ifeq ($(filter $(BOARD), odroidc4 qemu_arm_virt),)
 	$(error "Board $(BOARD) is not supported")
 endif
 
-# @ivanv: Check for dependencies and make sure they are installed/in the path
-ifndef TOOLCHAIN
-	# Get whether the common toolchain triples exist
-	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-	# Then check if they are defined and select the appropriate one
-	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-		TOOLCHAIN := aarch64-linux-gnu
-	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-		TOOLCHAIN := aarch64-unknown-linux-gnu
-	else
-		$(error "Could not find an AArch64 cross-compiler")
-	endif
-endif
-
 # @ivanv: check that all dependencies exist
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
@@ -45,6 +30,7 @@ QEMU := qemu-system-aarch64
 DTC := dtc
 
 CC := clang
+CC_USERLEVEL := zig cc
 LD := ld.lld
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
@@ -88,10 +74,10 @@ BLK_DRIVER_VM_INITRD := $(BLK_DRIVER_VM_DIR)/rootfs.cpio.gz
 BLK_DRIVER_VM_INITRD_MODIFIED := $(BUILD_DIR)/blk_driver_vm_rootfs.cpio.gz
 BLK_DRIVER_VM_BASE_DTS := $(BLK_DRIVER_VM_DTS_DIR)/linux.dts
 BLK_DRIVER_VM_DTS_OVERLAYS_qemu_arm_virt :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
-											$(BLK_DRIVER_VM_DTS_DIR)/uio.dts \
+											$(BLK_DRIVER_VM_DTS_DIR)/io.dts \
 											$(BLK_DRIVER_VM_DTS_DIR)/disable.dts
 BLK_DRIVER_VM_DTS_OVERLAYS_odroidc4 :=	$(BLK_DRIVER_VM_DTS_DIR)/init.dts \
-										$(BLK_DRIVER_VM_DTS_DIR)/uio.dts \
+										$(BLK_DRIVER_VM_DTS_DIR)/io.dts \
 										$(BLK_DRIVER_VM_DTS_DIR)/disable.dts
 BLK_DRIVER_VM_DTS_OVERLAYS := ${BLK_DRIVER_VM_DTS_OVERLAYS_${BOARD}}
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
@@ -191,7 +177,10 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
-					blk_driver_vmm.o
+					blk_driver_vmm.o \
+					console.o \
+					mmio.o \
+
 
 # sddf_printf.o sdd_putchar_debug.o only needed during debug mode
 SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
@@ -228,7 +217,8 @@ CFLAGS_LINUX :=	-g3 \
 				-Wall -Wno-unused-function -Werror \
 				-D_GNU_SOURCE \
 				-I$(SDDF_DIR)/include \
-				-I$(LINUX_DIR)/include
+				-I$(LINUX_DIR)/include \
+				-target aarch64-linux-gnu
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := -lmicrokit -Tmicrokit.ld
@@ -339,7 +329,7 @@ $(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=2 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
+	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
 
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -372,7 +362,7 @@ $(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
-	$(TOOLCHAIN)-gcc $< -o $@
+	$(CC_USERLEVEL) $(CFLAGS_LINUX) $< -o $@
 
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init
 	cp $< $@
@@ -387,10 +377,10 @@ $(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init
 	cp $< $@
 
 $(BUILD_DIR)/%.o: $(UIO_DIR)/%.c Makefile
-	$(TOOLCHAIN)-gcc -c $(CFLAGS_LINUX) $< -o $@
+	$(CC_USERLEVEL) -c $(CFLAGS_LINUX) $< -o $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
-	$(TOOLCHAIN)-gcc $^ -o $@
+	$(CC_USERLEVEL) $(CFLAGS_LINUX) $^ -o $@
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

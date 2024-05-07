@@ -53,6 +53,7 @@ static int num_maps;
 __attribute__((weak)) int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {
     assert(!"UIO driver did not implement driver_init");
+    return -1;
 }
 
 __attribute__((weak)) void driver_notified()
@@ -292,6 +293,7 @@ int main(int argc, char **argv)
         int num_victims = poll(&pfd, 1, -1);
 
         // TODO(@jade): handle this gracefully
+        (void)num_victims;
         assert(num_victims != 0);
         assert(num_victims != -1);
         assert(pfd.revents == POLLIN);
@@ -299,6 +301,7 @@ int main(int argc, char **argv)
         // actually ACK the IRQ by performing a read()
         int irq_count;
         int read_ret = read(pfd.fd, &irq_count, sizeof(irq_count));
+        (void)read_ret;
         assert(read_ret >= 0);
         LOG_UIO("received irq, count: %d\n", irq_count);
 
