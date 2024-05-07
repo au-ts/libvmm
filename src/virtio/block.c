@@ -1,15 +1,13 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "sddf/blk/queue.h"
 #include "virtio/config.h"
 #include "virtio/virtq.h"
 #include "virtio/mmio.h"
 #include "virtio/block.h"
 #include "virq.h"
 #include "util.h"
-#include <sddf/blk/fsmalloc.h>
-#include <sddf/util/ialloc.h>
-#include <sddf/blk/queue.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_BLOCK
@@ -22,32 +20,10 @@
 
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-/* Maximum number of buffers in sddf data region */
-#define SDDF_MAX_DATA_BUFFERS 4096
-
-/* Virtio blk configuration space */
-static struct virtio_blk_config virtio_blk_config;
-
-/* Data struct that handles allocation and freeing of fixed size data cells in sDDF memory region */
-static fsmalloc_t fsmalloc;
-static bitarray_t fsmalloc_avail_bitarr;
-static word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_BUFFERS)];
-
-/* Bookkeeping request data between virtIO and sDDF */
-typedef struct reqbk {
-    uint16_t virtio_desc_head;
-    uintptr_t sddf_data;
-    uint16_t sddf_count;
-    uint32_t sddf_block_number;
-    uintptr_t virtio_data;
-    uint16_t virtio_data_size;
-    bool aligned; /* Only used for unaligned write from virtIO, if not true, this request is the "read" part of the read-modify-write */
-} reqbk_t;
-static reqbk_t reqbk[SDDF_MAX_DATA_BUFFERS];
-
-/* Index allocator */
-static ialloc_t ialloc;
-static uint64_t ialloc_idxlist[SDDF_MAX_DATA_BUFFERS];
+static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
+{
+    return (struct virtio_blk_device *)dev->device_data;
+}
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
@@ -72,7 +48,8 @@ static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
+        LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n",
+                      dev->data.DeviceFeaturesSel);
         return 0;
     }
     return 1;
@@ -99,7 +76,8 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
+        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
+                      dev->data.DriverFeaturesSel);
         success = 0;
     }
 
@@ -112,23 +90,27 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
 
 static int virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
-    uintptr_t config_base_addr = (uintptr_t)&virtio_blk_config;
+    struct virtio_blk_device *state = device_state(dev);
+
+    uintptr_t config_base_addr = (uintptr_t)&state->config;
     uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
-    LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n", config_base_addr,
-              config_field_addr, *ret_val);
+    LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
+              config_base_addr, config_field_addr, *ret_val);
     return 1;
 }
 
 static int virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
-    uintptr_t config_base_addr = (uintptr_t)&virtio_blk_config;
+    struct virtio_blk_device *state = device_state(dev);
+
+    uintptr_t config_base_addr = (uintptr_t)&state->config;
     uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *config_field_addr = val;
-    LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with value %d\n", config_base_addr,
-              config_field_addr, val);
+    LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with value %d\n",
+              config_base_addr, config_field_addr, val);
     return 1;
 }
 
@@ -146,7 +128,9 @@ static bool virtio_blk_virq_inject(struct virtio_device *dev)
     return virq_inject(GUEST_VCPU_ID, dev->virq);
 }
 
-static void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
+static void virtio_blk_set_interrupt_status(struct virtio_device *dev,
+                                            bool used_buffer,
+                                            bool config_change)
 {
     /* Set the reason of the irq.
        bit 0: used buffer
@@ -175,21 +159,21 @@ static void virtio_blk_set_req_success(struct virtio_device *dev, uint16_t desc)
     *((uint8_t *)virtq->desc[curr_virtio_desc].addr) = VIRTIO_BLK_S_OK;
 }
 
-static bool sddf_make_req_check(blk_queue_handle_t *h, uint16_t sddf_count)
+static bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_count)
 {
     /* Check if ialloc is full, if data region is full, if req queue is full.
        If these all pass then this request can be handled successfully */
-    if (ialloc_full(&ialloc)) {
+    if (ialloc_full(&state->ialloc)) {
         LOG_BLOCK_ERR("Request bookkeeping array is full\n");
         return false;
     }
 
-    if (blk_req_queue_full(h)) {
+    if (blk_req_queue_full(&state->queue_h)) {
         LOG_BLOCK_ERR("Request queue is full\n");
         return false;
     }
 
-    if (fsmalloc_full(&fsmalloc, sddf_count)) {
+    if (fsmalloc_full(&state->fsmalloc, sddf_count)) {
         LOG_BLOCK_ERR("Data region is full\n");
         return false;
     }
@@ -204,7 +188,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ];
     struct virtq *virtq = &vq->virtq;
 
-    blk_queue_handle_t *queue_handle = dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h;
+    struct virtio_blk_device *state = device_state(dev);
 
     bool has_dropped = false; /* if any request has to be dropped due to any number of reasons, this becomes true */
 
@@ -238,7 +222,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             /* Converting bytes to the number of blocks, we are rounding up */
             uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
-            if (!sddf_make_req_check(queue_handle, sddf_count)) {
+            if (!sddf_make_req_check(state, sddf_count)) {
                 virtio_blk_set_req_fail(dev, desc_head);
                 has_dropped = true;
                 break;
@@ -246,19 +230,21 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
             /* Allocate data buffer from data region based on sddf_count */
             uintptr_t sddf_data;
-            fsmalloc_alloc(&fsmalloc, &sddf_data, sddf_count);
+            fsmalloc_alloc(&state->fsmalloc, &sddf_data, sddf_count);
 
             /* Bookkeep the virtio sddf block size translation */
             uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
             uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
             /* Book keep the request */
-            reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, 0};
             uint64_t req_id;
-            ialloc_alloc(&ialloc, &req_id);
-            reqbk[req_id] = data;
+            ialloc_alloc(&state->ialloc, &req_id);
+            state->reqbk[req_id] = (reqbk_t){
+                desc_head, sddf_data, sddf_count, sddf_block_number,
+                virtio_data, virtio_data_size, 0
+            };
 
-            err = blk_enqueue_req(queue_handle, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
+            err = blk_enqueue_req(&state->queue_h, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
             assert(!err);
             break;
         }
@@ -281,7 +267,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             we need to first read the surrounding aligned memory, overwrite that read memory on the unaligned areas
             we want write to, and then write the entire memory back to disk. */
             if (!aligned) {
-                if (!sddf_make_req_check(queue_handle, sddf_count)) {
+                if (!sddf_make_req_check(state, sddf_count)) {
                     virtio_blk_set_req_fail(dev, desc_head);
                     has_dropped = true;
                     break;
@@ -289,22 +275,24 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
                 /* Allocate data buffer from data region based on sddf_count */
                 uintptr_t sddf_data;
-                fsmalloc_alloc(&fsmalloc, &sddf_data, sddf_count);
+                fsmalloc_alloc(&state->fsmalloc, &sddf_data, sddf_count);
 
                 /* Bookkeep the virtio sddf block size translation */
                 uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, aligned};
                 uint64_t req_id;
-                ialloc_alloc(&ialloc, &req_id);
-                reqbk[req_id] = data;
+                ialloc_alloc(&state->ialloc, &req_id);
+                state->reqbk[req_id] = (reqbk_t){
+                    desc_head, sddf_data, sddf_count, sddf_block_number,
+                    virtio_data, virtio_data_size, aligned
+                };
 
-                err = blk_enqueue_req(queue_handle, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
+                err = blk_enqueue_req(&state->queue_h, READ_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
                 assert(!err);
             } else {
-                if (!sddf_make_req_check(queue_handle, sddf_count)) {
+                if (!sddf_make_req_check(state, sddf_count)) {
                     virtio_blk_set_req_fail(dev, desc_head);
                     has_dropped = true;
                     break;
@@ -312,21 +300,23 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
                 /* Allocate data buffer from data region based on sddf_count */
                 uintptr_t sddf_data;
-                fsmalloc_alloc(&fsmalloc, &sddf_data, sddf_count);
+                fsmalloc_alloc(&state->fsmalloc, &sddf_data, sddf_count);
 
                 /* Bookkeep the virtio sddf block size translation */
                 uintptr_t virtio_data = sddf_data + (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE;
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                reqbk_t data = {desc_head, sddf_data, sddf_count, sddf_block_number, virtio_data, virtio_data_size, aligned};
                 uint64_t req_id;
-                ialloc_alloc(&ialloc, &req_id);
-                reqbk[req_id] = data;
+                ialloc_alloc(&state->ialloc, &req_id);
+                state->reqbk[req_id] = (reqbk_t){
+                    desc_head, sddf_data, sddf_count, sddf_block_number,
+                    virtio_data, virtio_data_size, aligned
+                };
 
                 /* Copy data from virtio buffer to data buffer, create sddf write request and initialise it with data buffer */
                 memcpy((void *)sddf_data, (void *)virtq->desc[curr_desc_head].addr, virtq->desc[curr_desc_head].len);
-                err = blk_enqueue_req(queue_handle, WRITE_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
+                err = blk_enqueue_req(&state->queue_h, WRITE_BLOCKS, sddf_data, sddf_block_number, sddf_count, req_id);
                 assert(!err);
             }
             break;
@@ -334,24 +324,26 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         case VIRTIO_BLK_T_FLUSH: {
             LOG_BLOCK("Request type is VIRTIO_BLK_T_FLUSH\n");
 
-            if (!sddf_make_req_check(queue_handle, 0)) {
+            if (!sddf_make_req_check(state, 0)) {
                 virtio_blk_set_req_fail(dev, desc_head);
                 has_dropped = true;
                 break;
             }
 
             /* Book keep the request */
-            /* except for virtio desc, nothing else needs to be retrieved later so leave as 0 */
-            reqbk_t data = {desc_head, 0, 0, 0, 0, 0};
             uint64_t req_id;
-            ialloc_alloc(&ialloc, &req_id);
-            reqbk[req_id] = data;
+            ialloc_alloc(&state->ialloc, &req_id);
+            /* except for virtio desc, nothing else needs to be retrieved later
+             * so leave as 0 */
+            state->reqbk[req_id] = (reqbk_t){desc_head, 0, 0, 0, 0, 0};
 
-            err = blk_enqueue_req(queue_handle, FLUSH, 0, 0, 0, req_id);
+            err = blk_enqueue_req(&state->queue_h, FLUSH, 0, 0, 0, req_id);
             break;
         }
         default: {
-            LOG_BLOCK_ERR("Handling VirtIO block request, but virtIO request type is not recognised: %d\n", virtio_req->type);
+            LOG_BLOCK_ERR(
+                "Handling VirtIO block request, but virtIO request type is not recognised: %d\n",
+                virtio_req->type);
             virtio_blk_set_req_fail(dev, desc_head);
             has_dropped = true;
             break;
@@ -370,17 +362,18 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         success = virtio_blk_virq_inject(dev);
     }
 
-    if (!blk_req_queue_plugged(queue_handle)) {
-        /* there is a world where all requests to be handled during this batch are dropped and hence this notify to the other PD would be redundant */
-        microkit_notify(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
+    if (!blk_req_queue_plugged(&state->queue_h)) {
+        /* there is a world where all requests to be handled during this batch
+         * are dropped and hence this notify to the other PD would be redundant */
+        microkit_notify(state->server_ch);
     }
 
     return success;
 }
 
-int virtio_blk_handle_resp(struct virtio_device *dev)
+bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 {
-    blk_queue_handle_t *queue_handle = dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].queue_h;
+    struct virtio_device *dev = &state->virtio_device;
 
     blk_response_status_t sddf_ret_status;
     uint16_t sddf_ret_success_count;
@@ -388,41 +381,55 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
 
     bool handled = false;
     int err = 0;
-    while (!blk_resp_queue_empty(queue_handle)) {
-        err = blk_dequeue_resp(queue_handle, &sddf_ret_status, &sddf_ret_success_count, &sddf_ret_id);
+    while (!blk_resp_queue_empty(&state->queue_h)) {
+        err = blk_dequeue_resp(&state->queue_h,
+                               &sddf_ret_status,
+                               &sddf_ret_success_count,
+                               &sddf_ret_id);
         assert(!err);
 
         /* Freeing and retrieving data store */
-        reqbk_t data = reqbk[sddf_ret_id];
-        ialloc_free(&ialloc, sddf_ret_id);
+        reqbk_t *data = &state->reqbk[sddf_ret_id];
+        ialloc_free(&state->ialloc, sddf_ret_id);
 
         struct virtq *virtq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].virtq;
 
-        struct virtio_blk_outhdr *virtio_req = (void *)virtq->desc[data.virtio_desc_head].addr;
+        struct virtio_blk_outhdr *virtio_req = (void *)virtq->desc[data->virtio_desc_head].addr;
 
-        uint16_t curr_virtio_desc = virtq->desc[data.virtio_desc_head].next;
+        uint16_t curr_virtio_desc = virtq->desc[data->virtio_desc_head].next;
 
         bool resp_success = false;
         if (sddf_ret_status == SUCCESS) {
             resp_success = true;
             switch (virtio_req->type) {
             case VIRTIO_BLK_T_IN: {
-                memcpy((void *)virtq->desc[curr_virtio_desc].addr, (void *)data.virtio_data, data.virtio_data_size);
+                memcpy((void *)virtq->desc[curr_virtio_desc].addr,
+                       (void *)data->virtio_data, data->virtio_data_size);
                 break;
             }
             case VIRTIO_BLK_T_OUT: {
-                if (!data.aligned) {
+                if (!data->aligned) {
                     /* Copy the write data into an offset into the allocated sddf data buffer */
-                    memcpy((void *)data.virtio_data, (void *)virtq->desc[curr_virtio_desc].addr, data.virtio_data_size);
+                    memcpy((void *)data->virtio_data,
+                           (void *)virtq->desc[curr_virtio_desc].addr,
+                           data->virtio_data_size);
 
-                    reqbk_t parsed_data = {data.virtio_desc_head, data.sddf_data, data.sddf_count, data.sddf_block_number, 0, 0, true};
                     uint64_t new_sddf_id;
-                    ialloc_alloc(&ialloc, &new_sddf_id);
-                    reqbk[new_sddf_id] = parsed_data;
+                    ialloc_alloc(&state->ialloc, &new_sddf_id);
+                    state->reqbk[new_sddf_id] = (reqbk_t){
+                        data->virtio_desc_head,
+                        data->sddf_data, data->sddf_count,
+                        data->sddf_block_number, 0, 0, true
+                    };
 
-                    err = blk_enqueue_req(queue_handle, WRITE_BLOCKS, data.sddf_data, data.sddf_block_number, data.sddf_count, new_sddf_id);
+                    err = blk_enqueue_req(&state->queue_h,
+                                          WRITE_BLOCKS,
+                                          data->sddf_data,
+                                          data->sddf_block_number,
+                                          data->sddf_count,
+                                          new_sddf_id);
                     assert(!err);
-                    microkit_notify(dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].ch);
+                    microkit_notify(state->server_ch);
                     continue;
                 }
                 break;
@@ -430,7 +437,9 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
             case VIRTIO_BLK_T_FLUSH:
                 break;
             default: {
-                LOG_BLOCK_ERR("Retrieving sDDF block response, but virtIO request type is not recognised: %d\n", virtio_req->type);
+                LOG_BLOCK_ERR(
+                    "Retrieving sDDF block response, but virtIO request type is not recognised: %d\n",
+                    virtio_req->type);
                 resp_success = false;
                 break;
             }
@@ -438,24 +447,26 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
         }
 
         if (resp_success) {
-            virtio_blk_set_req_success(dev, data.virtio_desc_head);
+            virtio_blk_set_req_success(dev, data->virtio_desc_head);
         } else {
-            virtio_blk_set_req_fail(dev, data.virtio_desc_head);
+            virtio_blk_set_req_fail(dev, data->virtio_desc_head);
         }
 
-        /* Free corresponding bookkeeping structures regardless of the request's success status */
+        /* Free corresponding bookkeeping structures regardless of the request's
+         * success status */
         if (virtio_req->type == VIRTIO_BLK_T_IN || virtio_req->type == VIRTIO_BLK_T_OUT) {
-            fsmalloc_free(&fsmalloc, data.sddf_data, data.sddf_count);
+            fsmalloc_free(&state->fsmalloc, data->sddf_data, data->sddf_count);
         }
 
-        virtio_blk_used_buffer(dev, data.virtio_desc_head);
+        virtio_blk_used_buffer(dev, data->virtio_desc_head);
 
         handled = true;
     }
 
-    int success = 1;
+    bool success = true;
 
-    /* We need to know if we handled any responses, if we did we inject an interrupt, if we didn't we don't inject */
+    /* We need to know if we handled any responses, if we did we inject an
+     * interrupt, if we didn't we don't inject */
     if (handled) {
         virtio_blk_set_interrupt_status(dev, true, false);
         success = virtio_blk_virq_inject(dev);
@@ -464,14 +475,15 @@ int virtio_blk_handle_resp(struct virtio_device *dev)
     return success;
 }
 
-static void virtio_blk_config_init(struct virtio_device *dev)
+static void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
 {
-    blk_storage_info_t *config = (blk_storage_info_t *)dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].config;
-    virtio_blk_config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * config->size;
-    if (config->block_size != 0) {
-        virtio_blk_config.blk_size = config->block_size * BLK_TRANSFER_SIZE;
+    blk_storage_info_t *storage_info = blk_dev->storage_info;
+
+    blk_dev->config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * storage_info->size;
+    if (storage_info->block_size != 0) {
+        blk_dev->config.blk_size = storage_info->block_size * BLK_TRANSFER_SIZE;
     } else {
-        virtio_blk_config.blk_size = config->sector_size;
+        blk_dev->config.blk_size = storage_info->sector_size;
     }
 }
 
@@ -484,33 +496,47 @@ static virtio_device_funs_t functions = {
     .queue_notify = virtio_blk_mmio_queue_notify,
 };
 
-void virtio_blk_init(struct virtio_device *dev,
-                     struct virtio_queue_handler *vqs, size_t num_vqs,
+bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
+                     uintptr_t region_base,
+                     uintptr_t region_size,
                      size_t virq,
-                     sddf_handler_t *sddf_handlers)
+                     uintptr_t data_region,
+                     size_t data_region_size,
+                     blk_storage_info_t *storage_info,
+                     blk_queue_handle_t *queue_h,
+                     int server_ch)
 {
+    struct virtio_device *dev = &blk_dev->virtio_device;
+
     dev->data.DeviceID = DEVICE_ID_VIRTIO_BLOCK;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = blk_dev->vqs;
+    dev->num_vqs = VIRTIO_BLK_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_handlers = sddf_handlers;
+    dev->device_data = blk_dev;
 
-    size_t sddf_data_buffers = dev->sddf_handlers->data_size / BLK_TRANSFER_SIZE;
-    /* This assert is necessary as the bookkeeping data structures need to have a defined size at compile time
-       and that depends on the number of buffers passed to us during initialisation. */
+    blk_dev->storage_info = storage_info;
+    blk_dev->queue_h = *queue_h;
+    blk_dev->server_ch = server_ch;
+
+    size_t sddf_data_buffers = data_region_size / BLK_TRANSFER_SIZE;
+    /* This assert is necessary as the bookkeeping data structures need to have a
+     * defined size at compile time and that depends on the number of buffers
+     * passed to us during initialisation. */
     assert(sddf_data_buffers <= SDDF_MAX_DATA_BUFFERS);
 
-    virtio_blk_config_init(dev);
+    virtio_blk_config_init(blk_dev);
 
-    fsmalloc_init(&fsmalloc,
-                  dev->sddf_handlers[SDDF_BLK_DEFAULT_HANDLE].data,
+    fsmalloc_init(&blk_dev->fsmalloc,
+                  data_region,
                   BLK_TRANSFER_SIZE,
                   sddf_data_buffers,
-                  &fsmalloc_avail_bitarr,
-                  fsmalloc_avail_bitarr_words,
+                  &blk_dev->fsmalloc_avail_bitarr,
+                  blk_dev->fsmalloc_avail_bitarr_words,
                   roundup_bits2words64(sddf_data_buffers));
 
-    ialloc_init(&ialloc, ialloc_idxlist, sddf_data_buffers);
+    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, sddf_data_buffers);
+
+    return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
