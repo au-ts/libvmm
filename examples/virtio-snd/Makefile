@@ -161,6 +161,7 @@ CFLAGS := -mstrict-align \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF)/include \
+		  -I$(LINUX_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -169,10 +170,10 @@ CFLAGS := -mstrict-align \
 CFLAGS_USERLEVEL :=	-g \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
-					-I$(CURRENT_DIR) \
 					-I$(SDDF) \
 					-I$(SDDF)/include \
 					-I$(VMM_SRC_DIR) \
+					-I$(LINUX_DIR)/include \
 					-DBOARD_$(BOARD) \
 					-lasound \
 					-lm \

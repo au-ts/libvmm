@@ -1,7 +1,7 @@
 #include "log.h"
 #include "stream.h"
-#include "uio_sound.h"
 #include "util/atomic.h"
+#include <uio/sound.h>
 #include <sddf/sound/queue.h>
 #include <assert.h>
 #include <stdio.h>
