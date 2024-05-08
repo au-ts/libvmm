@@ -99,8 +99,8 @@ ELFS := client_vmm.elf \
 		sound_virt.elf \
 		snd_driver_vmm.elf
 
-SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf cantina.elf crab_rave.elf feedback.elf
-CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf cantina.elf crab_rave.elf feedback.elf
+SND_DRIVER_VM_USERLEVEL_ELFS := control.elf pcm_min.elf user_sound.elf pcm.elf record.elf feedback.elf
+CLIENT_VM_USERLEVEL_ELFS := control.elf pcm_min.elf pcm.elf record.elf feedback.elf
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
