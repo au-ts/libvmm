@@ -19,7 +19,7 @@
 #include <sddf/serial/queue.h>
 #include <sddf/sound/queue.h>
 #include <sddf/util/cache.h>
-#include "uio_sound.h"
+#include <uio/sound.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
