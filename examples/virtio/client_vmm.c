@@ -19,6 +19,7 @@
 #include <virtio/block.h>
 #include <sddf/serial/queue.h>
 #include <sddf/blk/queue.h>
+#include "util/atomic.h"
 
 #define GUEST_RAM_SIZE 0x6000000
 
@@ -45,7 +46,7 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 
-/* Virtio Console */
+/* VirtIO Console */
 #define SERIAL_VIRT_TX_CH 1
 #define SERIAL_VIRT_RX_CH 2
 
@@ -62,7 +63,7 @@ uintptr_t serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
-/* Virtio Block */
+/* VirtIO Block */
 #define BLK_CH 3
 
 #define BLK_DATA_SIZE 0x200000
@@ -78,16 +79,40 @@ uintptr_t blk_config;
 
 static struct virtio_blk_device virtio_blk;
 
+/* VirtIO Sound */
+#define SOUND_DRIVER_CH 4
+#define VIRTIO_SOUND_IRQ (76)
+#define VIRTIO_SOUND_BASE (0x170000)
+#define VIRTIO_SOUND_SIZE (0x1000)
+uintptr_t sound_cmd_req;
+uintptr_t sound_cmd_res;
+uintptr_t sound_pcm_req;
+uintptr_t sound_pcm_res;
+
+uintptr_t sound_data;
+uintptr_t sound_shared_state;
+
+static struct virtio_snd_device virtio_sound;
+
+
 void init(void)
 {
-    blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_config;
+    LOG_VMM("sound_shared_state: %#lx, blk_config: %#lx\n", sound_shared_state, blk_config);
+    assert(sound_shared_state);
+    assert(blk_config);
 
-    /* Busy wait until blk device is ready
-       Need to put an empty assembly line to prevent compiler from optimising out the busy wait */
+    blk_storage_info_t *blk_state = (blk_storage_info_t *)blk_config;
+    sound_shared_state_t *sound_state = (void *)sound_shared_state;
+
+    /* Busy wait until driver VMs are ready. */
     LOG_VMM("begin busy wait\n");
-    while (!storage_info->ready) {
-        asm("");
-    }
+    while (
+        !ATOMIC_LOAD(&sound_state->ready, __ATOMIC_ACQUIRE)
+    );
+    LOG_VMM("got sound\n");
+    while (
+        !ATOMIC_LOAD(&blk_state->ready, __ATOMIC_ACQUIRE)
+    );
     LOG_VMM("done busy waiting\n");
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -180,9 +205,38 @@ void init(void)
                         VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
                         blk_data,
                         BLK_DATA_SIZE,
-                        storage_info,
+                        blk_state,
                         &blk_queue_h,
                         BLK_CH);
+    assert(success);
+
+    /* Initialise virtIO sound device */
+    assert(sound_cmd_req);
+    assert(sound_cmd_res);
+    assert(sound_pcm_req);
+    assert(sound_pcm_res);
+    assert(sound_data);
+
+    sound_queues_t sound_queues;
+
+    sound_queues_init(&sound_queues,
+                      (void *)sound_cmd_req,
+                      (void *)sound_cmd_res,
+                      (void *)sound_pcm_req,
+                      (void *)sound_pcm_res,
+                      SOUND_CMD_QUEUE_SIZE,
+                      SOUND_PCM_QUEUE_SIZE);
+
+    sound_queues_init_buffers(&sound_queues);
+
+    success = virtio_mmio_snd_init(&virtio_sound,
+                              VIRTIO_SOUND_BASE,
+                              VIRTIO_SOUND_SIZE,
+                              VIRTIO_SOUND_IRQ,
+                              sound_state,
+                              &sound_queues,
+                              sound_data,
+                              SOUND_DRIVER_CH);
     assert(success);
 
     /* Finally start the guest */
@@ -192,16 +246,17 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
-    case SERIAL_VIRT_RX_CH: {
+    case SERIAL_VIRT_RX_CH:
         /* We have received an event from the serial multipelxor, so we
          * call the virtIO console handling */
         virtio_console_handle_rx(&virtio_console);
         break;
-    }
-    case BLK_CH: {
+    case BLK_CH:
         virtio_blk_handle_resp(&virtio_blk);
         break;
-    }
+    case SOUND_DRIVER_CH:
+        virtio_snd_notified(&virtio_sound);
+        break;
     default:
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }

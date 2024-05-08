@@ -163,8 +163,6 @@ CFLAGS_USERLEVEL :=	-g \
 					-I$(VMM_SRC_DIR) \
 					-I$(LINUX_DIR)/include \
 					-DBOARD_$(BOARD) \
-					-lasound \
-					-lm \
 					-target aarch64-linux-gnu \
 					$(NIX_LDFLAGS) \
 					$(NIX_CFLAGS_COMPILE)
@@ -234,7 +232,7 @@ $(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LI
 
 $(BUILD_DIR)/user_sound/%.o: $(UIO_DRIVERS_DIR)/snd/%.c
 	mkdir -p $(BUILD_DIR)/user_sound
-	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) $^ -o $@
+	$(CC_USERLEVEL) -c $(CFLAGS_USERLEVEL) -lasound -lm $^ -o $@
 
 $(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_sound/stream.o $(BUILD_DIR)/user_sound/queue.o $(BUILD_DIR)/user_sound/convert.o
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@

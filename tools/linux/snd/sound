@@ -1,8 +1,8 @@
 #!/bin/sh
 
-DAEMON="user_sound"
+DAEMON="uio_snd_driver"
 PIDFILE="/var/run/$DAEMON.pid"
-LOGFILE="/var/log/user_sound"
+LOGFILE="/var/log/uio_snd_driver"
 
 # shellcheck source=/dev/null
 [ -r "/etc/default/$DAEMON" ] && . "/etc/default/$DAEMON"
@@ -15,7 +15,7 @@ start() {
         start-stop-daemon -b -m -S -q \
                 -p "$PIDFILE" \
                 --startas /bin/sh \
-                -- -c "exec '/root/$DAEMON.elf' default hw:0,0 >> '$LOGFILE' 2>&1"
+                -- -c "exec '/root/$DAEMON' default hw:0,0 >> '$LOGFILE' 2>&1"
         status=$?
         if [ "$status" -eq 0 ]; then
                 echo "OK"

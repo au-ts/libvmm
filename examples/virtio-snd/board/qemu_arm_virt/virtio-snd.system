@@ -109,7 +109,6 @@
         <map mr="snd_drv_cmd_res" vaddr="0x8_200_000" perms="rw" cached="true" setvar_vaddr="drv_cmd_res" />
         <map mr="snd_drv_pcm_req" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="drv_pcm_req" />
         <map mr="snd_drv_pcm_res" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="drv_pcm_res" />
-
     </protection_domain>
 
     <protection_domain name="SND_DRIVER_VMM" priority="110" budget="400" period="2000">

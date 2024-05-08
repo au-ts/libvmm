@@ -1,0 +1,17 @@
+/ {
+	memory@0 {
+		reg = <0x00 0x28000000 0x00 0x8000000>;
+		device_type = "memory";
+	};
+
+	chosen {
+		#address-cells = <0x02>;
+		#size-cells = <0x02>;
+		ranges;
+        linux,stdout-path = "/virtio-console@0130000";
+        stdout-path = "/virtio-console@0130000";
+		linux,initrd-start = <0x2e000000>;
+		linux,initrd-end = <0x2f000000>;
+		bootargs = "console=hvc0 earlycon=hvc0 pci=nomsi earlyprintk=serial debug loglevel=8 uio_pdrv_genirq.of_id=generic-uio";
+	};
+};
