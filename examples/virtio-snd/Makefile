@@ -124,7 +124,6 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 
 NATIVE_CLIENT_OBJS := native_client.o \
 					printf.o \
-					bitarray.o \
 					util.o
 
 SOUND_VIRT_OBJS :=	sound_virt.o \
