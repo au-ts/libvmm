@@ -3,7 +3,6 @@
     nativeBuildInputs =
     let
       crossInputs = with pkgs.pkgsCross.aarch64-multiplatform; [
-        # buildPackages.gcc
         alsa-lib
       ];
       nativeInputs = with pkgs; [
