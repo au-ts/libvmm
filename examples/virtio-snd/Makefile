@@ -18,9 +18,6 @@ BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
 CONFIG ?= debug
 
-# @ivanv: Check for dependencies and make sure they are installed/in the path
-
-# @ivanv: check that all dependencies exist
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
@@ -35,14 +32,6 @@ CC_USERLEVEL := zig cc
 LD := ld.lld
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
-# @ivanv: need to have a step for putting in the initrd node into the DTB,
-# 		  right now it is unfortunately hard-coded.
-
-# @ivanv: check that the path of SDK_PATH/BOARD exists
-# @ivanv: Have a list of supported boards to check with, if it's not one of those
-# have a helpful message that lists all the support boards.
-
-# @ivanv: incremental builds don't work with IMAGE_DIR changing
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 VMM := ../../
 VMM_TOOLS := $(VMM)/tools
@@ -125,7 +114,6 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					console.o \
 					sound.o \
 					mmio.o
-# block.o
 
 SOUND_VIRT_OBJS :=	sound_virt.o \
 					sddf_printf.o \
@@ -166,7 +154,7 @@ CFLAGS := -mstrict-align \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
 
-# @alexbr: currently all userlevel procs link asound. this should instead be done per-process.
+# TODO: currently all userlevel procs link asound. this should instead be done per-process.
 CFLAGS_USERLEVEL :=	-g \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
@@ -203,24 +191,22 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-# Append to rootfs
+SND_DRIVER_VM_USERLEVEL_INIT := $(LINUX_SND_DIR)/sound
+SND_DRIVER_VM_ETC := $(LINUX_SND_DIR)/board/$(BOARD)/asound.conf
 
-UIO_ASOUND_CONF := $(LINUX_SND_DIR)/asound_$(BOARD).conf
+$(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) \
+								  $(SND_DRIVER_VM_USERLEVEL_INIT) \
+								  $(SND_DRIVER_VM_ETC)
+	$(VMM_TOOLS)/packrootfs $(SND_DRIVER_VM_INITRD) $(SND_DRIVER_VM_ROOTFS_TMP_DIR) -o $(SND_DRIVER_VM_INITRD_OVERLAYED) \
+							--startup $(SND_DRIVER_VM_USERLEVEL_INIT) \
+							--home $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) \
+							--etc $(SND_DRIVER_VM_ETC)
+	
+$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) \
+								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_INIT))
+	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_INITRD) $(CLIENT_VM_ROOTFS_TMP_DIR) -o $(CLIENT_VM_INITRD_OVERLAYED) \
+							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
 
-$(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) $(LINUX_SND_DIR)/S95sound $(UIO_ASOUND_CONF)
-	rm -rf $(SND_DRIVER_VM_ROOTFS_TMP_DIR) && \
-	mkdir -p $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d && \
-	cp $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/root && \
-	cp $(LINUX_SND_DIR)/S95sound $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d && \
-	chmod +x $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/init.d/* && \
-	cp $(UIO_ASOUND_CONF) $(SND_DRIVER_VM_ROOTFS_TMP_DIR)/etc/asound.conf && \
-	./pack.sh $(SND_DRIVER_VM_ROOTFS_TMP_DIR) $(SND_DRIVER_VM_INITRD) "$(CURRENT_DIR)/$(SND_DRIVER_VM_INITRD_OVERLAYED)"
-
-$(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
-	rm -rf $(CLIENT_VM_ROOTFS_TMP_DIR) && \
-	mkdir -p $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
-	cp $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) $(CLIENT_VM_ROOTFS_TMP_DIR)/root && \
-	./pack.sh $(CLIENT_VM_ROOTFS_TMP_DIR) $(CLIENT_VM_INITRD) $(CURRENT_DIR)/$(CLIENT_VM_INITRD_OVERLAYED) "$^"
 
 $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
 	sh ../../tools/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts
