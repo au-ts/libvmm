@@ -265,8 +265,9 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    uint32_t cookie = freelist_allocate(&state->free_requests);
-    if (cookie == FREELIST_INVALID) {
+    uint32_t cookie;
+    int err = ialloc_alloc(&state->free_requests, &cookie);
+    if (err < 0) {
         LOG_SOUND_ERR("Failed to allocate cookie\n");
         return -SOUND_S_IO_ERR;
     }
@@ -288,7 +289,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
 
     if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        freelist_return(&state->free_requests, cookie);
+        ialloc_free(&state->free_requests, cookie);
         return -SOUND_S_IO_ERR;
     }
 
@@ -302,8 +303,9 @@ static int handle_basic_cmd(struct virtio_device *dev,
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    uint32_t cookie = freelist_allocate(&state->free_requests);
-    if (cookie == FREELIST_INVALID) {
+    uint32_t cookie;
+    int err = ialloc_alloc(&state->free_requests, &cookie);
+    if (err < 0) {
         LOG_SOUND_ERR("Failed to allocate cookie\n");
         return -SOUND_S_IO_ERR;
     }
@@ -322,7 +324,7 @@ static int handle_basic_cmd(struct virtio_device *dev,
 
     if (sound_enqueue_cmd(&device_state(dev)->cmd_req, &cmd) != 0) {
         LOG_SOUND_ERR("Failed to enqueue command\n");
-        freelist_return(&state->free_requests, cookie);
+        ialloc_free(&state->free_requests, cookie);
         return -SOUND_S_IO_ERR;
     }
 
@@ -539,8 +541,9 @@ static void handle_xfer(struct virtio_device *dev,
         return;
     }
 
-    uint32_t cookie = freelist_allocate(&state->free_requests);
-    if (cookie == FREELIST_INVALID) {
+    uint32_t cookie;
+    int err = ialloc_alloc(&state->free_requests, &cookie);
+    if (err < 0) {
         LOG_SOUND_ERR("Failed to allocate cookie\n");
         return;
     }
@@ -562,7 +565,7 @@ static void handle_xfer(struct virtio_device *dev,
         *status_ptr = VIRTIO_SOUND_S_IO_ERR;
 
         virtq_enqueue_used(virtq, desc_head, sizeof(uint32_t));
-        freelist_return(&state->free_requests, cookie);
+        ialloc_free(&state->free_requests, cookie);
 
         *respond = true;
         return;
@@ -666,7 +669,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     sound_dev->config.streams = shared_state->streams;
     sound_dev->config.chmaps = 0;
 
-    freelist_init(&sound_dev->free_requests,
+    ialloc_init(&sound_dev->free_requests,
                   sound_dev->free_requests_data,
                   VIRTIO_SND_MAX_REQUESTS);
     
@@ -815,7 +818,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
         bool responded = respond_to_request(req, dev, NULL, 0,
                                             &response, sizeof(response));
         if (responded) {
-            freelist_return(&state->free_requests, cmd.cookie);
+            ialloc_free(&state->free_requests, cmd.cookie);
             respond = true;
         }
     }
@@ -837,7 +840,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
                                             pcm_buffer, pcm.len,
                                             &response, sizeof(response));
         if (responded) {
-            freelist_return(&state->free_requests, pcm.cookie);
+            ialloc_free(&state->free_requests, pcm.cookie);
             respond = true;
         }
 
