@@ -61,7 +61,7 @@ aplay rec.wav
 
 # 2. Design & Implementation
 ## 2.1 System Structure
-![image](assets/sound-structure.png)
+![image](sound-structure.png)
 From left to right:
 1. A client Linux process plays sound through ALSA.
 2. The Linux kernel sends this sound to a VirtIO sound device that has been
@@ -162,7 +162,7 @@ The VirtIO sound queue structure is shown below. A request appears in the
 available queue, containing request info and a number of data buffers. When this
 request has been fulfilled (i.e., the PCM data has been played), the status is
 written and it is moved into the used queue.
-![image](assets/virtio-snd.png)
+![image](virtio-snd.png)
 
 ## 2.5 UIO driver implementation
 ### 2.5.1 Communication with native protection domains
