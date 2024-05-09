@@ -82,7 +82,7 @@ static struct virtio_device virtio_console;
 
 /* PL011 Console*/
 #define PL011_CONSOLE_BASE (0x9000000)
-#define PL011_CONSOLE_SIZE (0x1000000) // TODO - HOW BIG SHOULD THIS BE?
+#define PL011_CONSOLE_SIZE (0x1000)
 
 static struct pl011_device pl011_console;
 
@@ -214,12 +214,32 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     switch (ch) {
-        // GIVEN WE HAVE PASSTHROUGH TO THE UART WE SHOULDNT BE CALLING THIS - CAN COMMENT OUT FOR NOW
-        case SERIAL_MUX_RX_CH: {
+        case SERIAL_MUX_RX_CH: { // this is just general receive (not specific for virtio_console)
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             // virtio_console_handle_rx(&virtio_console);
+            
+            // Read from sddf buffers --> pass that back to UBoot 
+            LOG_VMM("USER KEYBOARD INPUT!\n");
+            // REPLACE WITH PL011 handling
+            // This handling needs to:
+            // 1. Read the input character from the SDDF queue
+            // 2. Respond to UBoot with that character
+
+            // TODO:
+            // > Before the below, is there an easy way to access the data from user input? How does it get stored in the SDDF
+            // in the first place?
+            // > Need to implement the virtio_mmio_device_init function for pl011_emulation_init (this will need to 
+            // set up the PL011 device so we can write to the queues and whatnot for it)
+            // > We then need a pl011_console_handle_rx() function to actually handle outputting values
             break;
+
+            // Questions:
+            // - Direction for transmit/receive
+            // - How are SDDF queues getting populated? Do we need to mimic the virtio_console implementation in accessing them?
+
+            // Transmit from the virtio_console is mananged via the fault handler (transmitting data to the client)
+            // Receive for virtio_console is managed here (we're trying to have the console receive our input)
         }
         case BLK_CH: {
             virtio_blk_handle_resp(&virtio_blk);
@@ -237,6 +257,7 @@ void notified(microkit_channel ch) {
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {
     bool success = fault_handle(id, msginfo);
+
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */

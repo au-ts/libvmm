@@ -71,7 +71,56 @@ bool pl011_emulation_init(uintptr_t base, size_t size, pl011_device_t *dev) {
     return success;
 }
 
-bool pl011_fault_handle() {
-    LOG_VMM_ERR("THIS FAULT HAS BEEN HANDLED\n"); // TODO - work out why we're looping on this
+static bool handle_pl011_reg_read(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs) {
+    // Need to call the fault_emulate_write function here. This will respond to UBoots read request with 
+    // whatever value (in this case need to work out what it's expecting so we can pass that back).
+
+    // Is that how this works? There is no actual device at this address, we're just emulating it so 
+    // having access to that memory isn't going to do anything since the client can't actually access it anyway.
+    // Here we just need to respond to the client's read request with whatever value they're expecting (which we 
+    // can do using fault_emulate_write).
+
+    // The function logic for write looks like it uses offset to determine what register to select
+    // and then ANDs that with the data??? Not sure about this
+
+    size_t test = 0x0;    
+    fault_emulate_write(regs, offset, fsr, test);
+
+    // // Reading values here doesn't mean anything since this is just some random trash data??
+    // uint32_t data = fault_get_data(regs, fsr);
+    // uint32_t mask = fault_get_data_mask(offset, fsr);
+    // /* Mask the data to write */
+    // data &= mask;
+    // printf("|PL011READ|INFO: Read to 0x%x. Value: %lu\n", offset, (unsigned long) data);
+
+    // microkit_dbg_putc((char) data);
+
+    return true;
+}
+
+static bool handle_pl011_reg_write(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs) {
+    uint32_t data = fault_get_data(regs, fsr);
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    /* Mask the data to write */
+    data &= mask;
+
+    // printf("|PL011WRITE|INFO: Write to 0x%x. Value: %lu\n", offset, (unsigned long) data);
+
+    microkit_dbg_putc((char) data);
+
+    return true;
+}
+
+
+// This is the structure of the callback, can unpack it to find the relevant info
+// TODO: can't remove the data here as the callback excepts the argument but not using the device atm
+bool pl011_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+
+    if (fault_is_read(fsr)) {
+        return handle_pl011_reg_read(vcpu_id, offset, fsr, regs);
+    } else {
+        return handle_pl011_reg_write(vcpu_id, offset, fsr, regs);
+    }
+
     return true;
 }
