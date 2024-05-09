@@ -56,14 +56,14 @@ CLIENT_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_rootfs
 
 SND_DRIVER_VM_LINUX := $(SND_DRIVER_VM_DIR)/linux
 SND_DRIVER_VM_INITRD := $(SND_DRIVER_VM_DIR)/rootfs.cpio.gz
-SND_DRIVER_VM_INITRD_OVERLAYED := $(SND_DRIVER_VM_DIR)/rootfs_overlayed.cpio.gz
+SND_DRIVER_VM_INITRD_OVERLAYED := $(BUILD_DIR)/snd_driver_rootfs.cpio.gz
 SND_DRIVER_VM_BASE_DTS := $(SND_DRIVER_VM_DTS_DIR)/linux.dts
 SND_DRIVER_VM_DTS_OVERLAYS := $(SND_DRIVER_VM_DTS_DIR)/init.dts \
 							$(SND_DRIVER_VM_DTS_DIR)/io.dts
 
 CLIENT_VM_LINUX := $(CLIENT_VM_DIR)/linux
 CLIENT_VM_INITRD := $(CLIENT_VM_DIR)/rootfs.cpio.gz
-CLIENT_VM_INITRD_OVERLAYED := $(CLIENT_VM_DIR)/rootfs_overlayed.cpio.gz
+CLIENT_VM_INITRD_OVERLAYED := $(BUILD_DIR)/client_vm_rootfs.cpio.gz
 CLIENT_VM_BASE_DTS := $(CLIENT_VM_DTS_DIR)/linux.dts
 CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
 							$(CLIENT_VM_DTS_DIR)/io.dts
