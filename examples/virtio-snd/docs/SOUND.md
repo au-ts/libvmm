@@ -41,7 +41,6 @@ aplay -l
 ```
 To play some sounds, run
 ```
-./cantina.elf
 aplay /usr/share/sounds/alsa/*
 ```
 
