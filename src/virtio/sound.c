@@ -97,8 +97,6 @@ static int virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t
     return 0;
 }
 
-// static const char *queue_name[] = { "controlq", "eventq", "txq", "rxq", NULL };
-
 static const char *code_to_str(uint32_t code)
 {
     switch(code)
