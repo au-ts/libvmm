@@ -1,9 +1,3 @@
-/*
- * Copyright 2019, DornerWorks
- *
- * SPDX-License-Identifier: BSD-2-Clause
- */
-
 /* This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
  *
