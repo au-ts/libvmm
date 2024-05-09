@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <microkit.h>
 #include <util.h>
-#include <vgic/vgic.h>
 #include <linux.h>
 #include <fault.h>
 #include <guest.h>
