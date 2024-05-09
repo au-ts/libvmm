@@ -44,14 +44,14 @@ LINUX_DIR := $(VMM_TOOLS)/linux
 LINUX_SND_DIR := $(LINUX_DIR)/snd
 UIO_DRIVERS_DIR := $(LINUX_DIR)/uio_drivers
 
+VM_USERLEVEL_DIR := userlevel/
+
 SND_DRIVER_VM_DIR := board/$(BOARD)/snd_driver_vm
 SND_DRIVER_VM_DTS_DIR := $(SND_DRIVER_VM_DIR)/dts
-SND_DRIVER_VM_USERLEVEL_DIR := userlevel/snd_driver_vm
 SND_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/snd_driver_vm_rootfs
 
 CLIENT_VM_DIR := board/$(BOARD)/client_vm
 CLIENT_VM_DTS_DIR := $(CLIENT_VM_DIR)/dts
-CLIENT_VM_USERLEVEL_DIR := userlevel/client_vm
 CLIENT_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_rootfs
 
 SND_DRIVER_VM_LINUX := $(SND_DRIVER_VM_DIR)/linux
@@ -240,11 +240,7 @@ $(BUILD_DIR)/user_sound.elf: $(BUILD_DIR)/user_sound/main.o $(BUILD_DIR)/user_so
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
-$(BUILD_DIR)/%.elf: $(SND_DRIVER_VM_USERLEVEL_DIR)/%.c
-	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
-	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
-
-$(BUILD_DIR)/%.elf: $(CLIENT_VM_USERLEVEL_DIR)/%.c
+$(BUILD_DIR)/%.elf: $(VM_USERLEVEL_DIR)/%.c
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $^ -o $@
 	patchelf --set-interpreter /lib64/ld-linux-aarch64.so.1 $@
 
