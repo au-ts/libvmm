@@ -143,11 +143,11 @@ typedef struct virtio_device {
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
 
 /*
- * All terminology used and functionality of the virtIO device implementation
- * adheres with the following specification:
- * Virtual I/O Device (VIRTIO) Version 1.2
+ * Registers a new virtIO device at a given guest-physical region.
+ *
+ * Assumes the virtio_device_t *dev struct passed has been populated
+ * and virtual IRQ associated with the device has been registered.
  */
-
 bool virtio_mmio_register_device(virtio_device_t *dev,
                                  uintptr_t region_base,
                                  uintptr_t region_size,
