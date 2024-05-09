@@ -5,8 +5,8 @@ buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
-* HardKernel Odroid-C4
 * QEMU ARM virt
+* HardKernel Odroid-C4
 
 ## Building with Make
 
