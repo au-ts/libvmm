@@ -10,7 +10,7 @@ a single client.
 
 The example currently works on the following platforms:
 * QEMU ARM virt
-* ODROIDC4
+* HardKernel Odroid-C4
 
 ## Building
 
