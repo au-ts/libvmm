@@ -68,7 +68,7 @@ LINUX_DIR := $(VMM_TOOLS)/linux
 LINUX_BLK_DIR := $(LINUX_DIR)/blk
 UIO_DIR := $(LINUX_DIR)/uio
 
-SDDF_DIR := sddf
+SDDF_DIR := $(abspath ../../dep/sddf)
 
 BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
 BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
