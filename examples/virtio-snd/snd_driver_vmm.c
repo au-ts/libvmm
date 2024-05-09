@@ -73,8 +73,8 @@ uintptr_t serial_tx_active;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-uintptr_t sound_shared_state; 
-uintptr_t sound_data_paddr; 
+uintptr_t sound_shared_state;
+uintptr_t sound_data_paddr;
 
 static struct virtio_console_device virtio_console;
 
@@ -128,7 +128,7 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
-    
+
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init(GUEST_VCPU_ID);
     if (!success) {
@@ -143,7 +143,6 @@ void init(void) {
     assert(serial_tx_active);
     assert(serial_tx_free);
 
-    
     /* Initialise our sDDF ring buffers for the serial device */
     serial_queue_handle_t rxq, txq;
     serial_queue_init(&rxq,
@@ -187,7 +186,7 @@ void init(void) {
                                   &rxq, &txq,
                                   SERIAL_TX_CH);
     assert(success);
-    
+
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
     assert(success);
 
@@ -210,7 +209,7 @@ void init(void) {
     uintptr_t *data_paddr = &((vm_shared_state_t *)sound_shared_state)->data_paddr;
     *data_paddr = sound_data_paddr;
     cache_clean((uintptr_t)data_paddr, sizeof(uintptr_t));
-    
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
