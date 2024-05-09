@@ -8,7 +8,6 @@
 #include <microkit.h>
 #include "util/atomic.h"
 #include "util/util.h"
-#include "arch/aarch64/vgic/vgic.h"
 #include "arch/aarch64/linux.h"
 #include "arch/aarch64/fault.h"
 #include "guest.h"
