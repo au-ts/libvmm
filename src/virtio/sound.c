@@ -6,7 +6,7 @@
 #include "virtio/virtq.h"
 #include <sddf/sound/queue.h>
 
-#define DEBUG_SOUND
+// #define DEBUG_SOUND
 
 #if defined(DEBUG_SOUND)
 #define LOG_SOUND(...) do{ printf("VIRTIO(SOUND): "); printf(__VA_ARGS__); }while(0)
@@ -412,7 +412,7 @@ static void handle_control_msg(struct virtio_device *dev,
 
     uint32_t status = VIRTIO_SOUND_S_OK;
     if (result < 0) {
-        LOG_SOUND("Command failed with result %d\n", -result);
+        LOG_SOUND_ERR("Command failed with result %d\n", -result);
         immediate = true;
         status = -result;
     }
@@ -604,7 +604,7 @@ static void handle_virtq(struct virtio_device *dev,
             handle_xfer(dev, virtq, desc_head, false, notify_driver, respond);
             break;
         default:
-            LOG_SOUND("Queue %d not implemented", index);
+            LOG_SOUND_ERR("Queue %d not implemented", index);
         }
     }
     vq->last_idx = idx;
