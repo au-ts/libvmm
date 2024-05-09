@@ -18,4 +18,4 @@ The example currently works on the following platforms:
 * HardKernel Odroid-C4
 
 For details on the internals of the example and instructions on building and running it,
-see [SOUND.md](SOUND.md).
+see [docs/SOUND.md](docs/SOUND.md).
