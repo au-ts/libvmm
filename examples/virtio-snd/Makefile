@@ -82,7 +82,7 @@ CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
 SND_DRIVER_VM_DTB := $(BUILD_DIR)/snd_driver_vm.dtb
 CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
-SDDF := sddf
+SDDF := $(abspath ../../dep/sddf)
 
 SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
 SDDF_SOUND_COMPONENTS := $(SDDF)/sound/components
