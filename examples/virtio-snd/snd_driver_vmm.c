@@ -59,8 +59,8 @@ uintptr_t guest_ram_vaddr;
 int passthrough_irq_map[MAX_IRQ_CH];
 
 
-#define SERIAL_MUX_TX_CH 1
-#define SERIAL_MUX_RX_CH 2
+#define SERIAL_TX_CH 1
+#define SERIAL_RX_CH 2
 
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
@@ -186,7 +186,7 @@ void init(void) {
                                   VIRTIO_CONSOLE_SIZE,
                                   VIRTIO_CONSOLE_IRQ,
                                   &rxq, &txq,
-                                  SERIAL_MUX_TX_CH);
+                                  SERIAL_TX_CH);
     assert(success);
     
     success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
@@ -220,7 +220,7 @@ void notified(microkit_channel ch) {
     bool success;
 
     switch (ch) {
-    case SERIAL_MUX_RX_CH:
+    case SERIAL_RX_CH:
         /* We have received an event from the serial multiplexer, so we
             * call the virtIO console handling */
         virtio_console_handle_rx(&virtio_console);
