@@ -346,7 +346,7 @@ static void handle_control_msg(struct virtio_device *dev,
     struct virtq_desc *req_desc = &virtq->desc[desc_head];
     struct virtio_snd_hdr *hdr = (void *)req_desc->addr;
     struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
-    
+
     bool immediate = false;
 
     uint32_t bytes_written = 0;
@@ -555,7 +555,7 @@ static void handle_xfer(struct virtio_device *dev,
         for (;
             desc->flags & VIRTQ_DESC_F_NEXT;
             desc = &virtq->desc[desc->next]);
-            
+
         assert(desc->flags & VIRTQ_DESC_F_WRITE);
 
         uint32_t *status_ptr = (void *)desc->addr;

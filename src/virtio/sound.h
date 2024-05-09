@@ -272,9 +272,9 @@ enum {
 struct virtio_snd_chmap_info {
     struct virtio_snd_info hdr;
     // VIRTIO_SND_D_*
-    uint8_t direction; 
+    uint8_t direction;
     // The number of valid channel position values
-    uint8_t channels;  
+    uint8_t channels;
     // Channel position values (VIRTIO_SND_CHMAP_*)
     uint8_t positions[VIRTIO_SND_CHMAP_MAX_SIZE];
 };
@@ -317,7 +317,7 @@ struct virtio_snd_device {
 /**
  * Initialise a virtIO sound device with MMIO.
  * This must be called *after* driver has finished initialisation.
- * 
+ *
  * @param sound_dev Preallocated memory for the sound device,
  *                  does not need to be pre-initialised.
  * @param region_base Start of the MMIO fault region.
@@ -326,7 +326,7 @@ struct virtio_snd_device {
  * @param shared_state Pointer to the sDDF sound shared data region.
  * @param queues Pointer to sDDF sound queues.
  * @param server_ch Channel of the sound server.
- * 
+ *
  * @return `true` on success, `false` otherwise.
  */
 bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
