@@ -318,9 +318,12 @@ bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
     }
 }
 
+/*
+ * If the guest acknowledges the virtual IRQ associated with the virtIO
+ * device, there is nothing that we need to do.
+ */
 static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
 
-// Assumes device struct has been populated and virq has been initialised
 bool virtio_mmio_register_device(virtio_device_t *dev,
                                  uintptr_t region_base,
                                  uintptr_t region_size,
