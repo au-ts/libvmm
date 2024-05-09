@@ -253,7 +253,7 @@ static int flush_pcm(stream_t *stream, int max_count)
 {
     int response_count = 0;
 
-    // @alexbr: for some reason this is needed for mmap to work
+    // For some reason this is needed for mmap to work
     snd_pcm_avail(stream->handle);
 
     while (!queue_empty(stream->pcm_req) && max_count-- > 0) {
