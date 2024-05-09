@@ -220,28 +220,26 @@ void notified(microkit_channel ch) {
     bool success;
 
     switch (ch) {
-        case SERIAL_MUX_RX_CH: {
-            /* We have received an event from the serial multiplexer, so we
-             * call the virtIO console handling */
-            virtio_console_handle_rx(&virtio_console);
-            break;
+    case SERIAL_MUX_RX_CH:
+        /* We have received an event from the serial multiplexer, so we
+            * call the virtIO console handling */
+        virtio_console_handle_rx(&virtio_console);
+        break;
+    case SND_CLIENT_CH:
+        success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
+        if (!success) {
+            LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
         }
-        case SND_CLIENT_CH: {
-            success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
+        break;
+    default:
+        if (passthrough_irq_map[ch]) {
+            success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
             if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
             }
-            break;
+        } else {
+            printf("Unexpected channel, ch: 0x%lx\n", ch);
         }
-        default:
-            if (passthrough_irq_map[ch]) {
-                success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
-                if (!success) {
-                    LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
-                }
-            } else {
-                printf("Unexpected channel, ch: 0x%lx\n", ch);
-            }
     }
 }
 
