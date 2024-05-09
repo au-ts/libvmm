@@ -116,6 +116,7 @@ typedef struct sound_pcm_info {
 
 #define SOUND_MAX_STREAM_COUNT 32
 typedef struct sound_shared_state {
+    bool ready;
     uint32_t streams;
     sound_pcm_info_t stream_info[SOUND_MAX_STREAM_COUNT];
 } sound_shared_state_t;
@@ -126,20 +127,18 @@ stream, including
 	- supported rate bitmap
 	- stream direction (playback or recording)
 	- minimum and maximum supported channels on this stream.
-- When the driver is ready and has filled this info, it sends a notification to
-the client.
+- When the driver is ready and has filled this info, it sets `ready` to true
+with an atomic write.
 - From here, the client can send requests to the driver using the following
 protocol.
 
 ### 2.3.2 Communication
-*Please see the [sDDF Design
-*Document](https://trustworthy.systems/projects/drivers/sddf-design.pdf) for a
-*description of the communication protocol.*
+*Please see the [sDDF Design Document](https://trustworthy.systems/projects/drivers/sddf-design.pdf)
+for a description of the communication protocol.*
 
 ## 2.4 VirtIO sound implementation
-*See
-*[here](https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-56700014)
-*to learn about the VirtIO sound protocol.*
+*See [here](https://docs.oasis-open.org/virtio/virtio/v1.3/csd01/virtio-v1.3-csd01.html#x1-56700014)
+to learn about the VirtIO sound protocol.*
 
 Currently, the VirtIO device implementation at `src/virtio/sound.c` only
 supports streams. It does not provide jacks, channel maps, control elements, or
