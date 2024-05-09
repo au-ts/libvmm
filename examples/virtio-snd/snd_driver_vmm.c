@@ -52,7 +52,6 @@ uintptr_t guest_ram_vaddr;
 
 #define SND_CLIENT_CH 4
 
-// @alexbr: why 50?
 #define UIO_SND_IRQ 50
 
 #define MAX_IRQ_CH 63

@@ -81,7 +81,6 @@ static int virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32
 
 static int virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
-    // @alexbr: duplicated from block. can we abstract this?
     struct virtio_snd_device *state = device_state(dev);
     uintptr_t config_base_addr = (uintptr_t)&state->config;
     uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
@@ -141,7 +140,7 @@ static uint64_t virtio_formats_from_sddf(uint64_t formats)
 {
     uint64_t result = 0;
 
-    // @alexbr: Currently the enums are identical, but explicitly converting
+    // Currently the enums are identical, but explicitly converting
     // allows us to change the enum values in the future.
     convert_flag(&result, VIRTIO_SND_PCM_FMT_IMA_ADPCM, formats, SOUND_PCM_FMT_IMA_ADPCM);
     convert_flag(&result, VIRTIO_SND_PCM_FMT_MU_LAW,    formats, SOUND_PCM_FMT_MU_LAW);
@@ -615,7 +614,6 @@ static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
     struct virtio_snd_device *state = device_state(dev);
 
     if (dev->data.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
-        // @alexbr: handle error appropriately
         LOG_SOUND_ERR("Invalid queue\n");
         return 0;
     }
