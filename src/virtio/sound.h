@@ -34,8 +34,8 @@
 
 #include <stdint.h>
 #include <sddf/sound/queue.h>
+#include <sddf/util/ialloc.h>
 #include "virtio/mmio.h"
-#include "util/freelist.h"
 #include "util/queue.h"
 
 #define VIRTIO_SND_NUM_VIRTQ 4
@@ -305,7 +305,7 @@ struct virtio_snd_device {
     // Store pending request state
     virtio_snd_request_t requests[VIRTIO_SND_MAX_REQUESTS];
     uint32_t free_requests_data[VIRTIO_SND_MAX_REQUESTS];
-    freelist_t free_requests;
+    ialloc_t free_requests;
 
     // Queue of uintptr_t buffer offsets
     queue_t free_buffers;
