@@ -104,19 +104,6 @@ typedef struct virtio_device_info {
     // uint32_t ConfigGeneration;
 } virtio_device_info_t;
 
-// typedef struct sddf_handler {
-//     /* Pointer to the sDDF queue handle */
-//     void *queue_h;
-//     /* Pointer to the sDDF config space */
-//     void *config;
-//     /* Shared data region address */
-//     uintptr_t data;
-//     /* Shared data region size */
-//     size_t data_size;
-//     /* Microkit channel to the sDDF Virtualiser */
-//     size_t ch; // @ivanv: this is microkit specific so maybe should be a callback instead or something.
-// } sddf_handler_t;
-
 /* Everything needed at runtime for a virtIO device to function. */
 typedef struct virtio_device {
     virtio_device_info_t data;
