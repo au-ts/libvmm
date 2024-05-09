@@ -17,7 +17,7 @@ void stream_enqueue_pcm_req(stream_t *stream, sound_pcm_t *pcm);
 
 int stream_timer_fd(stream_t *stream);
 
-/** Returns true to signal client notify */
+/* Returns true to signal client notify */
 bool stream_update(stream_t *stream);
 
 snd_pcm_stream_t stream_direction(stream_t *stream);
