@@ -169,7 +169,7 @@ struct virtio_blk_device {
     word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_BUFFERS)];
     /* Index allocator */
     ialloc_t ialloc;
-    uint64_t ialloc_idxlist[SDDF_MAX_DATA_BUFFERS];
+    uint32_t ialloc_idxlist[SDDF_MAX_DATA_BUFFERS];
 
     blk_storage_info_t *storage_info;
     blk_queue_handle_t queue_h;

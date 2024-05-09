@@ -237,7 +237,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
             /* Book keep the request */
-            uint64_t req_id;
+            uint32_t req_id;
             ialloc_alloc(&state->ialloc, &req_id);
             state->reqbk[req_id] = (reqbk_t){
                 desc_head, sddf_data, sddf_count, sddf_block_number,
@@ -282,7 +282,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                uint64_t req_id;
+                uint32_t req_id;
                 ialloc_alloc(&state->ialloc, &req_id);
                 state->reqbk[req_id] = (reqbk_t){
                     desc_head, sddf_data, sddf_count, sddf_block_number,
@@ -307,7 +307,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 uintptr_t virtio_data_size = virtq->desc[curr_desc_head].len;
 
                 /* Book keep the request */
-                uint64_t req_id;
+                uint32_t req_id;
                 ialloc_alloc(&state->ialloc, &req_id);
                 state->reqbk[req_id] = (reqbk_t){
                     desc_head, sddf_data, sddf_count, sddf_block_number,
@@ -331,7 +331,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             }
 
             /* Book keep the request */
-            uint64_t req_id;
+            uint32_t req_id;
             ialloc_alloc(&state->ialloc, &req_id);
             /* except for virtio desc, nothing else needs to be retrieved later
              * so leave as 0 */
@@ -414,7 +414,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                            (void *)virtq->desc[curr_virtio_desc].addr,
                            data->virtio_data_size);
 
-                    uint64_t new_sddf_id;
+                    uint32_t new_sddf_id;
                     ialloc_alloc(&state->ialloc, &new_sddf_id);
                     state->reqbk[new_sddf_id] = (reqbk_t){
                         data->virtio_desc_head,
