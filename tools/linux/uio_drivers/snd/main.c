@@ -9,7 +9,9 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+// Used for mapping in UIO devices
 #define PAGE_SIZE_4K 0x1000
+// Depends on the size of the queue in the system file
 #define QUEUE_BYTES 0x200000
 
 #define DEFAULT_DEVICE "default"
