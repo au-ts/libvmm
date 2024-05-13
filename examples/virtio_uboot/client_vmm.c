@@ -22,19 +22,6 @@
 
 #define GUEST_RAM_SIZE 0x6000000
 
-/******
- * 
- * 
- * 
- * THIS FILE USES THE UBOOT VARIANTS OF THE INSTRUCTIONS TO LOAD INSTEAD OF
- * THE LINUX VARIANTS. NOTE THAT WE CURRENTLY USE THE FILE client_vmm.c AND THIS IS
- * JUST KEPT AS AN EXAMPLE.
- * 
- * 
- * 
-*/
-
-// TODO - PROBABLY NEED TO CHANGE THESE ADDRESSES
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x40000000 // UBoot for qemu_arm_virt seems to expect the DTB to be here
 #define UBOOT_OFFSET 0x200000
@@ -220,26 +207,28 @@ void notified(microkit_channel ch) {
             // virtio_console_handle_rx(&virtio_console);
             
             // Read from sddf buffers --> pass that back to UBoot 
-            LOG_VMM("USER KEYBOARD INPUT!\n");
+            // LOG_VMM("USER KEYBOARD INPUT!\n");
             // REPLACE WITH PL011 handling
             // This handling needs to:
             // 1. Read the input character from the SDDF queue
             // 2. Respond to UBoot with that character
 
             // TODO:
-            // > Before the below, is there an easy way to access the data from user input? How does it get stored in the SDDF
-            // in the first place?
             // > Need to implement the virtio_mmio_device_init function for pl011_emulation_init (this will need to 
             // set up the PL011 device so we can write to the queues and whatnot for it)
             // > We then need a pl011_console_handle_rx() function to actually handle outputting values
+
+            LOG_VMM("TODO - handle user input\n");
+
             break;
 
-            // Questions:
-            // - Direction for transmit/receive
-            // - How are SDDF queues getting populated? Do we need to mimic the virtio_console implementation in accessing them?
+            // Two ring buffers - active and empty. For receive (rx), the client takes an active buffer, reads the contents out of it
+            // and then places it back in the empty list. For transmit (tx), the client takes an empty buffer, adds its contents and
+            // then sends an IRQ?
 
             // Transmit from the virtio_console is mananged via the fault handler (transmitting data to the client)
-            // Receive for virtio_console is managed here (we're trying to have the console receive our input)
+            // Receive for virtio_console is managed here (we're trying to have the console receive our input and then we pass
+            // that onto the client)
         }
         case BLK_CH: {
             virtio_blk_handle_resp(&virtio_blk);
