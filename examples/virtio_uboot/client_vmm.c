@@ -45,6 +45,11 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+/* PL011 Console*/
+#define PL011_CONSOLE_BASE (0x9000000)
+#define PL011_CONSOLE_SIZE (0x1000)
+
+static struct pl011_device pl011_console;
 
 /* Virtio Console */
 #define SERIAL_MUX_TX_CH 1
@@ -61,17 +66,11 @@ uintptr_t serial_tx_active;
 uintptr_t serial_rx_data;
 uintptr_t serial_tx_data;
 
-serial_queue_handle_t serial_rx_h;
+serial_queue_handle_t serial_rx_h; // this can be used --> provides an address
 serial_queue_handle_t serial_tx_h;
 sddf_handler_t sddf_serial_handlers[SDDF_SERIAL_NUM_HANDLES];
 
 static struct virtio_device virtio_console;
-
-/* PL011 Console*/
-#define PL011_CONSOLE_BASE (0x9000000)
-#define PL011_CONSOLE_SIZE (0x1000)
-
-static struct pl011_device pl011_console;
 
 /* Virtio Block */
 #define BLK_CH 3
@@ -128,6 +127,10 @@ void init(void) {
         return;
     }
 
+    /* Initialise pl011 emulated console device */
+    success = pl011_emulation_init(&pl011_console, PL011_CONSOLE_BASE, PL011_CONSOLE_SIZE);
+    assert(success);
+
     /* virtIO console */
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].queue_h = &serial_rx_h;
     sddf_serial_handlers[SDDF_SERIAL_RX_HANDLE].config = NULL;
@@ -169,10 +172,6 @@ void init(void) {
             microkit_dbg_puts(": server tx buffer population, unable to enqueue\n");
         }
     }
-    
-    /* Initialise pl011 emulated console device */
-    success = pl011_emulation_init(PL011_CONSOLE_BASE, PL011_CONSOLE_SIZE, &pl011_console);
-    assert(success);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE, VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
@@ -205,21 +204,12 @@ void notified(microkit_channel ch) {
             /* We have received an event from the serial multipelxor, so we
              * call the virtIO console handling */
             // virtio_console_handle_rx(&virtio_console);
-            
-            // Read from sddf buffers --> pass that back to UBoot 
-            // LOG_VMM("USER KEYBOARD INPUT!\n");
-            // REPLACE WITH PL011 handling
-            // This handling needs to:
-            // 1. Read the input character from the SDDF queue
-            // 2. Respond to UBoot with that character
 
-            // TODO:
-            // > Need to implement the virtio_mmio_device_init function for pl011_emulation_init (this will need to 
-            // set up the PL011 device so we can write to the queues and whatnot for it)
-            // > We then need a pl011_console_handle_rx() function to actually handle outputting values
+            // TODO - implement the que/deque stuff for the SDDF
 
             LOG_VMM("TODO - handle user input\n");
-
+            pl011_console.registers.fr = pl011_console.registers.fr & ~(PL011_FR_RXFE); // should indicate something to read in buffer
+            pl011_console.registers.dr = 120; // x in asci
             break;
 
             // Two ring buffers - active and empty. For receive (rx), the client takes an active buffer, reads the contents out of it
@@ -253,3 +243,13 @@ void fault(microkit_id id, microkit_msginfo msginfo) {
         microkit_fault_reply(microkit_msginfo_new(0, 0));
     }
 }
+
+// user puts in character
+// driver -> virtualiser rx
+// rx virt -> notifies client_vmm-1
+// we just wait at this point
+// Later Uboot will try to receive data (it will check a register to see if data is available)
+// There'll be a fault on particular address to indicate there's been data put in the receive buffer
+// If the serial queue is empty, we respond ot this request with whatever means empty
+// Else we say there is data
+// Then Uboot will fault trying to access that data in whatever register its meant to be

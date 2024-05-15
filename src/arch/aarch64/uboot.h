@@ -10,15 +10,11 @@
 #include <stddef.h>
 #include "fault.h"
 
-/* Offsets from base address for PL011 registers */
-static const uint32_t DR_OFFSET = 0x000;
-static const uint32_t FR_OFFSET = 0x018;
-static const uint32_t IBRD_OFFSET = 0x024;
-static const uint32_t FBRD_OFFSET = 0x028;
-static const uint32_t LCR_OFFSET = 0x02c;
-static const uint32_t TCR_OFFSET = 0x030;
-static const uint32_t IMSC_OFFSET = 0x038;
-static const uint32_t DMACR_OFFSET = 0x048;
+/* PL011 device details given here - https://developer.arm.com/documentation/ddi0183/g/programmers-model */
+
+/* PL011 register definitions */
+#define PL011_FR_RXFE (1 << 4) 
+#define PL011_FR_TXFF (1 << 5)
 
 /* PL011 register set */
 typedef struct pl011_registers {
@@ -47,38 +43,20 @@ typedef struct pl011_registers {
 
 /* PL011 device information */
 typedef struct pl011_device {
+    pl011_registers_t registers;
     uint64_t base_address;
-    uint64_t base_clock;
-    uint32_t baudrate;
-    uint32_t data_bits;
-    uint32_t stop_bits;
+    uint32_t size;
+    /* Don't really need these as we're just emulating */
+    // uint64_t base_clock;
+    // uint32_t baudrate;
+    // uint32_t data_bits;
+    // uint32_t stop_bits;
 } pl011_device_t;
 
-/* Function for accessing specific registers */
-// volatile uint32_t *reg(const pl011_device_t *dev, uint32_t offset) {
-//     const uint64_t addr = dev->base_address + offset;
-
-//      // Returning a pointer to a locally defined variable???
-//     return (volatile uint32_t *) ((void *) addr);
-// }
-
-/* Calculations for clock */
-// static void calculate_divisors(const pl011_device_t *dev, uint32_t *integer, uint32_t *fractional) {
-//     const uint32_t div = 4 * dev->base_clock / dev->baudrate;
-
-//     *fractional = div & 0x3f;
-//     *integer = (div >> 6) & 0xffff;
-// }
-
-// int pl011_device_setup(pl011_device_t *dev, uint64_t base_address, uint64_t base_clock) {
-
-// }
-
 /*
-    Atm this is jut going to register a fault handler - it'll probably need to do some init stuff for 
-    the device eventually.
+    This does some setup for the device and registers the fault handler.
 */
-bool pl011_emulation_init(uintptr_t base, size_t size, pl011_device_t *dev);
+bool pl011_emulation_init(pl011_device_t *dev, uintptr_t base, size_t size);
 
 /*
     This passes the fault off to the correct handler depending on if read or right. Note that atm we're 
