@@ -128,7 +128,7 @@ void init(void) {
     }
 
     /* Initialise pl011 emulated console device */
-    success = pl011_emulation_init(&pl011_console, PL011_CONSOLE_BASE, PL011_CONSOLE_SIZE);
+    success = pl011_emulation_init(&pl011_console, PL011_CONSOLE_BASE, PL011_CONSOLE_SIZE, sddf_serial_handlers);
     assert(success);
 
     /* virtIO console */
@@ -200,16 +200,31 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     switch (ch) {
-        case SERIAL_MUX_RX_CH: { // this is just general receive (not specific for virtio_console)
-            /* We have received an event from the serial multipelxor, so we
-             * call the virtIO console handling */
-            // virtio_console_handle_rx(&virtio_console);
+        case SERIAL_MUX_RX_CH: {
+            /* We have received an event from the serial multipelxor, so we handle with pl011 */
 
-            // TODO - implement the que/deque stuff for the SDDF
+            // The flow for this will be something like (We've told UBoot there's something in the buffer):
+            // 1. Do all the protocol stuff for the SDDF queues (dequeu/enqueue, etc.) to read the next element
+            // 2. Store that element in the data register
+            // 3. Check if there's anything left in the SDDF queues, if there isn't we update the bit in the flag register
+            // 4. Fault emulate write (i.e. send that element back to Uboot)
+            // That should do it - UBoot will receive it and do whatever with it. It will then poll again and if the FR is still
+            // set it should go through this flow again.
 
-            LOG_VMM("TODO - handle user input\n");
-            pl011_console.registers.fr = pl011_console.registers.fr & ~(PL011_FR_RXFE); // should indicate something to read in buffer
-            pl011_console.registers.dr = 120; // x in asci
+            // We're here so we've recieved a keyboard interrupt from the user
+            // UBoot is constantly polling the FR so we update it to indicate there's something to read in the data register
+            // We also place the input from the user in the data register
+            // We then exit control here
+            // UBoot will poll the FR and see this time there is some data to be read
+            // It will then attempt to read the data register to get data out
+            // Then presumably it drops back to polling the flag register to check if it has data in there
+            // On our end, if UBoot attempts to read the data register, we return whatever value is in there
+            // We might also need to check that there is nothing left in the serial queue.
+            // If there is we read the next character in and leave the bit set
+            // If there's not we unset the flag register bit to indicate the buffer is now empty
+            // -- How do we stop it repeatedly reading out the same character???
+
+            pl011_console_handle_rx(&pl011_console);
             break;
 
             // Two ring buffers - active and empty. For receive (rx), the client takes an active buffer, reads the contents out of it
