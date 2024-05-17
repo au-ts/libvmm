@@ -15,7 +15,7 @@
         <program_image path="client_vmm_1.elf" />
         <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
-        <!-- sDDF related regions for virtIO console -->
+        <!-- sDDF related regions for pl011 console emulation -->
         <!-- shared memory for queue mechanism -->
         <map mr="rx_free_serial_vmm_1" vaddr="0x6_000_000" perms="rw" cached="false" setvar_vaddr="serial_rx_free" />
         <map mr="rx_active_serial_vmm_1" vaddr="0x6_200_000" perms="rw" cached="false" setvar_vaddr="serial_rx_active" />

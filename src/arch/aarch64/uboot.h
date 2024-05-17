@@ -13,8 +13,6 @@
 #include "virtio/console.h" // SAME AS ABOVE
 #include <sddf/serial/queue.h> // SAME AS ABOVE
 
-/* PL011 console internals */
-#define PL011_CONSOLE_NUM_VIRTQ 2
 
 /* PL011 device details given here - https://developer.arm.com/documentation/ddi0183/g/programmers-model */
 
@@ -47,23 +45,12 @@ typedef struct pl011_registers {
     uint32_t dmacr;     /* 0x048 DMA Control Register */  
 } pl011_registers_t;
 
-typedef struct pl011_queue_handler {
-    struct virtq virtq;
-    /* is this virtq fully initialised? */
-    bool ready;
-    /* the last index that the virtIO device processed */
-    uint16_t last_idx;
-} pl011_queue_handler_t;
-
 /* PL011 device information */
 typedef struct pl011_device {
     pl011_registers_t registers;
     uint64_t base_address;
     uint32_t size;
     sddf_handler_t *sddf_handlers;
-    size_t num_vqs;
-    pl011_queue_handler_t *vqs;
-    
     /* Don't really need these as we're just emulating */
     // uint64_t base_clock;
     // uint32_t baudrate;

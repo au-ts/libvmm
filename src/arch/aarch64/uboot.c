@@ -7,10 +7,7 @@
 #include "../../util/util.h"
 #include "uboot.h"
 
-static struct pl011_queue_handler pl011_console_queues[PL011_CONSOLE_NUM_VIRTQ];
-
 bool pl011_emulation_init(pl011_device_t *dev, uintptr_t base, size_t size, sddf_handler_t* sddf_handlers) {
-
     /* Set the base address and size for the device */
     dev->base_address = base;
     dev->size = size;
@@ -21,10 +18,6 @@ bool pl011_emulation_init(pl011_device_t *dev, uintptr_t base, size_t size, sddf
 
     /* Assign handlers */
     dev->sddf_handlers = sddf_handlers;
-
-    /* Setup queues */
-    dev->num_vqs = PL011_CONSOLE_NUM_VIRTQ;
-    dev->vqs = pl011_console_queues;
 
     /* Register exception handler */
     bool success = fault_register_vm_exception_handler(base,
@@ -37,13 +30,6 @@ bool pl011_emulation_init(pl011_device_t *dev, uintptr_t base, size_t size, sddf
 }
 
 static bool handle_pl011_reg_read(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, pl011_device_t *dev) {
-    // Why might we poll the flag register?? How can I differentiate these?
-    // - checking if there's user input
-    // - checking if the uart is still busy transmitting data
-
-    // I expect UBoot to start polling 0x18 at some point but it keeps hanging - why is it hanging???
-    //
-
     if (offset == offsetof(pl011_registers_t, fr)) { /* Attempt to read the flag register */
         /* 
             This might get read to:
@@ -68,27 +54,6 @@ static bool handle_pl011_reg_read(size_t vcpu_id, size_t offset, size_t fsr, seL
     } else {
         printf("Attempted read from unhandled register at: 0x%x\n", offset);
     }
-
-    // /* Polling flag register to see if there's anything available to read */
-    // if (offset == FR_OFFSET) {
-    //     printf("PLO11: access to FR (0x18)\n");
-    //     uint32_t reg = 0x00000000; //TODO - stopped here
-    //     // What format should the data be in to be sent back to UBoot
-    //     fault_emulate_write(regs, offset, fsr, reg);
-    // } else if (offset == 0x0) {
-    //     printf("PLO11: access to DR (0x0)\n");
-    //     // expect to loop on this since we're reading the data register but not checking its updated state
-    // } else {
-    //     printf("PL011: access to something random at 0x%x\n", offset);    
-    // }
-
-
-
-    // printf("|PL011READ|INFO: Read to 0x%x\n", offset);
-
-    // 0x18 = flag register
-
-    // microkit_dbg_putc((char) data);
 
     return true;
 }
@@ -127,91 +92,31 @@ bool pl011_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserCont
 }
 
 bool pl011_console_handle_rx(pl011_device_t *dev) {
+    //TODO - CURRENT ISSUE IS UBOOT HAS A BUNCH OF SPURIOUS RECEIVES WHEN IT STARTS UP THAT FILL UP THE BUFFER
+
     /* Update FR to indicate there's something to read in the buffer */
     dev->registers.fr = dev->registers.fr & ~(PL011_FR_RXFE);
 
-    dev->registers.dr = 120; // x in asci
-
-    /*********NEW STUFF**********/
+    /* Access the receive buffer and dequeue the input */
     serial_queue_handle_t *sddf_rx_queue = (serial_queue_handle_t *) dev->sddf_handlers[SDDF_SERIAL_RX_HANDLE].queue_h;
     uintptr_t sddf_buffer = 0;
     unsigned int sddf_buffer_len = 0;
+
     int ret = serial_dequeue_active(sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
+    char *input = ((char *) sddf_buffer);
+    LOG_VMM("Buffer contents: %s\n", input);
+
+    /* Put the input in the data register to be read out by UBoot later*/
+    dev->registers.dr = input[0];  // Only want to read single characters out of the buffer so this should be okay
+
+    /* Enqueue a free buffer for reuse */
+    ret = serial_enqueue_free(sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
     assert(!ret);
-
-    assert(dev->num_vqs > RX_QUEUE);
-
-    // TODO - STOPPED HERE - basically want to copy the remainder of the below structure over and try to read a character
-    // out of the queue. All I've done atm is started adding some of the necessary structures to the pl011 device and
-    // uboot.c/h files to set this all up + the small amount of code above. I'm not sure where the contents of the buffer
-    // (i.e. the input we're trying to read) is actually stored atm.
-
-
-    // /***********/
-    // // serial_queue_handle_t *sddf_rx_queue = (serial_queue_handle_t *)dev->sddf_handlers[SDDF_SERIAL_RX_HANDLE].queue_h;
-    // // uintptr_t sddf_buffer = 0;
-    // // unsigned int sddf_buffer_len = 0;
-    // // int ret = serial_dequeue_active(sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
-    // // assert(!ret);
-    // // if (ret != 0) {
-    // //     LOG_CONSOLE_ERR("could not dequeue from RX used queue\n");
-    // //     // @ivanv: handle properly
-    // // }
- 
-    // // assert(dev->num_vqs > RX_QUEUE);
-    // struct virtio_queue_handler *rx_queue = &dev->vqs[RX_QUEUE];
-    // struct virtq *virtq = &rx_queue->virtq;
-    // uint16_t guest_idx = virtq->avail->idx;
-    // size_t idx = rx_queue->last_idx;
-
-    // if (idx != guest_idx) {
-    //     size_t bytes_written = 0;
-
-    //     uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-    //     struct virtq_desc desc;
-    //     uint16_t desc_idx = desc_head;
-
-    //     do {
-    //         desc = virtq->desc[desc_idx];
-
-    //         size_t bytes_to_copy = (desc.len < sddf_buffer_len) ? desc.len : sddf_buffer_len;
-    //         memcpy((char *) desc.addr, (char *) sddf_buffer, bytes_to_copy - bytes_written);
-
-    //         bytes_written += bytes_to_copy;
-    //     } while (bytes_written != sddf_buffer_len);
-
-    //     struct virtq_used_elem used_elem;
-    //     used_elem.id = desc_head;
-    //     used_elem.len = bytes_written;
-    //     virtq->used->ring[guest_idx % virtq->num] = used_elem;
-    //     virtq->used->idx++;
-
-    //     rx_queue->last_idx++;
-
-    //     // 3. Inject IRQ to guest
-    //     // @ivanv: is setting interrupt status necesary?
-    //     dev->data.InterruptStatus = BIT_LOW(0);
-    //     bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    //     assert(success);
-    // }
-
-    // // 4. Enqueue sDDF buffer into RX free queue
-    // ret = serial_enqueue_free(sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
-    // assert(!ret);
-    // // @ivanv: error handle for release mode
-
-    // /***********/
-
-
-
-
-
-
 
     return true;
 }
 
-// TODO - pl011_console_handle_tx(pl011_device_t *dev) {}
+// TODO - pl011_console_handle_tx(pl011_device_t *dev)
 
 uintptr_t uboot_setup_image(uintptr_t ram_start,
                              uintptr_t uboot,
