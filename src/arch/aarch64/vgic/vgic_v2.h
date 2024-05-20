@@ -39,6 +39,7 @@ struct gic_dist_map {
     uint32_t enable_set[31];                        /* [0x104, 0x180) */
     uint32_t enable_clr0[GUEST_NUM_VCPUS];          /* [0x180, 0x184) */
     uint32_t enable_clr[31];                        /* [0x184, 0x200) */
+    // Remove, values to be determined by reading LR instead
     uint32_t pending_set0[GUEST_NUM_VCPUS];         /* [0x200, 0x204) */
     uint32_t pending_set[31];                       /* [0x204, 0x280) */
     uint32_t pending_clr0[GUEST_NUM_VCPUS];         /* [0x280, 0x284) */
@@ -47,6 +48,7 @@ struct gic_dist_map {
     uint32_t active[31];                            /* [0x300, 0x380) */
     uint32_t active_clr0[GUEST_NUM_VCPUS];          /* [0x380, 0x384) */
     uint32_t active_clr[31];                        /* [0x384, 0x400) */
+    ////////////////////////////////////////////////////////
     uint32_t priority0[GUEST_NUM_VCPUS][8];         /* [0x400, 0x420) */
     uint32_t priority[247];                         /* [0x420, 0x7FC) */
     uint32_t res3;                                  /* 0x7FC */
@@ -69,8 +71,10 @@ struct gic_dist_map {
     uint32_t sgir;                                  /* 0xF00 */
     uint32_t res9[3];                               /* [0xF04, 0xF10) */
 
+    // Remove, values to be determined by reading LR instead
     uint32_t sgi_pending_clr[GUEST_NUM_VCPUS][4];   /* [0xF10, 0xF20) */
     uint32_t sgi_pending_set[GUEST_NUM_VCPUS][4];   /* [0xF20, 0xF30) */
+    ////////////////////////////////////////////////////////
     uint32_t res10[40];                             /* [0xF30, 0xFC0) */
 
     uint32_t periph_id[12];                         /* [0xFC0, 0xFF0) */

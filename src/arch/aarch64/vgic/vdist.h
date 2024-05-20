@@ -17,6 +17,7 @@
 
 static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
+    // Remove, write to LR using syscall instead
     if (set_pending) {
         gic_dist->pending_set0[vcpu_id] |= IRQ_BIT(irq);
         gic_dist->pending_clr0[vcpu_id] |= IRQ_BIT(irq);
@@ -28,6 +29,7 @@ static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, b
 
 static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending)
 {
+    // Remove, write to LR using syscall instead
     if (set_pending) {
         gic_dist->pending_set[IRQ_IDX(irq)] |= IRQ_BIT(irq);
         gic_dist->pending_clr[IRQ_IDX(irq)] |= IRQ_BIT(irq);
@@ -39,6 +41,7 @@ static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool 
 
 static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
 {
+    // Write to LR using syscall instead
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         set_sgi_ppi_pending(gic_dist, irq, set_pending, vcpu_id);
     } else {
@@ -48,16 +51,19 @@ static inline void set_pending(struct gic_dist_map *gic_dist, int irq, bool set_
 
 static inline bool is_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
+    // Remove, read LR from syscall instead
     return !!(gic_dist->pending_set0[vcpu_id] & IRQ_BIT(irq));
 }
 
 static inline bool is_spi_pending(struct gic_dist_map *gic_dist, int irq)
 {
+    // Remove, read LR from syscall instead
     return !!(gic_dist->pending_set[IRQ_IDX(irq)] & IRQ_BIT(irq));
 }
 
 static inline bool is_pending(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
+    // Read LR from syscall instead
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_pending(gic_dist, irq, vcpu_id);
     } else {
@@ -117,16 +123,19 @@ static inline bool is_enabled(struct gic_dist_map *gic_dist, int irq, int vcpu_i
 
 static inline bool is_sgi_ppi_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
+    // Remove, read LR from syscall instead
     return !!(gic_dist->active0[vcpu_id] & IRQ_BIT(irq));
 }
 
 static inline bool is_spi_active(struct gic_dist_map *gic_dist, int irq)
 {
+    // Remove, read LR from syscall instead
     return !!(gic_dist->active[IRQ_IDX(irq)] & IRQ_BIT(irq));
 }
 
 static inline bool is_active(struct gic_dist_map *gic_dist, int irq, int vcpu_id)
 {
+    // Remove, read LR from syscall instead
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
         return is_sgi_ppi_active(gic_dist, irq, vcpu_id);
     } else {
@@ -139,13 +148,13 @@ static void vgic_dist_enable_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     LOG_DIST("Enabling IRQ %d\n", irq);
     set_enable(vgic_get_dist(vgic->registers), irq, true, vcpu_id);
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu_id, irq);
-    // assert(virq_data != NULL);
-    // @ivanv: explain
-    if (!virq_data) {
-        return;
-    }
+    assert(virq_data != NULL);
+
+    // This check is redundant, if virq_find_irq_data is not null
+    // it will return a valid virq_handle that is not VIRQ_INVALID
     if (virq_data->virq != VIRQ_INVALID) {
         /* STATE b) */
+        // Check whether IRQ is already pending 
         if (!is_pending(vgic_get_dist(vgic->registers), virq_data->virq, vcpu_id)) {
             virq_ack(vcpu_id, virq_data);
         }
@@ -183,17 +192,16 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     }
     struct gic_dist_map *dist = vgic_get_dist(vgic->registers);
 
-    if (virq_data->virq == VIRQ_INVALID || !vgic_dist_is_enabled(dist) || !is_enabled(dist, irq, vcpu_id)) {
+    if (virq_data->virq == VIRQ_INVALID) {
         if (virq_data->virq == VIRQ_INVALID) {
             LOG_VMM_ERR("vIRQ data could not be found for IRQ 0x%lx\n", irq);
         }
-        if (!vgic_dist_is_enabled(dist)) {
-            LOG_VMM_ERR("vGIC distributor is not enabled for IRQ 0x%lx\n", irq);
-        }
-        if (!is_enabled(dist, irq, vcpu_id)) {
-            LOG_VMM_ERR("vIRQ 0x%lx is not enabled\n", irq);
-        }
         return false;
+    }
+
+    if (!vgic_dist_is_enabled(dist) || !is_enabled(dist, irq, vcpu_id)) {
+        // Remember that the IRQ is pending, but do not inject it
+        // If it is already pending, do nothing
     }
 
     if (is_pending(dist, virq_data->virq, vcpu_id)) {
@@ -242,6 +250,7 @@ static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, size_t vcpu_id,
 {
     LOG_DIST("Clear pending IRQ %d\n", irq);
     set_pending(dist, irq, false, vcpu_id);
+    // @ericc: Implement this
     /* TODO: remove from IRQ queue and list registers as well */
     // @ivanv
 }
@@ -295,30 +304,38 @@ static bool vgic_dist_reg_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, ui
         reg = gic_dist->enable_clr[reg_offset];
         break;
     case RANGE32(GIC_DIST_ISPENDR0, GIC_DIST_ISPENDR0):
+        // @ericc:Read from LR instead: call is_pending()
         reg = gic_dist->pending_set0[vcpu_id];
         break;
     case RANGE32(GIC_DIST_ISPENDR1, GIC_DIST_ISPENDRN):
+        // @ericc:Read from LR instead: call is_pending()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ISPENDR1);
         reg = gic_dist->pending_set[reg_offset];
         break;
     case RANGE32(GIC_DIST_ICPENDR0, GIC_DIST_ICPENDR0):
+        // @ericc:Read from LR instead: call is_pending()
         reg = gic_dist->pending_clr0[vcpu_id];
         break;
     case RANGE32(GIC_DIST_ICPENDR1, GIC_DIST_ICPENDRN):
+        // @ericc:Read from LR instead: call is_pending()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICPENDR1);
         reg = gic_dist->pending_clr[reg_offset];
         break;
     case RANGE32(GIC_DIST_ISACTIVER0, GIC_DIST_ISACTIVER0):
+        // @ericc:Read from LR instead: call is_active()
         reg = gic_dist->active0[vcpu_id];
         break;
     case RANGE32(GIC_DIST_ISACTIVER1, GIC_DIST_ISACTIVERN):
+        // @ericc:Read from LR instead: call is_active()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ISACTIVER1);
         reg = gic_dist->active[reg_offset];
         break;
     case RANGE32(GIC_DIST_ICACTIVER0, GIC_DIST_ICACTIVER0):
+        // @ericc:Read from LR instead: call is_active()
         reg = gic_dist->active_clr0[vcpu_id];
         break;
     case RANGE32(GIC_DIST_ICACTIVER1, GIC_DIST_ICACTIVERN):
+        // @ericc:Read from LR instead: call is_active()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICACTIVER1);
         reg = gic_dist->active_clr[reg_offset];
         break;
@@ -366,10 +383,12 @@ static bool vgic_dist_reg_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, ui
         /* Reserved */
         break;
     case RANGE32(GIC_DIST_CPENDSGIR0, GIC_DIST_CPENDSGIRN):
+        // @ericc:Read from LR instead: call is_pending()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_CPENDSGIR0);
         reg = gic_dist->sgi_pending_clr[vcpu_id][reg_offset];
         break;
     case RANGE32(GIC_DIST_SPENDSGIR0, GIC_DIST_SPENDSGIRN):
+        // @ericc:Read from LR instead: call is_pending()
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_SPENDSGIR0);
         reg = gic_dist->sgi_pending_set[vcpu_id][reg_offset];
         break;
@@ -522,16 +541,20 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
         }
         break;
     case RANGE32(GIC_DIST_ISACTIVER0, GIC_DIST_ISACTIVER0):
+        // @ericc: Can't just overwrite the LR, Maybe do nothing? Come back to this later.
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->active0[vcpu_id]);
         break;
     case RANGE32(GIC_DIST_ISACTIVER1, GIC_DIST_ISACTIVERN):
+        // @ericc: Can't just overwrite the LR, Maybe do nothing? Come back to this later.
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ISACTIVER1);
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->active[reg_offset]);
         break;
     case RANGE32(GIC_DIST_ICACTIVER0, GIC_DIST_ICACTIVER0):
+        // @ericc: Can't just overwrite the LR, Maybe do nothing? Come back to this later.
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->active_clr0[vcpu_id]);
         break;
     case RANGE32(GIC_DIST_ICACTIVER1, GIC_DIST_ICACTIVERN):
+        // @ericc: Can't just overwrite the LR, Maybe do nothing? Come back to this later.
         reg_offset = GIC_DIST_REGN(offset, GIC_DIST_ICACTIVER1);
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->active_clr[reg_offset]);
         break;
@@ -592,6 +615,7 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
         /* Reserved */
         break;
     case RANGE32(GIC_DIST_CPENDSGIR0, GIC_DIST_SPENDSGIRN):
+        // @ericc: SGIs not implemented
         // @ivanv: come back to
         assert(!"vgic SGI reg not implemented!\n");
         break;

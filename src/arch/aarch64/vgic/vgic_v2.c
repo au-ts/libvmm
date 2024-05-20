@@ -21,6 +21,7 @@
        in case 2), we have ACKed an IRQ that was not yet pending anyway.
  *   - If the IRQ is already pending, we can assume that the VM has yet to ACK the IRQ and take no further
  *     action.
+ *   @ericc: CHANGE THIS STATE B) this weird behaviour exists because it is possible that we can drop IRQs.
  *   Transitions: b->c
  * c) PIRQ: When an IRQ is received from seL4, seL4 disables the IRQ and sends an async message. When the VMM
  *    receives the message.
