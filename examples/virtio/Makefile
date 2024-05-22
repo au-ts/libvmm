@@ -60,13 +60,13 @@ BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
 BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
 BLK_DRIVER_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/blk_driver_vm_rootfs
 
-CLIENT_VM_1_DIR := board/$(BOARD)/client_vm_1
-CLIENT_VM_1_DTS_DIR := $(CLIENT_VM_1_DIR)/dts
-CLIENT_VM_1_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_1_rootfs
+CLIENT_1_VM_DIR := board/$(BOARD)/client_1_vm
+CLIENT_1_VM_DTS_DIR := $(CLIENT_1_VM_DIR)/dts
+CLIENT_1_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_1_vm_rootfs
 
-CLIENT_VM_2_DIR := board/$(BOARD)/client_vm_2
-CLIENT_VM_2_DTS_DIR := $(CLIENT_VM_2_DIR)/dts
-CLIENT_VM_2_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_vm_2_rootfs
+CLIENT_2_VM_DIR := board/$(BOARD)/client_2_vm
+CLIENT_2_VM_DTS_DIR := $(CLIENT_2_VM_DIR)/dts
+CLIENT_2_VM_ROOTFS_TMP_DIR := $(BUILD_DIR)/client_2_vm_rootfs
 
 
 BLK_DRIVER_VM_LINUX := $(BLK_DRIVER_VM_DIR)/linux
@@ -83,30 +83,30 @@ BLK_DRIVER_VM_DTS_OVERLAYS := ${BLK_DRIVER_VM_DTS_OVERLAYS_${BOARD}}
 BLK_DRIVER_VM_DTB := $(BUILD_DIR)/blk_driver_vm.dtb
 
 
-CLIENT_VM_1_LINUX := $(CLIENT_VM_1_DIR)/linux
-CLIENT_VM_1_INITRD := $(CLIENT_VM_1_DIR)/rootfs.cpio.gz
-CLIENT_VM_1_INITRD_MODIFIED := $(BUILD_DIR)/client_vm_1_rootfs.cpio.gz
-CLIENT_VM_1_BASE_DTS := $(CLIENT_VM_1_DTS_DIR)/linux.dts
-CLIENT_VM_1_DTS_OVERLAYS_qemu_arm_virt :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
-											$(CLIENT_VM_1_DTS_DIR)/virtio.dts
-CLIENT_VM_1_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_1_DTS_DIR)/init.dts \
-										$(CLIENT_VM_1_DTS_DIR)/virtio.dts\
-										$(CLIENT_VM_1_DTS_DIR)/disable.dts
-CLIENT_VM_1_DTS_OVERLAYS := ${CLIENT_VM_1_DTS_OVERLAYS_${BOARD}}
-CLIENT_VM_1_DTB := $(BUILD_DIR)/client_vm_1.dtb
+CLIENT_1_VM_LINUX := $(CLIENT_1_VM_DIR)/linux
+CLIENT_1_VM_INITRD := $(CLIENT_1_VM_DIR)/rootfs.cpio.gz
+CLIENT_1_VM_INITRD_MODIFIED := $(BUILD_DIR)/client_1_vm_rootfs.cpio.gz
+CLIENT_1_VM_BASE_DTS := $(CLIENT_1_VM_DTS_DIR)/linux.dts
+CLIENT_1_VM_DTS_OVERLAYS_qemu_arm_virt :=	$(CLIENT_1_VM_DTS_DIR)/init.dts \
+											$(CLIENT_1_VM_DTS_DIR)/virtio.dts
+CLIENT_1_VM_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_1_VM_DTS_DIR)/init.dts \
+										$(CLIENT_1_VM_DTS_DIR)/virtio.dts\
+										$(CLIENT_1_VM_DTS_DIR)/disable.dts
+CLIENT_1_VM_DTS_OVERLAYS := ${CLIENT_1_VM_DTS_OVERLAYS_${BOARD}}
+CLIENT_1_VM_DTB := $(BUILD_DIR)/client_1_vm.dtb
 
 
-CLIENT_VM_2_LINUX := $(CLIENT_VM_2_DIR)/linux
-CLIENT_VM_2_INITRD := $(CLIENT_VM_2_DIR)/rootfs.cpio.gz
-CLIENT_VM_2_INITRD_MODIFIED := $(BUILD_DIR)/client_vm_2_rootfs.cpio.gz
-CLIENT_VM_2_BASE_DTS := $(CLIENT_VM_2_DTS_DIR)/linux.dts
-CLIENT_VM_2_DTS_OVERLAYS_qemu_arm_virt :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
-											$(CLIENT_VM_2_DTS_DIR)/virtio.dts
-CLIENT_VM_2_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
-										$(CLIENT_VM_2_DTS_DIR)/virtio.dts \
-										$(CLIENT_VM_2_DTS_DIR)/disable.dts
-CLIENT_VM_2_DTS_OVERLAYS := ${CLIENT_VM_2_DTS_OVERLAYS_${BOARD}}
-CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
+CLIENT_2_VM_LINUX := $(CLIENT_2_VM_DIR)/linux
+CLIENT_2_VM_INITRD := $(CLIENT_2_VM_DIR)/rootfs.cpio.gz
+CLIENT_2_VM_INITRD_MODIFIED := $(BUILD_DIR)/client_2_vm_rootfs.cpio.gz
+CLIENT_2_VM_BASE_DTS := $(CLIENT_2_VM_DTS_DIR)/linux.dts
+CLIENT_2_VM_DTS_OVERLAYS_qemu_arm_virt :=	$(CLIENT_2_VM_DTS_DIR)/init.dts \
+											$(CLIENT_2_VM_DTS_DIR)/virtio.dts
+CLIENT_2_VM_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_2_VM_DTS_DIR)/init.dts \
+										$(CLIENT_2_VM_DTS_DIR)/virtio.dts \
+										$(CLIENT_2_VM_DTS_DIR)/disable.dts
+CLIENT_2_VM_DTS_OVERLAYS := ${CLIENT_2_VM_DTS_OVERLAYS_${BOARD}}
+CLIENT_2_VM_DTB := $(BUILD_DIR)/client_2_vm.dtb
 
 SDDF_UTIL := $(SDDF_DIR)/util
 
@@ -128,15 +128,15 @@ BLK_DRIVER_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_driver_init
 BLK_DRIVER_VM_USERLEVEL_INIT_odroidc4 := blk_driver_init
 BLK_DRIVER_VM_USERLEVEL_INIT := ${BLK_DRIVER_VM_USERLEVEL_INIT_${BOARD}}
 
-CLIENT_VM_1_USERLEVEL :=
-CLIENT_VM_1_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
-CLIENT_VM_1_USERLEVEL_INIT_odroidc4 := blk_client_init
-CLIENT_VM_1_USERLEVEL_INIT := ${CLIENT_VM_1_USERLEVEL_INIT_${BOARD}}
+CLIENT_1_VM_USERLEVEL :=
+CLIENT_1_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
+CLIENT_1_VM_USERLEVEL_INIT_odroidc4 := blk_client_init
+CLIENT_1_VM_USERLEVEL_INIT := ${CLIENT_1_VM_USERLEVEL_INIT_${BOARD}}
 
-CLIENT_VM_2_USERLEVEL :=
-CLIENT_VM_2_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
-CLIENT_VM_2_USERLEVEL_INIT_odroidc4 := blk_client_init
-CLIENT_VM_2_USERLEVEL_INIT := ${CLIENT_VM_2_USERLEVEL_INIT_${BOARD}}
+CLIENT_2_VM_USERLEVEL :=
+CLIENT_2_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
+CLIENT_2_VM_USERLEVEL_INIT_odroidc4 := blk_client_init
+CLIENT_2_VM_USERLEVEL_INIT := ${CLIENT_2_VM_USERLEVEL_INIT_${BOARD}}
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -155,7 +155,7 @@ VMM_OBJS := printf.o \
 			tcb.o \
 			vcpu.o
 
-CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
+CLIENT_1_VMM_OBJS := $(VMM_OBJS) \
 					client_images_1.o \
 					client_vmm.o \
 					console.o \
@@ -165,7 +165,7 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					sddf_blk_fsmalloc.o \
 					sddf_printf.o sddf_putchar_debug.o \
 
-CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
+CLIENT_2_VMM_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
 					client_vmm.o \
 					console.o \
@@ -259,29 +259,29 @@ $(BLK_DRIVER_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USE
 							--startup $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL))
 	
-$(CLIENT_VM_1_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL)) \
-								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_1_INITRD) $(CLIENT_VM_1_ROOTFS_TMP_DIR) -o $(CLIENT_VM_1_INITRD_MODIFIED) \
-							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT)) \
-							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL))
+$(CLIENT_1_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_1_VM_USERLEVEL)) \
+								$(addprefix $(BUILD_DIR)/, $(CLIENT_1_VM_USERLEVEL_INIT))
+	$(VMM_TOOLS)/packrootfs $(CLIENT_1_VM_INITRD) $(CLIENT_1_VM_ROOTFS_TMP_DIR) -o $(CLIENT_1_VM_INITRD_MODIFIED) \
+							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_1_VM_USERLEVEL_INIT)) \
+							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_1_VM_USERLEVEL))
 	
-$(CLIENT_VM_2_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL)) \
-								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_2_INITRD) $(CLIENT_VM_2_ROOTFS_TMP_DIR) -o $(CLIENT_VM_2_INITRD_MODIFIED) \
-							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_INIT)) \
-							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL))
+$(CLIENT_2_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_2_VM_USERLEVEL)) \
+								$(addprefix $(BUILD_DIR)/, $(CLIENT_2_VM_USERLEVEL_INIT))
+	$(VMM_TOOLS)/packrootfs $(CLIENT_2_VM_INITRD) $(CLIENT_2_VM_ROOTFS_TMP_DIR) -o $(CLIENT_2_VM_INITRD_MODIFIED) \
+							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_2_VM_USERLEVEL_INIT)) \
+							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_2_VM_USERLEVEL))
 
 $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
 	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
 
-$(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
-	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_1.dts > $@
+$(CLIENT_1_VM_DTB): $(CLIENT_1_VM_BASE_DTS) $(CLIENT_1_VM_DTS_OVERLAYS)
+	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_1_vm.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_1_vm.dts > $@
 
-$(CLIENT_VM_2_DTB): $(CLIENT_VM_2_BASE_DTS) $(CLIENT_VM_2_DTS_OVERLAYS)
-	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_2.dts > $@
+$(CLIENT_2_VM_DTB): $(CLIENT_2_VM_BASE_DTS) $(CLIENT_2_VM_DTS_OVERLAYS)
+	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_2_vm.dts
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_2_vm.dts > $@
 
 $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
@@ -291,19 +291,19 @@ $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIV
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_MODIFIED)
+$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_1_VM_LINUX) $(CLIENT_1_VM_DTB) $(CLIENT_1_VM_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_1_DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_1_INITRD_MODIFIED)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_1_VM_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_1_VM_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_1_VM_INITRD_MODIFIED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_2_LINUX) $(CLIENT_VM_2_DTB) $(CLIENT_VM_2_INITRD_MODIFIED)
+$(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_2_VM_LINUX) $(CLIENT_2_VM_DTB) $(CLIENT_2_VM_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_2_LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_2_DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_2_INITRD_MODIFIED)\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_2_VM_LINUX)\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_2_VM_DTB)\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_2_VM_INITRD_MODIFIED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
 
@@ -340,10 +340,10 @@ $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
+$(BUILD_DIR)/client_1_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_1_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
+$(BUILD_DIR)/client_2_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_2_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
