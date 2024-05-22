@@ -145,7 +145,7 @@
 
     <!-- The driver for talking to the hardware serial device, in this case UART -->
     <protection_domain name="uart_driver" priority="100" pp="true">
-        <program_image path="uart_driver.elf" />
+        <program_image path="driver_uart_arm.elf" />
         <map mr="uart" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
         <!-- Data region -->
         <map mr="tx_data_driver" vaddr="0x2_200_000" perms="rw" cached="true" />

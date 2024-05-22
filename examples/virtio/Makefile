@@ -115,11 +115,12 @@ SDDF_BLK_UTIL := $(SDDF_DIR)/blk/util
 
 SDDF_SERIAL_COMPONENTS := $(SDDF_DIR)/serial/components
 
-SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
-SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
-SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
+SDDF_SERIAL_DRIVER_NAME_qemu_arm_virt := arm
+SDDF_SERIAL_DRIVER_NAME_odroidc4 := meson
+SDDF_SERIAL_DRIVER_NAME := $(SDDF_SERIAL_DRIVER_NAME_${BOARD})
+SDDF_SERIAL_DRIVER := $(SDDF_DIR)/drivers/serial/$(SDDF_SERIAL_DRIVER_NAME)
 
-ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
+ELFS := client_1_vmm.elf client_2_vmm.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf driver_uart_$(SDDF_SERIAL_DRIVER_NAME).elf blk_virt.elf
 
 BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL_odroidc4 := uio_blk_driver
@@ -358,7 +359,7 @@ $(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJ
 $(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
+$(BUILD_DIR)/driver_uart_$(SDDF_SERIAL_DRIVER_NAME).elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
