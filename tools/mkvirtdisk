@@ -1,42 +1,45 @@
 #!/bin/bash
 
-# This bash script creates a virtual disk image with an msdos partition table
+# This bash script creates a virtual disk image with an msdos partition table.
+# It aligns the partitions to both the sDDF transfer size and the device's logical size.
+# It creates a FAT filesystem on each partition.
 
 # Usage instructions
 if [ $# -ne 4 ]; then
-    echo "Usage: $0 <virtual_disk_name> <num_partitions> <blocksize> <memsize>"
+    echo "Usage: $0 <virtual_disk_name> <num_partitions> <logical_size> <memsize>"
     exit 1
 fi
 
 DISK_IMAGE=$1
 NUM_PARTITIONS=$2
-BLOCKSIZE=$3
+LSIZE=$3
 MEMSIZE=$4
 
-if [ $((BLOCKSIZE % 512)) -ne 0 ] || [ $BLOCKSIZE -lt 512 ]; then
-    echo "BLOCKSIZE must be a multiple of 512 and greater than or equal to 512"
+SDDF_TRANSFER_SIZE=4096
+FDISK_LSIZE=512
+
+if [ $(( LSIZE & (LSIZE - 1) )) -ne 0 ] || [ $LSIZE -lt $FDISK_LSIZE ]; then
+    echo "LSIZE must be greater than $FDISK_LSIZE and a power of 2"
     exit 1
 fi
 
 BUILD_DIR=$(dirname $DISK_IMAGE)
 
-SDDF_TRANSFER_SIZE=4096
-SECTORSIZE=512
-MULTIPLE=$(( SDDF_TRANSFER_SIZE / SECTORSIZE ))
+# Since LSIZE is always a power of 2, the least common multiple of LSIZE and SDDF_TRANSFER_SIZE is simply the bigger one
+LCM=$(( SDDF_TRANSFER_SIZE > LSIZE ? SDDF_TRANSFER_SIZE : LSIZE ))
 
-COUNT=$(( MEMSIZE / SECTORSIZE ))
-COUNT=$(( (COUNT / MULTIPLE) * MULTIPLE )) # Ensures that the disk size is a multiple of $MULTIPLE blocks
+# Since we are using fdisk, COUNT uses the logical size provided by fdisk which is always 512 bytes (FDISK_LSIZE)
+MULTIPLE=$(( LCM / FDISK_LSIZE ))
+COUNT=$(( MEMSIZE / FDISK_LSIZE ))
+COUNT=$(( COUNT / MULTIPLE * MULTIPLE)) # Ensure COUNT is a multiple of sDDF transfer size and logical size
+
+# Create a file to act as a virtual disk
+dd if=/dev/zero of=$DISK_IMAGE bs=$FDISK_LSIZE count=$COUNT
 
 POFFSET=$MULTIPLE
 
-# Create a file to act as a virtual disk
-dd if=/dev/zero of=$DISK_IMAGE bs=$SECTORSIZE count=$COUNT
-
 FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
-FS_COUNT=$(( (FS_COUNT / MULTIPLE) * MULTIPLE )) # Ensures that both FAT filesystems are a multiple of $MULTIPLE blocks
-FS_COUNT_ADD=$(( FS_COUNT - 1 ))
-
-FS_COUNT_BLOCKSIZE=$(( FS_COUNT / (BLOCKSIZE / SECTORSIZE) ))
+FS_COUNT=$(( FS_COUNT / MULTIPLE * MULTIPLE )) # Ensures that both filesystems are a multiple of sDDF transfer size and logical size
 
 # Create MBR partition table
 PREV=$POFFSET
@@ -52,8 +55,8 @@ do
         echo $i # Partition number
     fi
     echo $PREV # First sector
-    echo +$FS_COUNT_ADD # Last sector
-    PREV=$(( PREV + FS_COUNT_ADD + 1 ))
+    echo +$(( FS_COUNT - 1 )) # Last sector
+    PREV=$(( PREV + FS_COUNT ))
 done
 
 echo w # Write changes
@@ -63,11 +66,11 @@ fdisk -l $DISK_IMAGE
 
 # Create the FAT filesystem
 rm -f $BUILD_DIR/fat.img
-mkfs.fat -C $BUILD_DIR/fat.img -S $BLOCKSIZE $(( (FS_COUNT_BLOCKSIZE * BLOCKSIZE) / 1024 ))
+mkfs.fat -C $BUILD_DIR/fat.img $(( (FS_COUNT * FDISK_LSIZE) / 1024 ))
 
 # Copy the FAT filesystem to the virtual disk
 for i in $(seq 0 $(( NUM_PARTITIONS - 1 )))
 do
-    echo "Copying FAT filesystem to partition $i, seek $((POFFSET + i * FS_COUNT)), count $FS_COUNT, blocksize $SECTORSIZE"
-    dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$SECTORSIZE seek="$((POFFSET + i * FS_COUNT))" count=$FS_COUNT
+    echo "Copying FAT filesystem to partition $i, seek=$((POFFSET + i * FS_COUNT)), count=$FS_COUNT, bs=$FDISK_LSIZE"
+    dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$FDISK_LSIZE seek="$((POFFSET + i * FS_COUNT))" count=$FS_COUNT
 done
