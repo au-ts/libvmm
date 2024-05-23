@@ -18,13 +18,13 @@ const ConfigOptions = enum {
 
 const Target = struct {
     board: MicrokitBoard,
-    zig_target: std.zig.CrossTarget,
+    zig_target: std.Target.Query,
 };
 
 const targets = [_]Target {
     .{
         .board = MicrokitBoard.qemu_arm_virt,
-        .zig_target = std.zig.CrossTarget{
+        .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
             .os_tag = .freestanding,
@@ -33,7 +33,7 @@ const targets = [_]Target {
     },
     .{
         .board = MicrokitBoard.odroidc4,
-        .zig_target = std.zig.CrossTarget{
+        .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
             .os_tag = .freestanding,
@@ -74,7 +74,7 @@ fn fileExists(path: []const u8) bool {
     return true;
 }
 
-fn findTarget(board: MicrokitBoard) std.zig.CrossTarget {
+fn findTarget(board: MicrokitBoard) std.Target.Query {
     for (targets) |target| {
         if (board == target.board) {
             return target.zig_target;
