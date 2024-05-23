@@ -29,6 +29,7 @@ const targets = [_]Target {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
             .os_tag = .freestanding,
             .abi = .none,
+            .ofmt = .elf,
         },
     },
     .{
@@ -38,6 +39,7 @@ const targets = [_]Target {
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a55 },
             .os_tag = .freestanding,
             .abi = .none,
+            .ofmt = .elf,
         },
     }
 };
