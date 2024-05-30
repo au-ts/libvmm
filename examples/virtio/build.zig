@@ -56,18 +56,12 @@ var mkvirtdisk: LazyPath = undefined;
 var packrootfs: LazyPath = undefined;
 
 // TODO: Util function, move this elsewhere
-fn concatSlice(allocator: std.mem.Allocator, a :[]const u8, b: []const u8) std.mem.Allocator.Error![]const u8 {
+fn concatSlice(allocator: std.mem.Allocator, a :[]const u8, b: []const u8) ![]const u8 {
     var arrl = std.ArrayList(u8).init(allocator);
     defer arrl.deinit();
     try arrl.appendSlice(a);
     try arrl.appendSlice(b);
     return try arrl.toOwnedSlice();
-}
-
-// TODO: Improve error handling to be more generic
-fn _concatSliceError(err: std.mem.Allocator.Error) noreturn {
-    std.log.err("Failed to concatenate strings: {any}\n", .{err});
-    std.posix.exit(1);
 }
 
 // TODO: Util function, move this elsewhere
@@ -207,11 +201,11 @@ fn addVmm(
         }
     });
 
-    const vm_name_prefix = concatSlice(gpa, @tagName(microkit_board_option), vmm_name) catch |err| _concatSliceError(err);
+    const vm_name_prefix = concatSlice(gpa, @tagName(microkit_board_option), vmm_name) catch @panic("Failed to concatenate strings");
     
     // Generate DTB
-    const dts_name = concatSlice(gpa, vm_name_prefix, "_vm.dts") catch |err| _concatSliceError(err);
-    const dtb_name = concatSlice(gpa, vm_name_prefix, "_vm.dtb") catch |err| _concatSliceError(err);
+    const dts_name = concatSlice(gpa, vm_name_prefix, "_vm.dts") catch @panic("Failed to concatenate strings");
+    const dtb_name = concatSlice(gpa, vm_name_prefix, "_vm.dtb") catch @panic("Failed to concatenate strings");
 
     _, const dts = dtscatCmd(b, dts_base, dts_overlays);
     const dts_install_step = &b.addInstallFileWithDir(dts, .prefix, dts_name).step;
@@ -221,7 +215,7 @@ fn addVmm(
     const dtb_install_step = &b.addInstallFileWithDir(dtb, .prefix, dtb_name).step;
     
     // Pack rootfs
-    const rootfs_name = concatSlice(gpa, vm_name_prefix, "_vm_rootfs.cpio.gz") catch |err| _concatSliceError(err);
+    const rootfs_name = concatSlice(gpa, vm_name_prefix, "_vm_rootfs.cpio.gz") catch @panic("Failed to concatenate strings");
     // TODO: Investigate another way to do this, don't use /tmp?
     const rootfs_output_path = b.fmt("/tmp/{s}", .{ rootfs_name });
     const rootfs_tmpdir_path = b.fmt("/tmp/{s}_rootfs", .{ vmm_name });
