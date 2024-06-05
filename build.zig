@@ -82,11 +82,11 @@ pub fn build(b: *std.Build) void {
     });
 
     // @ivanv: fix all of our libvmm includes! This is a mess!
-    libvmm.addIncludePath(.{ .path = "src" });
-    libvmm.addIncludePath(.{ .path = "src/util/" });
-    libvmm.addIncludePath(.{ .path = "src/arch/aarch64" });
-    libvmm.addIncludePath(.{ .path = "src/arch/aarch64/vgic/" });
-    libvmm.addIncludePath(.{ .path = libmicrokit_include });
+    libvmm.addIncludePath(b.path("src"));
+    libvmm.addIncludePath(b.path("src/util/"));
+    libvmm.addIncludePath(b.path("src/arch/aarch64"));
+    libvmm.addIncludePath(b.path("src/arch/aarch64/vgic/"));
+    libvmm.addIncludePath(.{ .cwd_relative = libmicrokit_include });
 
     b.installArtifact(libvmm);
 }
