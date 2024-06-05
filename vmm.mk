@@ -35,8 +35,10 @@ CFLAGS += -I${SDDF}/include
 
 ARCH_INDEP_FILES := src/util/printf.c \
 		    src/util/util.c \
+		    src/virtio/block.c \
 		    src/virtio/console.c \
 		    src/virtio/mmio.c \
+		    src/virtio/sound.c \
 		    src/guest.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
