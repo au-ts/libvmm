@@ -104,20 +104,20 @@ pub fn build(b: *std.Build) void {
     const dtc_cmd = b.addSystemCommand(&[_][]const u8{
         "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
-    dtc_cmd.addFileArg(.{ .path = dts_path });
+    dtc_cmd.addFileArg(b.path(dts_path));
     const dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
-    exe.addIncludePath(.{ .path = sdk_board_include_dir });
+    exe.addIncludePath(.{ .cwd_relative = sdk_board_include_dir });
     exe.addIncludePath(libvmm_dep.path("src"));
     // @ivanv: shouldn't need to do this! fix our includes
     exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
-    exe.addObjectFile(.{ .path = libmicrokit });
+    exe.addObjectFile(.{ .cwd_relative = libmicrokit });
     exe.linkLibrary(libvmm);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .path = libmicrokit_linker_script });
+    exe.setLinkerScriptPath(.{ .cwd_relative = libmicrokit_linker_script });
 
     exe.addCSourceFiles(.{
         .files = &.{"vmm.c"},

@@ -1,6 +1,6 @@
 build/
 zig-out/
-zig-cache/
+.zig-cache/
 *.pdf
 *.dtb
 rust/target/
