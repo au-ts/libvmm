@@ -1,5 +1,9 @@
 #!/usr/bin/env -S expect -f
 
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 set IMAGE [lindex $argv 0]
 
 # Wait enough (forever) until a long-time boot

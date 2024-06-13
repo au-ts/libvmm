@@ -1,3 +1,7 @@
+/*
+ * Copyright 2019, Marco Paland
+ * SPDX-License-Identifier: MIT
+ */
 ///////////////////////////////////////////////////////////////////////////////
 // \author (c) Marco Paland (info@paland.com)
 //             2014-2019, PALANDesign Hannover, Germany

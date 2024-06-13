@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 Sound in LionsOS
 ================
 *Implementation and design document written by Alex Brown, April 2024.*

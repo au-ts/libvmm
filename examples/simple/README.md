@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # A simple VMM for running Linux guests
 
 This example is a minimal VMM that supports Linux guests and a basic
