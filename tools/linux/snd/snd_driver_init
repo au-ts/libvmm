@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 DAEMON="uio_snd_driver"
 PIDFILE="/var/run/$DAEMON.pid"
 LOGFILE="/var/log/user_sound"

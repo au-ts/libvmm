@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # libvmm
 
 The purpose of this project is to make it easy to run virtual machines on top of the seL4 microkernel.

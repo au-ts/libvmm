@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <alsa/asoundlib.h>
 #include <alsa/pcm.h>
 #include <stdio.h>

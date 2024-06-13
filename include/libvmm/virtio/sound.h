@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024, IBM
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
 /* This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
  *

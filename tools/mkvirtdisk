@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 # This bash script creates a virtual disk image with an msdos partition table.
 # It aligns the partitions to both the sDDF transfer size and the device's logical size.
 # It creates a FAT filesystem on each partition.

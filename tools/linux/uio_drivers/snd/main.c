@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include "log.h"
 #include "stream.h"
 #include <libvmm/util/atomic.h>

@@ -1,4 +1,9 @@
 #!/bin/sh
+
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 # This is a basic script that concatenates the given Device Tree Sources.
 # Useful for when you have a single DTS
 # Author: tim-arney
