@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 set -e
 
 SDK_PATH=$1

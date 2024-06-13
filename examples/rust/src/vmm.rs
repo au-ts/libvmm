@@ -1,3 +1,6 @@
+// Copyright 2024, UNSW
+// SPDX-License-Identifier: BSD-2-Clause
+
 #![no_std]
 #![no_main]
 #![feature(never_type)]

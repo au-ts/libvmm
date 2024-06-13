@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # Rust VMM example
 
 This example shows how to use the

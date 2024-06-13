@@ -1,5 +1,5 @@
 .{
-    .name = "simple",
+    .name = "zig",
     .version = "1.0.0",
 
     .dependencies = .{

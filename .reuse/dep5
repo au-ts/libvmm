@@ -1,0 +1,39 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: libvmm
+Source: https://github.com/au-ts/libvmm
+
+Files:
+    .gitmodules
+    build.zig.zon
+    examples/simple/build.zig.zon
+    examples/zig/build.zig.zon
+    examples/rust/Cargo.lock
+    examples/rust/.cargo/config
+    examples/rust/aarch64-microkit-minimal.json
+Copyright: UNSW
+License: BSD-2-Clause
+
+Files:
+    docs/assets/passthrough.svg
+    docs/assets/virtio_console_example.svg
+    examples/virtio-snd/docs/sound-structure.svg
+    examples/virtio-snd/docs/virtio-snd.svg
+Copyright: UNSW
+License: CC-BY-SA-4.0
+
+Files:
+    */linux_config
+    */linux.dts
+    examples/*/images/linux
+    examples/*/board/*/linux
+    examples/framebuffer/board/odroidc4/linux_vu7c.dts
+    examples/framebuffer/board/odroidc4/linux_with_serial.dts
+Copyright: Linux
+License: GPL-2.0-or-later
+
+Files:
+    */buildroot_config
+    examples/*/images/rootfs.cpio.gz
+    examples/*/board/*/rootfs.cpio.gz
+Copyright: Buildroot
+License: GPL-2.0-or-later

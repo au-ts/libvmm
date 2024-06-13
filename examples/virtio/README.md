@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # Using virtIO with multiple Linux guests
 
 This example shows off the virtIO support that libvmm provides using the

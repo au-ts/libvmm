@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <microkit.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>

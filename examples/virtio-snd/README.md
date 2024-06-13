@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # virtIO sound example
 
 This example shows off the virtIO sound support that libvmm provides using the

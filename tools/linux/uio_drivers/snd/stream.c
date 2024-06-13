@@ -1,3 +1,9 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include "stream.h"
 #include "convert.h"
 #include "log.h"
