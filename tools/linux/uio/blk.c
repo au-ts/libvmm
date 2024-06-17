@@ -131,7 +131,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     }
 
     /* May need to barrier all writes before this point of setting ready = true */
-    blk_config->ready = true;
+    __atomic_store_n(&blk_config->ready, true, __ATOMIC_RELEASE);
 
     LOG_UIO_BLOCK("Driver initialized\n");
 
