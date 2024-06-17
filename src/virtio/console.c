@@ -105,90 +105,53 @@ static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t 
     return -1;
 }
 
-/* The guest has notified us that it has placed something in the transmit queue. */
 static int virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
-
     // @ivanv: we need to check the pre-conditions before doing anything. e.g check
     // TX_QUEUE is ready?
-
     assert(dev->num_vqs > TX_QUEUE);
-    struct virtio_queue_handler *tx_queue = &dev->vqs[TX_QUEUE];
-    struct virtq *virtq = &tx_queue->virtq;
-    uint16_t guest_idx = virtq->avail->idx;
-    size_t idx = tx_queue->last_idx;
+    struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
+    struct virtio_console_device *console = device_state(dev);
 
-    struct virtio_console_device *state = device_state(dev);
-    serial_queue_handle_t *sddf_tx_queue = &state->txq;
-
-    while (idx != guest_idx) {
-        LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-
-        /* Continue traversing the chained buffers */
+    /* Transmit all available descriptors possible */
+    LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
+    bool transferred = false;
+    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(&console->txq, console->txq.queue->head))
+    {
+        uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
-        uint16_t desc_idx = desc_head;
+        /* Traverse chained descriptors */
         do {
-            desc = virtq->desc[desc_idx];
+            desc = vq->virtq.desc[desc_idx];
+            // @ivanv: to the debug logging, we should actually print out the buffer contents
             LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_idx, desc.addr, desc.addr + desc.len);
-            // @ivanv: to the debug logging, we should actually print out teh buffer contents
 
-            /* Now that we have a buffer, we can transfer the data to the sDDF multiplexor */
-            /* We first need a free buffer from the TX queue */
-            uintptr_t sddf_buffer = 0;
-            unsigned int sddf_buffer_len = 0;
-            LOG_CONSOLE("tx queue free size: 0x%lx, tx queue used size: 0x%lx\n", serial_queue_size(state->txq->free),
-                        serial_queue_size(sddf_tx_queue->active));
-            assert(!serial_queue_empty(sddf_tx_queue->free));
-            int ret = serial_dequeue_free(sddf_tx_queue, &sddf_buffer, &sddf_buffer_len);
-            assert(!ret);
-            if (ret != 0) {
-                LOG_CONSOLE_ERR("could not dequeue from the TX free queue\n");
-                // @ivanv: todo, handle this properly
+            uint32_t bytes_remain = desc.len;
+            /* Copy all contiguous data */
+            while (bytes_remain > 0 && !serial_queue_full(&console->txq, console->txq.queue->head))
+            {
+                uint32_t free = serial_queue_contiguous_free(&console->txq);
+                uint32_t to_transfer = (bytes_remain < free) ? bytes_remain : free;
+                if (to_transfer) transferred = true;
+
+                memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.size),
+                        (char *) (desc.addr + (desc.len - bytes_remain)), to_transfer);
+
+                serial_update_visible_tail(&console->txq, console->txq.queue->tail + to_transfer);
+                bytes_remain -= to_transfer;
             }
 
-            // @ivanv: handle this in release mode
-            if (desc.len > sddf_buffer_len) {
-                LOG_CONSOLE_ERR("%s expected sddf_buffer_len (0x%lx) <= desc.len (0x%lx)\n", microkit_name, sddf_buffer_len, desc.len);
-            }
-            assert(desc.len <= sddf_buffer_len);
-
-            /* Copy the data over, these buffers are in the guests's RAM and hence inaccessible
-             * by the multiplexor. */
-            memcpy((char *) sddf_buffer, (char *) desc.addr, desc.len);
-
-            bool is_empty = serial_queue_empty(sddf_tx_queue->active);
-            /* Now we can enqueue our buffer into the active TX queue */
-            ret = serial_enqueue_active(sddf_tx_queue, sddf_buffer, desc.len);
-            // @ivanv: handle case in release made
-            assert(ret == 0);
-
-            if (is_empty) {
-                // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(state->tx_ch);
-            }
-
-            /* Lastly, move to the next descriptor in the chain */
             desc_idx = desc.next;
-        } while (desc.flags & VIRTQ_DESC_F_NEXT);
 
-        /* Our final job is to move the available virtq into the used virtq */
-        struct virtq_used_elem used_elem;
-        used_elem.id = desc_head;
-        /* We did not write to any of the buffers, so len is zero. */
-        used_elem.len = 0;
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
+        } while (desc.flags & VIRTQ_DESC_F_NEXT && !serial_queue_full(&console->txq, console->txq.queue->head));
 
-        idx++;
+        struct virtq_used_elem used_elem = {vq->virtq.avail->ring[vq->last_idx % vq->virtq.num], 0};
+        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
+        vq->virtq.used->idx++;
+
+        vq->last_idx++;
     }
-
-    /* Move the available index past every virtq we've processed. */
-    // @ivanv: not sure about this line
-    virtq->avail->idx = idx;
-
-    tx_queue->last_idx = idx;
 
     dev->data.InterruptStatus = BIT_LOW(0);
     // @ivanv: The virq_inject API is poor as it expects a vCPU ID even though
@@ -196,68 +159,56 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
     bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
     assert(success);
 
+    if (transferred && serial_require_producer_signal(&console->txq)) {
+        serial_cancel_producer_signal(&console->txq);
+        microkit_notify(console->tx_ch);
+    }
+
     return success;
 }
 
 int virtio_console_handle_rx(struct virtio_console_device *console)
 {
     // @ivanv: revisit this whole function, it works but is very hacky.
-    /* We have received something from the real console driver.
-     * Our job is to inspect the sDDF active RX queue, and dequeue everything
-     * we can and give it to the guest driver.
-     */
-    struct virtio_device *dev = &console->virtio_device;
-    serial_queue_handle_t *sddf_rx_queue = &console->rxq;
+    LOG_CONSOLE("operation: handle rx\n");
+    assert(console->virtio_device.num_vqs > RX_QUEUE);
+    bool reprocess = true;
+    while (reprocess) {
+        struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+        LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
+        while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
 
-    uintptr_t sddf_buffer = 0;
-    unsigned int sddf_buffer_len = 0;
-    int ret = serial_dequeue_active(sddf_rx_queue, &sddf_buffer, &sddf_buffer_len);
-    assert(!ret);
-    if (ret != 0) {
-        LOG_CONSOLE_ERR("could not dequeue from RX active queue\n");
-        // @ivanv: handle properly
+            uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
+            struct virtq_desc desc = vq->virtq.desc[desc_head];
+            LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
+            uint32_t bytes_written = 0;
+            char c;
+            while (bytes_written < desc.len && !serial_dequeue(&console->rxq, &console->rxq.queue->head, &c)) {
+                *(char *)(desc.addr + bytes_written) = c;
+                bytes_written ++;
+            }
+
+            struct virtq_used_elem used_elem = {desc_head, bytes_written};
+            vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
+            vq->virtq.used->idx++;
+
+            vq->last_idx++;
+        }
+
+        serial_request_producer_signal(&console->rxq);
+        reprocess = false;
+
+        if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
+            serial_cancel_producer_signal(&console->rxq);
+            reprocess = true;
+        }
     }
 
-    assert(dev->num_vqs > RX_QUEUE);
-    struct virtio_queue_handler *rx_queue = &dev->vqs[RX_QUEUE];
-    struct virtq *virtq = &rx_queue->virtq;
-    uint16_t guest_idx = virtq->avail->idx;
-    size_t idx = rx_queue->last_idx;
+    // @ivanv: is setting interrupt status necessary?
+    console->virtio_device.data.InterruptStatus = BIT_LOW(0);
+    bool success = virq_inject(GUEST_VCPU_ID, console->virtio_device.virq);
+    assert(success);
 
-    if (idx != guest_idx) {
-        size_t bytes_written = 0;
-
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-        struct virtq_desc desc;
-        uint16_t desc_idx = desc_head;
-
-        do {
-            desc = virtq->desc[desc_idx];
-
-            size_t bytes_to_copy = (desc.len < sddf_buffer_len) ? desc.len : sddf_buffer_len;
-            memcpy((char *) desc.addr, (char *) sddf_buffer, bytes_to_copy - bytes_written);
-
-            bytes_written += bytes_to_copy;
-        } while (bytes_written != sddf_buffer_len);
-
-        struct virtq_used_elem used_elem;
-        used_elem.id = desc_head;
-        used_elem.len = bytes_written;
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
-
-        rx_queue->last_idx++;
-
-        // 3. Inject IRQ to guest
-        // @ivanv: is setting interrupt status necessary?
-        dev->data.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-        assert(success);
-    }
-
-    // 4. Enqueue sDDF buffer into RX free queue
-    ret = serial_enqueue_free(sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
-    assert(!ret);
     // @ivanv: error handle for release mode
 
     return -1;

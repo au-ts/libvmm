@@ -41,13 +41,10 @@
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
-        <map mr="rx_free_serial_vmm_1" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_rx_free" />
-        <map mr="rx_active_serial_vmm_1" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="serial_rx_active" />
-        <map mr="tx_free_serial_vmm_1" vaddr="0x103_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_free" />
-        <map mr="tx_active_serial_vmm_1" vaddr="0x103_600_000" perms="rw" cached="true" setvar_vaddr="serial_tx_active" />
-
-        <map mr="tx_data_serial_vmm_1" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
-        <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
+        <map mr="tx_queue_serial_vmm_1" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
+        <map mr="rx_queue_serial_vmm_1" vaddr="0x6_001_000" perms="rw" cached="true" setvar_vaddr="serial_rx_queue" />
+        <map mr="tx_data_serial_vmm_1" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+        <map mr="rx_data_serial_vmm_1" vaddr="0x6_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
         <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_data"/>
         
@@ -67,13 +64,10 @@
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
         
-        <map mr="rx_free_serial_vmm_2" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_rx_free" />
-        <map mr="rx_active_serial_vmm_2" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="serial_rx_active" />
-        <map mr="tx_free_serial_vmm_2" vaddr="0x103_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_free" />
-        <map mr="tx_active_serial_vmm_2" vaddr="0x103_600_000" perms="rw" cached="true" setvar_vaddr="serial_tx_active" />
-
-        <map mr="tx_data_serial_vmm_2" vaddr="0x8_800_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
-        <map mr="rx_data_serial_vmm_2" vaddr="0x8_a00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
+        <map mr="tx_queue_serial_vmm_2" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
+        <map mr="rx_queue_serial_vmm_2" vaddr="0x6_001_000" perms="rw" cached="true" setvar_vaddr="serial_rx_queue" />
+        <map mr="tx_data_serial_vmm_2" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+        <map mr="rx_data_serial_vmm_2" vaddr="0x6_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
         <map mr="snd_data" vaddr="0x9_200_000" perms="rw" cached="true" setvar_vaddr="sound_data"/>
         
@@ -116,13 +110,10 @@
         <program_image path="snd_driver_vmm.elf" />
         <map mr="snd_driver_vm_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
-        <map mr="rx_free_serial_vmm_3" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_rx_free" />
-        <map mr="rx_active_serial_vmm_3" vaddr="0x6_200_000" perms="rw" cached="true" setvar_vaddr="serial_rx_active" />
-        <map mr="tx_free_serial_vmm_3" vaddr="0x103_400_000" perms="rw" cached="true" setvar_vaddr="serial_tx_free" />
-        <map mr="tx_active_serial_vmm_3" vaddr="0x103_600_000" perms="rw" cached="true" setvar_vaddr="serial_tx_active" />
-
-        <map mr="tx_data_serial_vmm_3" vaddr="0x8_c00_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
-        <map mr="rx_data_serial_vmm_3" vaddr="0x8_e00_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
+        <map mr="tx_queue_serial_vmm_3" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
+        <map mr="rx_queue_serial_vmm_3" vaddr="0x6_001_000" perms="rw" cached="true" setvar_vaddr="serial_rx_queue" />
+        <map mr="tx_data_serial_vmm_3" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+        <map mr="rx_data_serial_vmm_3" vaddr="0x6_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
         <setvar symbol="sound_data_paddr" region_paddr="snd_data" />
         <map mr="snd_shared" vaddr="0x12_000_000" perms="rw" cached="false" setvar_vaddr="sound_shared_state" />
@@ -148,96 +139,66 @@
         <irq irq="37" id="5" />
     </protection_domain>
 
-    <!-- Serial sDDF regions -->
-    <!-- Shared memory for the actual data transfered -->
-    <memory_region name="tx_data_driver" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="rx_data_driver" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="tx_data_serial_vmm_1" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="rx_data_serial_vmm_1" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="tx_data_serial_vmm_2" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="rx_data_serial_vmm_2" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="tx_data_serial_vmm_3" size="0x200_000" page_size="0x200_000" />
-    <memory_region name="rx_data_serial_vmm_3" size="0x200_000" page_size="0x200_000" />
-    <!-- Regions for the shared ring buffers active by the driver and multiplexor -->
-    <memory_region name="rx_free_serial_driver" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_active_serial_driver" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="tx_free_serial_driver" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="tx_active_serial_driver" size="0x200_000" page_size="0x200_000"/>
-    <!--
-        Regions for the shared ring buffers active by the multiplexor and the
-        client (in this case the client is the VMM)
-    -->
-    <memory_region name="tx_free_serial_vmm_1" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="tx_active_serial_vmm_1" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_free_serial_vmm_1" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_active_serial_vmm_1" size="0x200_000" page_size="0x200_000"/>
+    <!-- Serial sDDF data regions -->
+    <memory_region name="tx_data_serial_driver" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="rx_data_serial_driver" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="tx_data_serial_vmm_1" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="rx_data_serial_vmm_1" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="tx_data_serial_vmm_2" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="rx_data_serial_vmm_2" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="tx_data_serial_vmm_3" size="0x2_000" page_size="0x1_000" />
+    <memory_region name="rx_data_serial_vmm_3" size="0x2_000" page_size="0x1_000" />
 
-    <memory_region name="tx_free_serial_vmm_2" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="tx_active_serial_vmm_2" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_free_serial_vmm_2" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_active_serial_vmm_2" size="0x200_000" page_size="0x200_000"/>
+    <!-- Serial sDDF queue regions -->
+    <memory_region name="rx_queue_serial_driver" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="tx_queue_serial_driver" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="tx_queue_serial_vmm_1" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="rx_queue_serial_vmm_1" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="tx_queue_serial_vmm_2" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="rx_queue_serial_vmm_2" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="tx_queue_serial_vmm_3" size="0x1_000" page_size="0x1_000"/>
+    <memory_region name="rx_queue_serial_vmm_3" size="0x1_000" page_size="0x1_000"/>
 
-    <memory_region name="tx_free_serial_vmm_3" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="tx_active_serial_vmm_3" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_free_serial_vmm_3" size="0x200_000" page_size="0x200_000"/>
-    <memory_region name="rx_active_serial_vmm_3" size="0x200_000" page_size="0x200_000"/>
-
-    <!-- Multiplexor for transmit (TX) serial data -->
-    <protection_domain name="serial_virt_tx" priority="100" pp="true">
+    <!-- Serial TX Virtualiser -->
+    <protection_domain name="serial_virt_tx" priority="100">
         <program_image path="serial_virt_tx.elf" />
-         <!-- shared memory for driver/virt ring buffer mechanism -->
-        <map mr="tx_free_serial_driver" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="tx_free_driver" />
-        <map mr="tx_active_serial_driver" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="tx_active_driver" />
-        <!-- shared memory for virt/client ring buffer mechanism -->
-        <!-- Ring buffers between the multiplexor and VMM client  -->
-        <map mr="tx_free_serial_vmm_1" vaddr="0x103_400_000" perms="rw" cached="true" setvar_vaddr="tx_free_client" />
-        <map mr="tx_active_serial_vmm_1" vaddr="0x103_600_000" perms="rw" cached="true" setvar_vaddr="tx_active_client" />
-        <map mr="tx_free_serial_vmm_2" vaddr="0x5_200_000" perms="rw" cached="true" setvar_vaddr="tx_free_client2" />
-        <map mr="tx_active_serial_vmm_2" vaddr="0x5_400_000" perms="rw" cached="true" setvar_vaddr="tx_active_client2" />
-        <map mr="tx_free_serial_vmm_3" vaddr="0x5_600_000" perms="rw" cached="true" setvar_vaddr="tx_free_client3" />
-        <map mr="tx_active_serial_vmm_3" vaddr="0x5_800_000" perms="rw" cached="true" setvar_vaddr="tx_active_client3" />
-        <!-- Data regions between multiplexor/driver and vmm/mulitplexor -->
-        <map mr="tx_data_driver" vaddr="0x2_200_000" perms="rw" cached="true" setvar_vaddr="tx_data_driver" />
-        <!-- @ivanv: the virtual address of the data region needs to match what it is in the client as well,
-             this is very fragile and should be fixed. -->
-        <map mr="tx_data_serial_vmm_1" vaddr="0x8_400_000" perms="rw" cached="true" setvar_vaddr="tx_data_client" />
-        <map mr="tx_data_serial_vmm_2" vaddr="0x8_800_000" perms="rw" cached="true" setvar_vaddr="tx_data_client2" />
-        <map mr="tx_data_serial_vmm_3" vaddr="0x8_c00_000" perms="rw" cached="true" setvar_vaddr="tx_data_client3" />
+        <map mr="tx_queue_serial_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="tx_queue_drv" />
+        <map mr="tx_queue_serial_vmm_1" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue_cli0" />
+        <map mr="tx_queue_serial_vmm_2" vaddr="0x4_002_000" perms="rw" cached="true"/>
+        <map mr="tx_queue_serial_vmm_3" vaddr="0x4_003_000" perms="rw" cached="true"/>
+
+        <map mr="tx_data_serial_driver" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="tx_data_drv" />
+        <map mr="tx_data_serial_vmm_1" vaddr="0x4_006_000" perms="r" cached="true" setvar_vaddr="tx_data_cli0" />
+        <map mr="tx_data_serial_vmm_2" vaddr="0x4_008_000" perms="r" cached="true"/>
+        <map mr="tx_data_serial_vmm_3" vaddr="0x4_00a_000" perms="r" cached="true"/>
     </protection_domain>
-    <!-- Multiplexor for receive (RX) serial data -->
-    <protection_domain name="serial_virt_rx" priority="100" pp="true">
+
+    <!-- Serial RX Virtualiser -->
+    <protection_domain name="serial_virt_rx" priority="100">
         <program_image path="serial_virt_rx.elf" />
-         <!-- shared memory for driver/virt ring buffer mechanism -->
-        <map mr="rx_free_serial_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_free_driver" />
-        <map mr="rx_active_serial_driver" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="rx_active_driver" />
-        <!-- Ring buffers between the multiplexor and VMM client  -->
-        <map mr="rx_free_serial_vmm_1" vaddr="0x4_800_000" perms="rw" cached="true" setvar_vaddr="rx_free_client" />
-        <map mr="rx_active_serial_vmm_1" vaddr="0x5_000_000" perms="rw" cached="true" setvar_vaddr="rx_active_client" />
-        <map mr="rx_free_serial_vmm_2" vaddr="0x5_200_000" perms="rw" cached="true" setvar_vaddr="rx_free_client2" />
-        <map mr="rx_active_serial_vmm_2" vaddr="0x5_400_000" perms="rw" cached="true" setvar_vaddr="rx_active_client2" />
-        <map mr="rx_free_serial_vmm_3" vaddr="0x5_600_000" perms="rw" cached="true" setvar_vaddr="rx_free_client3" />
-        <map mr="rx_active_serial_vmm_3" vaddr="0x5_800_000" perms="rw" cached="true" setvar_vaddr="rx_active_client3" />
+        <map mr="rx_queue_serial_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_queue_drv" />
+        <map mr="rx_queue_serial_vmm_1" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="rx_queue_cli0" />
+        <map mr="rx_queue_serial_vmm_2" vaddr="0x4_002_000" perms="rw" cached="true"/>
+        <map mr="rx_queue_serial_vmm_3" vaddr="0x4_003_000" perms="rw" cached="true"/>
 
-        <map mr="rx_data_driver" vaddr="0x2_600_000" perms="rw" cached="true" setvar_vaddr="rx_data_driver" />
-        <map mr="rx_data_serial_vmm_1" vaddr="0x8_600_000" perms="rw" cached="true" setvar_vaddr="rx_data_client" />
-        <map mr="rx_data_serial_vmm_2" vaddr="0x8_a00_000" perms="rw" cached="true" setvar_vaddr="rx_data_client2" />
-        <map mr="rx_data_serial_vmm_3" vaddr="0x8_e00_000" perms="rw" cached="true" setvar_vaddr="rx_data_client3" />
+        <map mr="rx_data_serial_driver" vaddr="0x4_004_000" perms="r" cached="true" setvar_vaddr="rx_data_drv" />
+        <map mr="rx_data_serial_vmm_1" vaddr="0x4_006_000" perms="rw" cached="true" setvar_vaddr="rx_data_cli0" />
+        <map mr="rx_data_serial_vmm_2" vaddr="0x4_008_000" perms="rw" cached="true"/>
+        <map mr="rx_data_serial_vmm_3" vaddr="0x4_00a_000" perms="rw" cached="true"/>
     </protection_domain>
 
-    <!-- The driver for talking to the hardware serial device, in this case UART -->
-    <protection_domain name="uart_driver" priority="100" pp="true">
+    <!-- Serial Driver -->
+    <protection_domain name="uart" priority="110">
         <program_image path="uart_driver.elf" />
         <map mr="uart" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
-        <!-- Data region -->
-        <map mr="tx_data_driver" vaddr="0x2_200_000" perms="rw" cached="true" />
-        <map mr="rx_data_driver" vaddr="0x2_600_000" perms="rw" cached="true" />
-        <!-- shared memory for ring buffer mechanism -->
-        <map mr="rx_free_serial_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_free" />
-        <map mr="rx_active_serial_driver" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="rx_active" />
-        <map mr="tx_free_serial_driver" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="tx_free" />
-        <map mr="tx_active_serial_driver" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="tx_active" />
-        <!-- UART IRQ -->
-        <irq irq="33" id="1" />
+
+        <map mr="rx_queue_serial_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_queue" />
+        <map mr="tx_queue_serial_driver" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue" />
+
+        <map mr="rx_data_serial_driver" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="rx_data" />
+        <map mr="tx_data_serial_driver" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="tx_data" />
+
+        <irq irq="33" id="0" /> <!-- UART interrupt -->
     </protection_domain>
 
     <channel>
@@ -256,8 +217,8 @@
     </channel>
 
     <channel>
-        <end pd="uart_driver" id="8"/>
-        <end pd="serial_virt_tx" id="9"/>
+        <end pd="uart_driver" id="1"/>
+        <end pd="serial_virt_tx" id="0"/>
     </channel>
 
     <channel>
@@ -276,8 +237,8 @@
     </channel>
 
     <channel>
-        <end pd="uart_driver" id="10"/>
-        <end pd="serial_virt_rx" id="11"/>
+        <end pd="uart_driver" id="2"/>
+        <end pd="serial_virt_rx" id="0"/>
     </channel>
 
     <!-- Sound -->

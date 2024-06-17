@@ -108,16 +108,13 @@ CLIENT_VM_2_DTS_OVERLAYS_odroidc4 :=	$(CLIENT_VM_2_DTS_DIR)/init.dts \
 CLIENT_VM_2_DTS_OVERLAYS := ${CLIENT_VM_2_DTS_OVERLAYS_${BOARD}}
 CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 
-SDDF_UTIL := $(SDDF_DIR)/util
-
 SDDF_BLK_COMPONENTS := $(SDDF_DIR)/blk/components
 SDDF_BLK_UTIL := $(SDDF_DIR)/blk/util
-
-SDDF_SERIAL_COMPONENTS := $(SDDF_DIR)/serial/components
 
 SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
+SERIAL_CONFIG_INCLUDE:= include/serial_config
 
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
@@ -161,9 +158,7 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_blk_bitarray.o \
-					sddf_blk_fsmalloc.o \
-					sddf_printf.o sddf_putchar_debug.o \
+					libsddf_util_debug.a 
 
 CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					client_images_2.o \
@@ -171,23 +166,15 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					console.o \
 					block.o \
 					mmio.o \
-					sddf_blk_bitarray.o \
-					sddf_blk_fsmalloc.o \
-					sddf_printf.o sddf_putchar_debug.o \
+					libsddf_util_debug.a 
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
 					blk_driver_vmm.o \
 					console.o \
-					mmio.o \
+					mmio.o 
 
-
-# sddf_printf.o sdd_putchar_debug.o only needed during debug mode
-SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
-SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
-SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
-
-BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_fsmalloc.o sddf_blk_bitarray.o sddf_blk_util.o sddf_printf.o sddf_putchar_debug.o 
+BLK_VIRT_OBJS := sddf_blk_virt.o libsddf_util_debug.a
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
 
 # Toolchain flags
@@ -205,8 +192,8 @@ CFLAGS := -mstrict-align \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
-		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF_DIR)/include \
+		  -I$(SERIAL_CONFIG_INCLUDE) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -221,7 +208,7 @@ CFLAGS_LINUX :=	-g3 \
 				-target aarch64-linux-gnu
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lmicrokit -Tmicrokit.ld
+LIBS := -lmicrokit -Tmicrokit.ld $(BUILD_DIR)/libsddf_util_debug.a
 
 ifeq ($(BOARD), qemu_arm_virt)
 	NUM_PART = 2
@@ -248,6 +235,36 @@ qemu: all $(BUILD_DIR)/storage
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
+	$(shell mkdir -p $(BUILD_DIR)/util)
+	$(shell mkdir -p $(BUILD_DIR)/serial)
+
+SDDF_LIB_UTIL_DBG_OBJS := cache.o sddf_printf.o newlibc.o assert.o putchar_debug.o bitarray.o fsmalloc.o
+
+TOOLCHAIN ?= aarch64-none-elf
+AR := $(TOOLCHAIN)-ar
+RANLIB := ${TOOLCHAIN}-ranlib
+
+$(BUILD_DIR)/libsddf_util_debug.a: $(addprefix ${BUILD_DIR}/util/, ${SDDF_LIB_UTIL_DBG_OBJS})
+	${AR} rv $@ $^
+	${RANLIB} $@
+
+$(BUILD_DIR)/util/sddf_printf.o: ${SDDF_DIR}/util/printf.c
+	${CC} ${CFLAGS} -c -o $@ $<
+
+$(BUILD_DIR)/util/%.o: ${SDDF_DIR}/util/%.c
+	${CC} ${CFLAGS} -c -o $@ $<
+
+$(BUILD_DIR)/uart_driver.elf: $(BUILD_DIR)/serial/uart_driver.o
+	$(LD) $(LDFLAGS) $< $(LIBS) -o $@
+
+$(BUILD_DIR)/serial/uart_driver.o: ${SDDF_SERIAL_DRIVER}/uart.c
+	$(CC) -c $(CFLAGS) -I${SDDF_SERIAL_DRIVER}/include -o $@ $< 
+
+$(BUILD_DIR)/serial_virt_%.elf: $(BUILD_DIR)/serial/virt_%.o
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c 
+	${CC} ${CFLAGS} -DSERIAL_NUM_CLIENTS=3 -o $@ -c $<
 
 $(BUILD_DIR)/storage:
 	$(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
@@ -325,15 +342,6 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
@@ -350,15 +358,6 @@ $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJ
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_virt.elf: $(addprefix $(BUILD_DIR)/, $(BLK_VIRT_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
