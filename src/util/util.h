@@ -23,7 +23,9 @@
 #define SEL4_USER_CONTEXT_SIZE 0x24
 #endif
 
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#endif
 
 #define CTZ(x) __builtin_ctz(x)
 
@@ -53,6 +55,7 @@ static void assert_fail(
 /* Convenience function to print memory region in hex */
 void print_mem_hex(uintptr_t addr, size_t size);
 
+#ifndef assert
 #ifndef CONFIG_DEBUG_BUILD
 
 #define _unused(x) ((void)(x))
@@ -67,4 +70,5 @@ void print_mem_hex(uintptr_t addr, size_t size);
         } \
     } while(0)
 
+#endif
 #endif

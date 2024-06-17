@@ -71,15 +71,12 @@ CLIENT_VM_DTS_OVERLAYS :=	$(CLIENT_VM_DTS_DIR)/init.dts \
 SND_DRIVER_VM_DTB := $(BUILD_DIR)/snd_driver_vm.dtb
 CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
-SDDF := $(abspath ../../dep/sddf)
+SDDF_DIR := $(abspath ../../dep/sddf)
 
-SDDF_SERIAL_COMPONENTS := $(SDDF)/serial/components
-SDDF_SOUND_COMPONENTS := $(SDDF)/sound/components
-SDDF_UTIL := $(SDDF)/util
-
-SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF)/drivers/serial/arm
-SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF)/drivers/serial/meson
+SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
+SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
+SERIAL_CONFIG_INCLUDE:= include/serial_config
 
 ELFS := client_vmm.elf \
 		serial_virt_tx.elf \
@@ -116,20 +113,14 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					mmio.o
 
 SOUND_VIRT_OBJS :=	sound_virt.o \
-					sddf_printf.o \
-					sddf_putchar_debug.o \
-					sddf_cache.o
+					libsddf_util_debug.a 
 
 SND_DRIVER_VMM_OBJS :=	$(VMM_OBJS) \
 						snd_driver_images.o \
 						snd_driver_vmm.o \
 						console.o \
 						mmio.o \
-						sddf_cache.o
-
-SERIAL_VIRT_TX_OBJS := virt_tx.o sddf_printf.o sddf_putchar_debug.o
-SERIAL_VIRT_RX_OBJS := virt_rx.o sddf_printf.o sddf_putchar_debug.o
-SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
+						libsddf_util_debug.a 
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -148,7 +139,8 @@ CFLAGS := -mstrict-align \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
-		  -I$(SDDF)/include \
+		  -I$(SDDF_DIR)/include \
+		  -I$(SERIAL_CONFIG_INCLUDE) \
 		  -I$(LINUX_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -158,8 +150,8 @@ CFLAGS := -mstrict-align \
 CFLAGS_USERLEVEL :=	-g \
 					-Wno-unused-command-line-argument \
 		  			-Wall -Wno-unused-function -Werror \
-					-I$(SDDF) \
-					-I$(SDDF)/include \
+					-I$(SDDF_DIR) \
+					-I$(SDDF_DIR)/include \
 					-I$(VMM_SRC_DIR) \
 					-I$(LINUX_DIR)/include \
 					-DBOARD_$(BOARD) \
@@ -170,7 +162,7 @@ CFLAGS_USERLEVEL :=	-g \
 					$(NIX_CFLAGS_COMPILE)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lmicrokit -Tmicrokit.ld
+LIBS := -lmicrokit -Tmicrokit.ld $(BUILD_DIR)/libsddf_util_debug.a
 
 
 .PHONY: all qemu clean
@@ -190,6 +182,36 @@ qemu: all
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
+	$(shell mkdir -p $(BUILD_DIR)/util)
+	$(shell mkdir -p $(BUILD_DIR)/serial)
+
+SDDF_LIB_UTIL_DBG_OBJS := cache.o sddf_printf.o newlibc.o assert.o putchar_debug.o bitarray.o fsmalloc.o
+
+TOOLCHAIN ?= aarch64-none-elf
+AR := $(TOOLCHAIN)-ar
+RANLIB := ${TOOLCHAIN}-ranlib
+
+$(BUILD_DIR)/libsddf_util_debug.a: $(addprefix ${BUILD_DIR}/util/, ${SDDF_LIB_UTIL_DBG_OBJS})
+	${AR} rv $@ $^
+	${RANLIB} $@
+
+$(BUILD_DIR)/util/sddf_printf.o: ${SDDF_DIR}/util/printf.c
+	${CC} ${CFLAGS} -c -o $@ $<
+
+$(BUILD_DIR)/util/%.o: ${SDDF_DIR}/util/%.c
+	${CC} ${CFLAGS} -c -o $@ $<
+
+$(BUILD_DIR)/uart_driver.elf: $(BUILD_DIR)/serial/uart_driver.o
+	$(LD) $(LDFLAGS) $< $(LIBS) -o $@
+
+$(BUILD_DIR)/serial/uart_driver.o: ${SDDF_SERIAL_DRIVER}/uart.c
+	$(CC) -c $(CFLAGS) -I${SDDF_SERIAL_DRIVER}/include -o $@ $< 
+
+$(BUILD_DIR)/serial_virt_%.elf: $(BUILD_DIR)/serial/virt_%.o
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c 
+	${CC} ${CFLAGS} -DSERIAL_NUM_CLIENTS=3 -o $@ -c $<
 
 SND_DRIVER_VM_USERLEVEL_INIT := $(LINUX_SND_DIR)/sound
 SND_DRIVER_VM_ETC := $(LINUX_SND_DIR)/board/$(BOARD)/asound.conf
@@ -262,15 +284,6 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/sddf_%.o: $(SDDF_UTIL)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DSERIAL_NUM_CLIENTS=3 -DSERIAL_TRANSFER_WITH_COLOUR=1 $< -o $@
-
-$(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
 $(BUILD_DIR)/sound_%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
@@ -282,16 +295,6 @@ $(BUILD_DIR)/sound_virt.elf: $(addprefix $(BUILD_DIR)/, $(SOUND_VIRT_OBJS))
 
 $(BUILD_DIR)/snd_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VMM_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/serial_virt_rx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_RX_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(BUILD_DIR)/uart_driver.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_DRIVER_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(SND_DRIVER_VM_DIR) $(CLIENT_VM_DIR)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(SND_DRIVER_VM_DIR) $(CLIENT_VM_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

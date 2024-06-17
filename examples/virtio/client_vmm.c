@@ -17,6 +17,7 @@
 #include <virtio/console.h>
 #include <virtio/block.h>
 #include <sddf/serial/queue.h>
+#include <serial_config.h>
 #include <sddf/blk/queue.h>
 
 #define GUEST_RAM_SIZE 0x6000000
@@ -52,12 +53,11 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
-uintptr_t serial_rx_free;
-uintptr_t serial_rx_active;
-uintptr_t serial_tx_free;
-uintptr_t serial_tx_active;
-uintptr_t serial_rx_data;
-uintptr_t serial_tx_data;
+serial_queue_t *serial_rx_queue;
+serial_queue_t *serial_tx_queue;
+
+char *serial_rx_data;
+char *serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
@@ -81,13 +81,8 @@ void init(void)
 {
     blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_config;
 
-    /* Busy wait until blk device is ready
-       Need to put an empty assembly line to prevent compiler from optimising out the busy wait */
-    LOG_VMM("begin busy wait\n");
-    while (!storage_info->ready) {
-        asm("");
-    }
-    LOG_VMM("done busy waiting\n");
+    /* Busy wait until blk device is ready */
+    while (!__atomic_load_n(&storage_info->ready, __ATOMIC_ACQUIRE));
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -118,52 +113,15 @@ void init(void)
     }
 
     /* Initialise our sDDF ring buffers for the serial device */
-    serial_queue_handle_t rxq, txq;
-    serial_queue_init(&rxq,
-                      (serial_queue_t *)serial_rx_free,
-                      (serial_queue_t *)serial_rx_active,
-                      true,
-                      NUM_ENTRIES,
-                      NUM_ENTRIES);
-    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        int ret = serial_enqueue_free(&rxq,
-                               serial_rx_data + (i * BUFFER_SIZE),
-                               BUFFER_SIZE);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-        }
-    }
-    serial_queue_init(&txq,
-                      (serial_queue_t *)serial_tx_free,
-                      (serial_queue_t *)serial_tx_active,
-                      true,
-                      NUM_ENTRIES,
-                      NUM_ENTRIES);
-    for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-        // Have to start at the memory region left of by the rx ring
-        int ret = serial_enqueue_free(&txq,
-                               serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
-                               BUFFER_SIZE);
-        assert(ret == 0);
-        if (ret != 0) {
-            microkit_dbg_puts(microkit_name);
-            microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-        }
-    }
-
-    /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    assert(!serial_queue_plugged(rxq.free));
-    assert(!serial_queue_plugged(rxq.active));
-    assert(!serial_queue_plugged(txq.free));
-    assert(!serial_queue_plugged(txq.active));
+    serial_queue_handle_t serial_rxq, serial_txq;
+    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue, serial_tx_data);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
                                   VIRTIO_CONSOLE_BASE,
                                   VIRTIO_CONSOLE_SIZE,
                                   VIRTIO_CONSOLE_IRQ,
-                                  &rxq, &txq,
+                                  &serial_rxq, &serial_txq,
                                   SERIAL_VIRT_TX_CH);
 
     /* virtIO block */
@@ -192,7 +150,7 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
     case SERIAL_VIRT_RX_CH: {
-        /* We have received an event from the serial multipelxor, so we
+        /* We have received an event from the serial virtualiser, so we
          * call the virtIO console handling */
         virtio_console_handle_rx(&virtio_console);
         break;
