@@ -33,7 +33,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <sddf/blk/fsmalloc.h>
+#include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
 #include <sddf/blk/queue.h>
 #include "virtio/mmio.h"
