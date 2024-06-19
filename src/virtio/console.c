@@ -106,7 +106,7 @@ static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t 
 }
 
 /* The guest has notified us that it has placed something in the transmit queue. */
-static int virtio_console_handle_tx(struct virtio_device *dev)
+static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
 
@@ -191,15 +191,13 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
     tx_queue->last_idx = idx;
 
     dev->data.InterruptStatus = BIT_LOW(0);
-    // @ivanv: The virq_inject API is poor as it expects a vCPU ID even though
-    // it doesn't matter for the case of SPIs, which is what virtIO devices use.
     bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
     assert(success);
 
     return success;
 }
 
-int virtio_console_handle_rx(struct virtio_console_device *console)
+static bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     // @ivanv: revisit this whole function, it works but is very hacky.
     /* We have received something from the real console driver.
@@ -215,7 +213,7 @@ int virtio_console_handle_rx(struct virtio_console_device *console)
     assert(!ret);
     if (ret != 0) {
         LOG_CONSOLE_ERR("could not dequeue from RX active queue\n");
-        // @ivanv: handle properly
+        return false;
     }
 
     assert(dev->num_vqs > RX_QUEUE);
@@ -249,18 +247,20 @@ int virtio_console_handle_rx(struct virtio_console_device *console)
         rx_queue->last_idx++;
 
         // 3. Inject IRQ to guest
-        // @ivanv: is setting interrupt status necessary?
-        dev->data.InterruptStatus = BIT_LOW(0);
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
+        if (!success) {
+            return false;
+        }
+        // Only set the interrupt status if we can inject the IRQ
+        dev->data.InterruptStatus = BIT_LOW(0);
     }
 
     // 4. Enqueue sDDF buffer into RX free queue
     ret = serial_enqueue_free(sddf_rx_queue, sddf_buffer, BUFFER_SIZE);
     assert(!ret);
-    // @ivanv: error handle for release mode
 
-    return -1;
+    return true;
 }
 
 virtio_device_funs_t functions = {

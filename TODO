@@ -1,0 +1,7 @@
+* Fix bug where if serial RX happens before the guest has
+  setup the driver.
+    * We should be checking whether the guest has set the 'DRIVER OK' bit from
+      memory.
+* Sort out all @ivanv in console.c
+* change all callbacks to return bool instead of int
+* mmio.h structures need cleanup
