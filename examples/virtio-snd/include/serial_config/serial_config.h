@@ -24,12 +24,12 @@
 #define SERIAL_CONSOLE_BEGIN_STRING "Begin input\n"
 #define SERIAL_CONSOLE_BEGIN_STRING_LEN 13
 
-#define SERIAL_CLI0_NAME "CLIENT_VMM-1"
-#define SERIAL_CLI1_NAME "CLIENT_VMM-2"
+#define SERIAL_CLI0_NAME "CLIENT_VMM_1"
+#define SERIAL_CLI1_NAME "CLIENT_VMM_2"
 #define SERIAL_CLI2_NAME "SND_DRIVER_VMM"
 #define SERIAL_VIRT_RX_NAME "serial_virt_rx"
 #define SERIAL_VIRT_TX_NAME "serial_virt_tx"
-#define SERIAL_DRIVER_NAME "uart"
+#define SERIAL_DRIVER_NAME "uart_driver"
 
 #define SERIAL_QUEUE_SIZE                          0x1000
 #define SERIAL_DATA_REGION_SIZE                    0x2000

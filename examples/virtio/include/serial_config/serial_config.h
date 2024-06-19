@@ -29,7 +29,7 @@
 #define SERIAL_CLI2_NAME "BLK_DRIVER_VMM"
 #define SERIAL_VIRT_RX_NAME "serial_virt_rx"
 #define SERIAL_VIRT_TX_NAME "serial_virt_tx"
-#define SERIAL_DRIVER_NAME "uart"
+#define SERIAL_DRIVER_NAME "uart_driver"
 
 #define SERIAL_QUEUE_SIZE                          0x1000
 #define SERIAL_DATA_REGION_SIZE                    0x2000
