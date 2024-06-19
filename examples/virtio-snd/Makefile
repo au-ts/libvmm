@@ -73,6 +73,7 @@ CLIENT_VM_DTB := $(BUILD_DIR)/client_vm.dtb
 
 SDDF_DIR := $(abspath ../../dep/sddf)
 
+SDDF_SOUND_COMPONENTS := $(SDDF_DIR)/sound/components
 SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
@@ -110,7 +111,8 @@ CLIENT_VMM_OBJS :=	$(VMM_OBJS) \
 					client_vmm.o \
 					console.o \
 					sound.o \
-					mmio.o
+                    mmio.o \
+                    libsddf_util_debug.a
 
 SOUND_VIRT_OBJS :=	sound_virt.o \
 					libsddf_util_debug.a 
