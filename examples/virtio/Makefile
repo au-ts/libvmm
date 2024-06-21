@@ -263,7 +263,7 @@ $(BUILD_DIR)/serial_virt_%.elf: $(BUILD_DIR)/serial/virt_%.o
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c 
-	${CC} ${CFLAGS} -DSERIAL_NUM_CLIENTS=3 -o $@ -c $<
+	${CC} ${CFLAGS} -o $@ -c $<
 
 $(BUILD_DIR)/storage:
 	$(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
