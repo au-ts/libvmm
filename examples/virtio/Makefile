@@ -240,9 +240,8 @@ directories:
 
 SDDF_LIB_UTIL_DBG_OBJS := cache.o sddf_printf.o newlibc.o assert.o putchar_debug.o bitarray.o fsmalloc.o
 
-TOOLCHAIN ?= aarch64-none-elf
-AR := $(TOOLCHAIN)-ar
-RANLIB := ${TOOLCHAIN}-ranlib
+AR := llvm-ar
+RANLIB := llvm-ranlib
 
 $(BUILD_DIR)/libsddf_util_debug.a: $(addprefix ${BUILD_DIR}/util/, ${SDDF_LIB_UTIL_DBG_OBJS})
 	${AR} rv $@ $^
