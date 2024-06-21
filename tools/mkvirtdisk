@@ -4,6 +4,8 @@
 # It aligns the partitions to both the sDDF transfer size and the device's logical size.
 # It creates a FAT filesystem on each partition.
 
+set -e
+
 # Usage instructions
 if [ $# -ne 4 ]; then
     echo "Usage: $0 <virtual_disk_name> <num_partitions> <logical_size> <memsize>"
