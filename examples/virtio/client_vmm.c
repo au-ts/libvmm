@@ -17,8 +17,10 @@
 #include <virtio/virtio.h>
 #include <virtio/console.h>
 #include <virtio/block.h>
+#include <virtio/net.h>
 #include <sddf/serial/queue.h>
 #include <sddf/blk/queue.h>
+#include <sddf/network/queue.h>
 
 #define GUEST_RAM_SIZE 0x6000000
 
@@ -85,15 +87,39 @@ sddf_handler_t sddf_blk_handlers[SDDF_BLK_NUM_HANDLES];
 
 static struct virtio_device virtio_blk;
 
+/* Virtio Net VSwitch */
+#define VSWITCH_TX_CH 4
+#define VSWITCH_RX_CH 5
+
+#define VSWITCH_IRQ (76)
+#define VSWITCH_BASE (0x160000)
+#define VSWITCH_SIZE (0x1000)
+
+uintptr_t vswitch_rx_free;
+uintptr_t vswitch_rx_active;
+uintptr_t vswitch_tx_free;
+uintptr_t vswitch_tx_active;
+
+uintptr_t vswitch_rx_data_vaddr;
+uintptr_t vswitch_rx_data_paddr;
+uintptr_t vswitch_tx_data_vaddr;
+uintptr_t vswitch_tx_data_paddr;
+
+net_queue_handle_t vswitch_rx_h;
+net_queue_handle_t vswitch_tx_h;
+sddf_handler_t sddf_network_handlers[SDDF_NET_NUM_HANDLES];
+
+static struct virtio_device virtio_vswitch;
+
 void init(void)
 {
     /* Busy wait until blk device is ready
        Need to put an empty assembly line to prevent compiler from optimising out the busy wait */
-    LOG_VMM("begin busy wait\n");
-    while (!((blk_storage_info_t *)blk_config)->ready) {
-        asm("");
-    }
-    LOG_VMM("done busy waiting\n");
+    // LOG_VMM("begin busy wait\n");
+    // while (!((blk_storage_info_t *)blk_config)->ready) {
+    //     asm("");
+    // }
+    // LOG_VMM("done busy waiting\n");
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -176,6 +202,43 @@ void init(void)
     /* Initialise virtIO console device */
     success = virtio_mmio_device_init(&virtio_console, CONSOLE, VIRTIO_CONSOLE_BASE, VIRTIO_CONSOLE_SIZE,
                                       VIRTIO_CONSOLE_IRQ, sddf_serial_handlers);
+    assert(success);
+
+    /* virtIO vswitch */
+    sddf_network_handlers[SDDF_NET_RX_HANDLE].queue_h = &vswitch_rx_h;
+    sddf_network_handlers[SDDF_NET_RX_HANDLE].config = NULL;
+    sddf_network_handlers[SDDF_NET_RX_HANDLE].data = vswitch_rx_data_vaddr;
+    sddf_network_handlers[SDDF_NET_RX_HANDLE].data_size = 0; /* Unused */
+    sddf_network_handlers[SDDF_NET_RX_HANDLE].ch = VSWITCH_RX_CH;
+
+    sddf_network_handlers[SDDF_NET_TX_HANDLE].queue_h = &vswitch_tx_h;
+    sddf_network_handlers[SDDF_NET_TX_HANDLE].config = NULL;
+    sddf_network_handlers[SDDF_NET_TX_HANDLE].data = vswitch_tx_data_vaddr;
+    sddf_network_handlers[SDDF_NET_TX_HANDLE].data_size = 0; /* Unusued */
+    sddf_network_handlers[SDDF_NET_TX_HANDLE].ch = VSWITCH_TX_CH;
+
+    microkit_dbg_puts("hello?\n");
+    /* Initialise our sDDF queues for the serial device */
+
+    net_queue_init(sddf_network_handlers[SDDF_NET_TX_HANDLE].queue_h,
+                   (net_queue_t *)vswitch_tx_free,
+                   (net_queue_t *)vswitch_tx_active, NUM_ENTRIES);
+
+    net_buffers_init(sddf_network_handlers[SDDF_NET_TX_HANDLE].queue_h,
+                     vswitch_tx_data_vaddr);
+
+    microkit_dbg_puts("hello again\n");
+
+    net_queue_init(sddf_network_handlers[SDDF_NET_RX_HANDLE].queue_h,
+                   (net_queue_t *)vswitch_rx_free,
+                   (net_queue_t *)vswitch_rx_active, NUM_ENTRIES);
+
+    net_buffers_init(sddf_network_handlers[SDDF_NET_RX_HANDLE].queue_h,
+                     vswitch_rx_data_vaddr);
+
+    /* Initialise virtIO vswitch device */
+    success = virtio_mmio_device_init(&virtio_vswitch, NET, VSWITCH_BASE, VSWITCH_SIZE,
+                                      VSWITCH_IRQ, sddf_network_handlers);
     assert(success);
 
     /* virtIO block */

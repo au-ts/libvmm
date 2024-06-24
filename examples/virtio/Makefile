@@ -133,7 +133,16 @@ SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
 SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
 SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
 
-ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
+SDDF_NETWORK_COMPONENTS := $(SDDF_DIR)/network/components
+
+# vswitch can co-exist with the physical driver
+SDDF_NETWORK_VSWITCH := $(SDDF_DIR)/drivers/network/virtual
+
+SDDF_NETWORK_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/network/meson
+SDDF_NETWORK_DRIVER := ${SDDF_NETWORK_DRIVER_${BOARD}}
+
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf \
+		serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf vswitch.elf
 
 BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL_odroidc4 := uio_blk_driver
@@ -175,6 +184,7 @@ CLIENT_VMM_1_OBJS := $(VMM_OBJS) \
 					virtio.o \
 					console.o \
 					block.o \
+					net.o\
 					mmio.o \
 					sddf_blk_bitarray.o \
 					sddf_blk_fsmalloc.o \
@@ -186,6 +196,7 @@ CLIENT_VMM_2_OBJS := $(VMM_OBJS) \
 					virtio.o \
 					console.o \
 					block.o \
+					net.o \
 					mmio.o \
 					sddf_blk_bitarray.o \
 					sddf_blk_fsmalloc.o \
@@ -202,6 +213,8 @@ SERIAL_DRIVER_OBJS := uart.o sddf_printf.o sddf_putchar_debug.o
 
 BLK_VIRT_OBJS := sddf_blk_virt.o sddf_cache.o sddf_blk_fsmalloc.o sddf_blk_bitarray.o sddf_blk_util.o sddf_printf.o sddf_putchar_debug.o 
 UIO_BLK_DRIVER_OBJS := blk.o libuio.o
+
+VSWITCH_OBJS := vswitch.o sddf_printf.o sddf_putchar_debug.o
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -346,6 +359,15 @@ $(BUILD_DIR)/%.o: $(SDDF_SERIAL_COMPONENTS)/%.c Makefile
 $(BUILD_DIR)/%.o: $(SDDF_SERIAL_DRIVER)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
+$(BUILD_DIR)/%.o: $(SDDF_NETWORK_COMPONENTS)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SDDF_NETWORK_DRIVER)/%.c Makefile
+	$(CC) -c $(CFLAGS) $< -o $@
+
+$(BUILD_DIR)/%.o: $(SDDF_NETWORK_VSWITCH)/%.c Makefile
+	$(CC) -c $(CFLAGS) -I$(SDDF_NETWORK_VSWITCH)/include $< -o $@
+
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
 
@@ -362,6 +384,9 @@ $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJ
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_virt.elf: $(addprefix $(BUILD_DIR)/, $(BLK_VIRT_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/vswitch.elf: $(addprefix $(BUILD_DIR)/, $(VSWITCH_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/serial_virt_tx.elf: $(addprefix $(BUILD_DIR)/, $(SERIAL_VIRT_TX_OBJS))
