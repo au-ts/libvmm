@@ -13,6 +13,12 @@ ifeq ($(strip $(BOARD)),)
 $(error BOARD must be specified)
 endif
 
+ifeq ($(BOARD),qemu_arm_virt)
+ifeq ($(strip $(ARMBIAN)),)
+$(error ARMBIAN image must be specified)
+endif
+endif
+
 # Default build directory, pass BUILD_DIR=<dir> to override
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
@@ -68,9 +74,12 @@ ARMBIAN_VM_DTS_DIR := $(ARMBIAN_VM_DIR)/dts
 ARMBIAN_VM_LINUX := $(ARMBIAN_VM_DIR)/linux
 ARMBIAN_VM_INITRD := $(ARMBIAN_VM_DIR)/initrd.cpio.gz
 ARMBIAN_VM_BASE_DTS := $(ARMBIAN_VM_DTS_DIR)/linux.dts
-ARMBIAN_VM_DTS_OVERLAYS := $(ARMBIAN_VM_DTS_DIR)/init.dts \
-								$(ARMBIAN_VM_DTS_DIR)/disable.dts \
-
+ARMBIAN_VM_DTS_OVERLAYS_qemu_arm_virt :=	$(ARMBIAN_VM_DTS_DIR)/init.dts \
+											$(ARMBIAN_VM_DTS_DIR)/disable.dts \
+											$(ARMBIAN_VM_DTS_DIR)/io.dts 
+ARMBIAN_VM_DTS_OVERLAYS_odroidc4 :=		$(ARMBIAN_VM_DTS_DIR)/init.dts \
+										$(ARMBIAN_VM_DTS_DIR)/disable.dts
+ARMBIAN_VM_DTS_OVERLAYS := ${ARMBIAN_VM_DTS_OVERLAYS_${BOARD}}
 ARMBIAN_VM_DTB := $(BUILD_DIR)/armbian_vm.dtb
 
 ELFS := armbian_vmm.elf
@@ -122,6 +131,17 @@ all: directories $(IMAGE_FILE)
 
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
+
+qemu: all
+	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
+	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
+	$(QEMU) -machine virt,virtualization=on,secure=off \
+			-cpu cortex-a53 \
+			-serial mon:stdio \
+			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
+			-m size=2G \
+			-drive file=$(ARMBIAN),format=qcow2,if=none,id=drive0 \
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1
 
 $(ARMBIAN_VM_DTB): $(ARMBIAN_VM_BASE_DTS) $(ARMBIAN_VM_DTS_OVERLAYS)
 	sh $(SCRIPTS)/dtscat $^ > $(BUILD_DIR)/armbian_vm.dts
