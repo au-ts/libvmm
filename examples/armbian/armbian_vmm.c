@@ -15,21 +15,17 @@
 #include "tcb.h"
 #include "vcpu.h"
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
 #define GUEST_RAM_SIZE 0x10000000
 
-#if defined(BOARD_odroidc4)
+#if defined(BOARD_qemu_arm_virt)
+#define GUEST_DTB_VADDR 0x49000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x47000000
+#elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x2ff00000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
-
-#define SERIAL_IRQ 225
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -42,30 +38,6 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
-
-#define MAX_IRQ_CH 63
-int passthrough_irq_map[MAX_IRQ_CH];
-
-static void dummy_ack(size_t vcpu_id, int irq, void *cookie) {
-    return;
-}
-
-static void passthrough_device_ack(size_t vcpu_id, int irq, void *cookie) {
-    microkit_channel irq_ch = (microkit_channel)(int64_t)cookie;
-    microkit_irq_ack(irq_ch);
-}
-
-static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
-    LOG_VMM("Register passthrough IRQ %d (channel: 0x%lx)\n", irq, irq_ch);
-    assert(irq_ch < MAX_IRQ_CH);
-    passthrough_irq_map[irq_ch] = irq;
-
-    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
-    if (!err) {
-        LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
-        return;
-    }
-}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -95,33 +67,33 @@ void init(void) {
         return;
     }
 
-    /* Register serial passthrough */
-    register_passthrough_irq(225, 1);
+    #if defined(BOARD_odroidc4)
+        /* Register the SD card IRQ */
+        virq_register_passthrough(GUEST_VCPU_ID, 225, 1);
+        /* Register MMC passthrough */
+        virq_register_passthrough(GUEST_VCPU_ID, 222, 2);
+        /* Register ethernet passthrough */
+        virq_register_passthrough(GUEST_VCPU_ID, 40, 3);
+        /* Register phy passthrough */
+        virq_register_passthrough(GUEST_VCPU_ID, 96, 4);
+    #endif
 
-    /* Register MMC passthrough */
-    register_passthrough_irq(222, 2);
-
-    /* Register ethernet passthrough */
-    register_passthrough_irq(40, 3);
-
-    /* Register phy passthrough */
-    register_passthrough_irq(96, 4);
+    #if defined(BOARD_qemu_arm_virt)
+        /* Register the block device IRQ */
+        virq_register_passthrough(GUEST_VCPU_ID, 33, 1);
+    #endif
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
-    switch (ch) {
-        default:
-            if (passthrough_irq_map[ch]) {
-                bool success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
-                if (!success) {
-                    LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
-                }
-                break;
-            }
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+    bool handled = false;
+
+    handled = virq_handle_passthrough(ch);
+
+    if (!handled) {
+        LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
 }
 

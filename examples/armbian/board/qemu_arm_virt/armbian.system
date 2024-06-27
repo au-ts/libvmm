@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2023, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+    <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" phys_addr="0x40000000" />
+    <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
+    <memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
+    <memory_region name="virtio_blk" size="0x4000" phys_addr="0xa000000" />
+
+    <protection_domain name="armbian_vmm" priority="254">
+        <program_image path="armbian_vmm.elf" />
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="linux" id="0">
+            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+            <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
+            <map mr="virtio_blk" vaddr="0xa000000" perms="rw" cached="false" />
+        </virtual_machine>
+        <!-- Serial IRQ -->
+        <irq irq="33" id="1" />
+        <!-- virtio block IRQ -->
+        <irq irq="79" id="2" trigger="edge" />
+    </protection_domain>
+</system>
