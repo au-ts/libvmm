@@ -62,8 +62,8 @@ which in libsel4, there is a lot of as all system calls makes use of inline asse
 
 If you run step 1 below, you will encounter the following text:
 ```
-// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:490:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
-// microkit-sdk-1.2.6/board/qemu_arm_virt/debug/include/sel4/arch/syscalls.h:487:26: warning: unable to translate function, demoted to extern
+// microkit-sdk-1.4.0/board/qemu_virt_aarch64/debug/include/sel4/arch/syscalls.h:490:5: warning: TODO implement translation of stmt class GCCAsmStmtClass
+// microkit-sdk-1.4.0/board/qemu_virt_aarch64/debug/include/sel4/arch/syscalls.h:487:26: warning: unable to translate function, demoted to extern
 ```
 
 Until this is solved, unfortunately using libsel4 and hence libmicrokit from Zig
@@ -84,7 +84,7 @@ is tedious). These are the steps for doing so.
 
 Produce the translated version of `microkit.h`.
 ```sh
-zig translate-c <MICROKIT SDK PATH>/board/qemu_arm_virt/debug/include/microkit.h -I <MICROKIT SDK PATH>/board/qemu_arm_virt/debug/include -target aarch64-freestanding > src/libmicrokit.zig
+zig translate-c <MICROKIT SDK PATH>/board/qemu_virt_aarch64/debug/include/microkit.h -I <MICROKIT SDK PATH>/board/qemu_virt_aarch64/debug/include -target aarch64-freestanding > src/libmicrokit.zig
 ```
 
 #### Step 2

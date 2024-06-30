@@ -25,7 +25,7 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
 #elif defined(BOARD_odroidc4)
@@ -156,7 +156,7 @@ void init(void) {
                                                   &uio_sound_fault_handler, NULL);
     assert(success);
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
     register_passthrough_irq(37, 5); // Serial
 #elif defined(BOARD_odroidc4)
     register_passthrough_irq(48, 5); // USB controller
@@ -202,16 +202,14 @@ void notified(microkit_channel ch) {
     }
 }
 
-/*
- * The primary purpose of the VMM after initialisation is to act as a fault-handler,
- * whenever our guest causes an exception, it gets delivered to this entry point for
- * the VMM to handle.
- */
-void fault(microkit_id id, microkit_msginfo msginfo) {
-    bool success = fault_handle(id, msginfo);
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+    bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
-        microkit_fault_reply(microkit_msginfo_new(0, 0));
+        *reply_msginfo = microkit_msginfo_new(0, 0);
+        return seL4_True;
     }
+
+    return seL4_False;
 }

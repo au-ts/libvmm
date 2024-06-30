@@ -13,8 +13,8 @@ endif
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
 CONFIG ?= debug
-# Default board supported is QEMU ARM virt
-BOARD = qemu_arm_virt
+# Default board supported is QEMU virt AArch64
+BOARD = qemu_virt_aarch64
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash

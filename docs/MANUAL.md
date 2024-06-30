@@ -49,7 +49,7 @@ If your desired platform is not supported by any examples, please see the sectio
 
 The goal of this section is to give a detailed introduction into making a
 system using libvmm with the [seL4 Microkit](https://github.com/seL4/microkit).
-This is done by explaining one of the example QEMU ARM virt systems that boots
+This is done by explaining one of the example QEMU virt AArch64 systems that boots
 up a simple Linux guest.
 
 All the existing systems are located in `board/$BOARD/systems/`. This is
@@ -63,7 +63,7 @@ The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
-[the QEMU example system](../board/qemu_arm_virt/systems/simple.system),
+[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system),
 
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" />
@@ -346,7 +346,7 @@ There are three files that need to be changed:
 * `src/vmm.h`
 * `src/vgic/vgic.h`
 * For Linux, the device tree needs to contain the location of the initial RAM disk,
-  see the `chosen` node of `board/qemu_arm_virt/images/linux.dts` as an example.
+  see the `chosen` node of `board/qemu_virt_aarch64/images/linux.dts` as an example.
 
 As you can probably tell, all this information that needs to be added is known at
 build-time, the plan is to auto-generate these values that the VMM needs to make it
@@ -382,7 +382,7 @@ Assuming the guest is being passed a device tree and initialising devices
 based on the device tree passed, it is quite simple to disable the device.
 
 Here is an example of how you would change the Device Tree Source to
-disable the PL011 UART node for the QEMU ARM virt platform:
+disable the PL011 UART node for the QEMU virt AArch64 platform:
 ```diff
 pl011@9000000 {
     clock-names = "uartclk\0apb_pclk";

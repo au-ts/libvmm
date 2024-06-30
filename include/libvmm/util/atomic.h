@@ -1,7 +1,7 @@
 #pragma once
 
 // Qemu faults if you try load or store with a strict memorder on aarch64.
-#ifdef BOARD_qemu_arm_virt
+#ifdef BOARD_qemu_virt_aarch64
 #define VMM_NO_ATOMICS
 #endif
 
