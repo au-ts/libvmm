@@ -28,7 +28,8 @@
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue" />
         <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" setvar_vaddr="blk_data" />
 
-        <virtual_machine name="client_linux-1" id="0" priority="100">
+        <virtual_machine name="client_linux-1" priority="100">
+            <vcpu id="0" />
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
@@ -53,7 +54,8 @@
         <!-- sDDF data region -->
         <map mr="data_blk_vmm_2" vaddr="0x31600000" perms="rw" cached="true" setvar_vaddr="blk_data" />
 
-        <virtual_machine name="client_linux-2" id="0" priority="100">
+        <virtual_machine name="client_linux-2" priority="100">
+            <vcpu id="0" />
             <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
@@ -189,7 +191,9 @@
         <map mr="tx_data_serial_vmm_3" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="rx_data_serial_vmm_3" vaddr="0x6_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
-        <virtual_machine name="blk_driver_linux" id="0" priority="200">
+        <virtual_machine name="blk_driver_linux" priority="200">
+            <vcpu id="0" />
+
             <map mr="blk_driver_vm_ram" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
             <map mr="virtio_blk" vaddr="0xa000000" perms="rw" cached="false" />

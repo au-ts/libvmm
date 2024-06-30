@@ -127,13 +127,15 @@ export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
     }
 }
 
-extern fn fault_handle(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
+extern fn fault_handle(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
 
-export fn fault(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) void {
+export fn fault(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo, msginfo_reply: *microkit.microkit_msginfo) callconv(.C) bool {
     if (fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
-        microkit.microkit_fault_reply(microkit.microkit_msginfo_new(0, 0));
+        msginfo_reply.* = microkit.microkit_msginfo_new(0, 0);
+        return true;
     } else {
         log.err("Failed to handle fault\n", .{});
+        return false;
     }
 }

@@ -6,7 +6,7 @@ const ConfigOptions = enum {
 };
 
 pub fn build(b: *std.Build) void {
-    // For this example we hard-code the target to AArch64 and the platform to QEMU ARM virt
+    // For this example we hard-code the target to AArch64 and the platform to QEMU virt AArch64
     // since the main point of this example is to show off using libvmm in another
     // systems programming language.
     const target = b.resolveTargetQuery(.{
@@ -25,8 +25,8 @@ pub fn build(b: *std.Build) void {
     }
     const microkit_sdk = microkit_sdk_arg.?;
 
-    // Hard-code the board to QEMU ARM virt since it's the only one the example intends to support
-    const microkit_board = "qemu_arm_virt";
+    // Hard-code the board to QEMU virt AArch64 since it's the only one the example intends to support
+    const microkit_board = "qemu_virt_aarch64";
     const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.debug;
     const microkit_config = @tagName(microkit_config_option);
     // Since we are relying on Zig to produce the final ELF, it needs to do the
@@ -50,7 +50,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
         .libmicrokit_include = @as([]const u8, libmicrokit_include),
-        // Because we only support QEMU ARM virt, vGIC version is 2.
+        // Because we only support QEMU virt AArch64, vGIC version is 2.
         .arm_vgic_version = @as(usize, 2),
         .microkit_board = @as([]const u8, microkit_board),
     });

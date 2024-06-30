@@ -15,13 +15,7 @@ export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export UART_DRIVER := meson
 	export CPU := cortex-a55
-else ifeq ($(strip $(MICROKIT_BOARD)), imx8mm_evk)
-	export UART_DRIVER := imx
-	export CPU := cortex-a53
-else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
-	export UART_DRIVER := imx
-	export CPU := cortex-a53
-else ifeq ($(strip $(MICROKIT_BOARD)), qemu_arm_virt)
+else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
 	export CPU := cortex-a53
 	QEMU := qemu-system-aarch64

@@ -240,7 +240,7 @@ bool fault_handle_vppi_event(size_t vcpu_id)
         // @ivanv, make a note that when having a lot of printing on it can cause this error
         LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
         // Acknowledge to unmask it as our guest will not use the interrupt
-        microkit_arm_vcpu_ack_vppi(vcpu_id, ppi_irq);
+        microkit_vcpu_arm_ack_vppi(vcpu_id, ppi_irq);
     }
 
     return true;
@@ -419,7 +419,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
         default:
             /* We have reached a genuinely unexpected case, stop the guest. */
             LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
-            microkit_vm_stop(vcpu_id);
+            microkit_vcpu_stop(vcpu_id);
             /* Dump the TCB and vCPU registers to hopefully get information as
              * to what has gone wrong. */
             tcb_print_regs(vcpu_id);

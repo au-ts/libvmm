@@ -126,7 +126,7 @@ snd_driver_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/snd_driver_vm/rootfs.cpio.gz \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 qemu: $(IMAGE_FILE)
-	[ ${MICROKIT_BOARD} = qemu_arm_virt ]
+	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
 	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \

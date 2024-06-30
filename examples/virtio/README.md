@@ -18,7 +18,7 @@ In order to show device sharing, the system has two Linux VMs that act as client
 The two client VMs have the same resources and are identical.
 
 The example currently works on the following platforms:
-* QEMU ARM virt
+* QEMU virt AArch64
 * HardKernel Odroid-C4
 
 ## Building
@@ -28,7 +28,7 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<BOARD>` is one of:
-* `qemu_arm_virt`
+* `qemu_virt_aarch64`
 * `odroidc4`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
@@ -36,7 +36,7 @@ and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
+make BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
