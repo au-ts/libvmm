@@ -5,6 +5,7 @@
  */
 
 #include <microkit.h>
+#include <stdbool.h>
 #include "util.h"
 #include "tcb.h"
 

@@ -19,7 +19,7 @@
 #include <sddf/serial/queue.h>
 #include <sddf/sound/queue.h>
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
 #elif defined(BOARD_odroidc4)

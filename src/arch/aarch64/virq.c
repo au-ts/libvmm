@@ -12,7 +12,7 @@ int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};
 
 static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 {
-    microkit_arm_vcpu_ack_vppi(vcpu_id, irq);
+    microkit_vcpu_arm_ack_vppi(vcpu_id, irq);
 }
 
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}

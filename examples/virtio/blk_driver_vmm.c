@@ -17,7 +17,7 @@
 
 #define GUEST_RAM_SIZE 0x6000000
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x47f00000
 #define GUEST_INIT_RAM_DISK_VADDR 0x47000000
 #elif defined(BOARD_odroidc4)
@@ -43,7 +43,7 @@ uintptr_t guest_ram_vaddr;
 #define BLOCK_CH 1
 #if defined(BOARD_odroidc4)
 #define SD_IRQ 222
-#elif defined(BOARD_qemu_arm_virt)
+#elif defined(BOARD_qemu_virt_aarch64)
 #define BLOCK_IRQ 79
 #endif
 
@@ -162,7 +162,7 @@ void init(void)
     virq_register_passthrough(GUEST_VCPU_ID, SD_IRQ, BLOCK_CH);
 #endif
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
     /* Register the block device IRQ */
     virq_register_passthrough(GUEST_VCPU_ID, BLOCK_IRQ, BLOCK_CH);
 #endif

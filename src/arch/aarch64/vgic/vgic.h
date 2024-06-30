@@ -13,7 +13,7 @@
 // @ivanv: this should all come from the DTS!
 // @ivanv: either this should all be compile time or all runtime
 // as in initialising the vgic should depend on the runtime values
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GIC_V2
 #define GIC_DIST_PADDR      0x8000000
 #elif defined(BOARD_odroidc2_hyp)

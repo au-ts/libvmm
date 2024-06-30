@@ -27,7 +27,7 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x47000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x46000000
 #elif defined(BOARD_odroidc4)
@@ -194,7 +194,7 @@ void init(void) {
                                                   &uio_sound_fault_handler, NULL);
     assert(success);
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
     register_passthrough_irq(37, 5); // Serial
 #elif defined(BOARD_odroidc4)
     register_passthrough_irq(48, 5); // USB controller

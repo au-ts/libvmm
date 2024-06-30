@@ -17,7 +17,7 @@
 /* Specific to the framebuffer example */
 #include "uio.h"
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_RAM_SIZE 0x10000000
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x5d700000
@@ -101,7 +101,7 @@ void init(void) {
         return;
     }
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
     register_passthrough_irq(33, 1);
     register_passthrough_irq(79, 2);
     register_passthrough_irq(36, 3);
