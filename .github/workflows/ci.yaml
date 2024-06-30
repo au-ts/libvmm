@@ -34,10 +34,9 @@ jobs:
         with:
           submodules: 'true'
       - name: Download Microkit SDK
-        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
-        shell: bash
-      - name: Extract Microkit SDK
-        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
+        run: |
+          wget https://github.com/seL4/microkit/releases/download/1.4.0/microkit-sdk-1.4.0-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.0-linux-x86-64.tar.gz
       - name: Install dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect gcc-aarch64-linux-gnu
@@ -49,7 +48,7 @@ jobs:
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run examples
-        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.0
         shell: bash
       - name: Upload built system images
         uses: actions/upload-artifact@v4
@@ -65,10 +64,9 @@ jobs:
         with:
           submodules: 'true'
       - name: Download Microkit SDK
-        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} macos-x86-64
-        shell: bash
-      - name: Extract Microkit SDK
-        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
+        run: |
+          wget https://github.com/seL4/microkit/releases/download/1.4.0/microkit-sdk-1.4.0-macos-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.0-macos-x86-64.tar.gz
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
@@ -82,7 +80,7 @@ jobs:
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run examples
-        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.2.6
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.0
         shell: bash
       - name: Upload built system images
         uses: actions/upload-artifact@v4
@@ -97,16 +95,15 @@ jobs:
         with:
           submodules: 'true'
       - name: Download Microkit SDK
-        run: ./ci/acquire_sdk.sh microkit-sdk.zip ${{ secrets.GITHUB_TOKEN }} linux-x86-64
-        shell: bash
-      - name: Extract Microkit SDK
-        run: unzip microkit-sdk.zip && tar -xf microkit-sdk-1.2.6.tar.gz
+        run: |
+          wget https://github.com/seL4/microkit/releases/download/1.4.0/microkit-sdk-1.4.0-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.0-linux-x86-64.tar.gz
       - name: Install Nix
         uses: cachix/install-nix-action@v25
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run examples
-        run: nix-shell --run "./ci/examples.sh ${PWD}/microkit-sdk-1.2.6"
+        run: nix-shell --run "./ci/examples.sh ${PWD}/microkit-sdk-1.4.0"
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:

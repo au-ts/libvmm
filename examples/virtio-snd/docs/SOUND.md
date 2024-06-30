@@ -7,7 +7,7 @@ Sound in LionsOS
 ### 1.1.1 Qemu
 ```
 nix-shell shell.nix --pure --run \
-	"make MICROKIT_SDK=/PATH/TO/microkit-sdk BOARD=qemu_arm_virt QEMU_SND_BACKEND=coreaudio qemu"
+	"make MICROKIT_SDK=/PATH/TO/microkit-sdk BOARD=qemu_virt_aarch64 QEMU_SND_BACKEND=coreaudio qemu"
 ```
 - Swap `coreaudio` out for an appropriate Qemu audio backend found with
 `qemu-system-aarch64 -audiodev help`

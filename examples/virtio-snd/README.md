@@ -14,7 +14,7 @@ we have a separate virtIO example for the emulating the sound device. You can fi
 information [in this GitHub issue](https://github.com/au-ts/libvmm/issues/60).
 
 The example currently works on the following platforms:
-* QEMU ARM virt
+* QEMU virt AArch64
 * HardKernel Odroid-C4
 
 For details on the internals of the example and instructions on building and running it,

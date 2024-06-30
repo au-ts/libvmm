@@ -5,6 +5,7 @@
  */
 
 #include <microkit.h>
+#include <stdbool.h>
 #include <libvmm/tcb.h>
 #include <libvmm/util/util.h>
 

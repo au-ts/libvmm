@@ -5,6 +5,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
@@ -26,7 +27,7 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
 #elif defined(BOARD_rpi4b_hyp)
@@ -49,7 +50,7 @@
  * across platforms. */
 #define SERIAL_IRQ_CH 1
 
-#if defined(BOARD_qemu_arm_virt)
+#if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
 #define SERIAL_IRQ 225
@@ -136,11 +137,14 @@ void notified(microkit_channel ch) {
  * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
-void fault(microkit_id id, microkit_msginfo msginfo) {
-    bool success = fault_handle(id, msginfo);
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+    bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
          * that the guest can resume execution. */
-        microkit_fault_reply(microkit_msginfo_new(0, 0));
+        *reply_msginfo = microkit_msginfo_new(0, 0);
+        return seL4_True;
     }
+
+    return seL4_False;
 }

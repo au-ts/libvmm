@@ -1,4 +1,4 @@
-# QEMU ARM virt images
+# QEMU virt AArch64 images
 
 ## Linux kernel
 

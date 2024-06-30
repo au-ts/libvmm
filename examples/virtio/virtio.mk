@@ -129,7 +129,7 @@ blk_storage:
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
-	[ ${MICROKIT_BOARD} = qemu_arm_virt ]
+	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
 	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
