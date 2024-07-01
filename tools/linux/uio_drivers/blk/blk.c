@@ -16,12 +16,18 @@
 #include <linux/fs.h>
 
 #include <sddf/blk/queue.h>
+#include <blk_config.h>
 
 #include <uio/libuio.h>
 #include <uio/blk.h>
 
+// @ericc:
+// This linux userspace block driver does not use DMA to transfer data between the device and the rest of the system.
+// As such we'll need to expose the data region to the driver for it to read/write data to/from the device.
+// Once we figure out how to do DMA in userspace (and get it working), we can remove this.
+
 /* Uncomment this to enable debug logging */
-// #define DEBUG_UIO_BLOCK
+#define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
 #define LOG_UIO_BLOCK(...) do{ printf("UIO_DRIVER(BLOCK)"); printf(": "); printf(__VA_ARGS__); }while(0)
@@ -38,12 +44,6 @@ int storage_fd;
 blk_storage_info_t *blk_config;
 blk_queue_handle_t h;
 uintptr_t blk_data;
-uintptr_t blk_data_phys;
-
-uintptr_t data_phys_to_virt(uintptr_t phys_addr)
-{
-    return phys_addr - blk_data_phys + blk_data;
-}
 
 int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char **argv)
 {
@@ -65,12 +65,13 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     blk_req_queue_t *req_queue = (blk_req_queue_t *)maps[1];
     blk_resp_queue_t *resp_queue = (blk_resp_queue_t *)maps[2];
     blk_data = (uintptr_t)maps[3];
-    blk_data_phys = maps_phys[3];
 
+    // @ericc: After changing to using offsets in the sddf protocol, we no longer need to know the 
+    // physical address of any mappings. But now that it is a part of the libuio library, we'll simply do nothing.
     LOG_UIO_BLOCK("maps_phys[0]: 0x%lx, maps_phys[1]: 0x%lx, maps_phys[2]: 0x%lx, maps_phys[3]: 0x%lx\n", maps_phys[0],
                   maps_phys[1], maps_phys[2], maps_phys[3]);
 
-    blk_queue_init(&h, req_queue, resp_queue, BLK_QUEUE_SIZE);
+    blk_queue_init(&h, req_queue, resp_queue, BLK_QUEUE_SIZE_DRIV);
 
     storage_fd = open(storage_path, O_RDWR);
     if (storage_fd < 0) {
@@ -79,58 +80,56 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     }
     LOG_UIO_BLOCK("Opened storage drive: %s\n", storage_path);
 
-    // Determine whether storage drive is a block device or regular file
-    // and set the blk queue configuration fields accordingly
     struct stat storageStat;
     if (fstat(storage_fd, &storageStat) < 0) {
         LOG_UIO_BLOCK_ERR("Failed to get storage drive status: %s\n", strerror(errno));
         return -1;
     }
 
-    if (S_ISBLK(storageStat.st_mode)) {
-        /* Set drive as read-write */
-        int read_only_set = 0;
-        if (ioctl(storage_fd, BLKROSET, &read_only_set) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to set storage drive as read-write: %s\n", strerror(errno));
-            return -1;
-        }
-
-        /* Get read only status */
-        int read_only;
-        if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get storage drive read only status: %s\n", strerror(errno));
-            return -1;
-        }
-        blk_config->read_only = (bool)read_only;
-
-        /* Get logical sector size */
-        int sector_size;
-        if (ioctl(storage_fd, BLKSSZGET, &sector_size) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get storage drive sector size: %s\n", strerror(errno));
-            return -1;
-        }
-        blk_config->sector_size = (uint16_t)sector_size;
-
-        /* Get size */
-        uint64_t size;
-        if (ioctl(storage_fd, BLKGETSIZE64, &size) == -1) {
-            LOG_UIO_BLOCK_ERR("Failed to get storage drive size: %s\n", strerror(errno));
-            return -1;
-        }
-        blk_config->size = size / BLK_TRANSFER_SIZE;
-
-        LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only,
-                      blk_config->sector_size, blk_config->size);
-
-        /* Optimal size */
-        /* As far as I know linux does not let you query this from userspace, set as 0 to mean undefined */
-        blk_config->block_size = 0;
-    } else {
+    if (!S_ISBLK(storageStat.st_mode)) {
         LOG_UIO_BLOCK_ERR("Storage drive is of an unsupported type\n");
         return -1;
     }
 
-    /* May need to barrier all writes before this point of setting ready = true */
+    /* Set drive as read-write */
+    int read_only_set = 0;
+    if (ioctl(storage_fd, BLKROSET, &read_only_set) == -1) {
+        LOG_UIO_BLOCK_ERR("Failed to set storage drive as read-write: %s\n", strerror(errno));
+        return -1;
+    }
+
+    /* Get read only status */
+    int read_only;
+    if (ioctl(storage_fd, BLKROGET, &read_only) == -1) {
+        LOG_UIO_BLOCK_ERR("Failed to get storage drive read only status: %s\n", strerror(errno));
+        return -1;
+    }
+    blk_config->read_only = (bool)read_only;
+
+    /* Get logical sector size */
+    int sector_size;
+    if (ioctl(storage_fd, BLKSSZGET, &sector_size) == -1) {
+        LOG_UIO_BLOCK_ERR("Failed to get storage drive sector size: %s\n", strerror(errno));
+        return -1;
+    }
+    blk_config->sector_size = (uint16_t)sector_size;
+
+    /* Get size */
+    uint64_t size;
+    if (ioctl(storage_fd, BLKGETSIZE64, &size) == -1) {
+        LOG_UIO_BLOCK_ERR("Failed to get storage drive size: %s\n", strerror(errno));
+        return -1;
+    }
+    blk_config->size = size / BLK_TRANSFER_SIZE;
+
+    LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only,
+                    blk_config->sector_size, blk_config->size);
+
+    /* Optimal size */
+    /* As far as I know linux does not let you query this from userspace, set as 0 to mean undefined */
+    blk_config->block_size = 0;
+    
+    /* Driver is ready to go, set ready in shared config page */
     __atomic_store_n(&blk_config->ready, true, __ATOMIC_RELEASE);
 
     LOG_UIO_BLOCK("Driver initialized\n");
@@ -141,14 +140,14 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 void driver_notified()
 {
     blk_request_code_t req_code;
-    uintptr_t req_addr;
+    uintptr_t req_offset;
     uint32_t req_block_number;
     uint16_t req_count;
     uint32_t req_id;
 
     while (!blk_req_queue_empty(&h)) {
-        blk_dequeue_req(&h, &req_code, &req_addr, &req_block_number, &req_count, &req_id);
-        LOG_UIO_BLOCK("Received command: code=%d, addr=%p, block_number=%d, count=%d, id=%d\n", req_code, (void *)req_addr,
+        blk_dequeue_req(&h, &req_code, &req_offset, &req_block_number, &req_count, &req_id);
+        LOG_UIO_BLOCK("Received command: code=%d, offset=%p, block_number=%d, count=%d, id=%d\n", req_code, (void *)req_offset,
                       req_block_number, req_count, req_id);
 
         blk_response_status_t status = SUCCESS;
@@ -168,8 +167,8 @@ void driver_notified()
                 success_count = 0;
                 break;
             }
-            LOG_UIO_BLOCK("Reading from storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-            int bytes_read = read(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_TRANSFER_SIZE);
+            LOG_UIO_BLOCK("Reading from storage at mmaped address: 0x%lx\n", req_offset + blk_data);
+            int bytes_read = read(storage_fd, (void *)(req_offset + blk_data), req_count * BLK_TRANSFER_SIZE);
             LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
             if (bytes_read < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
@@ -189,8 +188,8 @@ void driver_notified()
                 success_count = 0;
                 break;
             }
-            LOG_UIO_BLOCK("Writing to storage at mmaped address: 0x%lx\n", data_phys_to_virt(req_addr));
-            int bytes_written = write(storage_fd, (void *)data_phys_to_virt(req_addr), req_count * BLK_TRANSFER_SIZE);
+            LOG_UIO_BLOCK("Writing to storage at mmaped address: 0x%lx\n", req_offset + blk_data);
+            int bytes_written = write(storage_fd, (void *)(req_offset + blk_data), req_count * BLK_TRANSFER_SIZE);
             LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
             if (bytes_written < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
