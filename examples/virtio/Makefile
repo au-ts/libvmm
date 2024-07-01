@@ -55,9 +55,14 @@ CURRENT_DIR := $(shell pwd)
 
 LINUX_DIR := $(VMM_TOOLS)/linux
 LINUX_BLK_DIR := $(LINUX_DIR)/blk
+LINUX_BLK_BOARD_DIR := $(LINUX_BLK_DIR)/board/$(BOARD)
+
 UIO_DIR := $(LINUX_DIR)/uio
+UIO_DRIVER_BLK_DIR := $(LINUX_DIR)/uio_drivers/blk
 
 SDDF_DIR := $(abspath ../../dep/sddf)
+
+VMM_INCLUDE := include
 
 BLK_DRIVER_VM_DIR := board/$(BOARD)/blk_driver_vm
 BLK_DRIVER_VM_DTS_DIR := $(BLK_DRIVER_VM_DIR)/dts
@@ -123,26 +128,16 @@ $(error Unsupported BOARD given)
 endif
 SDDF_SERIAL_DRIVER := $(SDDF_DIR)/drivers/serial/$(UART_DRIVER_DIR)
 
-SERIAL_CONFIG_INCLUDE:= include/serial_config
-
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
-BLK_DRIVER_VM_USERLEVEL_qemu_arm_virt := uio_blk_driver
-BLK_DRIVER_VM_USERLEVEL_odroidc4 := uio_blk_driver
-BLK_DRIVER_VM_USERLEVEL := ${BLK_DRIVER_VM_USERLEVEL_${BOARD}}
-BLK_DRIVER_VM_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_driver_init
-BLK_DRIVER_VM_USERLEVEL_INIT_odroidc4 := blk_driver_init
-BLK_DRIVER_VM_USERLEVEL_INIT := ${BLK_DRIVER_VM_USERLEVEL_INIT_${BOARD}}
+BLK_DRIVER_VM_USERLEVEL := uio_blk_driver
+BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
 CLIENT_VM_1_USERLEVEL :=
-CLIENT_VM_1_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
-CLIENT_VM_1_USERLEVEL_INIT_odroidc4 := blk_client_init
-CLIENT_VM_1_USERLEVEL_INIT := ${CLIENT_VM_1_USERLEVEL_INIT_${BOARD}}
+CLIENT_VM_1_USERLEVEL_INIT := blk_client_init
 
 CLIENT_VM_2_USERLEVEL :=
-CLIENT_VM_2_USERLEVEL_INIT_qemu_arm_virt := qemu_blk_client_init
-CLIENT_VM_2_USERLEVEL_INIT_odroidc4 := blk_client_init
-CLIENT_VM_2_USERLEVEL_INIT := ${CLIENT_VM_2_USERLEVEL_INIT_${BOARD}}
+CLIENT_VM_2_USERLEVEL_INIT:= blk_client_init
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
@@ -202,7 +197,7 @@ CFLAGS := -mstrict-align \
 		  -Wall -Wno-unused-function -Werror \
 		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
 		  -I$(SDDF_DIR)/include \
-		  -I$(SERIAL_CONFIG_INCLUDE) \
+		  -I$(VMM_INCLUDE) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -214,6 +209,7 @@ CFLAGS_LINUX :=	-g3 \
 				-D_GNU_SOURCE \
 				-I$(SDDF_DIR)/include \
 				-I$(LINUX_DIR)/include \
+				-I$(VMM_INCLUDE) \
 				-target aarch64-linux-gnu
 
 LDFLAGS := -L$(BOARD_DIR)/lib
@@ -348,7 +344,7 @@ $(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
-	$(CC) -c $(CFLAGS) -DBLK_NUM_CLIENTS=2 $< -o $@
+	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -371,16 +367,13 @@ $(BUILD_DIR)/postmark: $(LINUX_BLK_DIR)/postmark.c
 $(BUILD_DIR)/blk_client_init: $(LINUX_BLK_DIR)/blk_client_init
 	cp $< $@
 
-$(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_DIR)/blk_driver_init
-	cp $< $@
-
-$(BUILD_DIR)/qemu_blk_client_init: $(LINUX_BLK_DIR)/qemu_blk_client_init
-	cp $< $@
-
-$(BUILD_DIR)/qemu_blk_driver_init: $(LINUX_BLK_DIR)/qemu_blk_driver_init
+$(BUILD_DIR)/blk_driver_init: $(LINUX_BLK_BOARD_DIR)/blk_driver_init
 	cp $< $@
 
 $(BUILD_DIR)/%.o: $(UIO_DIR)/%.c Makefile
+	$(CC_USERLEVEL) -c $(CFLAGS_LINUX) $< -o $@
+
+$(BUILD_DIR)/%.o: $(UIO_DRIVER_BLK_DIR)/%.c Makefile
 	$(CC_USERLEVEL) -c $(CFLAGS_LINUX) $< -o $@
 
 $(BUILD_DIR)/uio_blk_driver: $(addprefix $(BUILD_DIR)/, $(UIO_BLK_DRIVER_OBJS))
