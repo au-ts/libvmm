@@ -137,7 +137,7 @@ struct virtio_blk_outhdr {
 #define SDDF_BLK_NUM_HANDLES 1
 #define SDDF_BLK_DEFAULT_HANDLE 0
 /* Maximum number of buffers in sddf data region */
-#define SDDF_MAX_DATA_BUFFERS 4096
+#define SDDF_MAX_DATA_BUFFERS 8192
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
@@ -173,6 +173,7 @@ struct virtio_blk_device {
 
     blk_storage_info_t *storage_info;
     blk_queue_handle_t queue_h;
+    uintptr_t data_region;
     int server_ch;
 };
 
