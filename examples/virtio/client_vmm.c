@@ -19,6 +19,7 @@
 #include <sddf/serial/queue.h>
 #include <serial_config.h>
 #include <sddf/blk/queue.h>
+#include <blk_config.h>
 
 #define GUEST_RAM_SIZE 0x6000000
 
@@ -130,7 +131,7 @@ void init(void)
     blk_queue_init(&blk_queue_h,
                    (blk_req_queue_t *)blk_req_queue,
                    (blk_resp_queue_t *)blk_resp_queue,
-                   BLK_QUEUE_SIZE);
+                   blk_cli_queue_size(microkit_name));
 
     /* Initialise virtIO block device */
     success = virtio_mmio_blk_init(&virtio_blk,
