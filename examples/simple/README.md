@@ -17,6 +17,7 @@ make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+* `maaxboard`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -45,6 +46,7 @@ zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
 Where `<BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
+* `maaxboard`
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh

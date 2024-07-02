@@ -40,9 +40,9 @@
 #elif defined(BOARD_odroidc4)
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_imx8mm_evk_hyp)
+#elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -57,8 +57,10 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_rpi4b_hyp)
 #define SERIAL_IRQ 57
-#elif defined(BOARD_imx8mm_evk_hyp)
-#define SERIAL_IRQ 79
+#elif defined(BOARD_imx8mm_evk)
+#define SERIAL_IRQ 59
+#elif defined(BOARD_imx8mq_evk) || defined(BOARD_maaxboard)
+#define SERIAL_IRQ 58
 #else
 #error Need to define serial interrupt
 #endif
@@ -132,8 +134,8 @@ void notified(microkit_channel ch) {
 }
 
 /*
- * The primary purpose of the VMM after initialisation is to act as a fault-handler,
- * whenever our guest causes an exception, it gets delivered to this entry point for
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
 void fault(microkit_id id, microkit_msginfo msginfo) {

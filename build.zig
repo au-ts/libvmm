@@ -6,9 +6,16 @@ const src = [_][]const u8{
     "src/util/printf.c",
 };
 
+const src_aarch64_vgic_v2 = [_][]const u8{
+    "src/arch/aarch64/vgic/vgic_v2.c",
+};
+
+const src_aarch64_vgic_v3 = [_][]const u8{
+    "src/arch/aarch64/vgic/vgic_v3.c",
+};
+
 const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vgic/vgic.c",
-    "src/arch/aarch64/vgic/vgic_v2.c",
     "src/arch/aarch64/fault.c",
     "src/arch/aarch64/psci.c",
     "src/arch/aarch64/smc.c",
@@ -17,6 +24,14 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/tcb.c",
     "src/arch/aarch64/vcpu.c",
 };
+
+fn vgicSources(board: []const u8) [1][]const u8 {
+    if (std.mem.eql(u8, board, "maaxboard")) {
+        return src_aarch64_vgic_v3;
+    } else {
+        return src_aarch64_vgic_v2;
+    }
+}
 
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
@@ -63,7 +78,7 @@ pub fn build(b: *std.Build) void {
     });
 
     const src_arch = switch (target.result.cpu.arch) {
-        .aarch64 => src_aarch64,
+        .aarch64 => src_aarch64 ++ vgicSources(microkit_board),
         else => {
             std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
             std.posix.exit(1);

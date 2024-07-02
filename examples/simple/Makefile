@@ -62,7 +62,8 @@ SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
 
 IMAGE_DIR := board/$(BOARD)
 LINUX := $(IMAGE_DIR)/linux
-DTS := $(IMAGE_DIR)/linux.dts
+DTS_BASE := $(IMAGE_DIR)/linux.dts
+DTS_OVERLAYS := $(IMAGE_DIR)/overlay.dts
 DTB := $(BUILD_DIR)/linux.dtb
 INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
@@ -71,8 +72,17 @@ ELFS := vmm.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
+V3_BOARDS := maaxboard
+ifeq ($(filter ${BOARD},${V3_BOARDS}),)
+	VGIC := GIC_V2
+	VGIC_OBJS := vgic_v2.o
+else
+	VGIC := GIC_V3
+	VGIC_OBJS := vgic_v3.o
+endif
+
 # @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o vgic_v2.o package_guest_images.o tcb.o vcpu.o
+VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o package_guest_images.o tcb.o vcpu.o $(VGIC_OBJS)
 
 # Toolchain flags
 # FIXME: For optimisation we should consider providing the flag -mcpu.
@@ -111,10 +121,11 @@ qemu: all
 directories:
 	$(shell mkdir -p $(BUILD_DIR))
 
-$(DTB): $(DTS)
+$(DTB): $(DTS_BASE) $(DTS_OVERLAYS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
+	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/guest.dts
 	# @ivanv: Shouldn't supress warnings
-	$(DTC) -q -I dts -O dtb $< > $@
+	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/guest.dts > $@
 
 $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
