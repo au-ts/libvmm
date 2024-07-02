@@ -30,6 +30,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sddf/network/queue.h>
 #include "virtio/mmio.h"
 
 /* The feature bitmap for virtio net */
@@ -64,12 +65,12 @@ struct virtio_net_config {
 	/* The config defining mac address (if VIRTIO_NET_F_MAC) */
 	uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ];
 	/* See VIRTIO_NET_F_STATUS and VIRTIO_NET_S_* above */
-	uint16_t status;
+	// uint16_t status;
 	/* Maximum number of each of transmit and receive queues;
 	 * see VIRTIO_NET_F_MQ and VIRTIO_NET_CTRL_MQ.
 	 * Legal values are between 1 and 0x8000
 	 */
-	uint16_t max_virtqueue_pairs;
+	// uint16_t max_virtqueue_pairs;
 } __attribute__((packed));
 
 /* This header comes first in the scatter-gather list.
@@ -220,8 +221,55 @@ struct virtio_net_ctrl_mq {
 #define VIRTIO_NET_RX_VIRTQ     0
 #define VIRTIO_NET_TX_VIRTQ     1
 
-void virtio_net_init(struct virtio_device *dev,
-                    struct virtio_queue_handler *vqs, size_t num_vqs,
-                    size_t virq,
-                    sddf_handler_t *sddf_handlers);
-void net_client_rx(struct virtio_device *dev);
+// @jade, @ericc: These are sDDF specific, belong in a configuration file elsewhere ideally
+#define SHMEM_NUM_BUFFERS 512
+#define SHMEM_BUF_SIZE 2048
+
+// @jade: I don't know why we need these but the driver seems to care
+typedef enum {
+	ORIGIN_VIRTIO_NET_RX_VIRTQ,
+	ORIGIN_TX_QUEUE,
+} ethernet_buffer_origin_t;
+
+typedef struct ethernet_buffer {
+	/* The acutal underlying memory of the buffer */
+	uintptr_t buffer;
+	/* The physical size of the buffer */
+	size_t size;
+	/* Queue from which the buffer was allocated */
+	char origin;
+	/* Index into buffer_metadata array */
+	unsigned int index;
+	/* in use */
+	bool in_use;
+} ethernet_buffer_t;
+
+struct virtio_net_device {
+    struct virtio_device virtio_device;
+
+    struct virtio_net_config config;
+    struct virtio_queue_handler vqs[VIRTIO_NET_NUM_VIRTQ];
+
+    net_queue_handle_t rx;
+    net_queue_handle_t tx;
+    void *rx_data;
+    void *tx_data;
+    int tx_ch;
+    int rx_ch;
+
+	ethernet_buffer_t buffer_metadata[SHMEM_NUM_BUFFERS * 2];
+};
+
+bool virtio_mmio_net_init(struct virtio_net_device *dev,
+					 uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ],
+                     uintptr_t region_base,
+                     uintptr_t region_size,
+                     size_t virq,
+                     net_queue_handle_t *rx,
+                     net_queue_handle_t *tx,
+                     uintptr_t rx_data,
+                     uintptr_t tx_data,
+                     int rx_ch,
+                     int tx_ch);
+
+void virtio_net_handle_rx(struct virtio_net_device *dev);

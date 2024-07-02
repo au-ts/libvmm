@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+
+#include "microkit.h"
 #include "virtio/config.h"
 #include "virtio/virtq.h"
 #include "virtio/mmio.h"
@@ -11,7 +13,6 @@
 #include "virq.h"
 #include <util/util.h>
 // #include <util/ethernet.h>
-
 #include <sddf/network/queue.h>
 #include <sddf/network/mac802.h>
 
@@ -29,42 +30,15 @@
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
 #define LOG_NET_WRN(...) do{ printf("VIRTIO(NET)|WARNING: "); printf(__VA_ARGS__); }while(0)
 
-// @jade: migth need this after I change the getmac protocol
-// static struct virtio_net_config virtio_net_config;
-
-// @jade, @ericc: These are sDDF specific, belong in a configuration file elsewhere ideally
-#define SHMEM_NUM_BUFFERS 512
-#define SHMEM_BUF_SIZE 2048
-
 // @jade: random number that I picked, maybe a smaller buffer size would be better?
 #define TMP_BUF_SIZE 2048
 
+static bool virtio_net_handle_rx_buffer(struct virtio_device *dev, void *buf, uint32_t size);
 
-// temporary buffer to transmit buffer from this layer to the backend layer
-static char temp_buf[TMP_BUF_SIZE];
-
-// @jade: I don't know why we need these but the driver seems to care
-typedef enum {
-    ORIGIN_VIRTIO_NET_RX_VIRTQ,
-    ORIGIN_TX_QUEUE,
-} ethernet_buffer_origin_t;
-
-typedef struct ethernet_buffer {
-    /* The acutal underlying memory of the buffer */
-    uintptr_t buffer;
-    /* The physical size of the buffer */
-    size_t size;
-    /* Queue from which the buffer was allocated */
-    char origin;
-    /* Index into buffer_metadata array */
-    unsigned int index;
-    /* in use */
-    bool in_use;
-} ethernet_buffer_t;
-
-ethernet_buffer_t buffer_metadata[SHMEM_NUM_BUFFERS * 2];
-
-static bool virtio_net_handle_rx(struct virtio_device *dev, void *buf, uint32_t size);
+static inline struct virtio_net_device *device_state(struct virtio_device *dev)
+{
+    return (struct virtio_net_device *)dev->device_data;
+}
 
 static void debug_dump_packet(int len, uint8_t *buffer)
 {
@@ -82,77 +56,15 @@ static void debug_dump_packet(int len, uint8_t *buffer)
     printf("\n");
 }
 
-static void net_client_get_mac(size_t channel, uint8_t *retval)
+void virtio_net_handle_rx(struct virtio_net_device *state)
 {
-    LOG_NET("operation: get MAC address\n");
-    microkit_ppcall(channel, microkit_msginfo_new(0, 0));
-    uint32_t palr = microkit_mr_get(0);
-    uint32_t paur = microkit_mr_get(1);
+    struct virtio_device *dev = &state->virtio_device;
 
-    retval[5] = paur >> 8 & 0xff;
-    retval[4] = paur & 0xff;
-    retval[3] = palr >> 24;
-    retval[2] = palr >> 16 & 0xff;
-    retval[1] = palr >> 8 & 0xff;
-    retval[0] = palr & 0xff;
-}
-
-// sent packet from this vmm to another
-static bool net_client_tx(struct virtio_device *dev, void *buf, uint32_t size)
-{
     net_buff_desc_t sddf_buffer;
-    // void *cookie;
-
-    net_queue_handle_t *sddf_tx_queue = (net_queue_handle_t *)dev->sddf_handlers[SDDF_NET_TX_HANDLE].queue_h;
-
-    // get a buffer from the free ring
-    int error = net_dequeue_free(sddf_tx_queue, &sddf_buffer);
-    if (error) {
-        LOG_NET_WRN("avail ring is empty\n");
-        return false;
-    }
-    // @jade: what to do if it fails?
-    assert(size <= sddf_buffer.len);
-
-    // @jade: eliminate this copy
-    memcpy((void *)sddf_buffer.io_or_offset, buf, size);
-
-    struct ether_addr *macaddr = (struct ether_addr *)sddf_buffer.io_or_offset;
-    if (macaddr->etype[0] & 0x8) {
-        printf("\"%s\"|VIRTIO MMIO|INFO: outgoing, dest MAC: "PR_MAC802_ADDR", src MAC: "PR_MAC802_ADDR", type: 0x%02x%02x\n",
-                microkit_name, PR_MAC802_DEST_ADDR_ARGS(macaddr), PR_MAC802_SRC_ADDR_ARGS(macaddr),
-                macaddr->etype[0], macaddr->etype[1]);
-        // dump_payload(size - 14, macaddr->payload);
-    }
-    /* insert into the used ring */
-    error = net_enqueue_active(sddf_tx_queue, sddf_buffer);
-    if (error) {
-        printf("\"%s\"|VMM NET CLIENT|INFO: TX used ring full\n", microkit_name);
-        net_enqueue_free(sddf_tx_queue, sddf_buffer);
-        return false;
-    }
-
-    /* notify the other end */
-    microkit_notify(dev->sddf_handlers[SDDF_NET_TX_HANDLE].ch);
-
-    return true;
-}
-
-void net_client_rx(struct virtio_device *dev)
-{
-    net_buff_desc_t sddf_buffer;
-    // void *cookie;
-
-    net_queue_handle_t *sddf_rx_queue = (net_queue_handle_t *)dev->sddf_handlers[SDDF_NET_RX_HANDLE].queue_h;
-
-    while(!net_queue_empty_active(sddf_rx_queue)) {
-        int error = net_dequeue_active(sddf_rx_queue, &sddf_buffer);
-        // RX used ring is empty, this is not suppose to happend!
-        assert(!error);
-
+    while(net_dequeue_active(&state->rx, &sddf_buffer) != -1) {
         // @jade: handle errors
-        virtio_net_handle_rx(dev, (void *)sddf_buffer.io_or_offset, sddf_buffer.len);
-        net_enqueue_active(sddf_rx_queue, sddf_buffer);
+        virtio_net_handle_rx_buffer(dev, (void *)sddf_buffer.io_or_offset, sddf_buffer.len);
+        net_enqueue_active(&state->rx, sddf_buffer);
     }
 }
 
@@ -225,27 +137,22 @@ static int virtio_net_set_driver_features(struct virtio_device *dev, uint32_t fe
 
 static int virtio_net_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
-    // @jade: this function might need a refactor when the virtio net backend starts to
-    // support more features
+    struct virtio_net_device *state = device_state(dev);
     switch (offset) {
         // get mac low
         case REG_RANGE(0x100, 0x104):
         {
-            uint8_t mac[6];
-            net_client_get_mac(dev->sddf_handlers[SDDF_NET_GETMAC_HANDLE].ch, mac);
-            *ret_val = mac[0];
-            *ret_val |= mac[1] << 8;
-            *ret_val |= mac[2] << 16;
-            *ret_val |= mac[3] << 24;
+            *ret_val = state->config.mac[0];
+            *ret_val |= state->config.mac[1] << 8;
+            *ret_val |= state->config.mac[2] << 16;
+            *ret_val |= state->config.mac[3] << 24;
             break;
         }
         // get mac high
         case REG_RANGE(0x104, 0x108):
         {
-            uint8_t mac[6];
-            net_client_get_mac(dev->sddf_handlers[SDDF_NET_GETMAC_HANDLE].ch, mac);
-            *ret_val = mac[4];
-            *ret_val |= mac[5] << 8;
+            *ret_val = state->config.mac[4];
+            *ret_val |= state->config.mac[5] << 8;
             break;
         }
         default:
@@ -261,93 +168,139 @@ static int virtio_net_set_device_config(struct virtio_device *dev, uint32_t offs
     return 0;
 }
 
-/* notify the guest VM that we successfully delivered their packet */
-static void virtio_net_tx_complete(struct virtio_device *dev, uint16_t desc_head)
+static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t bytes_written)
 {
-        // set the reason of the irq
-        dev->data.InterruptStatus = BIT_LOW(0);
+    struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
+    used_elem->id = desc_head;
+    used_elem->len = bytes_written;
+    virtq->used->idx++;
+}
 
-        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-        // we can't inject irqs?? panic.
-        assert(success);
+static void virtio_net_respond(struct virtio_device *dev)
+{
+    dev->data.InterruptStatus = BIT_LOW(0);
+    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
+    assert(success);
+}
 
-        //add to useds
-        struct virtq *virtq = &dev->vqs[VIRTIO_NET_TX_VIRTQ].virtq;
+static void handle_tx_msg(struct virtio_device *dev,
+                          struct virtq *virtq,
+                          uint16_t desc_head,
+                          bool *notify_tx_server,
+                          bool *respond_to_client)
+{
+    struct virtio_net_device *state = device_state(dev);
 
-        struct virtq_used_elem used_elem = {desc_head, 0};
-        uint16_t guest_idx = virtq->used->idx;
+    net_buff_desc_t sddf_buffer;
+    int error = net_dequeue_free(&state->tx, &sddf_buffer);
+    if (error) {
+        LOG_NET_WRN("avail ring is empty\n");
+        goto fail;
+    }
 
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
+    void *dest_buf = state->tx_data + sddf_buffer.io_or_offset;
+
+    uint32_t written = 0;
+    uint32_t dest_remaining = sddf_buffer.len;
+
+    /* we want to skip the initial virtio header, as this should
+     * not be sent to the actual ethernet driver. This records
+     * how much we have skipped so far. */
+    uint32_t skip_remaining = sizeof(struct virtio_net_hdr_mrg_rxbuf);
+
+    struct virtq_desc *desc = &virtq->desc[desc_head];
+
+    while (dest_remaining > 0) {
+        uint32_t skipping = 0;
+        /* work out how much of this descriptor must be skipped */
+        skipping = MIN(skip_remaining, desc->len);
+        /* truncate packets that are large than BUF_SIZE */
+        uint32_t writing = MIN(dest_remaining, desc->len - skipping);
+
+        memcpy(dest_buf + written, (void *)desc->addr + skipping, writing);
+
+        skip_remaining -= skipping;
+        written += writing;
+        dest_remaining -= writing;
+
+        if (desc->flags & VIRTQ_DESC_F_NEXT) {
+            desc = &virtq->desc[desc->next];
+        } else {
+            break;
+        }
+    }
+
+    error = net_enqueue_active(&state->tx, sddf_buffer);
+    if (error) {
+        printf("\"%s\"|VMM NET CLIENT|INFO: TX used ring full\n", microkit_name);
+        // TODO: This is not safe as you can't have two produces.
+        // Use internal queue instead
+        // Also need to respond with some sort of error message.
+        net_enqueue_free(&state->tx, sddf_buffer);
+        goto fail;
+    }
+
+    virtq_enqueue_used(virtq, desc_head, written);
+    *respond_to_client = true;
+    *notify_tx_server = true;
+    return;
+
+fail:
+    virtq_enqueue_used(virtq, desc_head, 0);
+    *respond_to_client = true;
 }
 
 /* handle queue notify from the guest VM */
-static int virtio_net_queue_notify_tx(struct virtio_device *dev)
+static int virtio_net_queue_notify(struct virtio_device *dev)
 {
-    struct virtq *virtq = &dev->vqs[VIRTIO_NET_TX_VIRTQ].virtq;
+    struct virtio_net_device *state = device_state(dev);
+
+    if (dev->data.QueueSel != VIRTIO_NET_TX_VIRTQ) {
+        LOG_NET_ERR("Invalid queue\n");
+        return 0;
+    }
+
+    virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_TX_VIRTQ];
+    struct virtq *virtq = &vq->virtq;
 
     /* read the current guest index */
     uint16_t guest_idx = virtq->avail->idx;
-    uint16_t idx = dev->vqs[VIRTIO_NET_TX_VIRTQ].last_idx;
+    uint16_t idx = vq->last_idx;
+
+    bool notify_tx_server = false;
+    bool respond_to_client = false;
 
     for (; idx != guest_idx; idx++) {
-        /* read the head of the descriptor chain */
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-
-        /* byte written */
-        uint32_t written = 0;
-
-        /* we want to skip the initial virtio header, as this should
-         * not be sent to the actual ethernet driver. This records
-         * how much we have skipped so far. */
-        uint32_t skipped = 0;
-
-        uint16_t curr_desc_head = desc_head;
-
-        do {
-            uint32_t skipping = 0;
-            /* if we haven't yet skipped the full virtio net header, work
-             * out how much of this descriptor should be skipped */
-            if (skipped < sizeof(struct virtio_net_hdr_mrg_rxbuf)) {
-                skipping = MIN(sizeof(struct virtio_net_hdr_mrg_rxbuf) - skipped, virtq->desc[curr_desc_head].len);
-                skipped += skipping;
-            }
-
-            /* truncate packets that are large than BUF_SIZE */
-            uint32_t writing = MIN(TMP_BUF_SIZE - written, virtq->desc[curr_desc_head].len - skipping);
-
-            // TODO(@jade): we want to eliminate this copy
-            memcpy(temp_buf + written, (void *)virtq->desc[curr_desc_head].addr + skipping, writing);
-            written += writing;
-            curr_desc_head = virtq->desc[curr_desc_head].next;
-        } while (virtq->desc[curr_desc_head].flags & VIRTQ_DESC_F_NEXT);
-
-        /* ship the buffer to the next layer */
-        int success = net_client_tx(dev, temp_buf, written);
-        if (!success) {
-            LOG_NET_ERR("VirtIO Net failed to deliver packet for the guest\n.");
-        }
-
-        virtio_net_tx_complete(dev, desc_head);
+        handle_tx_msg(dev, virtq, desc_head, &notify_tx_server, &respond_to_client);
     }
 
-    dev->vqs[VIRTIO_NET_TX_VIRTQ].last_idx = idx;
+    vq->last_idx = idx;
+
+    if (notify_tx_server) {
+        microkit_notify(state->tx_ch);
+    }
+    if (respond_to_client) {
+        virtio_net_respond(dev);
+    }
 
     return 1;
 }
 
 // handle rx from client
-static bool virtio_net_handle_rx(struct virtio_device *dev, void *buf, uint32_t size)
+static bool virtio_net_handle_rx_buffer(struct virtio_device *dev, void *buf, uint32_t size)
 {
     if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
         // vq is not initialised, drop the packet
         return false;
     }
-    struct virtq *virtq = &dev->vqs[VIRTIO_NET_RX_VIRTQ].virtq;
+
+    virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_RX_VIRTQ];
+    struct virtq *virtq = &vq->virtq;
 
     /* grab the next receive chain */
     uint16_t guest_idx = virtq->avail->idx;
-    uint16_t idx = dev->vqs[VIRTIO_NET_RX_VIRTQ].last_idx;
+    uint16_t idx = vq->last_idx;
 
     if (idx == guest_idx) {
         // vq is full or not fully initialised (in this case idx and guest_idx are both 0s), drop the packet
@@ -418,22 +371,12 @@ static bool virtio_net_handle_rx(struct virtio_device *dev, void *buf, uint32_t 
         copied += sizeof(struct virtio_net_hdr_mrg_rxbuf);
     }
     /* now put it in the used ring */
-    struct virtq_used_elem used_elem = {desc_head, copied};
-    uint16_t used_idx = virtq->used->idx;
-
-    virtq->used->ring[used_idx % virtq->num] = used_elem;
-    virtq->used->idx++;
+    virtq_enqueue_used(virtq, desc_head, (uint32_t)copied);
 
     /* record that we've used this descriptor chain now */
-    dev->vqs[VIRTIO_NET_RX_VIRTQ].last_idx++;
+    vq->last_idx++;
 
-    // set the reason of the irq
-    dev->data.InterruptStatus = BIT_LOW(0);
-
-    // notify the guest
-    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    assert(success);
-
+    virtio_net_respond(dev);
     return true;
 }
 
@@ -443,18 +386,39 @@ static virtio_device_funs_t functions = {
     .set_driver_features = virtio_net_set_driver_features,
     .get_device_config = virtio_net_get_device_config,
     .set_device_config = virtio_net_set_device_config,
-    .queue_notify = virtio_net_queue_notify_tx,
+    .queue_notify = virtio_net_queue_notify,
 };
 
-void virtio_net_init(struct virtio_device *dev,
-                         struct virtio_queue_handler *vqs, size_t num_vqs,
-                         size_t virq,
-                         sddf_handler_t *sddf_handlers) {
-    dev->data.DeviceID = DEVICE_ID_VIRTIO_NET;
+bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
+                     uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ],
+                     uintptr_t region_base,
+                     uintptr_t region_size,
+                     size_t virq,
+                     net_queue_handle_t *rx,
+					 net_queue_handle_t *tx,
+                     uintptr_t rx_data,
+                     uintptr_t tx_data,
+                     int rx_ch,
+                     int tx_ch)
+{
+    struct virtio_device *dev = &net_dev->virtio_device;
+
+    dev->data.DeviceID = DEVICE_ID_VIRTIO_SOUND;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = net_dev->vqs;
+    dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_handlers = sddf_handlers;
+    dev->device_data = net_dev;
+
+    memcpy(net_dev->config.mac, mac, VIRTIO_NET_CONFIG_MAC_SZ);
+
+    net_dev->rx = *rx;
+    net_dev->tx = *tx;
+    net_dev->rx_data = (void *)rx_data;
+    net_dev->tx_data = (void *)tx_data;
+    net_dev->rx_ch = rx_ch;
+    net_dev->tx_ch = tx_ch;
+
+    return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
