@@ -185,7 +185,7 @@ int virtio_console_handle_rx(struct virtio_console_device *console)
             char c;
             while (bytes_written < desc.len && !serial_dequeue(&console->rxq, &console->rxq.queue->head, &c)) {
                 *(char *)(desc.addr + bytes_written) = c;
-                bytes_written ++;
+                bytes_written++;
             }
 
             struct virtq_used_elem used_elem = {desc_head, bytes_written};
