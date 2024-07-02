@@ -6,6 +6,7 @@
         alsa-lib
       ];
       nativeInputs = with pkgs; [
+        llvm
         dtc
         qemu
         patchelf
