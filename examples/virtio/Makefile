@@ -114,9 +114,15 @@ CLIENT_VM_2_DTB := $(BUILD_DIR)/client_vm_2.dtb
 SDDF_BLK_COMPONENTS := $(SDDF_DIR)/blk/components
 SDDF_BLK_UTIL := $(SDDF_DIR)/blk/util
 
-SDDF_SERIAL_DRIVER_qemu_arm_virt := $(SDDF_DIR)/drivers/serial/arm
-SDDF_SERIAL_DRIVER_odroidc4 := $(SDDF_DIR)/drivers/serial/meson
-SDDF_SERIAL_DRIVER := ${SDDF_SERIAL_DRIVER_${BOARD}}
+ifeq ($(strip $(BOARD)), odroidc4)
+	export UART_DRIVER_DIR := meson
+else ifeq ($(strip $(BOARD)), qemu_arm_virt)
+	export UART_DRIVER_DIR := arm
+else
+$(error Unsupported BOARD given)
+endif
+SDDF_SERIAL_DRIVER := $(SDDF_DIR)/drivers/serial/$(UART_DRIVER_DIR)
+
 SERIAL_CONFIG_INCLUDE:= include/serial_config
 
 ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
