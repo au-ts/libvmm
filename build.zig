@@ -78,7 +78,10 @@ pub fn build(b: *std.Build) void {
     };
 
     // Libmicrokit
-    const libmicrokit_include = b.fmt("{s}/include", .{ microkit_board_dir });
+    const libmicrokit_path = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script_path = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const libmicrokit_include_path = b.fmt("{s}/include", .{ microkit_board_dir });
+    const libmicrokit_include = LazyPath{ .cwd_relative = libmicrokit_include_path };
 
     // libvmm static ibrary
     const libvmm = b.addStaticLibrary(.{
@@ -111,14 +114,14 @@ pub fn build(b: *std.Build) void {
     libvmm.addIncludePath(b.path("src/virtio"));
     libvmm.addIncludePath(b.path("src/arch/aarch64"));
     libvmm.addIncludePath(b.path("src/arch/aarch64/vgic/"));
-    libvmm.addIncludePath(.{ .cwd_relative = libmicrokit_include });
+    libvmm.addIncludePath(libmicrokit_include);
 
     const sddf_dep = b.dependency("sddf", .{
         .target = target,
         .optimize = optimize,
-        .sdk = microkit_sdk_option,
-        .config = @as([]const u8, @tagName(microkit_config_option)),
-        .board = @as([]const u8, @tagName(microkit_board_option)),
+        .libmicrokit = @as([]const u8, libmicrokit_path),
+        .libmicrokit_include = @as([]const u8, libmicrokit_include_path),
+        .libmicrokit_linker_script = @as([]const u8, libmicrokit_linker_script_path)
     });
     libvmm.addIncludePath(sddf_dep.path("include"));
     libvmm.installHeadersDirectory(b.path("src"), "", .{});

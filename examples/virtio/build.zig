@@ -187,7 +187,7 @@ fn addVmm(
     // TODO: Expose only the headers, however can't get the headers to be installed into
     // zig-out .header directory when it is not an artifact/module.
     // vmm.addIncludePath(LazyPath{ .cwd_relative = b.getInstallPath(.header, "sddf") });
-    vmm.linkLibrary(sddf_dep.artifact("sddf_util"));
+    vmm.linkLibrary(sddf_dep.artifact("util"));
     vmm.linkLibrary(libvmm);
 
     vmm.addCSourceFile(.{
@@ -307,10 +307,13 @@ pub fn build(b: *Build) void {
     }
 
     // Libmicrokit
+    const libmicrokit_path = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
+    const libmicrokit_linker_script_path = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
+    const libmicrokit_include_path = b.fmt("{s}/include", .{ microkit_board_dir });
     const microkit_tool = LazyPath{ .cwd_relative = b.fmt("{s}/bin/microkit", .{ microkit_sdk_option }) };
-    libmicrokit = LazyPath{ .cwd_relative = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir }) };
-    libmicrokit_linker_script = LazyPath{ .cwd_relative = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir }) };
-    libmicrokit_include = LazyPath{ .cwd_relative = b.fmt("{s}/include", .{ microkit_board_dir }) };
+    libmicrokit = LazyPath{ .cwd_relative = libmicrokit_path };
+    libmicrokit_linker_script = LazyPath{ .cwd_relative = libmicrokit_linker_script_path };
+    libmicrokit_include = LazyPath{ .cwd_relative = libmicrokit_include_path };
     
     // Target
     const target = b.resolveTargetQuery(findTarget(microkit_board_option));
@@ -326,9 +329,11 @@ pub fn build(b: *Build) void {
     sddf_dep = b.dependency("sddf", .{
         .target = target,
         .optimize = optimize,
-        .sdk = microkit_sdk_option,
-        .config = @as([]const u8, @tagName(microkit_config_option)),
-        .board = @as([]const u8, @tagName(microkit_board_option)),
+        .libmicrokit = @as([]const u8, libmicrokit_path),
+        .libmicrokit_include = @as([]const u8, libmicrokit_linker_script_path),
+        .libmicrokit_linker_script = @as([]const u8, libmicrokit_include_path),
+        .blk_num_clients = @as(u32, 2),
+        .serial_config_include = @as([]const u8, "include/serial_config.h"),
     });
 
     // Tools
