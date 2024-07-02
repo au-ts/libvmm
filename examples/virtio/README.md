@@ -4,9 +4,20 @@ This example shows off the virtIO support that libvmm provides using the
 [seL4 Device Driver Framework](https://github.com/au-ts/sddf) to talk to the
 actual hardware.
 
-The system has two Linux guests that are exactly the same, but we have separate sets of
-Linux images and initrd for both to ease experimentation when you want to only modify
-a single client.
+This example makes use of the following virtIO devices emulated by libvmm:
+* console
+* block
+
+The console device is emulated by using a native driver for the hardware's UART
+device from sDDF.
+
+The block device is emulated by a virtualised driver in a separate Linux
+virtual machine.
+
+The system has two Linux guests that act as clients of the virtIO devices.
+They are the same and have the same resources, but have separate sets of
+Linux images and root file systems to ease experimentation when you only
+wish to modify a single client.
 
 The example currently works on the following platforms:
 * QEMU ARM virt
@@ -94,6 +105,7 @@ local storage device. The ramdisk file supplied to QEMU is formatted during buil
 time to contain a FAT filesystem for both partitions.
 
 ### Hardware set up
-When running on the odroidc4, the system expects to read and write from the SD card.
-You will need to format the SD card yourself on the odroidc4 system.
+
+When running on one of the supported hardware platforms, the system expects to read
+and write from the SD card. You will need to format the SD card prior to booting.
 
