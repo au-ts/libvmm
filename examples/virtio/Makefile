@@ -32,6 +32,9 @@ DTC := dtc
 CC := clang
 CC_USERLEVEL := zig cc
 LD := ld.lld
+AR := llvm-ar
+RANLIB := llvm-ranlib
+
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 # @ivanv: need to have a step for putting in the initrd node into the DTB,
@@ -239,9 +242,6 @@ directories:
 	$(shell mkdir -p $(BUILD_DIR)/serial)
 
 SDDF_LIB_UTIL_DBG_OBJS := cache.o sddf_printf.o newlibc.o assert.o putchar_debug.o bitarray.o fsmalloc.o
-
-AR := llvm-ar
-RANLIB := llvm-ranlib
 
 $(BUILD_DIR)/libsddf_util_debug.a: $(addprefix ${BUILD_DIR}/util/, ${SDDF_LIB_UTIL_DBG_OBJS})
 	${AR} rv $@ $^
