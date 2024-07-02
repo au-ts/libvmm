@@ -153,30 +153,38 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
         vq->last_idx++;
     }
 
-    dev->data.InterruptStatus = BIT_LOW(0);
-    // @ivanv: The virq_inject API is poor as it expects a vCPU ID even though
-    // it doesn't matter for the case of SPIs, which is what virtIO devices use.
-    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    assert(success);
+    /* While unlikely, it is possible that we could not consume any of the
+     * available data. In this case we do not set the IRQ status. */
+    if (transferred) {
+        dev->data.InterruptStatus = BIT_LOW(0);
+        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
+        assert(success);
 
-    if (transferred && serial_require_producer_signal(&console->txq)) {
-        serial_cancel_producer_signal(&console->txq);
-        microkit_notify(console->tx_ch);
+        if (serial_require_producer_signal(&console->txq)) {
+            serial_cancel_producer_signal(&console->txq);
+            microkit_notify(console->tx_ch);
+        }
+
+        return success;
     }
 
-    return success;
+    return true;
 }
 
 int virtio_console_handle_rx(struct virtio_console_device *console)
 {
-    // @ivanv: revisit this whole function, it works but is very hacky.
     LOG_CONSOLE("operation: handle rx\n");
     assert(console->virtio_device.num_vqs > RX_QUEUE);
+
+    /* Used to know whether to set the IRQ status. */
+    bool transferred = false;
+
     bool reprocess = true;
     while (reprocess) {
         struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
         while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
+            transferred = true;
 
             uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
             struct virtq_desc desc = vq->virtq.desc[desc_head];
@@ -204,14 +212,17 @@ int virtio_console_handle_rx(struct virtio_console_device *console)
         }
     }
 
-    // @ivanv: is setting interrupt status necessary?
-    console->virtio_device.data.InterruptStatus = BIT_LOW(0);
-    bool success = virq_inject(GUEST_VCPU_ID, console->virtio_device.virq);
-    assert(success);
+    /* While unlikely, it is possible that we could not consume any of the
+     * available data. In this case we do not set the IRQ status. */
+    if (transferred) {
+        console->virtio_device.data.InterruptStatus = BIT_LOW(0);
+        bool success = virq_inject(GUEST_VCPU_ID, console->virtio_device.virq);
+        assert(success);
 
-    // @ivanv: error handle for release mode
+        return success;
+    }
 
-    return -1;
+    return true;
 }
 
 virtio_device_funs_t functions = {
