@@ -88,14 +88,19 @@ pub fn build(b: *std.Build) void {
     const microkit_tool = b.fmt("{s}/bin/microkit", .{ microkit_sdk });
     const libmicrokit = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
     const libmicrokit_linker_script = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
-    const sdk_board_include_dir = b.fmt("{s}/include", .{ microkit_board_dir });
+    const libmicrokit_include = b.fmt("{s}/include", .{ microkit_board_dir });
+
+    const arm_vgic_version: usize = switch (microkit_board_option.?) {
+        .qemu_arm_virt, .odroidc4 => 2,
+        .maaxboard => 3,
+    };
 
     const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
-        .sdk = microkit_sdk,
-        .config = @as([]const u8, microkit_config),
-        .board = @as([]const u8, microkit_board),
+        .libmicrokit_include = @as([]const u8, libmicrokit_include),
+        .arm_vgic_version = arm_vgic_version,
+        .microkit_board = @as([]const u8, microkit_board),
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
@@ -125,7 +130,7 @@ pub fn build(b: *std.Build) void {
     const dtb = dtc_cmd.captureStdOut();
 
     // Add microkit.h to be used by the API wrapper.
-    exe.addIncludePath(.{ .cwd_relative = sdk_board_include_dir });
+    exe.addIncludePath(.{ .cwd_relative = libmicrokit_include });
     exe.addIncludePath(libvmm_dep.path("src"));
     // @ivanv: shouldn't need to do this! fix our includes
     exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
