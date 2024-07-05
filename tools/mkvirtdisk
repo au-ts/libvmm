@@ -68,8 +68,6 @@ done
 echo w # Write changes
 } | fdisk $DISK_IMAGE
 
-fdisk -l $DISK_IMAGE
-
 # Create the FAT filesystem
 rm -f $BUILD_DIR/fat.img
 mkfs.fat -C $BUILD_DIR/fat.img $(( (FS_COUNT * FDISK_LSIZE) / 1024 ))
