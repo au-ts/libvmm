@@ -4,4 +4,4 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-/root/uio_blk_driver /dev/mmcblk0 &
+/root/uio_driver_blk /dev/mmcblk0 &
