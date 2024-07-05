@@ -1,0 +1,17 @@
+.{
+    .name = "virtio",
+    .version = "1.0.0",
+
+    .dependencies = .{
+        .libvmm = .{
+            .path = "../../"
+        },
+        .sddf = .{
+            .path = "../../dep/sddf"
+        }
+    },
+    .paths = .{
+        ""
+    }
+}
+
