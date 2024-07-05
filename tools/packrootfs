@@ -4,6 +4,8 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
+set -e
+
 if [ $# -lt 2 ]; then
     echo "Usage: $0 <rootfs> <tmpdir> [-o output_rootfs] [--startup files...] [--home files...] [--etc files...]"
     exit 1
