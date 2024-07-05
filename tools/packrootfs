@@ -96,4 +96,4 @@ fi
 ({
     gunzip -dc "$rootfs";
     cd "$tmpdir" && find . | cpio -o -H newc
-} | gzip > "$final_output_path")
+} | gzip > "$final_output_path") 2>/dev/null
