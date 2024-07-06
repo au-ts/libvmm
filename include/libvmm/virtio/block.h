@@ -33,10 +33,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <libvmm/virtio/mmio.h>
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
 #include <sddf/blk/queue.h>
-#include "virtio/mmio.h"
 
 /* Feature bits */
 #define VIRTIO_BLK_F_SIZE_MAX       1   /* Indicates maximum segment size */

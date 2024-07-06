@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "hsr.h"
-#include "../../util/util.h"
-#include "smc.h"
-#include "vgic/vgic.h"
-#include "tcb.h"
-#include "vcpu.h"
-#include "fault.h"
+#include <libvmm/util/util.h>
+#include <libvmm/tcb.h>
+#include <libvmm/vcpu.h>
+#include <libvmm/arch/aarch64/hsr.h>
+#include <libvmm/arch/aarch64/smc.h>
+#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
 
 // #define CPSR_THUMB                 (1 << 5)
 // #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)

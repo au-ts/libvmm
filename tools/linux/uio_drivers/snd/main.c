@@ -1,6 +1,6 @@
 #include "log.h"
 #include "stream.h"
-#include "util/atomic.h"
+#include <libvmm/util/atomic.h>
 #include <uio/sound.h>
 #include <sddf/sound/queue.h>
 #include <assert.h>

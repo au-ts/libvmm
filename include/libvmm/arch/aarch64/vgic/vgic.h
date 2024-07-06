@@ -8,7 +8,7 @@
 #include <microkit.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "../../../virq.h"
+#include <libvmm/virq.h>
 
 // @ivanv: this should all come from the DTS!
 // @ivanv: either this should all be compile time or all runtime

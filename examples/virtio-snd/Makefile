@@ -36,14 +36,14 @@ RANLIB := llvm-ranlib
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-VMM := ../../
-VMM_TOOLS := $(VMM)/tools
-VMM_SRC_DIR := $(VMM)/src
+LIBVMM := $(abspath ../../)
+LIBVMM_TOOLS := $(LIBVMM)/tools
+LIBVMM_SRC_DIR := $(LIBVMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/virtio-snd.system
 
 CURRENT_DIR := $(shell pwd)
 
-LINUX_DIR := $(VMM_TOOLS)/linux
+LINUX_DIR := $(LIBVMM_TOOLS)/linux
 LINUX_SND_DIR := $(LINUX_DIR)/snd
 UIO_DRIVERS_DIR := $(LINUX_DIR)/uio_drivers
 
@@ -148,7 +148,8 @@ CFLAGS := -mstrict-align \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -I$(LIBVMM)/include \
+		  -I$(BOARD_DIR)/include \
 		  -I$(SDDF_SERIAL_DRIVER)/include \
 		  -I$(SDDF_DIR)/include \
 		  -I$(SERIAL_CONFIG_INCLUDE) \
@@ -163,7 +164,7 @@ CFLAGS_USERLEVEL :=	-g \
 		  			-Wall -Wno-unused-function -Werror \
 					-I$(SDDF_DIR) \
 					-I$(SDDF_DIR)/include \
-					-I$(VMM_SRC_DIR) \
+					-I$(LIBVMM)/include \
 					-I$(LINUX_DIR)/include \
 					-DBOARD_$(BOARD) \
 					-lasound \
@@ -226,14 +227,14 @@ SND_DRIVER_VM_ETC := $(LINUX_SND_DIR)/board/$(BOARD)/asound.conf
 $(SND_DRIVER_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) \
 								  $(SND_DRIVER_VM_USERLEVEL_INIT) \
 								  $(SND_DRIVER_VM_ETC)
-	$(VMM_TOOLS)/packrootfs $(SND_DRIVER_VM_INITRD) $(SND_DRIVER_VM_ROOTFS_TMP_DIR) -o $(SND_DRIVER_VM_INITRD_OVERLAYED) \
+	$(LIBVMM_TOOLS)/packrootfs $(SND_DRIVER_VM_INITRD) $(SND_DRIVER_VM_ROOTFS_TMP_DIR) -o $(SND_DRIVER_VM_INITRD_OVERLAYED) \
 							--startup $(SND_DRIVER_VM_USERLEVEL_INIT) \
 							--home $(addprefix $(BUILD_DIR)/, $(SND_DRIVER_VM_USERLEVEL_ELFS)) \
 							--etc $(SND_DRIVER_VM_ETC)
 	
 $(CLIENT_VM_INITRD_OVERLAYED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS)) \
 								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_INITRD) $(CLIENT_VM_ROOTFS_TMP_DIR) -o $(CLIENT_VM_INITRD_OVERLAYED) \
+	$(LIBVMM_TOOLS)/packrootfs $(CLIENT_VM_INITRD) $(CLIENT_VM_ROOTFS_TMP_DIR) -o $(CLIENT_VM_INITRD_OVERLAYED) \
 							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_ELFS))
 
 
@@ -241,7 +242,7 @@ $(SND_DRIVER_VM_DTB): $(SND_DRIVER_VM_BASE_DTS) $(SND_DRIVER_VM_DTS_OVERLAYS)
 	sh ../../tools/dtscat $^ > $(BUILD_DIR)/snd_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/snd_driver_vm.dts > $@
 
-$(BUILD_DIR)/snd_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(SND_DRIVER_VM_LINUX) $(SND_DRIVER_VM_DTB) $(SND_DRIVER_VM_INITRD_OVERLAYED)
+$(BUILD_DIR)/snd_driver_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(SND_DRIVER_VM_LINUX) $(SND_DRIVER_VM_DTB) $(SND_DRIVER_VM_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(SND_DRIVER_VM_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(SND_DRIVER_VM_DTB)\" \
@@ -253,7 +254,7 @@ $(CLIENT_VM_DTB): $(CLIENT_VM_BASE_DTS) $(CLIENT_VM_DTS_OVERLAYS)
 	sh ../../tools/dtscat $^ > $(BUILD_DIR)/client_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm.dts > $@
 
-$(BUILD_DIR)/client_images.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LINUX) $(CLIENT_VM_DTB) $(CLIENT_VM_INITRD_OVERLAYED)
+$(BUILD_DIR)/client_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(CLIENT_VM_LINUX) $(CLIENT_VM_DTB) $(CLIENT_VM_INITRD_OVERLAYED)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_DTB)\" \
@@ -276,19 +277,19 @@ $(BUILD_DIR)/%.elf: $(VM_USERLEVEL_DIR)/%.c
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/util/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sound_%.o: $(SDDF_SOUND_COMPONENTS)/%.c Makefile

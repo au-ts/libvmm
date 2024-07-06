@@ -55,9 +55,9 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-VMM := ../../
-VMM_TOOLS := $(VMM)/tools
-VMM_SRC_DIR := $(VMM)/src
+LIBVMM := $(abspath ../../)
+LIBVMM_TOOLS := $(LIBVMM)/tools
+LIBVMM_SRC_DIR := $(LIBVMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
 
 IMAGE_DIR := board/$(BOARD)
@@ -72,8 +72,8 @@ ELFS := vmm.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
 REPORT_FILE = $(BUILD_DIR)/report.txt
 
-V3_BOARDS := maaxboard
-ifeq ($(filter ${BOARD},${V3_BOARDS}),)
+GIC_V3_BOARDS := maaxboard
+ifeq ($(filter ${BOARD},${GIC_V3_BOARDS}),)
 	VGIC := GIC_V2
 	VGIC_OBJS := vgic_v2.o
 else
@@ -98,7 +98,7 @@ CFLAGS := -mstrict-align \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -I$(LIBVMM)/include -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -123,11 +123,11 @@ directories:
 
 $(DTB): $(DTS_BASE) $(DTS_OVERLAYS)
 	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
-	sh $(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/guest.dts
+	sh $(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/guest.dts
 	# @ivanv: Shouldn't supress warnings
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/guest.dts > $@
 
-$(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
+$(BUILD_DIR)/package_guest_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
@@ -138,16 +138,16 @@ $(BUILD_DIR)/package_guest_images.o: $(VMM_TOOLS)/package_guest_images.S $(IMAGE
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/util/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))

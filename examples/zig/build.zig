@@ -80,20 +80,17 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addAnonymousImport("linux", .{ .root_source_file = b.path("images/linux") });
     exe.root_module.addAnonymousImport("rootfs", .{ .root_source_file = b.path("images/rootfs.cpio.gz") });
 
+    exe.addIncludePath(b.path("src/"));
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .cwd_relative = libmicrokit_include });
-    exe.addIncludePath(libvmm_dep.path("src"));
-    // @ivanv: shouldn't need to do this! fix our includes
-    exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .cwd_relative = libmicrokit });
-    exe.linkLibrary(libvmm);
     exe.addObject(zig_libmicrokit);
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .cwd_relative = libmicrokit_linker_script });
 
-    exe.addIncludePath(b.path("src/"));
+    exe.linkLibrary(libvmm);
 
     b.installArtifact(exe);
 

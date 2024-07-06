@@ -35,14 +35,13 @@
  *         will never occur again.
  */
 
-#include "vgic.h"
-
 #include <stdint.h>
 
-#include "../fault.h"
-#include "virq.h"
-#include "vgic_v3.h"
-#include "vdist.h"
+#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
+#include <libvmm/arch/aarch64/vgic/virq.h>
+#include <libvmm/arch/aarch64/vgic/vgic_v3.h>
+#include <libvmm/arch/aarch64/vgic/vdist.h>
 
 vgic_t vgic;
 

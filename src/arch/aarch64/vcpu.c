@@ -5,8 +5,8 @@
  */
 
 #include <microkit.h>
-#include "util.h"
-#include "vcpu.h"
+#include <libvmm/vcpu.h>
+#include <libvmm/util/util.h>
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
                                            and IC IVAU in AArch64 state   */

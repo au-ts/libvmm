@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "../../util/util.h"
-#include "dtb.h"
-#include "linux.h"
+#include <libvmm/dtb.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/linux.h>
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t kernel,

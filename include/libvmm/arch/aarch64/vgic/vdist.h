@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "fault.h"
-#include "util.h"
+#include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/fault.h>
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))
