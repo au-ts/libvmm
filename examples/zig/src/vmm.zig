@@ -3,11 +3,9 @@
 
 const std = @import("std");
 const c = @cImport({
-    @cInclude("linux.h");
-    @cInclude("virq.h");
-    @cInclude("guest.h");
-    @cInclude("vcpu.h");
-    @cInclude("tcb.h");
+    @cInclude("libvmm/virq.h");
+    @cInclude("libvmm/guest.h");
+    @cInclude("libvmm/arch/aarch64/linux.h");
 });
 const microkit = @import("libmicrokit.zig");
 

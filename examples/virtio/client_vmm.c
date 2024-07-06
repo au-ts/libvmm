@@ -6,19 +6,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
-#include <util.h>
-#include <linux.h>
-#include <fault.h>
-#include <guest.h>
-#include <virq.h>
-#include <tcb.h>
-#include <vcpu.h>
-#include <virtio/virtio.h>
-#include <virtio/console.h>
-#include <virtio/block.h>
+#include <libvmm/guest.h>
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/virtio.h>
+#include <libvmm/arch/aarch64/linux.h>
+#include <libvmm/arch/aarch64/fault.h>
 #include <sddf/serial/queue.h>
-#include <serial_config.h>
 #include <sddf/blk/queue.h>
+#include <serial_config.h>
 #include <blk_config.h>
 
 #define GUEST_RAM_SIZE 0x6000000

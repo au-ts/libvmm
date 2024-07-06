@@ -131,15 +131,14 @@ pub fn build(b: *std.Build) void {
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(.{ .cwd_relative = libmicrokit_include });
-    exe.addIncludePath(libvmm_dep.path("src"));
-    // @ivanv: shouldn't need to do this! fix our includes
-    exe.addIncludePath(libvmm_dep.path("src/arch/aarch64"));
     // Add the static library that provides each protection domain's entry
     // point (`main()`), which runs the main handler loop.
     exe.addObjectFile(.{ .cwd_relative = libmicrokit });
-    exe.linkLibrary(libvmm);
     // Specify the linker script, this is necessary to set the ELF entry point address.
     exe.setLinkerScriptPath(.{ .cwd_relative = libmicrokit_linker_script });
+
+    // Link the libvmm library, this will automatically add the libvmm headers as well.
+    exe.linkLibrary(libvmm);
 
     exe.addCSourceFiles(.{
         .files = &.{"vmm.c"},

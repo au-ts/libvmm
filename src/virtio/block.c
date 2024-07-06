@@ -1,15 +1,15 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/virtio/virtq.h>
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/block.h>
 #include <sddf/blk/queue.h>
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
-#include "virtio/config.h"
-#include "virtio/virtq.h"
-#include "virtio/mmio.h"
-#include "virtio/block.h"
-#include "virq.h"
-#include "util.h"
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_BLOCK

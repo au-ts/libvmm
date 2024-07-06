@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#include <libvmm/util/util.h>
 
 /**
  * Generic fixed-size circular queue

@@ -6,7 +6,6 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <stddef.h>
 
-void vcpu_reset(size_t vcpu_id);
-void vcpu_print_regs(size_t vcpu_id);
+void tcb_print_regs(size_t vcpu_id);

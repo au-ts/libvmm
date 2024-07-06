@@ -1,7 +1,7 @@
 #include <microkit.h>
-#include "util/util.h"
-#include "vcpu.h"
-#include "guest.h"
+#include <libvmm/vcpu.h>
+#include <libvmm/guest.h>
+#include <libvmm/util/util.h>
 
 bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd) {
     /*

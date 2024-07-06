@@ -1,9 +1,9 @@
-#include "sound.h"
-#include "config.h"
-#include "microkit.h"
-#include "virq.h"
-#include "virtio/mmio.h"
-#include "virtio/virtq.h"
+#include <microkit.h>
+#include <libvmm/virq.h>
+#include <libvmm/virtio/sound.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtq.h>
 #include <sddf/sound/queue.h>
 
 // #define DEBUG_SOUND
