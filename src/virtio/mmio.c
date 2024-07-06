@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
-#include "util.h"
-#include "fault.h"
-#include "virq.h"
-#include "virtio/config.h"
-#include "virtio/mmio.h"
-#include "virtio/virtq.h"
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtq.h>
+#include <libvmm/arch/aarch64/fault.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO

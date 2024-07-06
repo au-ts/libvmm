@@ -6,8 +6,8 @@
 #pragma once
 
 #include <stdint.h>
-#include "util.h"
-#include "virtio/virtq.h"
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/virtq.h>
 
 // table 4.1
 #define VIRTIO_MMIO_DEV_MAGIC               0x74726976 // "virt"

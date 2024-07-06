@@ -1,8 +1,8 @@
-#include "virtio/config.h"
-#include "virtio/mmio.h"
-#include "virtio/console.h"
-#include "virq.h"
-#include "util.h"
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/console.h>
 #include <sddf/serial/queue.h>
 
 /* Uncomment this to enable debug logging */

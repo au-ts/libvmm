@@ -6,11 +6,11 @@
  */
 
 #include <stdbool.h>
-#include "psci.h"
-#include "smc.h"
-#include "fault.h"
-#include "../../util/util.h"
-#include "../../guest.h"
+#include <libvmm/guest.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/psci.h>
+#include <libvmm/arch/aarch64/smc.h>
+#include <libvmm/arch/aarch64/fault.h>
 
 /*
  * The PSCI version is represented by a 32-bit unsigned integer.

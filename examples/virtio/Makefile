@@ -46,14 +46,14 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 # @ivanv: incremental builds don't work with IMAGE_DIR changing
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-VMM := ../..
-VMM_TOOLS := $(VMM)/tools
-VMM_SRC_DIR := $(VMM)/src
+LIBVMM := $(abspath ../..)
+LIBVMM_TOOLS := $(LIBVMM)/tools
+LIBVMM_SRC_DIR := $(LIBVMM)/src
 SYSTEM_DESCRIPTION := board/$(BOARD)/virtio.system
 
 CURRENT_DIR := $(shell pwd)
 
-LINUX_DIR := $(VMM_TOOLS)/linux
+LINUX_DIR := $(LIBVMM_TOOLS)/linux
 LINUX_BLK_DIR := $(LINUX_DIR)/blk
 LINUX_BLK_BOARD_DIR := $(LINUX_BLK_DIR)/board/$(BOARD)
 
@@ -195,8 +195,9 @@ CFLAGS := -mstrict-align \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(VMM_SRC_DIR)/arch/aarch64 -I$(VMM_SRC_DIR) -I$(VMM_SRC_DIR)/util -I$(BOARD_DIR)/include \
+		  -I$(BOARD_DIR)/include \
 		  -I$(SDDF_DIR)/include \
+		  -I$(LIBVMM)/include \
 		  -I$(VMM_INCLUDE) \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
@@ -268,40 +269,40 @@ $(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c
 	${CC} ${CFLAGS} -o $@ -c $<
 
 $(BUILD_DIR)/storage:
-	$(VMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
+	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
 # Unpack rootfs, put the userlevel in /root and userlevel_init in /etc/init.d/S99, repack rootfs
 $(BLK_DRIVER_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL)) \
 								  $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(BLK_DRIVER_VM_INITRD) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) -o $(BLK_DRIVER_VM_INITRD_MODIFIED) \
+	$(LIBVMM_TOOLS)/packrootfs $(BLK_DRIVER_VM_INITRD) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) -o $(BLK_DRIVER_VM_INITRD_MODIFIED) \
 							--startup $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL))
 	
 $(CLIENT_VM_1_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL)) \
 								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_1_INITRD) $(CLIENT_VM_1_ROOTFS_TMP_DIR) -o $(CLIENT_VM_1_INITRD_MODIFIED) \
+	$(LIBVMM_TOOLS)/packrootfs $(CLIENT_VM_1_INITRD) $(CLIENT_VM_1_ROOTFS_TMP_DIR) -o $(CLIENT_VM_1_INITRD_MODIFIED) \
 							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_1_USERLEVEL))
 	
 $(CLIENT_VM_2_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL)) \
 								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_INIT))
-	$(VMM_TOOLS)/packrootfs $(CLIENT_VM_2_INITRD) $(CLIENT_VM_2_ROOTFS_TMP_DIR) -o $(CLIENT_VM_2_INITRD_MODIFIED) \
+	$(LIBVMM_TOOLS)/packrootfs $(CLIENT_VM_2_INITRD) $(CLIENT_VM_2_ROOTFS_TMP_DIR) -o $(CLIENT_VM_2_INITRD_MODIFIED) \
 							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_2_USERLEVEL))
 
 $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
-	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
+	$(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
 
 $(CLIENT_VM_1_DTB): $(CLIENT_VM_1_BASE_DTS) $(CLIENT_VM_1_DTS_OVERLAYS)
-	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
+	$(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_1.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_1.dts > $@
 
 $(CLIENT_VM_2_DTB): $(CLIENT_VM_2_BASE_DTS) $(CLIENT_VM_2_DTS_OVERLAYS)
-	$(VMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
+	$(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/client_vm_2.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/client_vm_2.dts > $@
 
-$(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_MODIFIED)
+$(BUILD_DIR)/blk_driver_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(BLK_DRIVER_VM_LINUX) $(BLK_DRIVER_VM_DTB) $(BLK_DRIVER_VM_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(BLK_DRIVER_VM_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(BLK_DRIVER_VM_DTB)\" \
@@ -309,7 +310,7 @@ $(BUILD_DIR)/blk_driver_images.o: $(VMM_TOOLS)/package_guest_images.S $(BLK_DRIV
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_MODIFIED)
+$(BUILD_DIR)/client_images_1.o: $(LIBVMM_TOOLS)/package_guest_images.S $(CLIENT_VM_1_LINUX) $(CLIENT_VM_1_DTB) $(CLIENT_VM_1_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_1_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_1_DTB)\" \
@@ -317,7 +318,7 @@ $(BUILD_DIR)/client_images_1.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 					-target aarch64-none-elf \
 					$< -o $@
 
-$(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_2_LINUX) $(CLIENT_VM_2_DTB) $(CLIENT_VM_2_INITRD_MODIFIED)
+$(BUILD_DIR)/client_images_2.o: $(LIBVMM_TOOLS)/package_guest_images.S $(CLIENT_VM_2_LINUX) $(CLIENT_VM_2_DTB) $(CLIENT_VM_2_INITRD_MODIFIED)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM_2_LINUX)\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$(CLIENT_VM_2_DTB)\" \
@@ -328,19 +329,19 @@ $(BUILD_DIR)/client_images_2.o: $(VMM_TOOLS)/package_guest_images.S $(CLIENT_VM_
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/util/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(VMM_SRC_DIR)/virtio/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/virtio/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile

@@ -10,7 +10,7 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "printf.h"
+#include <libvmm/util/printf.h>
 
 // @ivanv: these are here for convience, should not be here though
 #define GUEST_VCPU_ID 0

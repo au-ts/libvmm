@@ -1,7 +1,7 @@
 #include <microkit.h>
-#include "vgic/vgic.h"
-#include "../../util/util.h"
-#include "../../virq.h"
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
 
 /* Maps Microkit channel numbers with registered vIRQ */
 int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};

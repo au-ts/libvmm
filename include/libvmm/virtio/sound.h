@@ -27,10 +27,10 @@
 #pragma once
 
 #include <stdint.h>
+#include <libvmm/util/queue.h>
+#include <libvmm/virtio/mmio.h>
 #include <sddf/sound/queue.h>
 #include <sddf/util/ialloc.h>
-#include "virtio/mmio.h"
-#include "util/queue.h"
 
 #define VIRTIO_SND_NUM_VIRTQ 4
 

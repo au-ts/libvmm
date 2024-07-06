@@ -1,8 +1,9 @@
 #pragma once
-#include "mmio.h"
-#include "block.h"
-#include "console.h"
-#include "sound.h"
+
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/block.h>
+#include <libvmm/virtio/console.h>
+#include <libvmm/virtio/sound.h>
 
 /*
  * All terminology used and functionality of the virtIO device implementation
