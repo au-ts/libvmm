@@ -1,5 +1,3 @@
-include config.mk
-
 QEMU := qemu-system-aarch64
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
@@ -61,6 +59,8 @@ ${CHECK_FLAGS_BOARD_MD5}:
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
+
+-include vmm.d
 
 ${IMAGES}: libsddf_util_debug.a libvmm.a
 

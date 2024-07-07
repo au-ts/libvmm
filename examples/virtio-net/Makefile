@@ -47,18 +47,18 @@ export LD := ld.ldd
 export AS := llvm-as
 export AR := llvm-ar
 export DTC := dtc
-# export RANLIB := $(TOOLCHAIN)-ranlib
+export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF=$(abspath ../../dep/sddf)
 export VMM=$(abspath ../../)
 
-# IMAGE_FILE := $(BUILD_DIR)/loader.img
-# REPORT_FILE := $(BUILD_DIR)/report.txt
+IMAGE_FILE := $(BUILD_DIR)/loader.img
+REPORT_FILE := $(BUILD_DIR)/report.txt
 
-configure:: ${BUILD_DIR}/Makefile
+all: ${IMAGE_FILE}
 
 qemu ${IMAGE_FILE} ${REPORT_FILE} clean clobber: ${BUILD_DIR}/Makefile FORCE
-# {MAKE} -C ${BUILD_DIR} MICROKIT_SDK=${MICROKIT_SDK} $(notdir $@)
+	${MAKE} -C ${BUILD_DIR} MICROKIT_SDK=${MICROKIT_SDK} $(notdir $@)
 
 ${BUILD_DIR}/Makefile: virtio_net.mk
 	mkdir -p ${BUILD_DIR}
