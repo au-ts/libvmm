@@ -17,13 +17,13 @@ SYSTEM_FILE := $(SYSTEM_DIR)/virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-vpath %.c $(SDDF) $(VMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
+vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
 include $(SDDF)/util/util.mk
 include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include $(BLK_COMPONENTS)/blk_components.mk
-include $(VMM)/vmm.mk
+include $(LIBVMM)/vmm.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
 	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
@@ -38,9 +38,7 @@ CFLAGS := \
 	  -DCONFIG_$(MICROKIT_CONFIG) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
-	  -I$(VMM)/src \
-	  -I$(VMM)/src/arch/aarch64 \
-	  -I$(VMM)/src/util \
+	  -I$(LIBVMM)/include \
 	  -I$(VIRTIO_EXAMPLE)/include \
 	  -I$(SDDF)/$(LWIPDIR)/include \
 	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
@@ -74,15 +72,15 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 
 # TODO: sort out userlevel scripts & build userlevel processes
 client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz
-	$(VMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm/rootfs -o $@ \
+	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm/rootfs -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL) \
 		--home $(CLIENT_VM_USERLEVEL)
 
 # %_vm/rootfs.cpio.gz: %_vm $(SYSTEM_DIR)/%_vm/rootfs.cpio.gz
-# 	$(VMM)/tools/packrootfs $(SYSTEM_DIR)/$</rootfs.cpio.gz $</rootfs -o $@
+# 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/$</rootfs.cpio.gz $</rootfs -o $@
 
 %_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(shell find $(SYSTEM_DIR)/%_vm -name "*.dts" -not -name "linux.dts")
-	$(VMM)/tools/dtscat $^ > $@
+	$(LIBVMM)/tools/dtscat $^ > $@
 
 %_vm/vm.dtb: %_vm/vm.dts %_vm
 	$(DTC) -q -I dts -O dtb $< > $@
@@ -90,13 +88,13 @@ client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz
 %_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) %_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%_vm/images.o: %_vm $(VMM)/tools/package_guest_images.S $(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
+%_vm/images.o: %_vm $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$</linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$</vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"$</rootfs.cpio.gz\" \
 					-target $(TARGET) \
-					$(VMM)/tools/package_guest_images.S -o $@
+					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 # Stop make from deleting intermediate files
 client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
