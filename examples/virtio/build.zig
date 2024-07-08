@@ -1,4 +1,5 @@
 const std = @import("std");
+const libvmm_mod = @import("libvmm");
 const Build = std.Build;
 const LazyPath = Build.LazyPath;
 const Tuple = std.meta.Tuple;
@@ -49,10 +50,6 @@ var microkit_board: MicrokitBoard = undefined;
 var libvmm_dep: *Build.Dependency = undefined;
 var sddf_dep: *Build.Dependency = undefined;
 
-var dtscat: LazyPath = undefined;
-var mkvirtdisk: LazyPath = undefined;
-var packrootfs: LazyPath = undefined;
-
 // TODO: Util function, move this elsewhere
 fn fileExists(path: []const u8) bool {
     std.fs.cwd().access(path, .{}) catch return false;
@@ -69,81 +66,6 @@ fn findTarget(board: MicrokitBoard) std.Target.Query {
     std.posix.exit(1);
 }
 
-fn dtscatCmd(
-    b: *Build,
-    base: LazyPath,
-    overlays: []const LazyPath
-) Tuple(&.{*Build.Step.Run, LazyPath}) {
-    const cmd = Build.Step.Run.create(b, "run dtscat");
-    cmd.addFileArg(dtscat);
-    cmd.addFileArg(base);
-    for (overlays) |overlay| {
-        cmd.addFileArg(overlay);
-    }
-    const output = cmd.captureStdOut();
-    return .{cmd, output};
-}
-
-fn dtcCmd(
-    b: *Build,
-    dts: LazyPath
-) Tuple(&.{*Build.Step.Run, LazyPath}) {
-    const cmd = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-q", "-I", "dts", "-O", "dtb"
-    });
-    cmd.addFileArg(dts);
-    const output = cmd.captureStdOut();
-    return .{cmd, output};
-}
-
-fn packrootfsCmd(   
-    b: *Build, 
-    rootfs_base: LazyPath,
-    rootfs_tmp: []const u8,
-    rootfs_name: []const u8,
-    home_files: []const LazyPath,
-    startup_files: []const LazyPath,
-) Tuple(&.{*Build.Step.Run, LazyPath})  
-{
-    // TODO: Investigate why WF is not working
-    // const rootfs_wf = b.addWriteFiles();
-    // const output = rootfs_wf.getDirectory().path(b, rootfs_name);
-    // const tmp = rootfs_wf.getDirectory().path(b, "tmp");
-    const cmd = Build.Step.Run.create(b, "run packrootfs");
-    cmd.addFileArg(packrootfs);
-    cmd.addFileArg(rootfs_base);
-    cmd.addArg(rootfs_tmp);
-    cmd.addArg("-o");
-    const output = cmd.addOutputFileArg(rootfs_name);
-    cmd.addArg("--home");
-    for (home_files) |file| {
-        cmd.addFileArg(file);
-    }
-    cmd.addArg("--startup");
-    for (startup_files) |file| {
-        cmd.addFileArg(file);
-    }
-    return .{cmd, output};
-}
-
-fn mkvirtdiskCmd(
-    b: *Build,
-    num_part: usize,
-    logical_size: usize,
-    blk_mem: usize,
-) Tuple(&.{*Build.Step.Run, LazyPath}) {
-    const num_part_str = b.fmt("{d}", .{ num_part });
-    const logical_size_str = b.fmt("{d}", .{ logical_size });
-    const blk_mem_str = b.fmt("{d}", .{ blk_mem });
-    const cmd = Build.Step.Run.create(b, "run mkvirtdisk");
-    cmd.addFileArg(mkvirtdisk);
-    // TODO: Investigate another way to do this, don't use /tmp?
-    const virtdisk = cmd.addOutputFileArg("/tmp/virtdisk");
-    cmd.addArg(num_part_str);
-    cmd.addArg(logical_size_str);
-    cmd.addArg(blk_mem_str);
-    return .{cmd, virtdisk};
-}
 
 fn addPd(b: *Build, options: Build.ExecutableOptions) *Build.Step.Compile {
     const pd = b.addExecutable(options);
@@ -194,10 +116,10 @@ fn addVmm(
     const dts_name = b.fmt("{s}_{s}.dts", .{@tagName(microkit_board), vm_name});
     const dtb_name = b.fmt("{s}_{s}.dtb", .{@tagName(microkit_board), vm_name});
 
-    _, const dts = dtscatCmd(b, dts_base, dts_overlays);
+    _, const dts = libvmm_mod.dtscat(b, dts_base, dts_overlays);
     const dts_install_step = &b.addInstallFileWithDir(dts, .prefix, dts_name).step;
 
-    const dtc_cmd, const dtb = dtcCmd(b, dts);
+    const dtc_cmd, const dtb = libvmm_mod.compileDts(b, dts);
     dtc_cmd.step.dependOn(dts_install_step);
     const dtb_install_step = &b.addInstallFileWithDir(dtb, .prefix, dtb_name).step;
 
@@ -209,7 +131,7 @@ fn addVmm(
 
     // TODO: figure out how to put a directory of files as a dependency. For now
     // we don't check for changes in the files that are packed together
-    _, const rootfs = packrootfsCmd(
+    _, const rootfs = libvmm_mod.packrootfs(
         b,
         rootfs_base,
         rootfs_tmpdir_path,
@@ -304,6 +226,7 @@ pub fn build(b: *Build) void {
     const target = b.resolveTargetQuery(findTarget(microkit_board));
     
     // Dependencies
+    std.debug.print("{s}\n", .{ libmicrokit_include_path });
     libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
@@ -323,12 +246,6 @@ pub fn build(b: *Build) void {
         .blk_config_include = @as([]const u8, "include"),
         .serial_config_include = @as([]const u8, "include")
     });
-
-    // Tools
-    // TODO: Expose these tools via a better way?
-    dtscat = libvmm_dep.path("tools/dtscat");
-    mkvirtdisk = libvmm_dep.path("tools/mkvirtdisk");
-    packrootfs = libvmm_dep.path("tools/packrootfs");
 
     // Blk driver VMM artifact
     const blk_driver_src_file = b.path("blk_driver_vmm.c");
@@ -464,7 +381,7 @@ pub fn build(b: *Build) void {
         const num_part = 2;
         const logical_size = 512;
         const blk_mem = 2101248;
-        _, virtdisk = mkvirtdiskCmd(b, num_part, logical_size, blk_mem);
+        _, virtdisk = libvmm_mod.mkvirtdisk(b, num_part, logical_size, blk_mem);
         made_virtdisk = true;
     } else {
         made_virtdisk = false;
