@@ -374,11 +374,14 @@ pub fn build(b: *Build) void {
     // Create virtual disk if it doesn't exist or if the user wants to create a new one
     const made_virtdisk = blk: {
         if (mkvirtdisk_option or !fileExists(b.getInstallPath(.prefix, virtdisk_name))) {
-            // TODO: Make these configurable options
+            // Depends on the number of clients, right now we always have two clients.
             const num_part = 2;
-            const logical_size = 512;
-            const blk_mem = 2101248;
-            _, virtdisk = libvmm_mod.mkvirtdisk(b, num_part, logical_size, blk_mem);
+            // Configurable for the user
+            // Default to 512 bytes
+            const logical_size = b.option(usize, "virtdisk_logical_size", "Logical size for the virtual disk") orelse 512;
+            // Default to 2MB
+            const capacity = b.option(usize, "virtdisk_capacity", "Capacity of the virtual disk (in bytes)") orelse 2 * 1024 * 1024;
+            _, virtdisk = libvmm_mod.mkvirtdisk(b, num_part, logical_size, capacity);
             break :blk true;
         } else {
             break :blk false;
