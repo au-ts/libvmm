@@ -24,12 +24,14 @@
 #define BLK_QUEUE_REGION_SIZE_CLI1          BLK_REGION_SIZE
 #define BLK_QUEUE_REGION_SIZE_DRIV          BLK_REGION_SIZE
 
-_Static_assert(BLK_DATA_REGION_SIZE_CLI0 >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_CLI0 % BLK_TRANSFER_SIZE == 0,
+_Static_assert(BLK_DATA_REGION_SIZE_CLI0 >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_CLI0 % BLK_TRANSFER_SIZE == 0,
                "Client0 data region size must be a multiple of the transfer size");
-_Static_assert(BLK_DATA_REGION_SIZE_CLI1 >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_CLI1 % BLK_TRANSFER_SIZE == 0,
+_Static_assert(BLK_DATA_REGION_SIZE_CLI1 >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_CLI1 % BLK_TRANSFER_SIZE == 0,
                "Client1 data region size must be a multiple of the transfer size");
-_Static_assert(BLK_DATA_REGION_SIZE_DRIV >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_DRIV % BLK_TRANSFER_SIZE == 0,
+_Static_assert(BLK_DATA_REGION_SIZE_DRIV >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_DRIV % BLK_TRANSFER_SIZE == 0,
                "Driver data region size must be a multiple of the transfer size");
+
+static const int blk_partition_mapping[BLK_NUM_CLIENTS] = { 0, 1 };
 
 static inline blk_storage_info_t *blk_virt_cli_config_info(blk_storage_info_t *info, unsigned int id)
 {
@@ -86,7 +88,7 @@ static inline blk_resp_queue_t *blk_virt_cli_resp_queue(blk_resp_queue_t *resp, 
         return resp;
     case 1:
         return (blk_resp_queue_t *)((uintptr_t)resp + BLK_QUEUE_REGION_SIZE_CLI0);
-    default: 
+    default:
         return NULL;
     }
 }

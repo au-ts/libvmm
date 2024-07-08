@@ -92,8 +92,8 @@ build_virtio() {
     mkdir -p ${BUILD_DIR}
     make -C examples/virtio -B \
         BUILD_DIR=${BUILD_DIR} \
-        CONFIG=${CONFIG} \
-        BOARD=${BOARD} \
+        MICROKIT_CONFIG=${CONFIG} \
+        MICROKIT_BOARD=${BOARD} \
         MICROKIT_SDK=${SDK_PATH}
 }
 
