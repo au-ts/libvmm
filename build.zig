@@ -161,27 +161,22 @@ pub fn build(b: *std.Build) void {
         //     std.posix.exit(1);
         // }
     };
-    libvmm.addCSourceFiles(.{
-        .files = src_arch,
-        .flags = &.{
+
+    const libvmm_flags = &.{
             "-Wall",
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
             "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
             b.fmt("-DBOARD_{s}", .{ microkit_board_opt }) // @ivanv: shouldn't be needed as the library should not depend on the board
-        }
-    });
+    };
     libvmm.addCSourceFiles(.{
         .files = &src,
-        .flags = &.{
-            "-Wall",
-            "-Werror",
-            "-Wno-unused-function",
-            "-mstrict-align",
-            "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
-            b.fmt("-DBOARD_{s}", .{ microkit_board_opt }) // @ivanv: shouldn't be needed as the library should not depend on the board
-        }
+        .flags = libvmm_flags,
+    });
+    libvmm.addCSourceFiles(.{
+        .files = src_arch,
+        .flags = libvmm_flags,
     });
 
     libvmm.addIncludePath(b.path("include"));

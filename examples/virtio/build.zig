@@ -221,12 +221,11 @@ pub fn build(b: *Build) void {
     libmicrokit = LazyPath{ .cwd_relative = libmicrokit_path };
     libmicrokit_linker_script = LazyPath{ .cwd_relative = libmicrokit_linker_script_path };
     libmicrokit_include = LazyPath{ .cwd_relative = libmicrokit_include_path };
-    
+
     // Target
     const target = b.resolveTargetQuery(findTarget(microkit_board));
-    
+
     // Dependencies
-    std.debug.print("{s}\n", .{ libmicrokit_include_path });
     libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
