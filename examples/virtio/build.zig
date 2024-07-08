@@ -128,17 +128,20 @@ fn packrootfsCmd(
 
 fn mkvirtdiskCmd(
     b: *Build,
-    num_part: []const u8,
-    logical_size: []const u8,
-    blk_mem: []const u8
+    num_part: usize,
+    logical_size: usize,
+    blk_mem: usize,
 ) Tuple(&.{*Build.Step.Run, LazyPath}) {
+    const num_part_str = b.fmt("{d}", .{ num_part });
+    const logical_size_str = b.fmt("{d}", .{ logical_size });
+    const blk_mem_str = b.fmt("{d}", .{ blk_mem });
     const cmd = Build.Step.Run.create(b, "run mkvirtdisk");
     cmd.addFileArg(mkvirtdisk);
     // TODO: Investigate another way to do this, don't use /tmp?
     const virtdisk = cmd.addOutputFileArg("/tmp/virtdisk");
-    cmd.addArg(num_part);
-    cmd.addArg(logical_size);
-    cmd.addArg(blk_mem);
+    cmd.addArg(num_part_str);
+    cmd.addArg(logical_size_str);
+    cmd.addArg(blk_mem_str);
     return .{cmd, virtdisk};
 }
 
@@ -187,7 +190,6 @@ fn addVmm(
             b.fmt("-DBOARD_{s}", .{ @tagName(microkit_board) })
         }
     });
-
     // Generate DTB
     const dts_name = b.fmt("{s}_{s}.dts", .{@tagName(microkit_board), vm_name});
     const dtb_name = b.fmt("{s}_{s}.dtb", .{@tagName(microkit_board), vm_name});
@@ -285,11 +287,11 @@ pub fn build(b: *Build) void {
 
     // mkvirtdisk option
     var mkvirtdisk_option: bool = undefined;
-    if (microkit_board == MicrokitBoard.qemu_arm_virt) {
+    if (microkit_board == .qemu_arm_virt) {
         mkvirtdisk_option = b.option(bool, "mkvirtdisk", "Create a new virtual disk image") orelse false;
     }
 
-    // Libmicrokit
+    // libmicrokit
     const libmicrokit_path = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
     const libmicrokit_linker_script_path = b.fmt("{s}/lib/microkit.ld", .{ microkit_board_dir });
     const libmicrokit_include_path = b.fmt("{s}/include", .{ microkit_board_dir });
@@ -411,8 +413,8 @@ pub fn build(b: *Build) void {
 
     // UART driver artifact
     const uart_driver = switch (microkit_board) {
-        MicrokitBoard.qemu_arm_virt => sddf_dep.artifact("driver_uart_arm.elf"),
-        MicrokitBoard.odroidc4 => sddf_dep.artifact("driver_uart_meson.elf"),
+        .qemu_arm_virt => sddf_dep.artifact("driver_uart_arm.elf"),
+        .odroidc4 => sddf_dep.artifact("driver_uart_meson.elf"),
     };
     const uart_driver_install = b.addInstallArtifact(uart_driver, .{ .dest_sub_path = "uart_driver.elf" });
     b.getInstallStep().dependOn(&uart_driver_install.step);
@@ -459,9 +461,9 @@ pub fn build(b: *Build) void {
     // Create virtual disk if it doesn't exist or if the user wants to create a new one
     if (mkvirtdisk_option or !fileExists(b.getInstallPath(.prefix, virtdisk_name))) {
         // TODO: Make these configurable options
-        const num_part = "2";
-        const logical_size = "512";
-        const blk_mem = "2101248";
+        const num_part = 2;
+        const logical_size = 512;
+        const blk_mem = 2101248;
         _, virtdisk = mkvirtdiskCmd(b, num_part, logical_size, blk_mem);
         made_virtdisk = true;
     } else {
@@ -471,7 +473,7 @@ pub fn build(b: *Build) void {
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
     const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
-    if (microkit_board == MicrokitBoard.qemu_arm_virt) {
+    if (microkit_board == .qemu_arm_virt) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",

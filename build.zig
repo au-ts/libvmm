@@ -90,6 +90,7 @@ pub fn build(b: *std.Build) void {
     });
 
     libvmm.addIncludePath(b.path("include"));
+    libvmm.addIncludePath(sddf_dep.path("include"));
     libvmm.addIncludePath(.{ .cwd_relative = libmicrokit_include });
     libvmm.linkLibrary(sddf_dep.artifact("util"));
     libvmm.linkLibrary(sddf_dep.artifact("util_putchar_debug"));
@@ -124,6 +125,5 @@ pub fn build(b: *std.Build) void {
     uio_driver_blk.addIncludePath(b.path("tools/linux/include"));
     uio_driver_blk.addIncludePath(blk_config_include);
     uio_driver_blk.addIncludePath(sddf_dep.path("include"));
-
     b.installArtifact(uio_driver_blk);
 }
