@@ -6,8 +6,8 @@
 # Snippet to build libvmm.a, to be included in a full-system Makefile.
 # Needs the variable LionsOS to point to the top of the LionsOS tree.
 #
-V3_BOARDS := BOARD_imx8mm_evk
-ifeq ($(filter ${MICROKIT_BOARD},${V3_BOARDS}),)
+GIC_V3_BOARDS := imx8mm_evk maaxboard
+ifeq ($(filter ${MICROKIT_BOARD},${GIC_V3_BOARDS}),)
 	VGIC := GIC_V2
 	VGIC_FILES := src/arch/aarch64/vgic/vgic_v2.c
 else
