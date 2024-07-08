@@ -35,7 +35,6 @@ CFLAGS := \
 	  -Wno-unused-function \
 	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
-	  -DCONFIG_$(MICROKIT_CONFIG) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
 	  -I$(LIBVMM)/include \
