@@ -1,157 +1,46 @@
 #
-# Copyright 2021, Breakaway Consulting Pty. Ltd.
-# Copyright 2022, UNSW (ABN 57 195 873 179)
+# Copyright 2024, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
+BUILD_DIR ?= build
+export MICROKIT_CONFIG ?= debug
+
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
+export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 
-ifeq ($(strip $(BOARD)),)
-$(error BOARD must be specified)
+ifeq ($(strip $(MICROKIT_BOARD)),)
+$(error MICROKIT_BOARD must be specified)
 endif
 
-# Default build directory, pass BUILD_DIR=<dir> to override
-BUILD_DIR ?= build
-# Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
-CONFIG ?= debug
+export BUILD_DIR:=$(abspath $(BUILD_DIR))
+export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
+export EXAMPLE_DIR:=$(abspath .)
 
-# @ivanv: Check for dependencies and make sure they are installed/in the path
+export TARGET := aarch64-none-elf
+export CC := clang
+export LD := ld.lld
+export AS := llvm-as
+export AR := llvm-ar
+export DTC := dtc
+export RANLIB := llvm-ranlib
+export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
+export SDDF=$(abspath ../../dep/sddf)
+export LIBVMM=$(abspath ../../)
 
-# @ivanv: check that all dependencies exist
-# Specify that we use bash for all shell commands
-SHELL=/bin/bash
-# All dependencies needed to compile the VMM
-QEMU := qemu-system-aarch64
-DTC := dtc
+IMAGE_FILE := $(BUILD_DIR)/loader.img
+REPORT_FILE := $(BUILD_DIR)/report.txt
 
-# ifndef TOOLCHAIN
-# 	# Get whether the common toolchain triples exist
-# 	TOOLCHAIN_AARCH64_LINUX_GNU := $(shell command -v aarch64-linux-gnu-gcc 2> /dev/null)
-# 	TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU := $(shell command -v aarch64-unknown-linux-gnu-gcc 2> /dev/null)
-# 	# Then check if they are defined and select the appropriate one
-# 	ifdef TOOLCHAIN_AARCH64_LINUX_GNU
-# 		TOOLCHAIN := aarch64-linux-gnu
-# 	else ifdef TOOLCHAIN_AARCH64_UNKNOWN_LINUX_GNU
-# 		TOOLCHAIN := aarch64-unknown-linux-gnu
-# 	else
-# 		$(error "Could not find an AArch64 cross-compiler")
-# 	endif
-# endif
+all: $(IMAGE_FILE)
 
-CC := clang
-LD := ld.lld
-MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
+qemu $(IMAGE_FILE) $(REPORT_FILE) clean clobber: $(BUILD_DIR)/Makefile FORCE
+	$(MAKE) -C $(BUILD_DIR) MICROKIT_SDK=$(MICROKIT_SDK) $(notdir $@)
 
-# @ivanv: need to have a step for putting in the initrd node into the DTB,
-# 		  right now it is unfortunately hard-coded.
+$(BUILD_DIR)/Makefile: simple.mk
+	mkdir -p $(BUILD_DIR)
+	cp simple.mk $@
 
-# @ivanv: check that the path of SDK_PATH/BOARD exists
-# @ivanv: Have a list of supported boards to check with, if it's not one of those
-# have a helpful message that lists all the support boards.
-
-# @ivanv: incremental builds don't work with IMAGE_DIR changing
-
-BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-LIBVMM := $(abspath ../../)
-LIBVMM_TOOLS := $(LIBVMM)/tools
-LIBVMM_SRC_DIR := $(LIBVMM)/src
-SYSTEM_DESCRIPTION := board/$(BOARD)/simple.system
-
-IMAGE_DIR := board/$(BOARD)
-LINUX := $(IMAGE_DIR)/linux
-DTS_BASE := $(IMAGE_DIR)/linux.dts
-DTS_OVERLAYS := $(IMAGE_DIR)/overlay.dts
-DTB := $(BUILD_DIR)/linux.dtb
-INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
-
-ELFS := vmm.elf
-
-IMAGE_FILE = $(BUILD_DIR)/loader.img
-REPORT_FILE = $(BUILD_DIR)/report.txt
-
-GIC_V3_BOARDS := maaxboard
-ifeq ($(filter ${BOARD},${GIC_V3_BOARDS}),)
-	VGIC := GIC_V2
-	VGIC_OBJS := vgic_v2.o
-else
-	VGIC := GIC_V3
-	VGIC_OBJS := vgic_v3.o
-endif
-
-# @ivanv: should only compile printf.o in debug
-VMM_OBJS := vmm.o printf.o virq.o linux.o guest.o psci.o smc.o fault.o util.o vgic.o package_guest_images.o tcb.o vcpu.o $(VGIC_OBJS)
-
-# Toolchain flags
-# FIXME: For optimisation we should consider providing the flag -mcpu.
-# FIXME: We should also consider whether -mgeneral-regs-only should be
-# used to avoid the use of the FPU and therefore seL4 does not have to
-# context switch the FPU.
-# Note we only need -Wno-unused-command-line-argument because in Nix
-# passes an extra `--gcc-toolchain` flag which we do not need.
-CFLAGS := -mstrict-align \
-		  -g3 \
-		  -O3 \
-		  -ffreestanding \
-		  -nostdlib \
-		  -Wno-unused-command-line-argument \
-		  -Wall -Wno-unused-function -Werror \
-		  -I$(LIBVMM)/include -I$(BOARD_DIR)/include \
-		  -DBOARD_$(BOARD) \
-		  -DCONFIG_$(CONFIG) \
-		  -target aarch64-none-elf
-
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := -lmicrokit -Tmicrokit.ld
-
-all: directories $(IMAGE_FILE)
-
-qemu: all
-	# @ivanv: check that the amount of RAM given to QEMU is at least the number of RAM that QEMU is setup with for seL4.
-	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
-			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
-			-m size=2G \
-			-nographic
-
-directories:
-	$(shell mkdir -p $(BUILD_DIR))
-
-$(DTB): $(DTS_BASE) $(DTS_OVERLAYS)
-	if ! command -v $(DTC) &> /dev/null; then echo "Could not find dependency: Device Tree Compiler (dtc)"; exit 1; fi
-	sh $(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/guest.dts
-	# @ivanv: Shouldn't supress warnings
-	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/guest.dts > $@
-
-$(BUILD_DIR)/package_guest_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(IMAGE_DIR) $(LINUX) $(INITRD) $(DTB)
-	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(LINUX)\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$(DTB)\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$(INITRD)\" \
-					-target aarch64-none-elf \
-					$< -o $@
-
-$(BUILD_DIR)/%.o: %.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/util/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(LIBVMM_SRC_DIR)/arch/aarch64/vgic/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/vmm.elf: $(addprefix $(BUILD_DIR)/, $(VMM_OBJS))
-	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) $(IMAGE_DIR)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+FORCE:
