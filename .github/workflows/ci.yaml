@@ -1,7 +1,5 @@
 name: CI
 
-# @ivanv: TODO, should minisign Zig downloads
-
 on:
   pull_request:
   push:
