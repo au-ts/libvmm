@@ -11,20 +11,20 @@ The example currently works on the following platforms:
 ## Building with Make
 
 ```sh
-make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
+make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
-Where `<BOARD>` is one of:
+Where `<MICROKIT_BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
 * `maaxboard`
 
-Other configuration options can be passed to the Makefile such as `CONFIG`
+Other configuration options can be passed to the Makefile such as `MICROKIT_CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
+make MICROKIT_BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
@@ -40,10 +40,10 @@ This example expects to be built with Zig 0.13.*.
 You can download Zig [here](https://ziglang.org/download/).
 
 ```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<BOARD>
+zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD>
 ```
 
-Where `<BOARD>` is one of:
+Where `<MICROKIT_BOARD>` is one of:
 * `qemu_arm_virt`
 * `odroidc4`
 * `maaxboard`
@@ -55,6 +55,6 @@ zig build -Dsdk=/path/to/sdk -Dboard=qemu_arm_virt qemu
 
 You can view other options by doing:
 ```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<BOARD> -h
+zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD> -h
 ```
 
