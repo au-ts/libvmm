@@ -129,8 +129,6 @@ fn addVmm(
     const rootfs_tmpdir_path = b.fmt("/tmp/{s}_{s}_rootfs", .{ @tagName(microkit_board), vm_name});
     const rootfs_output_path = b.fmt("/tmp/{s}", .{ rootfs_name });
 
-    // TODO: figure out how to put a directory of files as a dependency. For now
-    // we don't check for changes in the files that are packed together
     _, const rootfs = libvmm_mod.packrootfs(
         b,
         rootfs_base,
@@ -373,18 +371,19 @@ pub fn build(b: *Build) void {
     // Make virtual disk
     const virtdisk_name = "storage.img";
     var virtdisk: LazyPath = undefined;
-    var made_virtdisk: bool = undefined;
     // Create virtual disk if it doesn't exist or if the user wants to create a new one
-    if (mkvirtdisk_option or !fileExists(b.getInstallPath(.prefix, virtdisk_name))) {
-        // TODO: Make these configurable options
-        const num_part = 2;
-        const logical_size = 512;
-        const blk_mem = 2101248;
-        _, virtdisk = libvmm_mod.mkvirtdisk(b, num_part, logical_size, blk_mem);
-        made_virtdisk = true;
-    } else {
-        made_virtdisk = false;
-    }
+    const made_virtdisk = blk: {
+        if (mkvirtdisk_option or !fileExists(b.getInstallPath(.prefix, virtdisk_name))) {
+            // TODO: Make these configurable options
+            const num_part = 2;
+            const logical_size = 512;
+            const blk_mem = 2101248;
+            _, virtdisk = libvmm_mod.mkvirtdisk(b, num_part, logical_size, blk_mem);
+            break :blk true;
+        } else {
+            break :blk false;
+        }
+    };
 
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
