@@ -10,7 +10,7 @@ export MICROKIT_CONFIG ?= debug
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
-export override MICROKIT_SDK:=$(abspath ${MICROKIT_SDK})
+export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 
 ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export UART_DRIVER := meson
@@ -29,8 +29,8 @@ else
 $(error Unsupported MICROKIT_BOARD given)
 endif
 
-export BUILD_DIR:=$(abspath ${BUILD_DIR})
-export MICROKIT_SDK:=$(abspath ${MICROKIT_SDK})
+export BUILD_DIR:=$(abspath $(BUILD_DIR))
+export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 export VIRTIO_EXAMPLE:=$(abspath .)
 
 export TARGET := aarch64-none-elf
@@ -47,13 +47,13 @@ export VMM=$(abspath ../../)
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
 
-all: ${IMAGE_FILE}
+all: $(IMAGE_FILE)
 
-qemu ${IMAGE_FILE} ${REPORT_FILE} clean clobber: ${BUILD_DIR}/Makefile FORCE
-	${MAKE} -C ${BUILD_DIR} MICROKIT_SDK=${MICROKIT_SDK} $(notdir $@)
+qemu $(IMAGE_FILE) $(REPORT_FILE) clean clobber: $(BUILD_DIR)/Makefile FORCE
+	$(MAKE) -C $(BUILD_DIR) MICROKIT_SDK=$(MICROKIT_SDK) $(notdir $@)
 
-${BUILD_DIR}/Makefile: virtio.mk
-	mkdir -p ${BUILD_DIR}
+$(BUILD_DIR)/Makefile: virtio.mk
+	mkdir -p $(BUILD_DIR)
 	cp virtio.mk $@
 
 FORCE:

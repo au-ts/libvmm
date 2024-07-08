@@ -12,18 +12,18 @@ SERIAL_NUM_CLIENTS := -DSERIAL_NUM_CLIENTS=3
 BLK_NUM_CLIENTS := -DBLK_NUM_CLIENTS=2
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-SYSTEM_DIR := ${VIRTIO_EXAMPLE}/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := ${SYSTEM_DIR}/virtio.system
+SYSTEM_DIR := $(VIRTIO_EXAMPLE)/board/$(MICROKIT_BOARD)
+SYSTEM_FILE := $(SYSTEM_DIR)/virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-vpath %.c ${SDDF} ${VMM} ${VIRTIO_EXAMPLE} ${NETWORK_COMPONENTS}
+vpath %.c $(SDDF) $(VMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
-include ${SDDF}/util/util.mk
-include ${UART_DRIVER}/uart_driver.mk
-include ${SERIAL_COMPONENTS}/serial_components.mk
-include ${BLK_COMPONENTS}/blk_components.mk
-include ${VMM}/vmm.mk
+include $(SDDF)/util/util.mk
+include $(UART_DRIVER)/uart_driver.mk
+include $(SERIAL_COMPONENTS)/serial_components.mk
+include $(BLK_COMPONENTS)/blk_components.mk
+include $(VMM)/vmm.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
 	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
@@ -38,12 +38,12 @@ CFLAGS := \
 	  -DCONFIG_$(MICROKIT_CONFIG) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
-	  -I${VMM}/src \
-	  -I${VMM}/src/arch/aarch64 \
-	  -I${VMM}/src/util \
-	  -I${VIRTIO_EXAMPLE}/include \
-	  -I${SDDF}/$(LWIPDIR)/include \
-	  -I${SDDF}/$(LWIPDIR)/include/ipv4 \
+	  -I$(VMM)/src \
+	  -I$(VMM)/src/arch/aarch64 \
+	  -I$(VMM)/src/util \
+	  -I$(VIRTIO_EXAMPLE)/include \
+	  -I$(SDDF)/$(LWIPDIR)/include \
+	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
@@ -51,9 +51,9 @@ CFLAGS := \
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
-CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- ${CFLAGS} ${BOARD} ${MICROKIT_CONFIG} | shasum | sed 's/ *-//')
+CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
-${CHECK_FLAGS_BOARD_MD5}:
+$(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
@@ -64,9 +64,9 @@ all: loader.img
 
 -include vmm.d
 
-${IMAGES}: libsddf_util_debug.a libvmm.a
+$(IMAGES): libsddf_util_debug.a libvmm.a
 
-${IMAGE_FILE} $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
+$(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 %_vm:
@@ -87,7 +87,7 @@ client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz
 %_vm/vm.dtb: %_vm/vm.dts %_vm
 	$(DTC) -q -I dts -O dtb $< > $@
 
-%_vm/vmm.o: ${VIRTIO_EXAMPLE}/%_vmm.c ${CHECK_FLAGS_BOARD_MD5} %_vm
+%_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) %_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 %_vm/images.o: %_vm $(VMM)/tools/package_guest_images.S $(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
@@ -115,9 +115,9 @@ qemu: $(IMAGE_FILE)
 			-d guest_errors
 
 clean::
-	${RM} -f *.elf .depend* $
+	$(RM) -f *.elf .depend* $
 	find . -name \*.[do] |xargs --no-run-if-empty rm
 
 clobber:: clean
 	rm -f *.a
-	rm -f ${IMAGE_FILE} ${REPORT_FILE}
+	rm -f $(IMAGE_FILE) $(REPORT_FILE)
