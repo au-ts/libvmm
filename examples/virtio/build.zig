@@ -363,6 +363,7 @@ pub fn build(b: *Build) void {
     const client_vm_1_dts_overlays = &[_]LazyPath{
         b.path(b.fmt("board/{s}/client_vm_1/dts/init.dts", .{ @tagName(microkit_board) })),
         b.path(b.fmt("board/{s}/client_vm_1/dts/virtio.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/client_vm_1/dts/disable.dts", .{ @tagName(microkit_board) })),
     };
     // Client 1 VM: Pack rootfs
     const client_vm_1_init = libvmm_dep.path("tools/linux/blk/blk_client_init");
@@ -388,6 +389,7 @@ pub fn build(b: *Build) void {
     const client_vm_2_dts_overlays = &[_]LazyPath{
         b.path(b.fmt("board/{s}/client_vm_2/dts/init.dts", .{ @tagName(microkit_board) })),
         b.path(b.fmt("board/{s}/client_vm_2/dts/virtio.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/client_vm_2/dts/disable.dts", .{ @tagName(microkit_board) })),
     };
     // Client 2 VM: Pack rootfs
     const client_vm_2_init = libvmm_dep.path("tools/linux/blk/blk_client_init");
