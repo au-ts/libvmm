@@ -1,5 +1,5 @@
 .{
-    .name = "virtio",
+    .name = "virtio_example",
     .version = "1.0.0",
 
     .dependencies = .{
