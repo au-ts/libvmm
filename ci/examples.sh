@@ -106,12 +106,15 @@ build_virtio_zig() {
     CONFIG=$2
     echo "CI|INFO: building virtio example via Zig with board: $BOARD and config: $CONFIG"
     BUILD_DIR="${PWD}/build/examples/virtio/zig/${BOARD}/${CONFIG}"
+    EXAMPLE_DIR="${PWD}/examples/virtio"
     mkdir -p ${BUILD_DIR}
+    pushd ${EXAMPLE_DIR}
     zig build \
         -Dsdk=${SDK_PATH} \
         -Dboard=${BOARD} \
         -Dconfig=${CONFIG} \
         -p ${BUILD_DIR}
+    popd
 }
 
 simulate_zig() {
