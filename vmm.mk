@@ -50,7 +50,7 @@ CFLAGS += -MD
 # Force rebuid if CFLAGS changes.
 # This will pick up (among other things} changes
 # to Microkit BOARD and CONFIG.
-CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS}|md5sum -|sed 's/ *-$$//')
+CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS} | shasum | sed 's/ *-$$//')
 .libvmm_cflags.%:
 	rm -f .libvmm_cflags.*
 	echo ${CFLAGS} > $@
