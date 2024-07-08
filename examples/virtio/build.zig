@@ -187,18 +187,18 @@ fn addVmm(
             b.fmt("-DBOARD_{s}", .{ @tagName(microkit_board) })
         }
     });
-    
+
     // Generate DTB
     const dts_name = b.fmt("{s}_{s}.dts", .{@tagName(microkit_board), vm_name});
     const dtb_name = b.fmt("{s}_{s}.dtb", .{@tagName(microkit_board), vm_name});
 
     _, const dts = dtscatCmd(b, dts_base, dts_overlays);
     const dts_install_step = &b.addInstallFileWithDir(dts, .prefix, dts_name).step;
-    
+
     const dtc_cmd, const dtb = dtcCmd(b, dts);
     dtc_cmd.step.dependOn(dts_install_step);
     const dtb_install_step = &b.addInstallFileWithDir(dtb, .prefix, dtb_name).step;
-    
+
     // Pack rootfs
     const rootfs_name = b.fmt("{s}_{s}_rootfs.cpio.gz", .{@tagName(microkit_board), vm_name});
     // TODO: Investigate another way to do this, don't use /tmp?
@@ -242,10 +242,10 @@ fn addVmm(
     });
 
     vmm.addObject(vm_images);
-    
+
     return vmm;
 }
-    
+
 pub fn build(b: *Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
