@@ -26,10 +26,8 @@ $(CHECK_UIO_BLK_DRIVER_FLAGS_MD5):
 	-rm -f .uio_blk_driver_cflags-*
 	touch $@
 
-
-# This shouldn't have a -c but for some reason it only works with one
-uio_blk_driver: uio_blk_driver.o
-	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_blk_driver) -o $@ -c $<
+uio_blk_driver: uio_blk_driver.o libuio.a
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_blk_driver) $^ -o $@
 
 uio_blk_driver.o: $(CHECK_UIO_BLK_DRIVER_FLAGS_MD5)
 uio_blk_driver.o: $(VMM_TOOLS)/linux/uio_drivers/blk/blk.c

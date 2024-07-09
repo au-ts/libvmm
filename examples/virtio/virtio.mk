@@ -29,6 +29,7 @@ include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include $(BLK_COMPONENTS)/blk_components.mk
 include $(LIBVMM)/vmm.mk
+include $(VMM_TOOLS)/linux/uio/uio.mk
 include $(VMM_TOOLS)/linux/blk/blk_init.mk
 include $(VMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
 
