@@ -29,7 +29,7 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
 
 static void virtio_blk_mmio_reset(struct virtio_device *dev)
 {
-    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = 0;
+    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = false;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
 
