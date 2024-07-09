@@ -20,5 +20,6 @@ in
         zig
       ];
     in crossInputs ++ nativeInputs;
+    hardeningDisable = [ "all" ];
 }
 

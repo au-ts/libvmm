@@ -5,6 +5,9 @@
 #include <sddf/serial/queue.h>
 #include <stdint.h>
 
+/* Number of clients connected to the serial device. */
+#define SERIAL_NUM_CLIENTS 3
+
 /* Only support transmission and not receive. */
 #define SERIAL_TX_ONLY 0
 
