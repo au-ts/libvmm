@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 # Snippet to build libvmm.a, to be included in a full-system Makefile.
-# Needs the variable LionsOS to point to the top of the LionsOS tree.
 #
 GIC_V3_BOARDS := imx8mm_evk maaxboard
 ifeq ($(filter ${MICROKIT_BOARD},${GIC_V3_BOARDS}),)
