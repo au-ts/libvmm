@@ -1,5 +1,6 @@
 QEMU := qemu-system-aarch64
 
+VMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 SDDF_INCLUDE := $(SDDF)/include/sddf
 UTIL := $(SDDF)/util
@@ -9,13 +10,17 @@ SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
 
 SERIAL_NUM_CLIENTS := -DSERIAL_NUM_CLIENTS=3
-BLK_NUM_CLIENTS := -DBLK_NUM_CLIENTS=2
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_DIR := $(VIRTIO_EXAMPLE)/board/$(MICROKIT_BOARD)
 SYSTEM_FILE := $(SYSTEM_DIR)/virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+
+CLIENT_VM_USERLEVEL :=
+CLIENT_VM_USERLEVEL_INIT := blk_client_init
+BLK_DRIVER_VM_USERLEVEL := uio_blk_driver
+BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
@@ -24,6 +29,8 @@ include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include $(BLK_COMPONENTS)/blk_components.mk
 include $(LIBVMM)/vmm.mk
+include $(VMM_TOOLS)/linux/blk/blk_init.mk
+include $(VMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
 	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
@@ -44,6 +51,15 @@ CFLAGS := \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
+
+CFLAGS_USERLEVEL := \
+		-g3 \
+		-O3 \
+		-Wno-unused-command-line-argument \
+		-Wall -Wno-unused-function -Werror \
+		-D_GNU_SOURCE \
+		-I$(VIRTIO_EXAMPLE)/include \
+		-target aarch64-linux-gnu
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
@@ -69,11 +85,18 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 %_vm:
 	mkdir -p $@
 
-# TODO: sort out userlevel scripts & build userlevel processes
-client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz
+client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz $(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT)
 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm/rootfs -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL) \
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
+
+blk_driver_vm/rootfs.cpio.gz: blk_driver_vm $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz $(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz blk_driver_vm/rootfs -o $@ \
+		--startup $(BLK_DRIVER_VM_USERLEVEL_INIT) \
+		--home $(BLK_DRIVER_VM_USERLEVEL)
+
+blk_storage:
+	$(VMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
 # %_vm/rootfs.cpio.gz: %_vm $(SYSTEM_DIR)/%_vm/rootfs.cpio.gz
 # 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/$</rootfs.cpio.gz $</rootfs -o $@
@@ -99,17 +122,15 @@ client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz
 client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 blk_driver_vm_files:: blk_driver_vm blk_driver_vm/vm.dts blk_driver_vm/vm.dtb blk_driver_vm/rootfs.cpio.gz blk_driver_vm/images.o blk_driver_vm/vmm.o
 
-qemu: $(IMAGE_FILE)
-	$(QEMU) -machine virt,virtualization=on \
+qemu: $(IMAGE_FILE) blk_storage
+	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
-			-device virtio-net-device,netdev=netdev0 \
-			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=udp::1235-:1235 \
-			-global virtio-mmio.force-legacy=false \
-			-d guest_errors
+			-drive file=blk_storage,format=raw,if=none,id=drive0 \
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1
 
 clean::
 	$(RM) -f *.elf .depend* $

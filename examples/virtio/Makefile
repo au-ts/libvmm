@@ -25,6 +25,10 @@ else ifeq ($(strip $(MICROKIT_BOARD)), qemu_arm_virt)
 	export UART_DRIVER := arm
 	export CPU := cortex-a53
 	QEMU := qemu-system-aarch64
+
+	export BLK_NUM_PART = 2
+	export BLK_SIZE = 512
+	export BLK_MEM ?= 2101248
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
@@ -35,6 +39,7 @@ export VIRTIO_EXAMPLE:=$(abspath .)
 
 export TARGET := aarch64-none-elf
 export CC := clang
+export CC_USERLEVEL := zig cc
 export LD := ld.lld
 export AS := llvm-as
 export AR := llvm-ar

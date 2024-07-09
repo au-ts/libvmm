@@ -3,7 +3,7 @@
 #include <sddf/util/string.h>
 #include <sddf/blk/queue.h>
 
-// #define BLK_NUM_CLIENTS 2
+#define BLK_NUM_CLIENTS 2
 
 #define BLK_NAME_CLI0                      "CLIENT_VMM-1"
 #define BLK_NAME_CLI1                      "CLIENT_VMM-2"
