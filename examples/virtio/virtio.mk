@@ -98,10 +98,7 @@ blk_driver_vm/rootfs.cpio.gz: blk_driver_vm $(SYSTEM_DIR)/blk_driver_vm/rootfs.c
 blk_storage:
 	$(VMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-# %_vm/rootfs.cpio.gz: %_vm $(SYSTEM_DIR)/%_vm/rootfs.cpio.gz
-# 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/$</rootfs.cpio.gz $</rootfs -o $@
-
-%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(shell find $(SYSTEM_DIR)/%_vm -name "*.dts" -not -name "linux.dts")
+%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 %_vm/vm.dtb: %_vm/vm.dts %_vm
