@@ -70,7 +70,7 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux vm.dtb root
 include $(LIBVMM)/vmm.mk
 
 qemu: $(IMAGE_FILE)
-	if ! command -v $(QEMU) &> /dev/null; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
+	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
 			-cpu cortex-a53 \
 			-serial mon:stdio \
