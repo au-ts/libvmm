@@ -97,6 +97,23 @@ build_virtio() {
         MICROKIT_SDK=${SDK_PATH}
 }
 
+build_virtio_snd() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building virtio sound example via Make with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${PWD}/build/examples/virtio-snd/make/${BOARD}/${CONFIG}"
+    mkdir -p ${BUILD_DIR}
+    pushd examples/virtio-snd
+    nix-shell
+    make -B \
+        BUILD_DIR=${BUILD_DIR} \
+        CONFIG=${CONFIG} \
+        BOARD=${BOARD} \
+        MICROKIT_SDK=${SDK_PATH}
+    exit
+    popd
+}
+
 simulate_zig() {
     echo "CI|INFO: simulating Zig example with config: $1"
     BUILD_DIR="${PWD}/build/examples/zig/qemu_arm_virt/${CONFIG}/${ZIG_OPTIMIZE}"
@@ -155,6 +172,11 @@ build_virtio "qemu_arm_virt" "debug"
 build_virtio "qemu_arm_virt" "release"
 build_virtio "odroidc4" "debug"
 build_virtio "odroidc4" "release"
+
+build_virtio_snd "qemu_arm_virt" "debug"
+build_virtio_snd "qemu_arm_virt" "release"
+build_virtio_snd "odroidc4" "debug"
+build_virtio_snd "odroidc4" "release"
 
 fi
 
