@@ -17,8 +17,6 @@
 #include <serial_config.h>
 #include <blk_config.h>
 
-#define GUEST_RAM_SIZE 0x6000000
-
 #if defined(BOARD_qemu_arm_virt)
 #define GUEST_DTB_VADDR 0x47f00000
 #define GUEST_INIT_RAM_DISK_VADDR 0x47000000
