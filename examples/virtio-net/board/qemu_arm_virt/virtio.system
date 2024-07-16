@@ -123,7 +123,7 @@
 
     <!-- Virtualiser for transmit (TX) serial data -->
     <protection_domain name="serial_virt_tx" priority="100" pp="true">
-        <program_image path="serial_tx_virt.elf" />
+        <program_image path="serial_virt_tx.elf" />
          <!-- shared memory for driver/virt queues -->
         <map mr="serial_tx_free_driver" vaddr="0x4_400_000" perms="rw" cached="true" setvar_vaddr="tx_free_driver" />
         <map mr="serial_tx_active_driver" vaddr="0x4_600_000" perms="rw" cached="true" setvar_vaddr="tx_active_driver" />
@@ -145,7 +145,7 @@
     </protection_domain>
     <!-- Virtualiser for receive (RX) serial data -->
     <protection_domain name="serial_virt_rx" priority="100" pp="true">
-        <program_image path="serial_rx_virt.elf" />
+        <program_image path="serial_virt_rx.elf" />
          <!-- shared memory for driver/virt queues -->
         <map mr="serial_rx_free_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_free_driver" />
         <map mr="serial_rx_active_driver" vaddr="0x4_200_000" perms="rw" cached="true" setvar_vaddr="rx_active_driver" />

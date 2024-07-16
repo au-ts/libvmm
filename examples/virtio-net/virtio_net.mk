@@ -1,3 +1,8 @@
+#
+# Copyright 2024, UNSW (ABN 57 195 873 179)
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
 QEMU := qemu-system-aarch64
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
@@ -19,18 +24,6 @@ REPORT_FILE := report.txt
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
-include $(SDDF)/util/util.mk
-include $(UART_DRIVER)/uart_driver.mk
-include $(ETHERNET_DRIVER)/eth_driver.mk
-include $(TIMER_DRIVER)/timer_driver.mk
-include $(SERIAL_COMPONENTS)/serial_components.mk
-include $(SDDF)/network/components/network_components.mk
-include $(LIBVMM)/vmm.mk
-
-IMAGES := client_vmm.elf \
-	serial_tx_virt.elf serial_rx_virt.elf uart_driver.elf \
-	eth_driver.elf network_virt_rx.elf network_virt_tx.elf copy.elf timer_driver.elf
-
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
@@ -50,6 +43,18 @@ CFLAGS := \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
+
+IMAGES := client_vmm.elf \
+	serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf \
+	eth_driver.elf network_virt_rx.elf network_virt_tx.elf copy.elf timer_driver.elf
+
+include $(SDDF)/util/util.mk
+include $(UART_DRIVER)/uart_driver.mk
+include $(ETHERNET_DRIVER)/eth_driver.mk
+include $(TIMER_DRIVER)/timer_driver.mk
+include $(SERIAL_COMPONENTS)/serial_components.mk
+include $(SDDF)/network/components/network_components.mk
+include $(LIBVMM)/vmm.mk
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
