@@ -22,18 +22,6 @@ BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
-include $(SDDF)/util/util.mk
-include $(UART_DRIVER)/uart_driver.mk
-include $(SERIAL_COMPONENTS)/serial_components.mk
-include $(BLK_COMPONENTS)/blk_components.mk
-include $(LIBVMM)/vmm.mk
-include $(VMM_TOOLS)/linux/uio/uio.mk
-include $(VMM_TOOLS)/linux/blk/blk_init.mk
-include $(VMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
-
-IMAGES := client_vmm.elf blk_driver_vmm.elf \
-	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
-
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
@@ -62,6 +50,18 @@ CFLAGS_USERLEVEL := \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
+
+include $(SDDF)/util/util.mk
+include $(UART_DRIVER)/uart_driver.mk
+include $(SERIAL_COMPONENTS)/serial_components.mk
+include $(BLK_COMPONENTS)/blk_components.mk
+include $(LIBVMM)/vmm.mk
+include $(VMM_TOOLS)/linux/uio/uio.mk
+include $(VMM_TOOLS)/linux/blk/blk_init.mk
+include $(VMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
+
+IMAGES := client_vmm.elf blk_driver_vmm.elf \
+	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
