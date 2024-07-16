@@ -56,16 +56,16 @@ char *serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
-uintptr_t net_rx_free;
-uintptr_t net_rx_active;
-uintptr_t net_tx_free;
-uintptr_t net_tx_active;
-uintptr_t net_rx_data;
-uintptr_t net_tx_data;
+// uintptr_t net_rx_free;
+// uintptr_t net_rx_active;
+// uintptr_t net_tx_free;
+// uintptr_t net_tx_active;
+// uintptr_t net_rx_data;
+// uintptr_t net_tx_data;
 
-static struct virtio_net_device virtio_net;
-#define NET_VIRT_RX_CH 3
-#define NET_VIRT_TX_CH 4
+// static struct virtio_net_device virtio_net;
+// #define NET_VIRT_RX_CH 3
+// #define NET_VIRT_TX_CH 4
 
 #define VIRTIO_NET_IRQ (77)
 #define VIRTIO_NET_BASE (0x190000)
@@ -114,74 +114,33 @@ void init(void)
                                   SERIAL_VIRT_TX_CH);
     LOG_VMM("Initialised virtio-console device\n");
 
-
-    // serial_queue_init(&rxq,
-    //                   (serial_queue_t *)serial_rx_free,
-    //                   (serial_queue_t *)serial_rx_active,
-    //                   true,
-    //                   NUM_ENTRIES,
-    //                   NUM_ENTRIES);
-    // for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-    //     int ret = serial_enqueue_free(&rxq,
-    //                            serial_rx_data + (i * BUFFER_SIZE),
-    //                            BUFFER_SIZE);
-    //     if (ret != 0) {
-    //         microkit_dbg_puts(microkit_name);
-    //         microkit_dbg_puts(": server rx buffer population, unable to enqueue buffer\n");
-    //     }
-    // }
-    // serial_queue_init(&txq,
-    //                   (serial_queue_t *)serial_tx_free,
-    //                   (serial_queue_t *)serial_tx_active,
-    //                   true,
-    //                   NUM_ENTRIES,
-    //                   NUM_ENTRIES);
-    // for (int i = 0; i < NUM_ENTRIES - 1; i++) {
-    //     // Have to start at the memory region left of by the rx ring
-    //     int ret = serial_enqueue_free(&txq,
-    //                            serial_tx_data + ((i + NUM_ENTRIES) * BUFFER_SIZE),
-    //                            BUFFER_SIZE);
-    //     assert(ret == 0);
-    //     if (ret != 0) {
-    //         microkit_dbg_puts(microkit_name);
-    //         microkit_dbg_puts(": server tx buffer population, unable to enqueue buffer\n");
-    //     }
-    // }
-
-    // /* Neither ring should be plugged and hence all buffers we send should actually end up at the driver. */
-    // assert(!serial_queue_plugged(rxq.free));
-    // assert(!serial_queue_plugged(rxq.active));
-    // assert(!serial_queue_plugged(txq.free));
-    // assert(!serial_queue_plugged(txq.active));
-
-
     /* Initialise the virtIO net device */
-    assert(net_rx_data != 0);
-    assert(net_tx_data != 0);
+    // assert(net_rx_data != 0);
+    // assert(net_tx_data != 0);
 
-    net_queue_handle_t rx, tx;
-    net_cli_queue_init_sys(microkit_name, &rx, net_rx_free, net_rx_active, &tx, net_tx_free, net_tx_active);
-    // net_queue_init(&rx, (net_queue_t *)net_rx_free, (net_queue_t *)net_rx_active, NUM_ENTRIES);
-    // net_queue_init(&tx, (net_queue_t *)net_tx_free, (net_queue_t *)net_tx_active, NUM_ENTRIES);
+    // net_queue_handle_t rx, tx;
+    // net_cli_queue_init_sys(microkit_name, &rx, net_rx_free, net_rx_active, &tx, net_tx_free, net_tx_active);
+    // // net_queue_init(&rx, (net_queue_t *)net_rx_free, (net_queue_t *)net_rx_active, NUM_ENTRIES);
+    // // net_queue_init(&tx, (net_queue_t *)net_tx_free, (net_queue_t *)net_tx_active, NUM_ENTRIES);
 
-    LOG_VMM("Initialised net queues\n");
+    // LOG_VMM("Initialised net queues\n");
 
-    net_buffers_init(&rx, net_rx_data);
-    net_buffers_init(&tx, net_tx_data);
+    // // net_buffers_init(&rx, net_rx_data);
+    // // net_buffers_init(&tx, net_tx_data);
 
-    LOG_VMM("Initialised net buffers\n");
+    // // LOG_VMM("Initialised net buffers\n");
 
-    uint8_t mac[6] = {0x52, 0x54, 0x01, 0x00, 0x00, 0x16};
-    success = virtio_mmio_net_init(&virtio_net,
-                                   mac,
-                                   VIRTIO_NET_BASE,
-                                   VIRTIO_NET_SIZE,
-                                   VIRTIO_NET_IRQ,
-                                   &rx, &tx,
-                                   net_rx_data, net_tx_data,
-                                   NET_VIRT_RX_CH,
-                                   NET_VIRT_TX_CH);
-    assert(success);
+    // uint8_t mac[6] = {0x52, 0x54, 0x01, 0x00, 0x00, 0x16};
+    // success = virtio_mmio_net_init(&virtio_net,
+    //                                mac,
+    //                                VIRTIO_NET_BASE,
+    //                                VIRTIO_NET_SIZE,
+    //                                VIRTIO_NET_IRQ,
+    //                                &rx, &tx,
+    //                                net_rx_data, net_tx_data,
+    //                                NET_VIRT_RX_CH,
+    //                                NET_VIRT_TX_CH);
+    // assert(success);
 
     LOG_VMM("Initialised virtio-net device\n");
 
@@ -198,10 +157,10 @@ void notified(microkit_channel ch)
         virtio_console_handle_rx(&virtio_console);
         break;
     }
-    case NET_VIRT_RX_CH: {
-        virtio_net_handle_rx(&virtio_net);
-        break;
-    }
+    // case NET_VIRT_RX_CH: {
+    //     virtio_net_handle_rx(&virtio_net);
+    //     break;
+    // }
     default:
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
