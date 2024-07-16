@@ -160,8 +160,9 @@ void init(void)
     assert(net_tx_data != 0);
 
     net_queue_handle_t rx, tx;
-    net_queue_init(&rx, (net_queue_t *)net_rx_free, (net_queue_t *)net_rx_active, NUM_ENTRIES);
-    net_queue_init(&tx, (net_queue_t *)net_tx_free, (net_queue_t *)net_tx_active, NUM_ENTRIES);
+    net_cli_queue_init_sys(microkit_name, &rx, net_rx_free, net_rx_active, &tx, net_tx_free, net_tx_active);
+    // net_queue_init(&rx, (net_queue_t *)net_rx_free, (net_queue_t *)net_rx_active, NUM_ENTRIES);
+    // net_queue_init(&tx, (net_queue_t *)net_tx_free, (net_queue_t *)net_tx_active, NUM_ENTRIES);
 
     LOG_VMM("Initialised net queues\n");
 
