@@ -194,6 +194,73 @@ guest's RAM to be the same as its mapped virtual address.
 </protection_domain>
 ```
 
+# virtIO
+
+virtIO is a standard interface between guests and hypervisors to faciliate the use of devices
+where the guest does not have access to the underlying hardware.
+
+libvmm provides a number of virtIO devices to enable guests to interact with the outside world.
+
+libvmm follows [version 1.2 of the virtIO specification](https://docs.oasis-open.org/virtio/virtio/v1.2/virtio-v1.2.html)
+and implements the following devices:
+
+* Console
+* Block
+* Sound
+
+These devices are implemented using MMIO, we do not use any PCI devices at this stage.
+
+For each of these devices, libvmm will perform I/O using the protocols and interfaces provided
+by the [seL4 Device Driver Framework](https://github.com/au-ts/sddf). This allows libvmm to
+interact with the outside world in a standard way just like any other native client program.
+
+This means that these virtIO device implementations are generic and are not dependent on the
+platform or architecture that libvmm is being used on.
+
+## Example architecture
+
+Below is an example architecture where a guest is making use of a virtIO console device.
+
+You can also find a working example making use of virtIO devices with libvmm in the repository
+at `examples/virtio`.
+
+![Example of virtIO console being used](./assets/virtio_console_example.svg){#virtio .class width=500}
+
+## Devices
+
+### Console
+
+The console device makes use of the 'serial' device class in sDDF. It supports one port.
+
+None of the feature bits are implemented. The legacy interface is not supported.
+
+The console device communicates with a hardware serial device via two sDDF serial virtualisers,
+one for recieve and one for transmit.
+
+There are plans to extend the console device implementation, you can find more details
+on [this GitHub issue](https://github.com/au-ts/libvmm/issues/27).
+
+### Block
+
+The block device makes use of the 'block' device class in sDDF.
+
+The following feature bits are implemented:
+
+* VIRTIO_BLK_F_FLUSH
+* VIRTIO_BLK_F_BLK_SIZE
+
+The legacy interface is not supported.
+
+The block device communicates with a hardware block device via a sDDF block virtualiser.
+
+### Sound
+
+The sound device makes use of the 'sound' device class in sDDF.
+
+There are no feature bits to implement. The legacy interface is not supported.
+
+The sound device communicates with a hardware sound device via a sDDF sound virtualiser.
+
 # Adding platform support
 
 This section will describe how to add support for a new platform to the `simple`
