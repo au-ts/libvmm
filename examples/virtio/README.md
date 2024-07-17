@@ -14,10 +14,8 @@ device from sDDF.
 The block device is emulated by a virtualised driver in a separate Linux
 virtual machine.
 
-The system has two Linux guests that act as clients of the virtIO devices.
-They are the same and have the same resources, but have separate sets of
-Linux images and root file systems to ease experimentation when you only
-wish to modify a single client.
+In order to show device sharing, the system has two Linux VMs that act as clients.
+The two client VMs have the same resources and are identical.
 
 The example currently works on the following platforms:
 * QEMU ARM virt
