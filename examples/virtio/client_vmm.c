@@ -50,6 +50,16 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
+/* Virtio virtual socket */
+#define VIRTIO_VSOCK_IRQ (75)
+#define VIRTIO_VSOCK_BASE (0x131000)
+#define VIRTIO_VSOCK_SIZE (0x1000)
+#ifndef VIRTIO_VSOCK_GUEST_CID
+#error "VIRTIO_VSOCK_GUEST_CID must be specified"
+#endif
+
+static struct virtio_vsock_device virtio_vsock;
+
 serial_queue_t *serial_rx_queue;
 serial_queue_t *serial_tx_queue;
 
@@ -63,7 +73,7 @@ static struct virtio_console_device virtio_console;
 
 #define BLK_DATA_SIZE 0x200000
 
-#define VIRTIO_BLK_IRQ (75)
+#define VIRTIO_BLK_IRQ (76)
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
@@ -108,6 +118,14 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+
+    /* Initialise virtIO socket device */
+    success = virtio_mmio_vsock_init(&virtio_vsock,
+                                      VIRTIO_VSOCK_BASE,
+                                      VIRTIO_VSOCK_SIZE,
+                                      VIRTIO_VSOCK_IRQ,
+                                      VIRTIO_VSOCK_GUEST_CID
+                                    );
 
     /* Initialise our sDDF ring buffers for the serial device */
     serial_queue_handle_t serial_rxq, serial_txq;

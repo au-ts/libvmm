@@ -111,12 +111,12 @@ $(error Unsupported BOARD given)
 endif
 SDDF_SERIAL_DRIVER := $(SDDF_DIR)/drivers/serial/$(UART_DRIVER_DIR)
 
-ELFS := client_vmm.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
+ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf blk_virt.elf
 
 BLK_DRIVER_VM_USERLEVEL := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
-CLIENT_VM_USERLEVEL :=
+CLIENT_VM_USERLEVEL := vsock_test.elf
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -138,11 +138,14 @@ VMM_OBJS := printf.o \
 
 CLIENT_VMM_OBJS := $(VMM_OBJS) \
 					client_images.o \
-					client_vmm.o \
 					console.o \
 					block.o \
+					vsock.o \
 					mmio.o \
-					libsddf_util_debug.a 
+					libsddf_util_debug.a
+
+CLIENT_VMM_1_OBJS := $(CLIENT_VMM_OBJS) client_vmm_1.o
+CLIENT_VMM_2_OBJS := $(CLIENT_VMM_OBJS) client_vmm_2.o
 
 BLK_DRIVER_VMM_OBJS := $(VMM_OBJS) \
 					blk_driver_images.o \
@@ -232,16 +235,19 @@ $(BUILD_DIR)/uart_driver.elf: $(BUILD_DIR)/serial/uart_driver.o
 	$(LD) $(LDFLAGS) $< $(LIBS) -o $@
 
 $(BUILD_DIR)/serial/uart_driver.o: ${SDDF_SERIAL_DRIVER}/uart.c
-	$(CC) -c $(CFLAGS) -I${SDDF_SERIAL_DRIVER}/include -o $@ $< 
+	$(CC) -c $(CFLAGS) -I${SDDF_SERIAL_DRIVER}/include -o $@ $<
 
 $(BUILD_DIR)/serial_virt_%.elf: $(BUILD_DIR)/serial/virt_%.o
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-$(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c 
+$(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c
 	${CC} ${CFLAGS} -o $@ -c $<
 
 $(BUILD_DIR)/storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
+
+$(BUILD_DIR)/vsock_test.elf: vsock_test.c
+	zig cc vsock_test.c -target aarch64-linux-musl -o $(BUILD_DIR)/vsock_test.elf
 
 # Unpack rootfs, put the userlevel in /root and userlevel_init in /etc/init.d/S99, repack rootfs
 $(BLK_DRIVER_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL)) \
@@ -249,13 +255,13 @@ $(BLK_DRIVER_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USE
 	$(LIBVMM_TOOLS)/packrootfs $(BLK_DRIVER_VM_INITRD) $(BLK_DRIVER_VM_ROOTFS_TMP_DIR) -o $(BLK_DRIVER_VM_INITRD_MODIFIED) \
 							--startup $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL))
-	
+
 $(CLIENT_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL)) \
 								$(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_INIT))
 	$(LIBVMM_TOOLS)/packrootfs $(CLIENT_VM_INITRD) $(CLIENT_VM_ROOTFS_TMP_DIR) -o $(CLIENT_VM_INITRD_MODIFIED) \
 							--startup $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL_INIT)) \
 							--home $(addprefix $(BUILD_DIR)/, $(CLIENT_VM_USERLEVEL))
-	
+
 $(BLK_DRIVER_VM_DTB): $(BLK_DRIVER_VM_BASE_DTS) $(BLK_DRIVER_VM_DTS_OVERLAYS)
 	$(LIBVMM_TOOLS)/dtscat $^ > $(BUILD_DIR)/blk_driver_vm.dts
 	$(DTC) -q -I dts -O dtb $(BUILD_DIR)/blk_driver_vm.dts > $@
@@ -279,6 +285,12 @@ $(BUILD_DIR)/client_images.o: $(LIBVMM_TOOLS)/package_guest_images.S $(CLIENT_VM
 					-DGUEST_INITRD_IMAGE_PATH=\"$(CLIENT_VM_INITRD_MODIFIED)\" \
 					-target aarch64-none-elf \
 					$< -o $@
+
+$(BUILD_DIR)/client_vmm_1.o: client_vmm.c Makefile
+	$(CC) -c $(CFLAGS) -DVIRTIO_VSOCK_GUEST_CID=3 $< -o $@
+
+$(BUILD_DIR)/client_vmm_2.o: client_vmm.c Makefile
+	$(CC) -c $(CFLAGS) -DVIRTIO_VSOCK_GUEST_CID=4 $< -o $@
 
 $(BUILD_DIR)/%.o: %.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -304,7 +316,10 @@ $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_COMPONENTS)/%.c Makefile
 $(BUILD_DIR)/sddf_blk_%.o: $(SDDF_BLK_UTIL)/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/client_vmm.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_OBJS))
+$(BUILD_DIR)/client_vmm_1.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_1_OBJS))
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+$(BUILD_DIR)/client_vmm_2.elf: $(addprefix $(BUILD_DIR)/, $(CLIENT_VMM_2_OBJS))
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 $(BUILD_DIR)/blk_driver_vmm.elf: $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VMM_OBJS))
