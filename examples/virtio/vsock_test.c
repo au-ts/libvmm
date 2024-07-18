@@ -9,13 +9,13 @@
 
 int main(int argc, char *argv[])
 {
-		printf("./vsock_test.elf <DEST CID>\n");
-		return 1;
-	}
 
 	printf("VSOCK TEST|INFO: starting\n");
 
 	if (argc != 2) {
+		printf("./vsock_test.elf <DEST CID>\n");
+		return 1;
+	}
 	uint32_t dest_cid = atoi(argv[1]);
 	printf("VSOCK TEST|INFO: using destination CID %d\n", dest_cid);
 
