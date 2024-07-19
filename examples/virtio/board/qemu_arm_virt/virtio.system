@@ -12,9 +12,13 @@
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
     <memory_region name="virtio_blk" size="0x4000" phys_addr="0xa000000" />
 
+    <memory_region name="virtio_vsock_buffer" size="0x4000" />
+
     <protection_domain name="CLIENT_VMM-1" priority="100">
         <program_image path="client_vmm_1.elf" />
         <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+
+        <map mr="virtio_vsock_buffer" vaddr="0x100_000_000" perms="rw" setvar_vaddr="virtio_vsock_buffer" />
 
         <!-- sDDF related regions for virtIO console -->
         <map mr="tx_queue_serial_vmm_1" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
@@ -37,6 +41,8 @@
     <protection_domain name="CLIENT_VMM-2" priority="100">
         <program_image path="client_vmm_2.elf" />
         <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+
+        <map mr="virtio_vsock_buffer" vaddr="0x100_000_000" perms="rw" setvar_vaddr="virtio_vsock_buffer" />
 
         <!-- sDDF related regions for virtIO console -->
         <map mr="tx_queue_serial_vmm_2" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
@@ -238,5 +244,10 @@
     <channel>
         <end pd="BLK_VIRT" id="0"/>
         <end pd="BLK_DRIVER_VMM" id="3"/>
+    </channel>
+
+    <channel>
+        <end pd="CLIENT_VMM-1" id="10"/>
+        <end pd="CLIENT_VMM-2" id="10"/>
     </channel>
 </system>

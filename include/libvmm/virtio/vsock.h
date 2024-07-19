@@ -124,3 +124,4 @@ bool virtio_mmio_vsock_init(struct virtio_vsock_device *vsock,
                          uintptr_t region_size,
                          size_t virq,
                          uint32_t guest_cid);
+bool virtio_vsock_handle_rx(struct virtio_vsock_device *vsock);

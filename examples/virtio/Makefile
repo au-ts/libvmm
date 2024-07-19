@@ -116,7 +116,7 @@ ELFS := client_vmm_1.elf client_vmm_2.elf blk_driver_vmm.elf serial_virt_tx.elf 
 BLK_DRIVER_VM_USERLEVEL := uio_blk_driver
 BLK_DRIVER_VM_USERLEVEL_INIT := blk_driver_init
 
-CLIENT_VM_USERLEVEL := vsock_test.elf
+CLIENT_VM_USERLEVEL := vsock_send.elf vsock_recv.elf
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
 
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -246,8 +246,11 @@ $(BUILD_DIR)/serial/virt_%.o: ${SDDF_DIR}/serial/components/virt_%.c
 $(BUILD_DIR)/storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-$(BUILD_DIR)/vsock_test.elf: vsock_test.c
-	zig cc vsock_test.c -target aarch64-linux-musl -o $(BUILD_DIR)/vsock_test.elf
+$(BUILD_DIR)/vsock_send.elf: vsock_send.c
+	zig cc vsock_send.c -target aarch64-linux-musl -o $(BUILD_DIR)/vsock_send.elf
+
+$(BUILD_DIR)/vsock_recv.elf: vsock_recv.c
+	zig cc vsock_recv.c -target aarch64-linux-musl -o $(BUILD_DIR)/vsock_recv.elf
 
 # Unpack rootfs, put the userlevel in /root and userlevel_init in /etc/init.d/S99, repack rootfs
 $(BLK_DRIVER_VM_INITRD_MODIFIED): $(addprefix $(BUILD_DIR)/, $(BLK_DRIVER_VM_USERLEVEL)) \

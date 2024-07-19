@@ -174,6 +174,10 @@ void notified(microkit_channel ch)
         virtio_blk_handle_resp(&virtio_blk);
         break;
     }
+    case 10: {
+        virtio_vsock_handle_rx(&virtio_vsock);
+        break;
+    }
     default:
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }

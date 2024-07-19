@@ -9,15 +9,14 @@
 
 int main(int argc, char *argv[])
 {
-
-	printf("VSOCK TEST|INFO: starting\n");
+	printf("VSOCK SEND|INFO: starting\n");
 
 	if (argc != 2) {
-		printf("./vsock_test.elf <DEST CID>\n");
+		printf("./vsock_send.elf <CID>\n");
 		return 1;
 	}
-	uint32_t dest_cid = atoi(argv[1]);
-	printf("VSOCK TEST|INFO: using destination CID %d\n", dest_cid);
+	uint32_t cid = atoi(argv[1]);
+	printf("VSOCK SEND|INFO: creating socket to send on CID %d\n", cid);
 
 	int s = socket(AF_VSOCK, SOCK_STREAM, 0);
 
@@ -25,18 +24,20 @@ int main(int argc, char *argv[])
 	memset(&addr, 0, sizeof(struct sockaddr_vm));
 	addr.svm_family = AF_VSOCK;
 	addr.svm_port = 9999;
-	addr.svm_cid = dest_cid;
+	addr.svm_cid = cid;
 
-	int r = connect(s, &addr, sizeof(struct sockaddr_vm));
+	int r;
+
+	r = connect(s, &addr, sizeof(struct sockaddr_vm));
 	if (r < 0) {
-		printf("VSOCK TEST|ERROR: connect failed with '%s'\n", strerror(errno));
+		printf("VSOCK SEND|ERROR: connect failed %d with '%s'\n", r, strerror(errno));
 		return 1;
 	}
 
 	char *hello = "Hello, world!";
 	r = send(s, hello, strlen(hello), 0);
 	if (r < 0) {
-		printf("VSOCK TEST|ERROR: send failed with '%s'\n", strerror(errno));
+		printf("VSOCK SEND|ERROR: send failed with '%s'\n", strerror(errno));
 		return 1;
 	}
 
