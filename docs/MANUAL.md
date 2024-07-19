@@ -207,11 +207,13 @@ and implements the following devices:
 * Console
 * Block
 * Sound
+* Socket
 
 These devices are implemented using MMIO, we do not use any PCI devices at this stage.
 
-For each of these devices, libvmm will perform I/O using the protocols and interfaces provided
-by the [seL4 Device Driver Framework](https://github.com/au-ts/sddf). This allows libvmm to
+For virtIO devices that result in actual I/O (as opposed to purely virtual devices like socket),
+libvmm uses  the protocols and interfaces provided by the
+[seL4 Device Driver Framework](https://github.com/au-ts/sddf). This allows libvmm to
 interact with the outside world in a standard way just like any other native client program.
 
 This means that these virtIO device implementations are generic and are not dependent on the
@@ -221,7 +223,11 @@ platform or architecture that libvmm is being used on.
 
 Below is an example architecture where a guest is making use of a virtIO console device.
 
-You can also find a working example making use of virtIO devices with libvmm in the repository
+You can see that virtIO console transmit ends up talking to a real UART device, and data received
+by the UART device will then be received by the virtIO console device in libvmm which will then
+be passed up to the guest.
+
+You can also find an actual working example making use of the virtIO devices in libvmm in the repository
 at `examples/virtio`.
 
 ![Example of virtIO console being used](./assets/virtio_console_example.svg){#virtio .class width=500}
@@ -260,6 +266,18 @@ The sound device makes use of the 'sound' device class in sDDF.
 There are no feature bits to implement. The legacy interface is not supported.
 
 The sound device communicates with a hardware sound device via a sDDF sound virtualiser.
+
+### Socket
+
+The socket device (commonly referred to as 'vsock') is a virtual socket device that allows
+for communication between guests without setting up a network.
+
+The following features bits are implemented:
+
+* VIRTIO_VSOCK_F_STREAM
+
+Since the socket device is a purely virtual concept, it does not connect to a device via sDDF
+and instead communicates directly with other guests.
 
 # Adding platform support
 
