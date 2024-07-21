@@ -113,7 +113,7 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
         LOG_UIO_BLOCK_ERR("Failed to get storage drive size: %s\n", strerror(errno));
         return -1;
     }
-    blk_config->size = size / BLK_TRANSFER_SIZE;
+    blk_config->capacity = size / BLK_TRANSFER_SIZE;
 
     LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only,
                     blk_config->sector_size, blk_config->size);
