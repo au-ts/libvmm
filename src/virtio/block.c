@@ -485,7 +485,7 @@ static void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
 {
     blk_storage_info_t *storage_info = blk_dev->storage_info;
 
-    blk_dev->config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * storage_info->size;
+    blk_dev->config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * storage_info->capacity;
     if (storage_info->block_size != 0) {
         blk_dev->config.blk_size = storage_info->block_size * BLK_TRANSFER_SIZE;
     } else {
