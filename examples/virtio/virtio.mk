@@ -1,6 +1,6 @@
 QEMU := qemu-system-aarch64
 
-VMM_TOOLS := $(LIBVMM)/tools
+LIBVMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 SDDF_INCLUDE := $(SDDF)/include/sddf
 UTIL := $(SDDF)/util
@@ -56,9 +56,9 @@ include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include $(BLK_COMPONENTS)/blk_components.mk
 include $(LIBVMM)/vmm.mk
-include $(VMM_TOOLS)/linux/uio/uio.mk
-include $(VMM_TOOLS)/linux/blk/blk_init.mk
-include $(VMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
+include $(LIBVMM_TOOLS)/linux/uio/uio.mk
+include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
+include $(LIBVMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
 	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
@@ -100,7 +100,7 @@ blk_driver_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
 		--home $(BLK_DRIVER_VM_USERLEVEL)
 
 blk_storage:
-	$(VMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
+	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
 %_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
