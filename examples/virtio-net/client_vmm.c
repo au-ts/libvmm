@@ -56,10 +56,11 @@ char *serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
-uintptr_t net_rx_free;
-uintptr_t net_rx_active;
-uintptr_t net_tx_free;
-uintptr_t net_tx_active;
+net_queue_t *net_rx_free;
+net_queue_t *net_rx_active;
+net_queue_t *net_tx_free;
+net_queue_t *net_tx_active;
+
 uintptr_t net_rx_data;
 uintptr_t net_tx_data;
 
