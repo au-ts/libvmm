@@ -72,33 +72,35 @@ all: loader.img
 $(IMAGES): libsddf_util_debug.a libvmm.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
-	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
+		--config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 %_vm:
 	mkdir -p $@
 
-client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm
+client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm |client_vm
 	cp $< $@
 
-%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts
+%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts |%_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-%_vm/vm.dtb: %_vm/vm.dts %_vm
+%_vm/vm.dtb: %_vm/vm.dts |%_vm
 	$(DTC) -q -I dts -O dtb $< > $@
 
-%_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) %_vm
+%_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) |%_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%_vm/images.o: %_vm $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
+%_vm/images.o: $(LIBVMM)/tools/package_guest_images.S \
+	$(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz |%_vm
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$</linux\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$</vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$</rootfs.cpio.gz\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$(@D)/linux\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(@D)/vm.dtb\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(@D)/rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 # Stop make from deleting intermediate files
-client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
+.PRECIOUS: client_vm client_vm/vm.dts client_vm/vm.dtb client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE)
 	$(QEMU) -machine virt,virtualization=on \
@@ -108,7 +110,7 @@ qemu: $(IMAGE_FILE)
 			-m size=2G \
 			-nographic \
 			-device virtio-net-device,netdev=netdev0 \
-			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=udp::1235-:1235 \
+			-netdev user,id=netdev0,hostfwd=tcp::1919-:22 \
 			-global virtio-mmio.force-legacy=false \
 			-d guest_errors
 
