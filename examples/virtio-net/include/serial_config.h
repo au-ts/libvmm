@@ -64,16 +64,17 @@ static inline void serial_cli_queue_init_sys(char *pd_name, serial_queue_handle_
 }
 
 static inline void serial_virt_queue_init_sys(char *pd_name, serial_queue_handle_t *cli_queue_handle,
-                                              uintptr_t cli_queue, uintptr_t cli_data)
+                                              serial_queue_t *cli_queue, char *cli_data)
 {
+    uintptr_t cli_queue_ptr = (uintptr_t)cli_queue;
     if (!sddf_strcmp(pd_name, SERIAL_VIRT_RX_NAME)) {
-        serial_queue_init(cli_queue_handle, (serial_queue_t *) cli_queue, SERIAL_RX_DATA_REGION_SIZE_CLI0, (char *)cli_data);
-        serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)(cli_queue + SERIAL_QUEUE_SIZE),
+        serial_queue_init(cli_queue_handle, cli_queue, SERIAL_RX_DATA_REGION_SIZE_CLI0, cli_data);
+        serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)(cli_queue_ptr + SERIAL_QUEUE_SIZE),
                           SERIAL_RX_DATA_REGION_SIZE_CLI1, (char *)(cli_data + SERIAL_RX_DATA_REGION_SIZE_CLI0));
     } else if (!sddf_strcmp(pd_name, SERIAL_VIRT_TX_NAME)) {
-        serial_queue_init(cli_queue_handle, (serial_queue_t *) cli_queue, SERIAL_TX_DATA_REGION_SIZE_CLI0, (char *)cli_data);
-        serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)(cli_queue + SERIAL_QUEUE_SIZE),
-                          SERIAL_TX_DATA_REGION_SIZE_CLI1, (char *)(cli_data + SERIAL_TX_DATA_REGION_SIZE_CLI0));
+        serial_queue_init(cli_queue_handle, cli_queue, SERIAL_TX_DATA_REGION_SIZE_CLI0, cli_data);
+        serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)(cli_queue_ptr + SERIAL_QUEUE_SIZE),
+                          SERIAL_TX_DATA_REGION_SIZE_CLI1, cli_data + SERIAL_TX_DATA_REGION_SIZE_CLI0);
     }
 }
 

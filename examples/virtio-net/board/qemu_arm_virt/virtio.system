@@ -98,8 +98,8 @@
 
         <map mr="net_rx_free_copy1" vaddr="0x2_400_000" perms="rw" cached="true" setvar_vaddr="rx_free_cli0" />
         <map mr="net_rx_active_copy1" vaddr="0x2_600_000" perms="rw" cached="true" setvar_vaddr="rx_active_cli0" />
-        <map mr="net_rx_free_copy2" vaddr="0x2_800_000" perms="rw" cached="true" setvar_vaddr="rx_free_cli1" />
-        <map mr="net_rx_active_copy2" vaddr="0x2_a00_000" perms="rw" cached="true" setvar_vaddr="rx_active_cli1" />
+        <map mr="net_rx_free_copy2" vaddr="0x2_800_000" perms="rw" cached="true" />
+        <map mr="net_rx_active_copy2" vaddr="0x2_a00_000" perms="rw" cached="true" />
 
         <map mr="net_rx_data" vaddr="0x2_c00_000" perms="r" cached="true" setvar_vaddr="buffer_data_vaddr" />
         <setvar symbol="buffer_data_paddr" region_paddr="net_rx_data" />
@@ -136,11 +136,11 @@
 
         <map mr="net_tx_free_cli1" vaddr="0x2_400_000" perms="rw" cached="true" setvar_vaddr="tx_free_cli0" />
         <map mr="net_tx_active_cli1" vaddr="0x2_600_000" perms="rw" cached="true" setvar_vaddr="tx_active_cli0" />
-        <map mr="net_tx_free_cli2" vaddr="0x2_800_000" perms="rw" cached="true" setvar_vaddr="tx_free_cli1" />
-        <map mr="net_tx_active_cli2" vaddr="0x2_a00_000" perms="rw" cached="true" setvar_vaddr="tx_active_cli1" />
+        <map mr="net_tx_free_cli2" vaddr="0x2_800_000" perms="rw" cached="true" />
+        <map mr="net_tx_active_cli2" vaddr="0x2_a00_000" perms="rw" cached="true" />
 
         <map mr="net_tx_data_cli1" vaddr="0x2_c00_000" perms="r" cached="true" setvar_vaddr="buffer_data_region_cli0_vaddr" />
-        <map mr="net_tx_data_cli2" vaddr="0x2_e00_000" perms="r" cached="true" setvar_vaddr="buffer_data_region_cli1_vaddr" />
+        <map mr="net_tx_data_cli2" vaddr="0x2_e00_000" perms="r" cached="true" />
         <setvar symbol="buffer_data_region_cli0_paddr" region_paddr="net_tx_data_cli1" />
         <setvar symbol="buffer_data_region_cli1_paddr" region_paddr="net_tx_data_cli2" />
     </protection_domain>
