@@ -85,15 +85,15 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 %_vm:
 	mkdir -p $@
 
-client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
-	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT)
+client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
+	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT) |client_vm 
 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
 		client_vm/rootfs -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
 
-blk_driver_vm/rootfs.cpio.gz: blk_driver_vm $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
-	$(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT)
+blk_driver_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
+	$(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT) |blk_driver_vm 
 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
 		blk_driver_vm/rootfs -o $@ \
 		--startup $(BLK_DRIVER_VM_USERLEVEL_INIT) \
@@ -105,18 +105,18 @@ blk_storage:
 %_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-%_vm/vm.dtb: %_vm/vm.dts %_vm
+%_vm/vm.dtb: %_vm/vm.dts |%_vm
 	$(DTC) -q -I dts -O dtb $< > $@
 
-%_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) %_vm
+%_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) |%_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%_vm/images.o: %_vm $(LIBVMM)/tools/package_guest_images.S \
+%_vm/images.o: $(LIBVMM)/tools/package_guest_images.S \
 	$(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$</linux\" \
-					-DGUEST_DTB_IMAGE_PATH=\"$</vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"$</rootfs.cpio.gz\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$(@D)/linux\" \
+					-DGUEST_DTB_IMAGE_PATH=\"$(@D)/vm.dtb\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"$(@D)/rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
