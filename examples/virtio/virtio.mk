@@ -139,7 +139,7 @@ qemu: $(IMAGE_FILE) blk_storage
 
 clean::
 	$(RM) -f *.elf .depend* $
-	find . -name \*.[do] |xargs --no-run-if-empty rm
+	find . -name \*.[do] -type f |xargs --no-run-if-empty rm
 
 clobber:: clean
 	rm -f *.a
