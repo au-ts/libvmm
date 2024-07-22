@@ -241,9 +241,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             /* Book keep the request */
             uint32_t req_id;
             ialloc_alloc(&state->ialloc, &req_id);
-            state->reqbk[req_id] = (reqbk_t){
+            state->reqbk[req_id] = (reqbk_t) {
                 desc_head, sddf_data, sddf_count, sddf_block_number,
-                virtio_data, virtio_data_size, 0
+                           virtio_data, virtio_data_size, 0
             };
 
             uintptr_t offset = sddf_data - ((struct virtio_blk_device *)dev->device_data)->data_region;
@@ -287,9 +287,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 /* Book keep the request */
                 uint32_t req_id;
                 ialloc_alloc(&state->ialloc, &req_id);
-                state->reqbk[req_id] = (reqbk_t){
+                state->reqbk[req_id] = (reqbk_t) {
                     desc_head, sddf_data, sddf_count, sddf_block_number,
-                    virtio_data, virtio_data_size, aligned
+                               virtio_data, virtio_data_size, aligned
                 };
 
                 uintptr_t offset = sddf_data - ((struct virtio_blk_device *)dev->device_data)->data_region;
@@ -313,9 +313,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 /* Book keep the request */
                 uint32_t req_id;
                 ialloc_alloc(&state->ialloc, &req_id);
-                state->reqbk[req_id] = (reqbk_t){
+                state->reqbk[req_id] = (reqbk_t) {
                     desc_head, sddf_data, sddf_count, sddf_block_number,
-                    virtio_data, virtio_data_size, aligned
+                               virtio_data, virtio_data_size, aligned
                 };
 
                 /* Copy data from virtio buffer to data buffer, create sddf write request and initialise it with data buffer */
@@ -341,7 +341,9 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             ialloc_alloc(&state->ialloc, &req_id);
             /* except for virtio desc, nothing else needs to be retrieved later
              * so leave as 0 */
-            state->reqbk[req_id] = (reqbk_t){desc_head, 0, 0, 0, 0, 0};
+            state->reqbk[req_id] = (reqbk_t) {
+                desc_head, 0, 0, 0, 0, 0
+            };
 
             err = blk_enqueue_req(&state->queue_h, FLUSH, 0, 0, 0, req_id);
             break;
@@ -422,10 +424,10 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
                     uint32_t new_sddf_id;
                     ialloc_alloc(&state->ialloc, &new_sddf_id);
-                    state->reqbk[new_sddf_id] = (reqbk_t){
+                    state->reqbk[new_sddf_id] = (reqbk_t) {
                         data->virtio_desc_head,
-                        data->sddf_data, data->sddf_count,
-                        data->sddf_block_number, 0, 0, true
+                             data->sddf_data, data->sddf_count,
+                             data->sddf_block_number, 0, 0, true
                     };
 
                     err = blk_enqueue_req(&state->queue_h,
@@ -503,14 +505,14 @@ static virtio_device_funs_t functions = {
 };
 
 bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
-                     uintptr_t region_base,
-                     uintptr_t region_size,
-                     size_t virq,
-                     uintptr_t data_region,
-                     size_t data_region_size,
-                     blk_storage_info_t *storage_info,
-                     blk_queue_handle_t *queue_h,
-                     int server_ch)
+                          uintptr_t region_base,
+                          uintptr_t region_size,
+                          size_t virq,
+                          uintptr_t data_region,
+                          size_t data_region_size,
+                          blk_storage_info_t *storage_info,
+                          blk_queue_handle_t *queue_h,
+                          int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
 

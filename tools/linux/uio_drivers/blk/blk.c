@@ -116,12 +116,12 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     blk_config->capacity = size / BLK_TRANSFER_SIZE;
 
     LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, size=%ld\n", (int)blk_config->read_only,
-                    blk_config->sector_size, blk_config->size);
+                  blk_config->sector_size, blk_config->size);
 
     /* Optimal size */
     /* As far as I know linux does not let you query this from userspace, set as 0 to mean undefined */
     blk_config->block_size = 0;
-    
+
     /* Driver is ready to go, set ready in shared config page */
     __atomic_store_n(&blk_config->ready, true, __ATOMIC_RELEASE);
 

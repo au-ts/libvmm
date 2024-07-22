@@ -75,7 +75,7 @@ static inline void serial_virt_queue_init_sys(char *pd_name, serial_queue_handle
         serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)(cli_queue_ptr + SERIAL_QUEUE_SIZE),
                           SERIAL_RX_DATA_REGION_SIZE_CLI1, (char *)(cli_data + SERIAL_RX_DATA_REGION_SIZE_CLI0));
         serial_queue_init(&cli_queue_handle[2], (serial_queue_t *)(cli_queue_ptr + 2 * SERIAL_QUEUE_SIZE),
-                          SERIAL_RX_DATA_REGION_SIZE_CLI2, 
+                          SERIAL_RX_DATA_REGION_SIZE_CLI2,
                           (char *)(cli_data + SERIAL_RX_DATA_REGION_SIZE_CLI0 + SERIAL_RX_DATA_REGION_SIZE_CLI1));
     } else if (!sddf_strcmp(pd_name, SERIAL_VIRT_TX_NAME)) {
         serial_queue_init(cli_queue_handle, cli_queue, SERIAL_TX_DATA_REGION_SIZE_CLI0, cli_data);
