@@ -79,18 +79,23 @@ all: loader.img
 $(IMAGES): libsddf_util_debug.a libvmm.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
-	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
+		--config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 %_vm:
 	mkdir -p $@
 
-client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz $(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT)
-	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz client_vm/rootfs -o $@ \
+client_vm/rootfs.cpio.gz: client_vm $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
+	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
+		client_vm/rootfs -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
 
-blk_driver_vm/rootfs.cpio.gz: blk_driver_vm $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz $(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT)
-	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz blk_driver_vm/rootfs -o $@ \
+blk_driver_vm/rootfs.cpio.gz: blk_driver_vm $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
+	$(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
+		blk_driver_vm/rootfs -o $@ \
 		--startup $(BLK_DRIVER_VM_USERLEVEL_INIT) \
 		--home $(BLK_DRIVER_VM_USERLEVEL)
 
@@ -106,7 +111,8 @@ blk_storage:
 %_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) %_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%_vm/images.o: %_vm $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
+%_vm/images.o: %_vm $(LIBVMM)/tools/package_guest_images.S \
+	$(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$</linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"$</vm.dtb\" \
@@ -115,8 +121,12 @@ blk_storage:
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 # Stop make from deleting intermediate files
-client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
-blk_driver_vm_files:: blk_driver_vm blk_driver_vm/vm.dts blk_driver_vm/vm.dtb blk_driver_vm/rootfs.cpio.gz blk_driver_vm/images.o blk_driver_vm/vmm.o
+client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb \
+	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
+
+blk_driver_vm_files:: blk_driver_vm blk_driver_vm/vm.dts \
+	blk_driver_vm/vm.dtb blk_driver_vm/rootfs.cpio.gz \
+	blk_driver_vm/images.o blk_driver_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
 	$(QEMU) -machine virt,virtualization=on,secure=off \
