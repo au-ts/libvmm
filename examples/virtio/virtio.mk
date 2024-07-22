@@ -102,7 +102,8 @@ blk_driver_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts $(SYSTEM_DIR)/%_vm/dts/overlays/*.dts
+%_vm/vm.dts: $(SYSTEM_DIR)/%_vm/dts/linux.dts \
+	$(SYSTEM_DIR)/%_vm/dts/overlays/*.dts $(CHECK_FLAGS_BOARD_MD5) |%_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 %_vm/vm.dtb: %_vm/vm.dts |%_vm
@@ -111,7 +112,7 @@ blk_storage:
 %_vm/vmm.o: $(VIRTIO_EXAMPLE)/%_vmm.c $(CHECK_FLAGS_BOARD_MD5) |%_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-%_vm/images.o: $(LIBVMM)/tools/package_guest_images.S \
+%_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
 	$(SYSTEM_DIR)/%_vm/linux %_vm/vm.dtb %_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/$(@D)/linux\" \
