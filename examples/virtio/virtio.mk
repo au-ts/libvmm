@@ -121,12 +121,11 @@ blk_storage:
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 # Stop make from deleting intermediate files
-client_vm_files:: client_vm client_vm/vm.dts client_vm/vm.dtb \
-	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
-
-blk_driver_vm_files:: blk_driver_vm blk_driver_vm/vm.dts \
+.PRECIOUS: blk_driver_vm blk_driver_vm/vm.dts \
 	blk_driver_vm/vm.dtb blk_driver_vm/rootfs.cpio.gz \
-	blk_driver_vm/images.o blk_driver_vm/vmm.o
+	blk_driver_vm/images.o blk_driver_vm/vmm.o \
+	client_vm client_vm/vm.dts client_vm/vm.dtb \
+	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
 	$(QEMU) -machine virt,virtualization=on,secure=off \
