@@ -86,14 +86,14 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	mkdir -p $@
 
 client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
-	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT) |client_vm 
+	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT) |client_vm
 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm/rootfs.cpio.gz \
 		client_vm/rootfs -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
 
 blk_driver_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
-	$(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT) |blk_driver_vm 
+	$(BLK_DRIVER_VM_USERLEVEL) $(BLK_DRIVER_VM_USERLEVEL_INIT) |blk_driver_vm
 	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/blk_driver_vm/rootfs.cpio.gz \
 		blk_driver_vm/rootfs -o $@ \
 		--startup $(BLK_DRIVER_VM_USERLEVEL_INIT) \
