@@ -137,7 +137,6 @@ void init(void)
                                    NET_VIRT_RX_CH,
                                    NET_VIRT_TX_CH);
     assert(success);
-
     LOG_VMM("Initialised virtio-net device\n");
 
     success = guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
