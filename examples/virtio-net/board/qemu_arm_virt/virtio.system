@@ -44,7 +44,7 @@
     <memory_region name="net_tx_free_cli2" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="net_tx_active_cli2" size="0x200_000" page_size="0x200_000"/>
 
-    <protection_domain name="CLIENT_VMM-1" priority="100">
+    <protection_domain name="CLIENT_VMM-1" priority="1">
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
@@ -62,13 +62,13 @@
         <map mr="net_rx_data_cli1" vaddr="0x12_800_000" perms="rw" cached="true" setvar_vaddr="net_rx_data" />
         <map mr="net_tx_data_cli1" vaddr="0x12_a00_000" perms="rw" cached="true" setvar_vaddr="net_tx_data" />
         
-        <virtual_machine name="client_linux-1" id="0" priority="100">
+        <virtual_machine name="client_linux-1" id="0" priority="1">
             <map mr="client_vm_ram_1" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
     </protection_domain>
 
-    <protection_domain name="CLIENT_VMM-2" priority="100">
+    <protection_domain name="CLIENT_VMM-2" priority="1">
         <program_image path="client_vmm.elf" />
         <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
@@ -85,7 +85,7 @@
         <map mr="net_rx_data_cli2" vaddr="0x12_800_000" perms="rw" cached="true" setvar_vaddr="net_rx_data" />
         <map mr="net_tx_data_cli2" vaddr="0x12_a00_000" perms="rw" cached="true" setvar_vaddr="net_tx_data" />
         
-        <virtual_machine name="client_linux-2" id="0" priority="100">
+        <virtual_machine name="client_linux-2" id="0" priority="1">
             <map mr="client_vm_ram_2" vaddr="0x40000000" perms="rwx" />
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
         </virtual_machine>
