@@ -21,8 +21,8 @@
 //  Client1 <----> | ------- | <----> virt_tx <----> | ------ |
 //                  ^(move copy to vswitch?)
 
-#define NET_CLI0_NAME "client0"
-#define NET_CLI1_NAME "client1"
+#define NET_CLI0_NAME "CLIENT_VMM-1"
+#define NET_CLI1_NAME "CLIENT_VMM-2"
 // #define NET_VSWITCH_NAME "vswitch"
 #define NET_COPY0_NAME "copy0"
 #define NET_COPY1_NAME "copy1"
