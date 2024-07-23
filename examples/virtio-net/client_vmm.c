@@ -156,6 +156,10 @@ void notified(microkit_channel ch)
         virtio_net_handle_rx(&virtio_net);
         break;
     }
+    case NET_VIRT_TX_CH: {
+        // @alexbr: can we stop this signal?
+        break;
+    }
     default:
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
