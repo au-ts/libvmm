@@ -167,6 +167,11 @@
     </protection_domain>
 
     <channel>
+        <end pd="eth" id="2" />
+        <end pd="net_virt_rx" id="0" />
+    </channel>
+
+    <channel>
         <end pd="net_virt_rx" id="1" />
         <end pd="copy1" id="0" />
     </channel>
