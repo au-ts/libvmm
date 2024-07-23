@@ -113,6 +113,7 @@ void init(void)
                                   VIRTIO_CONSOLE_IRQ,
                                   &serial_rxq, &serial_txq,
                                   SERIAL_VIRT_TX_CH);
+    assert(success);
     LOG_VMM("Initialised virtio-console device\n");
 
     /* Initialise the virtIO net device */
