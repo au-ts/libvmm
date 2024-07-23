@@ -122,6 +122,7 @@ void init(void)
 
     net_queue_handle_t net_rxq, net_txq;
     net_cli_queue_init_sys(microkit_name, &net_rxq, net_rx_free, net_rx_active, &net_txq, net_tx_free, net_tx_active);
+    net_buffers_init(&net_txq, 0);
 
     uint8_t mac[6];
     net_cli_mac_addr_init_sys(microkit_name, mac);
