@@ -52,6 +52,13 @@ static void assert_fail(
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+
 /* Convenience function to print memory region in hex */
 void print_mem_hex(uintptr_t addr, size_t size);
 
