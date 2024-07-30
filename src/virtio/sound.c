@@ -1,5 +1,6 @@
 #include <microkit.h>
 #include <libvmm/virq.h>
+#include <libvmm/util/util.h>
 #include <libvmm/virtio/sound.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
@@ -20,8 +21,6 @@
 #define EVENTQ 1
 #define TXQ 2
 #define RXQ 3
-
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 static inline struct virtio_snd_device *device_state(struct virtio_device *dev)
 {
