@@ -33,7 +33,7 @@ static void virtio_blk_mmio_reset(struct virtio_device *dev)
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
 
-static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
+static bool virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     if (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_BLOCK_ERR("driver somehow wants to read device features after FEATURES_OK\n");
@@ -52,17 +52,18 @@ static int virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32
     default:
         LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n",
                       dev->data.DeviceFeaturesSel);
-        return 0;
+        return false;
     }
-    return 1;
+
+    return true;
 }
 
-static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
+static bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     /* According to virtio initialisation protocol,
        this should check what device features were set, and return the subset of features understood
        by the driver. */
-    int success = 1;
+    bool success = false;
 
     uint32_t device_features = 0;
     device_features = device_features | BIT_LOW(VIRTIO_BLK_F_FLUSH);
@@ -80,7 +81,7 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
     default:
         LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
                       dev->data.DriverFeaturesSel);
-        success = 0;
+        return false;
     }
 
     if (success) {
@@ -90,7 +91,7 @@ static int virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32
     return success;
 }
 
-static int virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
+static bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     struct virtio_blk_device *state = device_state(dev);
 
@@ -100,10 +101,11 @@ static int virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_t
     *ret_val = *config_field_addr;
     LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
               config_base_addr, config_field_addr, *ret_val);
-    return 1;
+
+    return true;
 }
 
-static int virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
+static bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
     struct virtio_blk_device *state = device_state(dev);
 
@@ -113,7 +115,8 @@ static int virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t
     *config_field_addr = val;
     LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with value %d\n",
               config_base_addr, config_field_addr, val);
-    return 1;
+
+    return true;
 }
 
 static void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t desc)
@@ -183,7 +186,7 @@ static bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_c
     return true;
 }
 
-static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
+static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 {
     /* If multiqueue feature bit negotiated, should read which queue from dev->QueueNotify,
        but for now we just assume it's the one and only default queue */
@@ -362,7 +365,7 @@ static int virtio_blk_mmio_queue_notify(struct virtio_device *dev)
     /* Update virtq index to the next available request to be handled */
     vq->last_idx = idx;
 
-    int success = 1;
+    bool success = true;
 
     /* If any request has to be dropped due to any number of reasons, we inject an interrupt */
     if (has_dropped) {

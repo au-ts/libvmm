@@ -43,7 +43,7 @@ static void virtio_console_reset(struct virtio_device *dev)
     }
 }
 
-static int virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
+static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     LOG_CONSOLE("operation: get device features\n");
 
@@ -56,23 +56,24 @@ static int virtio_console_get_device_features(struct virtio_device *dev, uint32_
         break;
     default:
         LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
-        return 0;
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
-static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features)
+static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     LOG_CONSOLE("operation: set driver features\n");
     virtio_console_features_print(features);
 
-    int success = 1;
+    bool success = false;
 
     switch (dev->data.DriverFeaturesSel) {
     // feature bits 0 to 31
     case 0:
-        /* No low feature bits to check */
+        /* We do not offer any features in the first 32-bit bits */
+        success = (features == 0);
         break;
     // features bits 32 to 63
     case 1:
@@ -91,19 +92,19 @@ static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_
     return success;
 }
 
-static int virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config)
+static bool virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config)
 {
     LOG_CONSOLE("operation: get device config\n");
-    return -1;
+    return false;
 }
 
-static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config)
+static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config)
 {
     LOG_CONSOLE("operation: set device config\n");
-    return -1;
+    return false;
 }
 
-static int virtio_console_handle_tx(struct virtio_device *dev)
+static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
     // @ivanv: we need to check the pre-conditions before doing anything. e.g check
@@ -169,7 +170,7 @@ static int virtio_console_handle_tx(struct virtio_device *dev)
     return true;
 }
 
-int virtio_console_handle_rx(struct virtio_console_device *console)
+bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     LOG_CONSOLE("operation: handle rx\n");
     assert(console->virtio_device.num_vqs > RX_QUEUE);
