@@ -55,7 +55,6 @@ static int virtio_console_get_device_features(struct virtio_device *dev, uint32_
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        // @ivanv: audit
         LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
         return 0;
     }
@@ -73,10 +72,7 @@ static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_
     switch (dev->data.DriverFeaturesSel) {
     // feature bits 0 to 31
     case 0:
-        // The device initialisation protocol says the driver should read device feature bits,
-        // and write the subset of feature bits understood by the OS and driver to the device.
-        // Currently we only have one feature to check.
-        // success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
+        /* No low feature bits to check */
         break;
     // features bits 32 to 63
     case 1:
@@ -245,7 +241,6 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
                          int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
-    // @ivanv: check that num_vqs is greater than the minimum vqs to function?
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
