@@ -98,11 +98,11 @@ struct virtio_console_device {
 };
 
 bool virtio_mmio_console_init(struct virtio_console_device *console,
-                         uintptr_t region_base,
-                         uintptr_t region_size,
-                         size_t virq,
-                         serial_queue_handle_t *rxq,
-                         serial_queue_handle_t *txq,
-                         int tx_ch);
+                              uintptr_t region_base,
+                              uintptr_t region_size,
+                              size_t virq,
+                              serial_queue_handle_t *rxq,
+                              serial_queue_handle_t *txq,
+                              int tx_ch);
 
 bool virtio_console_handle_rx(struct virtio_console_device *console);

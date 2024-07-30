@@ -37,7 +37,7 @@ static void virtio_console_reset(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: reset device\n");
 
-    for (int i = 0; i < dev->num_vqs; i++){
+    for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
         dev->vqs[i].last_idx = 0;
     }
@@ -116,8 +116,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     /* Transmit all available descriptors possible */
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
-    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(&console->txq, console->txq.queue->head))
-    {
+    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(&console->txq, console->txq.queue->head)) {
         uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
         /* Traverse chained descriptors */
@@ -128,14 +127,15 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 
             uint32_t bytes_remain = desc.len;
             /* Copy all contiguous data */
-            while (bytes_remain > 0 && !serial_queue_full(&console->txq, console->txq.queue->head))
-            {
+            while (bytes_remain > 0 && !serial_queue_full(&console->txq, console->txq.queue->head)) {
                 uint32_t free = serial_queue_contiguous_free(&console->txq);
                 uint32_t to_transfer = (bytes_remain < free) ? bytes_remain : free;
-                if (to_transfer) transferred = true;
+                if (to_transfer) {
+                    transferred = true;
+                }
 
                 memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.size),
-                        (char *) (desc.addr + (desc.len - bytes_remain)), to_transfer);
+                       (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
 
                 serial_update_visible_tail(&console->txq, console->txq.queue->tail + to_transfer);
                 bytes_remain -= to_transfer;
@@ -234,12 +234,12 @@ virtio_device_funs_t functions = {
 };
 
 bool virtio_mmio_console_init(struct virtio_console_device *console,
-                         uintptr_t region_base,
-                         uintptr_t region_size,
-                         size_t virq,
-                         serial_queue_handle_t *rxq,
-                         serial_queue_handle_t *txq,
-                         int tx_ch)
+                              uintptr_t region_base,
+                              uintptr_t region_size,
+                              size_t virq,
+                              serial_queue_handle_t *rxq,
+                              serial_queue_handle_t *txq,
+                              int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
