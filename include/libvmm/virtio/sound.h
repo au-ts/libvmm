@@ -330,12 +330,12 @@ struct virtio_snd_device {
  * @return `true` on success, `false` otherwise.
  */
 bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
-                     uintptr_t region_base,
-                     uintptr_t region_size,
-                     size_t virq,
-                     sound_shared_state_t *shared_state,
-                     sound_queues_t *queues,
-                     uintptr_t data_region,
-                     int server_ch);
+                          uintptr_t region_base,
+                          uintptr_t region_size,
+                          size_t virq,
+                          sound_shared_state_t *shared_state,
+                          sound_queues_t *queues,
+                          uintptr_t data_region,
+                          int server_ch);
 
 void virtio_snd_notified(struct virtio_snd_device *sound_dev);
