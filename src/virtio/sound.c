@@ -38,7 +38,7 @@ static void virtio_snd_mmio_reset(struct virtio_device *dev)
     }
 }
 
-static int virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
+static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     switch (dev->data.DeviceFeaturesSel) {
         case 0:
@@ -50,14 +50,15 @@ static int virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint32
             break;
         default:
             LOG_SOUND_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
-            return 0;
+            return false;
     }
-    return 1;
+
+    return true;
 }
 
-static int virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
+static bool virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
-    int success;
+    bool success = false;
     switch (dev->data.DriverFeaturesSel) {
         // feature bits 0 to 31
         case 0:
@@ -69,7 +70,7 @@ static int virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32
             break;
         default:
             LOG_SOUND_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
-            success = 0;
+            return false;
     }
 
     if (success) {
@@ -79,7 +80,7 @@ static int virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32
     return success;
 }
 
-static int virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
+static bool virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     struct virtio_snd_device *state = device_state(dev);
     uintptr_t config_base_addr = (uintptr_t)&state->config;
@@ -87,13 +88,13 @@ static int virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
 
-    return 1;
+    return true;
 }
 
-static int virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
+static bool virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
     LOG_SOUND_ERR("Not allowed to change sound config.");
-    return 0;
+    return false;
 }
 
 static const char *code_to_str(uint32_t code)
@@ -609,13 +610,13 @@ static void handle_virtq(struct virtio_device *dev,
     vq->last_idx = idx;
 }
 
-static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
+static bool virtio_snd_mmio_queue_notify(struct virtio_device *dev)
 {
     struct virtio_snd_device *state = device_state(dev);
 
     if (dev->data.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
         LOG_SOUND_ERR("Invalid queue\n");
-        return 0;
+        return false;
     }
 
     bool notify_driver = false;
@@ -630,7 +631,7 @@ static int virtio_snd_mmio_queue_notify(struct virtio_device *dev)
         virtio_snd_respond(dev);
     }
 
-    return 1;
+    return true;
 }
 
 static virtio_device_funs_t functions = {

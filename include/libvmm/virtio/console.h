@@ -105,4 +105,4 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
                          serial_queue_handle_t *txq,
                          int tx_ch);
 
-int virtio_console_handle_rx(struct virtio_console_device *console);
+bool virtio_console_handle_rx(struct virtio_console_device *console);
