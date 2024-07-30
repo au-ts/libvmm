@@ -46,7 +46,8 @@ LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --e
 
 IMAGES := client_vmm.elf \
 	serial_virt_tx.elf serial_virt_rx.elf uart_driver.elf \
-	eth_driver.elf network_virt_rx.elf network_virt_tx.elf copy.elf timer_driver.elf
+	eth_driver.elf network_virt_rx.elf network_virt_tx.elf copy.elf timer_driver.elf \
+	vswitch.elf
 
 include $(SDDF)/util/util.mk
 include $(UART_DRIVER)/uart_driver.mk
@@ -54,6 +55,7 @@ include $(ETHERNET_DRIVER)/eth_driver.mk
 include $(TIMER_DRIVER)/timer_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include $(SDDF)/network/components/network_components.mk
+include $(SDDF)/network/components/vswitch/vswitch.mk
 include $(LIBVMM)/vmm.mk
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')

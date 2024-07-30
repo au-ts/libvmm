@@ -5,7 +5,7 @@
 #include <sddf/network/queue.h>
 #include <sddf/util/util.h>
 
-#define NUM_NETWORK_CLIENTS 2
+#define NUM_NETWORK_CLIENTS 1
 
 // We may need to change how this system works since now we have vswitch
 // =======================================================================
