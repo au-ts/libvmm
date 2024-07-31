@@ -821,6 +821,10 @@ static bool respond_to_request(virtio_snd_request_t *req,
 void virtio_snd_notified(struct virtio_snd_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
+    if (!virtio_device_ok(dev)) {
+        return;
+    }
+
     bool respond = false;
 
     sound_cmd_t cmd;

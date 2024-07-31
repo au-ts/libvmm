@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <libvmm/util/util.h>
+#include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
 
 // table 4.1
@@ -139,3 +140,13 @@ bool virtio_mmio_register_device(virtio_device_t *dev,
                                  uintptr_t region_base,
                                  uintptr_t region_size,
                                  size_t virq);
+
+/*
+ * Checks whether initialisation of virtIO device has completed successfully 
+ * This is useful for when external events that a virtIO device depends on occur
+ * before the device may be initialised by the guest.
+ */
+static inline bool virtio_device_ok(virtio_device_t *dev) {
+    return (dev->data.Status & VIRTIO_CONFIG_S_DRIVER_OK) &&
+           (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK);
+}

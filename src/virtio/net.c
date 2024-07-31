@@ -37,12 +37,6 @@ static void virtio_net_reset(struct virtio_device *dev)
     }
 }
 
-static bool driver_ok(struct virtio_device *dev)
-{
-    return (dev->data.Status & VIRTIO_CONFIG_S_DRIVER_OK) &&
-           (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK);
-}
-
 static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     LOG_NET("operation: get device features\n");
@@ -211,8 +205,8 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
 {
     struct virtio_net_device *state = device_state(dev);
 
-    if (!driver_ok(dev)) {
-        LOG_NET_ERR("Driver not ready\n");
+    if (!virtio_device_ok(dev)) {
+        LOG_NET_ERR("device is not ready\n");
         return false;
     }
     if (dev->data.QueueSel != VIRTIO_NET_TX_VIRTQ) {
@@ -323,8 +317,8 @@ bool virtio_net_handle_rx(struct virtio_net_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
 
-    if (!driver_ok(dev)) {
-        return false;
+    if (!virtio_device_ok(dev)) {
+        return true;
     }
     if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
         /* vq is not initialised, drop the packet */

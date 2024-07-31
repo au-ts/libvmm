@@ -385,6 +385,9 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
+    if (!virtio_device_ok(dev)) {
+        return true;
+    }
 
     blk_response_status_t sddf_ret_status;
     uint16_t sddf_ret_success_count;

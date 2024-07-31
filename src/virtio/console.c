@@ -174,6 +174,10 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     LOG_CONSOLE("operation: handle rx\n");
     assert(console->virtio_device.num_vqs > RX_QUEUE);
+    if (!virtio_device_ok(&console->virtio_device)) {
+        printf("device not ready\n");
+        return true;
+    }
 
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
