@@ -5,6 +5,9 @@
 #
 # Snippet to build libvmm.a, to be included in a full-system Makefile.
 #
+
+LIBVMM_DIR :=  $(abspath $(dir $(lastword ${MAKEFILE_LIST})))
+
 GIC_V3_BOARDS := imx8mm_evk maaxboard
 ifeq ($(filter ${MICROKIT_BOARD},${GIC_V3_BOARDS}),)
 	VGIC := GIC_V2
@@ -30,7 +33,14 @@ ifeq ($(strip $(SDDF)),)
     $(error libvmm needs the location of the SDDF to build virtIO components)
 endif
 
+# we need ${SDDF} for virtIO; we need ${LIBVMM} for all
+# the libvmm api interfaces
+ifeq ($(findstring ${SDDF}/include, ${CFLAGS}),)
 CFLAGS += -I${SDDF}/include
+endif
+ifeq ($(findstring ${LIBVMM_DIR}/include,${CFLAGS}),)
+CFLAGS +=-I${LIBVMM_DIR}/include
+endif
 
 ARCH_INDEP_FILES := src/util/printf.c \
 		    src/util/util.c \
@@ -42,7 +52,7 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/guest.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
-OBJECTS := ${CFILES:.c=.o}
+OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
 # Generate dependencies automatically
 CFLAGS += -MD
@@ -55,16 +65,20 @@ CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS} | shasum | sed 's/ *-
 	rm -f .libvmm_cflags.*
 	echo ${CFLAGS} > $@
 
-src/arch/aarch64/vgic/stamp:
-	mkdir -p src/arch/aarch64/vgic/
-	mkdir -p src/util
-	mkdir -p src/virtio
-	touch $@
+# This is ugly, but needed to distinguish  directories in the BUILD area
+# from directories in the source area.
+libvmm/arch/aarch64/vgic:
+	mkdir -p libvmm/arch/aarch64/vgic/
+	mkdir -p libvmm/util
+	mkdir -p libvmm/virtio
 
 libvmm.a: ${OBJECTS}
-	ar rv $@ ${CFILES:.c=.o}
+	ar rv $@ $^
 
-${OBJECTS}: src/arch/aarch64/vgic/stamp ${CHECK_LIBVMM_CFLAGS}
+${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic
+
+libvmm/%.o: src/%.c
+	${CC} ${CFLAGS} -c -o $@ $<
 
 -include ${CFILES:.c=.d}
 
@@ -72,4 +86,6 @@ clean::
 	rm -f ${OBJECTS} ${CFILES:.c=.d}
 
 clobber:: clean
-	rm -f src/arch/aarch64/vgic/stamp
+	rmdir src/arch/aarch64/vgic
+	rmdir src/util
+	rmdir src/virtio
