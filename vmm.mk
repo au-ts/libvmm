@@ -39,7 +39,7 @@ ifeq ($(findstring ${SDDF}/include, ${CFLAGS}),)
 CFLAGS += -I${SDDF}/include
 endif
 ifeq ($(findstring ${LIBVMM_DIR}/include,${CFLAGS}),)
-CFLAGS +=-I${LIBVMM_DIR}/include
+CFLAGS += -I${LIBVMM_DIR}/include
 endif
 
 ARCH_INDEP_FILES := src/util/printf.c \
