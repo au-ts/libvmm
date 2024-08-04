@@ -3,6 +3,8 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
+# Generates blk_client_init and blk_driver_init scripts
+#
 
 ifeq ($(strip $(MICROKIT_BOARD)),)
 $(error MICROKIT_BOARD must be specified)

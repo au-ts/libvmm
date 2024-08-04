@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# This Makefile snippet builds block UIO driver
+# Generates library libuio.a to be linked against userlevel drivers
 #
 
 ifeq ($(strip $(SDDF)),)
