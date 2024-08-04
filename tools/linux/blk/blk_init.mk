@@ -4,12 +4,12 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-ifeq ($(strip $(LIBVMM)),)
-$(error LIBVMM must be specified)
-endif
 ifeq ($(strip $(MICROKIT_BOARD)),)
 $(error MICROKIT_BOARD must be specified)
 endif
+
+LINUX_BLK_DIR := $(abs $(dir $(last ${MAKEFILES_LIST})))
+LIBVMM ?= $(realpath ${LINUX_BLK_DIR}/../../../)
 
 blk_client_init: $(LIBVMM)/tools/linux/blk/blk_client_init
 	cp $^ $@
