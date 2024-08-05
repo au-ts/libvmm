@@ -31,6 +31,8 @@ _Static_assert(BLK_DATA_REGION_SIZE_CLI1 >= BLK_TRANSFER_SIZE && BLK_DATA_REGION
 _Static_assert(BLK_DATA_REGION_SIZE_DRIV >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_DRIV % BLK_TRANSFER_SIZE == 0,
                "Driver data region size must be a multiple of the transfer size");
 
+static const int blk_partition_mapping[BLK_NUM_CLIENTS] = { 0, 1 };
+
 static inline blk_storage_info_t *blk_virt_cli_config_info(blk_storage_info_t *info, unsigned int id)
 {
     switch (id) {
