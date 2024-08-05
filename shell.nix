@@ -6,11 +6,6 @@ let
     linux_aarch64_cross = import <nixpkgs> {
         crossSystem = { config = "aarch64-unknown-linux-gnu"; };
     };
-    manual_deps = with pkgs.buildPackages; [
-        texliveFull
-        pandoc
-        librsvg
-    ];
 in
   pkgs.mkShell {
     buildInputs = with pkgs.buildPackages; [
@@ -28,7 +23,7 @@ in
         expect
         # For when we need to build user-space applications for Linux guests
         linux_aarch64_cross.buildPackages.gcc
-    ] ++ manual_deps;
+    ];
     hardeningDisable = [ "all" ];
     # Need to specify this when using Rust with bindgen
     LIBCLANG_PATH = "${llvm.libclang.lib}/lib";
