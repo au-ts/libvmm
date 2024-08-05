@@ -88,7 +88,7 @@ static inline blk_resp_queue_t *blk_virt_cli_resp_queue(blk_resp_queue_t *resp, 
         return resp;
     case 1:
         return (blk_resp_queue_t *)((uintptr_t)resp + BLK_QUEUE_REGION_SIZE_CLI0);
-    default: 
+    default:
         return NULL;
     }
 }
