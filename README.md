@@ -71,7 +71,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command:
 ```sh
 cd examples/simple
-make BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
+make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 You should see Linux booting and be greeted with the buildroot prompt:
