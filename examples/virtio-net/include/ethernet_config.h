@@ -113,7 +113,6 @@ static inline void net_virt_mac_addr_init_sys(char *pd_name, uint8_t *macs)
 {
     if (!sddf_strcmp(pd_name, NET_VIRT_RX_NAME)) {
         __net_set_mac_addr(macs, MAC_ADDR_CLI0);
-        __net_set_mac_addr(&macs[ETH_HWADDR_LEN], MAC_ADDR_CLI1);
     }
 }
 
@@ -148,12 +147,8 @@ static inline void net_virt_queue_init_sys(char *pd_name, net_queue_handle_t *cl
 {
     if (!sddf_strcmp(pd_name, NET_VIRT_RX_NAME)) {
         net_queue_init(cli_queue, cli_free, cli_active, NET_RX_QUEUE_SIZE_COPY0);
-        net_queue_init(&cli_queue[1], (net_queue_t *)((uintptr_t)cli_free + 2 * NET_DATA_REGION_SIZE),
-                       (net_queue_t *)((uintptr_t)cli_active + 2 * NET_DATA_REGION_SIZE), NET_RX_QUEUE_SIZE_COPY1);
     } else if (!sddf_strcmp(pd_name, NET_VIRT_TX_NAME)) {
         net_queue_init(cli_queue, cli_free, cli_active, NET_TX_QUEUE_SIZE_CLI0);
-        net_queue_init(&cli_queue[1], (net_queue_t *)((uintptr_t)cli_free + 2 * NET_DATA_REGION_SIZE),
-                       (net_queue_t *)((uintptr_t)cli_active + 2 * NET_DATA_REGION_SIZE), NET_TX_QUEUE_SIZE_CLI1);
     }
 }
 
@@ -161,6 +156,5 @@ static inline void net_mem_region_init_sys(char *pd_name, uintptr_t *mem_regions
 {
     if (!sddf_strcmp(pd_name, NET_VIRT_TX_NAME)) {
         mem_regions[0] = start_region;
-        mem_regions[1] = start_region + NET_DATA_REGION_SIZE;
     }
 }
