@@ -24,7 +24,7 @@ The example currently works on the following platforms:
 ## Building
 
 ```sh
-make BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
+make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<BOARD>` is one of:
@@ -36,7 +36,7 @@ and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
+make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
