@@ -55,7 +55,7 @@ brew install make qemu dtc llvm
 On [Nix](https://nixos.org/):
 ```sh
 # In the root of the repository
-nix-shell --pure
+nix-shell
 ```
 
 #### Acquiring the SDK
