@@ -22,6 +22,12 @@ if [ $# -ne 4 ]; then
     exit 1
 fi
 
+if ! command -v mkfs.fat &> /dev/null
+then
+    echo "mkfs.fat could not be found, please install dosfstools"
+    exit 1
+fi
+
 DISK_IMAGE=$1
 NUM_PARTITIONS=$2
 LSIZE=$3
