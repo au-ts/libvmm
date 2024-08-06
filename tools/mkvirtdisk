@@ -10,6 +10,12 @@
 
 set -e
 
+function cleanup {
+    rm -f $BUILD_DIR/fat.img
+}
+
+trap cleanup EXIT
+
 # Usage instructions
 if [ $# -ne 4 ]; then
     echo "Usage: $0 <virtual_disk_name> <num_partitions> <logical_size> <memsize>"
@@ -25,7 +31,12 @@ SDDF_TRANSFER_SIZE=4096
 FDISK_LSIZE=512
 
 if [ $(( LSIZE & (LSIZE - 1) )) -ne 0 ] || [ $LSIZE -lt $FDISK_LSIZE ]; then
-    echo "LSIZE must be greater than $FDISK_LSIZE and a power of 2"
+    echo "LSIZE must be greater than $FDISK_LSIZE and must be a power of 2"
+    exit 1
+fi
+
+if [ $((MEMSIZE)) -lt 114688 ]; then
+    echo "MEMSIZE must be greater than 114688(112 * 1024), sizes smaller than that break either fdisk or mkfs.fat"
     exit 1
 fi
 
@@ -37,12 +48,18 @@ LCM=$(( SDDF_TRANSFER_SIZE > LSIZE ? SDDF_TRANSFER_SIZE : LSIZE ))
 # Since we are using fdisk, COUNT uses the logical size provided by fdisk which is always 512 bytes (FDISK_LSIZE)
 MULTIPLE=$(( LCM / FDISK_LSIZE ))
 COUNT=$(( MEMSIZE / FDISK_LSIZE ))
-COUNT=$(( COUNT / MULTIPLE * MULTIPLE)) # Ensure COUNT is a multiple of sDDF transfer size and logical size
+
+# Determine starting partition offset
+if [ $COUNT -gt $(( 2048 * 4 )) ]; then
+    POFFSET=2048
+else
+    POFFSET=$MULTIPLE
+fi
+
+COUNT=$(( COUNT / MULTIPLE * MULTIPLE)) # Now ensure the real COUNT is a multiple of sDDF transfer size and logical size
 
 # Create a file to act as a virtual disk
 dd if=/dev/zero of=$DISK_IMAGE bs=$FDISK_LSIZE count=$COUNT 2> /dev/null
-
-POFFSET=$MULTIPLE
 
 FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
 FS_COUNT=$(( FS_COUNT / MULTIPLE * MULTIPLE )) # Ensures that both filesystems are a multiple of sDDF transfer size and logical size
@@ -67,8 +84,6 @@ done
 
 echo w # Write changes
 } | fdisk $DISK_IMAGE
-
-fdisk -l $DISK_IMAGE
 
 # Create the FAT filesystem
 rm -f $BUILD_DIR/fat.img
