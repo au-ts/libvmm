@@ -53,7 +53,6 @@ var microkit_board: MicrokitBoard = undefined;
 var libvmm_dep: *Build.Dependency = undefined;
 var sddf_dep: *Build.Dependency = undefined;
 
-// TODO: Util function, move this elsewhere
 fn fileExists(path: []const u8) bool {
     std.fs.cwd().access(path, .{}) catch return false;
     return true;
