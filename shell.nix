@@ -22,6 +22,8 @@ in
         llvm.lld
         llvm.libllvm
         llvm.libclang
+        dosfstools
+        util-linux
         # expect is only needed for CI testing but we include it for
         # completeness
         expect
