@@ -5,7 +5,7 @@ const LazyPath = Build.LazyPath;
 const Tuple = std.meta.Tuple;
 
 const MicrokitBoard = enum {
-    qemu_arm_virt,
+    qemu_virt_aarch64,
     odroidc4
 };
 
@@ -22,7 +22,7 @@ const Target = struct {
 
 const targets = [_]Target {
     .{
-        .board = MicrokitBoard.qemu_arm_virt,
+        .board = MicrokitBoard.qemu_virt_aarch64,
         .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
@@ -206,10 +206,10 @@ pub fn build(b: *Build) void {
     };
 
     // mkvirtdisk option
-    var mkvirtdisk_option: bool = undefined;
-    if (microkit_board == .qemu_arm_virt) {
-        mkvirtdisk_option = b.option(bool, "mkvirtdisk", "Create a new virtual disk image") orelse false;
-    }
+    const mkvirtdisk_option = switch (microkit_board) {
+        .qemu_virt_aarch64 => b.option(bool, "mkvirtdisk", "Create a new virtual disk image") orelse false,
+        else => false,
+    };
 
     // libmicrokit
     const libmicrokit_path = b.fmt("{s}/lib/libmicrokit.a", .{ microkit_board_dir });
@@ -249,9 +249,9 @@ pub fn build(b: *Build) void {
     // Blk driver VM: Get DTB
     const blk_driver_vm_dts_base = b.path(b.fmt("board/{s}/blk_driver_vm/dts/linux.dts", .{ @tagName(microkit_board) }));
     const blk_driver_vm_dts_overlays = &[_]LazyPath{
-        b.path(b.fmt("board/{s}/blk_driver_vm/dts/init.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/blk_driver_vm/dts/io.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/blk_driver_vm/dts/disable.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/blk_driver_vm/dts/overlays/init.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/blk_driver_vm/dts/overlays/io.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/blk_driver_vm/dts/overlays/disable.dts", .{ @tagName(microkit_board) })),
     };
     // Blk driver VM: Pack rootfs
     const uio_driver_blk = libvmm_dep.artifact("uio_driver_blk");
@@ -272,62 +272,36 @@ pub fn build(b: *Build) void {
     );
     b.installArtifact(blk_driver_vmm);
 
-    // Client 1 VMM artifact
+    // Client VMM artifact
     const client_src_file = b.path("client_vmm.c");
-    // Client 1 VM: Get DTB
-    const client_vm_1_dts_base = b.path(b.fmt("board/{s}/client_vm_1/dts/linux.dts", .{ @tagName(microkit_board) }));
-    const client_vm_1_dts_overlays = &[_]LazyPath{
-        b.path(b.fmt("board/{s}/client_vm_1/dts/init.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/client_vm_1/dts/virtio.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/client_vm_1/dts/disable.dts", .{ @tagName(microkit_board) })),
+    // Client VM: Get DTB
+    const client_vm_dts_base = b.path(b.fmt("board/{s}/client_vm/dts/linux.dts", .{ @tagName(microkit_board) }));
+    const client_vm_dts_overlays = &[_]LazyPath{
+        b.path(b.fmt("board/{s}/client_vm/dts/overlays/init.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/client_vm/dts/overlays/virtio.dts", .{ @tagName(microkit_board) })),
+        b.path(b.fmt("board/{s}/client_vm/dts/overlays/disable.dts", .{ @tagName(microkit_board) })),
     };
-    // Client 1 VM: Pack rootfs
-    const client_vm_1_init = libvmm_dep.path("tools/linux/blk/blk_client_init");
-    const client_vm_1_rootfs_base = b.path(b.fmt("board/{s}/client_vm_1/rootfs.cpio.gz", .{ @tagName(microkit_board) }));
-    const client_vmm_1 = addVmm(
+    // Client VM: Pack rootfs
+    const client_vm_init = libvmm_dep.path("tools/linux/blk/blk_client_init");
+    const client_vm_rootfs_base = b.path(b.fmt("board/{s}/client_vm/rootfs.cpio.gz", .{ @tagName(microkit_board) }));
+    const client_vmm = addVmm(
         b,
-        "client_vm_1",
-        "client_vmm_1.elf",
+        "client_vm",
+        "client_vmm.elf",
         client_src_file,
-        client_vm_1_rootfs_base,
+        client_vm_rootfs_base,
         &.{},
-        &.{client_vm_1_init},
-        client_vm_1_dts_base,
-        client_vm_1_dts_overlays,
+        &.{client_vm_init},
+        client_vm_dts_base,
+        client_vm_dts_overlays,
         target,
         optimize
     );
-    b.installArtifact(client_vmm_1);
-
-    // Client 2 VMM artifact
-    // Client 2 VM: Get DTB
-    const client_vm_2_dts_base = b.path(b.fmt("board/{s}/client_vm_2/dts/linux.dts", .{ @tagName(microkit_board) }));
-    const client_vm_2_dts_overlays = &[_]LazyPath{
-        b.path(b.fmt("board/{s}/client_vm_2/dts/init.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/client_vm_2/dts/virtio.dts", .{ @tagName(microkit_board) })),
-        b.path(b.fmt("board/{s}/client_vm_2/dts/disable.dts", .{ @tagName(microkit_board) })),
-    };
-    // Client 2 VM: Pack rootfs
-    const client_vm_2_init = libvmm_dep.path("tools/linux/blk/blk_client_init");
-    const client_vm_2_rootfs_base = b.path(b.fmt("board/{s}/client_vm_2/rootfs.cpio.gz", .{ @tagName(microkit_board) }));
-    const client_vmm_2 = addVmm(
-        b,
-        "client_vm_2",
-        "client_vmm_2.elf",
-        client_src_file,
-        client_vm_2_rootfs_base,
-        &.{},
-        &.{client_vm_2_init},
-        client_vm_2_dts_base,
-        client_vm_2_dts_overlays,
-        target,
-        optimize
-    );
-    b.installArtifact(client_vmm_2);
+    b.installArtifact(client_vmm);
 
     // UART driver artifact
     const uart_driver = switch (microkit_board) {
-        .qemu_arm_virt => sddf_dep.artifact("driver_uart_arm.elf"),
+        .qemu_virt_aarch64 => sddf_dep.artifact("driver_uart_arm.elf"),
         .odroidc4 => sddf_dep.artifact("driver_uart_meson.elf"),
     };
     const uart_driver_install = b.addInstallArtifact(uart_driver, .{ .dest_sub_path = "uart_driver.elf" });
@@ -391,7 +365,7 @@ pub fn build(b: *Build) void {
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
     const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
-    if (microkit_board == .qemu_arm_virt) {
+    if (microkit_board == .qemu_virt_aarch64) {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
