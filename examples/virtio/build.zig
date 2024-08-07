@@ -257,7 +257,7 @@ pub fn build(b: *Build) void {
         b.path(b.fmt("board/{s}/blk_driver_vm/dts/overlays/disable.dts", .{ @tagName(microkit_board) })),
     };
     // Blk driver VM: Pack rootfs
-    const uio_driver_blk = libvmm_dep.artifact("uio_driver_blk");
+    const uio_driver_blk = libvmm_dep.artifact("uio_blk_driver");
     const blk_driver_vm_init = libvmm_dep.path(b.fmt("tools/linux/blk/board/{s}/blk_driver_init", .{ @tagName(microkit_board) }));
     const blk_driver_vm_rootfs_base = b.path(b.fmt("board/{s}/blk_driver_vm/rootfs.cpio.gz", .{ @tagName(microkit_board) }));
     const blk_driver_vmm = addVmm(

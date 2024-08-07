@@ -195,7 +195,7 @@ pub fn build(b: *std.Build) void {
     const target_userlevel = b.resolveTargetQuery(target_userlevel_query);
 
     const uio_driver_blk = b.addExecutable(.{
-        .name = "uio_driver_blk",
+        .name = "uio_blk_driver",
         .target = target_userlevel,
         .optimize = optimize,
         .strip = false,
