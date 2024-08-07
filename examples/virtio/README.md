@@ -26,6 +26,40 @@ The example currently works on the following platforms:
 * QEMU virt AArch64
 * HardKernel Odroid-C4
 
+## Dependencies
+
+In addition to the dependencies outlined in the top-level README, the following dependencies
+are needed:
+* Zig (for cross-compiling for Linux user-space)
+* mkfs.fat
+
+### Linux
+
+Zig can be installed manually or via a package manager, see
+[here](https://github.com/ziglang/zig/wiki/Install-Zig-from-a-Package-Manager).
+
+You may already have `mkfs.fat`, if not and you use `apt` try the following command:
+```sh
+sudo apt-get install dosfstools
+```
+
+### macOS
+
+Zig can be installed manually or via a package manager, see
+[here](https://github.com/ziglang/zig/wiki/Install-Zig-from-a-Package-Manager).
+
+To install `mkfs.fat` run:
+```sh
+brew install dosfstools
+```
+
+### Nix
+
+The top-level `shell.nix` has everything necessary:
+```sh
+nix-shell ../../shell.nix
+```
+
 ## Building
 
 ```sh
@@ -59,10 +93,10 @@ serial device.
 When you boot the example, you will see different coloured output for each guest.
 The Linux logs will be interleaving like so:
 ```
-Starting klogd: OKStarting klogd: 
+Starting klogd: OKStarting klogd:
 OK
 Running sysctl: Running sysctl: OK
-OKSaving random seed: 
+OKSaving random seed:
 Saving random seed: [    4.070358] random: crng init done
 [    4.103992] random: crng init done
 OK
@@ -71,7 +105,7 @@ Starting network: OK
 OK
 
 Welcome to Buildroot
-buildroot login: 
+buildroot login:
 Welcome to Buildroot
 buildroot login:
 ```
