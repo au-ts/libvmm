@@ -151,16 +151,10 @@ simulate_zig "release" "ReleaseSafe"
 build_zig "release" "ReleaseSmall"
 simulate_zig "release" "ReleaseSmall"
 
-# The setup for virtIO block does not currently work on macOS due to
-# Linux-specific utilities not being available.
-# if [ "$(uname)" == "Linux" ]; then
-
-# build_virtio "qemu_virt_aarch64" "debug"
-# build_virtio "qemu_virt_aarch64" "release"
+build_virtio "qemu_virt_aarch64" "debug"
+build_virtio "qemu_virt_aarch64" "release"
 # build_virtio "odroidc4" "debug"
 # build_virtio "odroidc4" "release"
-
-# fi
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"

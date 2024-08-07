@@ -74,7 +74,7 @@ jobs:
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
-          brew install llvm qemu dtc make expect
+          brew install llvm qemu dtc make dosfstools expect
           echo "/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_PATH
       - name: Install Zig
         run: |
