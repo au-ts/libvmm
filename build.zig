@@ -155,11 +155,9 @@ pub fn build(b: *std.Build) void {
 
             break :blk &(src_aarch64 ++ vgic_src);
         },
-        else => &[_][]const u8 {},
-        // else => {
-        //     std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
-        //     std.posix.exit(1);
-        // }
+        else => {
+            @panic(b.fmt("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) }));
+        }
     };
 
     const libvmm_flags = &.{

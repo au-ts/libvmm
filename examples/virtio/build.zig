@@ -301,23 +301,23 @@ pub fn build(b: *Build) void {
     );
     b.installArtifact(client_vmm);
 
-    // UART driver artifact
+    // Get all of our sDDF artefacts
+    // UART driver
     const uart_driver = switch (microkit_board) {
         .qemu_virt_aarch64 => sddf_dep.artifact("driver_uart_arm.elf"),
         .odroidc4 => sddf_dep.artifact("driver_uart_meson.elf"),
     };
+    // The system description expects a different name for the UART driver ELF, so we add this extra
+    // install step.
     const uart_driver_install = b.addInstallArtifact(uart_driver, .{ .dest_sub_path = "uart_driver.elf" });
     b.getInstallStep().dependOn(&uart_driver_install.step);
-
-    // Serial virt TX artifact
+    // Serial TX virtualiser
     const serial_virt_tx = sddf_dep.artifact("serial_virt_tx.elf");
     b.installArtifact(serial_virt_tx);
-
-    // Serial virt RX artifact
+    // Serial RX virtualiser
     const serial_virt_rx = sddf_dep.artifact("serial_virt_rx.elf");
     b.installArtifact(serial_virt_rx);
-
-    // Blk virt artifact
+    // Block virtualiser
     const blk_virt = sddf_dep.artifact("blk_virt.elf");
     b.installArtifact(blk_virt);
 
