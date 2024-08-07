@@ -6,7 +6,7 @@
 
 # This bash script creates a virtual disk image with an msdos partition table.
 # It aligns the partitions to both the sDDF transfer size and the device's logical size.
-# It creates a FAT filesystem on each partition.
+# It creates a FAT 12 filesystem on each partition.
 
 set -e
 
@@ -25,6 +25,11 @@ fi
 if ! command -v mkfs.fat &> /dev/null
 then
     echo "mkfs.fat could not be found, please install dosfstools"
+    exit 1
+fi
+
+if [[ "$OSTYPE" != "linux"* ]] && [[ "$OSTYPE" != "darwin"* ]]; then
+    echo "This script is not supported on your OS"
     exit 1
 fi
 
@@ -71,29 +76,55 @@ FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
 FS_COUNT=$(( FS_COUNT / MULTIPLE * MULTIPLE )) # Ensures that both filesystems are a multiple of sDDF transfer size and logical size
 
 # Create MBR partition table
-PREV=$POFFSET
-{
-echo o # Create a new empty DOS partition table
+if [[ "$OSTYPE" == "linux"* ]]; then
+    PREV=$POFFSET
+    {
+    echo o # Create a new empty DOS partition table
 
-# Loop to create each partition
-for i in $(seq 1 $NUM_PARTITIONS)
-do
-    echo n # Add a new partition
-    echo p # Primary partition
-    if [ $i != 4 ]; then
-        echo $i # Partition number
-    fi
-    echo $PREV # First sector
-    echo +$(( FS_COUNT - 1 )) # Last sector
-    PREV=$(( PREV + FS_COUNT ))
-done
+    # Loop to create each partition
+    for i in $(seq 1 $NUM_PARTITIONS)
+    do
+        echo n # Add a new partition
+        echo p # Primary partition
+        if [ $i != 4 ]; then
+            echo $i # Partition number
+        fi
+        echo $PREV # First sector
+        echo +$(( FS_COUNT - 1 )) # Last sector
+        PREV=$(( PREV + FS_COUNT ))
+    done
 
-echo w # Write changes
-} | fdisk $DISK_IMAGE
+    echo w # Write changes
+    } | fdisk $DISK_IMAGE
+    fdisk -l $DISK_IMAGE # Print the partition table
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    PREV=$POFFSET
+    {
+    echo y # Answer yes to create a new empty DOS partition table
+
+    # Loop to create each partition
+    for i in $(seq 1 $NUM_PARTITIONS)
+    do
+        echo edit $i
+        echo 01 # Set partition type to FAT12
+        echo n # No to editing in CHS mode
+        echo $PREV # First sector
+        echo $FS_COUNT # Number of sectors in partition
+        PREV=$(( PREV + FS_COUNT ))
+    done
+
+    echo write # Write changes
+    echo quit # Save and quit fdisk
+    } | fdisk -e $DISK_IMAGE
+    fdisk $DISK_IMAGE # Print the partition table
+else
+    echo "This script is not supported on your OS"
+    exit 1
+fi
 
 # Create the FAT filesystem
 rm -f $BUILD_DIR/fat.img
-mkfs.fat -C $BUILD_DIR/fat.img $(( (FS_COUNT * FDISK_LSIZE) / 1024 ))
+mkfs.fat -C $BUILD_DIR/fat.img $(( (FS_COUNT * FDISK_LSIZE) / 1024 )) -F 12 -S $LSIZE
 
 # Copy the FAT filesystem to the virtual disk
 for i in $(seq 0 $(( NUM_PARTITIONS - 1 )))
