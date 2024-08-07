@@ -171,13 +171,13 @@ simulate_zig "release" "ReleaseSmall"
 # Linux-specific utilities not being available.
 # if [ "$(uname)" == "Linux" ]; then
 
-# build_virtio_make "qemu_virt_aarch64" "debug"
-# build_virtio_make "qemu_virt_aarch64" "release"
+build_virtio_make "qemu_virt_aarch64" "debug"
+build_virtio_make "qemu_virt_aarch64" "release"
 # build_virtio_make "odroidc4" "debug"
 # build_virtio_make "odroidc4" "release"
 
-# build_virtio_zig "qemu_virt_aarch64" "debug"
-# build_virtio_zig "qemu_virt_aarch64" "release"
+build_virtio_zig "qemu_virt_aarch64" "debug"
+build_virtio_zig "qemu_virt_aarch64" "release"
 # build_virtio_zig "odroidc4" "debug"
 # build_virtio_zig "odroidc4" "release"
 
