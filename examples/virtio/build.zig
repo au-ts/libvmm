@@ -1,3 +1,6 @@
+// Copyright 2024, UNSW
+// SPDX-License-Identifier: BSD-2-Clause
+
 const std = @import("std");
 const libvmm_mod = @import("libvmm");
 const Build = std.Build;

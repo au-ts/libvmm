@@ -1,3 +1,8 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 / {
     /delete-node/ pl011@9000000;
     /delete-node/ flash@0;
