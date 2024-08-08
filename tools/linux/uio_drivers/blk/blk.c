@@ -132,31 +132,31 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 
 void driver_notified()
 {
-    blk_request_code_t req_code;
+    blk_req_code_t req_code;
     uintptr_t req_offset;
     uint32_t req_block_number;
     uint16_t req_count;
     uint32_t req_id;
 
-    while (!blk_req_queue_empty(&h)) {
+    while (!blk_queue_empty_req(&h)) {
         blk_dequeue_req(&h, &req_code, &req_offset, &req_block_number, &req_count, &req_id);
         LOG_UIO_BLOCK("Received command: code=%d, offset=0x%lx, block_number=%d, count=%d, id=%d\n", req_code, req_offset,
                       req_block_number, req_count, req_id);
 
-        blk_response_status_t status = SUCCESS;
+        blk_resp_status_t status = BLK_RESP_OK;
         uint16_t success_count = 0;
 
-        if (blk_resp_queue_full(&h)) {
+        if (blk_queue_full_resp(&h)) {
             LOG_UIO_BLOCK_ERR("Response ring is full, dropping response\n");
             continue;
         }
 
         switch (req_code) {
-        case READ_BLOCKS: {
+        case BLK_REQ_READ: {
             int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
             if (ret < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
                 success_count = 0;
                 break;
             }
@@ -165,19 +165,19 @@ void driver_notified()
             LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
             if (bytes_read < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
                 success_count = 0;
             } else {
-                status = SUCCESS;
+                status = BLK_RESP_OK;
                 success_count = bytes_read / BLK_TRANSFER_SIZE;
             }
             break;
         }
-        case WRITE_BLOCKS: {
+        case BLK_REQ_WRITE: {
             int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
             if (ret < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
                 success_count = 0;
                 break;
             }
@@ -186,31 +186,31 @@ void driver_notified()
             LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
             if (bytes_written < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
                 success_count = 0;
             } else {
-                status = SUCCESS;
+                status = BLK_RESP_OK;
                 success_count = bytes_written / BLK_TRANSFER_SIZE;
             }
             break;
         }
-        case FLUSH: {
+        case BLK_REQ_FLUSH: {
             int ret = fsync(storage_fd);
             if (ret != 0) {
                 LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
             } else {
-                status = SUCCESS;
+                status = BLK_RESP_OK;
             }
             break;
         }
-        case BARRIER: {
+        case BLK_REQ_BARRIER: {
             int ret = fsync(storage_fd);
             if (ret != 0) {
                 LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = SEEK_ERROR;
+                status = BLK_RESP_SEEK_ERROR;
             } else {
-                status = SUCCESS;
+                status = BLK_RESP_OK;
             }
             break;
         }
