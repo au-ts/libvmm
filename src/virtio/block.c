@@ -179,7 +179,7 @@ static bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_c
         return false;
     }
 
-    if (blk_req_queue_full(&state->queue_h)) {
+    if (blk_queue_full_req(&state->queue_h)) {
         LOG_BLOCK_ERR("Request queue is full\n");
         return false;
     }
@@ -256,7 +256,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             };
 
             uintptr_t offset = sddf_data - ((struct virtio_blk_device *)dev->device_data)->data_region;
-            err = blk_enqueue_req(&state->queue_h, READ_BLOCKS, offset, sddf_block_number, sddf_count, req_id);
+            err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, offset, sddf_block_number, sddf_count, req_id);
             assert(!err);
             break;
         }
@@ -302,7 +302,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 };
 
                 uintptr_t offset = sddf_data - ((struct virtio_blk_device *)dev->device_data)->data_region;
-                err = blk_enqueue_req(&state->queue_h, READ_BLOCKS, offset, sddf_block_number, sddf_count, req_id);
+                err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, offset, sddf_block_number, sddf_count, req_id);
                 assert(!err);
             } else {
                 if (!sddf_make_req_check(state, sddf_count)) {
@@ -331,7 +331,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 memcpy((void *)sddf_data, (void *)virtq->desc[curr_desc_head].addr, virtq->desc[curr_desc_head].len);
 
                 uintptr_t offset = sddf_data - ((struct virtio_blk_device *)dev->device_data)->data_region;
-                err = blk_enqueue_req(&state->queue_h, WRITE_BLOCKS, offset, sddf_block_number, sddf_count, req_id);
+                err = blk_enqueue_req(&state->queue_h, BLK_REQ_WRITE, offset, sddf_block_number, sddf_count, req_id);
                 assert(!err);
             }
             break;
@@ -354,7 +354,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 desc_head, 0, 0, 0, 0, 0
             };
 
-            err = blk_enqueue_req(&state->queue_h, FLUSH, 0, 0, 0, req_id);
+            err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
             break;
         }
         default: {
@@ -379,7 +379,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         success = virtio_blk_virq_inject(dev);
     }
 
-    if (!blk_req_queue_plugged(&state->queue_h)) {
+    if (!blk_queue_plugged_req(&state->queue_h)) {
         /* there is a world where all requests to be handled during this batch
          * are dropped and hence this notify to the other PD would be redundant */
         microkit_notify(state->server_ch);
@@ -392,13 +392,13 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
 
-    blk_response_status_t sddf_ret_status;
+    blk_resp_status_t sddf_ret_status;
     uint16_t sddf_ret_success_count;
     uint32_t sddf_ret_id;
 
     bool handled = false;
     int err = 0;
-    while (!blk_resp_queue_empty(&state->queue_h)) {
+    while (!blk_queue_empty_resp(&state->queue_h)) {
         err = blk_dequeue_resp(&state->queue_h,
                                &sddf_ret_status,
                                &sddf_ret_success_count,
@@ -416,7 +416,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
         uint16_t curr_virtio_desc = virtq->desc[data->virtio_desc_head].next;
 
         bool resp_success = false;
-        if (sddf_ret_status == SUCCESS) {
+        if (sddf_ret_status == BLK_RESP_OK) {
             resp_success = true;
             switch (virtio_req->type) {
             case VIRTIO_BLK_T_IN: {
@@ -440,7 +440,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                     };
 
                     err = blk_enqueue_req(&state->queue_h,
-                                          WRITE_BLOCKS,
+                                          BLK_REQ_WRITE,
                                           data->sddf_data - state->data_region,
                                           data->sddf_block_number,
                                           data->sddf_count,
