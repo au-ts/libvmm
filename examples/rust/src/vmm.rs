@@ -113,7 +113,7 @@ impl Handler for VmmHandler {
 
     fn fault(&mut self, id: Child, msg_info: MessageInfo) -> Result<Option<MessageInfo>, Self::Error> {
         unsafe {
-            if fault_handle(0, msg_info) {
+            if fault_handle(id.index(), msg_info) {
                 Ok(Some(MessageInfo::new(0, 0)))
             } else {
                 unreachable!()
