@@ -7,6 +7,7 @@
 #include <microkit.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 
 /* Maps Microkit channel numbers with registered vIRQ */
@@ -24,8 +25,9 @@ static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}
 
 bool virq_controller_init(size_t boot_vcpu_id) {
+    bool success;
+
     vgic_init();
-    // @ivanv: todo, do this dynamically instead of compile time?
 #if defined(GIC_V2)
     LOG_VMM("initialised virtual GICv2 driver\n");
 #elif defined(GIC_V3)
@@ -34,7 +36,21 @@ bool virq_controller_init(size_t boot_vcpu_id) {
 #error "Unsupported GIC version"
 #endif
 
-    bool success = vgic_register_irq(boot_vcpu_id, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
+    /* Register the fault handler */
+    success = fault_register_vm_exception_handler(GIC_DIST_PADDR, GIC_DIST_SIZE, handle_vgic_dist_fault, NULL);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register fault handler for GIC distributor region\n");
+        return false;
+    }
+#if defined(GIC_V3)
+    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_SIZE, handle_vgic_redist_fault, NULL);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register fault handler for GIC redistributor region\n");
+        return false;
+    }
+#endif
+
+    success = vgic_register_irq(boot_vcpu_id, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
         return false;

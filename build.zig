@@ -33,7 +33,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
 
     const libmicrokit_include_opt = b.option([]const u8, "libmicrokit_include", "Path to the libmicrokit include directory") orelse null;
-    const microkit_board_opt = b.option([]const u8, "microkit_board", "Name of Microkit board") orelse null;
 
     // Default to vGIC version 2
     const arm_vgic_version = b.option(usize, "arm_vgic_version", "ARM vGIC version to emulate") orelse null;
@@ -69,7 +68,6 @@ pub fn build(b: *std.Build) void {
             "-Wno-unused-function",
             "-mstrict-align",
             "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
-            b.fmt("-DBOARD_{s}", .{ microkit_board_opt.? }) // @ivanv: shouldn't be needed as the library should not depend on the board
         }
     });
 

@@ -360,38 +360,26 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
 
-    switch (addr) {
-        case GIC_DIST_PADDR...GIC_DIST_PADDR + GIC_DIST_SIZE:
-            return handle_vgic_dist_fault(vcpu_id, addr, fsr, &regs);
-#if defined(GIC_V3)
-        /* Need to handle redistributor faults for GICv3 platforms. */
-        case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
-            return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
-#endif
-        default: {
-            bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
-            if (!success) {
-                /*
-                 * We could not find a registered handler for the address, meaning that the fault
-                 * is genuinely unexpected. Surprise!
-                 * Now we print out as much information relating to the fault as we can, hopefully
-                 * the programmer can figure out what went wrong.
-                 */
-                size_t ip = microkit_mr_get(seL4_VMFault_IP);
-                size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
-                bool is_write = fault_is_write(fsr);
-                LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
-                    addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-                tcb_print_regs(vcpu_id);
-                vcpu_print_regs(vcpu_id);
-            } else {
-                /* @ivanv, is it correct to unconditionally advance the CPU here? */
-                fault_advance_vcpu(vcpu_id, &regs);
-            }
-
-            return success;
-        }
+    bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
+    if (!success) {
+        /*
+         * We could not find a registered handler for the address, meaning that the fault
+         * is genuinely unexpected. Surprise!
+         * Now we print out as much information relating to the fault as we can, hopefully
+         * the programmer can figure out what went wrong.
+         */
+        size_t ip = microkit_mr_get(seL4_VMFault_IP);
+        size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+        bool is_write = fault_is_write(fsr);
+        LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
+            addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+        tcb_print_regs(vcpu_id);
+        vcpu_print_regs(vcpu_id);
+    } else {
+        fault_advance_vcpu(vcpu_id, &regs);
     }
+
+    return success;
 }
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
