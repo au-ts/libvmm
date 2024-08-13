@@ -103,7 +103,6 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .libmicrokit_include = @as([]const u8, libmicrokit_include),
         .arm_vgic_version = arm_vgic_version,
-        .microkit_board = @as([]const u8, microkit_board),
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
