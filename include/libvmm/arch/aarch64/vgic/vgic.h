@@ -10,16 +10,13 @@
 #include <stdint.h>
 #include <libvmm/virq.h>
 
-// @ivanv: this should all come from the DTS!
-// @ivanv: either this should all be compile time or all runtime
-// as in initialising the vgic should depend on the runtime values
-#if defined(BOARD_qemu_virt_aarch64)
+#if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
 #define GIC_V2
 #define GIC_DIST_PADDR      0x8000000
-#elif defined(BOARD_odroidc4)
+#elif defined(CONFIG_PLAT_ODROIDC4)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xffc01000
-#elif defined(BOARD_maaxboard)
+#elif defined(CONFIG_PLAT_MAAXBOARD)
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
@@ -54,7 +51,7 @@
 
 void vgic_init();
 bool fault_handle_vgic_maintenance(size_t vcpu_id);
-bool handle_vgic_dist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs);
-bool handle_vgic_redist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs);
+bool handle_vgic_dist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+bool handle_vgic_redist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
 bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void *ack_data);
 bool vgic_inject_irq(size_t vcpu_id, int irq);

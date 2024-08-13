@@ -90,9 +90,8 @@ static bool handle_vgic_redist_read_fault(size_t vcpu_id, vgic_t *vgic, uint64_t
 
     uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
     uint32_t mask = fault_get_data_mask(fault_addr, fsr);
+    fault_emulate_write(regs, fault_addr, fsr, reg & mask);
     // @ivanv: todo error handling
-    bool success = fault_advance(vcpu_id, regs, fault_addr, fsr, reg & mask);
-    assert(success);
 
     return true;
 }
@@ -145,17 +144,10 @@ static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_
         LOG_VMM_ERR("Unknown register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
     }
 
-    bool success = fault_advance_vcpu(vcpu_id, regs);
-    assert(success);
-
-    return success;
+    return true;
 }
 
-bool handle_vgic_redist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs) {
-    assert(fault_addr >= GIC_REDIST_PADDR);
-    uint64_t offset = fault_addr - GIC_REDIST_PADDR;
-    assert(offset < GIC_REDIST_SIZE);
-
+bool handle_vgic_redist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
     if (fault_is_read(fsr)) {
         return handle_vgic_redist_read_fault(vcpu_id, &vgic, offset, fsr, regs);
     } else {
