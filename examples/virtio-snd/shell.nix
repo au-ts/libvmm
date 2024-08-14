@@ -22,6 +22,7 @@ in
         fakeroot
         cpio
         zig
+        perl
       ];
     in crossInputs ++ nativeInputs;
     hardeningDisable = [ "all" ];
