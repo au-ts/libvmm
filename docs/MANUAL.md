@@ -281,9 +281,17 @@ intermediary components such as a virtual network switch (VSwitch).
 
 # Adding platform support
 
-This section will describe how to add support for a new platform to the `simple`
+The library itself is intended to need minimal changes to add a new platform.
+
+The following changes are necessary:
+
+* Platform vGIC version and physical address (see `src/arch/aarch64/vgic/vgic.h`).
+* If the platform uses GICv3, you will need to change the top-level Makefile snippet
+  (`vmm.mk`) to account for that.
+
+The rest of this section will be a guide on adding support for a new platform to the `simple`
 example which contains a VMM that boots a Linux guest with a simple command-line-interface
-via the serial connection.
+via the serial device.
 
 Before you can get a guest working on your desired platform you must have the following:
 
@@ -292,26 +300,22 @@ Before you can get a guest working on your desired platform you must have the fo
 
 ## Guest setup
 
-While in theory you should be able to run any guest, the VMM has only been tested
-with Linux and hence the following instructions are somewhat Linux specific.
-
 Required guest files:
 
 * Kernel image
 * Device Tree Source to be passed to the kernel at boot
 * Initial RAM disk
 
-Each platform image directory (`board/$BOARD/images`) contains a README with
+Each platform image directory (`board/$BOARD/`) contains a README with
 instructions on how to reproduce the images used if you would like to see
 examples of how other example systems are setup.
 
-Before attempting to get the VMM working, I strongly encourage you to make sure
+Before attempting to get the VMM working, we strongly encourage you to make sure
 that these binaries work natively, as in, without being virtualised. If they do
 not, they likely will not work with the VMM either.
 
-Add these images to the `board/$BOARD/` directory or specify the
-`IMAGE_DIR` argument when building the system which points to the directory
-that contains all of the files.
+Add these images to the `board/$BOARD/` directory following the same naming
+conventions as other platforms so that the build system can find them.
 
 ### Implementation notes
 
@@ -345,17 +349,12 @@ then the GIC emulation will need to be changed before your platform can be suppo
 
 <!-- @ivanv: These instructions could be improved -->
 
-Lastly, there are some hard-coded values that the VMM needs to support a platform.
-There are three files that need to be changed:
+Lastly, there are some platform-specific values that the VMM needs to know.
+There are two files that need to be changed:
 
-* `src/vmm.h`
-* `src/vgic/vgic.h`
-* For Linux, the device tree needs to contain the location of the initial RAM disk,
-  see the `chosen` node of `board/qemu_virt_aarch64/images/linux.dts` as an example.
-
-As you can probably tell, all this information that needs to be added is known at
-build-time, the plan is to auto-generate these values that the VMM needs to make it
-easier to add platform support (and in general make the VMM less fragile).
+* `src/vmm.c`
+* Linux expects the device tree to contain the location of the initial RAM disk,
+  see the `chosen` node of `board/qemu_virt_aarch64/overlay.dts` for an example.
 
 ## Getting the guest image to boot
 
