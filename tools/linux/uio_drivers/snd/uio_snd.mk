@@ -18,7 +18,9 @@ LIBVMM ?= $(realpath ${LINUX_BLK_DIR}/../../../../)
 
 UIO_SND_IMAGES := uio_snd_driver
 
-CFLAGS_uio_snd_driver := -I$(SDDF)/include -I$(LIBVMM)/tools/linux/include -I$(LIBVMM)/include -lasound -lm -MD
+CFLAGS_uio_snd_driver := -I$(SDDF)/include -I$(LIBVMM)/tools/linux/include -I$(LIBVMM)/include -MD
+
+LIBS_uio_snd_driver := -lasound
 
 CHECK_UIO_SND_DRIVER_FLAGS_HASH:=.uio_snd_driver_cflags-$(shell echo -- $(CFLAGS_USERLEVEL) $(CFLAGS_uio_snd_driver) | shasum | sed 's/ *-//')
 
@@ -39,7 +41,7 @@ _uio_snd_driver:
 	mkdir -p _uio_snd_driver
 
 uio_snd_driver: $(OBJECTS_uio_snd_driver)
-	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_snd_driver) $(OBJECTS_uio_snd_driver) -o $@
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_snd_driver) $(LIBS_uio_snd_driver) $(OBJECTS_uio_snd_driver) -o $@
 
 $(OBJECTS_uio_snd_driver): |_uio_snd_driver
 
