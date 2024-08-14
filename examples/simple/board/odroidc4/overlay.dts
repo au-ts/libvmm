@@ -3,3 +3,53 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+/ {
+    memory@0 {
+        device_type = "memory";
+        reg = <0x00 0x20000000 0x00 0x10000000>;
+    };
+
+    /* Give Linux a smaller amount of memory for DMA than normal since we only have 256MB of RAM */
+    reserved-memory {
+        linux,cma {
+            compatible = "shared-dma-pool";
+            reusable;
+            size = <0x00 0x1000000>;
+            alignment = <0x00 0x400000>;
+            alloc-ranges = <0x00 0x8000000 0x10000000>;
+            linux,cma-default;
+        };
+    };
+
+    secure-monitor {
+        status = "disabled";
+    };
+
+    soc {
+        ethernet@ff3f0000 {
+            status = "disabled";
+        };
+
+        bus@ff800000 {
+            ao-secure@140 {
+                status = "disabled";
+            };
+
+            adc@9000 {
+                status = "disabled";
+            };
+        };
+
+        vpu@ff900000 {
+            status = "disabled";
+        };
+    };
+
+    chosen {
+        linux,stdout-path = "/soc/bus@ff800000/serial@3000";
+        stdout-path = "/soc/bus@ff800000/serial@3000";
+        linux,initrd-end = <0x00000000 0x2e000000>;
+        linux,initrd-start = <0x00000000 0x2d700000>;
+        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+    };
+};

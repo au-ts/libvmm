@@ -6,10 +6,6 @@
 	#address-cells = <0x02>;
 	compatible = "linux,dummy-virt";
 
-	aliases {
-		serial0 = "/pl011@9000000";
-	};
-
 	psci {
 		migrate = <0xc4000005>;
 		cpu_on = <0xc4000003>;
@@ -20,7 +16,7 @@
 	};
 
 	memory@40000000 {
-		reg = <0x00 0x40000000 0x00 0x10000000>;
+		reg = <0x00 0x40000000 0x00 0x80000000>;
 		device_type = "memory";
 	};
 
@@ -61,7 +57,6 @@
 		bank-width = <0x04>;
 		reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
 		compatible = "cfi-flash";
-		status = "disabled";
 	};
 
 	cpus {
@@ -91,9 +86,7 @@
 
 	chosen {
 		stdout-path = "/pl011@9000000";
-		bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug loglevel=8";
-		linux,stdout-path = "/pl011@9000000";
-		linux,initrd-start = <0x4d700000>;
-		linux,initrd-end = <0x4d800000>;
+		rng-seed = <0x8f0ee46 0xecbe7263 0xc724a577 0x271cf683 0xdd190daf 0x103bff62 0x5f2496fb 0xee0cf760>;
+		kaslr-seed = <0x198a65b3 0x8b3cef37>;
 	};
 };
