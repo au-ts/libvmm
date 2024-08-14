@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 // Used for mapping in UIO devices
 #define PAGE_SIZE_4K 0x1000
@@ -37,6 +38,9 @@
 #define PCM_DATA_ADDR UIO_ADDR("2")
 #define PCM_DATA_SIZE UIO_SIZE("2")
 
+#define ALSACTL_PROGRAM_PATH "/alsactl"
+#define ALSACTL_EXIT_SUCCESS 99
+
 typedef struct driver_state {
     stream_t *streams[MAX_STREAMS];
     int stream_count;
@@ -47,6 +51,8 @@ typedef struct driver_state {
 
     char *signal_addr;
 } driver_state_t;
+
+static char *alsactl_args[] = {"alsactl", "init", "-U", "-i", "/alsa/init/00main", NULL};
 
 static void signal_ready_to_vmm(char *signal_addr)
 {
@@ -215,9 +221,40 @@ static bool handle_uio_interrupt(driver_state_t *state)
     return notify_client;
 }
 
+bool start_alsactl(void)
+{
+    pid_t pid = fork();
+    if (pid < 0) {
+        LOG_SOUND_ERR("Failed to fork: %s\n", strerror(errno));
+        return false;
+    } else if (pid == 0) {
+        execv(ALSACTL_PROGRAM_PATH, alsactl_args);
+        LOG_SOUND_ERR("Failed to start alsactl: %s\n", strerror(errno));
+        return false;
+    } else {
+        int status;
+        if (waitpid(pid, &status, 0) < 0) {
+            return false;
+        }
+
+        if (!WIFEXITED(status)) {
+            LOG_SOUND_ERR("alsactl did not exit normally\n");
+            return false;
+        }
+
+        if (WEXITSTATUS(status) != ALSACTL_EXIT_SUCCESS) {
+            LOG_SOUND_ERR("alsactl exited with status %d: %s\n", WEXITSTATUS(status), strerror(errno));
+            return false;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char **argv)
 {
-    system("alsactl init -U");
+    if (!start_alsactl()) {
+        return EXIT_FAILURE;
+    }
 
     LOG_SOUND("Starting sound driver\n");
 

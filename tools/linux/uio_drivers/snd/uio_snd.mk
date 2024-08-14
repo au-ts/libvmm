@@ -40,8 +40,8 @@ DEPENDS_uio_snd_driver := $(addprefix _uio_snd_driver/,$(DEPENDS_uio_snd_driver)
 _uio_snd_driver:
 	mkdir -p _uio_snd_driver
 
-uio_snd_driver: $(OBJECTS_uio_snd_driver)
-	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_snd_driver) $(LIBS_uio_snd_driver) $(OBJECTS_uio_snd_driver) -o $@
+uio_snd_driver: $(OBJECTS_uio_snd_driver) libuio.a
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_snd_driver) $(LIBS_uio_snd_driver) $^ -o $@
 
 $(OBJECTS_uio_snd_driver): |_uio_snd_driver
 
