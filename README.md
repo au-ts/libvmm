@@ -65,9 +65,9 @@ nix-shell
 
 #### Acquiring the SDK
 
-Finally, you will need version 1.4.0 of the Microkit SDK.
+Finally, you will need version 1.4.1 of the Microkit SDK.
 
-You can download a prebuilt SDK from [here](https://github.com/seL4/microkit/releases/tag/1.4.0)
+You can download a prebuilt SDK from [here](https://github.com/seL4/microkit/releases/tag/1.4.1)
 or [build from source](https://github.com/seL4/microkit).
 
 ### Building and running
