@@ -118,9 +118,9 @@ export fn init() callconv(.C) void {
 export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
     switch (ch) {
         SERIAL_IRQ_CH => {
-            const success = c.virq_inject(GUEST_BOOT_VCPU_ID, SERIAL_IRQ);
+            const success = c.virq_inject(SERIAL_IRQ);
             if (!success) {
-                log.err("IRQ {x} dropped on vCPU {x}\n", .{ SERIAL_IRQ, GUEST_BOOT_VCPU_ID });
+                log.err("IRQ {x} dropped\n", .{ SERIAL_IRQ });
             }
         },
         else => log.err("Unexpected channel, ch: {x}\n", .{ ch })

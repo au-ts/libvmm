@@ -145,7 +145,7 @@ void notified(microkit_channel ch)
 
     switch (ch) {
     case UIO_CH: {
-        int success = virq_inject(GUEST_VCPU_ID, UIO_IRQ);
+        int success = virq_inject(UIO_IRQ);
         if (!success) {
             LOG_VMM_ERR("Failed to inject UIO IRQ 0x%lx\n", UIO_IRQ);
         }

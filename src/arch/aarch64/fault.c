@@ -395,7 +395,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
             success = fault_handle_user_exception(vcpu_id);
             break;
         case seL4_Fault_VGICMaintenance:
-            success = fault_handle_vgic_maintenance(vcpu_id);
+            success = vgic_handle_fault_maintenance(vcpu_id);
             break;
         case seL4_Fault_VCPUFault:
             success = fault_handle_vcpu_exception(vcpu_id);

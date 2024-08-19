@@ -100,7 +100,7 @@ impl Handler for VmmHandler {
         match channel {
             UART_CH => {
                 unsafe {
-                    let success = virq_inject(GUEST_VCPU_ID, UART_IRQ as i32);
+                    let success = virq_inject(UART_IRQ as i32);
                     if !success {
                         debug_println!("VMM|ERROR: could not inject UART IRQ");
                     }
