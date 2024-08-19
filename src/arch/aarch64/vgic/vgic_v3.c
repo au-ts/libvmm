@@ -204,6 +204,7 @@ vgic_reg_t vgic_regs;
 void vgic_init()
 {
     // @ivanv: audit
+    // TODO: fix for SMP
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
