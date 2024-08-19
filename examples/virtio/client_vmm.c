@@ -103,7 +103,7 @@ void init(void)
     }
 
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init(GUEST_VCPU_ID);
+    bool success = virq_controller_init(GUEST_BOOT_VCPU_ID);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
@@ -140,7 +140,7 @@ void init(void)
     assert(success);
 
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch)

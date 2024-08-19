@@ -95,7 +95,7 @@ void init(void) {
     }
 
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init(GUEST_VCPU_ID);
+    bool success = virq_controller_init();
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
@@ -147,7 +147,7 @@ void init(void) {
                               SOUND_DRIVER_CH);
     assert(success);
 
-    success = guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    success = guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     assert(success);
 }
 
