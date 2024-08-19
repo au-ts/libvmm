@@ -149,9 +149,9 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
 
 bool vgic_handle_fault_redist(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
     if (fault_is_read(fsr)) {
-        return handle_vgic_redist_read_fault(vcpu_id, &vgic, offset, fsr, regs);
+        return vgic_handle_fault_redist_read(vcpu_id, &vgic, offset, fsr, regs);
     } else {
-        return handle_vgic_redist_write_fault(vcpu_id, &vgic, offset, fsr, regs);
+        return vgic_handle_fault_redist_write(vcpu_id, &vgic, offset, fsr, regs);
     }
 }
 
