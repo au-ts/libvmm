@@ -124,7 +124,7 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
         case PSCI_SYSTEM_OFF:
             // @refactor, is it guaranteed that the CPU that does the vCPU request
             // is the boot vcpu?
-            guest_stop(vcpu_id);
+            guest_stop();
             return true;
         default:
             LOG_VMM_ERR("Unhandled PSCI function ID 0x%lx\n", fn_number);
