@@ -247,7 +247,7 @@ static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, size_t vcpu_id,
     // @ivanv
 }
 
-static bool vgic_dist_reg_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     uint32_t reg = 0;
@@ -414,7 +414,7 @@ static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t add
     *reg = fault_emulate(regs, *reg, addr, fsr, fault_get_data(regs, fsr));
 }
 
-static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
 {
     bool success = true;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
