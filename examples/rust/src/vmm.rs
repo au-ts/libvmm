@@ -37,10 +37,10 @@ extern "C" {
                           kernel: usize, kernel_size: usize,
                           dtb_src: usize, dtb_dest: usize, dtb_size: usize,
                           initrd_src: usize, initrd_dest: usize, initrd_size: usize) -> usize;
-    fn virq_controller_init(boot_vpcu_id: usize) -> bool;
+    fn virq_controller_init() -> bool;
     fn virq_register(vcpu_id: usize, irq: i32, ack_fn: extern fn(usize, i32, *const c_void), ack_data: *const c_void) -> bool;
-    fn virq_inject(vcpu_id: usize, irq: i32) -> bool;
-    fn guest_start(boot_vpcu_id: usize, kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
+    fn virq_inject(irq: i32) -> bool;
+    fn guest_start(kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
 }
 
@@ -76,9 +76,10 @@ fn init() -> VmmHandler {
                                             dtb_addr, GUEST_DTB_VADDR, dtb.len(),
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
                                          );
-        // @ivanv, deal with unused vars
-        _ = virq_controller_init();
-        _ = virq_register(UART_IRQ as i32, uart_irq_ack, core::ptr::null());
+        let success = virq_controller_init();
+        assert!(success);
+        let success = virq_register(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
+        assert!(success);
         match UART_CH.irq_ack() {
             Ok(()) => {}
             Err(_e) => {
