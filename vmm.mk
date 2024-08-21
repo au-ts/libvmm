@@ -54,6 +54,7 @@ ARCH_INDEP_FILES := src/util/printf.c \
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
+
 # Generate dependencies automatically
 CFLAGS += -MD
 
@@ -75,15 +76,16 @@ libvmm/arch/aarch64/vgic:
 libvmm.a: ${OBJECTS}
 	ar rv $@ $^
 
+${OBJECTS}: ${SDDF}/include
 ${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic
 
 libvmm/%.o: src/%.c
 	${CC} ${CFLAGS} -c -o $@ $<
 
--include ${CFILES:.c=.d}
+-include ${OBJECTS:.o=.d}
 
 clean::
-	rm -f ${OBJECTS} ${CFILES:.c=.d}
+	rm -f ${OBJECTS} ${OBJECTS:.c=.d}
 
 clobber:: clean
 	rmdir src/arch/aarch64/vgic
