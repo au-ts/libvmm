@@ -71,11 +71,11 @@ void init_main(void)
         return;
     }
 
+    LOG_UIO_INIT("Starting UIO sound driver...\n");
     if (!setup_logfile()) {
         return;
     }
 
-    LOG_UIO_INIT("Starting UIO sound driver...\n");
     execv(UIO_SND_DRIVER_PROGRAM_PATH, uio_snd_driver_args);
     LOG_UIO_INIT("UIO sound driver exited\n");
 }

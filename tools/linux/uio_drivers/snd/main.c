@@ -252,6 +252,20 @@ bool start_alsactl(void)
 
 int main(int argc, char **argv)
 {
+    // Check if /dev/snd exists
+    int tries = 0;
+    while (access("/dev/snd/controlC0", F_OK) != 0 && tries < 10) {
+        LOG_SOUND_WARN("/dev/snd has not been initialised yet.\n");
+        LOG_SOUND_WARN("Trying again in 1s...\n");
+        sleep(1);
+        tries++;
+    }
+
+    if (tries >= 10) {
+        LOG_SOUND_ERR("Could not find /dev/snd\n");
+        return EXIT_FAILURE;
+    }
+
     if (!start_alsactl()) {
         return EXIT_FAILURE;
     }
@@ -292,7 +306,7 @@ int main(int argc, char **argv)
 
     state.stream_count = 0;
 
-    int tries = 0;
+    tries = 0;
     while (state.stream_count != MAX_STREAMS && tries < 10) {
         for (int i = 0; i < MAX_STREAMS; i++) {
 
