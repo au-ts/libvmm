@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "hsr.h"
-#include "../../util/util.h"
-#include "smc.h"
-#include "vgic/vgic.h"
-#include "tcb.h"
-#include "vcpu.h"
-#include "fault.h"
+#include <libvmm/util/util.h>
+#include <libvmm/tcb.h>
+#include <libvmm/vcpu.h>
+#include <libvmm/arch/aarch64/hsr.h>
+#include <libvmm/arch/aarch64/smc.h>
+#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
 
 // #define CPSR_THUMB                 (1 << 5)
 // #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
@@ -24,7 +24,7 @@
 
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs) {
     // For now we just ignore it and continue
-    // Assume 64-bit instruction
+    // Assume 32-bit instruction
     regs->pc += 4;
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
@@ -44,27 +44,22 @@ char *fault_to_string(seL4_Word fault_label) {
     }
 }
 
+/*
+ * Possible 'Syndrome Access Size' defined in ARMv8-A specification. The values
+ * of the enums line up with the SAS encoding of the ISS encoding for an
+ * exception from a Data Abort.
+ */
 enum fault_width {
-    WIDTH_DOUBLEWORD = 0,
-    WIDTH_WORD = 1,
-    WIDTH_HALFWORD = 2,
-    WIDTH_BYTE = 3,
+    WIDTH_BYTE = 0b00,
+    WIDTH_HALFWORD = 0b01,
+    WIDTH_WORD = 0b10,
+    WIDTH_DOUBLEWORD = 0b11,
 };
 
 static enum fault_width fault_get_width(uint64_t fsr)
 {
-    if (HSR_IS_SYNDROME_VALID(fsr)) {
-        switch (HSR_SYNDROME_WIDTH(fsr)) {
-            case 0: return WIDTH_BYTE;
-            case 1: return WIDTH_HALFWORD;
-            case 2: return WIDTH_WORD;
-            case 3: return WIDTH_DOUBLEWORD;
-            default:
-                // @ivanv: reviist
-                // print_fault(f);
-                assert(0);
-                return 0;
-        }
+    if (HSR_IS_SYNDROME_VALID(fsr) && HSR_SYNDROME_WIDTH(fsr) <= WIDTH_DOUBLEWORD) {
+        return (enum fault_width) (HSR_SYNDROME_WIDTH(fsr));
     } else {
         LOG_VMM_ERR("Received invalid FSR: 0x%lx\n", fsr);
         // @ivanv: reviist
@@ -105,9 +100,14 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
 }
 
 static seL4_Word wzr = 0;
-seL4_Word *decode_rt(uint64_t reg, seL4_UserContext *regs)
+seL4_Word *decode_rt(size_t reg_idx, seL4_UserContext *regs)
 {
-    switch (reg) {
+    /*
+     * This switch statement is necessary due to a mismatch between how
+     * seL4 orders the TCB registers compared to what the architecture
+     * encodes the Syndrome Register transfer.
+     */
+    switch (reg_idx) {
         case 0: return &regs->x0;
         case 1: return &regs->x1;
         case 2: return &regs->x2;
@@ -141,8 +141,7 @@ seL4_Word *decode_rt(uint64_t reg, seL4_UserContext *regs)
         case 30: return &regs->x30;
         case 31: return &wzr;
         default:
-            printf("invalid reg %d\n", reg);
-            assert(!"Invalid register");
+            LOG_VMM_ERR("failed to decode Rt, attempted to access invalid register index 0x%lx\n", reg_idx);
             return NULL;
     }
 }
@@ -159,7 +158,6 @@ bool fault_is_read(uint64_t fsr)
 
 static int get_rt(uint64_t fsr)
 {
-
     int rt = -1;
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         rt = HSR_SYNDROME_RT(fsr);
@@ -176,7 +174,7 @@ static int get_rt(uint64_t fsr)
 uint64_t fault_get_data(seL4_UserContext *regs, uint64_t fsr)
 {
     /* Get register opearand */
-    int rt  = get_rt(fsr);
+    int rt = get_rt(fsr);
 
     uint64_t data = *decode_rt(rt, regs);
 
@@ -212,8 +210,6 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 
     seL4_Word *reg_ctx = decode_rt(rt, regs);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
-    // DFAULT("%s: Emulate fault @ 0x%x from PC 0x%x\n",
-    //        fault->vcpu->vm->vm_name, fault->addr, fault->ip);
 
     return fault_advance_vcpu(vcpu_id, regs);
 }
@@ -244,7 +240,7 @@ bool fault_handle_vppi_event(size_t vcpu_id)
         // @ivanv, make a note that when having a lot of printing on it can cause this error
         LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
         // Acknowledge to unmask it as our guest will not use the interrupt
-        microkit_arm_vcpu_ack_vppi(vcpu_id, ppi_irq);
+        microkit_vcpu_arm_ack_vppi(vcpu_id, ppi_irq);
     }
 
     return true;
@@ -364,38 +360,26 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
 
-    switch (addr) {
-        case GIC_DIST_PADDR...GIC_DIST_PADDR + GIC_DIST_SIZE:
-            return handle_vgic_dist_fault(vcpu_id, addr, fsr, &regs);
-#if defined(GIC_V3)
-        /* Need to handle redistributor faults for GICv3 platforms. */
-        case GIC_REDIST_PADDR...GIC_REDIST_PADDR + GIC_REDIST_SIZE:
-            return handle_vgic_redist_fault(vcpu_id, addr, fsr, &regs);
-#endif
-        default: {
-            bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
-            if (!success) {
-                /*
-                 * We could not find a registered handler for the address, meaning that the fault
-                 * is genuinely unexpected. Surprise!
-                 * Now we print out as much information relating to the fault as we can, hopefully
-                 * the programmer can figure out what went wrong.
-                 */
-                size_t ip = microkit_mr_get(seL4_VMFault_IP);
-                size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
-                bool is_write = fault_is_write(fsr);
-                LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
-                    addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-                tcb_print_regs(vcpu_id);
-                vcpu_print_regs(vcpu_id);
-            } else {
-                /* @ivanv, is it correct to unconditionally advance the CPU here? */
-                fault_advance_vcpu(vcpu_id, &regs);
-            }
-
-            return success;
-        }
+    bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
+    if (!success) {
+        /*
+         * We could not find a registered handler for the address, meaning that the fault
+         * is genuinely unexpected. Surprise!
+         * Now we print out as much information relating to the fault as we can, hopefully
+         * the programmer can figure out what went wrong.
+         */
+        size_t ip = microkit_mr_get(seL4_VMFault_IP);
+        size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+        bool is_write = fault_is_write(fsr);
+        LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
+            addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+        tcb_print_regs(vcpu_id);
+        vcpu_print_regs(vcpu_id);
+    } else {
+        return fault_advance_vcpu(vcpu_id, &regs);
     }
+
+    return success;
 }
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
@@ -423,7 +407,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
         default:
             /* We have reached a genuinely unexpected case, stop the guest. */
             LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
-            microkit_vm_stop(vcpu_id);
+            microkit_vcpu_stop(vcpu_id);
             /* Dump the TCB and vCPU registers to hopefully get information as
              * to what has gone wrong. */
             tcb_print_regs(vcpu_id);

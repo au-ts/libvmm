@@ -1,9 +1,14 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # libvmm
 
 The purpose of this project is to make it easy to run virtual machines on top of the seL4 microkernel.
 
 This project contains three parts:
-* `src/`: The source code of libvmm, a library for virtual-machime-monitors (VMM) to create and manage virtual machines on seL4.
+* `src/`: The source code of libvmm, a library for virtual-machine-monitors (VMM) to create and manage virtual machines on seL4.
 * `examples/`: Examples for using libvmm.
 * `tools/`: Tools that are useful when developing systems using virtual machines, but are not
   necessary for using the library.
@@ -55,54 +60,15 @@ brew install make qemu dtc llvm
 On [Nix](https://nixos.org/):
 ```sh
 # In the root of the repository
-nix-shell --pure
+nix-shell
 ```
 
 #### Acquiring the SDK
 
-Finally, you will need an experimental Microkit SDK.
+Finally, you will need version 1.4.1 of the Microkit SDK.
 
-* Currently virtualisation support and other patches that the VMM requires are
-  not part of mainline Microkit.
-* Upstreaming the required changes is in-progress.
-
-For acquiring the SDK, you have two options.
-
-1. Download a pre-built SDK (recommended).
-2. Build the SDK yourself.
-
-##### Option 1 - Download pre-built SDK
-
-On Linux (x86-64):
-```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-linux-x86-64.tar.gz
-```
-
-On macOS (Apple Silicon/AArch64):
-```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-macos-aarch64.tar.gz
-```
-
-On macOS (Intel/x86-64):
-```sh
-wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
-tar xf microkit-sdk-dev-4f717f2-macos-x86-64.tar.gz
-```
-
-##### Option 2 - Building the SDK
-
-You will need a development version of the Microkit SDK source code. You can acquire it with the following command:
-```sh
-git clone https://github.com/Ivan-Velickovic/microkit.git --branch dev
-```
-
-From here, you can follow the instructions
-[here](https://github.com/Ivan-Velickovic/microkit/tree/dev) to build the SDK.
-
-If you have built the SDK then the path to the SDK should look something like
-this: `microkit/release/microkit-sdk-<VERSION>`.
+You can download a prebuilt SDK from [here](https://github.com/seL4/microkit/releases/tag/1.4.1)
+or [build from source](https://github.com/seL4/microkit).
 
 ### Building and running
 
@@ -110,7 +76,7 @@ Finally, we can simulate a basic system with a single Linux guest with the
 following command:
 ```sh
 cd examples/simple
-make BOARD=qemu_arm_virt MICROKIT_SDK=/path/to/sdk qemu
+make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 You should see Linux booting and be greeted with the buildroot prompt:

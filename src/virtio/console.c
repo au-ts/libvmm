@@ -1,8 +1,15 @@
-#include "virtio/config.h"
-#include "virtio/mmio.h"
-#include "virtio/console.h"
-#include "util/util.h"
-#include "virq.h"
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/console.h>
+#include <sddf/serial/queue.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_CONSOLE
@@ -15,68 +22,72 @@
 
 #define LOG_CONSOLE_ERR(...) do{ printf("VIRTIO(CONSOLE)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-// @ivanv: put in util or remove
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
+static inline struct virtio_console_device *device_state(struct virtio_device *dev)
+{
+    return (struct virtio_console_device *)dev->device_data;
+}
 
-static void virtio_console_features_print(uint32_t features) {
+static void virtio_console_features_print(uint32_t features)
+{
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_SIZE set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_MULTIPORT set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_EMERG_WRITE set to %s\n",
-        BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
+                BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
 }
 
-static void virtio_console_reset(struct virtio_device *dev) {
-    LOG_CONSOLE("operation: reset\n");
-    LOG_CONSOLE_ERR("virtio_console_reset is not implemented!\n");
+static void virtio_console_reset(struct virtio_device *dev)
+{
+    LOG_CONSOLE("operation: reset device\n");
 
-    // @ivanv reset vqs?
+    for (int i = 0; i < dev->num_vqs; i++) {
+        dev->vqs[i].ready = false;
+        dev->vqs[i].last_idx = 0;
+    }
 }
 
-static int virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features) {
+static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
+{
     LOG_CONSOLE("operation: get device features\n");
 
     switch (dev->data.DeviceFeaturesSel) {
-        case 0:
-            *features = 0;
-            break;
-        case 1:
-            *features = BIT_HIGH(VIRTIO_F_VERSION_1);
-            break;
-        default:
-            // @ivanv: audit
-            LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
-            return 0;
+    case 0:
+        *features = 0;
+        break;
+    case 1:
+        *features = BIT_HIGH(VIRTIO_F_VERSION_1);
+        break;
+    default:
+        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
+        return false;
     }
 
-    return 1;
+    return true;
 }
 
-static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features) {
+static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features)
+{
     LOG_CONSOLE("operation: set driver features\n");
     virtio_console_features_print(features);
 
-    int success = 1;
+    bool success = false;
 
     switch (dev->data.DriverFeaturesSel) {
-        // feature bits 0 to 31
-        case 0:
-            // The device initialisation protocol says the driver should read device feature bits,
-            // and write the subset of feature bits understood by the OS and driver to the device.
-            // Currently we only have one feature to check.
-            // success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
-            break;
-        // features bits 32 to 63
-        case 1:
-            success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
-            break;
-        default:
-            LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
-            return false;
+    // feature bits 0 to 31
+    case 0:
+        /* We do not offer any features in the first 32-bit bits */
+        success = (features == 0);
+        break;
+    // features bits 32 to 63
+    case 1:
+        success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
+        break;
+    default:
+        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
+        return false;
     }
 
     if (success) {
@@ -87,166 +98,136 @@ static int virtio_console_set_driver_features(struct virtio_device *dev, uint32_
     return success;
 }
 
-static int virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config) {
+static bool virtio_console_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *config)
+{
     LOG_CONSOLE("operation: get device config\n");
-    return -1;
+    return false;
 }
 
-static int virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config) {
+static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t config)
+{
     LOG_CONSOLE("operation: set device config\n");
-    return -1;
+    return false;
 }
 
-/* The guest has notified us that it has placed something in the transmit queue. */
-static int virtio_console_handle_tx(struct virtio_device *dev) {
+static bool virtio_console_handle_tx(struct virtio_device *dev)
+{
     LOG_CONSOLE("operation: handle transmit\n");
-
     // @ivanv: we need to check the pre-conditions before doing anything. e.g check
     // TX_QUEUE is ready?
-
     assert(dev->num_vqs > TX_QUEUE);
-    struct virtio_queue_handler *tx_queue = &dev->vqs[TX_QUEUE];
-    struct virtq *virtq = &tx_queue->virtq;
-    uint16_t guest_idx = virtq->avail->idx;
-    size_t idx = tx_queue->last_idx;
+    struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
+    struct virtio_console_device *console = device_state(dev);
 
-    while (idx != guest_idx) {
-        LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", idx, guest_idx);
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-
-        /* Continue traversing the chained buffers */
+    /* Transmit all available descriptors possible */
+    LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
+    bool transferred = false;
+    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(&console->txq, console->txq.queue->head)) {
+        uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
-        uint16_t desc_idx = desc_head;
+        /* Traverse chained descriptors */
         do {
-            desc = virtq->desc[desc_idx];
+            desc = vq->virtq.desc[desc_idx];
+            // @ivanv: to the debug logging, we should actually print out the buffer contents
             LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_idx, desc.addr, desc.addr + desc.len);
-            // @ivanv: to the debug logging, we should actually print out teh buffer contents
 
-            /* Now that we have a buffer, we can transfer the data to the sDDF multiplexor */
-            /* We first need a free buffer from the TX ring */
-            uintptr_t sddf_buffer = 0;
-            unsigned int sddf_buffer_len = 0;
-            void *sddf_cookie = NULL;
-            LOG_CONSOLE("tx ring free size: 0x%lx, tx ring used size: 0x%lx\n", ring_size(dev->sddf_tx_ring->free_ring), ring_size(dev->sddf_tx_ring->used_ring));
-            assert(!ring_empty(dev->sddf_tx_ring->free_ring));
-            int ret = dequeue_free(dev->sddf_tx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
-            assert(!ret);
-            if (ret != 0) {
-                LOG_CONSOLE_ERR("could not dequeue from the TX free ring\n");
-                // @ivanv: todo, handle this properly
+            uint32_t bytes_remain = desc.len;
+            /* Copy all contiguous data */
+            while (bytes_remain > 0 && !serial_queue_full(&console->txq, console->txq.queue->head)) {
+                uint32_t free = serial_queue_contiguous_free(&console->txq);
+                uint32_t to_transfer = (bytes_remain < free) ? bytes_remain : free;
+                if (to_transfer) {
+                    transferred = true;
+                }
+
+                memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.size),
+                       (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
+
+                serial_update_visible_tail(&console->txq, console->txq.queue->tail + to_transfer);
+                bytes_remain -= to_transfer;
             }
 
-            // @ivanv: handle this in release mode
-            if (desc.len > sddf_buffer_len) {
-                LOG_CONSOLE_ERR("%s expected sddf_buffer_len (0x%lx) <= desc.len (0x%lx)\n", microkit_name, sddf_buffer_len, desc.len);
-            }
-            assert(desc.len <= sddf_buffer_len);
-
-            /* Copy the data over, these buffers are in the guests's RAM and hence inaccessible
-             * by the multiplexor. */
-            memcpy((char *) sddf_buffer, (char *) desc.addr, desc.len);
-
-            bool is_empty = ring_empty(dev->sddf_tx_ring->used_ring);
-            /* Now we can enqueue our buffer into the used TX ring */
-            ret = enqueue_used(dev->sddf_tx_ring, sddf_buffer, desc.len, sddf_cookie);
-            // @ivanv: handle case in release made
-            assert(ret == 0);
-
-            if (is_empty) {
-                // @ivanv: should we be using the notify_reader/notify_writer API?
-                microkit_notify(dev->sddf_mux_tx_ch);
-            }
-
-            /* Lastly, move to the next descriptor in the chain */
             desc_idx = desc.next;
-        } while (desc.flags & VIRTQ_DESC_F_NEXT);
 
-        /* Our final job is to move the available virtq into the used virtq */
-        struct virtq_used_elem used_elem;
-        used_elem.id = desc_head;
-        /* We did not write to any of the buffers, so len is zero. */
-        used_elem.len = 0;
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
+        } while (desc.flags & VIRTQ_DESC_F_NEXT && !serial_queue_full(&console->txq, console->txq.queue->head));
 
-        idx++;
+        struct virtq_used_elem used_elem = {vq->virtq.avail->ring[vq->last_idx % vq->virtq.num], 0};
+        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
+        vq->virtq.used->idx++;
+
+        vq->last_idx++;
     }
 
-    /* Move the available index past every virtq we've processed. */
-    // @ivanv: not sure about this line
-    virtq->avail->idx = idx;
-
-    tx_queue->last_idx = idx;
-
-    dev->data.InterruptStatus = BIT_LOW(0);
-    // @ivanv: The virq_inject API is poor as it expects a vCPU ID even though
-    // it doesn't matter for the case of SPIs, which is what virtIO devices use.
-    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    assert(success);
-
-    return success;
-}
-
-int virtio_console_handle_rx(struct virtio_device *dev) {
-    // @ivanv: revisit this whole function, it works but is very hacky.
-    /* We have received something from the real console driver.
-     * Our job is to inspect the sDDF used RX ring, and dequeue everything
-     * we can and give it to the guest driver.
-     */
-
-    uintptr_t sddf_buffer = 0;
-    unsigned int sddf_buffer_len = 0;
-    void *sddf_cookie = NULL;
-    int ret = dequeue_used(dev->sddf_rx_ring, &sddf_buffer, &sddf_buffer_len, &sddf_cookie);
-    assert(!ret);
-    if (ret != 0) {
-        LOG_CONSOLE_ERR("could not dequeue from RX used ring\n");
-        // @ivanv: handle properly
-    }
-
-    assert(dev->num_vqs > RX_QUEUE);
-    struct virtio_queue_handler *rx_queue = &dev->vqs[RX_QUEUE];
-    struct virtq *virtq = &rx_queue->virtq;
-    uint16_t guest_idx = virtq->avail->idx;
-    size_t idx = rx_queue->last_idx;
-
-    if (idx != guest_idx) {
-        size_t bytes_written = 0;
-
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-        struct virtq_desc desc;
-        uint16_t desc_idx = desc_head;
-
-        do {
-            desc = virtq->desc[desc_idx];
-
-            size_t bytes_to_copy = (desc.len < sddf_buffer_len) ? desc.len : sddf_buffer_len;
-            memcpy((char *) desc.addr, (char *) sddf_buffer, bytes_to_copy - bytes_written);
-
-            bytes_written += bytes_to_copy;
-        } while (bytes_written != sddf_buffer_len);
-
-        struct virtq_used_elem used_elem;
-        used_elem.id = desc_head;
-        used_elem.len = bytes_written;
-        virtq->used->ring[guest_idx % virtq->num] = used_elem;
-        virtq->used->idx++;
-
-        rx_queue->last_idx++;
-
-        // 3. Inject IRQ to guest
-        // @ivanv: is setting interrupt status necesary?
+    /* While unlikely, it is possible that we could not consume any of the
+     * available data. In this case we do not set the IRQ status. */
+    if (transferred) {
         dev->data.InterruptStatus = BIT_LOW(0);
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
+
+        if (serial_require_producer_signal(&console->txq)) {
+            serial_cancel_producer_signal(&console->txq);
+            microkit_notify(console->tx_ch);
+        }
+
+        return success;
     }
 
-    // 4. Enqueue sDDF buffer into RX free ring
-    ret = enqueue_free(dev->sddf_rx_ring, sddf_buffer, BUFFER_SIZE, sddf_cookie);
-    assert(!ret);
-    // @ivanv: error handle for release mode
+    return true;
+}
 
-    return -1;
+bool virtio_console_handle_rx(struct virtio_console_device *console)
+{
+    LOG_CONSOLE("operation: handle rx\n");
+    assert(console->virtio_device.num_vqs > RX_QUEUE);
+
+    /* Used to know whether to set the IRQ status. */
+    bool transferred = false;
+
+    bool reprocess = true;
+    while (reprocess) {
+        struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+        LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
+        while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
+            transferred = true;
+
+            uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
+            struct virtq_desc desc = vq->virtq.desc[desc_head];
+            LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
+            uint32_t bytes_written = 0;
+            char c;
+            while (bytes_written < desc.len && !serial_dequeue(&console->rxq, &console->rxq.queue->head, &c)) {
+                *(char *)(desc.addr + bytes_written) = c;
+                bytes_written++;
+            }
+
+            struct virtq_used_elem used_elem = {desc_head, bytes_written};
+            vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
+            vq->virtq.used->idx++;
+
+            vq->last_idx++;
+        }
+
+        serial_request_producer_signal(&console->rxq);
+        reprocess = false;
+
+        if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
+            serial_cancel_producer_signal(&console->rxq);
+            reprocess = true;
+        }
+    }
+
+    /* While unlikely, it is possible that we could not consume any of the
+     * available data. In this case we do not set the IRQ status. */
+    if (transferred) {
+        console->virtio_device.data.InterruptStatus = BIT_LOW(0);
+        bool success = virq_inject(GUEST_VCPU_ID, console->virtio_device.virq);
+        assert(success);
+
+        return success;
+    }
+
+    return true;
 }
 
 virtio_device_funs_t functions = {
@@ -258,18 +239,26 @@ virtio_device_funs_t functions = {
     .queue_notify = virtio_console_handle_tx,
 };
 
-void virtio_console_init(struct virtio_device *dev,
-                         struct virtio_queue_handler *vqs, size_t num_vqs,
-                         size_t virq,
-                         ring_handle_t *sddf_rx_ring, ring_handle_t *sddf_tx_ring, size_t sddf_mux_tx_ch) {
-    // @ivanv: check that num_vqs is greater than the minimum vqs to function?
+bool virtio_mmio_console_init(struct virtio_console_device *console,
+                              uintptr_t region_base,
+                              uintptr_t region_size,
+                              size_t virq,
+                              serial_queue_handle_t *rxq,
+                              serial_queue_handle_t *txq,
+                              int tx_ch)
+{
+    struct virtio_device *dev = &console->virtio_device;
     dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
-    dev->vqs = vqs;
-    dev->num_vqs = num_vqs;
+    dev->vqs = console->vqs;
+    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
     dev->virq = virq;
-    dev->sddf_rx_ring = sddf_rx_ring;
-    dev->sddf_tx_ring = sddf_tx_ring;
-    dev->sddf_mux_tx_ch = sddf_mux_tx_ch;
+    dev->device_data = console;
+
+    console->rxq = *rxq;
+    console->txq = *txq;
+    console->tx_ch = tx_ch;
+
+    return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }

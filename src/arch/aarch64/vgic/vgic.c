@@ -5,20 +5,20 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
-#include "vgic.h"
-#include "virq.h"
-#include "fault.h"
-#include "../../util/util.h"
+#include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
+#include <libvmm/arch/aarch64/vgic/virq.h>
 
 #if defined(GIC_V2)
-#include "vgic_v2.h"
+#include <libvmm/arch/aarch64/vgic/vgic_v2.h>
 #elif defined(GIC_V3)
-#include "vgic_v3.h"
+#include <libvmm/arch/aarch64/vgic/vgic_v3.h>
 #else
 #error "Unknown GIC version"
 #endif
 
-#include "vdist.h"
+#include <libvmm/arch/aarch64/vgic/vdist.h>
 
 /* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
 extern vgic_t vgic;
@@ -97,13 +97,8 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 }
 
 // @ivanv: revisit this whole function
-bool handle_vgic_dist_fault(size_t vcpu_id, uint64_t fault_addr, uint64_t fsr, seL4_UserContext *regs)
+bool handle_vgic_dist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
-    /* Make sure that the fault address actually lies within the GIC distributor region. */
-    assert(fault_addr >= GIC_DIST_PADDR);
-    assert(fault_addr - GIC_DIST_PADDR < GIC_DIST_SIZE);
-
-    uint64_t offset = fault_addr - GIC_DIST_PADDR;
     bool success = false;
     if (fault_is_read(fsr)) {
         // printf("VGIC|INFO: Read dist\n");

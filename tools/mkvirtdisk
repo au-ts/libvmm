@@ -1,0 +1,134 @@
+#!/bin/bash
+
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# This bash script creates a virtual disk image with an msdos partition table.
+# It aligns the partitions to both the sDDF transfer size and the device's logical size.
+# It creates a FAT 12 filesystem on each partition.
+
+set -e
+
+function cleanup {
+    rm -f $BUILD_DIR/fat.img
+}
+
+trap cleanup EXIT
+
+# Usage instructions
+if [ $# -ne 4 ]; then
+    echo "Usage: $0 <virtual_disk_name> <num_partitions> <logical_size> <memsize>"
+    exit 1
+fi
+
+if ! command -v mkfs.fat &> /dev/null
+then
+    echo "mkfs.fat could not be found, please install dosfstools"
+    exit 1
+fi
+
+if [[ "$OSTYPE" != "linux"* ]] && [[ "$OSTYPE" != "darwin"* ]]; then
+    echo "This script is not supported on your OS"
+    exit 1
+fi
+
+DISK_IMAGE=$1
+NUM_PARTITIONS=$2
+LSIZE=$3
+MEMSIZE=$4
+
+SDDF_TRANSFER_SIZE=4096
+FDISK_LSIZE=512
+
+if [ $(( LSIZE & (LSIZE - 1) )) -ne 0 ] || [ $LSIZE -lt $FDISK_LSIZE ]; then
+    echo "LSIZE must be greater than $FDISK_LSIZE and must be a power of 2"
+    exit 1
+fi
+
+if [ $((MEMSIZE)) -lt 114688 ]; then
+    echo "MEMSIZE must be greater than 114688(112 * 1024), sizes smaller than that break either fdisk or mkfs.fat"
+    exit 1
+fi
+
+BUILD_DIR=$(dirname $DISK_IMAGE)
+
+# Since LSIZE is always a power of 2, the least common multiple of LSIZE and SDDF_TRANSFER_SIZE is simply the bigger one
+LCM=$(( SDDF_TRANSFER_SIZE > LSIZE ? SDDF_TRANSFER_SIZE : LSIZE ))
+
+# Since we are using fdisk, COUNT uses the logical size provided by fdisk which is always 512 bytes (FDISK_LSIZE)
+MULTIPLE=$(( LCM / FDISK_LSIZE ))
+COUNT=$(( MEMSIZE / FDISK_LSIZE ))
+
+# Determine starting partition offset
+if [ $COUNT -gt $(( 2048 * 4 )) ]; then
+    POFFSET=2048
+else
+    POFFSET=$MULTIPLE
+fi
+
+COUNT=$(( COUNT / MULTIPLE * MULTIPLE)) # Now ensure the real COUNT is a multiple of sDDF transfer size and logical size
+
+# Create a file to act as a virtual disk
+dd if=/dev/zero of=$DISK_IMAGE bs=$FDISK_LSIZE count=$COUNT 2> /dev/null
+
+FS_COUNT=$(( (COUNT - POFFSET - 1) / NUM_PARTITIONS ))
+FS_COUNT=$(( FS_COUNT / MULTIPLE * MULTIPLE )) # Ensures that both filesystems are a multiple of sDDF transfer size and logical size
+
+# Create MBR partition table
+if [[ "$OSTYPE" == "linux"* ]]; then
+    PREV=$POFFSET
+    {
+    echo o # Create a new empty DOS partition table
+
+    # Loop to create each partition
+    for i in $(seq 1 $NUM_PARTITIONS)
+    do
+        echo n # Add a new partition
+        echo p # Primary partition
+        if [ $i != 4 ]; then
+            echo $i # Partition number
+        fi
+        echo $PREV # First sector
+        echo +$(( FS_COUNT - 1 )) # Last sector
+        PREV=$(( PREV + FS_COUNT ))
+    done
+
+    echo w # Write changes
+    } | fdisk $DISK_IMAGE
+    fdisk -l $DISK_IMAGE # Print the partition table
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    PREV=$POFFSET
+    {
+    echo y # Answer yes to create a new empty DOS partition table
+
+    # Loop to create each partition
+    for i in $(seq 1 $NUM_PARTITIONS)
+    do
+        echo edit $i
+        echo 01 # Set partition type to FAT12
+        echo n # No to editing in CHS mode
+        echo $PREV # First sector
+        echo $FS_COUNT # Number of sectors in partition
+        PREV=$(( PREV + FS_COUNT ))
+    done
+
+    echo write # Write changes
+    echo quit # Save and quit fdisk
+    } | fdisk -e $DISK_IMAGE
+    fdisk $DISK_IMAGE # Print the partition table
+else
+    echo "This script is not supported on your OS"
+    exit 1
+fi
+
+# Create the FAT filesystem
+rm -f $BUILD_DIR/fat.img
+mkfs.fat -C $BUILD_DIR/fat.img $(( (FS_COUNT * FDISK_LSIZE) / 1024 )) -F 12 -S $LSIZE
+
+# Copy the FAT filesystem to the virtual disk
+for i in $(seq 0 $(( NUM_PARTITIONS - 1 )))
+do
+    echo "Copying FAT filesystem to partition $i, seek=$((POFFSET + i * FS_COUNT)), count=$FS_COUNT, bs=$FDISK_LSIZE"
+    dd if=$BUILD_DIR/fat.img of=$DISK_IMAGE bs=$FDISK_LSIZE seek="$((POFFSET + i * FS_COUNT))" count=$FS_COUNT 2> /dev/null
+done

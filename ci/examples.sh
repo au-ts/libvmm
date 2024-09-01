@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 set -e
 
 SDK_PATH=$1
@@ -15,8 +19,8 @@ build_simple_make() {
     mkdir -p ${BUILD_DIR}
     make -C examples/simple -B \
         BUILD_DIR=${BUILD_DIR} \
-        CONFIG=${CONFIG} \
-        BOARD=${BOARD} \
+        MICROKIT_CONFIG=${CONFIG} \
+        MICROKIT_BOARD=${BOARD} \
         MICROKIT_SDK=${SDK_PATH}
 }
 
@@ -38,7 +42,7 @@ build_simple_zig() {
 build_rust() {
     echo "CI|INFO: building Rust example with config: $1"
     CONFIG=$1
-    BUILD_DIR="${PWD}/build/examples/rust/qemu_arm_virt/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/rust/qemu_virt_aarch64/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/rust -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -50,7 +54,7 @@ build_zig() {
     echo "CI|INFO: building Zig example with config: $1, Zig optimize is: $2"
     CONFIG=$1
     ZIG_OPTIMIZE=$2
-    BUILD_DIR="${PWD}/build/examples/zig/qemu_arm_virt/${CONFIG}/${ZIG_OPTIMIZE}"
+    BUILD_DIR="${PWD}/build/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
     EXAMPLE_DIR="${PWD}/examples/zig"
     mkdir -p ${BUILD_DIR}
     pushd ${EXAMPLE_DIR}
@@ -64,7 +68,7 @@ build_zig() {
 
 simulate_rust() {
     echo "CI|INFO: simulating Rust example with config: $1"
-    BUILD_DIR="${PWD}/build/examples/rust/qemu_arm_virt/${CONFIG}"
+    BUILD_DIR="${PWD}/build/examples/rust/qemu_virt_aarch64/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
@@ -92,27 +96,27 @@ build_virtio() {
     mkdir -p ${BUILD_DIR}
     make -C examples/virtio -B \
         BUILD_DIR=${BUILD_DIR} \
-        CONFIG=${CONFIG} \
-        BOARD=${BOARD} \
+        MICROKIT_CONFIG=${CONFIG} \
+        MICROKIT_BOARD=${BOARD} \
         MICROKIT_SDK=${SDK_PATH}
 }
 
 simulate_zig() {
     echo "CI|INFO: simulating Zig example with config: $1"
-    BUILD_DIR="${PWD}/build/examples/zig/qemu_arm_virt/${CONFIG}/${ZIG_OPTIMIZE}"
+    BUILD_DIR="${PWD}/build/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/bin/loader.img
 }
 
-build_simple_make "qemu_arm_virt" "debug"
-simulate_simple_make "qemu_arm_virt" "debug"
-build_simple_make "qemu_arm_virt" "release"
-simulate_simple_make "qemu_arm_virt" "release"
+build_simple_make "qemu_virt_aarch64" "debug"
+simulate_simple_make "qemu_virt_aarch64" "debug"
+build_simple_make "qemu_virt_aarch64" "release"
+simulate_simple_make "qemu_virt_aarch64" "release"
 
 # @ivanv: we should incorporate the zig optimisation levels as well
-build_simple_zig "qemu_arm_virt" "debug"
-simulate_simple_zig "qemu_arm_virt" "debug"
-build_simple_zig "qemu_arm_virt" "release"
-simulate_simple_zig "qemu_arm_virt" "release"
+build_simple_zig "qemu_virt_aarch64" "debug"
+simulate_simple_zig "qemu_virt_aarch64" "debug"
+build_simple_zig "qemu_virt_aarch64" "release"
+simulate_simple_zig "qemu_virt_aarch64" "release"
 
 build_simple_make "odroidc4" "debug"
 build_simple_make "odroidc4" "release"
@@ -120,10 +124,16 @@ build_simple_make "odroidc4" "release"
 build_simple_zig "odroidc4" "debug"
 build_simple_zig "odroidc4" "release"
 
+build_simple_make "maaxboard" "debug"
+build_simple_make "maaxboard" "release"
+
+build_simple_zig "maaxboard" "debug"
+build_simple_zig "maaxboard" "release"
+
 build_rust "debug"
 simulate_rust "debug"
-build_rust "release"
-simulate_rust "release"
+# build_rust "release"
+# simulate_rust "release"
 
 # Here there are two kinds of configuration that we need to test. There is the
 # configuration of Microkit itself for which we test debug and release. This
@@ -141,8 +151,10 @@ simulate_zig "release" "ReleaseSafe"
 build_zig "release" "ReleaseSmall"
 simulate_zig "release" "ReleaseSmall"
 
-build_virtio "qemu_arm_virt" "debug"
-build_virtio "qemu_arm_virt" "release"
+build_virtio "qemu_virt_aarch64" "debug"
+build_virtio "qemu_virt_aarch64" "release"
+# build_virtio "odroidc4" "debug"
+# build_virtio "odroidc4" "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"

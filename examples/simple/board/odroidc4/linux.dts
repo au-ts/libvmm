@@ -19,11 +19,7 @@
 		#address-cells = <0x02>;
 		#size-cells = <0x02>;
 		ranges;
-        linux,stdout-path = "/soc/bus@ff800000/serial@3000";
-        stdout-path = "/soc/bus@ff800000/serial@3000";
-		linux,initrd-end = <0x00000000 0x2e000000>;
-        linux,initrd-start = <0x00000000 0x2d700000>;
-        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+		stdout-path = "serial0:115200n8";
 
 		framebuffer-cvbs {
 			compatible = "amlogic,simple-framebuffer\0simple-framebuffer";
@@ -114,9 +110,8 @@
 		linux,cma {
 			compatible = "shared-dma-pool";
 			reusable;
-			size = <0x00 0x1000000>;
+			size = <0x00 0x10000000>;
 			alignment = <0x00 0x400000>;
-			alloc-ranges = <0x00 0x8000000 0x10000000>;
 			linux,cma-default;
 		};
 	};
@@ -124,7 +119,6 @@
 	secure-monitor {
 		compatible = "amlogic,meson-gxbb-sm";
 		phandle = <0x04>;
-		status = "disabled";
 	};
 
 	soc {
@@ -166,7 +160,7 @@
 			clock-names = "stmmaceth\0clkin0\0clkin1\0timing-adjustment";
 			rx-fifo-depth = <0x1000>;
 			tx-fifo-depth = <0x800>;
-			status = "disabled";
+			status = "okay";
 			power-domains = <0x03 0x06>;
 			pinctrl-0 = <0x07 0x08>;
 			pinctrl-names = "default";
@@ -2385,7 +2379,6 @@
 				reg = <0x00 0x140 0x00 0x140>;
 				amlogic,has-chip-id;
 				phandle = <0x10>;
-				status = "disabled";
 			};
 
 			cec@280 {
@@ -2466,7 +2459,7 @@
 				interrupts = <0x00 0xc8 0x01>;
 				clocks = <0x11 0x19 0x08 0x19 0x12 0x19 0x10>;
 				clock-names = "clkin\0core\0adc_clk\0adc_sel";
-				status = "disabled";
+				status = "okay";
 			};
 		};
 
@@ -2493,7 +2486,6 @@
 			#size-cells = <0x00>;
 			amlogic,canvas = <0x20>;
 			power-domains = <0x03 0x00>;
-			status = "disabled";
 
 			port@0 {
 				reg = <0x00>;
@@ -3016,7 +3008,7 @@
 
 	memory@0 {
 		device_type = "memory";
-		reg = <0x00 0x20000000 0x00 0x10000000>;
+		reg = <0x00 0x00 0x00 0x40000000>;
 	};
 
 	emmc-pwrseq {

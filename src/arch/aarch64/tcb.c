@@ -5,8 +5,9 @@
  */
 
 #include <microkit.h>
-#include "util.h"
-#include "tcb.h"
+#include <stdbool.h>
+#include <libvmm/tcb.h>
+#include <libvmm/util/util.h>
 
 void tcb_print_regs(size_t vcpu_id) {
     /*

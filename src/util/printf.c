@@ -1,3 +1,7 @@
+/*
+ * Copyright 2019, Marco Paland
+ * SPDX-License-Identifier: MIT
+ */
 ///////////////////////////////////////////////////////////////////////////////
 // \author (c) Marco Paland (info@paland.com)
 //             2014-2019, PALANDesign Hannover, Germany
@@ -33,7 +37,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "printf.h"
+#include <libvmm/util/printf.h>
 
 
 // define this globally (e.g. gcc -DPRINTF_INCLUDE_CONFIG_H ...) to include the

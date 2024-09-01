@@ -1,3 +1,6 @@
+// Copyright 2024, UNSW
+// SPDX-License-Identifier: BSD-2-Clause
+
 #![no_std]
 #![no_main]
 #![feature(never_type)]
@@ -12,7 +15,7 @@ const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
 const GUEST_VCPU_ID: usize = 0;
 
-/// On the QEMU ARM virt platform the UART we are using has an IRQ number of 33.
+/// On the QEMU virt AArch64 platform the UART we are using has an IRQ number of 33.
 const UART_IRQ: usize = 33;
 /// The VMM is expecting the IRQ to be delivered with the channel ID of 1.
 const UART_CH: Channel = Channel::new(1);
@@ -56,7 +59,7 @@ fn init() -> VmmHandler {
     debug_println!("VMM|INFO: starting Rust VMM");
     // Thankfully Rust comes with a simple macro that allows us to package
     // binaries locally and placing them in the final binary that we load
-    // onto our platform, in this case the QEMU ARM virt board.
+    // onto our platform, in this case the QEMU virt AArch64 board.
     // @ivanv: the way this include works right now is undefined behaviour!
     let linux = include_bytes!(concat!(env!("IMAGE_DIR"), "/linux"));
     let dtb = include_bytes!(concat!(env!("BUILD_DIR"), "/linux.dtb"));
@@ -108,11 +111,10 @@ impl Handler for VmmHandler {
         Ok(())
     }
 
-    fn fault(&mut self, id: Child, msg_info: MessageInfo) -> Result<(), Self::Error> {
+    fn fault(&mut self, id: Child, msg_info: MessageInfo) -> Result<Option<MessageInfo>, Self::Error> {
         unsafe {
-            if fault_handle(id.unwrap(), msg_info) {
-                id.reply(MessageInfo::new(0, 0));
-                Ok(())
+            if fault_handle(id.index(), msg_info) {
+                Ok(Some(MessageInfo::new(0, 0)))
             } else {
                 unreachable!()
             }

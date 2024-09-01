@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 # CI for the VMM
 
 This basic CI attempts to build and run systems using the VMM in order to give

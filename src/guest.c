@@ -1,7 +1,12 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 #include <microkit.h>
-#include "util/util.h"
-#include "vcpu.h"
-#include "guest.h"
+#include <libvmm/vcpu.h>
+#include <libvmm/guest.h>
+#include <libvmm/util/util.h>
 
 bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd) {
     /*
@@ -19,7 +24,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
         BASE_VM_TCB_CAP + boot_vcpu_id,
         false, // We'll explcitly start the guest below rather than in this call
         0, // No flags
-        SEL4_USER_CONTEXT_SIZE, // Writing to x0, pc, and spsr // @ivanv: for some reason having the number of registers here does not work... (in this case 2)
+        4, // Writing to x0, pc, and spsr. Due to the ordering of seL4_UserContext the count must be 4.
         &regs
     );
     assert(err == seL4_NoError);
@@ -30,21 +35,21 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, initrd);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
-    microkit_vm_restart(boot_vcpu_id, regs.pc);
+    microkit_vcpu_restart(boot_vcpu_id, regs.pc);
 
     return true;
 }
 
 void guest_stop(size_t boot_vcpu_id) {
     LOG_VMM("Stopping guest\n");
-    microkit_vm_stop(boot_vcpu_id);
+    microkit_vcpu_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
 }
 
 bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr, size_t guest_ram_size) {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
-    microkit_vm_stop(boot_vcpu_id);
+    microkit_vcpu_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
     // Then, we need to clear all of RAM
     LOG_VMM("Clearing guest RAM\n");

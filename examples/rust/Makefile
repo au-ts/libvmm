@@ -13,8 +13,8 @@ endif
 BUILD_DIR ?= build
 # Default config is a debug build, pass CONFIG=<debug/release/benchmark> to override
 CONFIG ?= debug
-# Default board supported is QEMU ARM virt
-BOARD ?= qemu_arm_virt
+# Default board supported is QEMU virt AArch64
+BOARD = qemu_virt_aarch64
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
@@ -27,7 +27,7 @@ AR := llvm-ar
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-LIBVMM := ../../src
+LIBVMM := $(abspath ../../)
 SYSTEM_DESCRIPTION := rust_vmm.system
 
 IMAGE_DIR := images
@@ -67,7 +67,7 @@ CFLAGS := -mstrict-align \
 		  -nostdlib \
 		  -Wno-unused-command-line-argument \
 		  -Wall -Wno-unused-function -Werror \
-		  -I$(LIBVMM)/arch/aarch64 -I$(LIBVMM) -I$(LIBVMM)/util -I$(BOARD_DIR)/include \
+		  -I$(LIBVMM)/include -I$(BOARD_DIR)/include \
 		  -DBOARD_$(BOARD) \
 		  -DCONFIG_$(CONFIG) \
 		  -target aarch64-none-elf
@@ -112,19 +112,16 @@ directories:
 $(DTB): $(DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
 
-$(BUILD_DIR)/%.o: %.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM)/src/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(LIBVMM)/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM)/src/util/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(LIBVMM)/util/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM)/src/arch/aarch64/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(LIBVMM)/arch/aarch64/%.c Makefile
-	$(CC) -c $(CFLAGS) $< -o $@
-
-$(BUILD_DIR)/%.o: $(LIBVMM)/arch/aarch64/vgic/%.c Makefile
+$(BUILD_DIR)/%.o: $(LIBVMM)/src/arch/aarch64/vgic/%.c Makefile
 	$(CC) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/libvmm.a: $(addprefix $(BUILD_DIR)/, $(LIBVMM_OBJS))

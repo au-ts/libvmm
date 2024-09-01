@@ -1,3 +1,8 @@
+<!--
+     Copyright 2024, UNSW
+     SPDX-License-Identifier: CC-BY-SA-4.0
+-->
+
 ---
 title: libvmm User Manual (v0.1)
 papersize:
@@ -27,8 +32,8 @@ colorlinks: true
 
 # Introduction
 
-This document aims to describe the VMM and how to use it. If you feel there is
-something missing from this document or the VMM itself, feel free to let us
+This document aims to describe the libvmm project and how to use it. If you feel there is
+something missing from this document or libvmm itself, feel free to let us
 know by [opening an issue on the GitHub repository](https://github.com/au-ts/libvmm).
 
 ## Supported architectures and platforms
@@ -49,7 +54,7 @@ If your desired platform is not supported by any examples, please see the sectio
 
 The goal of this section is to give a detailed introduction into making a
 system using libvmm with the [seL4 Microkit](https://github.com/seL4/microkit).
-This is done by explaining one of the example QEMU ARM virt systems that boots
+This is done by explaining one of the example QEMU virt AArch64 systems that boots
 up a simple Linux guest.
 
 All the existing systems are located in `board/$BOARD/systems/`. This is
@@ -63,7 +68,7 @@ The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
-[the QEMU example system](../board/qemu_arm_virt/systems/simple.system),
+[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system),
 
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" />
@@ -176,11 +181,117 @@ in the device tree. See device tree bindings documentation for the platform's
 interrupt controller (e.g the GIC) or for the specific device you are trying to use.
 Note that not all devices encode interrupts the same.
 
+## Passing through DMA devices
+
+Devices which communicate through DMA see the world through host physical
+addresses, however virtual machines will give devices guest physical addresses
+(i.e., host virtual addresses).  In order for DMA passthrough to work, these two
+addresses must be aligned. This can be done by setting the `phys_addr` of the
+guest's RAM to be the same as its mapped virtual address.
+```xml
+<memory_region name="guest_ram" size="0x10_000_000" phys_addr="0x20000000" page_size="0x200_000" />
+<protection_domain ...>
+    <virtual_machine ...>
+        <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
+        <!-- ... -->
+    </virtual_machine>
+    <!-- ... -->
+</protection_domain>
+```
+
+# virtIO
+
+virtIO is a standard interface between guests and hypervisors to faciliate the use of devices
+where the guest does not have access to the underlying hardware.
+
+libvmm provides a number of virtIO devices to enable guests to interact with the outside world.
+
+libvmm follows [version 1.2 of the virtIO specification](https://docs.oasis-open.org/virtio/virtio/v1.2/virtio-v1.2.html)
+and implements the following devices:
+
+* Console
+* Block
+* Sound
+* Network
+
+These devices are implemented using MMIO, we do not use any PCI devices at this stage.
+
+For each of these devices, libvmm will perform I/O using the protocols and interfaces provided
+by the [seL4 Device Driver Framework](https://github.com/au-ts/sddf). This allows libvmm to
+interact with the outside world in a standard way just like any other native client program.
+
+This means that these virtIO device implementations are generic and are not dependent on the
+platform or architecture that libvmm is being used on.
+
+## Example architecture
+
+Below is an example architecture where a guest is making use of a virtIO console device.
+
+You can also find a working example making use of virtIO devices with libvmm in the repository
+at `examples/virtio`.
+
+![Example of virtIO console being used](./assets/virtio_console_example.svg){#virtio .class width=500}
+
+## Devices
+
+### Console
+
+The console device makes use of the 'serial' device class in sDDF. It supports one port.
+
+None of the feature bits are implemented. The legacy interface is not supported.
+
+The console device communicates with a hardware serial device via two sDDF serial virtualisers,
+one for recieve and one for transmit.
+
+There are plans to extend the console device implementation, you can find more details
+on [this GitHub issue](https://github.com/au-ts/libvmm/issues/27).
+
+### Block
+
+The block device makes use of the 'block' device class in sDDF.
+
+The following feature bits are implemented:
+
+* VIRTIO_BLK_F_FLUSH
+* VIRTIO_BLK_F_BLK_SIZE
+
+The legacy interface is not supported.
+
+The block device communicates with a hardware block device via a sDDF block virtualiser.
+
+### Sound
+
+The sound device makes use of the 'sound' device class in sDDF.
+
+There are no feature bits to implement. The legacy interface is not supported.
+
+The sound device communicates with a hardware sound device via a sDDF sound virtualiser.
+
+### Network
+
+The network device makes use of the 'net' device class in sDDF.
+
+The device supports `VIRTIO_NET_F_MAC`. No other features are available.
+
+The legacy interface is not supported.
+
+The network device communicates with a hardware network card via a pair of sDDF RX and TX
+net virtualisers. In the future, this communication may be done through
+intermediary components such as a virtual network switch (VSwitch).
+
 # Adding platform support
 
-This section will describe how to add support for a new platform to the `simple`
+The library itself is intended to need minimal changes to add a new platform.
+
+The following changes are necessary:
+
+* Platform vGIC version and physical address (see `src/arch/aarch64/vgic/vgic.h`).
+* If the platform uses GICv3, you will need to change the top-level Makefile snippet
+  (`vmm.mk`) to account for that.
+
+The rest of this section will be a guide on adding support for a new platform to the `simple`
 example which contains a VMM that boots a Linux guest with a simple command-line-interface
-via the serial connection.
+via the serial device.
 
 Before you can get a guest working on your desired platform you must have the following:
 
@@ -189,26 +300,22 @@ Before you can get a guest working on your desired platform you must have the fo
 
 ## Guest setup
 
-While in theory you should be able to run any guest, the VMM has only been tested
-with Linux and hence the following instructions are somewhat Linux specific.
-
 Required guest files:
 
 * Kernel image
 * Device Tree Source to be passed to the kernel at boot
 * Initial RAM disk
 
-Each platform image directory (`board/$BOARD/images`) contains a README with
+Each platform image directory (`board/$BOARD/`) contains a README with
 instructions on how to reproduce the images used if you would like to see
 examples of how other example systems are setup.
 
-Before attempting to get the VMM working, I strongly encourage you to make sure
+Before attempting to get the VMM working, we strongly encourage you to make sure
 that these binaries work natively, as in, without being virtualised. If they do
 not, they likely will not work with the VMM either.
 
-Add these images to the `board/$BOARD/` directory or specify the
-`IMAGE_DIR` argument when building the system which points to the directory
-that contains all of the files.
+Add these images to the `board/$BOARD/` directory following the same naming
+conventions as other platforms so that the build system can find them.
 
 ### Implementation notes
 
@@ -242,17 +349,12 @@ then the GIC emulation will need to be changed before your platform can be suppo
 
 <!-- @ivanv: These instructions could be improved -->
 
-Lastly, there are some hard-coded values that the VMM needs to support a platform.
-There are three files that need to be changed:
+Lastly, there are some platform-specific values that the VMM needs to know.
+There are two files that need to be changed:
 
-* `src/vmm.h`
-* `src/vgic/vgic.h`
-* For Linux, the device tree needs to contain the location of the initial RAM disk,
-  see the `chosen` node of `board/qemu_arm_virt/images/linux.dts` as an example.
-
-As you can probably tell, all this information that needs to be added is known at
-build-time, the plan is to auto-generate these values that the VMM needs to make it
-easier to add platform support (and in general make the VMM less fragile).
+* `src/vmm.c`
+* Linux expects the device tree to contain the location of the initial RAM disk,
+  see the `chosen` node of `board/qemu_virt_aarch64/overlay.dts` for an example.
 
 ## Getting the guest image to boot
 
@@ -284,7 +386,7 @@ Assuming the guest is being passed a device tree and initialising devices
 based on the device tree passed, it is quite simple to disable the device.
 
 Here is an example of how you would change the Device Tree Source to
-disable the PL011 UART node for the QEMU ARM virt platform:
+disable the PL011 UART node for the QEMU virt AArch64 platform:
 ```diff
 pl011@9000000 {
     clock-names = "uartclk\0apb_pclk";

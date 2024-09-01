@@ -3,11 +3,9 @@
 
 const std = @import("std");
 const c = @cImport({
-    @cInclude("linux.h");
-    @cInclude("virq.h");
-    @cInclude("guest.h");
-    @cInclude("vcpu.h");
-    @cInclude("tcb.h");
+    @cInclude("libvmm/virq.h");
+    @cInclude("libvmm/guest.h");
+    @cInclude("libvmm/arch/aarch64/linux.h");
 });
 const microkit = @import("libmicrokit.zig");
 
@@ -36,9 +34,9 @@ const guest_kernel_image = blk: {
     break :blk &arr;
 };
 // Data for the device tree to be passed to the kernel.
-const guest_dtb_image = @embedFile("linux.dtb");
+const guest_dtb_image = @embedFile("dtb");
 // Data for the initial RAM disk to be passed to the kernel.
-const guest_initrd_image = @embedFile("rootfs.cpio.gz");
+const guest_initrd_image = @embedFile("rootfs");
 
 // In Zig the standard library comes with printf-like functionality with the
 // ability to provide your own function to ouput the characters. This is
@@ -129,13 +127,15 @@ export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
     }
 }
 
-extern fn fault_handle(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
+extern fn fault_handle(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
 
-export fn fault(id: microkit.microkit_id, msginfo: microkit.microkit_msginfo) callconv(.C) void {
+export fn fault(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo, msginfo_reply: *microkit.microkit_msginfo) callconv(.C) bool {
     if (fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
-        microkit.microkit_fault_reply(microkit.microkit_msginfo_new(0, 0));
+        msginfo_reply.* = microkit.microkit_msginfo_new(0, 0);
+        return true;
     } else {
         log.err("Failed to handle fault\n", .{});
+        return false;
     }
 }
