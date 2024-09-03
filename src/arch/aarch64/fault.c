@@ -220,7 +220,7 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
     switch (hsr_ec_class) {
         case HSR_SMC_64_EXCEPTION:
-            return handle_smc(vcpu_id, hsr);
+            return smc_handle(vcpu_id, hsr);
         case HSR_WFx_EXCEPTION:
             // If we get a WFI exception, we just do nothing in the VMM.
             return true;
