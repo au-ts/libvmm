@@ -79,7 +79,7 @@ void init(void)
     blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_config;
 
     /* Busy wait until blk device is ready */
-    while (!__atomic_load_n(&storage_info->ready, __ATOMIC_ACQUIRE));
+    while (!blk_storage_is_ready(storage_info));
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
