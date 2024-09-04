@@ -37,6 +37,7 @@
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
 #include <sddf/blk/queue.h>
+#include <sddf/blk/storage_info.h>
 
 /* Feature bits */
 #define VIRTIO_BLK_F_SIZE_MAX       1   /* Indicates maximum segment size */
