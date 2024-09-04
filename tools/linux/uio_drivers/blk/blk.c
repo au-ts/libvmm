@@ -156,7 +156,7 @@ void driver_notified()
             int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
             if (ret < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
                 success_count = 0;
                 break;
             }
@@ -165,7 +165,7 @@ void driver_notified()
             LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
             if (bytes_read < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
                 success_count = 0;
             } else {
                 status = BLK_RESP_OK;
@@ -177,7 +177,7 @@ void driver_notified()
             int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
             if (ret < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
                 success_count = 0;
                 break;
             }
@@ -186,7 +186,7 @@ void driver_notified()
             LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
             if (bytes_written < 0) {
                 LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
                 success_count = 0;
             } else {
                 status = BLK_RESP_OK;
@@ -198,7 +198,7 @@ void driver_notified()
             int ret = fsync(storage_fd);
             if (ret != 0) {
                 LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
             } else {
                 status = BLK_RESP_OK;
             }
@@ -208,7 +208,7 @@ void driver_notified()
             int ret = fsync(storage_fd);
             if (ret != 0) {
                 LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = BLK_RESP_SEEK_ERROR;
+                status = BLK_RESP_ERR_UNSPEC;
             } else {
                 status = BLK_RESP_OK;
             }
