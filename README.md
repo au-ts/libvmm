@@ -28,23 +28,21 @@ intended to simply boot a Linux guest that has serial input and output.
 ### Dependencies
 
 * Make
-* dtc (Device Tree Compiler)
-* Clang, LLD, and `llvm-ar`
-* QEMU (for simulating the example)
-* Microkit SDK
+* Device Tree Compiler
+* Clang/LLVM tools
+* QEMU
+* Microkit SDK (version 1.4.1)
 
-It should be noted that while the examples in the VMM can be reproduced
-on macOS, if you need to do anything such as compile a custom Linux kernel image
-or a guest root file system for developing your own system, you will probably have
-less friction on a Linux machine.
+For the Microkit SDK, you can download it from [here](https://github.com/seL4/microkit/releases/tag/1.4.1).
+For all other dependencies, see the below instructions depending on your machine.
 
-On Ubuntu/Debian:
+#### Ubuntu/Debian (apt):
 
 ```sh
 sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
 ```
 
-On macOS:
+#### macOS (Homebrew):
 
 If you do not have Homebrew installed, you can install it [here](https://brew.sh/).
 
@@ -55,7 +53,12 @@ If you do not have Homebrew installed, you can install it [here](https://brew.sh
 brew install make qemu dtc llvm
 ```
 
-On [Nix](https://nixos.org/):
+It should be noted that while the examples in libvmm can be built
+on macOS, if you need to do anything such as compile a custom Linux kernel image
+or a guest root file system for developing your own system, you will probably have
+less friction on a Linux machine.
+
+#### Nix
 ```sh
 # In the root of the repository
 nix-shell
@@ -64,9 +67,6 @@ nix-shell
 #### Acquiring the SDK
 
 Finally, you will need version 1.4.1 of the Microkit SDK.
-
-You can download a prebuilt SDK from [here](https://github.com/seL4/microkit/releases/tag/1.4.1)
-or [build from source](https://github.com/seL4/microkit).
 
 ### Building and running
 
