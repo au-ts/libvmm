@@ -68,7 +68,7 @@ nix-shell
 ### Building and running
 
 Finally, we can simulate a basic system with a single Linux guest with the
-following command:
+following commands:
 ```sh
 cd examples/simple
 make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
