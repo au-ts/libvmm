@@ -34,6 +34,7 @@ intended to simply boot a Linux guest that has serial input and output.
 * Microkit SDK (version 1.4.1)
 
 For the Microkit SDK, you can download it from [here](https://github.com/seL4/microkit/releases/tag/1.4.1).
+
 For all other dependencies, see the below instructions depending on your machine.
 
 #### Ubuntu/Debian (apt):
@@ -46,6 +47,11 @@ sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm devic
 
 If you do not have Homebrew installed, you can install it [here](https://brew.sh/).
 
+It should be noted that while the examples in libvmm can be built
+on macOS, if you need to do anything such as compile a custom Linux kernel image
+or a guest root file system for developing your own system, you will probably have
+less friction on a Linux machine.
+
 ```sh
 # Note that you should make sure that the LLVM tools are in your path after running
 # the install command. Homebrew does not do it automatically but does print out a
@@ -53,20 +59,11 @@ If you do not have Homebrew installed, you can install it [here](https://brew.sh
 brew install make qemu dtc llvm
 ```
 
-It should be noted that while the examples in libvmm can be built
-on macOS, if you need to do anything such as compile a custom Linux kernel image
-or a guest root file system for developing your own system, you will probably have
-less friction on a Linux machine.
-
 #### Nix
 ```sh
 # In the root of the repository
 nix-shell
 ```
-
-#### Acquiring the SDK
-
-Finally, you will need version 1.4.1 of the Microkit SDK.
 
 ### Building and running
 
