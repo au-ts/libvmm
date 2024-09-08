@@ -21,8 +21,8 @@
 #define GUEST_DTB_VADDR 0x40500000
 #define GUEST_INIT_RAM_DISK_VADDR 0x40400000
 #elif defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x25f10000
-#define GUEST_INIT_RAM_DISK_VADDR 0x24000000
+#define GUEST_DTB_VADDR 0x20500000
+#define GUEST_INIT_RAM_DISK_VADDR 0x20400000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
