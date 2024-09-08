@@ -77,5 +77,5 @@ void init_main(void)
     }
 
     execv(UIO_SND_DRIVER_PROGRAM_PATH, uio_snd_driver_args);
-    LOG_UIO_INIT("UIO sound driver exited\n");
+    LOG_UIO_INIT_ERR("UIO sound driver exited\n");
 }

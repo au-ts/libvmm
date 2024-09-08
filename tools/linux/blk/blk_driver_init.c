@@ -28,5 +28,5 @@ void init_main(void)
 {
     LOG_UIO_INIT("Starting UIO block driver...\n");
     execv(UIO_BLK_DRIVER_PROGRAM_PATH, uio_blk_driver_args);
-    LOG_UIO_INIT("UIO block driver exited\n");
+    LOG_UIO_INIT_ERR("UIO block driver exited\n");
 }
