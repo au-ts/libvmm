@@ -27,7 +27,7 @@ intended to simply boot a Linux guest that has serial input and output.
 
 ### Dependencies
 
-* Make
+* GNU Make
 * Device Tree Compiler
 * Clang/LLVM tools
 * QEMU
