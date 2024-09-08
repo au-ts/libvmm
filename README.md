@@ -40,7 +40,7 @@ For all other dependencies, see the below instructions depending on your machine
 #### Ubuntu/Debian (apt):
 
 ```sh
-sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
+sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
 ```
 
 #### macOS (Homebrew):
