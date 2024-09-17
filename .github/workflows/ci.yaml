@@ -45,10 +45,9 @@ jobs:
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect gcc-aarch64-linux-gnu
       - name: Install Zig
-        run: |
-          wget https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
-          tar xf zig-linux-x86_64-0.13.0.tar.xz
-          echo "${PWD}/zig-linux-x86_64-0.13.0/:$PATH" >> $GITHUB_PATH
+        uses: mlugg/setup-zig@v1.2.0
+        with:
+          version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run examples
@@ -77,10 +76,9 @@ jobs:
           brew install llvm qemu dtc make dosfstools expect
           echo "/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_PATH
       - name: Install Zig
-        run: |
-          wget https://ziglang.org/download/0.13.0/zig-macos-x86_64-0.13.0.tar.xz
-          tar xf zig-macos-x86_64-0.13.0.tar.xz
-          echo "${PWD}/zig-macos-x86_64-0.13.0/:$PATH" >> $GITHUB_PATH
+        uses: mlugg/setup-zig@v1.2.0
+        with:
+          version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Build and run examples
