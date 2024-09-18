@@ -46,7 +46,7 @@ static void assert_fail(
     const char  *function)
 {
     printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
-    while (1) {}
+    __builtin_trap();
 }
 
 #define BIT_LOW(n)  (1ul<<(n))
