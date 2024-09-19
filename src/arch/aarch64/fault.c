@@ -381,14 +381,11 @@ static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr
         if (addr >= base && addr < end) {
             bool success = callback(vcpu_id, addr - base, fsr, regs, data);
             if (!success) {
-                // @ivanv: improve error message
                 LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base,
                             end, addr);
             }
-            /* Whether or not the callback actually successfully handled the
-             * exception, we return true to say that we at least found a handler
-             * for the faulting address. */
-            return true;
+
+            return success;
         }
     }
 
