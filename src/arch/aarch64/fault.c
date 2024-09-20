@@ -336,28 +336,37 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     return fault_advance_vcpu(vcpu_id, &regs);
 }
 
+#define MAX_VM_EXCEPTION_HANDLERS 16
+
 struct vm_exception_handler {
     uintptr_t base;
     uintptr_t end;
     vm_exception_handler_t callback;
     void *data;
 };
-#define MAX_VM_EXCEPTION_HANDLERS 16
-struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
-size_t vm_exception_handler_index = 0;
+
+static struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
+static size_t vm_exception_handler_index = 0;
 
 bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data)
 {
-    // @ivanv audit necessary here since this code was written very quickly. Other things to check such
-    // as the region of memory is not overlapping with other regions, also should have GIC_DIST regions
-    // use this API.
     if (vm_exception_handler_index == MAX_VM_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of VM exception handlers registered");
         return false;
     }
 
-    // @ivanv: use a define for page size? preMAture GENeraliZAATION
-    if (base % 0x1000 != 0) {
+    if (size == 0) {
+        LOG_VMM_ERR("registered VM exception handler with size 0\n");
         return false;
+    }
+
+    for (int i = 0; i < vm_exception_handler_index; i++) {
+        struct vm_exception_handler *curr = &registered_vm_exception_handlers[i];
+        if (!(base >= curr->end || base + size <= curr->base)) {
+            LOG_VMM_ERR("VM exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n",
+                        base, base + size, curr->base, curr->end);
+            return false;
+        }
     }
 
     registered_vm_exception_handlers[vm_exception_handler_index] = (struct vm_exception_handler) {
