@@ -5,8 +5,8 @@
  SPDX-License-Identifier: BSD-2-Clause
 -->
 <system>
-    <!-- We allocate 512MiB of RAM for the guest. -->
-    <memory_region name="guest_ram" size="0x20000000" page_size="0x200000" />
+    <!-- We allocate 256MiB of RAM for the guest. -->
+    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" />
     <!-- We want to map in the UART to get input/output. -->
     <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
