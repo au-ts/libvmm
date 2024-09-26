@@ -52,8 +52,9 @@ pub fn build(b: *std.Build) void {
     const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
+        .libmicrokit = @as([]const u8, libmicrokit),
         .libmicrokit_include = @as([]const u8, libmicrokit_include),
-        // Because we only support QEMU virt AArch64, vGIC version is 2.
+        .libmicrokit_linker_script = @as([]const u8, libmicrokit_linker_script),
         // Because we only support QEMU virt AArch64, vGIC version is always 2.
         .arm_vgic_version = @as(usize, 2),
     });
