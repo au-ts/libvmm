@@ -101,7 +101,9 @@ pub fn build(b: *std.Build) void {
     const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
+        .libmicrokit = @as([]const u8, libmicrokit),
         .libmicrokit_include = @as([]const u8, libmicrokit_include),
+        .libmicrokit_linker_script = @as([]const u8, libmicrokit_linker_script),
         .arm_vgic_version = arm_vgic_version,
     });
     const libvmm = libvmm_dep.artifact("vmm");
