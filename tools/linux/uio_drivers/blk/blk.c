@@ -189,7 +189,7 @@ void driver_notified() {
     err = blk_dequeue_req(&h, &req_code, &req_io, &req_block_number, &req_count,
                           &req_id);
     assert(!err);
-    LOG_UIO_BLOCK("Received command: code=%d, io=0x%lx, block_number=%d, "
+    LOG_UIO_BLOCK("Received request: code=%d, io=0x%lx, block_number=%d, "
                   "count=%d, id=%d\n",
                   req_code, req_io, req_block_number, req_count, req_id);
 
@@ -265,7 +265,7 @@ void driver_notified() {
       break;
     }
     default:
-      LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
+      LOG_UIO_BLOCK_ERR("Unknown request code: %d\n", req_code);
       assert(false);
     }
     /* Response queue is never full if number of inflight requests <= response
