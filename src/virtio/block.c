@@ -16,7 +16,6 @@
 #include <sddf/blk/queue.h>
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
-#include <blk_config.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_BLOCK
@@ -28,11 +27,6 @@
 #endif
 
 #define LOG_BLOCK_ERR(...) do{ printf("VIRTIO(BLOCK)|ERROR: "); printf(__VA_ARGS__); }while(0)
-
-_Static_assert(BLK_DATA_REGION_SIZE_CLI0 >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_CLI0 % BLK_TRANSFER_SIZE == 0,
-               "Client0 data region size must be a multiple of the transfer size");
-_Static_assert(BLK_DATA_REGION_SIZE_CLI1 >= BLK_TRANSFER_SIZE && BLK_DATA_REGION_SIZE_CLI1 % BLK_TRANSFER_SIZE == 0,
-               "Client1 data region size must be a multiple of the transfer size");
 
 static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
 {
