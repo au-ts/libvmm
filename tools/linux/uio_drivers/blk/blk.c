@@ -3,18 +3,18 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <unistd.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <errno.h>
 #include <assert.h>
-#include <string.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <linux/fs.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <sddf/blk/queue.h>
 #include <blk_config.h>
@@ -26,7 +26,12 @@
 // #define DEBUG_UIO_BLOCK
 
 #if defined(DEBUG_UIO_BLOCK)
-#define LOG_UIO_BLOCK(...) do{ printf("UIO_DRIVER(BLOCK)"); printf("|INFO: "); printf(__VA_ARGS__); }while(0)
+#define LOG_UIO_BLOCK(...)                                                     \
+  do {                                                                         \
+    printf("UIO_DRIVER(BLOCK)");                                               \
+    printf("|INFO: ");                                                         \
+    printf(__VA_ARGS__);                                                       \
+  } while (0)
 #else
 #define LOG_UIO_BLOCK(...) do{}while(0)
 #endif
@@ -50,12 +55,13 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
 {
     LOG_UIO_BLOCK("Initialising...\n");
 
-    /* Expects a storage_info map, request queue map, response queue map, virt data map,
-     * and BLK_NUM_CLIENT data mappings.
+    /* Expects a storage_info map, request queue map, response queue map, virt
+     * data map, and BLK_NUM_CLIENT data mappings.
      */
     if (num_maps != BLK_NUM_CLIENTS + 4) {
-        LOG_UIO_BLOCK_ERR("Expecting %d maps, got %d\n", BLK_NUM_CLIENTS + 4, num_maps);
-        return -1;
+      LOG_UIO_BLOCK_ERR("Expecting %d maps, got %d\n", BLK_NUM_CLIENTS + 4,
+                        num_maps);
+      return -1;
     }
 
     if (argc != 1) {
@@ -71,18 +77,20 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     blk_virt_data = (uintptr_t)maps[3];
     blk_virt_data_phys = (uintptr_t)maps_phys[3];
 
-    LOG_UIO_BLOCK("Storage info phys addr: 0x%lx, Request queue phys addr: 0x%lx, Response queue phys addr: 0x%lx, Virt data io addr: 0x%lx\n",
-                    maps_phys[0], maps_phys[1], maps_phys[2], maps_phys[3]);
+    LOG_UIO_BLOCK(
+        "Storage info phys addr: 0x%lx, Request queue phys addr: 0x%lx, "
+        "Response queue phys addr: 0x%lx, Virt data io addr: 0x%lx\n",
+        maps_phys[0], maps_phys[1], maps_phys[2], maps_phys[3]);
 
     for (int i = 0; i < BLK_NUM_CLIENTS; i++) {
-        blk_client_data[i] = (uintptr_t)maps[4 + i];
-        blk_client_data_phys[i] = (uintptr_t)maps_phys[4 + i];
+      blk_client_data[i] = (uintptr_t)maps[4 + i];
+      blk_client_data_phys[i] = (uintptr_t)maps_phys[4 + i];
     }
 
 #ifdef DEBUG_UIO_BLOCK
     LOG_UIO_BLOCK("Client data io addr:\n");
     for (int i = 0; i < BLK_NUM_CLIENTS; i++) {
-        printf("    client %i: 0x%lx\n", i, blk_client_data_phys[i]);
+      printf("    client %i: 0x%lx\n", i, blk_client_data_phys[i]);
     }
 #endif
 
@@ -90,8 +98,8 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     printf("storage_path: %s\n", storage_path);
     storage_fd = open(storage_path, O_RDWR);
     if (storage_fd < 0) {
-        LOG_UIO_BLOCK_ERR("Failed to open storage driver: %s\n", strerror(errno));
-        return -1;
+      LOG_UIO_BLOCK_ERR("Failed to open storage driver: %s\n", strerror(errno));
+      return -1;
     }
     LOG_UIO_BLOCK("Opened storage drive: %s\n", storage_path);
 
@@ -137,7 +145,9 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     }
     blk_storage_info->capacity = size / BLK_TRANSFER_SIZE;
 
-    LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, capacity(sectors)=%ld\n", (int)blk_storage_info->read_only,
+    LOG_UIO_BLOCK("Raw block device: read_only=%d, sector_size=%d, "
+                  "capacity(sectors)=%ld\n",
+                  (int)blk_storage_info->read_only,
                   blk_storage_info->sector_size, blk_storage_info->capacity);
 
     /* Optimal size */
@@ -152,33 +162,33 @@ int driver_init(void **maps, uintptr_t *maps_phys, int num_maps, int argc, char 
     return 0;
 }
 
-/* The virtualiser gives us an io address. We need to figure out which uio mapping
- * this corresponds to, so that we can fetch the corresponding mmaped virt address.
+/* The virtualiser gives us an io address. We need to figure out which uio
+ * mapping this corresponds to, so that we can fetch the corresponding mmaped
+ * virt address.
  */
-static inline uintptr_t io_to_virt(uintptr_t io_addr)
-{
-    if (io_addr - blk_virt_data_phys < BLK_DATA_REGION_SIZE_DRIV) {
-        return blk_virt_data + (io_addr - blk_virt_data_phys);
-    } else {
-        for (int i = 0; i < BLK_NUM_CLIENTS; i++) {
-            if (io_addr - blk_client_data_phys[i] < blk_virt_cli_data_region_size(i)) {
-                return blk_client_data[i] + (io_addr - blk_client_data_phys[i]);
-            }
-        }
+static inline uintptr_t io_to_virt(uintptr_t io_addr) {
+  if (io_addr - blk_virt_data_phys < BLK_DATA_REGION_SIZE_DRIV) {
+    return blk_virt_data + (io_addr - blk_virt_data_phys);
+  } else {
+    for (int i = 0; i < BLK_NUM_CLIENTS; i++) {
+      if (io_addr - blk_client_data_phys[i] <
+          blk_virt_cli_data_region_size(i)) {
+        return blk_client_data[i] + (io_addr - blk_client_data_phys[i]);
+      }
     }
-    assert(false);
-    return 0;
+  }
+  assert(false);
+  return 0;
 }
 
-void driver_notified()
-{
-    int err = 0;
-    _unused(err);
-    blk_req_code_t req_code;
-    uintptr_t req_io;
-    uint32_t req_block_number;
-    uint16_t req_count;
-    uint32_t req_id;
+void driver_notified() {
+  int err = 0;
+  _unused(err);
+  blk_req_code_t req_code;
+  uintptr_t req_io;
+  uint32_t req_block_number;
+  uint16_t req_count;
+  uint32_t req_id;
 
   while (!blk_queue_empty_req(&h)) {
     err = blk_dequeue_req(&h, &req_code, &req_io, &req_block_number, &req_count,
@@ -188,83 +198,89 @@ void driver_notified()
                   "count=%d, id=%d\n",
                   req_code, req_io, req_block_number, req_count, req_id);
 
-        blk_resp_status_t status = BLK_RESP_OK;
-        uint16_t success_count = 0;
+    blk_resp_status_t status = BLK_RESP_OK;
+    uint16_t success_count = 0;
 
-        switch (req_code) {
-        case BLK_REQ_READ: {
-            int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
-            if (ret < 0) {
-                LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-                success_count = 0;
-                break;
-            }
-            LOG_UIO_BLOCK("Reading from storage, io address: 0x%lx\n", req_io);
-            
-            int bytes_read = read(storage_fd, (void *)io_to_virt(req_io), req_count * BLK_TRANSFER_SIZE);
-            LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
-            if (bytes_read < 0) {
-                LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-                success_count = 0;
-            } else {
-                status = BLK_RESP_OK;
-                success_count = bytes_read / BLK_TRANSFER_SIZE;
-            }
-            break;
-        }
-        case BLK_REQ_WRITE: {
-            int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE, SEEK_SET);
-            if (ret < 0) {
-                LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-                success_count = 0;
-                break;
-            }
-            LOG_UIO_BLOCK("Writing to storage, io address: 0x%lx\n", req_io);
-            int bytes_written = write(storage_fd, (void *)io_to_virt(req_io), req_count * BLK_TRANSFER_SIZE);
-            LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
-            if (bytes_written < 0) {
-                LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-                success_count = 0;
-            } else {
-                status = BLK_RESP_OK;
-                success_count = bytes_written / BLK_TRANSFER_SIZE;
-            }
-            break;
-        }
-        case BLK_REQ_FLUSH: {
-            int ret = fsync(storage_fd);
-            if (ret != 0) {
-                LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-            } else {
-                status = BLK_RESP_OK;
-            }
-            break;
-        }
-        case BLK_REQ_BARRIER: {
-            int ret = fsync(storage_fd);
-            if (ret != 0) {
-                LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
-                status = BLK_RESP_ERR_UNSPEC;
-            } else {
-                status = BLK_RESP_OK;
-            }
-            break;
-        }
-        default:
-            LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
-            assert(false);
-        }
-        /* Response queue is never full if number of inflight requests <= response queue capacity */
-        err = blk_enqueue_resp(&h, status, success_count, req_id);
-        assert(!err);
-        LOG_UIO_BLOCK("Enqueued response: status=%d, success_count=%d, id=%d\n", status, success_count, req_id);
+    switch (req_code) {
+    case BLK_REQ_READ: {
+      int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE,
+                      SEEK_SET);
+      if (ret < 0) {
+        LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+        success_count = 0;
+        break;
+      }
+      LOG_UIO_BLOCK("Reading from storage, io address: 0x%lx\n", req_io);
+
+      int bytes_read = read(storage_fd, (void *)io_to_virt(req_io),
+                            req_count * BLK_TRANSFER_SIZE);
+      LOG_UIO_BLOCK("Read from storage successfully: %d bytes\n", bytes_read);
+      if (bytes_read < 0) {
+        LOG_UIO_BLOCK_ERR("Failed to read from storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+        success_count = 0;
+      } else {
+        status = BLK_RESP_OK;
+        success_count = bytes_read / BLK_TRANSFER_SIZE;
+      }
+      break;
     }
+    case BLK_REQ_WRITE: {
+      int ret = lseek(storage_fd, (off_t)req_block_number * BLK_TRANSFER_SIZE,
+                      SEEK_SET);
+      if (ret < 0) {
+        LOG_UIO_BLOCK_ERR("Failed to seek in storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+        success_count = 0;
+        break;
+      }
+      LOG_UIO_BLOCK("Writing to storage, io address: 0x%lx\n", req_io);
+      int bytes_written = write(storage_fd, (void *)io_to_virt(req_io),
+                                req_count * BLK_TRANSFER_SIZE);
+      LOG_UIO_BLOCK("Wrote to storage successfully: %d bytes\n", bytes_written);
+      if (bytes_written < 0) {
+        LOG_UIO_BLOCK_ERR("Failed to write to storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+        success_count = 0;
+      } else {
+        status = BLK_RESP_OK;
+        success_count = bytes_written / BLK_TRANSFER_SIZE;
+      }
+      break;
+    }
+    case BLK_REQ_FLUSH: {
+      int ret = fsync(storage_fd);
+      if (ret != 0) {
+        LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+      } else {
+        status = BLK_RESP_OK;
+      }
+      break;
+    }
+    case BLK_REQ_BARRIER: {
+      int ret = fsync(storage_fd);
+      if (ret != 0) {
+        LOG_UIO_BLOCK_ERR("Failed to flush storage: %s\n", strerror(errno));
+        status = BLK_RESP_ERR_UNSPEC;
+      } else {
+        status = BLK_RESP_OK;
+      }
+      break;
+    }
+    default:
+      LOG_UIO_BLOCK_ERR("Unknown command code: %d\n", req_code);
+      assert(false);
+    }
+    /* Response queue is never full if number of inflight requests <= response
+     * queue capacity */
+    err = blk_enqueue_resp(&h, status, success_count, req_id);
+    assert(!err);
+    LOG_UIO_BLOCK("Enqueued response: status=%d, success_count=%d, id=%d\n",
+                  status, success_count, req_id);
+  }
 
-    uio_notify();
-    LOG_UIO_BLOCK("Notified other side\n");
+  uio_notify();
+  LOG_UIO_BLOCK("Notified other side\n");
 }
