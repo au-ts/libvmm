@@ -70,13 +70,13 @@ static struct virtio_console_device virtio_console;
 uintptr_t blk_req_queue;
 uintptr_t blk_resp_queue;
 uintptr_t blk_data;
-uintptr_t blk_config;
+uintptr_t blk_storage_info;
 
 static struct virtio_blk_device virtio_blk;
 
 void init(void)
 {
-    blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_config;
+    blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_storage_info;
 
     /* Busy wait until blk device is ready */
     while (!blk_storage_is_ready(storage_info));
@@ -136,6 +136,7 @@ void init(void)
                         BLK_DATA_SIZE,
                         storage_info,
                         &blk_queue_h,
+                        blk_cli_queue_size(microkit_name),
                         BLK_CH);
     assert(success);
 
