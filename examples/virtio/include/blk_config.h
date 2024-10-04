@@ -15,12 +15,11 @@
 #define BLK_NAME_CLI0                      "CLIENT_VMM-1"
 #define BLK_NAME_CLI1                      "CLIENT_VMM-2"
 
-#define BLK_QUEUE_CAPACITY_CLI0            1024
-#define BLK_QUEUE_CAPACITY_CLI1            1024
-#define BLK_QUEUE_CAPACITY_DRIV            (BLK_QUEUE_CAPACITY_CLI0 + BLK_QUEUE_CAPACITY_CLI1)
+#define BLK_QUEUE_CAPACITY_CLI0                 1024
+#define BLK_QUEUE_CAPACITY_CLI1                 1024
+#define BLK_QUEUE_CAPACITY_DRIV                 (BLK_QUEUE_CAPACITY_CLI0 + BLK_QUEUE_CAPACITY_CLI1)
 
 #define BLK_REGION_SIZE                     0x200000
-
 #define BLK_DATA_REGION_SIZE_CLI0           BLK_REGION_SIZE
 #define BLK_DATA_REGION_SIZE_CLI1           BLK_REGION_SIZE
 #define BLK_DATA_REGION_SIZE_DRIV           BLK_REGION_SIZE
@@ -28,13 +27,6 @@
 #define BLK_QUEUE_REGION_SIZE_CLI0          BLK_REGION_SIZE
 #define BLK_QUEUE_REGION_SIZE_CLI1          BLK_REGION_SIZE
 #define BLK_QUEUE_REGION_SIZE_DRIV          BLK_REGION_SIZE
-
-_Static_assert(BLK_DATA_REGION_SIZE_CLI0 >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_CLI0 % BLK_TRANSFER_SIZE == 0,
-               "Client0 data region size must be a multiple of the transfer size");
-_Static_assert(BLK_DATA_REGION_SIZE_CLI1 >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_CLI1 % BLK_TRANSFER_SIZE == 0,
-               "Client1 data region size must be a multiple of the transfer size");
-_Static_assert(BLK_DATA_REGION_SIZE_DRIV >= BLK_TRANSFER_SIZE &&BLK_DATA_REGION_SIZE_DRIV % BLK_TRANSFER_SIZE == 0,
-               "Driver data region size must be a multiple of the transfer size");
 
 static const int blk_partition_mapping[BLK_NUM_CLIENTS] = { 0, 1 };
 
