@@ -140,7 +140,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
                     transferred = true;
                 }
 
-                memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.size),
+                memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.capacity),
                        (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
 
                 serial_update_visible_tail(&console->txq, console->txq.queue->tail + to_transfer);
