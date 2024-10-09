@@ -58,9 +58,9 @@ jobs:
         with:
           # @ivanv: this needs to be fixed for the restructure
           path: build_*/loader.img
-  build_macos_x86_64:
-    name: Build and run examples (macOS x86-64)
-    runs-on: macos-12
+  build_macos_arm64:
+    name: Build and run examples (macOS ARM64)
+    runs-on: macos-14
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,13 +68,13 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-macos-x86-64.tar.gz
-          tar xf microkit-sdk-1.4.1-macos-x86-64.tar.gz
+          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-macos-aarch64.tar.gz
+          tar xf microkit-sdk-1.4.1-macos-aarch64.tar.gz
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
-          brew install llvm qemu dtc make dosfstools expect
-          echo "/usr/local/opt/llvm/bin:$PATH" >> $GITHUB_PATH
+          brew install llvm lld qemu dtc make dosfstools expect
+          echo "/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_PATH
       - name: Install Zig
         uses: mlugg/setup-zig@v1.2.0
         with:
