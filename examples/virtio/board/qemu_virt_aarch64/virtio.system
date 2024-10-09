@@ -23,7 +23,7 @@
         <map mr="rx_data_serial_vmm_1" vaddr="0x6_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
         <!-- sDDF related regions for virtIO block -->
-        <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_config" />
+        <map mr="blk_storage_info_vmm_1" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_storage_info" />
         <map mr="req_blk_vmm_1" vaddr="0x103_800_000" perms="rw" cached="false" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_1" vaddr="0x103_a00_000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue" />
         <map mr="data_blk_vmm_1" vaddr="0x30600000" perms="rw" cached="true" setvar_vaddr="blk_data" />
@@ -47,7 +47,7 @@
 
         <!-- sDDF related regions for virtIO block -->
         <!-- blk config region -->
-        <map mr="blk_config_vmm_2" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_config" />
+        <map mr="blk_storage_info_vmm_2" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_storage_info" />
         <!-- shared memory for queues -->
         <map mr="req_blk_vmm_2" vaddr="0x103_800_000" perms="rw" cached="false" setvar_vaddr="blk_req_queue" />
         <map mr="resp_blk_vmm_2" vaddr="0x103_a00_000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue" />
@@ -164,17 +164,17 @@
     </channel>
 
     <!-- Block sDDF regions -->
-    <memory_region name="blk_config_driver" size="0x1000" page_size="0x1000" />
+    <memory_region name="blk_storage_info_driver" size="0x1000" page_size="0x1000" />
     <memory_region name="req_blk_driver" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_driver" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="data_blk_driver" size="0x200_000" page_size="0x200_000" />
 
-    <memory_region name="blk_config_vmm_1" size="0x1000" page_size="0x1000" />
+    <memory_region name="blk_storage_info_vmm_1" size="0x1000" page_size="0x1000" />
     <memory_region name="req_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_1" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="data_blk_vmm_1" size="0x200_000" page_size="0x200_000" />
 
-    <memory_region name="blk_config_vmm_2" size="0x1000" page_size="0x1000" />
+    <memory_region name="blk_storage_info_vmm_2" size="0x1000" page_size="0x1000" />
     <memory_region name="data_blk_vmm_2" size="0x200_000" page_size="0x200_000" />
     <memory_region name="req_blk_vmm_2" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="resp_blk_vmm_2" size="0x200_000" page_size="0x200_000"/>
@@ -200,7 +200,7 @@
             <map mr="uart" vaddr="0x9000000" perms="rw" cached="false" />
 
             <!-- sDDF block -->
-            <map mr="blk_config_driver" vaddr="0x20000000" perms="rw" cached="false" />
+            <map mr="blk_storage_info_driver" vaddr="0x20000000" perms="rw" cached="false" />
             <map mr="req_blk_driver" vaddr="0x20200000" perms="rw" cached="false" />
             <map mr="resp_blk_driver" vaddr="0x20400000" perms="rw" cached="false" />
             <map mr="data_blk_driver" vaddr="0x20800000" perms="rw" cached="true" />
@@ -214,18 +214,18 @@
 
     <protection_domain name="BLK_VIRT" priority="150" budget="100" period="400">
         <program_image path="blk_virt.elf" />
-        <map mr="blk_config_driver" vaddr="0x20000000" perms="rw" cached="false" setvar_vaddr="blk_config_driver" />
-        <map mr="req_blk_driver" vaddr="0x20200000" perms="rw" cached="false" setvar_vaddr="blk_req_queue_driver" />
-        <map mr="resp_blk_driver" vaddr="0x20400000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue_driver" />
-        <map mr="data_blk_driver" vaddr="0x20800000" perms="rw" cached="true" setvar_vaddr="blk_data_driver" />
+        <map mr="blk_storage_info_driver" vaddr="0x20000000" perms="rw" cached="false" setvar_vaddr="blk_driver_storage_info" />
+        <map mr="req_blk_driver" vaddr="0x20200000" perms="rw" cached="false" setvar_vaddr="blk_driver_req_queue" />
+        <map mr="resp_blk_driver" vaddr="0x20400000" perms="rw" cached="false" setvar_vaddr="blk_driver_resp_queue" />
+        <map mr="data_blk_driver" vaddr="0x20800000" perms="rw" cached="true" setvar_vaddr="blk_driver_data" />
 
-        <map mr="blk_config_vmm_1" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_config" />
-        <map mr="blk_config_vmm_2" vaddr="0x30200000" perms="rw" cached="false" />
-        <map mr="req_blk_vmm_1" vaddr="0x31000000" perms="rw" cached="false" setvar_vaddr="blk_req_queue" />
+        <map mr="blk_storage_info_vmm_1" vaddr="0x30000000" perms="rw" cached="false" setvar_vaddr="blk_client_storage_info" />
+        <map mr="blk_storage_info_vmm_2" vaddr="0x30200000" perms="rw" cached="false" />
+        <map mr="req_blk_vmm_1" vaddr="0x31000000" perms="rw" cached="false" setvar_vaddr="blk_client_req_queue" />
         <map mr="req_blk_vmm_2" vaddr="0x31200000" perms="rw" cached="false" />
-        <map mr="resp_blk_vmm_1" vaddr="0x32000000" perms="rw" cached="false" setvar_vaddr="blk_resp_queue" />
+        <map mr="resp_blk_vmm_1" vaddr="0x32000000" perms="rw" cached="false" setvar_vaddr="blk_client_resp_queue" />
         <map mr="resp_blk_vmm_2" vaddr="0x32200000" perms="rw" cached="false" />
-        <map mr="data_blk_vmm_1" vaddr="0x33000000" perms="rw" cached="true" setvar_vaddr="blk_client_data_start"/>
+        <map mr="data_blk_vmm_1" vaddr="0x33000000" perms="rw" cached="true" setvar_vaddr="blk_client_data"/>
         <map mr="data_blk_vmm_2" vaddr="0x33200000" perms="rw" cached="true" />
     </protection_domain>
 
