@@ -41,7 +41,6 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-
 /* Virtio Console */
 #define SERIAL_VIRT_TX_CH 1
 #define SERIAL_VIRT_RX_CH 2
@@ -67,19 +66,17 @@ static struct virtio_console_device virtio_console;
 #define VIRTIO_BLK_BASE (0x150000)
 #define VIRTIO_BLK_SIZE (0x1000)
 
-uintptr_t blk_req_queue;
-uintptr_t blk_resp_queue;
+blk_req_queue_t *blk_req_queue;
+blk_resp_queue_t *blk_resp_queue;
 uintptr_t blk_data;
-uintptr_t blk_config;
+blk_storage_info_t *blk_storage_info;
 
 static struct virtio_blk_device virtio_blk;
 
 void init(void)
 {
-    blk_storage_info_t *storage_info = (blk_storage_info_t *)blk_config;
-
     /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
+    while (!blk_storage_is_ready(blk_storage_info));
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -111,32 +108,33 @@ void init(void)
 
     /* Initialise our sDDF ring buffers for the serial device */
     serial_queue_handle_t serial_rxq, serial_txq;
-    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue, serial_tx_data);
+    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue,
+                              serial_tx_data);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
-                                  VIRTIO_CONSOLE_BASE,
-                                  VIRTIO_CONSOLE_SIZE,
-                                  VIRTIO_CONSOLE_IRQ,
-                                  &serial_rxq, &serial_txq,
-                                  SERIAL_VIRT_TX_CH);
+                                       VIRTIO_CONSOLE_BASE,
+                                       VIRTIO_CONSOLE_SIZE,
+                                       VIRTIO_CONSOLE_IRQ,
+                                       &serial_rxq, &serial_txq,
+                                       SERIAL_VIRT_TX_CH);
 
     /* virtIO block */
     /* Initialise our sDDF queues for the block device */
     blk_queue_handle_t blk_queue_h;
     blk_queue_init(&blk_queue_h,
-                   (blk_req_queue_t *)blk_req_queue,
-                   (blk_resp_queue_t *)blk_resp_queue,
-                   blk_cli_queue_size(microkit_name));
+                   blk_req_queue,
+                   blk_resp_queue,
+                   blk_cli_queue_capacity(microkit_name));
 
     /* Initialise virtIO block device */
     success = virtio_mmio_blk_init(&virtio_blk,
-                        VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                        blk_data,
-                        BLK_DATA_SIZE,
-                        storage_info,
-                        &blk_queue_h,
-                        BLK_CH);
+                                   VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
+                                   blk_data,
+                                   BLK_DATA_SIZE,
+                                   blk_storage_info,
+                                   &blk_queue_h,
+                                   BLK_CH);
     assert(success);
 
     /* Finally start the guest */
@@ -161,7 +159,8 @@ void notified(microkit_channel ch)
     }
 }
 
-seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
+{
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
