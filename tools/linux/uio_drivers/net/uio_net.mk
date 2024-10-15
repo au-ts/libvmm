@@ -26,7 +26,7 @@ $(CHECK_UIO_NET_DRIVER_FLAGS_MD5):
 	-rm -f .uio_net_driver_cflags-*
 	touch $@
 
-uio_net_driver: uio_net_driver.o libuio.a
+uio_net_driver: uio_net_driver.o
 	$(CC_USERLEVEL) -static $(CFLAGS_USERLEVEL) $(CFLAGS_uio_net_driver) $^ -o $@
 
 uio_net_driver.o: $(CHECK_UIO_NET_DRIVER_FLAGS_MD5)
