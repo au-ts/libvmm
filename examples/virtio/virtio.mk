@@ -51,7 +51,7 @@ CFLAGS_USERLEVEL := \
 		-Wall -Wno-unused-function -Werror \
 		-D_GNU_SOURCE \
 		-I$(VIRTIO_EXAMPLE)/include \
-		-target aarch64-linux-gnu
+		-target aarch64-linux-gnu 
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
