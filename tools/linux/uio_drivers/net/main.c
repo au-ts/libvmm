@@ -22,6 +22,7 @@
 
 #include <sddf/network/queue.h>
 #include <config/ethernet_config.h>
+#include <uio/net.h>
 
 /* Change this if you want to bind to a different interface 
    make sure it is brought up first by the init script */
@@ -55,11 +56,6 @@ int epoll_fd;
 /* UIO FDs to access the physical addresses of the sDDF data segment 
    so we can deduct it from the offset in control queue to access the data */
 int uio_sddf_vmm_net_info_passing_fd;
-typedef struct {
-    /* Any info that the VMM wants to give us go in here */
-    uint64_t rx_paddr;
-    uint64_t tx_paddr;
-} vmm_net_info_t;
 vmm_net_info_t *vmm_info_passing;
 
 int set_socket_nonblocking(int sock_fd)
@@ -200,7 +196,7 @@ int main(int argc, char **argv)
     uio_sddf_net_tx_fd = open_uio("/dev/uio1");
     uio_sddf_net_rx_fd = open_uio("/dev/uio2");
 
-    /* Is this needed??? */
+    /* Is this needed??? maybe we need to somehow inform the vmm that its done, so virt doesnt start up first */
     // enable_uio_interrupt(uio_sddf_net_tx_fd);
     // enable_uio_interrupt(uio_sddf_net_rx_fd);
 
@@ -211,6 +207,8 @@ int main(int argc, char **argv)
     LOG_NET("*** Setting up UIO data passing between VMM and us\n");
     uio_sddf_vmm_net_info_passing_fd = open_uio("/dev/uio3");
     vmm_info_passing = (vmm_net_info_t *) map_uio(PAGE_SIZE_4K, uio_sddf_vmm_net_info_passing_fd);
+    LOG_NET("TX: 0x%p\n", vmm_info_passing->tx_paddr);
+    LOG_NET("RX: 0x%p\n", vmm_info_passing->rx_paddr);
 
     LOG_NET("*** All initialisation successful, entering event loop\n");
     while (1) {
