@@ -60,6 +60,7 @@ typedef struct {
     uint64_t rx_paddr;
     uint64_t tx_paddr;
 } vmm_net_info_t;
+vmm_net_info_t *vmm_info_passing;
 
 int set_socket_nonblocking(int sock_fd)
 {
@@ -142,6 +143,8 @@ int open_uio(const char *abs_path) {
     if (fd == -1) {
         LOG_NET_ERR("can't open uio @ %s.\n", abs_path);
         exit(1);
+    } else {
+        LOG_NET("opened uio %s with fd %d\n", abs_path, fd);
     }
     return fd;
 }
@@ -173,19 +176,19 @@ int main(int argc, char **argv)
 {
     LOG_NET("*** Starting up\n");
 
-    LOG_NET("*** Setting up raw socket");
+    LOG_NET("*** Setting up raw socket\n");
     sock_fd = create_nb_socket();
     bind_sock_to_net_inf(sock_fd);
 
-    LOG_NET("*** Binding raw socket to epoll");
+    LOG_NET("*** Binding raw socket to epoll\n");
     epoll_fd = create_epoll();
     bind_fd_to_epoll(sock_fd, epoll_fd);
 
-    LOG_NET("*** Mapping in sDDF control and data queues");
-    uio_sddf_net_queues_fd = open("/dev/uio0", O_RDWR);
+    LOG_NET("*** Mapping in sDDF control and data queues\n");
+    uio_sddf_net_queues_fd = open_uio("/dev/uio0");
     sddf_net_queues_vaddr = map_uio(NET_CONTROL_QUEUE_REGION_SIZE, uio_sddf_net_queues_fd);
 
-    LOG_NET("*** Setting up sDDF control and data queues");
+    LOG_NET("*** Setting up sDDF control and data queues\n");
     char *rx_free_drv   = sddf_net_queues_vaddr;
     char *rx_active_drv = rx_free_drv + NET_CONTROL_QUEUE_REGION_SIZE;
     char *tx_free_drv   = rx_active_drv + NET_CONTROL_QUEUE_REGION_SIZE;
@@ -193,17 +196,21 @@ int main(int argc, char **argv)
     net_queue_init(&rx_queue, (net_queue_t *)rx_free_drv, (net_queue_t *)rx_active_drv, NET_RX_QUEUE_CAPACITY_DRIV);
     net_queue_init(&tx_queue, (net_queue_t *)tx_free_drv, (net_queue_t *)tx_active_drv, NET_TX_QUEUE_CAPACITY_DRIV);
 
-    LOG_NET("*** Setting up UIO TX and RX interrupts");
-    uio_sddf_net_tx_fd = open("/dev/uio1", O_RDWR);
-    uio_sddf_net_rx_fd = open("/dev/uio2", O_RDWR);
+    LOG_NET("*** Setting up UIO TX and RX interrupts\n");
+    uio_sddf_net_tx_fd = open_uio("/dev/uio1");
+    uio_sddf_net_rx_fd = open_uio("/dev/uio2");
 
     /* Is this needed??? */
     // enable_uio_interrupt(uio_sddf_net_tx_fd);
     // enable_uio_interrupt(uio_sddf_net_rx_fd);
 
-    LOG_NET("*** Binding UIO TX and RX interrupts to epoll");
+    LOG_NET("*** Binding UIO TX and RX interrupts to epoll\n");
     bind_fd_to_epoll(uio_sddf_net_tx_fd, epoll_fd);
     bind_fd_to_epoll(uio_sddf_net_rx_fd, epoll_fd);
+
+    LOG_NET("*** Setting up UIO data passing between VMM and us\n");
+    uio_sddf_vmm_net_info_passing_fd = open_uio("/dev/uio3");
+    vmm_info_passing = (vmm_net_info_t *) map_uio(PAGE_SIZE_4K, uio_sddf_vmm_net_info_passing_fd);
 
     LOG_NET("*** All initialisation successful, entering event loop\n");
     while (1) {
