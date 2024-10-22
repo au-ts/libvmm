@@ -157,7 +157,7 @@ char *map_uio(uint64_t length, int uiofd) {
     return (char *) base;
 }
 
-void enable_uio_interrupt(int uiofd) {
+void uio_interrupt_send(int uiofd) {
     uint32_t enable = 1;
     if (write(uiofd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
         LOG_NET_ERR("Failed to Enable interrupts on uio fd %d\n", uiofd);
@@ -197,8 +197,8 @@ int main(int argc, char **argv)
     uio_sddf_net_rx_fd = open_uio("/dev/uio2");
 
     /* Is this needed??? maybe we need to somehow inform the vmm that its done, so virt doesnt start up first */
-    // enable_uio_interrupt(uio_sddf_net_tx_fd);
-    // enable_uio_interrupt(uio_sddf_net_rx_fd);
+    uio_interrupt_send(uio_sddf_net_tx_fd);
+    uio_interrupt_send(uio_sddf_net_rx_fd);
 
     LOG_NET("*** Binding UIO TX and RX interrupts to epoll\n");
     bind_fd_to_epoll(uio_sddf_net_tx_fd, epoll_fd);
