@@ -48,8 +48,15 @@ net_queue_handle_t rx_queue;
 net_queue_handle_t tx_queue;
 
 /* UIO FDs to wait for TX/RX interrupts from VMM */
-int uio_sddf_net_tx_fd;
-int uio_sddf_net_rx_fd;
+int uio_sddf_net_tx_incoming_fd;
+int uio_sddf_net_rx_incoming_fd;
+
+/* UIO FDs to signal TX/RX to VMM */
+int uio_sddf_net_tx_outgoing_fd;
+int uio_sddf_net_rx_outgoing_fd;
+char *sddf_net_tx_outgoing_irq_fault_vaddr;
+char *sddf_net_rx_outgoing_irq_fault_vaddr;
+
 /* Polling FD to wait for events from the TX/RX UIO FD */
 int epoll_fd;
 
@@ -157,7 +164,7 @@ char *map_uio(uint64_t length, int uiofd) {
     return (char *) base;
 }
 
-void uio_interrupt_send(int uiofd) {
+void uio_interrupt_ack(int uiofd) {
     uint32_t enable = 1;
     if (write(uiofd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
         LOG_NET_ERR("Failed to Enable interrupts on uio fd %d\n", uiofd);
@@ -192,23 +199,27 @@ int main(int argc, char **argv)
     net_queue_init(&rx_queue, (net_queue_t *)rx_free_drv, (net_queue_t *)rx_active_drv, NET_RX_QUEUE_CAPACITY_DRIV);
     net_queue_init(&tx_queue, (net_queue_t *)tx_free_drv, (net_queue_t *)tx_active_drv, NET_TX_QUEUE_CAPACITY_DRIV);
 
-    LOG_NET("*** Setting up UIO TX and RX interrupts\n");
-    uio_sddf_net_tx_fd = open_uio("/dev/uio1");
-    uio_sddf_net_rx_fd = open_uio("/dev/uio2");
+    LOG_NET("*** Setting up UIO TX and RX interrupts from VMM \"incoming\"\n");
+    uio_sddf_net_tx_incoming_fd = open_uio("/dev/uio1");
+    uio_sddf_net_rx_incoming_fd = open_uio("/dev/uio2");
+    uio_interrupt_ack(uio_sddf_net_tx_incoming_fd);
+    uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);
 
-    /* Is this needed??? maybe we need to somehow inform the vmm that its done, so virt doesnt start up first */
-    uio_interrupt_send(uio_sddf_net_tx_fd);
-    uio_interrupt_send(uio_sddf_net_rx_fd);
-
-    LOG_NET("*** Binding UIO TX and RX interrupts to epoll\n");
-    bind_fd_to_epoll(uio_sddf_net_tx_fd, epoll_fd);
-    bind_fd_to_epoll(uio_sddf_net_rx_fd, epoll_fd);
+    LOG_NET("*** Binding UIO TX and RX incoming interrupts to epoll\n");
+    bind_fd_to_epoll(uio_sddf_net_tx_incoming_fd, epoll_fd);
+    bind_fd_to_epoll(uio_sddf_net_rx_incoming_fd, epoll_fd);
 
     LOG_NET("*** Setting up UIO data passing between VMM and us\n");
     uio_sddf_vmm_net_info_passing_fd = open_uio("/dev/uio3");
     vmm_info_passing = (vmm_net_info_t *) map_uio(PAGE_SIZE_4K, uio_sddf_vmm_net_info_passing_fd);
     LOG_NET("TX: 0x%p\n", vmm_info_passing->tx_paddr);
     LOG_NET("RX: 0x%p\n", vmm_info_passing->rx_paddr);
+
+    LOG_NET("*** Setting up UIO TX and RX interrupts to VMM \"outgoing\"\n");
+    uio_sddf_net_tx_outgoing_fd = open_uio("/dev/uio4");
+    uio_sddf_net_rx_outgoing_fd = open_uio("/dev/uio5");
+    sddf_net_tx_outgoing_irq_fault_vaddr = map_uio(PAGE_SIZE_4K, uio_sddf_net_tx_outgoing_fd);
+    sddf_net_rx_outgoing_irq_fault_vaddr = map_uio(PAGE_SIZE_4K, uio_sddf_net_rx_outgoing_fd);
 
     LOG_NET("*** All initialisation successful, entering event loop\n");
     while (1) {
@@ -229,25 +240,11 @@ int main(int argc, char **argv)
 
             if (events[i].data.fd == sock_fd) {
                 // Oh hey got a frame from network device!
-                // rx_ferry->len = recv(sock_fd, rx_ferry->data, sizeof(rx_ferry->data), 0);
-                // if (rx_ferry->len == -1) {
-                //     LOG_NET_WARN("got EPOLLIN on socket FD but nothing came through???\n");
-                // }
 
-                // Now poke the VMM to process the incoming frame, we won't return until the VMM has
-                // safely copied this frame into the sDDF queue
-
-
-            } else if (events[i].data.fd == uio_sddf_net_tx_fd) {
+            } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
                 // Got TX ntfn from VMM, send it thru the raw socket
-                // ssize_t send_len = send(sock_fd, tx_ferry->data, tx_ferry->len, 0);
-                // if (send_len == -1) {
-                //     LOG_NET_ERR("Failed to send frame in event loop, abort\n");
-                //     return -1;
-                // }
 
-                // Now poke the VMM saying that it is safe to for us to transmit the next frame
-            } else if (events[i].data.fd == uio_sddf_net_rx_fd) {
+            } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
                 LOG_NET("got rx notif\n");
             } else {
                 LOG_NET_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
