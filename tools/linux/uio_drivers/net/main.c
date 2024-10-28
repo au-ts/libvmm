@@ -248,6 +248,10 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    LOG_NET("head %d\n", ((net_queue_t *) rx_free_drv)->head);
+    LOG_NET("tail %d\n", ((net_queue_t *) rx_free_drv)->tail);
+    LOG_NET(">>> %d, io is %p\n", rx_buffer.len, rx_buffer.io_or_offset);
+
     LOG_NET("*** All initialisation successful, entering event loop\n");
     while (1) {
         int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -268,6 +272,8 @@ int main(int argc, char **argv)
             if (events[i].data.fd == sock_fd) {
                 // Oh hey got a frame from the network device!
                 // Convert DMA addr from virtualiser to offset
+                printf("got stuff from sock\n");
+                
                 uintptr_t offset = rx_buffer.io_or_offset - vmm_info_passing->rx_paddr;
                 char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
 
@@ -295,9 +301,11 @@ int main(int argc, char **argv)
                 *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
 
             } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
+                printf("Got virt TX ntfn from VMM\n");
+
                 // Got virt TX ntfn from VMM, send it thru the raw socket
                 if (net_queue_empty_active(&tx_queue)) {
-                    LOG_NET_ERR("active TX queue is empty when TX virt signalled? weird. quitting\n");
+                    LOG_NET_WARN("active TX queue is empty when TX virt signalled? weird.\n");
                     exit(1);
                 }
 
@@ -350,6 +358,7 @@ int main(int argc, char **argv)
             } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
                 // Got RX virt ntfn from VMM.
                 // Don't care, we are grabbing the free bufs ourselves.
+                printf("Got virt RX ntfn from VMM\n");
                 uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);
             } else {
                 LOG_NET_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
