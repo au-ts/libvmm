@@ -21,6 +21,7 @@
 #include "log.h"
 
 #include <sddf/network/queue.h>
+#include <sddf/network/net_info.h>
 #include <config/ethernet_config.h>
 #include <uio/net.h>
 
@@ -61,6 +62,9 @@ int epoll_fd;
 int uio_sddf_vmm_net_info_passing_fd;
 vmm_net_info_t *vmm_info_passing;
 
+int uio_sddf_net_info_fd;
+net_info_t *sddf_net_info;
+
 int set_socket_nonblocking(int sock_fd)
 {
     int flags = fcntl(sock_fd, F_GETFL, 0);
@@ -80,12 +84,7 @@ int create_nb_socket(void) {
         LOG_NET("created raw socket with fd %d\n", sock_fd);
     }
 
-    if (set_socket_nonblocking(sock_fd) == -1) {
-        LOG_NET_ERR("can't set the socket to non-blocking mode.\n");
-        exit(1);
-    } else {
-        LOG_NET("set raw socket %d to non-blocking\n", sock_fd);
-    }
+
     return sock_fd;
 }
 
@@ -165,8 +164,6 @@ void uio_interrupt_ack(int uiofd) {
     if (write(uiofd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
         LOG_NET_ERR("Failed to Enable interrupts on uio fd %d\n", uiofd);
         exit(1);
-    } else {
-        LOG_NET("Enabled/ACK'ed interrupt on fd %d\n", uiofd);
     }
     fsync(uiofd);
 }
@@ -232,6 +229,25 @@ int main(int argc, char **argv)
     sddf_net_tx_outgoing_irq_fault_vaddr = map_uio(PAGE_SIZE_4K, uio_sddf_net_tx_outgoing_fd);
     sddf_net_rx_outgoing_irq_fault_vaddr = map_uio(PAGE_SIZE_4K, uio_sddf_net_rx_outgoing_fd);
 
+    LOG_NET("*** Setting up UIO sDDF net info\n");
+    uio_sddf_net_info_fd = open_uio("/dev/uio6");
+    sddf_net_info = map_uio(PAGE_SIZE_4K, uio_sddf_net_info_fd);
+
+    LOG_NET("*** Writing the ready bit\n");
+    __atomic_store_n(&sddf_net_info->driver_ready, true, __ATOMIC_RELEASE);
+
+    LOG_NET("*** Waiting for RX virt to boot up\n");
+    net_buff_desc_t rx_buffer;
+    while (net_queue_empty_free(&rx_queue)) {
+        LOG_NET("tail of rx free is %d\n", ((net_queue_t *) rx_free_drv)->tail);
+    }
+
+    LOG_NET("*** Fetching a free buffer from the RX free queue\n");
+    if (net_dequeue_free(&rx_queue, &rx_buffer) != 0) {
+        LOG_NET_ERR("couldn't dequeue first free RX buffer, quitting.\n");
+        exit(1);
+    }
+
     LOG_NET("*** All initialisation successful, entering event loop\n");
     while (1) {
         int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -250,33 +266,97 @@ int main(int argc, char **argv)
             }
 
             if (events[i].data.fd == sock_fd) {
-                // RX
-                // Oh hey got a frame from network device!
-                while (!net_queue_empty_free(&rx_queue)) {
-                    net_buff_desc_t buffer;
-                    int err = net_dequeue_free(&rx_queue, &buffer);
-                    assert(!err);
-                    
-                    uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
+                // Oh hey got a frame from the network device!
+                // Convert DMA addr from virtualiser to offset
+                uintptr_t offset = rx_buffer.io_or_offset - vmm_info_passing->rx_paddr;
+                char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
 
-                    char frame[ETH_FRAME_LEN];
-                    int num_bytes = recvfrom(sock_fd, frame, ETH_FRAME_LEN, 0, NULL, NULL);
-                    if (num_bytes < 0) {
-                        LOG_NET_ERR("couldnt recv from raw sock\n");
+                // Write to the data buffer
+                int num_bytes = recv(sock_fd, buf_in_sddf_rx_data, ETH_FRAME_LEN, 0);
+                if (num_bytes < 0) {
+                    LOG_NET_ERR("couldnt recv from raw sock\n");
+                    exit(1);
+                }
+
+                // Enqueue it to the active queue
+                rx_buffer.len = num_bytes;
+                if (net_enqueue_active(&rx_queue, rx_buffer) != 0) {
+                    LOG_NET_ERR("couldn't enqueue active RX buffer, quitting.\n");
+                    exit(1);
+                }
+
+                // Prepare a buffer for the next recv
+                if (net_dequeue_free(&rx_queue, &rx_buffer) != 0) {
+                    LOG_NET_ERR("couldn't dequeue free RX buffer for next recv, quitting.\n");
+                    exit(1);
+                }  
+
+                // Signal to virtualiser 
+                *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
+
+            } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
+                // Got virt TX ntfn from VMM, send it thru the raw socket
+                if (net_queue_empty_active(&tx_queue)) {
+                    LOG_NET_ERR("active TX queue is empty when TX virt signalled? weird. quitting\n");
+                    exit(1);
+                }
+
+                while (!net_queue_empty_active(&tx_queue)) {
+                    net_buff_desc_t tx_buffer;
+                    if (net_dequeue_active(&tx_queue, &tx_buffer) != 0) {
+                        LOG_NET_ERR("couldn't dequeue active TX buffer, err is %d, quitting.\n");
+                        exit(1);
+                    }  
+
+                    // Workout which client it is from, so we can get the offset in data region
+                    uintptr_t dma_tx_addr = tx_buffer.io_or_offset;
+                    uintptr_t tx_data_offset;
+                    int tx_client;
+                    bool tx_data_paddr_found = false;
+                    for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
+                        if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] && 
+                            dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_CAPACITY)) {
+                            
+                            tx_data_offset = dma_tx_addr - vmm_info_passing->tx_paddrs[i];
+                            tx_client = i;
+                            tx_data_paddr_found = true;
+                        }
+                    }
+
+                    if (!tx_data_paddr_found) {
+                        LOG_NET_ERR("couldn't find corresponding client for DMA addr 0x%p, quitting.\n", dma_tx_addr);
+                        exit(1);
+                    }
+
+                    char *tx_data_base = tx_datas_drv[tx_client];
+                    char *tx_data = (char *) ((uintptr_t) tx_data_base + tx_data_offset);
+
+                    // Blocking send!
+                    int sent_bytes = send(sock_fd, tx_data, tx_buffer.len, 0);
+                    if (sent_bytes != tx_buffer.len) {
+                        LOG_NET_ERR("TX sent %d != expected %d. qutting.\n", sent_bytes, tx_buffer.len);
+                        exit(1);
+                    }
+
+                    if (net_enqueue_free(&tx_queue, tx_buffer) != 0) {
+                        LOG_NET_ERR("Couldn't return free TX buffer into the free queue. quiting\n");
                         exit(1);
                     }
                 }
 
-
-            } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
-                // Got TX ntfn from VMM, send it thru the raw socket
+                uio_interrupt_ack(uio_sddf_net_tx_incoming_fd);
+                *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
 
             } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
-                LOG_NET("got rx notif\n");
+                // Got RX virt ntfn from VMM.
+                // Don't care, we are grabbing the free bufs ourselves.
+                uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);
             } else {
                 LOG_NET_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
             }
         }
     }
+
+    LOG_NET_WARN("event loop has break??\n");
     return 0;
 }
