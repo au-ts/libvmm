@@ -115,6 +115,7 @@ pub fn build(b: *std.Build) void {
        b.getInstallPath(.prefix, "./report.txt")
     });
     microkit_tool_cmd.step.dependOn(b.getInstallStep());
+    microkit_tool_cmd.setEnvironmentVariable("MICROKIT_SDK", microkit_sdk);
     // Add the "microkit" step, and make it the default step when we execute `zig build`
     const microkit_step = b.step("microkit", "Compile and build the final bootable image");
     microkit_step.dependOn(&microkit_tool_cmd.step);
