@@ -14,7 +14,8 @@ pub fn build(b: *std.Build) void {
     // systems programming language.
     const target = b.resolveTargetQuery(.{
         .cpu_arch = .aarch64,
-        .cpu_model = .{ .explicit = &std.Target.arm.cpu.cortex_a53 },
+        .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
+        .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
         .os_tag = .freestanding,
         .abi = .none,
     });
