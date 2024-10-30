@@ -27,6 +27,7 @@
 /* Change this if you want to bind to a different interface 
    make sure it is brought up first by the init script */
 #define NET_INTERFACE "eth0"
+char frame[ETH_FRAME_LEN];
 
 /* Event queue for polling */
 #define MAX_EVENTS 20
@@ -229,16 +230,19 @@ void rx_process(void) {
         exit(EXIT_FAILURE);
     }
 
-    // Convert DMA addr from virtualiser to offset                
-    uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
-    char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
-
-    // Write to the data buffer
-    int num_bytes = recv(sock_fd, buf_in_sddf_rx_data, ETH_FRAME_LEN, 0);
+    // Write frame out to temp buffer
+    int num_bytes = recv(sock_fd, &frame[0], ETH_FRAME_LEN, 0);
     if (num_bytes < 0) {
         perror("rx_process(): recv()");
-        LOG_NET_ERR("couldnt recv from raw sock, offset is %p, buf_in_sddf_rx_data is %p\n", offset, buf_in_sddf_rx_data);
+        LOG_NET_ERR("couldnt recv from raw sock\n");
         exit(EXIT_FAILURE);
+    }
+
+    // Convert DMA addr from virtualiser to offset then mem copy               
+    uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
+    char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
+    for (uint64_t i = 0; i < num_bytes; i++) {
+        buf_in_sddf_rx_data[i] = frame[i];
     }
 
     // Enqueue it to the active queue
@@ -268,6 +272,8 @@ int main(int argc, char **argv)
     //                                        tx active+free + rx active+free                               common rx data and per client tx data
     uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_CAPACITY * 4) + (NET_DATA_REGION_CAPACITY * (1 + NUM_NETWORK_CLIENTS));
     sddf_net_queues_vaddr = map_uio(sddf_net_control_and_data_size, uio_sddf_net_queues_fd);
+
+    printf("total size is %p\n", sddf_net_control_and_data_size);
 
     LOG_NET("*** Setting up sDDF control and data queues\n");
     rx_free_drv   = sddf_net_queues_vaddr;
@@ -321,7 +327,7 @@ int main(int argc, char **argv)
 
     LOG_NET("*** All initialisation successful, now sending all pending TX active before we block on events\n");
     net_request_signal_active(&tx_queue);
-    // tx_process();
+    tx_process();
 
     LOG_NET("*** All pending TX active have been sent thru the raw sock, entering event loop now.\n");
     LOG_NET("*** You won't see any output from UIO Net anymore. Unless there is a warning or error.\n");
