@@ -81,7 +81,6 @@ void uio_irq_enable() {
     LOG_UIO_ERR("writing 1 to device failed with ret val: %d, errno: %d\n", ret,
                 errno);
   }
-  fsync(main_uio_fd);
 }
 
 void vmm_notify() {
