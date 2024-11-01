@@ -10,10 +10,10 @@
  */
 void vmm_notify();
 
-/* Writing 1 to the UIO device ACKs the IRQ and
- * also re-enables the interrupt.
+/* Writing 1 to the UIO device re-enables the
+ * interrupt.
  */
-void uio_irq_ack_and_enable();
+void uio_irq_enable();
 
 /* Drivers can add their own events to the uio event loop */
 void bind_fd_to_epoll(int fd);

@@ -285,7 +285,7 @@ void driver_notified(int *events_fds, int num_events) {
                   status, success_count, req_id);
   }
 
-  uio_irq_ack_and_enable();
+  uio_irq_enable();
   vmm_notify();
   LOG_UIO_BLOCK("Notified other side\n");
 }

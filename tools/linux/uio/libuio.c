@@ -74,7 +74,7 @@ __attribute__((weak)) void driver_notified(int *event_fds, int num_events) {
   assert(!"UIO driver did not implement driver_notified");
 }
 
-void uio_irq_ack_and_enable() {
+void uio_irq_enable() {
   int32_t one = 1;
   int ret = write(main_uio_fd, &one, 4);
   if (ret < 0) {
@@ -335,7 +335,7 @@ int main(int argc, char **argv)
   }
 
   /* Enable uio interrupt */
-  uio_irq_ack_and_enable();
+  uio_irq_enable();
 
   struct epoll_event events[MAX_EVENTS];
   int event_fds[MAX_EVENTS];
