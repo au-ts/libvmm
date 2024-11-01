@@ -16,4 +16,4 @@ void vmm_notify();
 void uio_irq_enable();
 
 /* Drivers can add their own events to the uio event loop */
-void bind_fd_to_epoll(int fd);
+void bind_fd_to_event_loop(int fd);

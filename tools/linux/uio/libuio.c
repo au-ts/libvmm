@@ -89,7 +89,7 @@ void vmm_notify() {
   msync(maps[VMM_NOTIFY_MAP], 1, MS_ASYNC);
 }
 
-void bind_fd_to_epoll(int fd) {
+void bind_fd_to_event_loop(int fd) {
   struct epoll_event sock_event;
   sock_event.events = EPOLLIN;
   sock_event.data.fd = fd;
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
 
   /* Initialise epoll, bind uio fd to it */
   epoll_fd = create_epoll();
-  bind_fd_to_epoll(main_uio_fd);
+  bind_fd_to_event_loop(main_uio_fd);
 
   /* Initialise driver, we pass the UIO device mappings to the driver,
    * skipping the first one which only contains UIO's irq status, and
