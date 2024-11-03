@@ -167,6 +167,7 @@ void uio_interrupt_ack(int uiofd) {
 }
 
 void tx_process(void) {
+    net_request_signal_active(&tx_queue);
     while (!net_queue_empty_active(&tx_queue)) {
         net_buff_desc_t tx_buffer;
         if (net_dequeue_active(&tx_queue, &tx_buffer) != 0) {
@@ -217,8 +218,6 @@ void tx_process(void) {
             exit(EXIT_FAILURE);
         }
     }
-
-    net_request_signal_active(&tx_queue);
     *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
 }
 
