@@ -24,16 +24,18 @@
 #include <ethernet_config.h>
 #include <uio/net.h>
 
+#define ARGC_REQURED 2
+
 /* Redefine this based on your sDDF version... */
 #define NET_DATA_REGION_BYTES NET_DATA_REGION_SIZE
 
-/* Change this if you want to bind to a different interface 
-   make sure it is brought up first by the init script */
-#define NET_INTERFACE "eth0"
+/* IMPORTANT: This driver currently assumes the network interface
+   has an "Ethernet-like" MTU, you should change this if your net inf is 
+   different. */
 char frame[ETH_FRAME_LEN];
 
 /* Event queue for polling */
-#define MAX_EVENTS 20
+#define MAX_EVENTS 16 // Arbitrary length
 struct epoll_event events[MAX_EVENTS];
 
 #define PAGE_SIZE_4K 0x1000
@@ -74,7 +76,7 @@ vmm_net_info_t *vmm_info_passing;
 
 struct ifreq ifr;
 
-int create_promiscuous_socket(void) {
+int create_promiscuous_socket(const char *net_inf) {
     int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sockfd == -1) {
         perror("create_promiscuous_socket(): socket()");
@@ -82,7 +84,7 @@ int create_promiscuous_socket(void) {
         exit(EXIT_FAILURE);
     }
 
-    strncpy(ifr.ifr_name, NET_INTERFACE, IFNAMSIZ);
+    strncpy(ifr.ifr_name, net_inf, IFNAMSIZ);
     if (ioctl(sockfd, SIOCGIFINDEX, &ifr) == -1) {
         perror("create_promiscuous_socket(): ioctl()");
         LOG_NET_ERR("could not get network interface index.\n");
@@ -259,10 +261,16 @@ void rx_process(void) {
 
 int main(int argc, char **argv)
 {
-    LOG_NET("*** Starting up\n");
+    if (argc != ARGC_REQURED) {
+        LOG_NET("usage: ./uio_net_driver <network_interface>");
+        exit(EXIT_FAILURE);
+    } else {
+        LOG_NET("*** Starting up\n");
+        LOG_NET("*** Network interface: %s\n", argv[1]);
+    }
 
     LOG_NET("*** Setting up raw promiscuous socket\n");
-    sock_fd = create_promiscuous_socket();
+    sock_fd = create_promiscuous_socket(argv[1]);
 
     LOG_NET("*** Creating epoll\n");
     epoll_fd = create_epoll();
