@@ -15,12 +15,11 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
 #include <uio/libuio.h>
 
 #include "log.h"
+#include "queue.h"
 
-#include <sddf/network/queue.h>
 #include <ethernet_config.h>
 #include <uio/net.h>
 
