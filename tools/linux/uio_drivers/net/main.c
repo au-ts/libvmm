@@ -21,8 +21,11 @@
 #include "log.h"
 
 #include <sddf/network/queue.h>
-#include <config/ethernet_config.h>
+#include <ethernet_config.h>
 #include <uio/net.h>
+
+/* Redefine this based on your sDDF version... */
+#define NET_DATA_REGION_BYTES NET_DATA_REGION_SIZE
 
 /* Change this if you want to bind to a different interface 
    make sure it is brought up first by the init script */
@@ -176,7 +179,7 @@ void tx_process(void) {
         bool tx_data_paddr_found = false;
         for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
             if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] && 
-                dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_CAPACITY)) {
+                dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
                 
                 tx_data_offset = dma_tx_addr - vmm_info_passing->tx_paddrs[i];
                 tx_client = i;
@@ -270,19 +273,19 @@ int main(int argc, char **argv)
     LOG_NET("*** Mapping in sDDF control and data queues\n");
     uio_sddf_net_queues_fd = open_uio(UIO_PATH_SDDF_NET_CONTROL_AND_DATA_QUEUES);
     //                                        tx active+free + rx active+free                               common rx data and per client tx data
-    uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_CAPACITY * 4) + (NET_DATA_REGION_CAPACITY * (1 + NUM_NETWORK_CLIENTS));
+    uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_BYTES * 4) + (NET_DATA_REGION_BYTES * (1 + NUM_NETWORK_CLIENTS));
     sddf_net_queues_vaddr = map_uio(sddf_net_control_and_data_size, uio_sddf_net_queues_fd);
 
     printf("total size is %p\n", sddf_net_control_and_data_size);
 
     LOG_NET("*** Setting up sDDF control and data queues\n");
     rx_free_drv   = sddf_net_queues_vaddr;
-    rx_active_drv = (char *) ((uint64_t) rx_free_drv + NET_DATA_REGION_CAPACITY);
-    tx_free_drv   = (char *) ((uint64_t) rx_active_drv + NET_DATA_REGION_CAPACITY);
-    tx_active_drv = (char *) ((uint64_t) tx_free_drv + NET_DATA_REGION_CAPACITY);
-    rx_data_drv   = (char *) ((uint64_t) tx_active_drv + NET_DATA_REGION_CAPACITY);
+    rx_active_drv = (char *) ((uint64_t) rx_free_drv + NET_DATA_REGION_BYTES);
+    tx_free_drv   = (char *) ((uint64_t) rx_active_drv + NET_DATA_REGION_BYTES);
+    tx_active_drv = (char *) ((uint64_t) tx_free_drv + NET_DATA_REGION_BYTES);
+    rx_data_drv   = (char *) ((uint64_t) tx_active_drv + NET_DATA_REGION_BYTES);
     for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-        tx_datas_drv[i] = (char *) ((uint64_t) rx_data_drv + (NET_DATA_REGION_CAPACITY * (i + 1)));
+        tx_datas_drv[i] = (char *) ((uint64_t) rx_data_drv + (NET_DATA_REGION_BYTES * (i + 1)));
     }
 
     net_queue_init(&rx_queue, (net_queue_t *)rx_free_drv, (net_queue_t *)rx_active_drv, NET_RX_QUEUE_CAPACITY_DRIV);
