@@ -38,3 +38,5 @@ typedef struct {
    UIO regions are unmapped, so a fault is generated */
 #define UIO_PATH_SDDF_NET_TX_FAULT_TO_VMM "/dev/uio4"
 #define UIO_PATH_SDDF_NET_RX_FAULT_TO_VMM "/dev/uio5"
+#define GUEST_TO_VMM_TX_FAULT_ADDR 0x60000000
+#define GUEST_TO_VMM_RX_FAULT_ADDR 0x70000000
