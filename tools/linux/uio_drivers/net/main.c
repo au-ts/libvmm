@@ -18,7 +18,6 @@
 #include <uio/libuio.h>
 
 #include "log.h"
-#include "queue.h"
 
 #include <ethernet_config.h>
 #include <uio/net.h>
@@ -76,6 +75,7 @@ vmm_net_info_t *vmm_info_passing;
 struct ifreq ifr;
 
 int create_promiscuous_socket(const char *net_inf) {
+    // See https://man7.org/linux/man-pages/man7/packet.7.html for more details on these operations
     int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sockfd == -1) {
         perror("create_promiscuous_socket(): socket()");
@@ -217,44 +217,65 @@ void tx_process(void) {
             exit(EXIT_FAILURE);
         }
     }
-    *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
+
+    net_request_signal_active(&tx_queue);
+    if (net_require_signal_free(&tx_queue)) {
+        *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
+    }
+}
+
+int bytes_available_in_socket(void) {
+    int bytes_available;
+    if (ioctl(sock_fd, FIONREAD, &bytes_available) == -1) {
+        perror("bytes_available_in_socket(): ioctl()");
+        LOG_NET_ERR("Couldn't poll the socket to see whether there is data available. quiting\n");
+        exit(EXIT_FAILURE);
+    }
+    return bytes_available;
 }
 
 void rx_process(void) {
-    if (net_queue_empty_free(&rx_queue)) {
-        LOG_NET_WARN("Received a frame but RX free queue is empty. Dropping the frame.\n");
-        return;
+    // Poll the socket and receive all frames until there is nothing to receive or the free queue is empty.
+    while (bytes_available_in_socket()) {
+        if (net_queue_empty_free(&rx_queue)) {
+            // Received a frame but RX free queue is empty, we can't process it right now. Signalling virt RX
+            net_request_signal_free(&rx_queue);
+            break;
+        }
+
+        net_buff_desc_t buffer;
+        int err = net_dequeue_free(&rx_queue, &buffer);
+        if (err) {
+            LOG_NET_ERR("couldn't dequeue a free RX buf\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Write frame out to temp buffer
+        int num_bytes = recv(sock_fd, &frame[0], sizeof(frame), 0);
+        if (num_bytes < 0) {
+            perror("rx_process(): recv()");
+            LOG_NET_ERR("couldnt recv from raw sock\n");
+            exit(EXIT_FAILURE);
+        }
+
+        // Convert DMA addr from virtualiser to offset then mem copy               
+        uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
+        char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
+        for (uint64_t i = 0; i < num_bytes; i++) {
+            buf_in_sddf_rx_data[i] = frame[i];
+        }
+
+        // Enqueue it to the active queue
+        buffer.len = num_bytes;
+        if (net_enqueue_active(&rx_queue, buffer) != 0) {
+            LOG_NET_ERR("couldn't enqueue active RX buffer, quitting.\n");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    net_buff_desc_t buffer;
-    int err = net_dequeue_free(&rx_queue, &buffer);
-    if (err) {
-        LOG_NET_ERR("couldn't dequeue a free RX buf\n");
-        exit(EXIT_FAILURE);
+    if (net_require_signal_free(&rx_queue)) {
+        *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
     }
-
-    // Write frame out to temp buffer
-    int num_bytes = recv(sock_fd, &frame[0], ETH_FRAME_LEN, 0);
-    if (num_bytes < 0) {
-        perror("rx_process(): recv()");
-        LOG_NET_ERR("couldnt recv from raw sock\n");
-        exit(EXIT_FAILURE);
-    }
-
-    // Convert DMA addr from virtualiser to offset then mem copy               
-    uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
-    char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
-    for (uint64_t i = 0; i < num_bytes; i++) {
-        buf_in_sddf_rx_data[i] = frame[i];
-    }
-
-    // Enqueue it to the active queue
-    buffer.len = num_bytes;
-    if (net_enqueue_active(&rx_queue, buffer) != 0) {
-        LOG_NET_ERR("couldn't enqueue active RX buffer, quitting.\n");
-        exit(EXIT_FAILURE);
-    }
-    *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
 }
 
 int main(int argc, char **argv)
@@ -335,7 +356,6 @@ int main(int argc, char **argv)
     while (net_queue_empty_free(&rx_queue));
 
     LOG_NET("*** All initialisation successful, now sending all pending TX active before we block on events\n");
-    net_request_signal_active(&tx_queue);
     tx_process();
 
     LOG_NET("*** All pending TX active have been sent thru the raw sock, entering event loop now.\n");
@@ -343,6 +363,7 @@ int main(int argc, char **argv)
     while (1) {
         int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
         if (n_events == -1) {
+            perror("main(): epoll_wait():");
             LOG_NET_ERR("epoll wait failed\n");
             exit(EXIT_FAILURE);
         }
@@ -359,14 +380,13 @@ int main(int argc, char **argv)
             if (events[i].data.fd == sock_fd) {
                 // Oh hey got a frame from the network device!
                 rx_process();
-
             } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
                 // Got virt TX ntfn from VMM, send it thru the raw socket
                 tx_process();
                 uio_interrupt_ack(uio_sddf_net_tx_incoming_fd);
             } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
-                // Got RX virt ntfn from VMM.
-                // Don't care, we are grabbing the free bufs ourselves.
+                // Got RX virt ntfn from VMM, the free RX queue got filled!
+                rx_process();
                 uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);
             } else {
                 LOG_NET_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
