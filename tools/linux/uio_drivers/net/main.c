@@ -273,7 +273,7 @@ void rx_process(void) {
         }
     }
 
-    if (net_require_signal_free(&rx_queue)) {
+    if (net_require_signal_active(&rx_queue)) {
         *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
     }
 }
