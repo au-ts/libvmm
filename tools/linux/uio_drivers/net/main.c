@@ -166,8 +166,12 @@ void uio_interrupt_ack(int uiofd) {
 }
 
 void tx_process(void) {
+    bool processed_tx = false;
+
     net_request_signal_active(&tx_queue);
     while (!net_queue_empty_active(&tx_queue)) {
+        processed_tx = true;
+
         net_buff_desc_t tx_buffer;
         if (net_dequeue_active(&tx_queue, &tx_buffer) != 0) {
             LOG_NET_ERR("couldn't dequeue active TX buffer, sddf err is %d, quitting.\n");
@@ -218,8 +222,8 @@ void tx_process(void) {
         }
     }
 
-    net_request_signal_active(&tx_queue);
-    if (net_require_signal_free(&tx_queue)) {
+    // net_request_signal_active(&tx_queue);
+    if (processed_tx && net_require_signal_free(&tx_queue)) {
         *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
     }
 }
@@ -235,13 +239,12 @@ int bytes_available_in_socket(void) {
 }
 
 void rx_process(void) {
+    bool processed_rx = false;
+
     // Poll the socket and receive all frames until there is nothing to receive or the free queue is empty.
-    while (bytes_available_in_socket()) {
-        if (net_queue_empty_free(&rx_queue)) {
-            // Received a frame but RX free queue is empty, we can't process it right now. Signalling virt RX
-            net_request_signal_free(&rx_queue);
-            break;
-        }
+    net_request_signal_free(&rx_queue);
+    while (bytes_available_in_socket() && !net_queue_empty_free(&rx_queue)) {
+        processed_rx = true;
 
         net_buff_desc_t buffer;
         int err = net_dequeue_free(&rx_queue, &buffer);
@@ -273,7 +276,7 @@ void rx_process(void) {
         }
     }
 
-    if (net_require_signal_active(&rx_queue)) {
+    if (processed_rx && net_require_signal_active(&rx_queue)) {
         *sddf_net_rx_outgoing_irq_fault_vaddr = 0;
     }
 }
@@ -303,7 +306,7 @@ int main(int argc, char **argv)
     uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_BYTES * 4) + (NET_DATA_REGION_BYTES * (1 + NUM_NETWORK_CLIENTS));
     sddf_net_queues_vaddr = map_uio(sddf_net_control_and_data_size, uio_sddf_net_queues_fd);
 
-    printf("total size is %p\n", sddf_net_control_and_data_size);
+    LOG_NET("total control + data size is %p\n", sddf_net_control_and_data_size);
 
     LOG_NET("*** Setting up sDDF control and data queues\n");
     rx_free_drv   = sddf_net_queues_vaddr;
