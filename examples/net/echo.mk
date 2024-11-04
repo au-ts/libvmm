@@ -151,9 +151,10 @@ include ${TIMER_DRIVER}/timer_driver.mk
 include ${UART_DRIVER}/uart_driver.mk
 include ${SERIAL_COMPONENTS}/serial_components.mk
 include ${LIBVMM}/vmm.mk
-include $(LIBVMM)/tools/linux/uio/uio.mk
-include $(LIBVMM)/tools/linux/net/net_init.mk
-include $(LIBVMM)/tools/linux/uio_drivers/net/uio_net.mk
+LIBVMM_TOOLS := $(LIBVMM)/tools/
+include $(LIBVMM_TOOLS)/linux/uio/uio.mk
+include $(LIBVMM_TOOLS)/linux/net/net_init.mk
+include $(LIBVMM_TOOLS)/linux/uio_drivers/net/uio_net.mk
 
 qemu: $(IMAGE_FILE)
 	$(QEMU) -machine virt,virtualization=on \
