@@ -2963,7 +2963,7 @@ BR2_PACKAGE_XMRIG_ARCH_SUPPORTS=y
 #
 # ejabberd needs erlang, toolchain w/ C++
 #
-# BR2_PACKAGE_ETHTOOL is not set
+BR2_PACKAGE_ETHTOOL=y
 # BR2_PACKAGE_FAIFA is not set
 # BR2_PACKAGE_FASTD is not set
 # BR2_PACKAGE_FCGIWRAP is not set
