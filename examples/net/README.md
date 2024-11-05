@@ -90,4 +90,4 @@ LWIP|NOTICE: DHCP request for client0 returned IP address: 172.16.1.250
 LWIP|NOTICE: DHCP request for client1 returned IP address: 172.16.1.251
 ```
 
-Though the MAC and IP addreses would be different of course. There will be a several seconds delay between the Linux userspace network driver initialisation and LWIP DHCP completion.
+Though the MAC, IP and memory addreses would be different of course. There will be delay in the tens of seconds between the Linux userspace network driver initialisation and LWIP DHCP completion. This is due to all the components being able to initialise first before the guest can get to userspace. So LWIP will send many DHCP requests without success, with increasing timeout for each request. 
