@@ -1,3 +1,8 @@
+/*
+ * Copyright 2024, UNSW
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
