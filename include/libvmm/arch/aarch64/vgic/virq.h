@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 
 /* The ARM GIC architecture defines 16 SGIs (0 - 7 is recommended for non-secure
@@ -208,6 +209,17 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx
     // @ivanv: why is the priority 0?
     microkit_vcpu_arm_inject_irq(vcpu_id, virq->virq, 0, group, idx);
     vgic_vcpu->lr_shadow[idx] = *virq;
+
+    if (vcpu_is_wfi(vcpu_id)) {
+        LOG_VMM("load reg\n");
+        seL4_UserContext regs;
+        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+        assert(!err);
+        regs.pc += 4;
+        err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, 1, &regs);
+        assert(!err);
+        vcpu_set_wfi(vcpu_id, false);
+    }
 
     return true;
 }
