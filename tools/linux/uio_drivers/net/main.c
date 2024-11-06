@@ -48,7 +48,7 @@ int sock_fd;
 
 /* UIO FD to access the sDDF control and data queues */
 int uio_sddf_net_queues_fd;
-char* sddf_net_queues_vaddr;
+char *sddf_net_queues_vaddr;
 net_queue_handle_t rx_queue;
 net_queue_handle_t tx_queue;
 
@@ -79,7 +79,8 @@ vmm_net_info_t *vmm_info_passing;
 
 struct ifreq ifr;
 
-int create_promiscuous_socket(const char *net_inf) {
+int create_promiscuous_socket(const char *net_inf)
+{
     // See https://man7.org/linux/man-pages/man7/packet.7.html for more details on these operations
     int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
     if (sockfd == -1) {
@@ -120,7 +121,8 @@ int create_promiscuous_socket(const char *net_inf) {
     return sockfd;
 }
 
-int create_epoll(void) {
+int create_epoll(void)
+{
     epoll_fd = epoll_create1(0);
     if (epoll_fd == -1) {
         perror("create_epoll(): epoll_create1()");
@@ -130,7 +132,8 @@ int create_epoll(void) {
     return epoll_fd;
 }
 
-void bind_fd_to_epoll(int fd, int epollfd) {
+void bind_fd_to_epoll(int fd, int epollfd)
+{
     struct epoll_event sock_event;
     sock_event.events = EPOLLIN;
     sock_event.data.fd = fd;
@@ -141,7 +144,8 @@ void bind_fd_to_epoll(int fd, int epollfd) {
     }
 }
 
-int open_uio(const char *abs_path) {
+int open_uio(const char *abs_path)
+{
     int fd = open(abs_path, O_RDWR);
     if (fd == -1) {
         perror("open_uio(): open()");
@@ -151,7 +155,8 @@ int open_uio(const char *abs_path) {
     return fd;
 }
 
-char *map_uio(uint64_t length, int uiofd) {
+char *map_uio(uint64_t length, int uiofd)
+{
     void *base = (char *) mmap(NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED, uiofd, 0);
     if (base == MAP_FAILED) {
         perror("map_uio(): mmap()");
@@ -161,7 +166,8 @@ char *map_uio(uint64_t length, int uiofd) {
     return (char *) base;
 }
 
-void uio_interrupt_ack(int uiofd) {
+void uio_interrupt_ack(int uiofd)
+{
     uint32_t enable = 1;
     if (write(uiofd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
         perror("uio_interrupt_ack(): write()");
@@ -170,7 +176,8 @@ void uio_interrupt_ack(int uiofd) {
     }
 }
 
-void tx_process(void) {
+void tx_process(void)
+{
     bool processed_tx = false;
 
     net_request_signal_active(&tx_queue);
@@ -190,7 +197,7 @@ void tx_process(void) {
         bool tx_data_paddr_found = false;
         for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
             if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] &&
-                dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
+                               dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
 
                 tx_data_offset = dma_tx_addr - vmm_info_passing->tx_paddrs[i];
                 tx_client = i;
@@ -204,7 +211,7 @@ void tx_process(void) {
         }
 
         char *tx_data_base = tx_datas_drv[tx_client];
-        char *tx_data = (char *) ((uintptr_t) tx_data_base + tx_data_offset);
+        char *tx_data = (char *)((uintptr_t) tx_data_base + tx_data_offset);
 
         // Blocking send!
         struct sockaddr_ll sa;
@@ -233,7 +240,8 @@ void tx_process(void) {
     }
 }
 
-int bytes_available_in_socket(void) {
+int bytes_available_in_socket(void)
+{
     int bytes_available;
     if (ioctl(sock_fd, FIONREAD, &bytes_available) == -1) {
         perror("bytes_available_in_socket(): ioctl()");
@@ -243,7 +251,8 @@ int bytes_available_in_socket(void) {
     return bytes_available;
 }
 
-void rx_process(void) {
+void rx_process(void)
+{
     bool processed_rx = false;
 
     // Poll the socket and receive all frames until there is nothing to receive or the free queue is empty.
@@ -268,7 +277,7 @@ void rx_process(void) {
 
         // Convert DMA addr from virtualiser to offset then mem copy
         uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
-        char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
+        char *buf_in_sddf_rx_data = (char *)((uintptr_t) rx_data_drv + offset);
         for (uint64_t i = 0; i < num_bytes; i++) {
             buf_in_sddf_rx_data[i] = frame[i];
         }
@@ -308,19 +317,20 @@ int main(int argc, char **argv)
     LOG_NET("*** Mapping in sDDF control and data queues\n");
     uio_sddf_net_queues_fd = open_uio(UIO_PATH_SDDF_NET_CONTROL_AND_DATA_QUEUES);
     //                                        tx active+free + rx active+free                               common rx data and per client tx data
-    uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_BYTES * 4) + (NET_DATA_REGION_BYTES * (1 + NUM_NETWORK_CLIENTS));
+    uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_BYTES * 4) + (NET_DATA_REGION_BYTES *
+                                                                             (1 + NUM_NETWORK_CLIENTS));
     sddf_net_queues_vaddr = map_uio(sddf_net_control_and_data_size, uio_sddf_net_queues_fd);
 
     LOG_NET("total control + data size is %p\n", sddf_net_control_and_data_size);
 
     LOG_NET("*** Setting up sDDF control and data queues\n");
     rx_free_drv   = sddf_net_queues_vaddr;
-    rx_active_drv = (char *) ((uint64_t) rx_free_drv + NET_DATA_REGION_BYTES);
-    tx_free_drv   = (char *) ((uint64_t) rx_active_drv + NET_DATA_REGION_BYTES);
-    tx_active_drv = (char *) ((uint64_t) tx_free_drv + NET_DATA_REGION_BYTES);
-    rx_data_drv   = (char *) ((uint64_t) tx_active_drv + NET_DATA_REGION_BYTES);
+    rx_active_drv = (char *)((uint64_t) rx_free_drv + NET_DATA_REGION_BYTES);
+    tx_free_drv   = (char *)((uint64_t) rx_active_drv + NET_DATA_REGION_BYTES);
+    tx_active_drv = (char *)((uint64_t) tx_free_drv + NET_DATA_REGION_BYTES);
+    rx_data_drv   = (char *)((uint64_t) tx_active_drv + NET_DATA_REGION_BYTES);
     for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-        tx_datas_drv[i] = (char *) ((uint64_t) rx_data_drv + (NET_DATA_REGION_BYTES * (i + 1)));
+        tx_datas_drv[i] = (char *)((uint64_t) rx_data_drv + (NET_DATA_REGION_BYTES * (i + 1)));
     }
 
     net_queue_init(&rx_queue, (net_queue_t *)rx_free_drv, (net_queue_t *)rx_active_drv, NET_RX_QUEUE_CAPACITY_DRIV);

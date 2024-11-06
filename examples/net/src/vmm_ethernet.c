@@ -95,7 +95,8 @@ bool uio_net_from_vmm_rx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
     return true;
 }
 
-void init(void) {
+void init(void)
+{
     LOG_VMM("starting %s at \"%s\"\n", "ethernet driver vm", microkit_name);
     /* Initialise the VMM, the VCPU(s), and start the guest */
 
@@ -104,15 +105,15 @@ void init(void) {
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
-                                      (uintptr_t) _guest_kernel_image,
-                                      kernel_size,
-                                      (uintptr_t) _guest_dtb_image,
-                                      GUEST_DTB_VADDR,
-                                      dtb_size,
-                                      (uintptr_t) _guest_initrd_image,
-                                      GUEST_INIT_RAM_DISK_VADDR,
-                                      initrd_size
-                                      );
+                                             (uintptr_t) _guest_kernel_image,
+                                             kernel_size,
+                                             (uintptr_t) _guest_dtb_image,
+                                             GUEST_DTB_VADDR,
+                                             dtb_size,
+                                             (uintptr_t) _guest_initrd_image,
+                                             GUEST_INIT_RAM_DISK_VADDR,
+                                             initrd_size
+                                            );
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -138,15 +139,16 @@ void init(void) {
 
     /* Initialise our sDDF ring buffers for the serial device */
     serial_queue_handle_t serial_rxq, serial_txq;
-    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue, serial_tx_data);
+    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue,
+                              serial_tx_data);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
-                                  VIRTIO_CONSOLE_BASE,
-                                  VIRTIO_CONSOLE_SIZE,
-                                  VIRTIO_CONSOLE_IRQ,
-                                  &serial_rxq, &serial_txq,
-                                  SERIAL_VIRT_TX_CH);
+                                       VIRTIO_CONSOLE_BASE,
+                                       VIRTIO_CONSOLE_SIZE,
+                                       VIRTIO_CONSOLE_IRQ,
+                                       &serial_rxq, &serial_txq,
+                                       SERIAL_VIRT_TX_CH);
 
     /* Initialise UIO IRQ for TX and RX path */
     if (!virq_register(GUEST_VCPU_ID, UIO_NET_TX_IRQ, uio_net_to_vmm_ack, NULL)) {
@@ -173,12 +175,14 @@ void init(void) {
     LOG_VMM("tx cli1 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[1]);
 
     /* Finally, register vmfault handlers for getting signals from the guest on tx and rx */
-    bool tx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_TX_FAULT_ADDR, PAGE_SIZE_4K, &uio_net_from_vmm_tx_signal, NULL);
+    bool tx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_TX_FAULT_ADDR, PAGE_SIZE_4K,
+                                                                 &uio_net_from_vmm_tx_signal, NULL);
     if (!tx_vmfault_reg_ok) {
         LOG_VMM_ERR("Failed to register the VM fault handler for tx\n");
         return;
     }
-    bool rx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_RX_FAULT_ADDR, PAGE_SIZE_4K, &uio_net_from_vmm_rx_signal, NULL);
+    bool rx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_RX_FAULT_ADDR, PAGE_SIZE_4K,
+                                                                 &uio_net_from_vmm_rx_signal, NULL);
     if (!rx_vmfault_reg_ok) {
         LOG_VMM_ERR("Failed to register the VM fault handler for rx\n");
         return;
@@ -190,24 +194,25 @@ void init(void) {
     LOG_VMM("ETH VMM is ready.\n");
 }
 
-void notified(microkit_channel ch) {
+void notified(microkit_channel ch)
+{
     bool handled = virq_handle_passthrough(ch);
     switch (ch) {
-        case VIRT_NET_TX_CH:
-            if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
-                LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
-            }
-            break;
-        case VIRT_NET_RX_CH:
-            if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
-                LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
-            }
-            break;
-        default:
-            if (handled) {
-                return;
-            }
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+    case VIRT_NET_TX_CH:
+        if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
+            LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
+        }
+        break;
+    case VIRT_NET_RX_CH:
+        if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
+            LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
+        }
+        break;
+    default:
+        if (handled) {
+            return;
+        }
+        printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
 }
 
@@ -216,7 +221,8 @@ void notified(microkit_channel ch) {
  * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
-seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
+{
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
