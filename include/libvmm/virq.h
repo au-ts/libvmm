@@ -24,9 +24,6 @@ bool virq_inject(size_t vcpu_id, int irq);
  * passthrough access to a particular device on the hardware.
  * After registering the passthrough IRQ, call `virq_handle_passthrough` when
  * the IRQ has come through from seL4.
- *
- * @ivanv: currently this API assumes a Microkit environment. This should be changed
- * if/when we make libvmm agnostic to the seL4 environment it is running in.
  */
 bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_ch);
 bool virq_handle_passthrough(microkit_channel irq_ch);
