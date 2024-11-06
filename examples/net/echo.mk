@@ -131,7 +131,7 @@ package_guest_ethernet_images.o: $(LIBVMM)/tools/package_guest_images.S \
 					-DGUEST_INITRD_IMAGE_PATH=\"$(ETHERNET_INITRD_FINAL)\" \
 					$(LIBVMM_DIR)/tools/package_guest_images.S -o $@
 
-vmm_ethernet.o: ${ECHO_SERVER_PATCH}/src/vmm_ethernet.c
+vmm_ethernet.o: ${ETHERNET_VMM_IMAGE_DIR}/vmm_ethernet.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 vmm_ethernet.elf: ${VMM_ETHERNET_OBJS} libvmm.a
