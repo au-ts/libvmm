@@ -33,7 +33,7 @@
 #define NET_DATA_REGION_BYTES NET_DATA_REGION_SIZE
 
 /* IMPORTANT: This driver currently assumes the network interface
-   has an "Ethernet-like" MTU, you should change this if your net inf is 
+   has an "Ethernet-like" MTU, you should change this if your net inf is
    different. */
 char frame[ETH_FRAME_LEN];
 
@@ -72,7 +72,7 @@ char *sddf_net_rx_outgoing_irq_fault_vaddr;
 /* Polling FD to wait for events from the TX/RX UIO FD */
 int epoll_fd;
 
-/* UIO FDs to access the physical addresses of the sDDF data segment 
+/* UIO FDs to access the physical addresses of the sDDF data segment
    so we can deduct it from the offset in control queue to access the data */
 int uio_sddf_vmm_net_info_passing_fd;
 vmm_net_info_t *vmm_info_passing;
@@ -128,7 +128,7 @@ int create_epoll(void) {
         exit(EXIT_FAILURE);
     }
     return epoll_fd;
-} 
+}
 
 void bind_fd_to_epoll(int fd, int epollfd) {
     struct epoll_event sock_event;
@@ -181,7 +181,7 @@ void tx_process(void) {
         if (net_dequeue_active(&tx_queue, &tx_buffer) != 0) {
             LOG_NET_ERR("couldn't dequeue active TX buffer, sddf err is %d, quitting.\n");
             exit(EXIT_FAILURE);
-        }  
+        }
 
         // Workout which client it is from, so we can get the offset in data region
         uintptr_t dma_tx_addr = tx_buffer.io_or_offset;
@@ -189,9 +189,9 @@ void tx_process(void) {
         int tx_client;
         bool tx_data_paddr_found = false;
         for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-            if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] && 
+            if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] &&
                 dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
-                
+
                 tx_data_offset = dma_tx_addr - vmm_info_passing->tx_paddrs[i];
                 tx_client = i;
                 tx_data_paddr_found = true;
@@ -266,7 +266,7 @@ void rx_process(void) {
             exit(EXIT_FAILURE);
         }
 
-        // Convert DMA addr from virtualiser to offset then mem copy               
+        // Convert DMA addr from virtualiser to offset then mem copy
         uintptr_t offset = buffer.io_or_offset - vmm_info_passing->rx_paddr;
         char *buf_in_sddf_rx_data = (char *) ((uintptr_t) rx_data_drv + offset);
         for (uint64_t i = 0; i < num_bytes; i++) {
