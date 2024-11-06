@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
+#include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
@@ -85,15 +86,29 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
     LOG_IRQ("Injecting IRQ %d\n", irq);
 
-    return vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
+    bool success = vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
 
-    // @ivanv: explain why we don't check error before checking this fault stuff
-    // @ivanv: seperately, it seems weird to have this fault handling code here?
-    // @ivanv: revist
-    // if (!fault_handled(vcpu->vcpu_arch.fault) && fault_is_wfi(vcpu->vcpu_arch.fault)) {
-    //     // ignore_fault(vcpu->vcpu_arch.fault);
-    //     err = advance_vcpu_fault(regs);
-    // }
+    if (vcpu_is_wfi(vcpu_id)) {
+        seL4_UserContext regs;
+        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, 1, &regs);
+        assert(!err);
+        // if (vcpu_fault_get_il(vcpu_id) == 32) {
+        //     regs.pc += 4;
+        // } else if (vcpu_fault_get_il(vcpu_id) == 16) {
+        //     LOG_VMM("increaisng by 2\n");
+        //     regs.pc += 2;
+        // } else {
+        //     assert(false);
+        // }
+        regs.pc += 4;
+        err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, 1, &regs);
+        assert(!err);
+        vcpu_set_wfi(vcpu_id, false);
+        // vcpu_fault_set_il(vcpu_id, 0);
+        // microkit_vcpu_start(vcpu_id);
+    }
+
+    return success;
 }
 
 // @ivanv: revisit this whole function

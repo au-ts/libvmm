@@ -13,8 +13,8 @@
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 
-// #define CPSR_THUMB                 (1 << 5)
-// #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
+#define CPSR_THUMB                 (1 << 5)
+#define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
 
 // int fault_is_32bit_instruction(seL4_UserContext *regs)
 // {
@@ -26,6 +26,7 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs)
 {
     // For now we just ignore it and continue
     // Assume 32-bit instruction
+    assert(!CPSR_IS_THUMB(regs->spsr));
     regs->pc += 4;
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
@@ -264,7 +265,25 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
-        // If we get a WFI exception, we just do nothing in the VMM.
+        /* Suspend the vCPU until we get a virtual IRQ */
+        vcpu_set_wfi(vcpu_id, true);
+        microkit_vcpu_stop(vcpu_id);
+
+        // if (((hsr >> 25) & ((1 << 25) - 1)) == 1) {
+        //     LOG_VMM("got 32-bit instr\n");
+        //     vcpu_fault_set_il(vcpu_id, 32);
+        // } else {
+        //     LOG_VMM("got 16-bit instr\n");
+        //     vcpu_fault_set_il(vcpu_id, 16);
+        // }
+
+        // uint8_t iss = HSR_ISS(hsr);
+        // assert(iss == 1 || iss == 0);
+        // if (iss == 1) {
+        //     LOG_VMM("got wfe\n");
+        // } else {
+        //     LOG_VMM("got wfi\n");
+        // }
         return true;
     default:
         LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
@@ -277,6 +296,11 @@ bool fault_handle_vppi_event(size_t vcpu_id)
     uint64_t ppi_irq = microkit_mr_get(seL4_VPPIEvent_IRQ);
     // We directly inject the interrupt assuming it has been previously registered.
     // If not the interrupt will dropped by the VM.
+    // if (vcpu_is_wfi(vcpu_id)) {
+    //     LOG_VMM("timer got during wfi\n");
+    // } else {
+    //     LOG_VMM("timer\n");
+    // }
     bool success = vgic_inject_irq(vcpu_id, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error

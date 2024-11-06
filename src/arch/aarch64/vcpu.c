@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
@@ -24,6 +25,27 @@
                            | SCTLR_EL1_NTWI | SCTLR_EL1_NTWE )
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
+
+static bool vcpu_wfi[GUEST_NUM_VCPUS];
+
+void vcpu_set_wfi(size_t vcpu_id, bool value) {
+    vcpu_wfi[vcpu_id] = value;
+}
+
+bool vcpu_is_wfi(size_t vcpu_id) {
+    return vcpu_wfi[vcpu_id];
+}
+
+static uint8_t vcpu_fault_il[GUEST_NUM_VCPUS];
+
+void vcpu_fault_set_il(size_t vcpu_id, uint8_t il) {
+    assert(il == 16 || il == 32);
+    vcpu_fault_il[vcpu_id] = il;
+}
+
+uint8_t vcpu_fault_get_il(size_t vcpu_id) {
+    return vcpu_fault_il[vcpu_id];
+}
 
 void vcpu_reset(size_t vcpu_id) {
     // @ivanv this is an incredible amount of system calls

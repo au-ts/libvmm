@@ -16,6 +16,8 @@
 #define HSR_SYNDROME_WIDTH(x)      (((x) >> 22) & 0x3)
 #define HSR_SYNDROME_RT(x)         (((x) >> 16) & 0x1f)
 
+#define HSR_ISS(x) (x & ((1 << 24) - 1))
+
 /* HSR Exception Value */
 #define HSR_UNKNOWN_EXCEPTION       (0x0)
 #define HSR_WFx_EXCEPTION           (0x1)
