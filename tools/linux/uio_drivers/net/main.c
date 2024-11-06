@@ -197,7 +197,7 @@ void tx_process(void)
         bool tx_data_paddr_found = false;
         for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
             if (dma_tx_addr >= vmm_info_passing->tx_paddrs[i] &&
-                               dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
+                dma_tx_addr < (vmm_info_passing->tx_paddrs[i] + NET_DATA_REGION_BYTES)) {
 
                 tx_data_offset = dma_tx_addr - vmm_info_passing->tx_paddrs[i];
                 tx_client = i;
@@ -221,7 +221,7 @@ void tx_process(void)
         sa.sll_ifindex = ifr.ifr_ifindex;
         sa.sll_halen    = ETH_ALEN;
 
-        int sent_bytes = sendto(sock_fd, tx_data, tx_buffer.len, 0, (struct sockaddr*)&sa, sizeof(sa));;
+        int sent_bytes = sendto(sock_fd, tx_data, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
         if (sent_bytes != tx_buffer.len) {
             perror("tx_process(): sendto()");
             LOG_NET_ERR("TX sent %d != expected %d. qutting.\n", sent_bytes, tx_buffer.len);
