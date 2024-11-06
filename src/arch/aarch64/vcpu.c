@@ -36,6 +36,16 @@ bool vcpu_is_wfi(size_t vcpu_id) {
     return vcpu_wfi[vcpu_id];
 }
 
+static seL4_Word vcpu_suspend_pc[GUEST_NUM_VCPUS];
+
+void vcpu_set_suspend_pc(size_t vcpu_id, seL4_Word pc) {
+    vcpu_suspend_pc[vcpu_id] = pc;
+}
+
+seL4_Word vcpu_get_suspend_pc(size_t vcpu_id) {
+    return vcpu_suspend_pc[vcpu_id];
+}
+
 static uint8_t vcpu_fault_il[GUEST_NUM_VCPUS];
 
 void vcpu_fault_set_il(size_t vcpu_id, uint8_t il) {

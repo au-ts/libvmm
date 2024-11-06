@@ -50,6 +50,16 @@ bool fault_handle_vgic_maintenance(size_t vcpu_id)
     /* Check the overflow list for pending IRQs */
     struct virq_handle *virq = vgic_irq_dequeue(&vgic, vcpu_id);
 
+    if (vcpu_is_wfi(vcpu_id)) {
+        vcpu_set_wfi(vcpu_id, false);
+        seL4_UserContext regs;
+        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+        assert(!err);
+        regs.pc += 4;
+        err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, 1, &regs);
+        assert(!err);
+    }
+
 #if defined(GIC_V2)
     int group = 0;
 #elif defined(GIC_V3)
@@ -82,6 +92,9 @@ bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void 
     return virq_add(vcpu_id, &vgic, &virq);
 }
 
+#define CPSR_THUMB                 (1 << 5)
+#define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
+
 bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
     LOG_IRQ("Injecting IRQ %d\n", irq);
@@ -90,7 +103,7 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 
     if (vcpu_is_wfi(vcpu_id)) {
         seL4_UserContext regs;
-        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, 1, &regs);
+        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
         assert(!err);
         // if (vcpu_fault_get_il(vcpu_id) == 32) {
         //     regs.pc += 4;
@@ -100,6 +113,7 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
         // } else {
         //     assert(false);
         // }
+        assert(!CPSR_IS_THUMB(regs.spsr));
         regs.pc += 4;
         err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, 1, &regs);
         assert(!err);

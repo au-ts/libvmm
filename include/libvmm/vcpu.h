@@ -10,6 +10,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+void vcpu_set_suspend_pc(size_t vcpu_id, seL4_Word pc);
+seL4_Word vcpu_get_suspend_pc(size_t vcpu_id);
+
 void vcpu_fault_set_il(size_t vcpu_id, uint8_t il);
 uint8_t vcpu_fault_get_il(size_t vcpu_id);
 
