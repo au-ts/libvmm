@@ -93,7 +93,7 @@ bool uio_net_from_vmm_rx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
 {
     microkit_notify(VIRT_NET_RX_CH);
     return true;
-} 
+}
 
 void init(void) {
     LOG_VMM("starting %s at \"%s\"\n", "ethernet driver vm", microkit_name);
@@ -147,7 +147,7 @@ void init(void) {
                                   VIRTIO_CONSOLE_IRQ,
                                   &serial_rxq, &serial_txq,
                                   SERIAL_VIRT_TX_CH);
-    
+
     /* Initialise UIO IRQ for TX and RX path */
     if (!virq_register(GUEST_VCPU_ID, UIO_NET_TX_IRQ, uio_net_to_vmm_ack, NULL)) {
         LOG_VMM_ERR("Failed to register TX interrupt\n");
@@ -167,7 +167,7 @@ void init(void) {
     vmm_info_passing->rx_paddr = eth_rx_buffer_data_region_paddr;
     vmm_info_passing->tx_paddrs[0] = eth_tx_cli0_buffer_data_region_paddr;
     vmm_info_passing->tx_paddrs[1] = eth_tx_cli1_buffer_data_region_paddr;
-    
+
     LOG_VMM("rx data physadd is 0x%p\n", vmm_info_passing->rx_paddr);
     LOG_VMM("tx cli0 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[0]);
     LOG_VMM("tx cli1 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[1]);

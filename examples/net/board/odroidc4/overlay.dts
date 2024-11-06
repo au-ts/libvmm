@@ -11,10 +11,10 @@
 
     secure-monitor {
         status = "disabled";
-    }; 
+    };
 
     bus@ff800000 {
-        // enable/disable console serial for debugging 
+        // enable/disable console serial for debugging
         serial@3000 {
             status = "disabled";
         };

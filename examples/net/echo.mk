@@ -24,7 +24,7 @@ SYSTEM_FILE := ${ECHO_SERVER_PATCH}/board/$(MICROKIT_BOARD)/echo_server.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-vpath %.c ${SDDF} ${LIBVMM} ${ECHO_SERVER} 
+vpath %.c ${SDDF} ${LIBVMM} ${ECHO_SERVER}
 
 IMAGES := vmm_ethernet.elf lwip.elf benchmark.elf idle.elf network_virt_rx.elf\
 	  network_virt_tx.elf copy.elf timer_driver.elf uart_driver.elf serial_virt_tx.elf

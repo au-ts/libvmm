@@ -9,7 +9,7 @@
 NET_INF='eth0'
 
 # The sleep command is needed because the full eth uplink actually take place some time later
-# after the `ip link set "$NET_INF" up` finish 
+# after the `ip link set "$NET_INF" up` finish
 ip link show && ip link set "$NET_INF" up && sleep 8 && \
 
 # Turn off HW offloading to prevent Linux from joining 2 TCP segments together which messes with LWIP badly
