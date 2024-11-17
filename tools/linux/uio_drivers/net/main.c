@@ -316,12 +316,12 @@ int main(int argc, char **argv)
 
     LOG_NET("*** Mapping in sDDF control and data queues\n");
     uio_sddf_net_queues_fd = open_uio(UIO_PATH_SDDF_NET_CONTROL_AND_DATA_QUEUES);
-    //                                        tx active+free + rx active+free                               common rx data and per client tx data
+    //                                        tx active+free + rx active+free + common rx data and per client tx data
     uint64_t sddf_net_control_and_data_size = (NET_DATA_REGION_BYTES * 4) + (NET_DATA_REGION_BYTES *
                                                                              (1 + NUM_NETWORK_CLIENTS));
     sddf_net_queues_vaddr = map_uio(sddf_net_control_and_data_size, uio_sddf_net_queues_fd);
 
-    LOG_NET("total control + data size is %p\n", sddf_net_control_and_data_size);
+    LOG_NET("*** Total control + data size is %p\n", sddf_net_control_and_data_size);
 
     LOG_NET("*** Setting up sDDF control and data queues\n");
     rx_free_drv   = sddf_net_queues_vaddr;
@@ -336,13 +336,13 @@ int main(int argc, char **argv)
     net_queue_init(&rx_queue, (net_queue_t *)rx_free_drv, (net_queue_t *)rx_active_drv, NET_RX_QUEUE_CAPACITY_DRIV);
     net_queue_init(&tx_queue, (net_queue_t *)tx_free_drv, (net_queue_t *)tx_active_drv, NET_TX_QUEUE_CAPACITY_DRIV);
 
-    LOG_NET("rx_free_drv   = 0x%p\n", rx_free_drv);
-    LOG_NET("rx_active_drv = 0x%p\n", rx_active_drv);
-    LOG_NET("tx_free_drv   = 0x%p\n", tx_free_drv);
-    LOG_NET("tx_active_drv = 0x%p\n", tx_active_drv);
-    LOG_NET("rx_data_drv   = 0x%p\n", rx_data_drv);
+    LOG_NET("*** rx_free_drv   = %p\n", rx_free_drv);
+    LOG_NET("*** rx_active_drv = %p\n", rx_active_drv);
+    LOG_NET("*** tx_free_drv   = %p\n", tx_free_drv);
+    LOG_NET("*** tx_active_drv = %p\n", tx_active_drv);
+    LOG_NET("*** rx_data_drv   = %p\n", rx_data_drv);
     for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-        LOG_NET("tx_data_drv cli%d = 0x%p\n", i, tx_datas_drv[i]);
+        LOG_NET("*** tx_data_drv cli%d = %p\n", i, tx_datas_drv[i]);
     }
 
     LOG_NET("*** Setting up UIO TX and RX interrupts from VMM \"incoming\"\n");
@@ -358,9 +358,9 @@ int main(int argc, char **argv)
     LOG_NET("*** Setting up UIO data passing between VMM and us\n");
     uio_sddf_vmm_net_info_passing_fd = open_uio(UIO_PATH_SDDF_NET_SHARED_DATA);
     vmm_info_passing = (vmm_net_info_t *) map_uio(PAGE_SIZE_4K, uio_sddf_vmm_net_info_passing_fd);
-    LOG_NET("RX paddr: 0x%p\n", vmm_info_passing->rx_paddr);
+    LOG_NET("*** RX paddr: %p\n", vmm_info_passing->rx_paddr);
     for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-        LOG_NET("TX cli%d paddr: 0x%p\n", i, vmm_info_passing->tx_paddrs[i]);
+        LOG_NET("*** TX cli%d paddr: %p\n", i, vmm_info_passing->tx_paddrs[i]);
     }
 
     LOG_NET("*** Setting up UIO TX and RX interrupts to VMM \"outgoing\"\n");
