@@ -88,13 +88,13 @@ The following is essentially what is in
 
 First we create a VMM as a root PD that contains a virtual machine (VM).
 This hierarchy is necessary as the VMM needs to be able to access the guest's
-TCB registers and VCPU registers for initialising the guest, delivering virtual
+TCB registers and vCPU registers for initialising the guest, delivering virtual
 interrupts to the guest and restarting the guest.
 
 You will also see that three memory regions (MRs) exist in the system.
 1. `guest_ram` for the guest's RAM region
 2. `uart` for the UART serial device
-3. `gic_vcpu` for the Generic Interrupt Controller VCPU interface
+3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface
 
 ## Guest RAM region
 
@@ -127,13 +127,22 @@ this will work since nothing else is concurrently accessing the device.
 
 ## GIC virtual CPU interface region
 
-The GIC VCPU interface region is a hardware device region passed through to the
-guest. The device is at a certain physical address, which is then mapped into
-the guest at the address of the GIC CPU interface that the guest expects. In the
-case of the example above, the GIC VCPU interface is at `0x8040000`, and we map
+The GIC vCPU interface is used to virtualise the CPU interface for a guest.
+
+Depending on the ARM platform, the GIC vCPU/CPU interface may be via system
+registers or MMIO.
+
+For the QEMU platform, the GIC vCPU/CPU interface is via MMIO and so we
+map the vCPU interface's physical memory region into the guest as the
+*CPU interface*. In this case the GIC vCPU interface is at `0x8040000`, and we map
 this into the guest physical address of `0x8010000`, which is where the guest
-expects the CPU interface to be. The rest of the GIC is virtualised in the VGIC
-driver in the VMM. Like the UART, the address of the GIC is platform specific.
+expects the CPU interface to be. Like the UART, the address of the GIC is
+platform specific.
+
+If the CPU interface was via system registers, we would not have to map any
+region for the GIC into the guest.
+
+The rest of the GIC is virtualised in the vGIC driver in libvmm.
 
 # Passthrough
 
@@ -230,7 +239,7 @@ Below is an example architecture where a guest is making use of a virtIO console
 You can also find a working example making use of virtIO devices with libvmm in the repository
 at `examples/virtio`.
 
-![Example of virtIO console being used](./assets/virtio_console_example.svg){#virtio .class width=500}
+![Example of virtIO console being used](./assets/virtio_console_example.svg){.class width=500}
 
 ## Devices
 
@@ -289,16 +298,20 @@ The following changes are necessary:
 * If the platform uses GICv3, you will need to change the top-level Makefile snippet
   (`vmm.mk`) to account for that.
 
-The rest of this section will be a guide on adding support for a new platform to the `simple`
-example which contains a VMM that boots a Linux guest with a simple command-line-interface
-via the serial device.
-
 Before you can get a guest working on your desired platform you must have the following:
 
 * A working platform port of the seL4 kernel in hypervisor mode.
 * A working platform port of the seL4 Microkit where the kernel is configured in hypervisor mode.
 
-## Guest setup
+## Porting the simple example
+
+This section will be a guide on adding support for a new platform to the `simple`
+example which contains a minimal VMM capable of booting a Linux guest with
+a simple user-space command-line-interface via the serial device.
+
+The simple example can be found in `examples/simple` from the root of the libvmm source.
+
+### Guest setup
 
 Required guest files:
 
@@ -352,7 +365,7 @@ then the GIC emulation will need to be changed before your platform can be suppo
 Lastly, there are some platform-specific values that the VMM needs to know.
 There are two files that need to be changed:
 
-* `src/vmm.c`
+* `vmm.c`
 * Linux expects the device tree to contain the location of the initial RAM disk,
   see the `chosen` node of `board/qemu_virt_aarch64/overlay.dts` for an example.
 
