@@ -7,6 +7,7 @@ const MicrokitBoard = enum {
     qemu_virt_aarch64,
     odroidc4,
     maaxboard,
+    tqma8xqp1gb,
 };
 
 const Target = struct {
@@ -41,6 +42,15 @@ const targets = [_]Target {
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
             .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+    .{
+        .board = MicrokitBoard.tqma8xqp1gb,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a35 },
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -98,7 +108,7 @@ pub fn build(b: *std.Build) void {
 
     const arm_vgic_version: usize = switch (microkit_board_option.?) {
         .qemu_virt_aarch64, .odroidc4 => 2,
-        .maaxboard => 3,
+        .maaxboard, .tqma8xqp1gb => 3,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -121,11 +131,18 @@ pub fn build(b: *std.Build) void {
         .strip = false,
     });
 
-    const base_dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
-    const overlay = b.fmt("board/{s}/overlay.dts", .{ microkit_board });
+    const dtscat = libvmm_dep.path("tools/dtscat");
+    const base_dts = b.path(b.fmt("board/{s}/linux.dts", .{ microkit_board }));
+    const overlay = b.path(b.fmt("board/{s}/overlay.dts", .{ microkit_board }));
     const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
-        "sh", "../../tools/dtscat", base_dts_path, overlay
+        "sh"
     });
+    dts_cat_cmd.addFileArg(dtscat);
+    dts_cat_cmd.addFileInput(dtscat);
+    dts_cat_cmd.addFileArg(base_dts);
+    dts_cat_cmd.addFileInput(base_dts);
+    dts_cat_cmd.addFileArg(overlay);
+    dts_cat_cmd.addFileInput(overlay);
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the DTS into a DTB

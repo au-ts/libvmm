@@ -1,0 +1,22 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x00 0x80000000 0x00 0x10000000>;
+    };
+
+    bus@5d000000 {
+        status = "disabled";
+    };
+
+    chosen {
+        stdout-path = "/bus@5a000000/serial@5a070000";
+        linux,initrd-start = <0x00000000 0x8c000000>;
+        linux,initrd-end = <0x00000000 0x8e000000>;
+        bootargs = "console=lpuart32,115200 earlycon nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
+    };
+};

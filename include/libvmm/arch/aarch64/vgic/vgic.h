@@ -20,6 +20,10 @@
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
+#elif defined(CONFIG_PLAT_TQMA8XQP1GB)
+#define GIC_V3
+#define GIC_DIST_PADDR      0x51a00000
+#define GIC_REDIST_PADDR    0x51b00000
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xf9010000
