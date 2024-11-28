@@ -8,7 +8,7 @@
 
 /* All of these details must match up with the DTS overlay and Sys Desc File. */
 
-#define UIO_IRQ_NUM 71
+#define UIO_FS_IRQ_NUM 71
 
 #define UIO_LENGTH_FS_COMMAND_QUEUE 0x8000
 #define UIO_PATH_FS_COMMAND_QUEUE_AND_IRQ "/dev/uio0"

@@ -26,11 +26,19 @@ $(CHECK_UIO_FS_DRIVER_FLAGS_MD5):
 	-rm -f .uio_fs_driver_cflags-*
 	touch $@
 
-uio_fs_driver: uio_fs_driver.o
+uio_fs_driver: $(CHECK_UIO_FS_DRIVER_FLAGS_MD5) uio_fs_driver_main.o uio_fs_driver_op.o uio_fs_driver_util.o
 	$(CC_USERLEVEL) -static $(CFLAGS_USERLEVEL) $(CFLAGS_uio_fs_driver) $^ -o $@
 
-uio_fs_driver.o: $(CHECK_UIO_FS_DRIVER_FLAGS_MD5)
-uio_fs_driver.o: $(LIBVMM_TOOLS)/linux/uio_drivers/fs/main.c
+uio_fs_driver_main.o: $(CHECK_UIO_FS_DRIVER_FLAGS_MD5)
+uio_fs_driver_main.o: $(LIBVMM_TOOLS)/linux/uio_drivers/fs/main.c
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_fs_driver) -o $@ -c $<
+
+uio_fs_driver_op.o: $(CHECK_UIO_FS_DRIVER_FLAGS_MD5)
+uio_fs_driver_op.o: $(LIBVMM_TOOLS)/linux/uio_drivers/fs/op.c
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_fs_driver) -o $@ -c $<
+
+uio_fs_driver_util.o: $(CHECK_UIO_FS_DRIVER_FLAGS_MD5)
+uio_fs_driver_util.o: $(LIBVMM_TOOLS)/linux/uio_drivers/fs/util.c
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) $(CFLAGS_uio_fs_driver) -o $@ -c $<
 
 clean::

@@ -3,24 +3,42 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/epoll.h>
+#include <linux/limits.h>
 
 #include <lions/fs/protocol.h>
 #include <uio/fs.h>
 
 #include "log.h"
+#include "op.h"
+#include "util.h"
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define ARGC_REQURED 3
 
 /* Event queue for polling */
 #define MAX_EVENTS 16 // Arbitrary length
 struct epoll_event events[MAX_EVENTS];
+
+char blk_device[PATH_MAX];
+char mnt_point[PATH_MAX];
+
+struct fs_queue *cmd_queue;
+struct fs_queue *comp_queue;
+char *fs_data;
+
+char *vmm_notify_fault;
 
 int create_epoll(void)
 {
@@ -77,35 +95,66 @@ void uio_interrupt_ack(int uiofd)
     }
 }
 
+void process_fs_commands(void)
+{
+    uint64_t command_count = fs_queue_length_consumer(cmd_queue);
+    uint64_t completion_space = FS_QUEUE_CAPACITY - fs_queue_length_producer(comp_queue);
+    // don't dequeue a command if we have no space to enqueue its completion
+    uint64_t to_consume = MIN(command_count, completion_space);
+    for (uint64_t i = 0; i < to_consume; i++) {
+        fs_cmd_t cmd = fs_queue_idx_filled(cmd_queue, i)->cmd;
+        if (cmd.type >= FS_NUM_COMMANDS) {
+            fs_queue_reply((fs_cmpl_t){ .id = cmd.id, .status = FS_STATUS_INVALID_COMMAND, .data = {0} });
+            continue;
+        }
+        cmd_handler[cmd.type](cmd);
+    }
+    fs_queue_publish_consumption(cmd_queue, to_consume);
+}
+
+void notify_vmm(void) {
+    char *fault_addr = (char *) vmm_notify_fault;
+    *fault_addr = (char) 0;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != ARGC_REQURED) {
         LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
         exit(EXIT_FAILURE);
     } else {
-        LOG_FS("*** Starting up\n");
-        LOG_FS("Block device: %s\n", argv[1]);
-        LOG_FS("Mount point: %s\n", argv[2]);
+        if (strlen(argv[1]) > PATH_MAX) {
+            LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
+            LOG_FS_ERR("<blk_device> cannot be more than PATH_MAX, which is %u\n", PATH_MAX);
+        }
+        if (strlen(argv[2]) > PATH_MAX) {
+            LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
+            LOG_FS_ERR("<mount_point> cannot be more than PATH_MAX, which is %u\n", PATH_MAX);
+        }
     }
-    char *blk_device = argv[1];
-    char *mnt_point = argv[2];
+    strncpy(blk_device, argv[1], PATH_MAX);
+    strncpy(mnt_point, argv[2], PATH_MAX);
+
+    LOG_FS("*** Starting up\n");
+    LOG_FS("Block device: %s\n", blk_device);
+    LOG_FS("Mount point: %s\n", mnt_point);
 
     LOG_FS("*** Setting up command queue via UIO\n");
     int cmd_uio_fd = open_uio(UIO_PATH_FS_COMMAND_QUEUE_AND_IRQ);
-    struct fs_queue *cmd_queue = (struct fs_queue *) map_uio(UIO_LENGTH_FS_COMMAND_QUEUE, cmd_uio_fd);
+    cmd_queue = (struct fs_queue *) map_uio(UIO_LENGTH_FS_COMMAND_QUEUE, cmd_uio_fd);
     
     LOG_FS("*** Setting up completion queue via UIO\n");
     int comp_uio_fd = open_uio(UIO_PATH_FS_COMPLETION_QUEUE);
-    struct fs_queue *comp_queue = (struct fs_queue *) map_uio(UIO_LENGTH_FS_COMPLETION_QUEUE, comp_uio_fd);
+    comp_queue = (struct fs_queue *) map_uio(UIO_LENGTH_FS_COMPLETION_QUEUE, comp_uio_fd);
     
     LOG_FS("*** Setting up FS data region via UIO\n");
     int fs_data_uio_fd = open_uio(UIO_PATH_FS_DATA);
-    char *fs_data = map_uio(UIO_LENGTH_FS_DATA, fs_data_uio_fd);
+    fs_data = map_uio(UIO_LENGTH_FS_DATA, fs_data_uio_fd);
 
     LOG_FS("*** Setting up fault region via UIO\n");
     // For Guest -> VMM notifications
     int fault_uio_fd = open_uio(UIO_PATH_GUEST_TO_VMM_NOTIFY_FAULT);
-    char *vmm_notify_fault = map_uio(UIO_LENGTH_GUEST_TO_VMM_NOTIFY_FAULT, fault_uio_fd);
+    vmm_notify_fault = map_uio(UIO_LENGTH_GUEST_TO_VMM_NOTIFY_FAULT, fault_uio_fd);
 
     LOG_FS("*** Enabling UIO interrupt on command queue\n");
     uio_interrupt_ack(cmd_uio_fd);
@@ -115,6 +164,13 @@ int main(int argc, char **argv)
 
     LOG_FS("*** Binding command queue IRQ to epoll\n");
     bind_fd_to_epoll(cmd_uio_fd, epoll_fd);
+
+    LOG_FS("*** Consuming requests already in command queue\n");
+    // Because any native FS clients would've finished initialising way before our Linux kernel get to
+    // userland.
+    process_fs_commands();
+    // Only notify when we have consumed every commands.
+    notify_vmm();
 
     LOG_FS("*** All initialisation successful!\n");
     LOG_FS("*** You won't see any output from UIO FS anymore. Unless there is a warning or error.\n");
@@ -137,8 +193,8 @@ int main(int argc, char **argv)
             }
 
             if (events[i].data.fd == cmd_uio_fd) {
-                // Got command!
-                continue; // for now
+                process_fs_commands();
+                notify_vmm();
             } else {
                 LOG_FS_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
             }
