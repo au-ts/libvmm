@@ -169,11 +169,13 @@ int main(int argc, char **argv)
     // Because any native FS clients would've finished initialising way before our Linux kernel get to
     // userland.
     process_fs_commands();
-    // Only notify when we have consumed every commands.
-    notify_vmm();
 
     LOG_FS("*** All initialisation successful!\n");
     LOG_FS("*** You won't see any output from UIO FS anymore. Unless there is a warning or error.\n");
+
+    // Only notify when we have consumed every commands.
+    // After printing our finish message to not mess up Micropython.
+    notify_vmm();
 
     while (1) {
         int n_events = epoll_wait(epoll_fd, events, MAX_EVENTS, -1);
@@ -194,6 +196,7 @@ int main(int argc, char **argv)
 
             if (events[i].data.fd == cmd_uio_fd) {
                 process_fs_commands();
+                uio_interrupt_ack(cmd_uio_fd);
                 notify_vmm();
             } else {
                 LOG_FS_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
