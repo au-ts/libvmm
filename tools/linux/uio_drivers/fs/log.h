@@ -16,7 +16,7 @@
 #define LOG_FS(...) do{}while(0)
 #endif
 
-#define DEBUG_FS_OPS
+// #define DEBUG_FS_OPS
 #if defined(DEBUG_FS_OPS)
 #define LOG_FS_OPS(...) do{ fprintf(stderr, "UIO(FS ops): "); fprintf(stderr, __VA_ARGS__); }while(0)
 #else

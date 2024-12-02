@@ -14,6 +14,7 @@
 
 #include "log.h"
 
+/* From main.c */
 extern char mnt_point[PATH_MAX];
 extern struct fs_queue *comp_queue;
 extern char *fs_data;
@@ -76,9 +77,11 @@ uint64_t errno_to_lions_status(int err_num) {
         case ENOENT: {
             return FS_STATUS_INVALID_PATH;
         }
+        case ENOSPC:
         case EACCES: {
             return FS_STATUS_SERVER_WAS_DENIED;
         }
+        case EROFS:
         case EBADF: {
             return FS_STATUS_INVALID_FD;
         }
@@ -92,12 +95,10 @@ uint64_t errno_to_lions_status(int err_num) {
         case ENOMEM: {
             return FS_STATUS_ALLOCATION_ERROR;
         }
+        case EDQUOT:
         case EOVERFLOW:
         case ENAMETOOLONG: {
             return FS_STATUS_INVALID_NAME;
-        }
-        case ENOSPC: {
-            return FS_STATUS_DIRECTORY_IS_FULL;
         }
         case EBUSY: {
             return FS_STATUS_OUTSTANDING_OPERATIONS;

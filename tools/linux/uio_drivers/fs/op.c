@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <sys/syscall.h>
 
+#include <uio/fs.h>
 #include <lions/fs/protocol.h>
 
 #include "log.h"
@@ -26,11 +27,20 @@
 
 #define NAME_MAX_LEN 256
 
+/* From main.c */
 extern char blk_device[PATH_MAX];
 extern char mnt_point[PATH_MAX];
 extern char *fs_data;
 
+/* Metadata with the mounted FS */
 bool mounted = false;
+/* Each read/write is bounded by the data share region size */
+char inflight_data[UIO_LENGTH_FS_DATA];
+
+/* A simple macro to abort FS operations if the FS isn't mounted */
+#define CHECK_MOUNTED(cmd_id) {if(!mounted){fs_op_reply_failure(cmd_id, FS_STATUS_ERROR, (fs_cmpl_data_t){0});return;}}
+
+#define TIMESPEC_TO_NS(ts) ((long long)ts.tv_sec * 1000000000LL + ts.tv_nsec)
 
 /* Error checking wrapper around fs_malloc_create_path. Atomic to failures. */
 char *prepare_path(uint64_t cmd_id, fs_buffer_t client_path) {
@@ -58,13 +68,11 @@ void handle_initialise(fs_cmd_t cmd)
     
     if (mounted) {
         LOG_FS_OPS("handle_initialise(): already mounted!\n");
-        fs_queue_reply((fs_cmpl_t){ 
-            .id = cmd.id,
-            .status = FS_STATUS_ERROR,
-            .data = {0}
-        });
+        fs_op_reply_failure(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0});
+        return;
     }
 
+    /* Use the shell to mount the filesystem */
     uint64_t cmd_size = sizeof(char) * ((PATH_MAX * 2) + 16);
     char *sh_mount_cmd = malloc(cmd_size);
     if (!sh_mount_cmd) {
@@ -91,6 +99,33 @@ void handle_deinitialise(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_deinitialise(): entry\n");
 
+    CHECK_MOUNTED(cmd.id);
+
+    /* Use the shell to unmount the filesystem */
+    uint64_t cmd_size = sizeof(char) * ((PATH_MAX) + 16);
+    char *sh_umount_cmd = malloc(cmd_size);
+    if (!sh_umount_cmd) {
+        LOG_FS_ERR("handle_deinitialise(): out of memory\n");
+        exit(EXIT_FAILURE);
+    }
+
+    snprintf(sh_umount_cmd, cmd_size, "umount %s", mnt_point);
+    LOG_FS_OPS("handle_deinitialise(): mounting with shell command: %s\n", sh_umount_cmd);
+
+    int umount_exit_code = system(sh_umount_cmd);
+    switch(umount_exit_code) {
+        case EXIT_SUCCESS: {
+            mounted = false;
+            LOG_FS_OPS("handle_deinitialise(): filesystem at %s, with backing block device at %s UNMOUNTED.\n", mnt_point, blk_device);
+            fs_op_reply_success(cmd.id, (fs_cmpl_data_t){0});
+        }
+        default: {
+            // Assume that this is due to inflight operations. 
+            fs_op_reply_failure(cmd.id, FS_STATUS_OUTSTANDING_OPERATIONS, (fs_cmpl_data_t){0});
+        }
+    }
+
+    free(sh_umount_cmd);
 }
 
 void handle_open(fs_cmd_t cmd)
@@ -98,15 +133,30 @@ void handle_open(fs_cmd_t cmd)
     LOG_FS_OPS("handle_open(): entry\n");
 
     struct fs_cmd_params_file_open params = cmd.params.file_open;
-    char *path = malloc((sizeof(char) * params.path.size) + 1);
-    if (!path) {
-        LOG_FS_ERR("handle_open(): out of memory\n");
-        exit(EXIT_FAILURE);
-    }
-    fs_memcpy(path, fs_get_buffer(params.path), params.path.size);
-    path[params.path.size] = '\0';
+    char *path = prepare_path(cmd.id, params.path);
 
     LOG_FS_OPS("handle_open(): got path %s\n", path);
+    int flags = 0;
+    if (params.flags & FS_OPEN_FLAGS_CREATE) {
+        flags |= O_CREAT;
+    }
+
+    if (params.flags & FS_OPEN_FLAGS_READ_WRITE) {
+        flags |= O_RDWR;
+    } else if (params.flags & FS_OPEN_FLAGS_READ_ONLY) {
+        flags |= O_RDONLY;
+    } else if (params.flags & FS_OPEN_FLAGS_WRITE_ONLY) {
+        flags |= O_WRONLY;
+    }
+
+    int fd = open(path, flags);
+    if (fd != -1) {
+        fs_cmpl_data_t result;
+        result.file_open.fd = fd;
+        fs_op_reply_success(cmd.id, result);
+    } else {
+        fs_op_reply_failure(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0});
+    }
 
     free(path);
 }
@@ -128,6 +178,12 @@ void handle_stat(fs_cmd_t cmd)
     }
     if (path_total_len > PATH_MAX) {
         fs_op_reply_failure(cmd.id, errno_to_lions_status(ENAMETOOLONG), (fs_cmpl_data_t){0});
+        free(path);
+        return;
+    }
+    if (params.buf.size < sizeof(fs_stat_t)) {
+        fs_op_reply_failure(cmd.id, FS_STATUS_INVALID_BUFFER, (fs_cmpl_data_t){0});
+        free(path);
         return;
     }
 
@@ -137,7 +193,27 @@ void handle_stat(fs_cmd_t cmd)
     int err = stat(path, &stat_data);
 
     if (err != -1) {
-        // TODO
+        fs_stat_t *resp_stat = (fs_stat_t *) fs_get_buffer(params.buf);
+        resp_stat->dev = stat_data.st_dev;
+        resp_stat->ino = stat_data.st_ino;
+        resp_stat->mode = stat_data.st_mode;
+        resp_stat->nlink = stat_data.st_nlink;
+        resp_stat->uid = stat_data.st_uid;
+        resp_stat->gid = stat_data.st_gid;
+        resp_stat->rdev = stat_data.st_rdev;
+        resp_stat->size = stat_data.st_size;
+        resp_stat->blksize = stat_data.st_blksize;
+        resp_stat->blocks = stat_data.st_blocks;
+
+        resp_stat->atime = stat_data.st_atim.tv_sec;
+        resp_stat->mtime = stat_data.st_mtim.tv_sec;
+        resp_stat->ctime = stat_data.st_ctim.tv_sec;
+
+        resp_stat->atime_nsec = TIMESPEC_TO_NS(stat_data.st_atim);
+        resp_stat->mtime_nsec = TIMESPEC_TO_NS(stat_data.st_mtim);
+        resp_stat->ctime_nsec = TIMESPEC_TO_NS(stat_data.st_ctim);
+
+        fs_op_reply_success(cmd.id, (fs_cmpl_data_t){0});
     } else {
         int err_num = errno;
         LOG_FS_OPS("handle_stat(): fail with errno %d\n", err_num);
@@ -152,21 +228,75 @@ void handle_stat(fs_cmd_t cmd)
 void handle_fsize(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_fsize(): entry\n");
+    fs_cmd_params_file_size_t params = cmd.params.file_size;
+    uint64_t fd = params.fd;
+
+    off_t sz = lseek(fd, 0L, SEEK_END);
+    if (sz > -1) {
+        fs_cmpl_data_t result;
+        result.file_size.size = sz;
+        fs_op_reply_success(cmd.id, result);
+    } else {
+        fs_op_reply_failure(cmd.id, errno_to_lions_status(errno), (fs_cmpl_data_t){0});
+    }
 }
 
 void handle_close(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_close(): entry\n");
+
+    fs_cmd_params_file_close_t params = cmd.params.file_close;
+    uint64_t fd = params.fd;
+
+    errno = 0;
+    close(fd);
+
+    if (errno == 0) {
+        fs_op_reply_success(cmd.id, (fs_cmpl_data_t){0});
+    } else {
+        fs_op_reply_failure(cmd.id, errno_to_lions_status(errno), (fs_cmpl_data_t){0});
+    }
 }
 
 void handle_read(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_read(): entry\n");
+    fs_cmd_params_file_read_t params = cmd.params.file_read;
+    
+    uint64_t fd = params.fd;
+    uint64_t count = params.buf.size;
+    uint64_t off = params.offset;
+
+    ssize_t bytes_read = pread(fd, inflight_data, count, off);
+    if (bytes_read > -1) {
+        fs_memcpy(fs_get_buffer(params.buf), inflight_data, bytes_read);
+        fs_cmpl_data_t result;
+        result.file_read.len_read = bytes_read;
+        fs_op_reply_success(cmd.id, result);
+    } else {
+        fs_op_reply_failure(cmd.id, errno_to_lions_status(errno), (fs_cmpl_data_t){0});
+    }
 }
 
 void handle_write(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_write(): entry\n");
+    fs_cmd_params_file_write_t params = cmd.params.file_write;
+
+    uint64_t fd = params.fd;
+    uint64_t count = params.buf.size;
+    uint64_t off = params.offset;
+
+    LOG_FS_OPS("count = %p, off = %p, buff = %p\n", count, off, fs_get_buffer(params.buf));
+    fs_memcpy(inflight_data, fs_get_buffer(params.buf), count);
+    ssize_t bytes_written = pwrite(fd, inflight_data, count, off);
+    if (bytes_written > -1) {
+        fs_cmpl_data_t result;
+        result.file_write.len_written = bytes_written;
+        fs_op_reply_success(cmd.id, result);
+    } else {
+        fs_op_reply_failure(cmd.id, errno_to_lions_status(errno), (fs_cmpl_data_t){0});
+    }
 }
 
 void handle_rename(fs_cmd_t cmd)
@@ -361,6 +491,18 @@ void handle_readdir(fs_cmd_t cmd)
 void handle_fsync(fs_cmd_t cmd)
 {
     LOG_FS_OPS("handle_fsync(): entry\n");
+
+    fs_cmd_params_file_sync_t params = cmd.params.file_sync;
+    uint64_t fd = params.fd;
+
+    errno = 0;
+    fsync(fd);
+
+    if (errno == 0) {
+        fs_op_reply_success(cmd.id, (fs_cmpl_data_t){0});
+    } else {
+        fs_op_reply_failure(cmd.id, errno_to_lions_status(errno), (fs_cmpl_data_t){0});
+    }
 }
 
 void handle_seekdir(fs_cmd_t cmd)
