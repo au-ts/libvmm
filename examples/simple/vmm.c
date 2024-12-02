@@ -52,6 +52,9 @@
 #elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#elif defined(BOARD_ariane)
+#define GUEST_DTB_VADDR 0x8f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x8c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -62,11 +65,15 @@
 
 #if defined(BOARD_qemu_virt_riscv64)
 #define VTIMER_IRQ_CH 2
+#elif defined(BOARD_ariane)
+#define VTIMER_IRQ_CH 2
 #endif
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
 #elif defined(BOARD_qemu_virt_riscv64)
+#define SERIAL_IRQ 10
+#elif defined(BOARD_ariane)
 #define SERIAL_IRQ 10
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
 #define SERIAL_IRQ 225
