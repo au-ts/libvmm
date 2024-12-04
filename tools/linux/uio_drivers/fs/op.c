@@ -73,14 +73,15 @@ void handle_initialise(fs_cmd_t cmd)
     }
 
     /* Use the shell to mount the filesystem */
-    uint64_t cmd_size = sizeof(char) * ((PATH_MAX * 2) + 16);
+    uint64_t cmd_size = sizeof(char) * ((PATH_MAX * 2) + 32);
     char *sh_mount_cmd = malloc(cmd_size);
     if (!sh_mount_cmd) {
         LOG_FS_ERR("handle_initialise(): out of memory\n");
         exit(EXIT_FAILURE);
     }
 
-    snprintf(sh_mount_cmd, cmd_size, "mount %s %s", blk_device, mnt_point);
+    /* Mount without caching! */
+    snprintf(sh_mount_cmd, cmd_size, "mount -o sync %s %s", blk_device, mnt_point);
     LOG_FS_OPS("handle_initialise(): mounting with shell command: %s\n", sh_mount_cmd);
 
     if (system(sh_mount_cmd) == 0) {
