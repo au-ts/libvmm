@@ -9,6 +9,12 @@ if [ $# -lt 2 ]; then
     exit 1
 fi
 
+which cpio >/dev/null
+if [ "$?" != 0 ]; then
+    echo "packrootfs: Please install CPIO"
+    exit 1
+fi
+
 rootfs=$1
 tmpdir=$2
 startup_files=()
