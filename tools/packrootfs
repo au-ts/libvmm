@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Copyright 2024, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
@@ -11,7 +13,7 @@ fi
 
 which cpio >/dev/null
 if [ "$?" != 0 ]; then
-    echo "packrootfs: Please install CPIO"
+    echo "packrootfs: Please install cpio utility."
     exit 1
 fi
 
