@@ -40,10 +40,12 @@ int blk_device_len;
 char mnt_point[PATH_MAX];
 int mnt_point_len;
 
+/* Shared queues and data to native client via UIO */
 struct fs_queue *cmd_queue;
 struct fs_queue *comp_queue;
 char *fs_data;
 
+/* Guest -> VMM fault address via UIO, unmapped in SDF */
 char *vmm_notify_fault;
 
 struct io_uring ring;
@@ -106,6 +108,9 @@ void uio_interrupt_ack(int uiofd)
 void bring_up_io_uring(void) {
     /* An optimisation hint to Linux as we only have one userland thread submitting jobs. */
     unsigned int flags = IORING_SETUP_SINGLE_ISSUER;
+
+    /* More optimisation:  */
+    flags |= IORING_SETUP_COOP_TASKRUN;
 
     /* I believe there are more useful flags to us: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html */
     int err = io_uring_queue_init(BLK_QUEUE_CAPACITY_DRIV, &ring, flags);

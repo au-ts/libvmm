@@ -888,7 +888,7 @@ void handle_readdir(fs_cmd_t cmd, uint64_t *comp_idx)
 
     fs_cmpl_data_t result;
     result.dir_read.path_len = name_len;
-    fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_SUCCESS, (fs_cmpl_data_t){0}), comp_idx);
+    fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_SUCCESS, result), comp_idx);
 }
 
 /* Seekdir */
@@ -924,7 +924,7 @@ void handle_telldir(fs_cmd_t cmd, uint64_t *comp_idx)
     if (pos != -1) {
         fs_cmpl_data_t result;
         result.dir_tell.location = pos;
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_SUCCESS, (fs_cmpl_data_t){0}), comp_idx);
+        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_SUCCESS, result), comp_idx);
     } else {
         int err_num = errno;
         LOG_FS_OPS("handle_telldir(): fail with errno %d\n", err_num);

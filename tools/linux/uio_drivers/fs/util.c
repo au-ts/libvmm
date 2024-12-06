@@ -95,17 +95,23 @@ char *fs_malloc_create_path(fs_buffer_t params_path, size_t *path_len) {
 }
 
 void fs_memcpy(char *dest, const char *src, size_t n) {
+    size_t i = 0;
+
+    size_t odd_bytes = n % 8;
+    while (i < odd_bytes) {
+        dest[i] = src[i];
+        i += 1;
+    }
+
     size_t n_64bytes_chunks = n / 8;
+    const char *remainder_src = &src[i];
+    char *remainder_dest = &dest[i];
 
     for (size_t i = 0; i < n_64bytes_chunks; i++) {
-        ((uint64_t *) dest)[i] = ((uint64_t *) src)[i];
+        ((uint64_t *) remainder_dest)[i] = ((uint64_t *) remainder_src)[i];
     }
 
-    size_t remainder = n % 8;
-    size_t begin_byte = n_64bytes_chunks * 8;
-    for (size_t i = 0; i < remainder; i++) {
-        dest[begin_byte + i] = src[begin_byte + i];
-    }
+    assert(i == n);
 }
 
 uint64_t errno_to_lions_status(int err_num) {
