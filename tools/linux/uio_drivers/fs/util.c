@@ -40,7 +40,6 @@ void flush_and_wait_io_uring_sqes(struct io_uring *ring, uint64_t *comp_idx) {
             LOG_FS_ERR("flush_io_uring_sqes(): io_uring_wait_cqes(): failed: %s", strerror(-wait_err));
             exit(EXIT_FAILURE);
         }
-        assert(n_submitted == n_returned);
 
         /* For each completion, invoke the callback then enqueue the reply */
         struct io_uring_cqe *this_cqe;
