@@ -17,9 +17,13 @@
 #include <lions/fs/protocol.h>
 #include <uio/fs.h>
 
+#include <blk_config.h>
+
 #include "log.h"
 #include "op.h"
 #include "util.h"
+
+#include <liburing.h>
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -32,13 +36,17 @@
 struct epoll_event events[MAX_EVENTS];
 
 char blk_device[PATH_MAX];
+int blk_device_len;
 char mnt_point[PATH_MAX];
+int mnt_point_len;
 
 struct fs_queue *cmd_queue;
 struct fs_queue *comp_queue;
 char *fs_data;
 
 char *vmm_notify_fault;
+
+struct io_uring ring;
 
 int create_epoll(void)
 {
@@ -95,21 +103,49 @@ void uio_interrupt_ack(int uiofd)
     }
 }
 
+void bring_up_io_uring(void) {
+    /* An optimisation hint to Linux as we only have one userland thread submitting jobs. */
+    unsigned int flags = IORING_SETUP_SINGLE_ISSUER;
+
+    /* I believe there are more useful flags to us: https://man7.org/linux/man-pages/man2/io_uring_setup.2.html */
+    int err = io_uring_queue_init(BLK_QUEUE_CAPACITY_DRIV, &ring, flags);
+    if (err) {
+        perror("bring_up_io_uring(): io_uring_queue_init(): ");
+        exit(EXIT_FAILURE);
+    }
+
+    /* This ring will last for the lifetime of this program so there isn't ever a need to tear it down. */
+}
+
 void process_fs_commands(void)
 {
     uint64_t command_count = fs_queue_length_consumer(cmd_queue);
     uint64_t completion_space = FS_QUEUE_CAPACITY - fs_queue_length_producer(comp_queue);
-    // don't dequeue a command if we have no space to enqueue its completion
+    /* Don't dequeue a command if we have no space to enqueue its completion */
     uint64_t to_consume = MIN(command_count, completion_space);
+    
+    /* Number of commands that completed */
+    uint64_t comp_idx = 0;
+
+    /* Enqueue all the commands to io_uring */
     for (uint64_t i = 0; i < to_consume; i++) {
         fs_cmd_t cmd = fs_queue_idx_filled(cmd_queue, i)->cmd;
         if (cmd.type >= FS_NUM_COMMANDS) {
-            fs_queue_reply((fs_cmpl_t){ .id = cmd.id, .status = FS_STATUS_INVALID_COMMAND, .data = {0} });
-            continue;
+            fs_queue_enqueue_reply((fs_cmpl_t){ .id = cmd.id, .status = FS_STATUS_INVALID_COMMAND, .data = {0} }, &comp_idx);
+            comp_idx += 1;
+        } else {
+            cmd_handler[cmd.type](cmd, &comp_idx);
         }
-        cmd_handler[cmd.type](cmd);
     }
+
     fs_queue_publish_consumption(cmd_queue, to_consume);
+
+    flush_and_wait_io_uring_sqes(&ring, &comp_idx);
+
+    /* Finally annouce the number of completions we produced. These are left to last minute as
+       ordered writes are expensive. */
+    assert(comp_idx == to_consume);
+    fs_queue_publish_production(comp_queue, comp_idx);
 }
 
 void notify_vmm(void) {
@@ -123,17 +159,20 @@ int main(int argc, char **argv)
         LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
         exit(EXIT_FAILURE);
     } else {
-        if (strlen(argv[1]) > PATH_MAX) {
+        strncpy(blk_device, argv[1], PATH_MAX);
+        strncpy(mnt_point, argv[2], PATH_MAX);
+        blk_device_len = strnlen(blk_device, PATH_MAX);
+        mnt_point_len = strnlen(mnt_point, PATH_MAX);
+
+        if (blk_device_len > PATH_MAX) {
             LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
             LOG_FS_ERR("<blk_device> cannot be more than PATH_MAX, which is %u\n", PATH_MAX);
         }
-        if (strlen(argv[2]) > PATH_MAX) {
+        if (mnt_point_len > PATH_MAX) {
             LOG_FS_ERR("usage: ./uio_fs_driver <blk_device> <mount_point>");
             LOG_FS_ERR("<mount_point> cannot be more than PATH_MAX, which is %u\n", PATH_MAX);
         }
     }
-    strncpy(blk_device, argv[1], PATH_MAX);
-    strncpy(mnt_point, argv[2], PATH_MAX);
 
     LOG_FS("*** Starting up\n");
     LOG_FS("Block device: %s\n", blk_device);
@@ -165,6 +204,9 @@ int main(int argc, char **argv)
     LOG_FS("*** Binding command queue IRQ to epoll\n");
     bind_fd_to_epoll(cmd_uio_fd, epoll_fd);
 
+    LOG_FS("*** Initialising liburing for io_uring\n");
+    bring_up_io_uring();
+
     LOG_FS("*** Consuming requests already in command queue\n");
     // Because any native FS clients would've finished initialising way before our Linux kernel get to
     // userland.
@@ -189,18 +231,10 @@ int main(int argc, char **argv)
         }
 
         for (int i = 0; i < n_events; i++) {
-            if (!(events[i].events & EPOLLIN)) {
-                LOG_FS_WARN("got non EPOLLIN event on fd %d\n", events[i].data.fd);
-                continue;
-            }
-
-            if (events[i].data.fd == cmd_uio_fd) {
-                process_fs_commands();
-                uio_interrupt_ack(cmd_uio_fd);
-                notify_vmm();
-            } else {
-                LOG_FS_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
-            }
+            assert(events[i].data.fd == cmd_uio_fd);
+            process_fs_commands();
+            uio_interrupt_ack(cmd_uio_fd);
+            notify_vmm();
         }
     }
 

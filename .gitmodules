@@ -2,3 +2,6 @@
 	path = dep/sddf
 	url = https://github.com/au-ts/sddf
 	branch = main
+[submodule "dep/liburing"]
+	path = dep/liburing
+	url = https://github.com/axboe/liburing.git

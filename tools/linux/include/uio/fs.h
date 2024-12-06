@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <blk_config.h>
+
 /* All of these details must match up with the DTS overlay and Sys Desc File. */
 
 #define UIO_FS_IRQ_NUM 71
@@ -16,7 +18,7 @@
 #define UIO_LENGTH_FS_COMPLETION_QUEUE 0x8000
 #define UIO_PATH_FS_COMPLETION_QUEUE "/dev/uio1"
 
-#define UIO_LENGTH_FS_DATA 0x200000
+#define UIO_LENGTH_FS_DATA BLK_REGION_SIZE
 #define UIO_PATH_FS_DATA "/dev/uio2"
 
 #define GUEST_TO_VMM_NOTIFY_FAULT_ADDR 0x10000000

@@ -8,12 +8,22 @@
 #include <stdlib.h>
 
 #include <lions/fs/protocol.h>
+#include <liburing.h>
 
-/* Enqueue a reply into the completion queue */
-void fs_queue_reply(fs_cmpl_t cmpl);
-/* Thin wrappers for the above */
-void fs_op_reply_success(uint64_t cmd_id, fs_cmpl_data_t result);
-void fs_op_reply_failure(uint64_t cmd_id, uint64_t status, fs_cmpl_data_t result);
+#include "op.h"
+
+/* Checks whether the io_uring submission queue is empty */
+bool io_uring_sqe_queue_empty(struct io_uring *ring);
+
+/* Given a ring structure of io_uring. Flush the SQEs for processing, wait for them all
+   to complete and invoke the callbacks. */
+void flush_and_wait_io_uring_sqes(struct io_uring *ring, uint64_t *comp_idx);
+
+/* Grab the private callback data from an io_uring's Completion Queue Entry (CQE) */
+io_uring_comp_callback_t *cb_dat_from_cqe(struct io_uring_cqe *cqe);
+
+/* Enqueue a reply into the completion queue, but not publish it! */
+void fs_queue_enqueue_reply(fs_cmpl_t cmpl, uint64_t *comp_idx);
 
 /* Convert a fs_buffer_t into our vaddr */
 void *fs_get_buffer(fs_buffer_t buf);
@@ -22,7 +32,7 @@ void *fs_get_buffer(fs_buffer_t buf);
    *** Returns a buffer from malloc. *** */
 char *fs_malloc_create_path(fs_buffer_t path, size_t *path_len);
 
-/* Byte-by-byte memcpy as the string.h's memcpy is not compatible with UIO mappings */
+/* Custom optimised memcpy as the string.h's memcpy is not compatible with UIO mappings */
 void fs_memcpy(char *dest, const char *src, size_t n);
 
 /* Converts the errno into LionsOS' equivalent status. */
