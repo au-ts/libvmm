@@ -58,6 +58,25 @@ char our_data_region[UIO_LENGTH_FS_DATA];
         } \
     } while (0)
 
+#define SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx) \
+    do { \
+        /* Ensure memory for the callback structure. */ \
+        cb_data = malloc(sizeof(io_uring_comp_callback_t)); \
+        if (!cb_data) { \
+            LOG_FS_ERR("handle_open(): out of memory for callback structure\n"); \
+            fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx); \
+            exit(EXIT_FAILURE); \
+        } \
+        /* Get a submission queue entry (sqe).
+        This should never fail because the io_uring queue is the same capacity as client queue. */ \
+        sqe = io_uring_get_sqe(&ring); \
+        if (!sqe) { \
+            LOG_FS_ERR("handle_open(): io_uring_get_sqe(): cannot get an SQE\n"); \
+            fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx); \
+            exit(EXIT_FAILURE); \
+        } \
+    } while (0)
+
 /* Thin error checking wrapper around fs_malloc_create_path. Prepend the
    the mount point with the client path */
 char *malloc_prepare_path(fs_buffer_t their_path, uint64_t cmd_id, uint64_t *comp_idx) {
@@ -173,23 +192,9 @@ void handle_open(fs_cmd_t cmd, uint64_t *comp_idx)
         flags |= O_WRONLY;
     }
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_open(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_open(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     /* Now fill in and enqueue an open operation. */
     io_uring_prep_open(sqe, path, flags, 0);
@@ -247,23 +252,9 @@ void handle_stat(fs_cmd_t cmd, uint64_t *comp_idx)
 
     LOG_FS_OPS("handle_stat(): got concatenated path %s\n", path);
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_stat(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_stat(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     /* Now fill in and enqueue a statx operation. */
     io_uring_prep_statx(sqe, AT_FDCWD, path, 0, STATX_BASIC_STATS, stx);
@@ -331,23 +322,9 @@ void handle_fsize(fs_cmd_t cmd, uint64_t *comp_idx)
         return;
     }
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_fsize(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_fsize(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_statx(sqe, fd, "", AT_EMPTY_PATH, STATX_SIZE, stx);
 
@@ -388,23 +365,9 @@ void handle_close(fs_cmd_t cmd, uint64_t *comp_idx)
     fs_cmd_params_file_close_t params = cmd.params.file_close;
     uint64_t fd = params.fd;
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_close(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_close(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_close(sqe, fd);
 
@@ -442,23 +405,9 @@ void handle_read(fs_cmd_t cmd, uint64_t *comp_idx)
     uint64_t count = params.buf.size;
     uint64_t off = params.offset;
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_read(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_read(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_read(sqe, fd, (char *) ((uint64_t) our_data_region + params.buf.offset), count, off);
 
@@ -502,24 +451,10 @@ void handle_write(fs_cmd_t cmd, uint64_t *comp_idx)
     uint64_t off = params.offset;
 
     LOG_FS_OPS("count = %lu, off = %lu, buff = %p\n", count, off, fs_get_buffer(params.buf));
-    
-    /* Ensure memory for the callback structure. */
-    io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_write(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
 
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
+    io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_write(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
     
     /* Copy the client's data into our buffer due to UIO being treated as device memory... */
     fs_memcpy((char *) ((uint64_t) our_data_region + params.buf.offset), fs_get_buffer(params.buf), count);
@@ -568,24 +503,10 @@ void handle_rename(fs_cmd_t cmd, uint64_t *comp_idx)
         free(src_path);
         return;
     }
-    
-    /* Ensure memory for the callback structure. */
-    io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_fsize(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
 
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
+    io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_fsize(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_rename(sqe, src_path, dst_path);
 
@@ -627,23 +548,9 @@ void handle_unlink(fs_cmd_t cmd, uint64_t *comp_idx)
 
     LOG_FS_OPS("handle_unlink(): got concatenated path %s\n", path);
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_fsize(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_fsize(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_unlink(sqe, path, 0);
 
@@ -703,23 +610,9 @@ void handle_fsync(fs_cmd_t cmd, uint64_t *comp_idx)
     fs_cmd_params_file_sync_t params = cmd.params.file_sync;
     uint64_t fd = params.fd;
 
-    /* Ensure memory for the callback structure. */
     io_uring_comp_callback_t *cb_data = malloc(sizeof(io_uring_comp_callback_t));
-    if (!cb_data) {
-        LOG_FS_ERR("handle_fsize(): out of memory for callback structure\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, errno_to_lions_status(ENOMEM), (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
-
-    /* Get a submission queue entry (sqe).
-       This should never fail because the io_uring queue is the same capacity as client queue. */
     struct io_uring_sqe *sqe;
-    sqe = io_uring_get_sqe(&ring);
-    if (!sqe) {
-        LOG_FS_ERR("handle_fsize(): io_uring_get_sqe(): cannot get an SQE\n");
-        fs_queue_enqueue_reply(CREATE_COMP(cmd.id, FS_STATUS_ERROR, (fs_cmpl_data_t){0}), comp_idx);
-        exit(EXIT_FAILURE);
-    }
+    SET_UP_IO_URING_REQUEST(cb_data, sqe, cmd, comp_idx);
 
     io_uring_prep_fsync(sqe, fd, 0);
 
