@@ -24,13 +24,13 @@
 // e.g one DTB for VMM one, one DTB for VMM two. we should be able to hide all
 // of this in the build system to avoid doing any run-time DTB stuff.
 #define GUEST_RAM_SIZE 0x10000000
-#define GUEST_DTB_VADDR 0x3f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x3d700000
+#define GUEST_DTB_VADDR 0x4f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 
 #define PAGE_SIZE_4K 0x1000
 
 /* Interrupts */
-#define ETH_IRQ 40
+#define ETH_IRQ 152
 #define ETH_IRQ_CH 10
 #define ETH_PHY_IRQ 96
 #define ETH_PHY_IRQ_CH 11

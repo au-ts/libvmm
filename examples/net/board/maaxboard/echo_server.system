@@ -5,6 +5,7 @@
  SPDX-License-Identifier: BSD-2-Clause
 -->
 <system>
+    <memory_region name="eth0" size="0x10_000" phys_addr="0x30be0000" />
     <!-- We allocate 256MiB of RAM for the guest. -->
     <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" />
     <!-- We want to map in the UART to get input/output. -->
@@ -92,13 +93,22 @@
         <protection_domain name="eth" priority="254" id="1">
             <program_image path="vmm_ethernet.elf" />
             <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
-            <virtual_machine name="linux" >
+            <!-- sDDF related regions for virtIO console -->
+            <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
+            <map mr="serial_tx_data_ethernet_vmm" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+
+            <setvar symbol="eth_rx_buffer_data_region_paddr" region_paddr="net_rx_buffer_data_region" />
+            <setvar symbol="eth_tx_cli0_buffer_data_region_paddr" region_paddr="net_tx_buffer_data_region_cli0" />
+            <setvar symbol="eth_tx_cli1_buffer_data_region_paddr" region_paddr="net_tx_buffer_data_region_cli1" />
+            <map mr="eth_vm_data_passing" vaddr="0x7_000_000" perms="rw" cached="false" setvar_vaddr="vmm_info_passing" />
+
+            <virtual_machine name="linux">
                 <vcpu id="0" />
                 <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
                 <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" />
+
                 <!-- The guest needs to view what is actually the vCPU interface as the CPU interface. -->
                 <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
-
                 <!--
                     Below are devices that were required to have a Linux image compiled with the default
                     configuration boot.
@@ -106,6 +116,7 @@
                     This would most likely involve a combination of disabling the devices in the Device Tree
                     provided to Linux as well as changing the kernel configuration.
                 -->
+                <map mr="eth0" vaddr="0x30be0000" perms="rw" cached="false" />
                 <map mr="syscon" vaddr="0x30360000" perms="rw" cached="false" />
                 <map mr="clock_controller" vaddr="0x30380000" perms="rw" cached="false" />
                 <map mr="gpc" vaddr="0x303a0000" perms="rw" cached="false" />
@@ -124,11 +135,11 @@
                 <map mr="net_tx_buffer_data_region_cli1" vaddr="0x50c00000" perms="rw" cached="false" />
 
                 <!-- uio@1 and uio@2 -->
-                <map mr="eth_vm_tx_uio_irq" vaddr="0x50000000" perms="rw" cached="false" />
-                <map mr="eth_vm_rx_uio_irq" vaddr="0x50002000" perms="rw" cached="false" />
+                <map mr="eth_vm_tx_uio_irq" vaddr="0x60002000" perms="rw" cached="false" />
+                <map mr="eth_vm_rx_uio_irq" vaddr="0x60004000" perms="rw" cached="false" />
 
                 <!-- uio@3 -->
-                <map mr="eth_vm_data_passing" vaddr="0x50004000" perms="rw" cached="false" />
+                <map mr="eth_vm_data_passing" vaddr="0x60000000" perms="rw" cached="false" />
 
                 <!-- uio@4 and 5 -->
                 <!-- unmapped so VMM gets the faults -->

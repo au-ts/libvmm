@@ -1938,7 +1938,7 @@
             // the physical addresses of `eth_tx_buffer_data_region_micropython` and
             // `eth_rx_buffer_data_region` to the guest because the addr in buffer queues is relative to
             // physical addr for DMA.
-            0x00 0x50004000 0x00 0x1000
+            0x00 0x60000000 0x00 0x1000
         >;
     };
 
@@ -1947,7 +1947,7 @@
         reg = <
             // VM -> Hypervisor interrupt for TX path. This physaddr remain unmapped in guest
             // Guest writes to this address when it want to notify the VMM.
-            0x00 0x60000000 0x00 0x1000
+            0x00 0x60002000 0x00 0x1000
         >;
     };
 
@@ -1955,7 +1955,7 @@
         compatible = "generic-uio\0uio";
         reg = <
             // Same idea as above but for RX
-            0x00 0x70000000 0x00 0x1000
+            0x00 0x60004000 0x00 0x1000
         >;
     };
 
@@ -1971,10 +1971,6 @@
 
             spi@30840000 {
                 status = "disabled";
-            };
-
-            ethernet@30be0000 {
-                status = "okay";
             };
 
             mailbox@30aa0000 {
@@ -2033,10 +2029,16 @@
         };
     };
 
+    virtio-console@0130000 {
+        compatible = "virtio,mmio";
+        reg = <0x00 0x130000 0x00 0x200>;
+        interrupts = <0x00 42 0x04>;
+    };
+
     chosen {
-        stdout-path = "/soc@0/bus@30800000/serial@30860000";
+        stdout-path = "/virtio-console@0130000";
         linux,initrd-start = <0x00000000 0x4c000000>;
         linux,initrd-end = <0x00000000 0x4e000000>;
-        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=hvc0 earlycon=hvc0 clk_ignore_unused root=/dev/ram0 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi maxcpus=1";
     };
 };
