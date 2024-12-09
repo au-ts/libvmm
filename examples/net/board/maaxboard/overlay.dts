@@ -148,10 +148,16 @@
         };
     };
 
+    virtio-console@0130000 {
+        compatible = "virtio,mmio";
+        reg = <0x00 0x130000 0x00 0x200>;
+        interrupts = <0x00 42 0x04>;
+    };
+
     chosen {
-        stdout-path = "/soc@0/bus@30800000/serial@30860000";
+        stdout-path = "/virtio-console@0130000";
         linux,initrd-start = <0x00000000 0x4c000000>;
         linux,initrd-end = <0x00000000 0x4e000000>;
-        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=hvc0 earlycon=hvc0 clk_ignore_unused root=/dev/ram0 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi maxcpus=1";
     };
 };
