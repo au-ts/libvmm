@@ -7,7 +7,7 @@
 <system>
     <memory_region name="eth0" size="0x10_000" phys_addr="0x30be0000" />
     <!-- We allocate 256MiB of RAM for the guest. -->
-    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" />
+    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" phys_addr="0x40000000" />
     <!-- We want to map in the UART to get input/output. -->
     <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
