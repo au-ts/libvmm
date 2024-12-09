@@ -305,6 +305,7 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
         /* Suspend the vCPU until we get a virtual IRQ */
+        LOG_VMM("wfi\n");
 
         uint64_t time_now = sddf_timer_time_now(50);
         uintptr_t freq;
