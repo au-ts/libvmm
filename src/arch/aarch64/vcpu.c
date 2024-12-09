@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
@@ -24,6 +25,32 @@
                            | SCTLR_EL1_NTWI | SCTLR_EL1_NTWE )
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
+
+static vcpu_data_t vcpu_wfi[GUEST_NUM_VCPUS];
+
+void vcpu_set_state(size_t vcpu_id, vcpu_state_t value) {
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+    vcpu_wfi[vcpu_id].vcpu_state = value;
+}
+
+vcpu_state_t vcpu_get_state(size_t vcpu_id) {
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+    return vcpu_wfi[vcpu_id].vcpu_state;
+}
+
+void vcpu_pause(size_t vcpu_id) {
+    microkit_vcpu_stop(vcpu_id);
+}
+
+void vcpu_resume(size_t vcpu_id) {
+    // LOG_VMM("resuming vcpu\n");
+    seL4_UserContext regs;
+    seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(!err);
+    regs.pc += 4;
+    err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, true, 0, 1, &regs);
+    assert(!err);
+}
 
 void vcpu_reset(size_t vcpu_id) {
     // @ivanv this is an incredible amount of system calls

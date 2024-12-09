@@ -13,6 +13,9 @@
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 
+#include <sddf/timer/client.h>
+#include <sddf/util/udivmodti4.h>
+
 // #define CPSR_THUMB                 (1 << 5)
 // #define CPSR_IS_THUMB(x)           ((x) & CPSR_THUMB)
 
@@ -256,15 +259,87 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
     return fault_advance_vcpu(vcpu_id, regs);
 }
 
+#define KHZ (1000)
+#define MHZ (1000 * KHZ)
+#define GHZ (1000 * MHZ)
+
+#define LOW_WORD(x) (x & 0xffffffffffffffff)
+#define HIGH_WORD(x) (x >> 64)
+
+static inline uint64_t freq_cycles_and_hz_to_ns(uint64_t ncycles, uint64_t hz)
+{
+    if (hz % GHZ == 0) {
+        return ncycles / (hz / GHZ);
+    } else if (hz % MHZ == 0) {
+        return ncycles * MS_IN_S / (hz / MHZ);
+    } else if (hz % KHZ == 0) {
+        return ncycles * US_IN_S / (hz / KHZ);
+    }
+
+    __uint128_t ncycles_in_s = (__uint128_t)ncycles * NS_IN_S;
+    /* We can discard the remainder. */
+    uint64_t rem = 0;
+    uint64_t res = udiv128by64to64(HIGH_WORD(ncycles_in_s), LOW_WORD(ncycles_in_s), NS_IN_S, &rem);
+
+    return res;
+}
+
+static inline uint64_t freq_ns_and_hz_to_cycles(uint64_t ns, uint64_t hz)
+{
+    __uint128_t calc = ((__uint128_t)ns * (__uint128_t)hz);
+    /* We can discard the remainder. */
+    uint64_t rem = 0;
+    uint64_t res = udiv128by64to64(HIGH_WORD(calc), LOW_WORD(calc), NS_IN_S, &rem);
+
+    return res;
+}
+
 bool fault_handle_vcpu_exception(size_t vcpu_id)
 {
+    seL4_UserContext regs;
+
     uint32_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
     switch (hsr_ec_class) {
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
-        // If we get a WFI exception, we just do nothing in the VMM.
+        /* Suspend the vCPU until we get a virtual IRQ */
+
+        uint64_t time_now = sddf_timer_time_now(50);
+        uintptr_t freq;
+        asm volatile ("mrs %0, " "cntfrq_el0" : "=r" (freq));
+
+        uint64_t pcnt = freq_ns_and_hz_to_cycles(time_now, freq);
+
+        uint64_t cntv_off = microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CNTVOFF);
+        uint64_t cntv_cval = microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CVAL);
+        uint64_t cntv_ctl = microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CNTV_CTL);
+        
+        uint64_t virtual_time = pcnt - cntv_off;
+        long long timeout_ticks = cntv_cval - virtual_time;
+
+        // uint32_t timeout_ticks = (uint32_t) microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CNTV_TVAL);
+
+        // LOG_VMM("pcnt is %lu, cval is %lu cntv_cval, timeout is %ld, ctl is 0x%p\n", pcnt, cntv_cval, timeout, cntv_ctl);
+
+        int timer_on = (cntv_ctl & 1);
+        int timer_irq_masked = (cntv_ctl >> 1) & 1;
+        if (timeout_ticks > 0 && timer_on && !timer_irq_masked) {
+            // The architectural timer has been primed to fire. Everything is good.
+            sddf_timer_set_timeout(50, (uint64_t) freq_cycles_and_hz_to_ns(timeout_ticks, freq));
+            vcpu_set_state(vcpu_id, VCPU_WFI_ON_ARCH_TIMER);
+        } else if (timeout_ticks <= 0 && timer_on && !timer_irq_masked) {
+            LOG_VMM("ERROR, possible clock skew on vcpu detected, timer is armed, interrupt not masked but timeout ticks is %d, guest will stall until a peripheral IRQ comes in.\n", timeout_ticks);
+            /* When the simple example boots, sometimes this is printed, sometimes not. */
+            /* If you see this on the simple example with the Buildroot login prompt, let it sit for a few minutes then press enter. You will see Linux complain */
+            vcpu_set_state(vcpu_id, VCPU_WFI_ON_OTHER_IRQ);
+        } else {
+            /* Everything is all good not waiting for the timer */
+            vcpu_set_state(vcpu_id, VCPU_WFI_ON_OTHER_IRQ);
+        }
+        vcpu_pause(vcpu_id);
+
         return true;
     default:
         LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);

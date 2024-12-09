@@ -120,6 +120,12 @@ void notified(microkit_channel ch) {
             }
             break;
         }
+        case 50:
+            /* From the ARM generic timer driver. Then inject IRQ 27 for the virtual arch timer. */
+            if (!virq_inject(GUEST_VCPU_ID, 27)) {
+                LOG_VMM_ERR("failed to inject architectural timer IRQ\n");
+            }
+            break;
         default:
             printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
