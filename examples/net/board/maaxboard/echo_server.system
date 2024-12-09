@@ -7,7 +7,7 @@
 <system>
     <memory_region name="eth0" size="0x10_000" phys_addr="0x30be0000" />
     <!-- We allocate 256MiB of RAM for the guest. -->
-    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" phys_addr="0x40000000" />
+    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" phys_addr="0x70000000" />
     <!-- We want to map in the UART to get input/output. -->
     <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
@@ -90,9 +90,9 @@
         <map mr="serial_tx_queue_client2" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
         <map mr="serial_tx_data_client2" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
 
-        <protection_domain name="eth" priority="254" id="1">
+        <protection_domain name="eth" priority="110" id="1">
             <program_image path="vmm_ethernet.elf" />
-            <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+            <map mr="guest_ram" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
             <!-- sDDF related regions for virtIO console -->
             <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x6_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
             <map mr="serial_tx_data_ethernet_vmm" vaddr="0x6_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
@@ -104,7 +104,7 @@
 
             <virtual_machine name="linux">
                 <vcpu id="0" />
-                <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
+                <map mr="guest_ram" vaddr="0x70000000" perms="rwx" />
                 <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" />
 
                 <!-- The guest needs to view what is actually the vCPU interface as the CPU interface. -->
