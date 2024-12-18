@@ -6,7 +6,7 @@
 / {
     memory@40000000 {
         device_type = "memory";
-        reg = <0x00 0x40000000 0x00 0x10000000>;
+        reg = <0x00 0x70000000 0x00 0x10000000>;
     };
 
     soc@0 {
@@ -24,7 +24,7 @@
             };
 
             ethernet@30be0000 {
-                status = "disabled";
+                status = "okay";
             };
 
             mailbox@30aa0000 {
@@ -68,10 +68,6 @@
             watchdog@30280000 {
                 status = "disabled";
             };
-
-            efuse@30350000 {
-                status = "disabled";
-            };
         };
 
         usb@38200000 {
@@ -85,8 +81,8 @@
 
     chosen {
         stdout-path = "/soc@0/bus@30800000/serial@30860000";
-        linux,initrd-start = <0x00000000 0x4c000000>;
-        linux,initrd-end = <0x00000000 0x4e000000>;
+        linux,initrd-start = <0x00000000 0x7c000000>;
+        linux,initrd-end = <0x00000000 0x7e000000>;
         bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 nosmp rw debug ignore_loglevel initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1";
     };
 };

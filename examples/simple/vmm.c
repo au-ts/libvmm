@@ -33,8 +33,8 @@
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #elif defined(BOARD_maaxboard)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#define GUEST_DTB_VADDR 0x7f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x7c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -42,6 +42,9 @@
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
 #define SERIAL_IRQ_CH 1
+
+#define ETH_IRQ_CH 2
+#define ETH_IRQ 152
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
@@ -105,6 +108,7 @@ void init(void) {
         return;
     }
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    success = virq_register_passthrough(GUEST_VCPU_ID, ETH_IRQ, ETH_IRQ_CH);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
@@ -112,16 +116,22 @@ void init(void) {
 }
 
 void notified(microkit_channel ch) {
+    bool handled = false;
+
+    handled = virq_handle_passthrough(ch);
+
     switch (ch) {
         case SERIAL_IRQ_CH: {
             bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
             if (!success) {
                 LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
             }
+            handled = true;
             break;
         }
-        default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+    }
+    if (!handled) {
+        LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
 }
 
