@@ -24,6 +24,13 @@
         };
     };
 
+    virtio-console@0130000 {
+        compatible = "virtio,mmio";
+        reg = <0x00 0x130000 0x00 0x200>;
+        interrupts = <0x00 42 0x04>;
+        // IRQ = 74
+    };
+
     uio@0 {
         compatible = "generic-uio";
         reg = <
@@ -130,6 +137,10 @@
 	     	serial@30a60000 {
                 status = "disabled";
             };
+
+            serial@30860000 {
+                status = "disabled";
+            };
         };
 
         bus@30000000 {
@@ -169,9 +180,10 @@
     };
 
     chosen {
-        stdout-path = "/soc@0/bus@30800000/serial@30860000";
+        stdout-path = "/virtio-console@0130000";
+        linux,stdout-path = "/virtio-console@0130000";
         linux,initrd-start = <0x00000000 0x7c000000>;
         linux,initrd-end = <0x00000000 0x7e000000>;
-        bootargs = "console=ttymxc0,115200 earlycon=ec_imx6q,0x30860000,115200 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
+        bootargs = "console=ttymxc0,115200 earlycon=ttymxc0,115200 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
     };
 };

@@ -13,6 +13,10 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 
+#include <libvmm/virtio/virtio.h>
+#include <sddf/serial/queue.h>
+#include <serial_config.h>
+
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
 // We can probably add a node for the DTB addr and then use that.
@@ -27,29 +31,11 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
-#elif defined(BOARD_rpi4b_hyp)
-#define GUEST_DTB_VADDR 0x2e000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_odroidc2_hyp)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
-#elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x7f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x7c000000
-#else
-#error Need to define guest kernel image address and DTB address
-#endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
-#define SERIAL_IRQ_CH 1
-#define SD_CH 2
 
 #define UIO_IRQ 50
 #define UIO_CH 3
@@ -57,23 +43,19 @@
 #define ETH_IRQ 152
 #define ETH_CH  5
 
-#if defined(BOARD_qemu_virt_aarch64)
-#define SERIAL_IRQ 33
-#elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
-#define SERIAL_IRQ 225
-#elif defined(BOARD_rpi4b_hyp)
-#define SERIAL_IRQ 57
-#elif defined(BOARD_imx8mm_evk)
-#define SERIAL_IRQ 59
-#elif defined(BOARD_imx8mq_evk) || defined(BOARD_maaxboard)
-#define SD_IRQ 55
-#define SERIAL_IRQ 58
-#else
-#error Need to define serial interrupt
-#endif
+/* Virtio Console */
+#define SERIAL_VIRT_TX_CH 3
+#define VIRTIO_CONSOLE_IRQ (74)
+#define VIRTIO_CONSOLE_BASE (0x130000)
+#define VIRTIO_CONSOLE_SIZE (0x1000)
 
+serial_queue_t *serial_rx_queue;
+serial_queue_t *serial_tx_queue;
 
-/* static struct virtio_console_device virtio_console; */
+char *serial_rx_data;
+char *serial_tx_data;
+
+static struct virtio_console_device virtio_console;
 
 /* Network Virtualiser channels */
 #define VIRT_NET_TX_CH  1
@@ -106,13 +88,6 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
-    /*
-     * For now we by default simply ack the serial IRQ, we have not
-     * come across a case yet where more than this needs to be done.
-     */
-    microkit_irq_ack(SERIAL_IRQ_CH);
-}
 
 void uio_ack(size_t vcpu_id, int irq, void *cookie)
 {
@@ -146,10 +121,24 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    /* success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL); */
     assert(virq_register_passthrough(GUEST_VCPU_ID, ETH_IRQ, ETH_CH));
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    /* microkit_irq_ack(SERIAL_IRQ_CH); */
+
+    /* Initialise our sDDF ring buffers for the serial device */
+    serial_queue_handle_t serial_rxq, serial_txq;
+    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue,
+                              serial_tx_data);
+
+    /* Initialise virtIO console device */
+    success = virtio_mmio_console_init(&virtio_console,
+                                       VIRTIO_CONSOLE_BASE,
+                                       VIRTIO_CONSOLE_SIZE,
+                                       VIRTIO_CONSOLE_IRQ,
+                                       &serial_rxq, &serial_txq,
+                                       SERIAL_VIRT_TX_CH);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -163,14 +152,6 @@ void notified(microkit_channel ch) {
             int success = virq_inject(GUEST_VCPU_ID, UIO_IRQ);
             if (!success) {
                 LOG_VMM_ERR("Failed to inject UIO IRQ 0x%lx\n", UIO_IRQ);
-            }
-            handled = true;
-            break;
-        }
-        case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
             }
             handled = true;
             break;

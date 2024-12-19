@@ -21,7 +21,7 @@ NET_DRIVER_VM_USERLEVEL_INIT := net_driver_init
 
 vpath %.c ${SDDF} ${LIBVMM} ${ECHO_SERVER}
 
-IMAGES := vmm_ethernet.elf
+IMAGES := vmm_ethernet.elf uart_driver.elf serial_virt_tx.elf
 
 CFLAGS := -mcpu=$(CPU) \
 	  -mstrict-align \
@@ -32,6 +32,7 @@ CFLAGS := -mcpu=$(CPU) \
 		-DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
+		-I$(ROOT_DIR)/include \
 		-I$(LIBVMM)/include \
 	  -I$(LIBVMM)/tools/linux/include \
 		-I$(ETHERNET_CONFIG_INCLUDE) \
@@ -50,7 +51,7 @@ CFLAGS_USERLEVEL := \
 	-I$(ETHERNET_CONFIG_INCLUDE) \
 
 LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
-LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a libsddf_util_debug.a --end-group
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- ${CFLAGS} ${BOARD} ${MICROKIT_CONFIG} | shasum | sed 's/ *-//')
 
@@ -65,7 +66,7 @@ all: loader.img
 
 # Need to build libsddf_util_debug.a because it's included in LIBS
 # for the unimplemented libc dependencies
-${IMAGES}: libvmm.a
+${IMAGES}: libvmm.a libsddf_util_debug.a
 
 # Build the VMM for ethernet
 ETHERNET_INITRD_FINAL := ethernet_linux_rootfs.cpio.gz
@@ -104,12 +105,12 @@ vmm_ethernet.elf: eth_vmm.o eth_vm/images.o
 ${IMAGE_FILE} $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-# include ${SDDF}/util/util.mk
+include ${SDDF}/util/util.mk
 # include ${SDDF}/network/components/network_components.mk
 # include ${BENCHMARK}/benchmark.mk
 # include ${TIMER_DRIVER}/timer_driver.mk
-# include ${UART_DRIVER}/uart_driver.mk
-# include ${SERIAL_COMPONENTS}/serial_components.mk
+include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/uart_driver.mk
+include $(SDDF)/serial/components/serial_components.mk
 include ${LIBVMM}/vmm.mk
 LIBVMM_TOOLS := $(LIBVMM)/tools/
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
