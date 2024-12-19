@@ -72,6 +72,28 @@
 #error Need to define serial interrupt
 #endif
 
+
+/* static struct virtio_console_device virtio_console; */
+
+/* Network Virtualiser channels */
+#define VIRT_NET_TX_CH  1
+#define VIRT_NET_RX_CH  2
+
+/* UIO Network Interrupts */
+#define UIO_NET_TX_IRQ 71
+#define UIO_NET_RX_IRQ 72
+
+/* sDDF Networking queues  */
+#include <ethernet_config.h>
+/* TX RX "DMA" Data regions */
+uintptr_t eth_rx_buffer_data_region_paddr;
+uintptr_t eth_tx_cli0_buffer_data_region_paddr;
+uintptr_t eth_tx_cli1_buffer_data_region_paddr;
+
+/* Data passing between VMM and Hypervisor */
+#include <uio/net.h>
+vmm_net_info_t *vmm_info_passing;
+
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];

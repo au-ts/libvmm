@@ -9,10 +9,15 @@ QEMU := qemu-system-aarch64
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_DIR:=$(ROOT_DIR)/board/$(MICROKIT_BOARD)
+ECHO_SERVER:=${SDDF}/examples/echo_server
 
+ETHERNET_CONFIG_INCLUDE:=${ECHO_SERVER}/include/ethernet_config
 SYSTEM_FILE := $(SYSTEM_DIR)/echo_server.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+
+NET_DRIVER_VM_USERLEVEL := uio_net_driver
+NET_DRIVER_VM_USERLEVEL_INIT := net_driver_init
 
 vpath %.c ${SDDF} ${LIBVMM} ${ECHO_SERVER}
 
@@ -29,6 +34,7 @@ CFLAGS := -mcpu=$(CPU) \
 	  -I$(SDDF)/include \
 		-I$(LIBVMM)/include \
 	  -I$(LIBVMM)/tools/linux/include \
+		-I$(ETHERNET_CONFIG_INCLUDE) \
 	  -MD \
 	  -MP
 
@@ -41,6 +47,7 @@ CFLAGS_USERLEVEL := \
 	-target aarch64-linux-gnu \
 	-I$(BOARD_DIR)/include \
 	-I$(SDDF)/include \
+	-I$(ETHERNET_CONFIG_INCLUDE) \
 
 LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
 LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a --end-group
@@ -69,8 +76,12 @@ eth_vm/vm.dts: $(SYSTEM_DIR)/maaxboard.dts $(SYSTEM_DIR)/overlay.dts |eth_vm
 eth_vm/vm.dtb: eth_vm/vm.dts |eth_vm
 	$(DTC) -q -I dts -O dtb $< > $@
 
-eth_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz |eth_vm
+eth_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz $(NET_DRIVER_VM_USERLEVEL_INIT) \
+		$(NET_DRIVER_VM_USERLEVEL) |eth_vm
 	cp $(SYSTEM_DIR)/rootfs.cpio.gz $(BUILD_DIR)/$@
+	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/rootfs.cpio.gz rootfs1 -o $@ \
+		--startup $(NET_DRIVER_VM_USERLEVEL_INIT) \
+		--home $(NET_DRIVER_VM_USERLEVEL)
 
 eth_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux \
 		eth_vm/rootfs.cpio.gz eth_vm/vm.dtb |eth_vm
@@ -100,10 +111,10 @@ ${IMAGE_FILE} $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 # include ${UART_DRIVER}/uart_driver.mk
 # include ${SERIAL_COMPONENTS}/serial_components.mk
 include ${LIBVMM}/vmm.mk
-# LIBVMM_TOOLS := $(LIBVMM)/tools/
-# include $(LIBVMM_TOOLS)/linux/uio/uio.mk
-# include $(LIBVMM_TOOLS)/linux/net/net_init.mk
-# include $(LIBVMM_TOOLS)/linux/uio_drivers/net/uio_net.mk
+LIBVMM_TOOLS := $(LIBVMM)/tools/
+include $(LIBVMM_TOOLS)/linux/uio/uio.mk
+include $(LIBVMM_TOOLS)/linux/net/net_init.mk
+include $(LIBVMM_TOOLS)/linux/uio_drivers/net/uio_net.mk
 
 clean::
 	${RM} -f *.elf .depend* $
