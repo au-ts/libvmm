@@ -28,7 +28,7 @@
         compatible = "virtio,mmio";
         reg = <0x00 0x130000 0x00 0x200>;
         interrupts = <0x00 42 0x04>;
-        // IRQ = 74
+        // IRQ = 109, which is reserved on MaaXBoard, 74 is occupied by GPIO
     };
 
     uio@0 {
@@ -54,8 +54,8 @@
             // a vIRQ inject from the hypervisor trigger an event in the net UIO driver.
             0x00 0x60000000 0x00 0x1000
         >;
-        interrupts = <0x00 39 0x04>;
-        // IRQ = 71
+        interrupts = <0x00 78 0x04>;
+        // IRQ = 110
     };
 
     uio@2 {
@@ -64,8 +64,8 @@
             // Same idea as above but for RX
             0x00 0x60002000 0x00 0x1000
         >;
-        interrupts = <0x00 40 0x04>;
-        // IRQ = 72
+        interrupts = <0x00 79 0x04>;
+        // IRQ = 111
     };
 
     uio@3 {
@@ -138,7 +138,7 @@
                 status = "disabled";
             };
 
-            serial@30860000 {
+	     	serial@30860000 {
                 status = "disabled";
             };
         };
@@ -184,6 +184,6 @@
         linux,stdout-path = "/virtio-console@0130000";
         linux,initrd-start = <0x00000000 0x7c000000>;
         linux,initrd-end = <0x00000000 0x7e000000>;
-        bootargs = "console=ttymxc0,115200 earlycon=ttymxc0,115200 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
+        bootargs = "console=hvc0 earlycon=hvc0 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
     };
 };

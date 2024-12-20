@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 /* Number of clients that can be connected to the serial server. */
-#define SERIAL_NUM_CLIENTS 4
+#define SERIAL_NUM_CLIENTS 1
 
 /* Only support transmission and not receive. */
 #define SERIAL_TX_ONLY 1
@@ -28,10 +28,10 @@
 /* Default baud rate of the uart device */
 #define UART_DEFAULT_BAUD 115200
 
-#define SERIAL_CLI0_NAME "client0"
+#define SERIAL_CLI0_NAME "eth"
 #define SERIAL_CLI1_NAME "client1"
 #define SERIAL_CLI2_NAME "bench"
-#define SERIAL_CLI3_NAME "eth"
+#define SERIAL_CLI3_NAME "client0"
 #define SERIAL_VIRT_TX_NAME "serial_virt_tx"
 
 #define SERIAL_QUEUE_SIZE                              0x1000
@@ -73,15 +73,15 @@ static inline void serial_virt_queue_init_sys(char *pd_name, serial_queue_handle
 {
     if (!sddf_strcmp(pd_name, SERIAL_VIRT_TX_NAME)) {
         serial_queue_init(cli_queue_handle, cli_queue, SERIAL_TX_DATA_REGION_CAPACITY_CLI0, cli_data);
-        serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)((uintptr_t)cli_queue + SERIAL_QUEUE_SIZE),
-                          SERIAL_TX_DATA_REGION_CAPACITY_CLI1, cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0);
-        serial_queue_init(&cli_queue_handle[2], (serial_queue_t *)((uintptr_t)cli_queue + 2 * SERIAL_QUEUE_SIZE),
-                          SERIAL_TX_DATA_REGION_CAPACITY_CLI2,
-                          cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0 + SERIAL_TX_DATA_REGION_CAPACITY_CLI1);
-        serial_queue_init(&cli_queue_handle[3], (serial_queue_t *)((uintptr_t)cli_queue + 3 * SERIAL_QUEUE_SIZE),
-                          SERIAL_TX_DATA_REGION_CAPACITY_CLI3,
-                          cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0 + SERIAL_TX_DATA_REGION_CAPACITY_CLI1 +
-                          SERIAL_TX_DATA_REGION_CAPACITY_CLI2);
+        /* serial_queue_init(&cli_queue_handle[1], (serial_queue_t *)((uintptr_t)cli_queue + SERIAL_QUEUE_SIZE), */
+        /*                   SERIAL_TX_DATA_REGION_CAPACITY_CLI1, cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0); */
+        /* serial_queue_init(&cli_queue_handle[2], (serial_queue_t *)((uintptr_t)cli_queue + 2 * SERIAL_QUEUE_SIZE), */
+        /*                   SERIAL_TX_DATA_REGION_CAPACITY_CLI2, */
+        /*                   cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0 + SERIAL_TX_DATA_REGION_CAPACITY_CLI1); */
+        /* serial_queue_init(&cli_queue_handle[3], (serial_queue_t *)((uintptr_t)cli_queue + 3 * SERIAL_QUEUE_SIZE), */
+        /*                   SERIAL_TX_DATA_REGION_CAPACITY_CLI3, */
+        /*                   cli_data + SERIAL_TX_DATA_REGION_CAPACITY_CLI0 + SERIAL_TX_DATA_REGION_CAPACITY_CLI1 + */
+        /*                   SERIAL_TX_DATA_REGION_CAPACITY_CLI2); */
     }
 }
 
@@ -89,8 +89,8 @@ static inline void serial_virt_queue_init_sys(char *pd_name, serial_queue_handle
 static inline void serial_channel_names_init(char **client_names)
 {
     client_names[0] = SERIAL_CLI0_NAME;
-    client_names[1] = SERIAL_CLI1_NAME;
-    client_names[2] = SERIAL_CLI2_NAME;
-    client_names[3] = SERIAL_CLI3_NAME;
+    /* client_names[1] = SERIAL_CLI1_NAME; */
+    /* client_names[2] = SERIAL_CLI2_NAME; */
+    /* client_names[3] = SERIAL_CLI3_NAME; */
 }
 #endif

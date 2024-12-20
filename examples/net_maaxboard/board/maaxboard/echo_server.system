@@ -59,14 +59,14 @@
     <memory_region name="cyclecounters" size="0x1000"/>
 
     <!-- shared memory for serial data regions -->
-    <memory_region name="serial_tx_data_driver" size="0x4_000" />
+    <memory_region name="serial_tx_data_driver" size="0x8_000" />
     <memory_region name="serial_tx_data_client0" size="0x2_000" />
     <memory_region name="serial_tx_data_client1" size="0x2_000" />
     <memory_region name="serial_tx_data_client2" size="0x2_000" />
-    <memory_region name="serial_tx_data_ethernet_vmm" size="0x2_000" />
+    <memory_region name="serial_tx_data_ethernet_vmm" size="0x4_000" />
 
     <!-- shared memory for serial queue regions -->
-    <memory_region name="serial_tx_queue_driver" size="0x1_000" />
+    <memory_region name="serial_tx_queue_driver" size="0x2_000" />
     <memory_region name="serial_tx_queue_client0" size="0x1_000" />
     <memory_region name="serial_tx_queue_client1" size="0x1_000" />
     <memory_region name="serial_tx_queue_client2" size="0x1_000" />
@@ -78,7 +78,7 @@
     <!-- uio@3 for Ethernet driver VM, data passing between VMM and guest -->
     <memory_region name="eth_vm_data_passing" size="0x1_000" page_size="0x1_000"/>
 
-    <protection_domain name="eth" priority="254">
+    <protection_domain name="eth" priority="102">
         <program_image path="vmm_ethernet.elf" />
         <map mr="guest_ram" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
@@ -95,7 +95,6 @@
         <virtual_machine name="linux" >
             <vcpu id="0" />
             <map mr="guest_ram" vaddr="0x70000000" perms="rwx" />
-
 
             <map mr="eth" vaddr="0x30be0000" perms="rw" cached="false" />
             <map mr="efuse" vaddr="0x30350000" perms="rw" cached="false" />
@@ -143,7 +142,7 @@
         <map mr="uart" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
 
         <map mr="serial_tx_queue_driver" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue" />
-        <map mr="serial_tx_data_driver" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="tx_data" />
+        <map mr="serial_tx_data_driver" vaddr="0x4_005_000" perms="rw" cached="true" setvar_vaddr="tx_data" />
 
         <irq irq="58" id="0" trigger="edge" /> <!-- UART interrupt -->
     </protection_domain>
@@ -151,16 +150,16 @@
     <protection_domain name="serial_virt_tx" priority="99">
         <program_image path="serial_virt_tx.elf" />
         <map mr="serial_tx_queue_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="tx_queue_drv" />
-        <map mr="serial_tx_queue_client0" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue_cli0" />
-        <map mr="serial_tx_queue_client1" vaddr="0x4_002_000" perms="rw" cached="true"/>
-        <map mr="serial_tx_queue_client2" vaddr="0x4_003_000" perms="rw" cached="true"/>
-        <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true"/>
+        <!-- <map mr="serial_tx_queue_client0" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue_cli0" /> -->
+        <!-- <map mr="serial_tx_queue_client1" vaddr="0x4_002_000" perms="rw" cached="true"/> -->
+        <!-- <map mr="serial_tx_queue_client2" vaddr="0x4_003_000" perms="rw" cached="true"/> -->
+        <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="tx_queue_cli0" />
 
         <map mr="serial_tx_data_driver" vaddr="0x5_004_000" perms="rw" cached="true" setvar_vaddr="tx_data_drv" />
-        <map mr="serial_tx_data_client0" vaddr="0x5_008_000" perms="r" cached="true" setvar_vaddr="tx_data_cli0" />
-        <map mr="serial_tx_data_client1" vaddr="0x5_00a_000" perms="r" cached="true"/>
-        <map mr="serial_tx_data_client2" vaddr="0x5_00c_000" perms="r" cached="true"/>
-        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x5_00e_000" perms="r" cached="true"/>
+        <!-- <map mr="serial_tx_data_client0" vaddr="0x5_008_000" perms="r" cached="true" setvar_vaddr="tx_data_cli0" /> -->
+        <!-- <map mr="serial_tx_data_client1" vaddr="0x5_00a_000" perms="r" cached="true"/> -->
+        <!-- <map mr="serial_tx_data_client2" vaddr="0x5_00c_000" perms="r" cached="true"/> -->
+        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x5_00e_000" perms="r" cached="true" setvar_vaddr="tx_data_cli0" />
     </protection_domain>
 
     <channel>
@@ -169,7 +168,7 @@
     </channel>
 
     <channel>
-        <end pd="serial_virt_tx" id="4"/>
+        <end pd="serial_virt_tx" id="1"/>
         <end pd="eth" id="3"/>
     </channel>
 

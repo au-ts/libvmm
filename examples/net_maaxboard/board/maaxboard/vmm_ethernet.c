@@ -37,11 +37,11 @@
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
 
-#define UIO_IRQ 50
-#define UIO_CH 3
-
 #define ETH_IRQ 152
 #define ETH_CH  5
+
+#define SERIAL_IRQ 58
+#define SERIAL_IRQ_CH 1
 
 /* Virtio Console */
 #define SERIAL_VIRT_TX_CH 3
@@ -62,8 +62,8 @@ static struct virtio_console_device virtio_console;
 #define VIRT_NET_RX_CH  2
 
 /* UIO Network Interrupts */
-#define UIO_NET_TX_IRQ 71
-#define UIO_NET_RX_IRQ 72
+#define UIO_NET_TX_IRQ 110
+#define UIO_NET_RX_IRQ 111
 
 /* sDDF Networking queues  */
 #include <ethernet_config.h>
@@ -87,12 +87,6 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
-
-
-void uio_ack(size_t vcpu_id, int irq, void *cookie)
-{
-    microkit_notify(UIO_CH);
-}
 
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -121,8 +115,11 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    /* success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL); */
-    assert(virq_register_passthrough(GUEST_VCPU_ID, ETH_IRQ, ETH_CH));
+    success = virq_register_passthrough(GUEST_VCPU_ID, ETH_IRQ, ETH_CH);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register ETH_IRQ passthrough\n");
+        return;
+    }
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     /* microkit_irq_ack(SERIAL_IRQ_CH); */
 
@@ -138,6 +135,10 @@ void init(void) {
                                        VIRTIO_CONSOLE_IRQ,
                                        &serial_rxq, &serial_txq,
                                        SERIAL_VIRT_TX_CH);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise virtio console\n");
+        return;
+    }
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
@@ -146,17 +147,8 @@ void init(void) {
 void notified(microkit_channel ch) {
     bool handled = false;
 
+    LOG_VMM("Notifed on channel: %d\n", ch);
     handled = virq_handle_passthrough(ch);
-    switch (ch) {
-        case UIO_CH: {
-            int success = virq_inject(GUEST_VCPU_ID, UIO_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("Failed to inject UIO IRQ 0x%lx\n", UIO_IRQ);
-            }
-            handled = true;
-            break;
-        }
-    }
     if (!handled) {
         LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
