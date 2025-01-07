@@ -283,7 +283,7 @@ pub fn build(b: *std.Build) !void {
             "-kernel",
             final_image_dest,
             "-m",
-            "3G",
+            "2G",
             "-nographic",
         });
         qemu_cmd.step.dependOn(b.default_step);
