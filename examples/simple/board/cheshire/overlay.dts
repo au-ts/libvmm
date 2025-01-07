@@ -11,8 +11,9 @@
     };
 
     chosen {
-        stdout-path = "/uart@10000000";
-        bootargs = "console=ttyS0 loglevel=8 earlycon=ns16550a,0x10000000 no4lvl";
+        console = "/soc/serial@3002000";
+        stdout-path = "/soc/serial@3002000:115200";
+        bootargs = "console=ttyS0 loglevel=8 earlycon=ns16550a,0x3002000 no4lvl";
         linux,initrd-start = <0x8c000000>;
         linux,initrd-end = <0x8e000000>;
     };
