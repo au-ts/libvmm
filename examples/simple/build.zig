@@ -263,7 +263,6 @@ pub fn build(b: *std.Build) !void {
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");
         simulate_step.dependOn(&qemu_cmd.step);
     } else if (std.mem.eql(u8, microkit_board, "qemu_virt_riscv64")) {
-        // @ivanv: this assumes rv64
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-riscv64",
             "-machine",
@@ -273,7 +272,7 @@ pub fn build(b: *std.Build) !void {
             "-kernel",
             final_image_dest,
             "-m",
-            "3G",
+            "2G",
             "-nographic",
         });
         qemu_cmd.step.dependOn(b.default_step);
