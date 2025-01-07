@@ -67,6 +67,14 @@ nix-shell
 
 ### Building and running
 
+First, initialize the repository:
+
+```sh
+git clone https://github.com/au-ts/libvmm
+cd libvmm
+git submodule update --init
+```
+
 Finally, we can simulate a basic system with a single Linux guest with the
 following commands:
 ```sh
