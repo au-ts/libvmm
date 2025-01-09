@@ -15,7 +15,7 @@ REPORT_FILE := report.txt
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
-IMAGES := vmm.elf
+IMAGES := vmm.elf uart_driver.elf serial_virt_tx.elf
 
 CFLAGS := \
 	  -mstrict-align \
@@ -26,13 +26,15 @@ CFLAGS := \
 	  -DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
+	  -I$(LIBVMM)/tools/linux/include \
 	  -I$(SDDF)/include \
+		-I$(EXAMPLE_DIR)/include \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -47,7 +49,7 @@ all: loader.img
 
 -include vmm.d
 
-$(IMAGES): libvmm.a
+$(IMAGES): libvmm.a libsddf_util_debug.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
@@ -72,6 +74,9 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux vm.dtb root
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
+include ${SDDF}/util/util.mk
+include ${SDDF}/drivers/serial/imx/uart_driver.mk
+include $(SDDF)/serial/components/serial_components.mk
 include $(LIBVMM)/vmm.mk
 
 qemu: $(IMAGE_FILE)

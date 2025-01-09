@@ -13,6 +13,9 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 
+#include <libvmm/virtio/virtio.h>
+#include <sddf/serial/queue.h>
+#include <serial_config.h>
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
 // We can probably add a node for the DTB addr and then use that.
@@ -40,8 +43,8 @@
 #define GUEST_DTB_VADDR 0x2f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
 #elif defined(BOARD_maaxboard)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#define GUEST_DTB_VADDR 0x7f000000
+#define GUEST_INIT_RAM_DISK_VADDR 0x7c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -64,6 +67,12 @@
 #error Need to define serial interrupt
 #endif
 
+/* Virtio Console */
+#define SERIAL_VIRT_TX_CH 3
+#define VIRTIO_CONSOLE_IRQ (74)
+#define VIRTIO_CONSOLE_BASE (0x130000)
+#define VIRTIO_CONSOLE_SIZE (0x1000)
+
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -75,6 +84,14 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+
+serial_queue_t *serial_rx_queue;
+serial_queue_t *serial_tx_queue;
+
+char *serial_rx_data;
+char *serial_tx_data;
+
+static struct virtio_console_device virtio_console;
 
 static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     /*
@@ -111,24 +128,35 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    /* success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL); */
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    /* microkit_irq_ack(SERIAL_IRQ_CH); */
+    serial_queue_handle_t serial_rxq, serial_txq;
+    serial_cli_queue_init_sys(microkit_name, &serial_rxq, serial_rx_queue, serial_rx_data, &serial_txq, serial_tx_queue,
+                              serial_tx_data);
+
+    success = virtio_mmio_console_init(&virtio_console,
+                                       VIRTIO_CONSOLE_BASE,
+                                       VIRTIO_CONSOLE_SIZE,
+                                       VIRTIO_CONSOLE_IRQ,
+                                       &serial_rxq, &serial_txq,
+                                       SERIAL_VIRT_TX_CH);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise virtio console\n");
+        return;
+    }
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
-    switch (ch) {
-        case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
-            if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
-            }
-            break;
-        }
-        default:
-            printf("Unexpected channel, ch: 0x%lx\n", ch);
+    bool handled = false;
+
+    LOG_VMM("Notifed on channel: %d\n", ch);
+    handled = virq_handle_passthrough(ch);
+    if (!handled) {
+        LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
 }
 

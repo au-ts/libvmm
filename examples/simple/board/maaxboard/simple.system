@@ -6,7 +6,7 @@
 -->
 <system>
     <!-- We allocate 256MiB of RAM for the guest. -->
-    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" />
+    <memory_region name="guest_ram" size="0x10000000" page_size="0x200000" phys_addr="0x70000000" />
     <!-- We want to map in the UART to get input/output. -->
     <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
@@ -20,13 +20,25 @@
     <memory_region name="syscon" size="0x10000" phys_addr="0x30360000" />
     <memory_region name="clock_controller" size="0x10000" phys_addr="0x30380000" />
 
-    <protection_domain name="VMM" priority="254">
+    <!-- shared memory for serial data regions -->
+    <memory_region name="serial_tx_data_driver" size="0x8_000" />
+    <!-- shared memory for serial queue regions -->
+    <memory_region name="serial_tx_queue_driver" size="0x2_000" />
+
+    <memory_region name="serial_tx_data_ethernet_vmm" size="0x22_000" />
+    <memory_region name="serial_tx_queue_ethernet_vmm" size="0x1_000" />
+
+    <protection_domain name="VMM" priority="102">
         <program_image path="vmm.elf" />
-        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="guest_ram" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+
+        <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
+        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+
         <virtual_machine name="linux" >
             <vcpu id="0" />
-            <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
-            <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" />
+            <map mr="guest_ram" vaddr="0x70000000" perms="rwx" />
+            <!-- <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" /> -->
             <!-- The guest needs to view what is actually the vCPU interface as the CPU interface. -->
             <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
 
@@ -46,6 +58,36 @@
             <map mr="irqsteer" vaddr="0x32e2d000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- UART interrupt -->
-        <irq irq="58" id="1" />
+        <!-- <irq irq="58" id="1" /> -->
     </protection_domain>
+
+    <protection_domain name="uart" priority="100">
+        <program_image path="uart_driver.elf" />
+
+        <map mr="uart" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
+
+        <map mr="serial_tx_queue_driver" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="tx_queue" />
+        <map mr="serial_tx_data_driver" vaddr="0x4_005_000" perms="rw" cached="true" setvar_vaddr="tx_data" />
+
+        <irq irq="58" id="0" trigger="edge" /> <!-- UART interrupt -->
+    </protection_domain>
+
+    <protection_domain name="serial_virt_tx" priority="99">
+        <program_image path="serial_virt_tx.elf" />
+        <map mr="serial_tx_queue_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="tx_queue_drv" />
+        <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="tx_queue_cli0" />
+
+        <map mr="serial_tx_data_driver" vaddr="0x5_004_000" perms="rw" cached="true" setvar_vaddr="tx_data_drv" />
+        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x5_00e_000" perms="r" cached="true" setvar_vaddr="tx_data_cli0" />
+    </protection_domain>
+
+    <channel>
+        <end pd="uart" id="1"/>
+        <end pd="serial_virt_tx" id="0"/>
+    </channel>
+
+    <channel>
+        <end pd="serial_virt_tx" id="1"/>
+        <end pd="VMM" id="3"/>
+    </channel>
 </system>
