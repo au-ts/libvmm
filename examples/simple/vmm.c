@@ -153,7 +153,6 @@ void init(void) {
 void notified(microkit_channel ch) {
     bool handled = false;
 
-    LOG_VMM("Notifed on channel: %d\n", ch);
     handled = virq_handle_passthrough(ch);
     if (!handled) {
         LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);

@@ -31,8 +31,8 @@
 #define SERIAL_CLI0_NAME "VMM"
 #define SERIAL_VIRT_TX_NAME "serial_virt_tx"
 
-#define SERIAL_QUEUE_SIZE                              0x1000
-#define SERIAL_DATA_REGION_CAPACITY                    0x2000
+#define SERIAL_QUEUE_SIZE                              0x4000
+#define SERIAL_DATA_REGION_CAPACITY                    0x8000
 
 #define SERIAL_TX_DATA_REGION_CAPACITY_DRIV            (2 * SERIAL_DATA_REGION_CAPACITY)
 #define SERIAL_TX_DATA_REGION_CAPACITY_CLI0            SERIAL_DATA_REGION_CAPACITY
