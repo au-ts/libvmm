@@ -12,7 +12,7 @@
 #include <sddf/serial/queue.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_CONSOLE
+// #define DEBUG_CONSOLE
 
 #if defined(DEBUG_CONSOLE)
 #define LOG_CONSOLE(...) do{ printf("VIRTIO(CONSOLE): "); printf(__VA_ARGS__); }while(0)

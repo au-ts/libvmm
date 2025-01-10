@@ -148,6 +148,7 @@ void init(void) {
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    LOG_VMM("VMM is ready.\n");
 }
 
 void notified(microkit_channel ch) {

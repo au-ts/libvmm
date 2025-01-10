@@ -12,10 +12,18 @@ SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
 SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+LWIPDIR:=network/ipstacks/lwip/src
+ECHO_SERVER:=${SDDF}/examples/echo_server
 
-vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
+DRIV_DIR := imx
+ETHERNET_DRIVER:=$(SDDF)/drivers/network/$(DRIV_DIR)
+ETHERNET_CONFIG_INCLUDE:=${ECHO_SERVER}/include/ethernet_config
+TIMER_DRIVER:=$(SDDF)/drivers/timer/$(DRIV_DIR)
 
-IMAGES := vmm.elf uart_driver.elf serial_virt_tx.elf
+vpath %.c $(SDDF) $(LIBVMM) $(EXAMPLE_DIR) $(ECHO_SERVER)
+
+IMAGES := vmm.elf uart_driver.elf serial_virt_tx.elf eth_driver.elf lwip.elf \
+				network_virt_tx.elf network_virt_rx.elf copy.elf timer_driver.elf
 
 CFLAGS := \
 	  -mstrict-align \
@@ -29,12 +37,13 @@ CFLAGS := \
 	  -I$(LIBVMM)/tools/linux/include \
 	  -I$(SDDF)/include \
 		-I$(EXAMPLE_DIR)/include \
+	  -I$(SDDF)/$(LWIPDIR)/include \
+	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
 	  -MD \
 	  -MP \
-	  -target $(TARGET)
 
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
+LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
+LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a libsddf_util_debug.a --end-group
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -42,7 +51,34 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
+include $(SDDF)/${LWIPDIR}/Filelists.mk
+
+# NETIFFILES: Files implementing various generic network interface functions
+# Override version in Filelists.mk
+NETIFFILES:=$(LWIPDIR)/netif/ethernet.c
+
+# LWIPFILES: All the above.
+LWIPFILES=lwip.c $(COREFILES) $(CORE4FILES) $(NETIFFILES)
+LWIP_OBJS := $(LWIPFILES:.c=.o) lwip.o utilization_socket.o \
+	     udp_echo_socket.o tcp_echo_socket.o
+
+OBJS := $(LWIP_OBJS)
+DEPS := $(filter %.d,$(OBJS:.o=.d))
+
+all: loader.img
+
+${LWIP_OBJS}: ${CHECK_FLAGS_BOARD_MD5}
+lwip.elf: $(LWIP_OBJS) libsddf_util.a
+	@echo "-------" $(COREFILES)
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+LWIPDIRS := $(addprefix ${LWIPDIR}/, core/ipv4 netif api)
+${LWIP_OBJS}: |${BUILD_DIR}/${LWIPDIRS}
+${BUILD_DIR}/${LWIPDIRS}:
+	mkdir -p $@
+
 vmm.elf: vmm.o images.o
+	$(RANLIB) libvmm.a
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
@@ -71,10 +107,12 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux vm.dtb root
 					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"rootfs.cpio.gz\" \
-					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include ${SDDF}/util/util.mk
+include ${ETHERNET_DRIVER}/eth_driver.mk
+include ${SDDF}/network/components/network_components.mk
+include ${TIMER_DRIVER}/timer_driver.mk
 include ${SDDF}/drivers/serial/imx/uart_driver.mk
 include $(SDDF)/serial/components/serial_components.mk
 include $(LIBVMM)/vmm.mk
@@ -95,3 +133,5 @@ clean::
 clobber:: clean
 	rm -f *.a
 	rm -f $(IMAGE_FILE) $(REPORT_FILE)
+
+-include $(DEPS)
