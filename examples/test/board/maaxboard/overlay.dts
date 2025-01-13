@@ -76,7 +76,7 @@
             };
 
 			clock-controller@30380000 {
-                status = "disabled";
+                status = "okay";
             };
         };
 

@@ -20,6 +20,8 @@
     <memory_region name="gpio" size="0x50000" phys_addr="0x30200000" />
     <memory_region name="irqsteer" size="0x1000" phys_addr="0x32e2d000" />
 
+    <memory_region name="clk_void_vmm_eth" size="0xd000" />
+    <memory_region name="clk_analog_void_vmm_eth" size="0x1000" />
     <memory_region name="clk_ccm" size="0xd000" phys_addr="0x30380000"/>
     <memory_region name="clk_ccm_analog" size="0x1000" phys_addr="0x30360000"/>
 
@@ -45,6 +47,11 @@
         <map mr="serial_rx_queue_ethernet_vmm" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="serial_rx_queue" />
         <map mr="serial_tx_data_ethernet_vmm" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
         <map mr="serial_rx_data_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
+
+        <map mr="clk_ccm" vaddr="0x30380000" perms="rw" cached="false" />
+        <map mr="clk_void_vmm_eth" vaddr="0xAAA_905_000" perms="rw" cached="false" setvar_vaddr="clk_void" />
+        <map mr="clk_ccm_analog" vaddr="0x30360000" perms="rw" cached="false" />
+        <map mr="clk_analog_void_vmm_eth" vaddr="0xAAA_A05_000" perms="rw" cached="false" setvar_vaddr="clk_analog_void" />
 
         <virtual_machine name="linux" >
             <vcpu id="0" />

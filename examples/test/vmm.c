@@ -49,6 +49,16 @@
 #error Need to define guest kernel image address and DTB address
 #endif
 
+#define CLK_CNTL_PADDR_START 0x30380000
+#define CLK_CNTL_PADDR_END 0x3038d000
+#define CLK_CNTL_MR_SIZE 0xd000
+#define CLK_ANALOG_PADDR_START 0x30360000
+#define CLK_ANALOG_PADDR_END 0x30361000
+#define CLK_ANALOG_MR_SIZE 0x1000
+
+uintptr_t clk_analog_void;
+uintptr_t clk_void;
+
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
 #define SERIAL_IRQ_CH 1
@@ -98,12 +108,82 @@ char *serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
-static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
-    /*
-     * For now we by default simply ack the serial IRQ, we have not
-     * come across a case yet where more than this needs to be done.
-     */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+bool clk_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data) {
+    uintptr_t phys_addr = addr + CLK_CNTL_PADDR_START;
+    if (fault_is_read(fsr)) {
+        uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
+        asm volatile("" : : : "memory");
+        uint64_t phys_data = *target_phys_vaddr;
+        asm volatile("" : : : "memory");
+
+        uint32_t *target_void_vaddr = (uint32_t *)(clk_void + addr);
+        asm volatile("" : : : "memory");
+        uint64_t void_data = *target_void_vaddr;
+        asm volatile("" : : : "memory");
+
+        fault_emulate_write(regs, phys_addr, fsr, phys_data);
+    } else {
+        uint64_t mask = fault_get_data_mask(addr, fsr);
+        uint64_t data = fault_get_data(regs, fsr);
+
+        uint32_t *target_void_vaddr = (uint32_t *)(clk_void + addr);
+        asm volatile("" : : : "memory");
+        *target_void_vaddr = (uint32_t)(data & mask);
+        asm volatile("" : : : "memory");
+
+        uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
+        asm volatile("" : : : "memory");
+        uint64_t phys_data = *target_phys_vaddr;
+        asm volatile("" : : : "memory");
+
+        if (phys_data != data) {
+            /* printf("CLK|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask); */
+            /* printf("CLK|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+        } else {
+            /* printf("CLK|MATCHED WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+        }
+    }
+
+    return true;
+}
+
+bool clk_analog_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data) {
+    uintptr_t phys_addr = addr + CLK_ANALOG_PADDR_START;
+    if (fault_is_read(fsr)) {
+        uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
+        asm volatile("" : : : "memory");
+        uint64_t phys_data = *target_phys_vaddr;
+        asm volatile("" : : : "memory");
+
+        /* uint32_t *target_void_vaddr = (uint32_t *)(clk_analog_void + addr); */
+        /* asm volatile("" : : : "memory"); */
+        /* uint64_t void_data = *target_void_vaddr; */
+        /* asm volatile("" : : : "memory"); */
+
+        fault_emulate_write(regs, phys_addr, fsr, phys_data);
+    } else {
+        uint64_t mask = fault_get_data_mask(addr, fsr);
+        uint64_t data = fault_get_data(regs, fsr);
+
+        uint32_t *target_void_vaddr = (uint32_t *)(clk_analog_void + addr);
+        asm volatile("" : : : "memory");
+        *target_void_vaddr = (uint32_t)(data & mask);
+        asm volatile("" : : : "memory");
+
+        uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
+        asm volatile("" : : : "memory");
+        uint64_t phys_data = *target_phys_vaddr;
+        asm volatile("" : : : "memory");
+
+        if (phys_data != data) {
+            /* printf("CLK_ANALOG|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask); */
+            /* printf("CLK_ANALOG|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+        } else {
+            /* printf("CLK_ANALOG|MATCHED WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+        }
+    }
+
+    return true;
 }
 
 void init(void) {
@@ -137,7 +217,18 @@ void init(void) {
         LOG_VMM_ERR("Failed to pass thru ETH irq\n");
         return;
     }
-    /* success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL); */
+
+    /* Trap all access to clk into the hypervisor for emulation */
+    bool clk_fault_reg_ok = fault_register_vm_exception_handler(CLK_CNTL_PADDR_START, CLK_CNTL_MR_SIZE, &clk_vmfault_handler, NULL);
+    if (!clk_fault_reg_ok) {
+        LOG_VMM_ERR("Failed to register the VM fault handler for clk\n");
+        return;
+    }
+    clk_fault_reg_ok = fault_register_vm_exception_handler(CLK_ANALOG_PADDR_START, CLK_ANALOG_MR_SIZE, &clk_analog_vmfault_handler, NULL);
+    if (!clk_fault_reg_ok) {
+        LOG_VMM_ERR("Failed to register the VM fault handler for clk analog\n");
+        return;
+    }
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     /* microkit_irq_ack(SERIAL_IRQ_CH); */
     serial_queue_handle_t serial_rxq, serial_txq;
