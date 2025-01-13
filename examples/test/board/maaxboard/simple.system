@@ -10,6 +10,7 @@
     <!-- We want to map in the UART to get input/output. -->
     <memory_region name="uart" size="0x10000" phys_addr="0x30860000" />
     <memory_region name="eth0" size="0x10_000" phys_addr="0x30be0000" />
+    <memory_region name="efuse" size="0x10_000" phys_addr="0x30350000" />
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1000" phys_addr="0x31020000" />
 
@@ -18,25 +19,32 @@
     <memory_region name="pinctrl" size="0x10000" phys_addr="0x30330000" />
     <memory_region name="gpio" size="0x50000" phys_addr="0x30200000" />
     <memory_region name="irqsteer" size="0x1000" phys_addr="0x32e2d000" />
-    <memory_region name="syscon" size="0x10000" phys_addr="0x30360000" />
-    <memory_region name="clock_controller" size="0x10000" phys_addr="0x30380000" />
+
+    <memory_region name="clk_ccm" size="0xd000" phys_addr="0x30380000"/>
+    <memory_region name="clk_ccm_analog" size="0x1000" phys_addr="0x30360000"/>
 
     <!-- shared memory for serial data regions -->
     <memory_region name="serial_tx_data_driver" size="0x4_000" />
-    <!-- shared memory for serial queue regions -->
-    <memory_region name="serial_tx_queue_driver" size="0x1_000" />
-
     <memory_region name="serial_tx_data_ethernet_vmm" size="0x2_000" />
     <memory_region name="serial_tx_data_client0" size="0x2_000" />
+    <memory_region name="serial_rx_data_driver" size="0x4_000" />
+    <memory_region name="serial_rx_data_ethernet_vmm" size="0x2_000" />
+
+    <!-- shared memory for serial queue regions -->
+    <memory_region name="serial_tx_queue_driver" size="0x1_000" />
     <memory_region name="serial_tx_queue_ethernet_vmm" size="0x1_000" />
     <memory_region name="serial_tx_queue_client0" size="0x1_000" />
+    <memory_region name="serial_rx_queue_driver" size="0x1_000" />
+    <memory_region name="serial_rx_queue_ethernet_vmm" size="0x1_000" />
 
-    <protection_domain name="VMM" priority="97">
+    <protection_domain name="eth" priority="97">
         <program_image path="vmm.elf" />
         <map mr="guest_ram" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
         <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
-        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+        <map mr="serial_rx_queue_ethernet_vmm" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="serial_rx_queue" />
+        <map mr="serial_tx_data_ethernet_vmm" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
+        <map mr="serial_rx_data_ethernet_vmm" vaddr="0x4_004_000" perms="rw" cached="true" setvar_vaddr="serial_rx_data" />
 
         <virtual_machine name="linux" >
             <vcpu id="0" />
@@ -44,6 +52,8 @@
             <!-- <map mr="uart" vaddr="0x30860000" perms="rw" cached="false" /> -->
             <!-- The guest needs to view what is actually the vCPU interface as the CPU interface. -->
             <map mr="gic_vcpu" vaddr="0x31000000" perms="rw" cached="false" />
+            <map mr="eth0" vaddr="0x30be0000" perms="rw" cached="false" />
+            <map mr="efuse" vaddr="0x30350000" perms="rw" cached="false" />
 
             <!--
                 Below are devices that were required to have a Linux image compiled with the default
@@ -52,7 +62,7 @@
                 This would most likely involve a combination of disabling the devices in the Device Tree
                 provided to Linux as well as changing the kernel configuration.
             -->
-            <map mr="syscon" vaddr="0x30360000" perms="rw" cached="false" />
+            <!-- <map mr="syscon" vaddr="0x30360000" perms="rw" cached="false" /> -->
             <!-- <map mr="clock_controller" vaddr="0x30380000" perms="rw" cached="false" /> -->
             <map mr="gpc" vaddr="0x303a0000" perms="rw" cached="false" />
             <map mr="timer" vaddr="0x306a0000" perms="rw" cached="false" />
@@ -62,15 +72,19 @@
         </virtual_machine>
         <!-- UART interrupt -->
         <!-- <irq irq="58" id="1" /> -->
+        <irq irq="152" id="10" /> <!--> ethernet interrupt -->
     </protection_domain>
 
     <protection_domain name="uart" priority="100">
         <program_image path="uart_driver.elf" />
 
-        <map mr="uart" vaddr="0x5_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
+        <map mr="uart" vaddr="0x6_000_000" perms="rw" cached="false" setvar_vaddr="uart_base" />
 
         <map mr="serial_tx_queue_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="tx_queue" />
         <map mr="serial_tx_data_driver" vaddr="0x4_008_000" perms="rw" cached="true" setvar_vaddr="tx_data" />
+
+        <map mr="serial_rx_queue_driver" vaddr="0x5_000_000" perms="rw" cached="true" setvar_vaddr="rx_queue" />
+        <map mr="serial_rx_data_driver" vaddr="0x5_008_000" perms="rw" cached="true" setvar_vaddr="rx_data" />
 
         <irq irq="58" id="0" trigger="edge" /> <!-- UART interrupt -->
     </protection_domain>
@@ -86,14 +100,33 @@
         <map mr="serial_tx_data_client0" vaddr="0x5_006_000" perms="r" cached="true" />
     </protection_domain>
 
+    <protection_domain name="serial_virt_rx" priority="98">
+        <program_image path="serial_virt_rx.elf" />
+        <map mr="serial_rx_queue_driver" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="rx_queue_drv" />
+        <map mr="serial_rx_queue_ethernet_vmm" vaddr="0x4_001_000" perms="rw" cached="true" setvar_vaddr="rx_queue_cli0" />
+
+        <map mr="serial_rx_data_driver" vaddr="0x5_000_000" perms="r" cached="true" setvar_vaddr="rx_data_drv" />
+        <map mr="serial_rx_data_ethernet_vmm" vaddr="0x5_004_000" perms="rw" cached="true" setvar_vaddr="rx_data_cli0" />
+    </protection_domain>
+
     <channel>
         <end pd="uart" id="1"/>
         <end pd="serial_virt_tx" id="0"/>
     </channel>
 
     <channel>
+        <end pd="uart" id="2"/>
+        <end pd="serial_virt_rx" id="0"/>
+    </channel>
+
+    <channel>
         <end pd="serial_virt_tx" id="1"/>
-        <end pd="VMM" id="3"/>
+        <end pd="eth" id="3"/>
+    </channel>
+
+    <channel>
+        <end pd="serial_virt_rx" id="1"/>
+        <end pd="eth" id="4"/>
     </channel>
 
     <!-- Ethernet Driver -->
@@ -122,21 +155,22 @@
     <!-- shared memory for lwip/virt_tx queue mechanism -->
     <memory_region name="net_tx_free_cli0" size="0x200_000" page_size="0x200_000"/>
     <memory_region name="net_tx_active_cli0" size="0x200_000" page_size="0x200_000"/>
-    <protection_domain name="eth" priority="101">
-        <program_image path="eth_driver.elf" />
-        <map mr="eth0" vaddr="0x2_000_000" perms="rw" cached="false" setvar_vaddr="eth"/>
 
-        <map mr="hw_ring_buffer" vaddr="0x2_200_000" perms="rw" cached="false" setvar_vaddr="hw_ring_buffer_vaddr" />
+    <!-- <protection_domain name="eth" priority="101"> -->
+    <!--     <program_image path="eth_driver.elf" /> -->
+    <!--     <map mr="eth0" vaddr="0x2_000_000" perms="rw" cached="false" setvar_vaddr="eth"/> -->
 
-        <map mr="net_rx_free_drv" vaddr="0x2_400_000" perms="rw" cached="true" setvar_vaddr="rx_free" />
-        <map mr="net_rx_active_drv" vaddr="0x2_600_000" perms="rw" cached="true" setvar_vaddr="rx_active" />
-        <map mr="net_tx_free_drv" vaddr="0x2_800_000" perms="rw" cached="true" setvar_vaddr="tx_free" />
-        <map mr="net_tx_active_drv" vaddr="0x2_a00_000" perms="rw" cached="true" setvar_vaddr="tx_active" />
+    <!--     <map mr="hw_ring_buffer" vaddr="0x2_200_000" perms="rw" cached="false" setvar_vaddr="hw_ring_buffer_vaddr" /> -->
 
-        <irq irq="152" id="0" /> <!--> ethernet interrupt -->
+    <!--     <map mr="net_rx_free_drv" vaddr="0x2_400_000" perms="rw" cached="true" setvar_vaddr="rx_free" /> -->
+    <!--     <map mr="net_rx_active_drv" vaddr="0x2_600_000" perms="rw" cached="true" setvar_vaddr="rx_active" /> -->
+    <!--     <map mr="net_tx_free_drv" vaddr="0x2_800_000" perms="rw" cached="true" setvar_vaddr="tx_free" /> -->
+    <!--     <map mr="net_tx_active_drv" vaddr="0x2_a00_000" perms="rw" cached="true" setvar_vaddr="tx_active" /> -->
 
-        <setvar symbol="hw_ring_buffer_paddr" region_paddr="hw_ring_buffer" />
-    </protection_domain>
+    <!--     <irq irq="152" id="0" /> <!-\-> ethernet interrupt -\-> -->
+
+    <!--     <setvar symbol="hw_ring_buffer_paddr" region_paddr="hw_ring_buffer" /> -->
+    <!-- </protection_domain> -->
 
     <protection_domain name="net_virt_rx" priority="99" >
         <program_image path="network_virt_rx.elf" />
@@ -193,6 +227,13 @@
         <program_image path="timer_driver.elf" />
         <map mr="timer" vaddr="0x2_000_000" perms="rw" cached="false" setvar_vaddr="gpt_regs" />
         <irq irq="87" id="0" /> <!-- timer interrupt -->
+    </protection_domain>
+
+    <protection_domain name="clk_driver" priority="254" pp="true" passive="true" stack_size="0x5000">
+        <program_image path="clk_driver.elf"/>
+
+        <map mr="clk_ccm" vaddr="0x3_200_000" perms="rw" setvar_vaddr="ccm_base" cached="false" />
+        <map mr="clk_ccm_analog" vaddr="0x3_300_000" perms="rw" setvar_vaddr="ccm_analog_base" cached="false" />
     </protection_domain>
 
     <channel>

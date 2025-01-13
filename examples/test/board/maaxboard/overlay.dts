@@ -29,10 +29,6 @@
                 status = "disabled";
             };
 
-            ethernet@30be0000 {
-                status = "disabled";
-            };
-
             mailbox@30aa0000 {
                 status = "disabled";
             };
@@ -76,10 +72,6 @@
             };
 
             watchdog@30280000 {
-                status = "disabled";
-            };
-
-            efuse@30350000 {
                 status = "disabled";
             };
 

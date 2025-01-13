@@ -12,6 +12,7 @@ SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
 SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+DTS_FILE := $(EXAMPLE_DIR)/build/vm.dts
 LWIPDIR:=network/ipstacks/lwip/src
 ECHO_SERVER:=${SDDF}/examples/echo_server
 
@@ -19,11 +20,12 @@ DRIV_DIR := imx
 ETHERNET_DRIVER:=$(SDDF)/drivers/network/$(DRIV_DIR)
 ETHERNET_CONFIG_INCLUDE:=${ECHO_SERVER}/include/ethernet_config
 TIMER_DRIVER:=$(SDDF)/drivers/timer/$(DRIV_DIR)
+CLK_DRIVER:=$(SDDF)/drivers/clk/imx
 
 vpath %.c $(SDDF) $(LIBVMM) $(EXAMPLE_DIR) $(ECHO_SERVER)
 
-IMAGES := vmm.elf uart_driver.elf serial_virt_tx.elf eth_driver.elf lwip.elf \
-				network_virt_tx.elf network_virt_rx.elf copy.elf timer_driver.elf
+IMAGES := vmm.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf lwip.elf \
+				network_virt_tx.elf network_virt_rx.elf copy.elf timer_driver.elf clk_driver.elf
 
 CFLAGS := \
 	  -mstrict-align \
@@ -39,6 +41,7 @@ CFLAGS := \
 		-I$(EXAMPLE_DIR)/include \
 	  -I$(SDDF)/$(LWIPDIR)/include \
 	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
+		-DBOARD_CLASS_imx \
 	  -MD \
 	  -MP \
 
@@ -110,9 +113,9 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux vm.dtb root
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include ${SDDF}/util/util.mk
-include ${ETHERNET_DRIVER}/eth_driver.mk
 include ${SDDF}/network/components/network_components.mk
 include ${TIMER_DRIVER}/timer_driver.mk
+include ${CLK_DRIVER}/clk_driver.mk
 include ${SDDF}/drivers/serial/imx/uart_driver.mk
 include $(SDDF)/serial/components/serial_components.mk
 include $(LIBVMM)/vmm.mk

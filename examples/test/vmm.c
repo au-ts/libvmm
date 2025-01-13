@@ -53,6 +53,10 @@
  * across platforms. */
 #define SERIAL_IRQ_CH 1
 
+/* Interrupts */
+#define ETH_IRQ 152
+#define ETH_IRQ_CH 10
+
 #if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
 #elif defined(BOARD_odroidc2_hyp) || defined(BOARD_odroidc4)
@@ -69,6 +73,7 @@
 
 /* Virtio Console */
 #define SERIAL_VIRT_TX_CH 3
+#define SERIAL_VIRT_RX_CH 4
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
@@ -128,6 +133,10 @@ void init(void) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+    if (!virq_register_passthrough(GUEST_VCPU_ID, ETH_IRQ, ETH_IRQ_CH)) {
+        LOG_VMM_ERR("Failed to pass thru ETH irq\n");
+        return;
+    }
     /* success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL); */
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     /* microkit_irq_ack(SERIAL_IRQ_CH); */
@@ -155,6 +164,18 @@ void notified(microkit_channel ch) {
     bool handled = false;
 
     handled = virq_handle_passthrough(ch);
+    switch (ch) {
+    case SERIAL_VIRT_RX_CH: {
+        /* We have received an event from the serial virtualiser, so we
+         * call the virtIO console handling */
+        virtio_console_handle_rx(&virtio_console);
+        handled = true;
+        break;
+    }
+    default:
+        break;
+    }
+
     if (!handled) {
         LOG_VMM_ERR("Unhandled notification on channel %d\n", ch);
     }
