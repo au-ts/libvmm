@@ -45,6 +45,17 @@ CFLAGS := \
 	  -MD \
 	  -MP \
 
+CFLAGS_USERLEVEL := \
+		-g3 \
+		-O3 \
+		-Wno-unused-command-line-argument \
+		-Wall -Wno-unused-function \
+		-D_GNU_SOURCE \
+		-target aarch64-linux-gnu \
+		-I$(BOARD_DIR)/include \
+		-I$(SDDF)/include \
+		-I${ETHERNET_CONFIG_INCLUDE}
+
 LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
 LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a libsddf_util_debug.a --end-group
 
@@ -72,7 +83,6 @@ all: loader.img
 
 ${LWIP_OBJS}: ${CHECK_FLAGS_BOARD_MD5}
 lwip.elf: $(LWIP_OBJS) libsddf_util.a
-	@echo "-------" $(COREFILES)
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 LWIPDIRS := $(addprefix ${LWIPDIR}/, core/ipv4 netif api)
@@ -90,11 +100,18 @@ all: loader.img
 
 $(IMAGES): libvmm.a libsddf_util_debug.a
 
+NET_DRIVER_VM_USERLEVEL := uio_net_driver
+NET_DRIVER_VM_USERLEVEL_INIT := net_driver_init
+
+
+
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz
-	cp $(SYSTEM_DIR)/rootfs.cpio.gz $(BUILD_DIR)/rootfs.cpio.gz
+rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz $(NET_DRIVER_VM_USERLEVEL_INIT) $(NET_DRIVER_VM_USERLEVEL)
+	$(LIBVMM)/tools/packrootfs ${SYSTEM_DIR}/rootfs.cpio.gz rootfs1 -o $@ \
+		--startup $(NET_DRIVER_VM_USERLEVEL_INIT) \
+		--home $(NET_DRIVER_VM_USERLEVEL)
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
@@ -119,6 +136,10 @@ include ${CLK_DRIVER}/clk_driver.mk
 include ${SDDF}/drivers/serial/imx/uart_driver.mk
 include $(SDDF)/serial/components/serial_components.mk
 include $(LIBVMM)/vmm.mk
+LIBVMM_TOOLS := $(LIBVMM)/tools/
+include $(LIBVMM_TOOLS)/linux/uio/uio.mk
+include $(LIBVMM_TOOLS)/linux/net/net_init.mk
+include $(LIBVMM_TOOLS)/linux/uio_drivers/net/uio_net.mk
 
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi

@@ -30,6 +30,8 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
+#define PAGE_SIZE_4K 0x1000
+
 #if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
@@ -81,6 +83,28 @@ uintptr_t clk_void;
 #error Need to define serial interrupt
 #endif
 
+/* Network Virtualiser channels */
+#define VIRT_NET_TX_CH  1
+#define VIRT_NET_RX_CH  2
+
+/* UIO Network Interrupts */
+#define UIO_NET_TX_IRQ 71
+#define UIO_NET_RX_IRQ 72
+
+#define GUEST_TO_VMM_TX_FAULT_ADDR 0x51000000
+#define GUEST_TO_VMM_RX_FAULT_ADDR 0x52000000
+
+/* sDDF Networking queues  */
+#include <ethernet_config.h>
+/* TX RX "DMA" Data regions */
+uintptr_t eth_rx_buffer_data_region_paddr;
+uintptr_t eth_tx_cli0_buffer_data_region_paddr;
+uintptr_t eth_tx_cli1_buffer_data_region_paddr;
+
+/* Data passing between VMM and Hypervisor */
+#include <uio/net.h>
+vmm_net_info_t *vmm_info_passing;
+
 /* Virtio Console */
 #define SERIAL_VIRT_TX_CH 3
 #define SERIAL_VIRT_RX_CH 4
@@ -108,6 +132,19 @@ char *serial_tx_data;
 
 static struct virtio_console_device virtio_console;
 
+void uio_net_to_vmm_ack(size_t vcpu_id, int irq, void *cookie) {}
+
+bool uio_net_from_vmm_tx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    microkit_notify(VIRT_NET_TX_CH);
+    return true;
+}
+bool uio_net_from_vmm_rx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    microkit_notify(VIRT_NET_RX_CH);
+    return true;
+}
+
 bool clk_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data) {
     uintptr_t phys_addr = addr + CLK_CNTL_PADDR_START;
     if (fault_is_read(fsr)) {
@@ -116,10 +153,10 @@ bool clk_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserCo
         uint64_t phys_data = *target_phys_vaddr;
         asm volatile("" : : : "memory");
 
-        uint32_t *target_void_vaddr = (uint32_t *)(clk_void + addr);
-        asm volatile("" : : : "memory");
-        uint64_t void_data = *target_void_vaddr;
-        asm volatile("" : : : "memory");
+        /* uint32_t *target_void_vaddr = (uint32_t *)(clk_void + addr); */
+        /* asm volatile("" : : : "memory"); */
+        /* uint64_t void_data = *target_void_vaddr; */
+        /* asm volatile("" : : : "memory"); */
 
         fault_emulate_write(regs, phys_addr, fsr, phys_data);
     } else {
@@ -246,6 +283,39 @@ void init(void) {
         return;
     }
 
+    /* Initialise UIO IRQ for TX and RX path */
+    if (!virq_register(GUEST_VCPU_ID, UIO_NET_TX_IRQ, uio_net_to_vmm_ack, NULL)) {
+        LOG_VMM_ERR("Failed to register TX interrupt\n");
+        return;
+    }
+    if (!virq_register(GUEST_VCPU_ID, UIO_NET_RX_IRQ, uio_net_to_vmm_ack, NULL)) {
+        LOG_VMM_ERR("Failed to register RX interrupt\n");
+        return;
+    }
+
+    /* Tell the VMM what the physaddr of the TX and RX data buffers are, so it can deduct it from the offset given by virtualiser */
+    vmm_info_passing->rx_paddr = eth_rx_buffer_data_region_paddr;
+    vmm_info_passing->tx_paddrs[0] = eth_tx_cli0_buffer_data_region_paddr;
+    /* vmm_info_passing->tx_paddrs[1] = eth_tx_cli1_buffer_data_region_paddr; */
+
+    LOG_VMM("rx data physadd is 0x%p\n", vmm_info_passing->rx_paddr);
+    LOG_VMM("tx cli0 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[0]);
+    /* LOG_VMM("tx cli1 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[1]); */
+
+    /* Finally, register vmfault handlers for getting signals from the guest on tx and rx */
+    bool tx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_TX_FAULT_ADDR, PAGE_SIZE_4K,
+                                                                 &uio_net_from_vmm_tx_signal, NULL);
+    if (!tx_vmfault_reg_ok) {
+        LOG_VMM_ERR("Failed to register the VM fault handler for tx\n");
+        return;
+    }
+    bool rx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_RX_FAULT_ADDR, PAGE_SIZE_4K,
+                                                                 &uio_net_from_vmm_rx_signal, NULL);
+    if (!rx_vmfault_reg_ok) {
+        LOG_VMM_ERR("Failed to register the VM fault handler for rx\n");
+        return;
+    }
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     LOG_VMM("VMM is ready.\n");
@@ -254,6 +324,7 @@ void init(void) {
 void notified(microkit_channel ch) {
     bool handled = false;
 
+    LOG_VMM("Notified on channel: %d\n", ch);
     handled = virq_handle_passthrough(ch);
     switch (ch) {
     case SERIAL_VIRT_RX_CH: {
@@ -263,6 +334,16 @@ void notified(microkit_channel ch) {
         handled = true;
         break;
     }
+    case VIRT_NET_TX_CH:
+        if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
+            LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
+        }
+        break;
+    case VIRT_NET_RX_CH:
+        if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
+            LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
+        }
+        break;
     default:
         break;
     }
