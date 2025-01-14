@@ -80,8 +80,6 @@ LWIP_OBJS := $(LWIPFILES:.c=.o) lwip.o utilization_socket.o \
 OBJS := $(LWIP_OBJS)
 DEPS := $(filter %.d,$(OBJS:.o=.d))
 
-all: loader.img
-
 ${LWIP_OBJS}: ${CHECK_FLAGS_BOARD_MD5}
 lwip.elf: $(LWIP_OBJS) libsddf_util.a
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -103,8 +101,6 @@ $(IMAGES): libvmm.a libsddf_util_debug.a
 
 NET_DRIVER_VM_USERLEVEL := uio_net_driver
 NET_DRIVER_VM_USERLEVEL_INIT := net_driver_init
-
-
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)

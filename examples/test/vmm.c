@@ -335,11 +335,13 @@ void notified(microkit_channel ch) {
         break;
     }
     case VIRT_NET_TX_CH:
+        LOG_VMM("Inject UIO_NET_TX_IRQ\n");
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
             LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
         }
         break;
     case VIRT_NET_RX_CH:
+        LOG_VMM("Inject UIO_NET_RX_IRQ\n");
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
             LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
         }

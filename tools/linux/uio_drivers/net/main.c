@@ -389,6 +389,7 @@ int main(int argc, char **argv)
             LOG_NET_WARN("epoll_wait() returned MAX_EVENTS, there maybe dropped events!\n");
         }
 
+        LOG_NET("n_events: %d\n", n_events);
         for (int i = 0; i < n_events; i++) {
             if (!(events[i].events & EPOLLIN)) {
                 LOG_NET_WARN("got non EPOLLIN event on fd %d\n", events[i].data.fd);
@@ -396,13 +397,16 @@ int main(int argc, char **argv)
             }
 
             if (events[i].data.fd == sock_fd) {
+                LOG_NET("Frame from the network device\n");
                 // Oh hey got a frame from the network device!
                 rx_process();
             } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
+                LOG_NET("notification from tTX\n");
                 // Got virt TX ntfn from VMM, send it thru the raw socket
                 tx_process();
                 uio_interrupt_ack(uio_sddf_net_tx_incoming_fd);
             } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
+                LOG_NET("notification from RX\n");
                 // Got RX virt ntfn from VMM, the free RX queue got filled!
                 rx_process();
                 uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);

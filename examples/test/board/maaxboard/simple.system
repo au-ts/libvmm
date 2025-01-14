@@ -325,6 +325,11 @@
     </channel>
 
     <channel>
+        <end pd="serial_virt_tx" id="3"/>
+        <end pd="client1" id="0"/>
+    </channel>
+
+    <channel>
         <end pd="eth" id="2" />
         <end pd="net_virt_rx" id="0" />
     </channel>
