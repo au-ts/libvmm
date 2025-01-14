@@ -91,9 +91,6 @@ uintptr_t clk_void;
 #define UIO_NET_TX_IRQ 71
 #define UIO_NET_RX_IRQ 72
 
-#define GUEST_TO_VMM_TX_FAULT_ADDR 0x51000000
-#define GUEST_TO_VMM_RX_FAULT_ADDR 0x52000000
-
 /* sDDF Networking queues  */
 #include <ethernet_config.h>
 /* TX RX "DMA" Data regions */
@@ -103,6 +100,10 @@ uintptr_t eth_tx_cli1_buffer_data_region_paddr;
 
 /* Data passing between VMM and Hypervisor */
 #include <uio/net.h>
+
+/* Overwrite the fault addresses */
+#define GUEST_TO_VMM_TX_FAULT_ADDR 0x51000000
+#define GUEST_TO_VMM_RX_FAULT_ADDR 0x52000000
 vmm_net_info_t *vmm_info_passing;
 
 /* Virtio Console */
@@ -296,11 +297,11 @@ void init(void) {
     /* Tell the VMM what the physaddr of the TX and RX data buffers are, so it can deduct it from the offset given by virtualiser */
     vmm_info_passing->rx_paddr = eth_rx_buffer_data_region_paddr;
     vmm_info_passing->tx_paddrs[0] = eth_tx_cli0_buffer_data_region_paddr;
-    /* vmm_info_passing->tx_paddrs[1] = eth_tx_cli1_buffer_data_region_paddr; */
+    vmm_info_passing->tx_paddrs[1] = eth_tx_cli1_buffer_data_region_paddr;
 
     LOG_VMM("rx data physadd is 0x%p\n", vmm_info_passing->rx_paddr);
     LOG_VMM("tx cli0 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[0]);
-    /* LOG_VMM("tx cli1 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[1]); */
+    LOG_VMM("tx cli1 data physadd is 0x%p\n",  vmm_info_passing->tx_paddrs[1]);
 
     /* Finally, register vmfault handlers for getting signals from the guest on tx and rx */
     bool tx_vmfault_reg_ok = fault_register_vm_exception_handler(GUEST_TO_VMM_TX_FAULT_ADDR, PAGE_SIZE_4K,
@@ -324,7 +325,6 @@ void init(void) {
 void notified(microkit_channel ch) {
     bool handled = false;
 
-    LOG_VMM("Notified on channel: %d\n", ch);
     handled = virq_handle_passthrough(ch);
     switch (ch) {
     case SERIAL_VIRT_RX_CH: {

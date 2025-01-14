@@ -39,6 +39,7 @@ CFLAGS := \
 	  -I$(LIBVMM)/tools/linux/include \
 	  -I$(SDDF)/include \
 		-I$(EXAMPLE_DIR)/include \
+		-I${ETHERNET_CONFIG_INCLUDE} \
 	  -I$(SDDF)/$(LWIPDIR)/include \
 	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
 		-DBOARD_CLASS_imx \
