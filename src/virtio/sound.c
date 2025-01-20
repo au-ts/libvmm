@@ -681,7 +681,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
 {
     struct virtio_device *dev = &sound_dev->virtio_device;
 
-    dev->data.DeviceID = DEVICE_ID_VIRTIO_SOUND;
+    dev->data.DeviceID = VIRTIO_DEVICE_ID_SOUND;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = sound_dev->vqs;
@@ -700,7 +700,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     queue_init(&sound_dev->free_buffers,
                sizeof(uintptr_t),
                sound_dev->free_buffers_data,
-               SOUND_PCM_QUEUE_SIZE);
+               SOUND_PCM_QUEUE_CAPACITY);
 
     sound_dev->shared_state = shared_state;
     sound_dev->cmd_req = queues->cmd_req;
@@ -710,7 +710,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
     sound_dev->data_region = (void *)data_region;
     sound_dev->server_ch = server_ch;
 
-    for (uintptr_t i = 0; i < sound_dev->pcm_req.size; i++) {
+    for (uintptr_t i = 0; i < sound_dev->pcm_req.capacity; i++) {
         uintptr_t offset = i * SOUND_PCM_BUFFER_SIZE;
         queue_enqueue(&sound_dev->free_buffers, &offset);
     }

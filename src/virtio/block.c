@@ -229,7 +229,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                       (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
             /* Converting virtio sector number to sddf block number, we are rounding down */
-            uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
+            uint64_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
             /* Converting bytes to the number of blocks, we are rounding up */
             uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
@@ -269,7 +269,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                       (uint16_t)virtq->desc[curr_desc_head].flags, virtq->desc[curr_desc_head].len);
 
             /* Converting virtio sector number to sddf block number, we are rounding down */
-            uint32_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
+            uint64_t sddf_block_number = (virtio_req->sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
             /* Converting bytes to the number of blocks, we are rounding up */
             uint16_t sddf_count = (virtq->desc[curr_desc_head].len + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
 
@@ -525,7 +525,7 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
 
-    dev->data.DeviceID = DEVICE_ID_VIRTIO_BLOCK;
+    dev->data.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;

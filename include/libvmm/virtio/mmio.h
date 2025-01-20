@@ -42,14 +42,11 @@
 #define REG_VIRTIO_MMIO_CONFIG_GENERATION   0x0fc
 #define REG_VIRTIO_MMIO_CONFIG              0x100
 
-// section 5
-// The following device IDs are used to identify different types of virtio devices,
-// only devices that sel4cp VMM currently supports are listed
-#define DEVICE_ID_VIRTIO_NET          1
-#define DEVICE_ID_VIRTIO_BLOCK        2
-#define DEVICE_ID_VIRTIO_CONSOLE      3
-#define DEVICE_ID_VIRTIO_VSOCK        19
-#define DEVICE_ID_VIRTIO_SOUND        25
+/* virtIO devices we have support for */
+#define VIRTIO_DEVICE_ID_NET          1
+#define VIRTIO_DEVICE_ID_BLOCK        2
+#define VIRTIO_DEVICE_ID_CONSOLE      3
+#define VIRTIO_DEVICE_ID_SOUND        25
 
 /* The maximum size (number of elements) of a virtqueue. It is set
  * to 128 because I copied it from the camkes virtio device. If you find

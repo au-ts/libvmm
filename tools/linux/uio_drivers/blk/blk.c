@@ -134,7 +134,7 @@ void driver_notified()
 {
     blk_req_code_t req_code;
     uintptr_t req_offset;
-    uint32_t req_block_number;
+    uint64_t req_block_number;
     uint16_t req_count;
     uint32_t req_id;
 

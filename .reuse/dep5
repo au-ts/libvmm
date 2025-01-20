@@ -26,6 +26,8 @@ Files:
     */linux.dts
     examples/*/images/linux
     examples/*/board/*/linux
+    examples/virtio/client_vm/linux
+    examples/virtio/client_vm/rootfs.cpio.gz
     examples/framebuffer/board/odroidc4/linux_vu7c.dts
     examples/framebuffer/board/odroidc4/linux_with_serial.dts
 Copyright: Linux
