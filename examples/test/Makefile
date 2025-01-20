@@ -39,6 +39,8 @@ export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF=$(abspath ../../dep/sddf)
 export LIBVMM=$(abspath ../../)
 
+export ECHO_INCLUDE:=$(SDDF)/examples/echo_server/include
+
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
 

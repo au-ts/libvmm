@@ -169,7 +169,8 @@ char *map_uio(uint64_t length, int uiofd)
 void uio_interrupt_ack(int uiofd)
 {
     uint32_t enable = 1;
-    if (write(uiofd, &enable, sizeof(uint32_t)) != sizeof(uint32_t)) {
+    int success = write(uiofd, &enable, sizeof(uint32_t));
+    if (success != sizeof(uint32_t)) {
         perror("uio_interrupt_ack(): write()");
         LOG_NET_ERR("Failed to write enable/ack interrupts on uio fd %d\n", uiofd);
         exit(EXIT_FAILURE);
@@ -222,6 +223,7 @@ void tx_process(void)
         sa.sll_halen    = ETH_ALEN;
 
         int sent_bytes = sendto(sock_fd, tx_data, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
+        LOG_NET("Sent %d bytes to %s\n", sent_bytes, inet_ntoa(sa.sin_addr));
         if (sent_bytes != tx_buffer.len) {
             perror("tx_process(): sendto()");
             LOG_NET_ERR("TX sent %d != expected %d. qutting.\n", sent_bytes, tx_buffer.len);
@@ -236,7 +238,7 @@ void tx_process(void)
 
     // net_request_signal_active(&tx_queue);
     if (processed_tx && net_require_signal_free(&tx_queue)) {
-        *sddf_net_tx_outgoing_irq_fault_vaddr = 0;
+        *sddf_net_tx_outgoing_irq_fault_vaddr = 123;
     }
 }
 
@@ -358,10 +360,6 @@ int main(int argc, char **argv)
     LOG_NET("*** Setting up UIO data passing between VMM and us\n");
     uio_sddf_vmm_net_info_passing_fd = open_uio(UIO_PATH_SDDF_NET_SHARED_DATA);
     vmm_info_passing = (vmm_net_info_t *) map_uio(PAGE_SIZE_4K, uio_sddf_vmm_net_info_passing_fd);
-    LOG_NET("*** RX paddr: %p\n", vmm_info_passing->rx_paddr);
-    for (int i = 0; i < NUM_NETWORK_CLIENTS; i++) {
-        LOG_NET("*** TX cli%d paddr: %p\n", i, vmm_info_passing->tx_paddrs[i]);
-    }
 
     LOG_NET("*** Setting up UIO TX and RX interrupts to VMM \"outgoing\"\n");
     uio_sddf_net_tx_outgoing_fd = open_uio(UIO_PATH_SDDF_NET_TX_FAULT_TO_VMM);
@@ -389,7 +387,6 @@ int main(int argc, char **argv)
             LOG_NET_WARN("epoll_wait() returned MAX_EVENTS, there maybe dropped events!\n");
         }
 
-        LOG_NET("n_events: %d\n", n_events);
         for (int i = 0; i < n_events; i++) {
             if (!(events[i].events & EPOLLIN)) {
                 LOG_NET_WARN("got non EPOLLIN event on fd %d\n", events[i].data.fd);
@@ -397,16 +394,14 @@ int main(int argc, char **argv)
             }
 
             if (events[i].data.fd == sock_fd) {
-                LOG_NET("Frame from the network device\n");
                 // Oh hey got a frame from the network device!
                 rx_process();
             } else if (events[i].data.fd == uio_sddf_net_tx_incoming_fd) {
-                LOG_NET("notification from tTX\n");
                 // Got virt TX ntfn from VMM, send it thru the raw socket
                 tx_process();
                 uio_interrupt_ack(uio_sddf_net_tx_incoming_fd);
+                /* LOG_NET("ack TX\n"); */
             } else if (events[i].data.fd == uio_sddf_net_rx_incoming_fd) {
-                LOG_NET("notification from RX\n");
                 // Got RX virt ntfn from VMM, the free RX queue got filled!
                 rx_process();
                 uio_interrupt_ack(uio_sddf_net_rx_incoming_fd);

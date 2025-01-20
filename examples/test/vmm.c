@@ -140,6 +140,7 @@ bool uio_net_from_vmm_tx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
     microkit_notify(VIRT_NET_TX_CH);
     return true;
 }
+
 bool uio_net_from_vmm_rx_signal(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data)
 {
     microkit_notify(VIRT_NET_RX_CH);
@@ -319,13 +320,11 @@ void init(void) {
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
-    LOG_VMM("VMM is ready.\n");
 }
 
 void notified(microkit_channel ch) {
     bool handled = false;
 
-    handled = virq_handle_passthrough(ch);
     switch (ch) {
     case SERIAL_VIRT_RX_CH: {
         /* We have received an event from the serial virtualiser, so we
@@ -335,18 +334,19 @@ void notified(microkit_channel ch) {
         break;
     }
     case VIRT_NET_TX_CH:
-        LOG_VMM("Inject UIO_NET_TX_IRQ\n");
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
             LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
         }
+        handled = true;
         break;
     case VIRT_NET_RX_CH:
-        LOG_VMM("Inject UIO_NET_RX_IRQ\n");
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
             LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
         }
+        handled = true;
         break;
     default:
+        handled = virq_handle_passthrough(ch);
         break;
     }
 
