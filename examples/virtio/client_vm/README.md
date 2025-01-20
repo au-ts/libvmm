@@ -1,9 +1,9 @@
 <!--
-     Copyright 2024, UNSW
+     Copyright 2025, UNSW
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# Odroid-C4 images
+# Linux kernel image
 
 ## Linux kernel
 
@@ -11,17 +11,18 @@
 * Image name: `linux`
 * Config name: `linux_config`
 * Git remote: https://github.com/torvalds/linux.git
-* Tag: v5.18 (commit hash: `4b0986a3613c92f4ec1bdc7f60ec66fea135991f`)
+* Tag: v6.13 (commit hash: `ffd294d346d185b70e28b1a28abe367bbfe53c04`)
 * Toolchain: `aarch64-none-elf`
-    * Version: GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16)) 10.2.1 20201103
+    * Version: (Arm GNU Toolchain 12.2.Rel1 (Build arm-12.24)) 12.2.1 20221205
 
 You can also get the Linux config used after booting by running the following
-command in userspace: `zcat /proc/config.gz`.
+command in userspace: `zcat /proc/config.gz`. This is a kernel minimally configured with a
+IPv4 network stack + DNS + DHCP and virtIO device drivers.
 
 ### Instructions for reproducing
 ```
-git clone --depth 1 --branch v5.18 https://github.com/torvalds/linux.git
-cp linux_config linux/.config
+git clone --depth 1 --branch v6.13 https://github.com/torvalds/linux.git
+cp config linux/.config
 make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all -j$(nproc)
 ```
 

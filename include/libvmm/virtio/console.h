@@ -92,8 +92,8 @@ struct virtio_console_control {
 struct virtio_console_device {
     struct virtio_device virtio_device;
     struct virtio_queue_handler vqs[VIRTIO_CONSOLE_NUM_VIRTQ];
-    serial_queue_handle_t rxq;
-    serial_queue_handle_t txq;
+    serial_queue_handle_t *rxq;
+    serial_queue_handle_t *txq;
     int tx_ch;
 };
 
