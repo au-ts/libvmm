@@ -223,7 +223,10 @@ void tx_process(void)
         sa.sll_halen    = ETH_ALEN;
 
         int sent_bytes = sendto(sock_fd, tx_data, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
-        LOG_NET("Sent %d bytes to %s\n", sent_bytes, inet_ntoa(sa.sin_addr));
+        LOG_NET("sent %d bytes to %02x %02x %02x %02x %02x %02x %02x %02x\n", sent_bytes,
+                sa.sll_addr[0], sa.sll_addr[1], sa.sll_addr[2], sa.sll_addr[3],
+                sa.sll_addr[4], sa.sll_addr[5], sa.sll_addr[6], sa.sll_addr[7]);
+
         if (sent_bytes != tx_buffer.len) {
             perror("tx_process(): sendto()");
             LOG_NET_ERR("TX sent %d != expected %d. qutting.\n", sent_bytes, tx_buffer.len);

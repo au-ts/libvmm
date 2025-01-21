@@ -171,15 +171,16 @@ bool clk_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserCo
         asm volatile("" : : : "memory");
 
         uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
-        asm volatile("" : : : "memory");
-        uint64_t phys_data = *target_phys_vaddr;
-        asm volatile("" : : : "memory");
 
-        if (phys_data != data) {
-            /* printf("CLK|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask); */
-            /* printf("CLK|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+        // 0x4490, 0xaf00 are for UART1
+        if (addr == 0x4490 || addr == 0xaf00) {
+            asm volatile("" : : : "memory");
+            uint64_t phys_data = *target_phys_vaddr;
+            asm volatile("" : : : "memory");
+            printf("CLK|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask);
+            printf("CLK|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask);
         } else {
-            /* printf("CLK|MATCHED WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
+            *target_phys_vaddr = data;
         }
     }
 
@@ -210,16 +211,7 @@ bool clk_analog_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
         asm volatile("" : : : "memory");
 
         uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
-        asm volatile("" : : : "memory");
-        uint64_t phys_data = *target_phys_vaddr;
-        asm volatile("" : : : "memory");
-
-        if (phys_data != data) {
-            /* printf("CLK_ANALOG|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask); */
-            /* printf("CLK_ANALOG|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
-        } else {
-            /* printf("CLK_ANALOG|MATCHED WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask); */
-        }
+        *target_phys_vaddr = data;
     }
 
     return true;

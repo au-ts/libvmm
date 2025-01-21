@@ -126,7 +126,7 @@
                     This would most likely involve a combination of disabling the devices in the Device Tree
                     provided to Linux as well as changing the kernel configuration.
                 -->
-                <!-- <map mr="syscon" vaddr="0x30360000" perms="rw" cached="false" /> -->
+                <!-- <map mr="clk_ccm_analog" vaddr="0x30360000" perms="rw" cached="false" /> -->
                 <!-- <map mr="clk_ccm" vaddr="0x30380000" perms="rw" cached="false" /> -->
                 <map mr="gpc" vaddr="0x303a0000" perms="rw" cached="false" />
                 <!-- <map mr="timer" vaddr="0x306a0000" perms="rw" cached="false" /> -->
