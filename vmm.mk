@@ -74,7 +74,7 @@ libvmm/arch/aarch64/vgic:
 	mkdir -p libvmm/virtio
 
 libvmm.a: ${OBJECTS}
-	ar rv $@ $^
+	${AR} rv $@ $^
 
 ${OBJECTS}: ${SDDF}/include
 ${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic
