@@ -17,7 +17,5 @@ echo "ethtool -K $NET_INF gso off" && \
 ethtool -K "$NET_INF" gso off && \
 echo "ethtool -K $NET_INF gro off" && \
 ethtool -K "$NET_INF" gro off && \
-echo "ethtool -K $NET_INF tx off rx off" && \
-ethtool -K "$NET_INF" tx off rx off && \
 
 chmod +x /root/uio_net_driver && /root/uio_net_driver "$NET_INF"

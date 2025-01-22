@@ -38,6 +38,7 @@ CFLAGS := \
 	  -I$(LIBVMM)/include \
 	  -I$(LIBVMM)/tools/linux/include \
 	  -I$(SDDF)/include \
+		-I$(SDDF)/drivers/network/imx \
 		-I$(EXAMPLE_DIR)/include \
 		-I${ECHO_INCLUDE}/lwip \
 		-I${ETHERNET_CONFIG_INCLUDE} \

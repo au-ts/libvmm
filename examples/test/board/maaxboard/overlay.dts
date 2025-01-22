@@ -127,19 +127,19 @@
 
         bus@30000000 {
             gpio@30210000 {
-                status = "disabled";
+                status = "okay";
             };
 
             gpio@30220000 {
-                status = "disabled";
+                status = "okay";
             };
 
             gpio@30230000 {
-                status = "disabled";
+                status = "okay";
             };
 
             gpio@30240000 {
-                status = "disabled";
+                status = "okay";
             };
 
             watchdog@30280000 {

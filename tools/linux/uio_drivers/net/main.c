@@ -223,9 +223,6 @@ void tx_process(void)
         sa.sll_halen    = ETH_ALEN;
 
         int sent_bytes = sendto(sock_fd, tx_data, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
-        LOG_NET("sent %d bytes to %02x %02x %02x %02x %02x %02x %02x %02x\n", sent_bytes,
-                sa.sll_addr[0], sa.sll_addr[1], sa.sll_addr[2], sa.sll_addr[3],
-                sa.sll_addr[4], sa.sll_addr[5], sa.sll_addr[6], sa.sll_addr[7]);
 
         if (sent_bytes != tx_buffer.len) {
             perror("tx_process(): sendto()");
@@ -390,6 +387,7 @@ int main(int argc, char **argv)
             LOG_NET_WARN("epoll_wait() returned MAX_EVENTS, there maybe dropped events!\n");
         }
 
+        /* LOG_NET("n_events: %d\n", n_events); */
         for (int i = 0; i < n_events; i++) {
             if (!(events[i].events & EPOLLIN)) {
                 LOG_NET_WARN("got non EPOLLIN event on fd %d\n", events[i].data.fd);

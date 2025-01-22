@@ -97,6 +97,8 @@
             <program_image path="vmm.elf" />
             <map mr="guest_ram" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
 
+            <map mr="eth0" vaddr="0x2_000_000" perms="rw" cached="false" setvar_vaddr="eth"/>
+
             <map mr="serial_tx_queue_ethernet_vmm" vaddr="0x4_000_000" perms="rw" cached="true" setvar_vaddr="serial_tx_queue" />
             <map mr="serial_tx_data_ethernet_vmm" vaddr="0x4_002_000" perms="rw" cached="true" setvar_vaddr="serial_tx_data" />
 

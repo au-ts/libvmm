@@ -16,6 +16,8 @@
 #include <libvmm/virtio/virtio.h>
 #include <sddf/serial/queue.h>
 #include <serial_config.h>
+
+#include <ethernet.h>
 // @ivanv: ideally we would have none of these hardcoded values
 // initrd, ram size come from the DTB
 // We can probably add a node for the DTB addr and then use that.
@@ -31,6 +33,8 @@
 #define GUEST_RAM_SIZE 0x10000000
 
 #define PAGE_SIZE_4K 0x1000
+
+volatile struct enet_regs *eth;
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x4f000000
@@ -180,7 +184,7 @@ bool clk_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserCo
             printf("CLK|NATIVE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, phys_data, mask);
             printf("CLK|WRITE: vaddr(0x%llx) data(0x%lx) mask(0x%llx)\n", phys_addr, data, mask);
         } else {
-            *target_phys_vaddr = data;
+            /* *target_phys_vaddr = data; */
         }
     }
 
@@ -210,8 +214,8 @@ bool clk_analog_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
         *target_void_vaddr = (uint32_t)(data & mask);
         asm volatile("" : : : "memory");
 
-        uint32_t *target_phys_vaddr = (uint32_t *)phys_addr;
-        *target_phys_vaddr = data;
+        /* uint32_t *target_phys_vaddr = (uint32_t *)phys_addr; */
+        /* *target_phys_vaddr = data; */
     }
 
     return true;
@@ -220,6 +224,7 @@ bool clk_analog_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
+
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -329,12 +334,14 @@ void notified(microkit_channel ch) {
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_TX_IRQ)) {
             LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
         }
+        /* LOG_VMM("TACC: 0x%x\n", eth->tacc); */
         handled = true;
         break;
     case VIRT_NET_RX_CH:
         if (!virq_inject(GUEST_VCPU_ID, UIO_NET_RX_IRQ)) {
             LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
         }
+
         handled = true;
         break;
     default:
