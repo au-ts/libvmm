@@ -148,7 +148,7 @@ typedef struct reqbk {
     uint16_t virtio_desc_head;
     uintptr_t sddf_data;
     uint16_t sddf_count;
-    uint32_t sddf_block_number;
+    uint64_t sddf_block_number;
     uintptr_t virtio_data;
     uint16_t virtio_data_size;
     /* Only used for unaligned write from virtIO, if not true, this request is the

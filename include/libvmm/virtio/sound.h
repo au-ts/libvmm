@@ -309,7 +309,7 @@ struct virtio_snd_device {
 
     // Queue of uintptr_t buffer offsets
     queue_t free_buffers;
-    uintptr_t free_buffers_data[SOUND_PCM_QUEUE_SIZE];
+    uintptr_t free_buffers_data[SOUND_PCM_QUEUE_CAPACITY];
     // sDDF state
     sound_shared_state_t *shared_state;
     sound_cmd_queue_handle_t cmd_req;

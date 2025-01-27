@@ -383,7 +383,7 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
-    dev->data.DeviceID = DEVICE_ID_VIRTIO_NET;
+    dev->data.DeviceID = VIRTIO_DEVICE_ID_NET;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;

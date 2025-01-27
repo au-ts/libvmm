@@ -248,7 +248,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
                               int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
-    dev->data.DeviceID = DEVICE_ID_VIRTIO_CONSOLE;
+    dev->data.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
     dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = console->vqs;
