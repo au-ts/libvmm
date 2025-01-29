@@ -20,9 +20,6 @@
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
-__attribute__((__section__(".device_resources"))) device_resources_t device_resources;
-
-#define GUEST_RAM_SIZE 0x6000000
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_RAM_VADDR 0x40000000
@@ -49,20 +46,14 @@ extern char _guest_initrd_image_end[];
 uintptr_t guest_ram_vaddr;
 
 /* Virtio Console */
-#define SERIAL_VIRT_TX_CH 1
-#define SERIAL_VIRT_RX_CH 2
-
 #define VIRTIO_CONSOLE_IRQ (74)
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
-serial_queue_handle_t rx_queue_handle;
-serial_queue_handle_t tx_queue_handle;
+serial_queue_handle_t serial_rx_queue_handle;
+serial_queue_handle_t serial_tx_queue_handle;
 
 static struct virtio_console_device virtio_console;
-
-/* Virtio Block */
-#define BLK_CH 3
 
 #define BLK_DATA_SIZE 0x200000
 
@@ -76,6 +67,7 @@ static struct virtio_blk_device virtio_blk;
 
 void init(void)
 {
+    assert(serial_config_check_magic(&serial_config));
     assert(blk_config_check_magic(&blk_config));
 
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr, blk_config.virt.num_buffers);
@@ -113,20 +105,15 @@ void init(void)
         return;
     }
 
-    /* Initialise our sDDF ring buffers for the serial device */
-    assert(serial_config_check_magic(&serial_config));
-
-    serial_queue_init(&rx_queue_handle, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
-    serial_queue_init(&tx_queue_handle, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
-
-    serial_putchar_init(serial_config.tx.id, &tx_queue_handle);
+    serial_queue_init(&serial_rx_queue_handle, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
+    serial_queue_init(&serial_tx_queue_handle, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
                                        VIRTIO_CONSOLE_BASE,
                                        VIRTIO_CONSOLE_SIZE,
                                        VIRTIO_CONSOLE_IRQ,
-                                       &serial_config.rx.queue.vaddr, &serial_config.tx.queue.vaddr,
+                                       &serial_rx_queue_handle, &serial_tx_queue_handle,
                                        serial_config.tx.id);
 
     /* Initialise virtIO block device */
