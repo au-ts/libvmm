@@ -122,7 +122,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     /* Transmit all available descriptors possible */
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
-    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(&console->txq, console->txq.queue->head)) {
+    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(console->txq, console->txq->queue->head)) {
         uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
         /* Traverse chained descriptors */
@@ -133,23 +133,23 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 
             uint32_t bytes_remain = desc.len;
             /* Copy all contiguous data */
-            while (bytes_remain > 0 && !serial_queue_full(&console->txq, console->txq.queue->head)) {
-                uint32_t free = serial_queue_contiguous_free(&console->txq);
+            while (bytes_remain > 0 && !serial_queue_full(console->txq, console->txq->queue->head)) {
+                uint32_t free = serial_queue_contiguous_free(console->txq);
                 uint32_t to_transfer = (bytes_remain < free) ? bytes_remain : free;
                 if (to_transfer) {
                     transferred = true;
                 }
 
-                memcpy(console->txq.data_region + (console->txq.queue->tail % console->txq.capacity),
+                memcpy(console->txq->data_region + (console->txq->queue->tail % console->txq->capacity),
                        (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
 
-                serial_update_visible_tail(&console->txq, console->txq.queue->tail + to_transfer);
+                serial_update_visible_tail(console->txq, console->txq->queue->tail + to_transfer);
                 bytes_remain -= to_transfer;
             }
 
             desc_idx = desc.next;
 
-        } while (desc.flags & VIRTQ_DESC_F_NEXT && !serial_queue_full(&console->txq, console->txq.queue->head));
+        } while (desc.flags & VIRTQ_DESC_F_NEXT && !serial_queue_full(console->txq, console->txq->queue->head));
 
         struct virtq_used_elem used_elem = {vq->virtq.avail->ring[vq->last_idx % vq->virtq.num], 0};
         vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
@@ -165,8 +165,8 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
 
-        if (serial_require_producer_signal(&console->txq)) {
-            serial_cancel_producer_signal(&console->txq);
+        if (serial_require_producer_signal(console->txq)) {
+            serial_cancel_producer_signal(console->txq);
             microkit_notify(console->tx_ch);
         }
 
@@ -188,7 +188,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     while (reprocess) {
         struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
-        while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
+        while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
             transferred = true;
 
             uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
@@ -196,7 +196,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
             LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
             uint32_t bytes_written = 0;
             char c;
-            while (bytes_written < desc.len && !serial_dequeue(&console->rxq, &console->rxq.queue->head, &c)) {
+            while (bytes_written < desc.len && !serial_dequeue(console->rxq, &console->rxq->queue->head, &c)) {
                 *(char *)(desc.addr + bytes_written) = c;
                 bytes_written++;
             }
@@ -208,11 +208,11 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
             vq->last_idx++;
         }
 
-        serial_request_producer_signal(&console->rxq);
+        serial_request_producer_signal(console->rxq);
         reprocess = false;
 
-        if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(&console->rxq, console->rxq.queue->head)) {
-            serial_cancel_producer_signal(&console->rxq);
+        if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
+            serial_cancel_producer_signal(console->rxq);
             reprocess = true;
         }
     }
@@ -256,8 +256,8 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
     dev->virq = virq;
     dev->device_data = console;
 
-    console->rxq = *rxq;
-    console->txq = *txq;
+    console->rxq = rxq;
+    console->txq = txq;
     console->tx_ch = tx_ch;
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
