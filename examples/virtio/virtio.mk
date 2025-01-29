@@ -11,14 +11,19 @@ SDDF_INCLUDE := $(SDDF)/include/sddf
 UTIL := $(SDDF)/util
 
 UART_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
+BLK_DRIVER := $(SDDF)/drivers/blk/$(BLK_DRIVER)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_DIR := $(VIRTIO_EXAMPLE)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/virtio.system
+SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+DTS_FILE := $(SDDF)/dts/$(MICROKIT_BOARD).dts
+DTB_FILE := $(MICROKIT_BOARD).dtb
+CLIENT_DTB := client_vm/vm.dtb
+METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 CLIENT_VM_USERLEVEL :=
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
@@ -54,11 +59,12 @@ CFLAGS_USERLEVEL := \
 		-target aarch64-linux-gnu
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
 include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
+include ${BLK_DRIVER}/blk_driver.mk
 include $(BLK_COMPONENTS)/blk_components.mk
 include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
@@ -66,7 +72,7 @@ include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
-	$(SERIAL_IMAGES) $(BLK_IMAGES) uart_driver.elf
+	blk_driver.elf blk_virt.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -81,7 +87,22 @@ all: loader.img
 
 -include vmm.d
 
-$(IMAGES): libsddf_util_debug.a libvmm.a
+$(IMAGES): libsddf_util.a libvmm.a
+
+$(DTB_FILE): $(DTS_FILE)
+	$(DTC) -q -I dts -O dtb $< > $@
+
+$(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
+	python $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB_FILE) --client_dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE)
+	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
+	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
+	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM-1.data client_vmm.elf
+	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data uart_driver.elf
+	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data uart_driver.elf
+	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
+	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM-1.data client_vmm.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
@@ -141,6 +162,7 @@ qemu: $(IMAGE_FILE) blk_storage
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
+      -global virtio-mmio.force-legacy=false \
 			-drive file=blk_storage,format=raw,if=none,id=drive0 \
 			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1
 

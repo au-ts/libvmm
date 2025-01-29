@@ -14,9 +14,11 @@ export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 
 ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export UART_DRIVER := meson
+	export BLK_DRIVER := meson
 	export CPU := cortex-a55
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
+	export BLK_DRIVER := virtio
 	export CPU := cortex-a53
 	QEMU := qemu-system-aarch64
 
@@ -31,6 +33,7 @@ export BUILD_DIR:=$(abspath $(BUILD_DIR))
 export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 export VIRTIO_EXAMPLE:=$(abspath .)
 
+export OBJCOPY := llvm-objcopy
 export TARGET := aarch64-none-elf
 export CC := clang
 export CC_USERLEVEL := zig cc
