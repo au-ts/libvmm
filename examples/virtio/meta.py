@@ -40,11 +40,11 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert client1.connect()
 
     # Client 2
-    vmm_client2 = ProtectionDomain("CLIENT_VMM-2", "client_vmm.elf", priority=100)
-    vm_client2 = VirtualMachine("client_linux-2", [VirtualMachine.Vcpu(id=0)])
-    client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
-    sdf.add_pd(vmm_client2)
-    assert client2.connect()
+    # vmm_client2 = ProtectionDomain("CLIENT_VMM-2", "client_vmm.elf", priority=100)
+    # vm_client2 = VirtualMachine("client_linux-2", [VirtualMachine.Vcpu(id=0)])
+    # client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
+    # sdf.add_pd(vmm_client2)
+    # assert client2.connect()
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "uart_driver.elf", priority=200)
@@ -58,7 +58,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
                                 serial_virt_tx, virt_rx=serial_virt_rx)
     serial_system.add_client(vmm_client1)
-    serial_system.add_client(vmm_client2)
+    # serial_system.add_client(vmm_client2)
 
     pds = [
         serial_driver,
@@ -67,9 +67,6 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     ]
     for pd in pds:
         sdf.add_pd(pd)
-
-    assert serial_system.connect()
-    assert serial_system.serialise_config(output_dir)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -80,7 +77,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
     blk_system.add_client(vmm_client1, partition=0)
-    blk_system.add_client(vmm_client2, partition=1)
+    # blk_system.add_client(vmm_client2, partition=1)
     pds = [
         blk_driver,
         blk_virt
@@ -88,6 +85,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
+    assert serial_system.connect()
+    assert serial_system.serialise_config(output_dir)
     assert blk_system.connect()
     assert blk_system.serialise_config(output_dir)
 
