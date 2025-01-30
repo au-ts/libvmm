@@ -3,8 +3,12 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+#include <stdbool.h>
 #include <stdint.h>
 #include <microkit.h>
+
+#define VMM_MAGIC_LEN 3
+static char VMM_MAGIC[VMM_MAGIC_LEN] = { 'v', 'm', 'm' };
 
 #define VMM_MAX_IRQS 32
 #define VMM_MAX_VCPUS 32
@@ -18,7 +22,7 @@ typedef struct vmm_config_irq {
 typedef struct vmm_config_virtio_mmio_device {
     uint8_t type;
     uint64_t base;
-    uint16_t size;
+    uint32_t size;
     uint32_t irq;
 } vmm_config_virtio_mmio_device_t;
 
@@ -27,6 +31,7 @@ typedef struct vmm_config_vcpu {
 } vmm_config_vcpu_t;
 
 typedef struct vmm_config {
+    char magic[VMM_MAGIC_LEN];
     uint64_t ram;
     uint64_t ram_size;
     uint64_t dtb;
@@ -47,4 +52,16 @@ int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id) {
     }
 
     return -1;
+}
+
+static bool vmm_config_check_magic(void *config)
+{
+    char *magic = (char *)config;
+    for (int i = 0; i < VMM_MAGIC_LEN; i++) {
+        if (magic[i] != VMM_MAGIC[i]) {
+            return false;
+        }
+    }
+
+    return true;
 }

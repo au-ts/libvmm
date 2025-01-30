@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
+#include <libvmm/config.h>
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
@@ -20,18 +21,7 @@
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
-
-#if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_RAM_VADDR 0x40000000
-#define GUEST_DTB_VADDR 0x47f00000
-#define GUEST_INIT_RAM_DISK_VADDR 0x47000000
-#elif defined(BOARD_odroidc4)
-#define GUEST_RAM_VADDR 0x20000000
-#define GUEST_DTB_VADDR 0x25f10000
-#define GUEST_INIT_RAM_DISK_VADDR 0x24000000
-#else
-#error Need to define guest kernel image address and DTB address
-#endif
+__attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -69,6 +59,7 @@ void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
     assert(blk_config_check_magic(&blk_config));
+    assert(vmm_config_check_magic(&vmm_config));
 
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr, blk_config.virt.num_buffers);
     /* Want to print out configuration information, so wait until the config is ready. */
@@ -83,14 +74,14 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_VADDR,
+    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
                                              (uintptr_t) _guest_kernel_image,
                                              kernel_size,
                                              (uintptr_t) _guest_dtb_image,
-                                             GUEST_DTB_VADDR,
+                                             vmm_config.dtb,
                                              dtb_size,
                                              (uintptr_t) _guest_initrd_image,
-                                             GUEST_INIT_RAM_DISK_VADDR,
+                                             vmm_config.initrd,
                                              initrd_size
                                             );
     if (!kernel_pc) {
@@ -127,7 +118,7 @@ void init(void)
     assert(success);
 
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
 }
 

@@ -38,6 +38,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
     assert client1.connect()
+    assert client1.serialise_config(output_dir)
 
     # Client 2
     # vmm_client2 = ProtectionDomain("CLIENT_VMM-2", "client_vmm.elf", priority=100)
