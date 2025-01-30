@@ -104,6 +104,7 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM-1.data client_vmm.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM-1.data client_vmm.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
