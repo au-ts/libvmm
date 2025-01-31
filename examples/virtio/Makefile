@@ -15,10 +15,12 @@ export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export UART_DRIVER := meson
 	export BLK_DRIVER := meson
+	export ETH_DRIVER := meson
 	export CPU := cortex-a55
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
 	export BLK_DRIVER := virtio
+	export ETH_DRIVER := virtio
 	export CPU := cortex-a53
 	QEMU := qemu-system-aarch64
 
