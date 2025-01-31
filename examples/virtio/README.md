@@ -130,6 +130,15 @@ virtIO drive initialising for both clients.
 [    5.325953] virtio_blk virtio1: [vda] 2040 512-byte logical blocks (1.04 MB/1020 KiB)
 ```
 
+When you reboot the example, the client VMs may display a warning indicating that the 
+FAT filesystem on the vda device was not cleanly unmounted, which could lead to potential
+data corruption:
+``` 
+[   12.292600] FAT-fs (vda): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
+```
+To prevent this, always shut down the system properly by running poweroff after use, 
+instead of forcefully terminating the VM.
+
 The system expects the storage device to contain an MBR partition table that contains
 two partitions. Each partition is allocated to a single client. Partitions must have a
 starting block number that is a multiple of sDDF block's transfer size of 4096 bytes
