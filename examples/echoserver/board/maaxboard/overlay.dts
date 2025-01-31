@@ -1,0 +1,111 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    memory@40000000 {
+        device_type = "memory";
+        reg = <0x00 0x70000000 0x00 0x10000000>;
+    };
+
+    virtio-console@0130000 {
+        compatible = "virtio,mmio";
+        reg = <0x00 0x130000 0x00 0x200>;
+        interrupts = <0x00 42 0x04>;
+    };
+
+	virtio-net@0160000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x160000 0x00 0x200>;
+		interrupts = <0x00 44 0x04>;
+	};
+
+    soc@0 {
+        bus@30800000 {
+            spi@30820000 {
+                status = "disabled";
+            };
+
+            spi@30830000 {
+                status = "disabled";
+            };
+
+            spi@30840000 {
+                status = "disabled";
+            };
+
+            mailbox@30aa0000 {
+                status = "disabled";
+            };
+
+            mmc@30b40000 {
+                status = "disabled";
+            };
+
+            mmc@30b50000 {
+                status = "disabled";
+            };
+
+            spi@30bb0000 {
+                status = "disabled";
+            };
+
+            i2c@30a20000 {
+                status = "disabled";
+            };
+
+	     	serial@30860000 {
+                status = "disabled";
+            };
+        };
+
+		bus@30400000 {
+			timer@306a0000 {
+                status = "disabled";
+            };
+        };
+
+        bus@30000000 {
+            gpio@30210000 {
+                status = "okay";
+            };
+
+            gpio@30220000 {
+                status = "okay";
+            };
+
+            gpio@30230000 {
+                status = "okay";
+            };
+
+            gpio@30240000 {
+                status = "okay";
+            };
+
+            watchdog@30280000 {
+                status = "disabled";
+            };
+
+			clock-controller@30380000 {
+                status = "okay";
+            };
+        };
+
+        usb@38200000 {
+            status = "disabled";
+        };
+
+        usb-phy@382f0040 {
+            status = "disabled";
+        };
+    };
+
+    chosen {
+        stdout-path = "/virtio-console@0130000";
+        linux,stdout-path = "/virtio-console@0130000";
+        linux,initrd-start = <0x00000000 0x7c000000>;
+        linux,initrd-end = <0x00000000 0x7e000000>;
+        bootargs = "console=hvc0 earlycon=hvc0 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
+    };
+};
