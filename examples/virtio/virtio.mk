@@ -13,8 +13,10 @@ UTIL := $(SDDF)/util
 
 UART_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
 BLK_DRIVER := $(SDDF)/drivers/blk/$(BLK_DRIVER)
+ETH_DRIVER := $(SDDF)/drivers/network/$(ETH_DRIVER)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
+NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_DIR := $(VIRTIO_EXAMPLE)/board/$(MICROKIT_BOARD)
@@ -67,13 +69,16 @@ include $(UART_DRIVER)/uart_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${BLK_DRIVER}/blk_driver.mk
 include $(BLK_COMPONENTS)/blk_components.mk
+include ${ETH_DRIVER}/eth_driver.mk
+include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
 include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/uio_drivers/blk/uio_blk.mk
 
 IMAGES := client_vmm.elf blk_driver_vmm.elf \
-	blk_driver.elf blk_virt.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf
+	blk_driver.elf blk_virt.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
+	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -105,6 +110,12 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM-1.data client_vmm.elf
 	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM-1.data client_vmm.elf
+	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
+	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
+	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
+	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy0.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM-1.data client_vmm.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
@@ -164,9 +175,11 @@ qemu: $(IMAGE_FILE) blk_storage
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
-      -global virtio-mmio.force-legacy=false \
+			-global virtio-mmio.force-legacy=false \
 			-drive file=blk_storage,format=raw,if=none,id=drive0 \
-			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1 \
+			-device virtio-net-device,netdev=netdev0 \
+			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 
 clean::
 	$(RM) -f *.elf .depend* $

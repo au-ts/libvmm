@@ -17,10 +17,13 @@
 #include <sddf/serial/config.h>
 #include <sddf/blk/queue.h>
 #include <sddf/blk/config.h>
+#include <sddf/network/queue.h>
+#include <sddf/network/config.h>
 #include <sddf/util/printf.h>
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
+__attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
 /* Data for the guest's kernel image. */
@@ -40,8 +43,8 @@ uintptr_t guest_ram_vaddr;
 #define VIRTIO_CONSOLE_BASE (0x130000)
 #define VIRTIO_CONSOLE_SIZE (0x1000)
 
-serial_queue_handle_t serial_rx_queue_handle;
-serial_queue_handle_t serial_tx_queue_handle;
+serial_queue_handle_t serial_rx_queue;
+serial_queue_handle_t serial_tx_queue;
 
 static struct virtio_console_device virtio_console;
 
@@ -54,6 +57,14 @@ static struct virtio_console_device virtio_console;
 static blk_queue_handle_t blk_queue;
 
 static struct virtio_blk_device virtio_blk;
+
+#define VIRTIO_NET_IRQ (76)
+#define VIRTIO_NET_BASE (0x160000)
+#define VIRTIO_NET_SIZE (0x1000)
+static struct virtio_net_device virtio_net;
+
+net_queue_handle_t net_rx_queue;
+net_queue_handle_t net_tx_queue;
 
 void init(void)
 {
@@ -96,15 +107,15 @@ void init(void)
         return;
     }
 
-    serial_queue_init(&serial_rx_queue_handle, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
-    serial_queue_init(&serial_tx_queue_handle, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
+    serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
+    serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
                                        VIRTIO_CONSOLE_BASE,
                                        VIRTIO_CONSOLE_SIZE,
                                        VIRTIO_CONSOLE_IRQ,
-                                       &serial_rx_queue_handle, &serial_tx_queue_handle,
+                                       &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
 
     /* Initialise virtIO block device */
@@ -117,6 +128,22 @@ void init(void)
                                    blk_config.virt.id);
     assert(success);
 
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
+    success = virtio_mmio_net_init(&virtio_net,
+                                   VIRTIO_NET_BASE,
+                                   VIRTIO_NET_SIZE,
+                                   VIRTIO_NET_IRQ,
+                                   &net_rx_queue, &net_tx_queue,
+                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                   net_config.rx.id, net_config.tx.id,
+                                   net_config.mac_addr
+                                );
+    assert(success);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
@@ -126,10 +153,12 @@ void notified(microkit_channel ch)
 {
     if (ch == serial_config.rx.id) {
         virtio_console_handle_rx(&virtio_console);
-    } else if (ch == serial_config.tx.id) {
-        /* Nothing to do for TX notify */
+    } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
+        /* Nothing to do */
     } else if (ch == blk_config.virt.id) {
         virtio_blk_handle_resp(&virtio_blk);
+    } else if (ch == net_config.rx.id) {
+          virtio_net_handle_rx(&virtio_net);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
