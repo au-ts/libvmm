@@ -27,7 +27,6 @@
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
-__attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 __attribute__((__section__(".benchmark_client_config"))) benchmark_client_config_t benchmark_config;
@@ -54,16 +53,6 @@ serial_queue_handle_t serial_tx_queue;
 
 static struct virtio_console_device virtio_console;
 
-#define BLK_DATA_SIZE 0x200000
-
-#define VIRTIO_BLK_IRQ (75)
-#define VIRTIO_BLK_BASE (0x150000)
-#define VIRTIO_BLK_SIZE (0x1000)
-
-static blk_queue_handle_t blk_queue;
-
-static struct virtio_blk_device virtio_blk;
-
 #define VIRTIO_NET_IRQ (76)
 #define VIRTIO_NET_BASE (0x160000)
 #define VIRTIO_NET_SIZE (0x1000)
@@ -75,15 +64,7 @@ net_queue_handle_t net_tx_queue;
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
-    assert(blk_config_check_magic(&blk_config));
     assert(vmm_config_check_magic(&vmm_config));
-
-    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr, blk_config.virt.num_buffers);
-    /* Want to print out configuration information, so wait until the config is ready. */
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
-
-    /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -124,14 +105,6 @@ void init(void)
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
 
-    /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(&virtio_blk,
-                                   VIRTIO_BLK_BASE, VIRTIO_BLK_SIZE, VIRTIO_BLK_IRQ,
-                                   (uintptr_t)blk_config.data.vaddr,
-                                   BLK_DATA_SIZE,
-                                   storage_info,
-                                   &blk_queue,
-                                   blk_config.virt.id);
     assert(success);
 
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
@@ -161,8 +134,6 @@ void notified(microkit_channel ch)
         virtio_console_handle_rx(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
-    } else if (ch == blk_config.virt.id) {
-        virtio_blk_handle_resp(&virtio_blk);
     } else if (ch == net_config.rx.id) {
           virtio_net_handle_rx(&virtio_net);
     } else {

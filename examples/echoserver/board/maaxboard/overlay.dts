@@ -43,6 +43,10 @@
                 status = "disabled";
             };
 
+			ethernet@30be0000 {
+                status = "disabled";
+            };
+
             mmc@30b50000 {
                 status = "disabled";
             };
@@ -87,9 +91,22 @@
                 status = "disabled";
             };
 
-			clock-controller@30380000 {
-                status = "okay";
+            clock-controller@30380000 {
+                status = "disabled";
             };
+
+			iomuxc@30330000 {
+                status = "disabled";
+            };
+
+			gpc@303a0000 {
+                status = "disabled";
+            };
+
+			interrupt-controller@32e2d000 {
+                status = "disabled";
+            };
+
         };
 
         usb@38200000 {

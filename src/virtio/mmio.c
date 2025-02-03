@@ -50,7 +50,7 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
     // we only care about the new status
     dev->data.Status &= reg;
     reg ^= dev->data.Status;
-    // printf("VIRTIO MMIO|INFO: set status flag 0x%x.\n", reg);
+    printf("VIRTIO MMIO|INFO: set status flag 0x%x.\n", reg);
 
     switch (reg) {
     case VIRTIO_CONFIG_S_RESET:
@@ -309,6 +309,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
 
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
+    LOG_VMM("Fault on 0x%x to read/write: %d\n", offset, fault_is_read(fsr));
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
     if (fault_is_read(fsr)) {

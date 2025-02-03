@@ -12,7 +12,7 @@
 #include <sddf/network/queue.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_NET
+#define DEBUG_NET
 
 #if defined(DEBUG_NET)
 #define LOG_NET(...) do{ printf("VIRTIO(NET): "); printf(__VA_ARGS__); }while(0)

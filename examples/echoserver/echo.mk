@@ -14,7 +14,7 @@ ECHO_SERVER:=${SDDF}/examples/echo_server
 LWIPDIR:=network/ipstacks/lwip/src
 BENCHMARK:=$(SDDF)/benchmark
 UTIL:=$(SDDF)/util
-ETHERNET_DRIVER:=$(SDDF)/drivers/network/$(DRIV_DIR)
+ETHERNET_DRIVER:=$(SDDF)/drivers/network/$(ETH_DRV_DIR)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
 UART_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIV_DIR)
 TIMER_DRIVER:=$(SDDF)/drivers/timer/$(TIMER_DRV_DIR)
@@ -33,7 +33,7 @@ METAPROGRAM := $(TOP)/meta.py
 vpath %.c ${SDDF} $(LIBVMM) $(EXAMPLE_DIR) $(NETWORK_COMPONENTS) ${ECHO_SERVER}
 
 IMAGES := eth_driver.elf client_vmm0.elf client_vmm1.elf benchmark.elf idle.elf network_virt_rx.elf\
-	  network_virt_tx.elf network_copy.elf timer_driver.elf uart_driver.elf serial_virt_tx.elf
+	  network_virt_tx.elf network_copy.elf timer_driver.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf
 
 CFLAGS := -mcpu=$(CPU) \
 	  -mstrict-align \
@@ -64,7 +64,7 @@ ${CHECK_FLAGS_BOARD_MD5}:
 	$(LD) $(LDFLAGS) $< $(LIBS) -o $@
 
 # Client VMs
-%_vm:
+client_vm:
 	mkdir -p $@
 
 client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz \
@@ -74,8 +74,8 @@ client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
 
-client_vm/vm.dts: $(SYSTEM_DIR)/maaxboard.dts $(SYSTEM_DIR)/overlay.dts \
-	$(CHECK_FLAGS_BOARD_MD5) |%_vm
+client_vm/vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts \
+	$(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 client_vm/vm.dtb: client_vm/vm.dts |client_vm
@@ -108,6 +108,7 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	$(OBJCOPY) --update-section .device_resources=uart_driver_device_resources.data uart_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data uart_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
+	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .device_resources=ethernet_driver_device_resources.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
@@ -122,6 +123,8 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	$(OBJCOPY) --update-section .net_client_config=net_client_client1.data client_vmm1.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_client1.data client_vmm1.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_bench.data benchmark.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_client0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_client1.data client_vmm1.elf
 	$(OBJCOPY) --update-section .benchmark_config=benchmark_config.data benchmark.elf
 	$(OBJCOPY) --update-section .benchmark_client_config=benchmark_client_config.data client_vmm0.elf
 	$(OBJCOPY) --update-section .benchmark_config=benchmark_idle_config.data idle.elf

@@ -22,17 +22,26 @@ class Board:
     paddr_top: int
     serial: str
     timer: str
-    ethernet: str
+    net: str
     guest_net: str
 
 BOARDS: List[Board] = [
     Board(
+        name="qemu_virt_aarch64",
+        arch=SystemDescription.Arch.AARCH64,
+        paddr_top=0x60000000,
+        serial="pl011@9000000",
+        net="virtio_mmio@a003e00",
+        timer="timer",
+        guest_net="virtio-net@0160000",
+    ),
+    Board(
         name="maaxboard",
         arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x70000000,
+        paddr_top=0x90000000,
         serial="soc@0/bus@30800000/serial@30860000",
         timer="soc@0/bus@30000000/timer@302d0000",
-        ethernet="soc@0/bus@30800000/ethernet@30be0000",
+        net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@0160000"
     ),
 ]
@@ -108,7 +117,7 @@ class BenchmarkConfig:
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     uart_node = dtb.node(board.serial)
     assert uart_node is not None
-    ethernet_node = dtb.node(board.ethernet)
+    ethernet_node = dtb.node(board.net)
     assert ethernet_node is not None
     timer_node = dtb.node(board.timer)
     assert uart_node is not None
@@ -122,7 +131,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     uart_driver = ProtectionDomain("uart_driver", "uart_driver.elf", priority=100)
     serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=99)
-    serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx)
+    serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
+                                      priority=199, stack_size=0x2000)
+    serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx)
 
     ethernet_driver = ProtectionDomain(
         "ethernet_driver", "eth_driver.elf", priority=101, budget=100, period=400
@@ -161,18 +172,18 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     serial_system.add_client(client1)
     timer_system.add_client(client0)
     timer_system.add_client(client1)
-
     serial_system.add_client(bench)
 
     benchmark_pds = [
         uart_driver,
         serial_virt_tx,
+        serial_virt_rx,
         ethernet_driver,
         net_virt_tx,
         net_virt_rx,
         client0,
-        client0_net_copier,
         client1,
+        client0_net_copier,
         client1_net_copier,
         timer_driver,
     ]
@@ -191,6 +202,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert vmm_client0.serialise_config(output_dir)
     assert vmm_client1.connect()
     assert vmm_client1.serialise_config(output_dir)
+
     # Benchmark START channel
     bench_start_ch = Channel(client0, bench)
     sdf.add_channel(bench_start_ch)
