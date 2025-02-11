@@ -29,6 +29,8 @@ DTS := $(SDDF)/dts/$(MICROKIT_BOARD).dts
 DTB := $(MICROKIT_BOARD).dtb
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(TOP)/meta.py
+CLIENT_VM_USERLEVEL :=
+CLIENT_VM_USERLEVEL_INIT := echoserver_init
 
 vpath %.c ${SDDF} $(LIBVMM) $(EXAMPLE_DIR) $(NETWORK_COMPONENTS) ${ECHO_SERVER}
 
@@ -66,6 +68,9 @@ ${CHECK_FLAGS_BOARD_MD5}:
 # Client VMs
 client_vm:
 	mkdir -p $@
+
+$(CLIENT_VM_USERLEVEL_INIT): $(EXAMPLE_DIR)/echoserver_init
+	cp $^ $@
 
 client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz \
 	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT) |client_vm

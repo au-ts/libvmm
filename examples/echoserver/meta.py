@@ -14,6 +14,10 @@ Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
 
+@dataclass
+class DeviceNode:
+    name: str
+    path: str
 
 @dataclass
 class Board:
@@ -24,6 +28,7 @@ class Board:
     timer: str
     net: str
     guest_net: str
+    passthrough: DeviceNode
 
 BOARDS: List[Board] = [
     Board(
@@ -34,6 +39,21 @@ BOARDS: List[Board] = [
         net="virtio_mmio@a003e00",
         timer="timer",
         guest_net="virtio-net@0160000",
+        passthrough=[],
+    ),
+    Board(
+        name="odroidc4",
+        arch=SystemDescription.Arch.AARCH64,
+        paddr_top=0x60000000,
+        serial="soc/bus@ff800000/serial@3000",
+        net="soc/ethernet@ff3f0000",
+        timer="soc/bus@ffd00000/watchdog@f0d0",
+        guest_net="virtio-net@0160000",
+        passthrough=[
+            DeviceNode(name="bus@ff600000", path="soc/bus@ff600000"),
+            DeviceNode(name="reset-controller@1004", path="soc/bus@ffd00000/reset-controller@1004"),
+            DeviceNode(name="sys-ctrl", path="soc/bus@ff800000/sys-ctrl@0"),
+        ],
     ),
     Board(
         name="maaxboard",
@@ -42,7 +62,8 @@ BOARDS: List[Board] = [
         serial="soc@0/bus@30800000/serial@30860000",
         timer="soc@0/bus@30000000/timer@302d0000",
         net="soc@0/bus@30800000/ethernet@30be0000",
-        guest_net="virtio-net@0160000"
+        guest_net="virtio-net@0160000",
+        passthrough=[],
     ),
 ]
 
@@ -155,6 +176,11 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
     vm_client1 = VirtualMachine("client_linux-1", [VirtualMachine.Vcpu(id=0)])
     vmm_client1 = Vmm(sdf, client1, vm_client1, client_dtb)
+    for device in board.passthrough:
+        node = dtb.node(device.path)
+        assert node is not None
+        vmm_client0.add_passthrough_device(device.name, node)
+        vmm_client1.add_passthrough_device(device.name, node)
 
     client1_net_copier = ProtectionDomain(
         "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
@@ -217,7 +243,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     sdf.add_mr(cycle_counters_mr)
 
     bench_idle.add_map(Map(cycle_counters_mr, 0x5_000_000, perms=Map.Perms(r=True, w=True)))
-    client0.add_map(Map(cycle_counters_mr, 0x20_000_000, perms=Map.Perms(r=True, w=True)))
+    client0.add_map(Map(cycle_counters_mr, 0x30_000_000, perms=Map.Perms(r=True, w=True)))
     bench_idle_config = BenchmarkIdleConfig(0x5_000_000, bench_idle_ch.pd_a_id)
 
     bench_client_config = BenchmarkClientConfig(

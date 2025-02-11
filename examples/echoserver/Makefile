@@ -23,6 +23,12 @@ ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export TIMER_DRV_DIR := arm
 	export ETH_DRV_DIR := virtio
 	export CPU := cortex-a53
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+	export DRIV_DIR := meson
+	export UART_DRIV_DIR := meson
+	export TIMER_DRV_DIR := meson
+	export ETH_DRV_DIR := meson
+	export CPU := cortex-a55
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export DRIV_DIR := imx
 	export UART_DRIV_DIR := imx

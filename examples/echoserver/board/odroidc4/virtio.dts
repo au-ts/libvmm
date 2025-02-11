@@ -1,0 +1,18 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+	virtio-console@0130000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x130000 0x00 0x200>;
+		interrupts = <0x00 42 0x04>;
+	};
+
+	virtio-net@0160000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x160000 0x00 0x200>;
+		interrupts = <0x00 44 0x04>;
+	};
+};
