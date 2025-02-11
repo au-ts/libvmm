@@ -2,3 +2,6 @@
 	path = dep/sddf
 	url = https://github.com/au-ts/sddf
 	branch = main
+[submodule "dep/sddf_benchmarking"]
+	path = dep/sddf_benchmarking
+	url = https://github.com/au-ts/sddf_benchmarking.git
