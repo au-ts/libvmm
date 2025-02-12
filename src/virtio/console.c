@@ -143,7 +143,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
                 memcpy(console->txq->data_region + (console->txq->queue->tail % console->txq->capacity),
                        (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
 
-                serial_update_visible_tail(console->txq, console->txq->queue->tail + to_transfer);
+                serial_update_shared_tail(console->txq, console->txq->queue->tail + to_transfer);
                 bytes_remain -= to_transfer;
             }
 
@@ -165,10 +165,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
 
-        if (serial_require_producer_signal(console->txq)) {
-            serial_cancel_producer_signal(console->txq);
-            microkit_notify(console->tx_ch);
-        }
+        microkit_notify(console->tx_ch);
 
         return success;
     }
@@ -184,8 +181,8 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
 
-    bool reprocess = true;
-    while (reprocess) {
+    //bool reprocess = true;
+    //while (reprocess) {
         struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
         LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
         while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
@@ -196,7 +193,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
             LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
             uint32_t bytes_written = 0;
             char c;
-            while (bytes_written < desc.len && !serial_dequeue(console->rxq, &console->rxq->queue->head, &c)) {
+            while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
                 *(char *)(desc.addr + bytes_written) = c;
                 bytes_written++;
             }
@@ -208,14 +205,14 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
             vq->last_idx++;
         }
 
-        serial_request_producer_signal(console->rxq);
-        reprocess = false;
+        //serial_request_producer_signal(console->rxq);
+        //reprocess = false;
 
-        if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
-            serial_cancel_producer_signal(console->rxq);
-            reprocess = true;
-        }
-    }
+        //if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
+        //    serial_cancel_producer_signal(console->rxq);
+        //    reprocess = true;
+        //}
+    //}
 
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
