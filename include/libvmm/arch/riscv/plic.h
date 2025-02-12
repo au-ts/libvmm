@@ -14,7 +14,7 @@
 #error "Unknown platform for PLIC"
 #endif
 
-bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, uint32_t htinst, seL4_UserContext *regs);
+bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs);
 
 bool plic_inject_timer_irq(size_t vcpu_id);
 

@@ -100,11 +100,21 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
     }
     assert(instruction->width == 2 || instruction->width == 4);
 
-    seL4_Word reg = fault_get_reg(regs, instruction->rd);
+    // TODO: we can do this better probably
+    seL4_Word reg;
+    if (instruction->width == 2) {
+        reg = fault_get_reg_compressed(regs, instruction->rd);
+    } else {
+        reg = fault_get_reg(regs, instruction->rd);
+    }
 
     reg &= 0xffffffff00000000;
     reg |= data;
-    fault_set_reg(regs, instruction->rd, reg);
+    if (instruction->width == 2) {
+        fault_set_reg_compressed(regs, instruction->rd, reg);
+    } else {
+        fault_set_reg(regs, instruction->rd, reg);
+    }
 
     return true;
 }
@@ -114,7 +124,12 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
 
     // TODO: need to make sure offset is 4-byte aligned?
 
-    uint32_t data = fault_get_reg(regs, instruction->rs2);
+    uint32_t data;
+    if (instruction->width == 2) {
+        data = fault_get_reg_compressed(regs, instruction->rs2);
+    } else {
+        data = fault_get_reg(regs, instruction->rs2);
+    }
 
     assert(instruction->width == 2 || instruction->width == 4);
 
@@ -220,8 +235,8 @@ bool plic_inject_irq(size_t vcpu_id, int irq) {
     return true;
 }
 
-bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, uint32_t htinst, seL4_UserContext *regs) {
-    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, htinst);
+bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs) {
+    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
     assert(instruction.op_code != 0);
     /* from decode instruction we need: opcode, rs2, and rd */
 
