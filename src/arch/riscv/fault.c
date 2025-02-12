@@ -324,7 +324,7 @@ static bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
     seL4_Word sbi_eid = regs->a7;
     /* SBI function ID for the given extension */
     seL4_Word sbi_fid = regs->a6;
-    LOG_VMM("SBI handle EID 0x%lx, FID: 0x%lx\n", sbi_eid, sbi_fid);
+    // LOG_VMM("SBI handle EID 0x%lx, FID: 0x%lx\n", sbi_eid, sbi_fid);
     switch (sbi_eid) {
     case SBI_EXTENSION_BASE:
         // TODO: error handling
@@ -367,7 +367,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
     seL4_UserContext regs;
     seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
     size_t label = microkit_msginfo_get_label(msginfo);
-    LOG_VMM("handling fault '%s'\n", fault_to_string(label));
+    // LOG_VMM("handling fault '%s'\n", fault_to_string(label));
     bool success = false;
     switch (label) {
         case seL4_Fault_VMFault: {
