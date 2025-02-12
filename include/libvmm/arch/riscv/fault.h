@@ -28,7 +28,7 @@ struct fault_instruction {
 /* Fault-handling functions */
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
-struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word ip);
+struct fault_instruction fault_decode_instruction(size_t vcpu_id, uint32_t htinst);
 
 // TODO: should we have these?
 // bool fault_is_read(struct fault_instruction *instruction) {
@@ -112,64 +112,6 @@ static inline seL4_Word fault_get_reg(seL4_UserContext *regs, int index)
             LOG_VMM_ERR("Invalid index %d\n", index);
             assert(false);
             return -1;
-    }
-}
-
-static inline seL4_Word fault_get_reg_compressed(seL4_UserContext *regs, int index) {
-    switch (index) {
-    case 0:
-        return regs->s0;
-    case 1:
-        return regs->s1;
-    case 2:
-        return regs->a0;
-    case 3:
-        return regs->a1;
-    case 4:
-        return regs->a2;
-    case 5:
-        return regs->a3;
-    case 6:
-        return regs->a4;
-    case 7:
-        return regs->a5;
-    default:
-        LOG_VMM_ERR("invalid compressed register index %d\n", index);
-        assert(false);
-        return -1;
-    }
-}
-
-static inline void fault_set_reg_compressed(seL4_UserContext *regs, int index, seL4_Word value)
-{
-    switch (index) {
-    case 0:
-        regs->s0 = value;
-        break;
-    case 1:
-        regs->s1 = value;
-        break;
-    case 2:
-        regs->a0 = value;
-        break;
-    case 3:
-        regs->a1 = value;
-        break;
-    case 4:
-        regs->a2 = value;
-        break;
-    case 5:
-        regs->a3 = value;
-        break;
-    case 6:
-        regs->a4 = value;
-        break;
-    case 7:
-        regs->a5 = value;
-        break;
-    default:
-        LOG_VMM_ERR("invalid compressed register index %d\n", index);
-        assert(false);
     }
 }
 
