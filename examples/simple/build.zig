@@ -9,6 +9,7 @@ const MicrokitBoard = enum {
     cheshire,
     odroidc4,
     maaxboard,
+    p550,
 };
 
 const Target = struct {
@@ -17,6 +18,15 @@ const Target = struct {
 };
 
 const targets = [_]Target {
+   .{
+        .board = MicrokitBoard.p550,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
     .{
         .board = MicrokitBoard.qemu_virt_aarch64,
         .zig_target = std.Target.Query{
@@ -119,7 +129,7 @@ pub fn build(b: *std.Build) !void {
     const arm_vgic_version: usize = switch (microkit_board_option.?) {
         .qemu_virt_aarch64, .odroidc4 => 2,
         .maaxboard => 3,
-        .qemu_virt_riscv64, .cheshire => 0,
+        .qemu_virt_riscv64, .cheshire, .p550 => 0,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{

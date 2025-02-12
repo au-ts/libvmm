@@ -30,7 +30,7 @@
 #if defined(BOARD_qemu_virt_aarch64)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4d700000
-#elif defined(BOARD_qemu_virt_riscv64) || defined(BOARD_cheshire)
+#elif defined(BOARD_qemu_virt_riscv64) || defined(BOARD_cheshire) || defined(BOARD_p550)
 #define GUEST_DTB_VADDR 0x8f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x8c000000
 #elif defined(BOARD_rpi4b_hyp)
@@ -53,7 +53,7 @@
  * across platforms. */
 #define SERIAL_IRQ_CH 1
 
-#if defined(BOARD_qemu_virt_riscv64) || defined(BOARD_cheshire)
+#if defined(BOARD_qemu_virt_riscv64) || defined(BOARD_cheshire) || defined(BOARD_p550)
 #define VTIMER_IRQ_CH 2
 #endif
 
@@ -71,6 +71,8 @@
 #define SERIAL_IRQ 58
 #elif defined(BOARD_cheshire)
 #define SERIAL_IRQ 1
+#elif defined(BOARD_p550)
+#define SERIAL_IRQ 100
 #else
 #error Need to define serial interrupt
 #endif

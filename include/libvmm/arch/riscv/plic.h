@@ -4,7 +4,7 @@
 #include <libvmm/virq.h>
 
 // TODO: move out of here
-#ifdef CONFIG_PLAT_QEMU_RISCV_VIRT
+#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_P550)
 #define PLIC_ADDR 0xc000000
 #define PLIC_SIZE 0x4000000
 #elif CONFIG_PLAT_CHESHIRE

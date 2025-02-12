@@ -1,0 +1,37 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    /* Need to specify how much RAM the guest will have */
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x10000000>;
+    };
+
+    soc {
+        /delete-node/ cache-controller@2010000;
+        /delete-node/ sys-crg@51828000;
+        /delete-node/ pinctrl@0x51600080;
+        /delete-node/ gpio@51600000;
+        /delete-node/ bus-error-unit@hart0;
+        /delete-node/ bus-error-unit@hart1;
+        /delete-node/ bus-error-unit@hart2;
+        /delete-node/ bus-error-unit@hart3;
+
+        /delete-node/ serial@0x50910000;
+        /delete-node/ serial@0x50920000;
+        /delete-node/ serial@0x50930000;
+        /delete-node/ serial@0x50940000;
+        /delete-node/ iommu@50c00000;
+        /delete-node/ scu_sys_con@0x51810000;
+    };
+
+    chosen {
+        stdout-path = "/soc/serial@0x50900000";
+        bootargs = "console=uart8250,mmio32,0x50900000,loglevel=8 no4lvl debug maxcpus=1 earlycon=uart8250,mmio32,0x50900000";
+        linux,initrd-start = <0x8c000000>;
+        linux,initrd-end = <0x8e000000>;
+    };
+};
