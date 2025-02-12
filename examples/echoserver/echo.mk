@@ -29,7 +29,7 @@ DTS := $(SDDF)/dts/$(MICROKIT_BOARD).dts
 DTB := $(MICROKIT_BOARD).dtb
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(TOP)/meta.py
-CLIENT_VM_USERLEVEL :=
+CLIENT_VM_USERLEVEL := echoit
 CLIENT_VM_USERLEVEL_INIT := echoserver_init
 
 vpath %.c ${SDDF} $(LIBVMM) $(EXAMPLE_DIR) $(NETWORK_COMPONENTS) ${ECHO_SERVER}
@@ -53,6 +53,16 @@ CFLAGS := -mcpu=$(CPU) \
 	  -MP \
 		-target $(TARGET)
 
+CFLAGS_USERLEVEL := \
+	-g3 \
+	-O3 \
+	-Wno-unused-command-line-argument \
+	-Wall -Wno-unused-function \
+	-D_GNU_SOURCE \
+	-target aarch64-linux-gnu \
+	-I$(BOARD_DIR)/include \
+	-I$(SDDF)/include
+
 LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
 LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libsddf_util_debug.a libvmm.a --end-group
 
@@ -68,6 +78,12 @@ ${CHECK_FLAGS_BOARD_MD5}:
 # Client VMs
 client_vm:
 	mkdir -p $@
+
+echoit.o: $(SDDF_BENCHMARK)/linux/echoit.c
+	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) -o $@ -c $<
+
+$(CLIENT_VM_USERLEVEL): echoit.o
+	$(CC_USERLEVEL) -static $(CFLAGS_USERLEVEL) $^ -o $@
 
 $(CLIENT_VM_USERLEVEL_INIT): $(EXAMPLE_DIR)/echoserver_init
 	cp $^ $@

@@ -309,7 +309,6 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
 
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
-    LOG_VMM("Fault on 0x%x to read/write: %d\n", offset, fault_is_read(fsr));
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
     if (fault_is_read(fsr)) {

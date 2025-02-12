@@ -52,6 +52,7 @@ export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF=$(abspath ../../dep/sddf)
+export SDDF_BENCHMARK=$(abspath ../../dep/sddf_benchmarking)
 export LIBVMM=$(abspath ../../)
 export EXAMPLE_DIR=$(abspath .)
 
