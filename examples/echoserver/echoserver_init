@@ -5,5 +5,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 ifconfig eth0 up && \
+sleep 5 && \
 udhcpc && \
-/root/echoit
+(/root/echoit &) && \
+export PYTHONPATH=$PTHONPATH:/ipbench/usr/lib/python3.12/site-packages/ && \
+/ipbench/usr/bin/ipbenchd -d -t

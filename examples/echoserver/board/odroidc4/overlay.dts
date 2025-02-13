@@ -10,7 +10,7 @@
 
     memory@0 {
 		device_type = "memory";
-		reg = <0x00 0x20000000 0x00 0x6000000>;
+		reg = <0x00 0x20000000 0x00 0x10000000>;
 	};
 
     secure-monitor {

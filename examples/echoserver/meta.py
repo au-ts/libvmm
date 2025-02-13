@@ -52,6 +52,7 @@ BOARDS: List[Board] = [
         passthrough=[
             DeviceNode(name="bus@ff600000", path="soc/bus@ff600000"),
             DeviceNode(name="reset-controller@1004", path="soc/bus@ffd00000/reset-controller@1004"),
+            DeviceNode(name="interrupt-controller@f080", path="soc/bus@ffd00000/interrupt-controller@f080"),
             DeviceNode(name="sys-ctrl", path="soc/bus@ff800000/sys-ctrl@0"),
         ],
     ),
