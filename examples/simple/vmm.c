@@ -13,6 +13,44 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 
+// benchmarking infra
+#include <sddf/benchmark/sel4bench.h>
+volatile int sel4bench_record_cycle_count(uint64_t type);
+void benchmark_dump_array(void);
+uint64_t counterArray[10000][2]; /* counter + tag */
+int cnt = 0;
+int _dump_done = 0;
+int SAMPLE = 2000;
+
+void benchmark_dump_array(void)
+{
+    for (int i=0;i<SAMPLE;i++) {
+        printf("record %d: type: %llu: %llu\n", i, counterArray[i][1], counterArray[i][0]);
+        if ((i+1)%2==0) {printf("---------------\n");}
+    }
+    printf("MKDONE\n");
+}
+
+
+volatile int sel4bench_record_cycle_count(uint64_t tag)
+{
+    if (cnt<SAMPLE) {
+      counterArray[cnt][0] = sel4bench_get_cycle_count();
+      counterArray[cnt][1] = tag;
+      cnt++;
+      return 0;
+    }
+    else if (!_dump_done) {
+      benchmark_dump_array();
+      _dump_done=1;
+      return 0;
+    }
+    else {
+      return 0;
+    }
+}
+
+
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
@@ -77,6 +115,35 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
+// devmem 0x1ff100000 >/dev/null
+bool benchmark_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+    sel4bench_record_cycle_count(2);
+    printf("benchmarking: cycle count: %llu\n", sel4bench_get_cycle_count());
+    return true;
+}
+
+// devmem 0x1ff200000 >/dev/null
+// shouldn't be needed
+bool benchmark_activate(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+    seL4_BenchmarkNullSyscall();
+    LOG_VMM("benchmarking: received fault, setup PMU\n");
+    return true;
+}
+
+// devmem 0x1ff300000 >/dev/null
+bool benchmark_clean(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    _dump_done=0;
+    cnt = 0;
+    return true;
+}
+
+// devmem 0x1ff400000 >/dev/null
+bool benchmark_quick(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    return true;
+}
+
 void init(void) {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -107,6 +174,14 @@ void init(void) {
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+    sel4bench_init();
+    /* Setup handler */
+    fault_register_vm_exception_handler(0x1ff100000, 0x1000, benchmark_handler, NULL);
+    fault_register_vm_exception_handler(0x1ff200000, 0x1000, benchmark_activate, NULL);
+    fault_register_vm_exception_handler(0x1ff300000, 0x1000, benchmark_clean, NULL);
+    fault_register_vm_exception_handler(0x1ff400000, 0x1000, benchmark_quick, NULL);
+    printf("============ init benchmakring... ==================\n");
+    printf("benchmarking: cycle count: %d\n", sel4bench_get_cycle_count());
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -130,7 +205,20 @@ void notified(microkit_channel ch) {
  * Whenever our guest causes an exception, it gets delivered to this entry point for
  * the VMM to handle.
  */
+int _tag_linuxfixup = 0;
+int _tag_VMFault = 0;
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+
+    if (microkit_msginfo_get_label(msginfo) == seL4_Fault_VMFault) {
+        _tag_VMFault = 1;
+        sel4bench_record_cycle_count(1);
+    }
+
+    if (_tag_linuxfixup == 0) {
+        seL4_BenchmarkNullSyscall();
+        _tag_linuxfixup = 1;
+    }
+
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
