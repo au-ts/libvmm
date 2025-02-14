@@ -10,7 +10,23 @@
         reg = <0x00 0x40000000 0x00 0x10000000>;
     };
 
+    intc@8000000 {
+        /delete-node/ v2m@8020000;
+    };
+
     flash@0 {
+        status = "disabled";
+    };
+
+    pl061@9030000 {
+        status = "disabled";
+    };
+
+    pl031@9010000 {
+        status = "disabled";
+    };
+
+    pcie@10000000 {
         status = "disabled";
     };
 
