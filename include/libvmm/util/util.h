@@ -15,7 +15,7 @@
 #define GUEST_BOOT_VCPU_ID 0
 
 #ifndef GUEST_NUM_VCPUS
-#define GUEST_NUM_VCPUS 1
+#define GUEST_NUM_VCPUS 4
 #endif
 
 #define PAGE_SIZE_MIN 0x1000
