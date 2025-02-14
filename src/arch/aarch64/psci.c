@@ -100,7 +100,7 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
             return false;
     }
 
-    bool success = fault_advance_vcpu(vcpu_id, regs);
+    bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
     assert(success);
 
     return success;
