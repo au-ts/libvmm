@@ -78,6 +78,7 @@ qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
 			-cpu cortex-a53 \
+			-smp 4 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
