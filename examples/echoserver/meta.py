@@ -53,6 +53,7 @@ BOARDS: List[Board] = [
             DeviceNode(name="bus@ff600000", path="soc/bus@ff600000"),
             DeviceNode(name="reset-controller@1004", path="soc/bus@ffd00000/reset-controller@1004"),
             DeviceNode(name="interrupt-controller@f080", path="soc/bus@ffd00000/interrupt-controller@f080"),
+            # DeviceNode(name="watchdog@f080", path="soc/bus@ffd00000/interrupt-controller@f080"),
             DeviceNode(name="sys-ctrl", path="soc/bus@ff800000/sys-ctrl@0"),
         ],
     ),
@@ -166,7 +167,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     # Client 1
     client0 = ProtectionDomain("client0", "client_vmm0.elf", priority=97, budget=20000)
-    vm_client0 = VirtualMachine("client_linux-0", [VirtualMachine.Vcpu(id=0)])
+    vm_client0 = VirtualMachine("client_linux-0", [VirtualMachine.Vcpu(id=0)], priority=96)
     vmm_client0 = Vmm(sdf, client0, vm_client0, client_dtb)
 
     client0_net_copier = ProtectionDomain(
@@ -174,31 +175,31 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     )
 
     # Client 2
-    client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
-    vm_client1 = VirtualMachine("client_linux-1", [VirtualMachine.Vcpu(id=0)])
-    vmm_client1 = Vmm(sdf, client1, vm_client1, client_dtb)
+    # client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
+    # vm_client1 = VirtualMachine("client_linux-1", [VirtualMachine.Vcpu(id=0)])
+    # vmm_client1 = Vmm(sdf, client1, vm_client1, client_dtb)
     for device in board.passthrough:
         node = dtb.node(device.path)
         assert node is not None
         vmm_client0.add_passthrough_device(device.name, node)
-        vmm_client1.add_passthrough_device(device.name, node)
+    #     vmm_client1.add_passthrough_device(device.name, node)
 
-    client1_net_copier = ProtectionDomain(
-        "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
-    )
+    # client1_net_copier = ProtectionDomain(
+    #     "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
+    # )
 
     mac_random_part = random.randint(0, 0xfe)
     client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
-    client1_mac_addr = f"52:54:01:00:00:{hex(mac_random_part + 1)[2:]:0>2}"
-    assert client0_mac_addr != client1_mac_addr
+    # client1_mac_addr = f"52:54:01:00:00:{hex(mac_random_part + 1)[2:]:0>2}"
+    # assert client0_mac_addr != client1_mac_addr
 
     vmm_client0.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client0_net_copier, mac_addr=client0_mac_addr)
-    vmm_client1.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client1_net_copier, mac_addr=client1_mac_addr)
+    # vmm_client1.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client1_net_copier, mac_addr=client1_mac_addr)
 
     serial_system.add_client(client0)
-    serial_system.add_client(client1)
+    # serial_system.add_client(client1)
     timer_system.add_client(client0)
-    timer_system.add_client(client1)
+    # timer_system.add_client(client1)
     serial_system.add_client(bench)
 
     benchmark_pds = [
@@ -209,9 +210,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         net_virt_tx,
         net_virt_rx,
         client0,
-        client1,
+        # client1,
         client0_net_copier,
-        client1_net_copier,
+        # client1_net_copier,
         timer_driver,
     ]
     pds = [
@@ -227,8 +228,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     assert vmm_client0.connect()
     assert vmm_client0.serialise_config(output_dir)
-    assert vmm_client1.connect()
-    assert vmm_client1.serialise_config(output_dir)
+    # assert vmm_client1.connect()
+    # assert vmm_client1.serialise_config(output_dir)
 
     # Benchmark START channel
     bench_start_ch = Channel(client0, bench)
