@@ -60,7 +60,14 @@ BOARDS: List[Board] = [
         timer="soc@0/bus@30000000/timer@302d0000",
         net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@0160000",
-        passthrough=[],
+        passthrough=[
+            "soc@0/bus@30000000/ocotp-ctrl@30350000",
+            "soc@0/bus@30800000/ethernet@30be0000",
+            "soc@0/bus@30000000/gpc@303a0000",
+            "soc@0/bus@30400000/timer@306a0000",
+            "soc@0/bus@30000000/iomuxc@30330000",
+            "soc@0/bus@32c00000/interrupt-controller@32e2d000",
+        ],
     ),
 ]
 
@@ -165,9 +172,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     vm_client0 = VirtualMachine("client_linux-0", [VirtualMachine.Vcpu(id=0)], priority=96)
     vmm_client0 = Vmm(sdf, client0, vm_client0, client_dtb)
 
-    client0_net_copier = ProtectionDomain(
-        "client0_net_copier", "network_copy0.elf", priority=98, budget=20000
-    )
+    # client0_net_copier = ProtectionDomain(
+        # "client0_net_copier", "network_copy0.elf", priority=98, budget=20000
+    # )
 
     # Client 2
     # client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
@@ -183,12 +190,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     #     "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
     # )
 
-    mac_random_part = random.randint(0, 0xfe)
-    client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
+    # mac_random_part = random.randint(0, 0xfe)
+    # client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
     # client1_mac_addr = f"52:54:01:00:00:{hex(mac_random_part + 1)[2:]:0>2}"
     # assert client0_mac_addr != client1_mac_addr
 
-    vmm_client0.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client0_net_copier, mac_addr=client0_mac_addr)
+    # vmm_client0.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client0_net_copier, mac_addr=client0_mac_addr)
     # vmm_client1.add_virtio_mmio_net(client_dtb.node(board.guest_net), net_system, client1_net_copier, mac_addr=client1_mac_addr)
 
     serial_system.add_client(client0)
@@ -201,12 +208,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         uart_driver,
         serial_virt_tx,
         serial_virt_rx,
-        ethernet_driver,
-        net_virt_tx,
-        net_virt_rx,
+        # ethernet_driver,
+        # net_virt_tx,
+        # net_virt_rx,
         client0,
         # client1,
-        client0_net_copier,
+        # client0_net_copier,
         # client1_net_copier,
         timer_driver,
     ]
@@ -258,8 +265,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
-    assert net_system.connect()
-    assert net_system.serialise_config(output_dir)
+    # assert net_system.connect()
+    # assert net_system.serialise_config(output_dir)
     assert timer_system.connect()
     assert timer_system.serialise_config(output_dir)
 
