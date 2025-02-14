@@ -15,11 +15,6 @@ Channel = SystemDescription.Channel
 
 
 @dataclass
-class DeviceNode:
-    name: str
-    path: str
-
-@dataclass
 class Board:
     name: str
     arch: SystemDescription.Arch
@@ -28,7 +23,7 @@ class Board:
     timer: str
     net: str
     guest_net: str
-    passthrough: DeviceNode
+    passthrough: str
 
 BOARDS: List[Board] = [
     Board(
@@ -50,11 +45,11 @@ BOARDS: List[Board] = [
         timer="soc/bus@ffd00000/watchdog@f0d0",
         guest_net="virtio-net@0160000",
         passthrough=[
-            DeviceNode(name="bus@ff600000", path="soc/bus@ff600000"),
-            DeviceNode(name="reset-controller@1004", path="soc/bus@ffd00000/reset-controller@1004"),
-            DeviceNode(name="interrupt-controller@f080", path="soc/bus@ffd00000/interrupt-controller@f080"),
-            # DeviceNode(name="watchdog@f080", path="soc/bus@ffd00000/interrupt-controller@f080"),
-            DeviceNode(name="sys-ctrl", path="soc/bus@ff800000/sys-ctrl@0"),
+            "soc/bus@ff600000",
+            "soc/bus@ffd00000/reset-controller@1004",
+            "soc/bus@ffd00000/interrupt-controller@f080",
+            "soc/bus@ffd00000/interrupt-controller@f080",
+            "soc/bus@ff800000/sys-ctrl@0",
         ],
     ),
     Board(
@@ -178,11 +173,11 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     # client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
     # vm_client1 = VirtualMachine("client_linux-1", [VirtualMachine.Vcpu(id=0)])
     # vmm_client1 = Vmm(sdf, client1, vm_client1, client_dtb)
-    for device in board.passthrough:
-        node = dtb.node(device.path)
+    for device_path in board.passthrough:
+        node = dtb.node(device_path)
         assert node is not None
-        vmm_client0.add_passthrough_device(device.name, node)
-    #     vmm_client1.add_passthrough_device(device.name, node)
+        vmm_client0.add_passthrough_device(node)
+    #     vmm_client1.add_passthrough_device(node)
 
     # client1_net_copier = ProtectionDomain(
     #     "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
