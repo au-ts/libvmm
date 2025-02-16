@@ -12,6 +12,7 @@ VirtualMachine = SystemDescription.VirtualMachine
 MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
+Irq = SystemDescription.Irq
 
 
 @dataclass
@@ -50,6 +51,7 @@ BOARDS: List[Board] = [
             "soc/bus@ffd00000/interrupt-controller@f080",
             "soc/bus@ffd00000/interrupt-controller@f080",
             "soc/bus@ff800000/sys-ctrl@0",
+            "soc/ethernet@ff3f0000",
         ],
     ),
     Board(
@@ -61,12 +63,19 @@ BOARDS: List[Board] = [
         net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@0160000",
         passthrough=[
-            "soc@0/bus@30000000/ocotp-ctrl@30350000",
-            "soc@0/bus@30800000/ethernet@30be0000",
+            "soc@0/bus@30000000/syscon@30360000",
             "soc@0/bus@30000000/gpc@303a0000",
-            "soc@0/bus@30400000/timer@306a0000",
-            "soc@0/bus@30000000/iomuxc@30330000",
             "soc@0/bus@32c00000/interrupt-controller@32e2d000",
+            "soc@0/bus@30000000/ocotp-ctrl@30350000",
+            "soc@0/bus@30000000/iomuxc@30330000",
+            "soc@0/bus@30000000/gpio@30200000",
+            "soc@0/bus@30000000/gpio@30210000",
+            "soc@0/bus@30000000/gpio@30220000",
+            "soc@0/bus@30000000/gpio@30230000",
+            "soc@0/bus@30000000/gpio@30240000",
+            "soc@0/bus@30800000/ethernet@30be0000",
+            "soc@0/bus@30400000/timer@306a0000",
+            "soc@0/bus@30000000/clock-controller@30380000",
         ],
     ),
 ]
@@ -170,7 +179,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     # Client 1
     client0 = ProtectionDomain("client0", "client_vmm0.elf", priority=97, budget=20000)
     vm_client0 = VirtualMachine("client_linux-0", [VirtualMachine.Vcpu(id=0)], priority=96)
-    vmm_client0 = Vmm(sdf, client0, vm_client0, client_dtb)
+    vmm_client0 = Vmm(sdf, client0, vm_client0, client_dtb, one_to_one_ram=True)
 
     # client0_net_copier = ProtectionDomain(
         # "client0_net_copier", "network_copy0.elf", priority=98, budget=20000
@@ -183,8 +192,14 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for device_path in board.passthrough:
         node = dtb.node(device_path)
         assert node is not None
-        vmm_client0.add_passthrough_device(node)
-    #     vmm_client1.add_passthrough_device(node)
+        vmm_client0.add_passthrough_device(node, regions=[0])
+        # vmm_client1.add_passthrough_device(node)
+
+    if board.name == "odroidc4":
+        eth_phy_irq = Irq(96)
+        vmm_client0.add_passthrough_irq(eth_phy_irq)
+        irq_work_irq = Irq(5)
+        vmm_client0.add_passthrough_irq(irq_work_irq)
 
     # client1_net_copier = ProtectionDomain(
     #     "client1_net_copier", "network_copy1.elf", priority=98, budget=20000

@@ -9,16 +9,25 @@
         reg = <0x00 0x70000000 0x00 0x10000000>;
     };
 
-    virtio-console@0130000 {
-        compatible = "virtio,mmio";
-        reg = <0x00 0x130000 0x00 0x200>;
-        interrupts = <0x00 42 0x04>;
+    cpus {
+        cpu@0 {
+            /delete-property/ cpu-idle-states;
+        };
+        cpu@1 {
+            /delete-property/ cpu-idle-states;
+        };
+        cpu@2 {
+            /delete-property/ cpu-idle-states;
+        };
+        cpu@3 {
+            /delete-property/ cpu-idle-states;
+        };
     };
 
-	virtio-net@0160000 {
+	virtio-console@0130000 {
 		compatible = "virtio,mmio";
-		reg = <0x00 0x160000 0x00 0x200>;
-		interrupts = <0x00 44 0x04>;
+		reg = <0x00 0x130000 0x00 0x200>;
+		interrupts = <0x00 42 0x04>;
 	};
 
     soc@0 {
@@ -43,10 +52,6 @@
                 status = "disabled";
             };
 
-			ethernet@30be0000 {
-                status = "disabled";
-            };
-
             mmc@30b50000 {
                 status = "disabled";
             };
@@ -59,54 +64,57 @@
                 status = "disabled";
             };
 
-	     	serial@30860000 {
+			i2c@30a30000 {
                 status = "disabled";
             };
-        };
 
-		bus@30400000 {
-			timer@306a0000 {
+			i2c@30a40000 {
+                status = "disabled";
+            };
+
+            /delete-node/ serial@30860000;
+
+			serial@30890000 {
+                status = "disabled";
+            };
+
+			serial@30a60000 {
+                status = "disabled";
+            };
+
+			mu@30aa0000 {
                 status = "disabled";
             };
         };
 
         bus@30000000 {
             gpio@30210000 {
-                status = "okay";
+                status = "disabled";
             };
 
             gpio@30220000 {
-                status = "okay";
+                status = "disabled";
             };
 
             gpio@30230000 {
-                status = "okay";
+                status = "disabled";
             };
 
             gpio@30240000 {
-                status = "okay";
+                status = "disabled";
             };
 
             watchdog@30280000 {
                 status = "disabled";
             };
+        };
 
-            clock-controller@30380000 {
-                status = "disabled";
-            };
+		usb@38100000 {
+            status = "disabled";
+        };
 
-			iomuxc@30330000 {
-                status = "disabled";
-            };
-
-			gpc@303a0000 {
-                status = "disabled";
-            };
-
-			interrupt-controller@32e2d000 {
-                status = "disabled";
-            };
-
+        usb-phy@381f0040 {
+            status = "disabled";
         };
 
         usb@38200000 {
@@ -123,6 +131,6 @@
         linux,stdout-path = "/virtio-console@0130000";
         linux,initrd-start = <0x00000000 0x7c000000>;
         linux,initrd-end = <0x00000000 0x7e000000>;
-        bootargs = "console=hvc0 earlycon=hvc0 nosmp rw loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
+        bootargs = "console=hvc0 earlycon=hvc0 nosmp rw clk_ignore_unused loglevel=8 debug initcall_blacklist=imx8_soc_init pci=nomsi earlyprintk=serial maxcpus=1 uio_pdrv_genirq.of_id=generic-uio";
     };
 };
