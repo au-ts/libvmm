@@ -94,11 +94,11 @@ void init(void)
         return;
     }
 
-    for (int i = 0; i < vmm_config.num_irqs; i++) {
-        bool success = virq_register_passthrough(vmm_config.vcpus[0].id, vmm_config.irqs[i].irq, vmm_config.irqs[i].id);
-        /* Should not be any reason for this to fail */
-        assert(success);
-    }
+    /* for (int i = 0; i < vmm_config.num_irqs; i++) { */
+    /*     bool success = virq_register_passthrough(vmm_config.vcpus[0].id, vmm_config.irqs[i].irq, vmm_config.irqs[i].id); */
+    /*     /\* Should not be any reason for this to fail *\/ */
+    /*     assert(success); */
+    /* } */
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
@@ -113,21 +113,21 @@ void init(void)
 
     assert(success);
 
-    /* net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr, */
-    /*                net_config.rx.num_buffers); */
-    /* net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr, */
-    /*                net_config.tx.num_buffers); */
-    /* net_buffers_init(&net_tx_queue, 0); */
-    /* success = virtio_mmio_net_init(&virtio_net, */
-    /*                                VIRTIO_NET_BASE, */
-    /*                                VIRTIO_NET_SIZE, */
-    /*                                VIRTIO_NET_IRQ, */
-    /*                                &net_rx_queue, &net_tx_queue, */
-    /*                                (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, */
-    /*                                net_config.rx.id, net_config.tx.id, */
-    /*                                net_config.mac_addr */
-    /*                             ); */
-    /* assert(success); */
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
+    success = virtio_mmio_net_init(&virtio_net,
+                                   VIRTIO_NET_BASE,
+                                   VIRTIO_NET_SIZE,
+                                   VIRTIO_NET_IRQ,
+                                   &net_rx_queue, &net_tx_queue,
+                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                   net_config.rx.id, net_config.tx.id,
+                                   net_config.mac_addr
+                                );
+    assert(success);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
@@ -136,10 +136,8 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
-    bool success = virq_handle_passthrough(ch);
-    if (success) {
-        return;
-    } else if (ch == serial_config.rx.id) {
+    /* bool success = virq_handle_passthrough(ch); */
+    if (ch == serial_config.rx.id) {
         virtio_console_handle_rx(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
