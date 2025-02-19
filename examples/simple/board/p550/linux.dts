@@ -41,7 +41,7 @@
 			next-level-cache = <0x01>;
 			reg = <0x00>;
 			riscv,isa-base = "rv64i";
-			riscv,isa-extensions = "i", "m", "a", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
+			riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zicsr", "zifencei", "zba", "zbb", "sscofpmf";
 			riscv,pmpgranularity = <0x1000>;
 			riscv,pmpregions = <0x08>;
 			sifive,buserror = <0x02>;
