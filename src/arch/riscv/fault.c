@@ -12,9 +12,6 @@
 
 #define WFI_INST    0x10500073
 
-// TODO: why does our impl id and version id come up as this?
-/* [    0.000000] SBI implementation ID=0xfffffffffffffdf4 Version=0xfffffffffffffdf4 */
-
 /* We support version 2.0 of SBI */
 #define SBI_SPEC_MAJOR_VERSION 2
 #define SBI_SPEC_MINOR_VERSION 0
