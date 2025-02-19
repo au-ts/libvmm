@@ -5,6 +5,7 @@ const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
 const src = [_][]const u8{
+    "src/fault.c",
     "src/guest.c",
     "src/util/util.c",
     "src/util/printf.c",

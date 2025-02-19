@@ -23,7 +23,8 @@
 // TODO: have no fucking idea where this number comes from
 // TODO: this makes plic_regs, quite large. Maybe it can be a customised
 // #define instead.
-#define PLIC_NUM_CONTEXTS 15872
+// #define PLIC_NUM_CONTEXTS 15872
+#define PLIC_NUM_CONTEXTS 4
 
 struct plic_regs {
     uint32_t priority[1024];
@@ -106,21 +107,7 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
     }
     assert(instruction->width == 2 || instruction->width == 4);
 
-    // TODO: we can do this better probably
-    seL4_Word reg;
-    if (instruction->width == 2) {
-        reg = fault_get_reg_compressed(regs, instruction->rd);
-    } else {
-        reg = fault_get_reg(regs, instruction->rd);
-    }
-
-    reg &= 0xffffffff00000000;
-    reg |= data;
-    if (instruction->width == 2) {
-        fault_set_reg_compressed(regs, instruction->rd, reg);
-    } else {
-        fault_set_reg(regs, instruction->rd, reg);
-    }
+    fault_emulate_read(instruction, regs, data);
 
     return true;
 }

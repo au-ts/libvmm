@@ -30,6 +30,8 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
 struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word ip);
 
+void fault_emulate_read(struct fault_instruction *instruction, seL4_UserContext *regs, uint32_t data);
+
 // TODO: should we have these?
 // bool fault_is_read(struct fault_instruction *instruction) {
 //     return instruction.op_code == OP_CODE_STORE;

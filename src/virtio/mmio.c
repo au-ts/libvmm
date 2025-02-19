@@ -9,7 +9,12 @@
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/virtq.h>
+#include <libvmm/fault.h>
+#if defined(CONFIG_ARCH_RISCV)
+#include <libvmm/arch/riscv/fault.h>
+#elif defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/fault.h>
+#endif
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
@@ -157,10 +162,15 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         success = false;
     }
 
+#if defined(CONFIG_ARCH_AARCH64)
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
+#elif defined(CONFIG_ARCH_RISCV)
+    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+    fault_emulate_read(&instruction, regs, regs->pc);
+#endif
 
     return success;
 }
@@ -169,10 +179,21 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                                          seL4_UserContext *regs)
 {
     bool success = true;
+
+#if defined(CONFIG_ARCH_AARCH64)
     uint32_t data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
     data &= mask;
+#elif defined(CONFIG_ARCH_RISCV)
+    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+    uint32_t data;
+    if (instruction.width == 2) {
+        data = fault_get_reg_compressed(regs, instruction.rs2);
+    } else {
+        data = fault_get_reg(regs, instruction.rs2);
+    }
+#endif
 
     // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
 

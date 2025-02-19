@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <libvmm/fault.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
@@ -29,12 +30,39 @@
 enum sbi_extensions {
     SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR = 0x1,
     SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR = 0x2,
+    SBI_EXTENSION_LEGACY_REMOTE_FENCE_I = 0x5,
+    SBI_EXTENSION_LEGACY_REMOTE_SFENCE_VMA = 0x6,
     SBI_EXTENSION_BASE = 0x10,
     SBI_EXTENSION_TIMER = 0x54494d45,
+    SBI_EXTENSION_IPI = 0x735049,
+    SBI_EXTENSION_RFENCE = 0x52464E43,
     SBI_EXTENSION_HART_STATE_MANAGEMENT = 0x48534d,
     SBI_EXTENSION_SYSTEM_RESET = 0x53525354,
+    SBI_EXTENSION_PMU = 0x504D55,
     SBI_EXTENSION_DEBUG_CONSOLE = 0x4442434e,
+    SBI_EXTENSION_SYSTEM_SUSPEND = 0x53555350,
+    SBI_EXTENSION_CPPC = 0x43505043,
+    SBI_EXTENSION_NACL = 0x4E41434C,
+    SBI_EXTENSION_STA = 0x535441,
 };
+
+// TODO: finish this and use it
+char *sbi_eid_to_string(size_t eid) {
+    switch (eid) {
+    case SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR:
+        return "legacy console putchar";
+    case SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR:
+        return "legacy console getchar";
+    case SBI_EXTENSION_BASE:
+        return "base";
+    case SBI_EXTENSION_TIMER:
+        return "timer";
+    case SBI_EXTENSION_IPI:
+        return "ipi";
+    default:
+        return "unknown";
+    };
+}
 
 enum sbi_debug_extension {
     SBI_CONSOLE_PUTCHAR = 1,
@@ -224,6 +252,24 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     return (struct fault_instruction){ 0 };
 }
 
+void fault_emulate_read(struct fault_instruction *instruction, seL4_UserContext *regs, uint32_t data) {
+    // TODO: we can do this better probably
+    seL4_Word reg;
+    if (instruction->width == 2) {
+        reg = fault_get_reg_compressed(regs, instruction->rd);
+    } else {
+        reg = fault_get_reg(regs, instruction->rd);
+    }
+
+    reg &= 0xffffffff00000000;
+    reg |= data;
+    if (instruction->width == 2) {
+        fault_set_reg_compressed(regs, instruction->rd, reg);
+    } else {
+        fault_set_reg(regs, instruction->rd, reg);
+    }
+}
+
 char *fault_to_string(seL4_Word fault_label) {
     // TODO
     switch (fault_label) {
@@ -346,18 +392,50 @@ static bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
         regs->pc += 4;
         seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
         return true;
-    // case SBI_CONSOLE_PUTCHAR: {
-    //     printf("%c", regs->a0);
-    //     regs->a0 = 0;
-    //     regs->pc += 4;
-    //     seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-    //     return true;
-    // }
+    case SBI_EXTENSION_LEGACY_REMOTE_SFENCE_VMA:
+    case SBI_EXTENSION_LEGACY_REMOTE_FENCE_I:
+        // TODO: fix this, we should actually be doing fence instructions
+        regs->a0 = SBI_SUCCESS;
+        regs->pc += 4;
+        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
+        return true;
     default: {
         LOG_VMM_ERR("unhandled sbi_eid: 0x%lx, sbi_fid 0x%lx\n", sbi_eid, sbi_fid);
     }
     }
     return false;
+}
+
+bool fault_handle_vm_exception(size_t vcpu_id, seL4_UserContext *regs)
+{
+    uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
+    size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
+
+    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+
+    bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, regs);
+    if (!success) {
+        /*
+         * We could not find a registered handler for the address, meaning that the fault
+         * is genuinely unexpected. Surprise!
+         * Now we print out as much information relating to the fault as we can, hopefully
+         * the programmer can figure out what went wrong.
+         */
+        size_t ip = microkit_mr_get(seL4_VMFault_IP);
+        size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
+        // TODO: have a library function for doing this?
+        bool is_write = instruction.op_code == OP_CODE_STORE;
+        LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
+                    addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
+        tcb_print_regs(vcpu_id);
+        vcpu_print_regs(vcpu_id);
+    } else {
+        regs->pc += instruction.width;
+        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
+        return true;
+    }
+
+    return success;
 }
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
