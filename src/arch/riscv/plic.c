@@ -80,9 +80,13 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         size_t context = (offset - PLIC_IRQ_ENABLE_START) / 128;
         /* Now that we have the context, we want to find what the IRQ source is so
          * we can figure out the second-level index. */
-        size_t enable_group = (offset - PLIC_IRQ_ENABLE_START) % 128;
+        size_t enable_group = (offset - (PLIC_IRQ_ENABLE_START + (128 * context))) / 4;
         LOG_PLIC("reading enable bits for context %d, IRQ source #%d to #%d\n", context, enable_group * 32, ((enable_group + 1) * 32 - 1));
         data = plic_regs.enable_bits[context][enable_group];
+
+        if (data != 0) {
+            LOG_VMM("reading offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+        }
         break;
     }
     case PLIC_CLAIM_COMPLETE_CONTEXT_1_START: {
@@ -140,8 +144,11 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         size_t context = (offset - PLIC_IRQ_ENABLE_START) / 128;
         /* Now that we have the context, we want to find what the IRQ source is so
          * we can figure out the second-level index. */
-        size_t enable_group = (offset - PLIC_IRQ_ENABLE_START) % 128;
+        size_t enable_group = (offset - (PLIC_IRQ_ENABLE_START + (128 * context))) / 4;
         LOG_PLIC("writing enable bits for context %d, IRQ source #%d to #%d: data 0x%lx\n", context, enable_group * 32, ((enable_group + 1) * 32 - 1), data);
+        if (data != 0) {
+            LOG_VMM("writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+        }
         plic_regs.enable_bits[context][enable_group] = data;
         break;
     }
@@ -207,9 +214,11 @@ bool plic_register_irq(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *a
 }
 
 bool plic_inject_irq(size_t vcpu_id, int irq) {
-    // size_t context = irq / 128;
-    size_t enable_group = irq / 128;
-    if ((plic_regs.enable_bits[1][enable_group] & (1 << irq)) == 0) {
+    size_t enable_group = irq / 32;
+    // TODO: dont' hardcode context
+    if ((plic_regs.enable_bits[1][enable_group] & (1 << (irq % 32))) == 0) {
+        /* Don't inject unless it's enabled */
+        // LOG_VMM_ERR("attempting to inject for disabled IRQ %d\n", irq);
         return true;
     }
 
