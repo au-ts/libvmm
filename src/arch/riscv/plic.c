@@ -21,6 +21,8 @@
  */
 
 // TODO: have no fucking idea where this number comes from
+// TODO: this makes plic_regs, quite large. Maybe it can be a customised
+// #define instead.
 #define PLIC_NUM_CONTEXTS 15872
 
 struct plic_regs {
