@@ -145,7 +145,7 @@ void notified(microkit_channel ch) {
 #ifdef CONFIG_ARCH_RISCV
         case VTIMER_IRQ_CH: {
             // TODO: handle vcpu id properly
-            plic_inject_timer_irq(0);
+            plic_inject_timer_irq(GUEST_VCPU_ID);
             break;
         }
 #endif
