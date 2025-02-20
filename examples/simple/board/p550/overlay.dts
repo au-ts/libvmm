@@ -30,7 +30,7 @@
 
     chosen {
         stdout-path = "/soc/serial@0x50900000";
-        bootargs = "console=uart8250,mmio32,0x50900000,loglevel=8 no4lvl debug maxcpus=1 earlycon=uart8250,mmio32,0x50900000";
+        bootargs = "clk_ignore_unused console=uart8250,mmio32,0x50900000 loglevel=8 no4lvl debug maxcpus=1 earlycon=uart8250,mmio32,0x50900000";
         linux,initrd-start = <0x8c000000>;
         linux,initrd-end = <0x8e000000>;
     };
