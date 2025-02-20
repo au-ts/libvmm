@@ -169,7 +169,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
     fault_emulate_write(regs, offset, fsr, reg & mask);
 #elif defined(CONFIG_ARCH_RISCV)
     struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
-    fault_emulate_read(&instruction, regs, regs->pc);
+    fault_emulate_read(&instruction, regs, reg);
 #endif
 
     return success;
