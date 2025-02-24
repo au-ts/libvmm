@@ -52,7 +52,7 @@
  * to 128 because I copied it from the camkes virtio device. If you find
  * out that the virtqueue gets full easily, increase the number.
  */
-#define QUEUE_SIZE 128
+#define QUEUE_SIZE 512
 
 /* handler of a virtqueue */
 // @ivanv: we can pack/bitfield this struct

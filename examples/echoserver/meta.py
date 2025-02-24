@@ -51,7 +51,6 @@ BOARDS: List[Board] = [
             "soc/bus@ffd00000/interrupt-controller@f080",
             "soc/bus@ffd00000/interrupt-controller@f080",
             "soc/bus@ff800000/sys-ctrl@0",
-            "soc/ethernet@ff3f0000",
         ],
     ),
     Board(

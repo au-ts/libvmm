@@ -65,12 +65,12 @@ struct virtio_net_config {
     /* The config defining mac address (if VIRTIO_NET_F_MAC) */
     uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ];
     /* See VIRTIO_NET_F_STATUS and VIRTIO_NET_S_* above */
-    // uint16_t status;
+    uint16_t status;
     /* Maximum number of each of transmit and receive queues;
      * see VIRTIO_NET_F_MQ and VIRTIO_NET_CTRL_MQ.
      * Legal values are between 1 and 0x8000
      */
-    // uint16_t max_virtqueue_pairs;
+    uint16_t max_virtqueue_pairs;
 } __attribute__((packed));
 
 /* This header comes first in the scatter-gather list.

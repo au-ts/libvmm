@@ -113,7 +113,9 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
         *ret_val = config->mac[4];
         *ret_val |= config->mac[5] << 8;
         break;
-
+    case 3:
+        LOG_NET("any check?\n");
+        *ret_val = 256;
     default:
         LOG_NET_ERR("Unknown device config register: 0x%x\n", offset);
         return false;
