@@ -12,6 +12,7 @@ static char VMM_MAGIC[VMM_MAGIC_LEN] = { 'v', 'm', 'm' };
 
 #define VMM_MAX_IRQS 32
 #define VMM_MAX_VCPUS 32
+#define VMM_MAX_UIOS 16
 #define VMM_MAX_VIRTIO_MMIO_DEVICES 32
 
 typedef struct vmm_config_irq {
@@ -30,6 +31,15 @@ typedef struct vmm_config_vcpu {
     uint8_t id;
 } vmm_config_vcpu_t;
 
+#define VMM_UIO_NAME_MAX_LEN 32
+typedef struct vmm_config_uio_region {
+    char name[VMM_UIO_NAME_MAX_LEN];
+    uintptr_t guest_paddr;
+    uintptr_t vmm_vaddr;
+    uint64_t size;
+    uint32_t irq;
+} vmm_config_uio_region_t;
+
 typedef struct vmm_config {
     char magic[VMM_MAGIC_LEN];
     uint64_t ram;
@@ -42,6 +52,8 @@ typedef struct vmm_config {
     vmm_config_vcpu_t vcpus[VMM_MAX_VCPUS];
     uint8_t num_virtio_mmio_devices;
     vmm_config_virtio_mmio_device_t virtio_mmio_devices[VMM_MAX_VIRTIO_MMIO_DEVICES];
+    uint8_t num_uio_regions;
+    vmm_config_uio_region_t uios[VMM_MAX_UIOS];
 } vmm_config_t;
 
 int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id) {
@@ -64,4 +76,50 @@ static bool vmm_config_check_magic(void *config)
     }
 
     return true;
+}
+
+int vmm_config_strnlen(const char *s, int n) {
+    int i;
+
+    for (i = 0; i < n; ++i) {
+        if (s[i] == '\0') {
+            break;
+        }
+    }
+    return i;
+}
+
+bool vmm_config_string_n_cmp(const char *lhs, const char *rhs, int n) {
+    if (lhs == NULL || rhs == NULL || n < 0) {
+        return false;
+    }
+
+    for (int i = 0; i < n; i++) {
+        if (lhs[i] != rhs[i]) {
+            return false;
+        }
+        if (lhs[i] == '\0' || rhs[i] == '\0') {
+            break;
+        }
+    }
+
+    return true;
+}
+
+vmm_config_uio_region_t *vmm_config_find_uio_by_name(vmm_config_t *config, const char *name) {
+    if (!vmm_config_check_magic(config)) {
+        return (vmm_config_uio_region_t *) NULL;
+    }
+
+    if (vmm_config_strnlen(name, VMM_UIO_NAME_MAX_LEN) >= VMM_UIO_NAME_MAX_LEN) {
+        return (vmm_config_uio_region_t *) NULL;
+    }
+
+    for (int i = 0; i < config->num_uio_regions; i++) {
+        if (vmm_config_string_n_cmp(config->uios[i].name, name, VMM_UIO_NAME_MAX_LEN)) {
+            return &config->uios[i];
+        }
+    }
+
+    return (vmm_config_uio_region_t *) NULL;
 }
