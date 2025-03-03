@@ -39,8 +39,8 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-linux-x86-64.tar.gz
-          tar xf microkit-sdk-1.4.1-linux-x86-64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
       - name: Install dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect gcc-aarch64-linux-gnu
@@ -53,7 +53,7 @@ jobs:
       - name: Setup pyenv
         run: |
           python3 -m venv venv
-          ./venv/bin/pip install sdfgen==0.21.0
+          ./venv/bin/pip install --upgrade sdfgen==0.21.0
       - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
         shell: bash
@@ -74,8 +74,8 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-macos-aarch64.tar.gz
-          tar xf microkit-sdk-1.4.1-macos-aarch64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64.tar.gz
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
@@ -90,7 +90,7 @@ jobs:
       - name: Setup pyenv
         run: |
           python3 -m venv venv
-          ./venv/bin/pip install sdfgen==0.21.0
+          ./venv/bin/pip install --upgrade sdfgen==0.21.0
       - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
         shell: bash
@@ -110,8 +110,8 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-linux-x86-64.tar.gz
-          tar xf microkit-sdk-1.4.1-linux-x86-64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
       - name: Install Nix
         uses: cachix/install-nix-action@v25
         with:
