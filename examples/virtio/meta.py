@@ -112,11 +112,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    mac_random_part = random.randint(0, 0xfe)
-    client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
-
-    client0.add_virtio_mmio_net(guest_net_node, net_system,
-                                client0_net_copier, mac_addr=client0_mac_addr)
+    client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
