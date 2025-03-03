@@ -17,7 +17,7 @@
 
 You can also get the Linux config used after booting by running the following
 command in userspace: `zcat /proc/config.gz`. This is a kernel minimally configured with a
-IPv4 network stack + DNS + DHCP and virtIO device drivers. 
+IPv4 network stack + DNS + DHCP and virtIO device drivers.
 
 ### Instructions for reproducing
 ```

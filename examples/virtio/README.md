@@ -84,7 +84,7 @@ to any serial device on the platform. The virtIO console support in libvmm talks
 a serial multiplexor which then talks to a driver for input/output to the physical
 serial device.
 
-When you boot the example, you will see different coloured output for the guest. 
+When you boot the example, you will see different coloured output for the guest.
 Initially all input is defaulted to guest 1 in red.
 
 ### virtIO block
@@ -101,13 +101,13 @@ virtIO drive initialising.
 [    5.381885] virtio_blk virtio1: [vda] 2040 512-byte logical blocks (1.04 MB/1020 KiB)
 ```
 
-When you reboot the example, the client VM may display a warning indicating that the 
+When you reboot the example, the client VM may display a warning indicating that the
 FAT filesystem on the vda device was not cleanly unmounted, which could lead to potential
 data corruption:
-``` 
+```
 [   12.292600] FAT-fs (vda): Volume was not properly unmounted. Some data may be corrupt. Please run fsck.
 ```
-To prevent this, always shut down the system properly by running poweroff after use, 
+To prevent this, always shut down the system properly by running poweroff after use,
 instead of forcefully terminating the VM.
 
 The system expects the storage device to contain an MBR partition table that contains
@@ -128,8 +128,6 @@ it should be called `eth0`:
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
        valid_lft forever preferred_lft forever
 2: eth0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop qlen 1000
     link/ether 52:54:01:00:00:fd brd ff:ff:ff:ff:ff:ff
