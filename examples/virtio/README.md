@@ -3,7 +3,7 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# Using virtIO with multiple Linux guests
+# Using multiple virtIO devices with a Linux guest
 
 This example shows off the virtIO support that libvmm provides using the
 [seL4 Device Driver Framework](https://github.com/au-ts/sddf) to talk to the
@@ -12,19 +12,13 @@ actual hardware.
 This example makes use of the following virtIO devices emulated by libvmm:
 * console
 * block
+* network
 
-The console device is emulated by using a native driver for the hardware's UART
-device from sDDF.
-
-The block device is emulated by a virtualised driver in a separate Linux
-virtual machine.
-
-In order to show device sharing, the system has two Linux VMs that act as clients.
-The two client VMs have the same resources and are identical.
+All of the virtIO devices are emulated with their corresponding native drivers from sDDF.
 
 The example currently works on the following platforms:
 * QEMU virt AArch64
-* HardKernel Odroid-C4
+* Avnet MaaXBoard
 
 ## Dependencies
 
@@ -68,7 +62,7 @@ make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 
 Where `<BOARD>` is one of:
 * `qemu_virt_aarch64`
-* `odroidc4`
+* `maaxboard`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -85,52 +79,29 @@ system running the whole system.
 
 ### virtIO console
 
-This example makes use of the virtIO console device so that neither guest has access
+This example makes use of the virtIO console device so that the guest has access
 to any serial device on the platform. The virtIO console support in libvmm talks to
 a serial multiplexor which then talks to a driver for input/output to the physical
 serial device.
 
-When you boot the example, you will see different coloured output for each guest.
-The Linux logs will be interleaving like so:
-```
-Starting klogd: OKStarting klogd:
-OK
-Running sysctl: Running sysctl: OK
-OKSaving random seed:
-Saving random seed: [    4.070358] random: crng init done
-[    4.103992] random: crng init done
-OK
-Starting network: OK
-Starting network: OK
-OK
-
-Welcome to Buildroot
-buildroot login:
-Welcome to Buildroot
-buildroot login:
-```
-
-Initially all input is defaulted to guest 1 in green. To switch to input into
-the other guest (red), type in `@2`. The `@` symbol is used to switch between
-clients of the serial system, in this case the red guest is client 2.
+When you boot the example, you will see different coloured output for the guest. 
+Initially all input is defaulted to guest 1 in red.
 
 ### virtIO block
 
-Guest 1 and guest 2 also doubles as a client in the block system that talks
-virtIO to guest 3 that acts as driver with passthrough access to the block device.
-The requests from both clients are multiplexed through the additional block virtualiser
-component.
+The guest also doubles as a client in the block system that talks virtIO to a native
+block device. The requests from the guest are multiplexed through the additional block
+virtualiser component.
 
-When you boot the example, the block driver VM will boot first. When it is ready, the
-client VMs will boot together. After the client VMs boot, they will attempt to mount the
+When you boot the example, the native block driver will boot first. When it is ready, the
+client VM will boot. After the client VM boot, they will attempt to mount the
 virtIO block device `/dev/vda` into `/mnt`. The kernel logs from linux will show the
-virtIO drive initialising for both clients.
+virtIO drive initialising.
 ```
 [    5.381885] virtio_blk virtio1: [vda] 2040 512-byte logical blocks (1.04 MB/1020 KiB)
-[    5.325953] virtio_blk virtio1: [vda] 2040 512-byte logical blocks (1.04 MB/1020 KiB)
 ```
 
-When you reboot the example, the client VMs may display a warning indicating that the 
+When you reboot the example, the client VM may display a warning indicating that the 
 FAT filesystem on the vda device was not cleanly unmounted, which could lead to potential
 data corruption:
 ``` 
@@ -140,10 +111,57 @@ To prevent this, always shut down the system properly by running poweroff after 
 instead of forcefully terminating the VM.
 
 The system expects the storage device to contain an MBR partition table that contains
-two partitions. Each partition is allocated to a single client. Partitions must have a
+one partition. Each partition is allocated to a single client. Partitions must have a
 starting block number that is a multiple of sDDF block's transfer size of 4096 bytes
 divided by the disk's logical size. Partitions that do not follow this restriction
 are unsupported.
+
+### virtIO net
+In addition to virtIO console and block, the guest can also talk with the native sDDF network
+driver via virtIO for in-guest networking. Packets in and out of the guest are multiplexed through
+the network virtualiser components.
+
+When the guest boots up, you must bring up the network device. First check the name of the network device,
+it should be called `eth0`:
+```
+# ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop qlen 1000
+    link/ether 52:54:01:00:00:fd brd ff:ff:ff:ff:ff:ff
+```
+
+Then bring up the device:
+```
+ip link set eth0 up
+```
+
+Before you can talk on the network, you need an IP address. To obtain an IP address, initiate DHCP with:
+```
+# udhcpc
+```
+
+Now the guest network, you can try to ping Google DNS with:
+```
+# ping 8.8.8.8
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: seq=0 ttl=255 time=18.560 ms
+64 bytes from 8.8.8.8: seq=1 ttl=255 time=8.859 ms
+64 bytes from 8.8.8.8: seq=2 ttl=255 time=5.361 ms
+64 bytes from 8.8.8.8: seq=3 ttl=255 time=6.902 ms
+64 bytes from 8.8.8.8: seq=4 ttl=255 time=9.198 ms
+^C
+--- 8.8.8.8 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 5.361/9.776/18.560 ms
+```
+
+The minimal kernel also comes with a DNS resolver so you can ping a URL too.
+
 
 ### QEMU set up
 When running on QEMU, read and writes go to an emulated ramdisk instead of to your
