@@ -50,9 +50,15 @@ jobs:
           version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - name: Setup pyenv
+        run: |
+          python3 -m venv venv
+          ./venv/bin/pip install sdfgen==0.21.0
       - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
         shell: bash
+        env:
+          PYTHON: ${{ github.workspace }}/venv/bin/python
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
@@ -81,9 +87,15 @@ jobs:
           version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - name: Setup pyenv
+        run: |
+          python3 -m venv venv
+          ./venv/bin/pip install sdfgen==0.21.0
       - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
         shell: bash
+        env:
+          PYTHON: ${{ github.workspace }}/venv/bin/python
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
