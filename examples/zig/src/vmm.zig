@@ -78,7 +78,7 @@ fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.C) void {
 
 export fn init() callconv(.C) void {
     // Initialise the VMM, the VCPU(s), and start the guest
-    log.info("starting \"{s}\"", .{ microkit.microkit_name });
+    log.info("starting", .{});
     // Place all the binaries in the right locations before starting the guest
     const kernel_pc = c.linux_setup_images(
                 GUEST_RAM_VADDR,
