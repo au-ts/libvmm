@@ -12,7 +12,7 @@ on:
 jobs:
   build_manual:
     name: Build manual
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
           path: docs/MANUAL.pdf
   build_linux_x86_64:
     name: Build and run examples (Linux x86-64)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -39,8 +39,8 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-linux-x86-64.tar.gz
-          tar xf microkit-sdk-1.4.1-linux-x86-64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
       - name: Install dependencies (via apt)
         # 'expect' is only a dependency for CI testing
         run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect gcc-aarch64-linux-gnu
@@ -50,9 +50,15 @@ jobs:
           version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - name: Setup pyenv
+        run: |
+          python3 -m venv venv
+          ./venv/bin/pip install --upgrade sdfgen==0.21.0
       - name: Build and run examples
-        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64
         shell: bash
+        env:
+          PYTHON: ${{ github.workspace }}/venv/bin/python
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
@@ -68,8 +74,8 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-macos-aarch64.tar.gz
-          tar xf microkit-sdk-1.4.1-macos-aarch64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64.tar.gz
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
@@ -81,16 +87,22 @@ jobs:
           version: 0.13.0
       - name: Install Rust
         run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      - name: Setup pyenv
+        run: |
+          python3 -m venv venv
+          ./venv/bin/pip install --upgrade sdfgen==0.21.0
       - name: Build and run examples
-        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64
         shell: bash
+        env:
+          PYTHON: ${{ github.workspace }}/venv/bin/python
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
           path: build_*/loader.img
   build_linux_x86_64_nix:
     name: Build and run examples (Linux x86-64 via Nix)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -98,19 +110,19 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget https://github.com/seL4/microkit/releases/download/1.4.1/microkit-sdk-1.4.1-linux-x86-64.tar.gz
-          tar xf microkit-sdk-1.4.1-linux-x86-64.tar.gz
+          wget https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
+          tar xf microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz
       - name: Install Nix
         uses: cachix/install-nix-action@v25
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run examples
-        run: nix-shell --run "./ci/examples.sh ${PWD}/microkit-sdk-1.4.1"
+        run: nix-shell --run "./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64"
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
           path: build_*/loader.img
-  # build_macos_x86_64_nix:
+  # build_macos_x86_64_nix:å
   #   name: Build and run examples (macOS x86-64 via Nix)
   #   runs-on: macos-12
   #   steps:
