@@ -183,35 +183,35 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
 
     //bool reprocess = true;
     //while (reprocess) {
-        struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
-        LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
-        while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
-            transferred = true;
+    struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+    LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
+    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
+        transferred = true;
 
-            uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
-            struct virtq_desc desc = vq->virtq.desc[desc_head];
-            LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
-            uint32_t bytes_written = 0;
-            char c;
-            while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
-                *(char *)(desc.addr + bytes_written) = c;
-                bytes_written++;
-            }
-
-            struct virtq_used_elem used_elem = {desc_head, bytes_written};
-            vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
-            vq->virtq.used->idx++;
-
-            vq->last_idx++;
+        uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
+        struct virtq_desc desc = vq->virtq.desc[desc_head];
+        LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
+        uint32_t bytes_written = 0;
+        char c;
+        while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
+            *(char *)(desc.addr + bytes_written) = c;
+            bytes_written++;
         }
 
-        //serial_request_producer_signal(console->rxq);
-        //reprocess = false;
+        struct virtq_used_elem used_elem = {desc_head, bytes_written};
+        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
+        vq->virtq.used->idx++;
 
-        //if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
-        //    serial_cancel_producer_signal(console->rxq);
-        //    reprocess = true;
-        //}
+        vq->last_idx++;
+    }
+
+    //serial_request_producer_signal(console->rxq);
+    //reprocess = false;
+
+    //if (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
+    //    serial_cancel_producer_signal(console->rxq);
+    //    reprocess = true;
+    //}
     //}
 
     /* While unlikely, it is possible that we could not consume any of the

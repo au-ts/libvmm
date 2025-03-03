@@ -60,7 +60,8 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
-    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr, blk_config.virt.num_buffers);
+    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
+                   blk_config.virt.num_buffers);
     /* Want to print out configuration information, so wait until the config is ready. */
     blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
 
@@ -102,23 +103,25 @@ void init(void)
     assert(vmm_config.num_virtio_mmio_devices == 3);
     for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
         switch (vmm_config.virtio_mmio_devices[i].type) {
-            case VIRTIO_DEVICE_ID_CONSOLE:
-                console_vdev_idx = i;
-                break;
-            case VIRTIO_DEVICE_ID_BLOCK:
-                blk_vdev_idx = i;
-                break;
-            case VIRTIO_DEVICE_ID_NET:
-                net_vdev_idx = i;
-                break;
+        case VIRTIO_DEVICE_ID_CONSOLE:
+            console_vdev_idx = i;
+            break;
+        case VIRTIO_DEVICE_ID_BLOCK:
+            blk_vdev_idx = i;
+            break;
+        case VIRTIO_DEVICE_ID_NET:
+            net_vdev_idx = i;
+            break;
         }
     }
     assert(console_vdev_idx != -1);
     assert(blk_vdev_idx != -1);
     assert(net_vdev_idx != -1);
 
-    serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
-    serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
+    serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
+                      serial_config.rx.data.vaddr);
+    serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
+                      serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
@@ -154,7 +157,7 @@ void init(void)
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
                                    net_config.rx.id, net_config.tx.id,
                                    net_config.mac_addr
-                                );
+                                  );
     assert(success);
 
     /* Finally start the guest */
@@ -171,7 +174,7 @@ void notified(microkit_channel ch)
     } else if (ch == blk_config.virt.id) {
         virtio_blk_handle_resp(&virtio_blk);
     } else if (ch == net_config.rx.id) {
-          virtio_net_handle_rx(&virtio_net);
+        virtio_net_handle_rx(&virtio_net);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }

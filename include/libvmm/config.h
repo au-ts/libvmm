@@ -56,7 +56,8 @@ typedef struct vmm_config {
     vmm_config_uio_region_t uios[VMM_MAX_UIOS];
 } vmm_config_t;
 
-int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id) {
+int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id)
+{
     for (int i = 0; i < config->num_irqs; i++) {
         if (config->irqs[i].id == id) {
             return config->irqs[i].irq;
@@ -78,7 +79,8 @@ static bool vmm_config_check_magic(void *config)
     return true;
 }
 
-int vmm_config_strnlen(const char *s, int n) {
+int vmm_config_strnlen(const char *s, int n)
+{
     int i;
 
     for (i = 0; i < n; ++i) {
@@ -89,7 +91,8 @@ int vmm_config_strnlen(const char *s, int n) {
     return i;
 }
 
-bool vmm_config_string_n_cmp(const char *lhs, const char *rhs, int n) {
+bool vmm_config_string_n_cmp(const char *lhs, const char *rhs, int n)
+{
     if (lhs == NULL || rhs == NULL || n < 0) {
         return false;
     }
@@ -106,7 +109,8 @@ bool vmm_config_string_n_cmp(const char *lhs, const char *rhs, int n) {
     return true;
 }
 
-vmm_config_uio_region_t *vmm_config_find_uio_by_name(vmm_config_t *config, const char *name) {
+vmm_config_uio_region_t *vmm_config_find_uio_by_name(vmm_config_t *config, const char *name)
+{
     if (!vmm_config_check_magic(config)) {
         return (vmm_config_uio_region_t *) NULL;
     }

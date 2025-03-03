@@ -13,6 +13,7 @@ MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
+
 @dataclass
 class Board:
     name: str
@@ -26,6 +27,7 @@ class Board:
     net: str
     guest_net: str
     partition: int
+
 
 BOARDS: List[Board] = [
     Board(
@@ -55,6 +57,7 @@ BOARDS: List[Board] = [
         partition=0
     ),
 ]
+
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client VM 1
@@ -92,11 +95,13 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     guest_net_node = client_dtb.node(board.guest_net)
     assert guest_net_node is not None
 
-    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf", priority=101, budget=100, period=400)
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+                                  priority=101, budget=100, period=400)
     net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
     net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
-    client0_net_copier = ProtectionDomain("client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+    client0_net_copier = ProtectionDomain(
+        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
 
     pds = [
         eth_driver,
@@ -110,7 +115,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     mac_random_part = random.randint(0, 0xfe)
     client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
 
-    client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier, mac_addr=client0_mac_addr)
+    client0.add_virtio_mmio_net(guest_net_node, net_system,
+                                client0_net_copier, mac_addr=client0_mac_addr)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -155,6 +161,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     with open(f"{output_dir}/{sdf_file}", "w+") as f:
         f.write(sdf.render())
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
