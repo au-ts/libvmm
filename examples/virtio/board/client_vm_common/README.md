@@ -9,7 +9,7 @@
 
 ### Details
 * Image name: `linux`
-* Config name: `config`
+* Config name: `linux_config`
 * Git remote: https://github.com/torvalds/linux.git
 * Tag: v6.13 (commit hash: `ffd294d346d185b70e28b1a28abe367bbfe53c04`)
 * Toolchain: `aarch64-none-elf`
