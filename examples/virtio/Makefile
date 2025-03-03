@@ -12,10 +12,10 @@ $(error MICROKIT_SDK must be specified)
 endif
 export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
 
-// Both QEMU and Maaxboard uses the same guest device tree as the guest does not
-// need to access any physical device. The only difference is that QEMU is GICv2 while
-// the Maaxboard is GICv3. We apply a GIC overlay for the correct version on the board
-// at build time.
+# Both QEMU and Maaxboard uses the same guest device tree as the guest does not
+# need to access any physical device. The only difference is that QEMU is GICv2 while
+# the Maaxboard is GICv3. We apply a GIC overlay for the correct version on the board
+# at build time.
 ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export UART_DRIVER := imx
 	export TIMER_DRIVER := imx
