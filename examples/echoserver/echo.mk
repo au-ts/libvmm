@@ -16,7 +16,7 @@ BENCHMARK:=$(SDDF)/benchmark
 UTIL:=$(SDDF)/util
 ETHERNET_DRIVER:=$(SDDF)/drivers/network/$(ETH_DRV_DIR)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
-UART_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIV_DIR)
+SERIAL_DRIVER := $(SDDF)/drivers/serial/$(SERIAL_DRIV_DIR)
 TIMER_DRIVER:=$(SDDF)/drivers/timer/$(TIMER_DRV_DIR)
 NETWORK_COMPONENTS:=$(SDDF)/network/components
 
@@ -35,7 +35,7 @@ CLIENT_VM_USERLEVEL_INIT := echoserver_init
 vpath %.c ${SDDF} $(LIBVMM) $(EXAMPLE_DIR) $(NETWORK_COMPONENTS) ${ECHO_SERVER}
 
 IMAGES := eth_driver.elf client_vmm0.elf client_vmm1.elf benchmark.elf idle.elf network_virt_rx.elf\
-	  network_virt_tx.elf network_copy.elf timer_driver.elf uart_driver.elf serial_virt_tx.elf serial_virt_rx.elf
+	  network_virt_tx.elf network_copy.elf timer_driver.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf
 
 CFLAGS := -mcpu=$(CPU) \
 	  -mstrict-align \
@@ -126,8 +126,8 @@ $(DTB): $(DTS)
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client_dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE)
-	$(OBJCOPY) --update-section .device_resources=uart_driver_device_resources.data uart_driver.elf
-	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data uart_driver.elf
+	$(OBJCOPY) --update-section .device_resources=uart_driver_device_resources.data serial_driver.elf
+	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .device_resources=ethernet_driver_device_resources.data eth_driver.elf
@@ -159,7 +159,7 @@ include ${SDDF}/network/components/network_components.mk
 include ${ETHERNET_DRIVER}/eth_driver.mk
 include ${BENCHMARK}/benchmark.mk
 include ${TIMER_DRIVER}/timer_driver.mk
-include ${UART_DRIVER}/uart_driver.mk
+include ${SERIAL_DRIVER}/serial_driver.mk
 include ${SERIAL_COMPONENTS}/serial_components.mk
 include $(LIBVMM)/vmm.mk
 
