@@ -92,7 +92,7 @@ jobs:
           python3 -m venv venv
           ./venv/bin/pip install --upgrade sdfgen==0.21.0
       - name: Build and run examples
-        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64
+        run: ./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64
         shell: bash
         env:
           PYTHON: ${{ github.workspace }}/venv/bin/python
