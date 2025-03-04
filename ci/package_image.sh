@@ -14,10 +14,14 @@ ZON_PATH="build.zig.zon"
 
 SHASUM=$(shasum $IMAGE_PATH | cut -d' ' -f1)
 
+# Clean the image name if it contain dots, a common case is `rootfs.cpio.gz`
+# Because it can interfere with the Zig syntax
+SANITISED_IMG_NAME=$(echo "$IMAGE_NAME" | tr '.' '_')
+
 cat > $ZON_PATH <<EOF
 .{
-    .name = "$IMAGE_NAME",
-    .version = "0.1.0",
+    .name = .$SANITISED_IMG_NAME,
+    .version = "0.0.0",
 
     .paths = .{
         "$IMAGE_NAME",
