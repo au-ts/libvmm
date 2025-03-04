@@ -80,7 +80,7 @@ pub fn build(b: *std.Build) void {
     const dtb = dtc_cmd.captureStdOut();
     // The artefacts that are pre-compiled (Linux kernel and init RAM disk) are
     // dependencies that are fetched by the build process.
-    const linux_kernel = b.dependency("linux", .{}).path("Image");
+    const linux_kernel = b.dependency("linux", .{}).path("linux");
     const initrd = b.dependency("initrd", .{}).path("rootfs.cpio.gz");
     // When we embed these artifacts into our VMM code, we use @embedFile provided by
     // the Zig compiler. However, we can't just include any path outside of the 'src/'
