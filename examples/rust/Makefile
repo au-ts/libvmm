@@ -21,13 +21,13 @@ LINUX_NAME := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 LINUX := $(BUILD_DIR)/$(LINUX_NAME)
 INITRD_NAME := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 INITRD := $(BUILD_DIR)/$(INITRD_NAME)
-${LINUX}:
+${LINUX}: directories
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX_NAME}.tar.gz -o $@.tar.gz
-	mkdir ${LINUX}
+	mkdir -p ${LINUX}
 	tar xf $@.tar.gz -C $(BUILD_DIR)
-${INITRD}:
+${INITRD}: directories
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD_NAME}.tar.gz -o $@.tar.gz
-	mkdir ${INITRD}
+	mkdir -p ${INITRD}
 	tar xf $@.tar.gz -C $(BUILD_DIR)
 
 # Copy both the kernel and initrd into 1 directory for the Rust compiler to `include_bytes!` the files
@@ -126,7 +126,7 @@ qemu: all
 			-nographic
 
 directories:
-	$(shell mkdir -p $(BUILD_DIR))
+	mkdir -p $(BUILD_DIR)
 
 $(DTB): $(DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
@@ -150,5 +150,5 @@ $(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a $(LINUX_DOWNLOAD_IMAGES_D
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) ${LINUX_DOWNLOAD_IMAGES_DIR}
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
