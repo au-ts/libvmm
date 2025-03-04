@@ -16,6 +16,13 @@ CONFIG ?= debug
 # Default board supported is QEMU virt AArch64
 BOARD = qemu_virt_aarch64
 
+# Download the Linux kernel and initrd from Trustworthy Systems website
+LINUX_NAME := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+LINUX := $(BUILD_DIR)/$(LINUX_NAME)
+INITRD_NAME := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+INITRD := $(BUILD_DIR)/$(INITRD_NAME)
+LINUX_DOWNLOAD_IMAGES_DIR := $(BUILD_DIR)/linux_images
+
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
 # All dependencies needed to compile the VMM
@@ -107,11 +114,6 @@ qemu: all
 directories:
 	mkdir -p $(BUILD_DIR)
 
-# Download the Linux kernel and initrd from Trustworthy Systems website
-LINUX_NAME := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-LINUX := $(BUILD_DIR)/$(LINUX_NAME)
-INITRD_NAME := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
-INITRD := $(BUILD_DIR)/$(INITRD_NAME)
 ${LINUX}: directories
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX_NAME}.tar.gz -o $@.tar.gz
 	mkdir -p ${LINUX}
@@ -122,7 +124,6 @@ ${INITRD}: directories
 	tar xf $@.tar.gz -C $(BUILD_DIR)
 
 # Copy both the kernel and initrd into 1 directory for the Rust compiler to `include_bytes!` the files
-LINUX_DOWNLOAD_IMAGES_DIR := $(BUILD_DIR)/linux_images
 ${LINUX_DOWNLOAD_IMAGES_DIR}: ${LINUX} ${INITRD}
 	mkdir $@
 	cp ${LINUX}/linux ${LINUX_DOWNLOAD_IMAGES_DIR}/linux
