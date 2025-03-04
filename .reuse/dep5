@@ -4,6 +4,7 @@ Source: https://github.com/au-ts/libvmm
 
 Files:
     .gitmodules
+    flake.lock
     build.zig.zon
     examples/simple/build.zig.zon
     examples/zig/build.zig.zon
