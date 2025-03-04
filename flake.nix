@@ -25,6 +25,7 @@
         x86_64-darwin = "macos-x86-64";
         x86_64-linux = "linux-x86-64";
       };
+      overlays = [ (import rust-overlay) ];
 
       forAllSystems = with nixpkgs.lib; genAttrs (builtins.attrNames microkit-platforms);
     in
@@ -34,12 +35,12 @@
           default =
             let
               pkgs = import nixpkgs {
-                inherit system;
+                inherit system overlays;
               };
 
               llvm = pkgs.llvmPackages_18;
               zig = zig-overlay.packages.${system}."master";
-              rust = rust-overlay.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
+              rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
 
               pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
 
