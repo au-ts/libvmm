@@ -75,6 +75,7 @@
                 llvm.lld
                 llvm.libllvm
                 llvm.clang
+                llvm.libclang
                 dtc
                 python
                 util-linux
@@ -85,6 +86,8 @@
               # To avoid Nix adding compiler flags that are not available on a freestanding
               # environment.
               hardeningDisable = [ "all" ];
+              # Necessary for Rust bindgen
+              LIBCLANG_PATH = "${llvm.libclang.lib}/lib";
             };
         });
     };
