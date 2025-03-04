@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Copyright 2025, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
 set -e
 
 IMAGE_PATH=$1
