@@ -31,9 +31,12 @@ intended to simply boot a Linux guest that has serial input and output.
 * Device Tree Compiler
 * Clang/LLVM tools
 * QEMU
-* Microkit SDK (version 1.4.1)
+* Microkit SDK 1.4.1-dev.54+a8b7894
 
-For the Microkit SDK, you can download it from [here](https://github.com/seL4/microkit/releases/tag/1.4.1).
+For the Microkit SDK, you can download it here:
+- [Linux x64_64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64.tar.gz).
+- [macOS aarch64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-macos-aarch64.tar.gz).
+- [macOS Intel](https://trustworthy.systems/Downloads/microkit/microkit-sdk-1.4.1-dev.54+a8b7894-macos-x86-64.tar.gz)
 
 For all other dependencies, see the below instructions depending on your machine.
 
