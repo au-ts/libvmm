@@ -60,10 +60,14 @@ brew install make qemu dtc llvm
 ```
 
 #### Nix
+
+There is a Nix flake available in the repository, so you can get a development shell via:
 ```sh
-# In the root of the repository
-nix-shell
+nix develop
 ```
+
+Note that this will set the `MICROKIT_SDK` environment variable to the SDK path, you do not
+need to download the Microkit SDK manually.
 
 ### Building and running
 
