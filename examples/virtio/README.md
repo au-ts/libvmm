@@ -28,7 +28,7 @@ are needed:
 * mkfs.fat, and
 * sdfgen (for generating the System Description File with a metaprogram).
 
-On all platforms, `sdfgen` can be installed with:
+On macOS and Linux platforms, `sdfgen` can be installed with:
 ```shell
 pip3 install sdfgen
 ```
