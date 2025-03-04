@@ -48,8 +48,6 @@ jobs:
         uses: mlugg/setup-zig@v1.2.0
         with:
           version: master
-      - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Setup pyenv
         run: |
           python3 -m venv venv
@@ -85,8 +83,6 @@ jobs:
         uses: mlugg/setup-zig@v1.2.0
         with:
           version: master
-      - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Setup pyenv
         run: |
           python3 -m venv venv
