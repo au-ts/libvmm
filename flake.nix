@@ -63,6 +63,7 @@
               };
 
               nativeBuildInputs = with pkgs; [
+                rust
                 git
                 zig
                 qemu
