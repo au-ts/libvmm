@@ -8,6 +8,7 @@
 The purpose of this project is to make it easy to run virtual machines on top of the seL4 microkernel.
 
 This project contains three parts:
+
 * `src/`: The source code of libvmm, a library for virtual-machine-monitors (VMM) to create and manage virtual machines on seL4.
 * `examples/`: Examples for using libvmm.
 * `tools/`: Tools that are useful when developing systems using virtual machines, but are not
@@ -31,9 +32,9 @@ intended to simply boot a Linux guest that has serial input and output.
 * Device Tree Compiler
 * Clang/LLVM tools
 * QEMU
-* Microkit SDK (version 1.4.1)
+* Microkit SDK (version 2.0.0)
 
-For the Microkit SDK, you can download it from [here](https://github.com/seL4/microkit/releases/tag/1.4.1).
+For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.0.0).
 
 For all other dependencies, see the below instructions depending on your machine.
 
