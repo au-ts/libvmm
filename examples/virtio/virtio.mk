@@ -20,16 +20,15 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-SYSTEM_DIR := $(VIRTIO_EXAMPLE)/
 SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 DTS_FILE := $(SDDF)/dts/$(MICROKIT_BOARD).dts
 DTB_FILE := $(MICROKIT_BOARD).dtb
+CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
-CLIENT_VM_USERLEVEL :=
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
@@ -125,17 +124,16 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 vm_dir:
 	mkdir -p client_vm
 
-client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/client_vm_common/rootfs.cpio.gz \
-	$(CLIENT_VM_USERLEVEL) $(CLIENT_VM_USERLEVEL_INIT) |client_vm
-	$(LIBVMM)/tools/packrootfs $(SYSTEM_DIR)/client_vm_common/rootfs.cpio.gz \
+client_vm/rootfs.cpio.gz: $(CLIENT_VM)/rootfs.cpio.gz \
+	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(LIBVMM)/tools/packrootfs $(CLIENT_VM)/rootfs.cpio.gz \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT) \
-		--home $(CLIENT_VM_USERLEVEL)
+		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-client_vm/vm.dts: $(SYSTEM_DIR)/client_vm_common/linux.dts $(SYSTEM_DIR)/client_vm_common/$(GIC_DT_OVERLAY) \
+client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -146,9 +144,9 @@ client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	$(SYSTEM_DIR)/client_vm_common/linux client_vm/vm.dtb client_vm/rootfs.cpio.gz
+	$(CLIENT_VM)/linux client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/client_vm_common/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM)/linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \
