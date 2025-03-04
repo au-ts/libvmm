@@ -134,9 +134,9 @@ ${INITRD}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz
 	tar xf $@.tar.gz
 
-client_vm/rootfs.cpio.gz: $(CLIENT_VM)/rootfs.cpio.gz \
+client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
-	$(LIBVMM)/tools/packrootfs $(CLIENT_VM)/rootfs.cpio.gz \
+	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
