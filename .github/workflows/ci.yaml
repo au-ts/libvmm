@@ -117,7 +117,7 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build and run examples
-        run: nix-shell --run "./ci/examples.sh ${PWD}/microkit-sdk-1.4.1-dev.54+a8b7894-linux-x86-64"
+        run: nix develop -c bash -c './ci/examples.sh $MICROKIT_SDK'
       - name: Upload built system images
         uses: actions/upload-artifact@v4
         with:
