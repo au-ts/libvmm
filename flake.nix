@@ -72,8 +72,7 @@
                 llvm.libclang.python
                 llvm.lld
                 llvm.libllvm
-                # llvm.libclang
-                clang
+                llvm.clang
                 dtc
                 python
                 util-linux
@@ -84,8 +83,6 @@
               # To avoid Nix adding compiler flags that are not available on a freestanding
               # environment.
               hardeningDisable = [ "all" ];
-              # Needed for Rust example
-              # LIBCLANG_PATH = "${llvm.libclang.lib}/lib";
             };
         });
     };
