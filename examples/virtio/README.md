@@ -88,11 +88,11 @@ This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
 ### Metaprogram
-Unlike the other examples, this one uses a metaprogram (meta.py) with microkit_sdf_gen 
-to generate the System Description File (SDF) and other necessary artefacts. Previously, 
-SDFs were written manually, along with C headers for sDDF-specific configurations, but 
-this approach was tedious and error-prone. By leveraging microkit_sdf_gen, we can describe 
-the system at a higher level, automating the generation of system-specific data for driver 
+Unlike the other examples, this one uses a metaprogram (meta.py) with microkit_sdf_gen
+to generate the System Description File (SDF) and other necessary artefacts. Previously,
+SDFs were written manually, along with C headers for sDDF-specific configurations, but
+this approach was tedious and error-prone. By leveraging microkit_sdf_gen, we can describe
+the system at a higher level, automating the generation of system-specific data for driver
 subsystems and reducing the complexity of assembling more advanced systems.
 
 ## Running
