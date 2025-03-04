@@ -49,7 +49,9 @@ jobs:
         with:
           version: master
       - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          rustup toolchain install nightly-2024-01-06-x86_64-unknown-linux-gnu
       - name: Setup pyenv
         run: |
           python3 -m venv venv
@@ -86,7 +88,9 @@ jobs:
         with:
           version: master
       - name: Install Rust
-        run: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          rustup toolchain install nightly-2024-01-06-aarch64-apple-darwin
       - name: Setup pyenv
         run: |
           python3 -m venv venv
