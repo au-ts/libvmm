@@ -22,8 +22,10 @@ ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	INITRD := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	LINUX := 98d7ef6542f59df3e614fb62122d42216c36d874-linux
-	INITRD := 98d7ef6542f59df3e614fb62122d42216c36d874-linux.tar.gz
+	INITRD := ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
+	LINUX := 218994f11eb8292e615daee37e417caf6929487b-linux
+	INITRD := ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
@@ -64,12 +66,12 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 ${LINUX}:
-	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@
-	tar xf $@
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@.tar.gz
+	tar xf $@.tar.gz
 
 ${INITRD}:
-	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@
-	tar xf $@
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
+	tar xf $@.tar.gz
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
