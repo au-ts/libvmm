@@ -35,7 +35,7 @@ LINUX_DOWNLOAD_IMAGES_DIR := $(BUILD_DIR)/linux_images
 ${LINUX_DOWNLOAD_IMAGES_DIR}: ${LINUX} ${INITRD}
 	mkdir $@
 	cp ${LINUX}/linux ${LINUX_DOWNLOAD_IMAGES_DIR}/linux
-	cp ${INITRD}/rootfs.cpio.gz ${LINUX_DOWNLOAD_IMAGES_DIR}/rootfs.cpio.gz 
+	cp ${INITRD}/rootfs.cpio.gz ${LINUX_DOWNLOAD_IMAGES_DIR}/rootfs.cpio.gz
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
