@@ -20,43 +20,40 @@ The example currently works on the following platforms:
 * QEMU virt AArch64
 * Avnet MaaXBoard
 
+### Metaprogram
+Unlike the other examples, this one uses a metaprogram (meta.py) with microkit_sdf_gen
+to generate the System Description File (SDF) and other necessary artefacts. Previously,
+SDFs were written manually, along with C headers for sDDF-specific configurations, but
+this approach was tedious and error-prone. By leveraging microkit_sdf_gen, we can describe
+the system at a higher level, automating the generation of system-specific data for driver
+subsystems and reducing the complexity of assembling more advanced systems.
+
 ## Dependencies
 
 In addition to the dependencies outlined in the top-level README, the following dependencies
 are needed:
-* Zig (for cross-compiling for Linux user-space),
 * mkfs.fat, and
 * sdfgen (for generating the System Description File with a metaprogram).
 
-On macOS and Linux platforms, `sdfgen` can be installed with:
-```shell
-pip3 install sdfgen
-```
-Or alternatively with a virtual environment:
-```shell
-python3 -m venv my_venv
-source ./my_venv/bin/activate
-pip3 install sdfgen
-```
-
 ### Linux
 
-Zig can be installed manually or via a package manager, see
-[here](https://github.com/ziglang/zig/wiki/Install-Zig-from-a-Package-Manager).
-
-You may already have `mkfs.fat`, if not and you use `apt` try the following command:
+On apt based Linux distributions run the following commands:
 ```sh
 sudo apt-get install dosfstools
+pip3 install sdfgen==0.21.0
 ```
 
 ### macOS
 
-Zig can be installed manually or via a package manager, see
-[here](https://github.com/ziglang/zig/wiki/Install-Zig-from-a-Package-Manager).
-
-To install `mkfs.fat` run:
+On macOS, you can install the dependencies via Homebrew:
 ```sh
 brew install dosfstools
+pip3 install sdfgen==0.21.0
+```
+
+If you get error: `externally-managed-environment` when installing via pip, instead run:
+```sh
+pip3 install --break-system-packages sdfgen==0.21.0
 ```
 
 ### Nix
@@ -86,14 +83,6 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 
 This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
-
-### Metaprogram
-Unlike the other examples, this one uses a metaprogram (meta.py) with microkit_sdf_gen
-to generate the System Description File (SDF) and other necessary artefacts. Previously,
-SDFs were written manually, along with C headers for sDDF-specific configurations, but
-this approach was tedious and error-prone. By leveraging microkit_sdf_gen, we can describe
-the system at a higher level, automating the generation of system-specific data for driver
-subsystems and reducing the complexity of assembling more advanced systems.
 
 ## Running
 
