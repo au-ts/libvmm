@@ -20,7 +20,7 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-SYSTEM_DIR := $(VIRTIO_EXAMPLE)/board/
+SYSTEM_DIR := $(VIRTIO_EXAMPLE)/
 SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
