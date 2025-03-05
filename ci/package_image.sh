@@ -26,7 +26,7 @@ SANITISED_IMG_NAME=$(echo "$IMAGE_NAME" | tr '.' '_')
 
 cat > $ZON_PATH <<EOF
 .{
-    .name = ."$SANITISED_IMG_NAME",
+    .name = .$SANITISED_IMG_NAME,
     .version = "0.0.0",
 
     .paths = .{
