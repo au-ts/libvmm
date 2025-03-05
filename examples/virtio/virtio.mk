@@ -136,7 +136,7 @@ ${INITRD}:
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
-	$(LIBVMM)/tools/packrootfs ${INITRD} \
+	$(LIBVMM)/tools/packrootfs ${INITRD}/rootfs.cpio.gz \
 		client_vm/rootfs_staging -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
