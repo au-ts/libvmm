@@ -12,6 +12,7 @@ common Linux utilities.
 The example currently works on the following platforms:
 * QEMU virt AArch64
 * HardKernel Odroid-C4
+* Avnet MaaXBoard
 
 ## Building with Make
 
