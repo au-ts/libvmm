@@ -54,7 +54,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     switch (dev->data.DeviceFeaturesSel) {
     /* Feature bits 0 to 31 */
     case 0:
-        *features = BIT_LOW(VIRTIO_NET_F_MAC);
+        *features = (BIT_LOW(VIRTIO_NET_F_MAC) | BIT_LOW(0));
         break;
     /* Features bits 32 to 63 */
     case 1:
