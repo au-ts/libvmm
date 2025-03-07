@@ -56,7 +56,7 @@ BOARDS: List[Board] = [
     Board(
         name="maaxboard",
         arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x90000000,
+        paddr_top=0x70000000,
         serial="soc@0/bus@30800000/serial@30860000",
         timer="soc@0/bus@30000000/timer@302d0000",
         net="soc@0/bus@30800000/ethernet@30be0000",
@@ -205,9 +205,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     # )
 
     mac_random_part = random.randint(0, 0xfe)
-    # client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
-    client0_mac_addr = f"22:4e:27:a9:37:93"
-    
+    client0_mac_addr = f"52:54:01:00:00:{hex(mac_random_part)[2:]:0>2}"
     # client1_mac_addr = f"52:54:01:00:00:{hex(mac_random_part + 1)[2:]:0>2}"
     # assert client0_mac_addr != client1_mac_addr
 
