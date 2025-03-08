@@ -1,6 +1,6 @@
 .{
-    .name = "zig",
-    .version = "1.0.0",
+    .name = .zig,
+    .version = "0.0.0",
 
     .dependencies = .{
         .libvmm = .{
@@ -10,5 +10,6 @@
     .paths = .{
         "build.zig",
         "build.zig.zon",
-    }
+    },
+    .fingerprint = 0xc1ce1081cd2432c3,
 }

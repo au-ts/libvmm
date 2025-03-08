@@ -93,7 +93,7 @@ pub fn build(b: *std.Build) void {
     exe.addObjectFile(.{ .cwd_relative = libmicrokit });
     exe.addObject(zig_libmicrokit);
     // Specify the linker script, this is necessary to set the ELF entry point address.
-    exe.setLinkerScriptPath(.{ .cwd_relative = libmicrokit_linker_script });
+    exe.setLinkerScript(.{ .cwd_relative = libmicrokit_linker_script });
 
     exe.linkLibrary(libvmm);
 

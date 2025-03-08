@@ -94,7 +94,7 @@ zig translate-c <MICROKIT SDK PATH>/board/qemu_virt_aarch64/debug/include/microk
 
 #### Step 2
 
-Add the following to the top of `libmicrokit.zig`
+Add the following to the top of `src/libmicrokit.zig`
 ```zig
 const libmicrokit = @cImport({
     @cInclude("libmicrokit.h");

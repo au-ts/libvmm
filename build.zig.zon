@@ -1,6 +1,6 @@
 .{
-    .name = "libvmm",
-    .version = "0.1.0",
+    .name = .libvmm,
+    .version = "0.0.0",
 
     .dependencies = .{
         .sddf = .{
@@ -14,5 +14,6 @@
         "build.zig.zon",
         "src",
         "tools",
-    }
+    },
+    .fingerprint = 0x78d558db37c63bd1,
 }
