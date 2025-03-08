@@ -1,14 +1,23 @@
 .{
-    .name = "zig",
-    .version = "1.0.0",
+    .name = .zig,
+    .version = "0.0.0",
 
     .dependencies = .{
         .libvmm = .{
             .path = "../../"
         },
+        .linux = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/85000f3f42a882e4476e57003d53f2bbec8262b0-linux.tar.gz",
+            .hash = "12208b86cf6ccbfd8c6befdfd6587ebef4d5c4d7cf125203a1dda11401d2abd8bdc2",
+        },
+        .initrd = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz.tar.gz",
+            .hash = "1220e95084d0ef6564e67784f6c647bc13d04d7749140bd1d39c0cd1aee84fd7fddb",
+        },
     },
     .paths = .{
         "build.zig",
         "build.zig.zon",
-    }
+    },
+    .fingerprint = 0xc1ce1081cd2432c3,
 }

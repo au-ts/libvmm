@@ -226,7 +226,6 @@ struct virtio_net_device {
 };
 
 bool virtio_mmio_net_init(struct virtio_net_device *dev,
-                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ],
                           uintptr_t region_base,
                           uintptr_t region_size,
                           size_t virq,
@@ -235,6 +234,7 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
                           uintptr_t rx_data,
                           uintptr_t tx_data,
                           microkit_channel rx_ch,
-                          microkit_channel tx_ch);
+                          microkit_channel tx_ch,
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);
 
 bool virtio_net_handle_rx(struct virtio_net_device *dev);

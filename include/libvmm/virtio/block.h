@@ -148,12 +148,12 @@ typedef struct reqbk {
     uint16_t virtio_desc_head;
     uintptr_t sddf_data;
     uint16_t sddf_count;
-    uint32_t sddf_block_number;
+    uint64_t sddf_block_number;
     uintptr_t virtio_data;
     uint16_t virtio_data_size;
     /* Only used for unaligned write from virtIO, if not true, this request is the
     * "read" part of the read-modify-write */
-    bool aligned; 
+    bool aligned;
 } reqbk_t;
 
 struct virtio_blk_device {
@@ -179,13 +179,13 @@ struct virtio_blk_device {
 };
 
 bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
-                     uintptr_t region_base,
-                     uintptr_t region_size,
-                     size_t virq,
-                     uintptr_t data_region,
-                     size_t data_region_size,
-                     blk_storage_info_t *storage_info,
-                     blk_queue_handle_t *queue_h,
-                     int server_ch);
+                          uintptr_t region_base,
+                          uintptr_t region_size,
+                          size_t virq,
+                          uintptr_t data_region,
+                          size_t data_region_size,
+                          blk_storage_info_t *storage_info,
+                          blk_queue_handle_t *queue_h,
+                          int server_ch);
 
 bool virtio_blk_handle_resp(struct virtio_blk_device *blk_dev);
