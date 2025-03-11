@@ -116,8 +116,8 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
 }
 
 // devmem 0x1ff100000 >/dev/null
+// devmem 0x1ff100000 8 1234 >/dev/null
 bool benchmark_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
-    sel4bench_record_cycle_count(2);
     printf("benchmarking: cycle count: %llu\n", sel4bench_get_cycle_count());
     return true;
 }
@@ -209,10 +209,10 @@ int _tag_linuxfixup = 0;
 int _tag_VMFault = 0;
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
 
-    if (microkit_msginfo_get_label(msginfo) == seL4_Fault_VMFault) {
-        _tag_VMFault = 1;
-        sel4bench_record_cycle_count(1);
-    }
+//    if (microkit_msginfo_get_label(msginfo) == seL4_Fault_VMFault) {
+//        _tag_VMFault = 1;
+//        sel4bench_record_cycle_count(1);
+//    }
 
     if (_tag_linuxfixup == 0) {
         seL4_BenchmarkNullSyscall();
