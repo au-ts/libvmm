@@ -114,7 +114,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm%.elf: client_vm/vmm.o client_vm/images.o
+client_vmm%.elf: client_vm/vmm.o client_vm/images.o libsddf_util.a
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Need to build libsddf_util_debug.a because it's included in LIBS

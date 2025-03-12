@@ -22,6 +22,12 @@
 //     return !CPSR_IS_THUMB(regs->spsr);
 // }
 
+static uint32_t fault_cnt;
+
+uint32_t read_fault_cnt() {
+    return fault_cnt;
+}
+
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs)
 {
     // For now we just ignore it and continue
@@ -404,6 +410,8 @@ static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr
 
 bool fault_handle_vm_exception(size_t vcpu_id)
 {
+    fault_cnt += 1;
+
     uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
     size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
 

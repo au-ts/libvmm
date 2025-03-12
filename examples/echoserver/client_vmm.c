@@ -24,6 +24,7 @@
 #include <sddf/util/printf.h>
 #include <sddf/benchmark/sel4bench.h>
 #include <sddf/benchmark/config.h>
+#include <sel4/benchmark_utilisation_types.h>
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
@@ -60,6 +61,43 @@ static struct virtio_net_device virtio_net;
 
 net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
+
+#define START 0x01
+#define STOP  0x02
+
+bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs, void *data) {
+    LOG_VMM("[IPBENCH VM FAULT] write: %d, data: %d\n", fault_is_read(fsr), fault_get_data(regs, fsr));
+
+    uint64_t val = fault_get_data(regs, fsr);
+
+    sddf_printf("[ipbench vm fault handler]:\n", vcpu_id);
+    sddf_dprintf("[ipbench vm fault handler]:\n", vcpu_id);
+
+    if (val == START) {
+        sddf_printf("%s measurement starting... notify %d\n", microkit_name, benchmark_config.start_ch);
+        seL4_BenchmarkResetThreadUtilisation(BASE_VM_TCB_CAP + vcpu_id);
+        microkit_notify(benchmark_config.start_ch);
+    } else if (val == STOP) {
+        sddf_printf("%s measurement finished, notify %d\n", microkit_name, benchmark_config.stop_ch);
+        seL4_BenchmarkGetThreadUtilisation(BASE_VM_TCB_CAP + vcpu_id);
+
+        uint64_t *buffer = (uint64_t *)&seL4_GetIPCBuffer()->msg[0];
+        uint64_t total = buffer[BENCHMARK_TCB_UTILISATION];
+        uint64_t number_schedules = buffer[BENCHMARK_TCB_NUMBER_SCHEDULES];
+        uint64_t kernel = buffer[BENCHMARK_TCB_KERNEL_UTILISATION];
+        uint64_t entries = buffer[BENCHMARK_TCB_NUMBER_KERNEL_ENTRIES];
+
+        sddf_printf("Utilisation details for VM:\n");
+        sddf_printf("{\nKernelUtilisation:  %lx\nKernelEntries:  %lx\nNumberSchedules:  %lx\nTotalUtilisation:  %lx\n}\n",
+                kernel, entries, number_schedules, total);
+
+        microkit_notify(benchmark_config.stop_ch);
+
+        sddf_printf("vm_fault count: %lu\n", read_fault_cnt());
+    }
+
+    return true;
+}
 
 void init(void)
 {
@@ -102,6 +140,9 @@ void init(void)
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size, serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
+    serial_putchar_init(serial_config.tx.id, &serial_tx_queue);
+
+    sddf_printf("fdjshkafhkdjshffdsjfhdska******f\n");
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
@@ -129,9 +170,16 @@ void init(void)
                                 );
     assert(success);
 
+    success = fault_register_vm_exception_handler(0x170000, 0x100, &ipbench_vmfault_handler, NULL);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register the VM fault handler for ipbench\n");
+        return;
+    }
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
+    sddf_dprintf("Debug information\n");
 }
 
 void notified(microkit_channel ch)

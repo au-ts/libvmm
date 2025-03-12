@@ -36,3 +36,5 @@ char *fault_to_string(seL4_Word fault_label);
 
 bool fault_is_write(uint64_t fsr);
 bool fault_is_read(uint64_t fsr);
+
+uint32_t read_fault_cnt();
