@@ -43,6 +43,22 @@
         vpu@ff900000 {
             status = "disabled";
         };
+
+        usb@ffe09000 {
+            status = "disabled";
+        };
+
+        sd@ffe05000 {
+            status = "disabled";
+        };
+
+        mmc@ffe07000 {
+            status = "disabled";
+        };
+
+        gpu@ffe40000 {
+            status = "disabled";
+        };
     };
 
     chosen {
