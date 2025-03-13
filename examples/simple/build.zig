@@ -126,6 +126,8 @@ pub fn build(b: *std.Build) void {
     const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
         "sh", "../../tools/dtscat", base_dts_path, overlay
     });
+    dts_cat_cmd.addFileInput(b.path(base_dts_path));
+    dts_cat_cmd.addFileInput(b.path(overlay));
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the DTS into a DTB
@@ -166,12 +168,10 @@ pub fn build(b: *std.Build) void {
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
     guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
 
-    const linux_image_dep = b.lazyDependency(b.fmt("{s}_linux", .{ microkit_board }), .{});
+    const linux_image_dep = b.dependency("linux", .{});
     const initrd_image_dep = b.lazyDependency(b.fmt("{s}_initrd", .{ microkit_board }), .{});
 
-    if (linux_image_dep) |linux_image| {
-        guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
-    }
+    guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image_dep.path("linux"), .prefix, "linux").step);
 
     if (initrd_image_dep) |initrd_image| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
