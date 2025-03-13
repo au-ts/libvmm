@@ -29,10 +29,11 @@ CFLAGS := \
 	  -I$(SDDF)/include \
 	  -MD \
 	  -MP \
-	  -target $(TARGET)
+	  -target $(TARGET) \
+	  -I/Users/ivanv/ts/arm-gnu-toolchain-12.2.rel1-darwin-arm64-aarch64-none-elf/aarch64-none-elf/include
 
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a --end-group
+LDFLAGS := -L$(BOARD_DIR)/lib -L/Users/ivanv/ts/arm-gnu-toolchain-12.2.rel1-darwin-arm64-aarch64-none-elf/aarch64-none-elf/lib
+LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libvmm.a --end-group
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
