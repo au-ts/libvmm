@@ -6,6 +6,8 @@
 QEMU := qemu-system-aarch64
 PYTHON ?= python3
 
+LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
+
 LIBVMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 SDDF_INCLUDE := $(SDDF)/include/sddf
@@ -124,9 +126,17 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 vm_dir:
 	mkdir -p client_vm
 
-client_vm/rootfs.cpio.gz: $(CLIENT_VM)/rootfs.cpio.gz \
+${LINUX}:
+	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
+	tar xf $@.tar.gz
+
+${INITRD}:
+	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz
+	tar xf $@.tar.gz
+
+client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
-	$(LIBVMM)/tools/packrootfs $(CLIENT_VM)/rootfs.cpio.gz \
+	$(LIBVMM)/tools/packrootfs ${INITRD}/rootfs.cpio.gz \
 		client_vm/rootfs_staging -o $@ \
 		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
@@ -144,9 +154,9 @@ client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	$(CLIENT_VM)/linux client_vm/vm.dtb client_vm/rootfs.cpio.gz
+	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(CLIENT_VM)/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}/linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \

@@ -17,6 +17,19 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
 IMAGES := vmm.elf
 
+ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
+	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+	LINUX := 98d7ef6542f59df3e614fb62122d42216c36d874-linux
+	INITRD := ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
+else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
+	LINUX := 218994f11eb8292e615daee37e417caf6929487b-linux
+	INITRD := ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
+else
+$(error Unsupported MICROKIT_BOARD given)
+endif
+
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
@@ -52,8 +65,13 @@ $(IMAGES): libvmm.a
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz
-	cp $(SYSTEM_DIR)/rootfs.cpio.gz $(BUILD_DIR)/rootfs.cpio.gz
+${LINUX}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@.tar.gz
+	tar xf $@.tar.gz
+
+${INITRD}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
+	tar xf $@.tar.gz
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
@@ -64,11 +82,11 @@ vm.dtb: vm.dts
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-images.o: $(LIBVMM)/tools/package_guest_images.S $(SYSTEM_DIR)/linux vm.dtb rootfs.cpio.gz
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}/linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"rootfs.cpio.gz\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}/rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
