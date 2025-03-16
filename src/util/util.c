@@ -15,24 +15,24 @@ void _putchar(char character)
     microkit_dbg_putc(character);
 }
 
-void *memset(void *dest, int c, size_t n)
-{
-    unsigned char *s = dest;
-    for (; n; n--, s++) {
-        *s = c;
-    }
-    return dest;
-}
+/* void *memset(void *dest, int c, size_t n) */
+/* { */
+/*     unsigned char *s = dest; */
+/*     for (; n; n--, s++) { */
+/*         *s = c; */
+/*     } */
+/*     return dest; */
+/* } */
 
-void *memcpy(void *restrict dest, const void *restrict src, size_t n)
-{
-    unsigned char *d = dest;
-    const unsigned char *s = src;
-    for (; n; n--) {
-        *d++ = *s++;
-    }
-    return dest;
-}
+/* void *memcpy(void *restrict dest, const void *restrict src, size_t n) */
+/* { */
+/*     unsigned char *d = dest; */
+/*     const unsigned char *s = src; */
+/*     for (; n; n--) { */
+/*         *d++ = *s++; */
+/*     } */
+/*     return dest; */
+/* } */
 
 void print_mem_hex(uintptr_t addr, size_t size)
 {

@@ -238,3 +238,5 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
                           uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);
 
 bool virtio_net_handle_rx(struct virtio_net_device *dev);
+
+uint32_t read_invocation_cnt();

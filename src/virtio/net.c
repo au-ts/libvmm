@@ -11,6 +11,8 @@
 #include <libvmm/util/util.h>
 #include <sddf/network/queue.h>
 
+#include <sddf/benchmark/sel4bench.h>
+
 /* Uncomment this to enable debug logging */
 #define DEBUG_NET
 
@@ -22,6 +24,14 @@
 
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
+/* uint32_t invocation_cnt; */
+/* uint32_t cycle_cnt; */
+/* uint32_t notify_cnt; */
+
+uint32_t read_invocation_cnt() {
+    /* return notify_cnt / invocation_cnt; */
+    return 1;
+}
 
 static inline struct virtio_net_device *device_state(struct virtio_device *dev)
 {
@@ -202,6 +212,7 @@ static void handle_tx_msg(struct virtio_device *dev,
     virtq_enqueue_used(virtq, desc_head, written);
     *respond_to_guest = true;
     *notify_tx_server = true;
+
     return;
 
 fail:
@@ -211,6 +222,7 @@ fail:
 
 static bool virtio_net_queue_notify(struct virtio_device *dev)
 {
+
     struct virtio_net_device *state = device_state(dev);
 
     if (!driver_ok(dev)) {
@@ -231,6 +243,7 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
 
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
+    uint16_t idx_start = idx;
 
     bool notify_tx_server = false;
     bool respond_to_guest = false;
@@ -401,6 +414,8 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     net_dev->tx_data = (void *)tx_data;
     net_dev->rx_ch = rx_ch;
     net_dev->tx_ch = tx_ch;
+
+    set_pmu(false);
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }

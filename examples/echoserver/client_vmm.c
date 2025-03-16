@@ -10,9 +10,11 @@
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+#include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#include <string.h>
 #include <sddf/serial/queue.h>
 #include <sddf/serial/config.h>
 #include <sddf/timer/client.h>
@@ -62,6 +64,7 @@ static struct virtio_net_device virtio_net;
 net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
 
+#define READY 0x00
 #define START 0x01
 #define STOP  0x02
 
@@ -71,9 +74,12 @@ bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_Us
     uint64_t val = fault_get_data(regs, fsr);
 
     sddf_printf("[ipbench vm fault handler]:\n", vcpu_id);
-    sddf_dprintf("[ipbench vm fault handler]:\n", vcpu_id);
 
-    if (val == START) {
+    if (val == READY) {
+        sddf_printf("Guest is booted, re-enable PMU access\n");
+        seL4_BenchmarkNullSyscall();
+        set_pmu(true);
+    } else if (val == START) {
         sddf_printf("%s measurement starting... notify %d\n", microkit_name, benchmark_config.start_ch);
         seL4_BenchmarkResetThreadUtilisation(BASE_VM_TCB_CAP + vcpu_id);
         microkit_notify(benchmark_config.start_ch);
@@ -94,6 +100,8 @@ bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_Us
         microkit_notify(benchmark_config.stop_ch);
 
         sddf_printf("vm_fault count: %lu\n", read_fault_cnt());
+        sddf_printf("queue_notify cnt: %lu\n", read_net_fault_cnt());
+        sddf_printf("queue_notify avg cycles: %lu\n", read_net_handling_avg());
     }
 
     return true;
@@ -142,7 +150,6 @@ void init(void)
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size, serial_config.tx.data.vaddr);
     serial_putchar_init(serial_config.tx.id, &serial_tx_queue);
 
-    sddf_printf("fdjshkafhkdjshffdsjfhdska******f\n");
 
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
@@ -179,7 +186,6 @@ void init(void)
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
-    sddf_dprintf("Debug information\n");
 }
 
 void notified(microkit_channel ch)

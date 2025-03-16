@@ -11,6 +11,7 @@
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/arch/aarch64/fault.h>
 
+#include <sddf/benchmark/sel4bench.h>
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
 
@@ -21,10 +22,31 @@
 #define LOG_MMIO(...) do{}while(0)
 #endif
 
+uint32_t invocation_cnt;
+uint32_t notify_cnt;
+
 // @jade: add some giant comments about this file
 // generic virtio mmio emul interface
 
+uint32_t net_fault_cnt;
+bool pmu_ready;
+
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
+
+uint32_t read_net_fault_cnt()
+{
+    return invocation_cnt;
+}
+
+uint32_t read_net_handling_avg()
+{
+    return notify_cnt / invocation_cnt;
+}
+
+void set_pmu(bool is_ready)
+{
+    pmu_ready = is_ready;
+}
 
 struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
 {
@@ -168,6 +190,9 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
 static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
                                          seL4_UserContext *regs)
 {
+    uint64_t cycle_start;
+    uint64_t cycle_end;
+
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
@@ -207,8 +232,16 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NOTIFY, REG_VIRTIO_MMIO_INTERRUPT_STATUS):
+        if (pmu_ready) {
+            SEL4BENCH_READ_CCNT(cycle_start);
+        }
         dev->data.QueueNotify = (uint32_t)data;
         success = dev->funs->queue_notify(dev);
+        if (pmu_ready) {
+            invocation_cnt += 1;
+            SEL4BENCH_READ_CCNT(cycle_end);
+            notify_cnt += cycle_end - cycle_start;
+        }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_ACK, REG_VIRTIO_MMIO_STATUS):
         dev->data.InterruptStatus &= ~data;
@@ -304,6 +337,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         success = false;
     }
 
+
     return success;
 }
 
@@ -311,11 +345,19 @@ bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
 {
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
+
+    /* if (dev->data.DeviceID == VIRTIO_DEVICE_ID_NET && fault_is_read(fsr)) { */
+        /* net_fault_cnt += 1; */
+    /* } */
+
+    bool success = false;
     if (fault_is_read(fsr)) {
-        return handle_virtio_mmio_reg_read(dev, vcpu_id, offset, fsr, regs);
+        success =  handle_virtio_mmio_reg_read(dev, vcpu_id, offset, fsr, regs);
     } else {
-        return handle_virtio_mmio_reg_write(dev, vcpu_id, offset, fsr, regs);
+        success = handle_virtio_mmio_reg_write(dev, vcpu_id, offset, fsr, regs);
     }
+
+    return success;
 }
 
 /*

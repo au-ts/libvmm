@@ -9,22 +9,23 @@
 # sleep 5 && \
 # devmem 0x170000 b 0x02
 
+devmem 0x170000 b 0x00 && \
 ifconfig eth0 up && \
 sleep 5 && \
 udhcpc && \
 (/root/echoit &) && \
 export PYTHONPATH=$PTHONPATH:/ipbench/usr/lib/python3.12/site-packages/ && \
 (/ipbench/usr/bin/ipbenchd -d -t &> output.txt &) && \
-echo "Listening on the output.txt" && \
+# echo "Listening on the output.txt" && \
 while true; do
     tail -f output.txt | while read -r line; do
-        echo $line
+        # echo $line
         if [[ "$line" == "\[run\] start" ]]; then
-            echo "[SCRIPT]: notify bench PD to start"
+            # echo "[SCRIPT]: notify bench PD to start"
             devmem 0x170000 b 0x01
         fi
         if [[ "$line" == *"\[parse_common_opts\]: got line STOP"* ]]; then
-            echo "[SCRIPT]: notify bench PD to stop"
+            # echo "[SCRIPT]: notify bench PD to stop"
             devmem 0x170000 b 0x02
         fi
     done

@@ -51,7 +51,8 @@ CFLAGS := -mcpu=$(CPU) \
 	  -I${SDDF}/$(LWIPDIR)/include/ipv4 \
 	  -MD \
 	  -MP \
-		-target $(TARGET)
+		-target $(TARGET) \
+		-I/Users/terrybai/ts/arm-gnu-toolchain-12.2.rel1-darwin-arm64-aarch64-none-elf/aarch64-none-elf/include
 
 CFLAGS_USERLEVEL := \
 	-g3 \
@@ -63,7 +64,7 @@ CFLAGS_USERLEVEL := \
 	-I$(BOARD_DIR)/include \
 	-I$(SDDF)/include
 
-LDFLAGS := -L$(BOARD_DIR)/lib -L${LIBC}
+LDFLAGS := -L$(BOARD_DIR)/lib -L/Users/terrybai/ts/arm-gnu-toolchain-12.2.rel1-darwin-arm64-aarch64-none-elf/aarch64-none-elf/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld -lc libsddf_util_debug.a libvmm.a --end-group
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- ${CFLAGS} ${BOARD} ${MICROKIT_CONFIG} | shasum | sed 's/ *-//')

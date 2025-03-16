@@ -137,3 +137,7 @@ bool virtio_mmio_register_device(virtio_device_t *dev,
                                  uintptr_t region_base,
                                  uintptr_t region_size,
                                  size_t virq);
+
+uint32_t read_net_fault_cnt();
+uint32_t read_net_handling_avg();
+void set_pmu(bool is_ready);
