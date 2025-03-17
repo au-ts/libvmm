@@ -410,8 +410,6 @@ static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr
 
 bool fault_handle_vm_exception(size_t vcpu_id)
 {
-    fault_cnt += 1;
-
     uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
     size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
 
@@ -462,6 +460,8 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         success = fault_handle_vcpu_exception(vcpu_id);
         break;
     case seL4_Fault_VPPIEvent:
+        fault_cnt += 1;
+
         success = fault_handle_vppi_event(vcpu_id);
         break;
     default:

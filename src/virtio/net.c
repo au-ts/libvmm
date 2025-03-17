@@ -24,13 +24,11 @@
 
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-/* uint32_t invocation_cnt; */
+uint32_t net_invocation_cnt;
 /* uint32_t cycle_cnt; */
-/* uint32_t notify_cnt; */
 
 uint32_t read_invocation_cnt() {
-    /* return notify_cnt / invocation_cnt; */
-    return 1;
+    return net_invocation_cnt;
 }
 
 static inline struct virtio_net_device *device_state(struct virtio_device *dev)
@@ -149,15 +147,11 @@ static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t
 
 static bool virtio_net_respond(struct virtio_device *dev)
 {
-    if (dev->data.InterruptStatus == 0x1) {
-        return true;
-    } else {
-        dev->data.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-        assert(success);
+    dev->data.InterruptStatus = BIT_LOW(0);
+    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
+    assert(success);
 
-        return success;
-    }
+    return success;
 }
 
 static void handle_tx_msg(struct virtio_device *dev,
@@ -226,7 +220,6 @@ fail:
 
 static bool virtio_net_queue_notify(struct virtio_device *dev)
 {
-
     struct virtio_net_device *state = device_state(dev);
 
     if (!driver_ok(dev)) {
@@ -265,9 +258,9 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
     }
 
     bool success = true;
-    if (respond_to_guest) {
-        success = virtio_net_respond(dev);
-    }
+    /* if (respond_to_guest) { */
+        /* success = virtio_net_respond(dev); */
+    /* } */
 
     return success;
 }

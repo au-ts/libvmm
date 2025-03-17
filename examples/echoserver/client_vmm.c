@@ -99,9 +99,10 @@ bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_Us
 
         microkit_notify(benchmark_config.stop_ch);
 
-        sddf_printf("vm_fault count: %lu\n", read_fault_cnt());
+        sddf_printf("vppi_fault count: %lu\n", read_fault_cnt());
         sddf_printf("queue_notify cnt: %lu\n", read_net_fault_cnt());
         sddf_printf("queue_notify avg cycles: %lu\n", read_net_handling_avg());
+        sddf_printf("net queue_notify cnt: %lu\n", read_invocation_cnt());
     }
 
     return true;
