@@ -128,11 +128,15 @@ vm_dir:
 
 ${LINUX}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
-	tar xf $@.tar.gz
+	mkdir -p linux_download_dir
+	tar -xf $@.tar.gz -C linux_download_dir
+	cp linux_download_dir/${LINUX}/linux ${LINUX}
 
 ${INITRD}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz
-	tar xf $@.tar.gz
+	mkdir -p initrd_download_dir
+	tar xf $@.tar.gz -C initrd_download_dir
+	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
@@ -156,9 +160,9 @@ client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
 	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
@@ -166,10 +170,7 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
-.PRECIOUS: blk_driver_vm blk_driver_vm/vm.dts \
-	blk_driver_vm/vm.dtb blk_driver_vm/rootfs.cpio.gz \
-	blk_driver_vm/images.o blk_driver_vm/vmm.o \
-	client_vm client_vm/vm.dts client_vm/vm.dtb \
+.PRECIOUS: client_vm client_vm/vm.dts client_vm/vm.dtb \
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
