@@ -148,5 +148,5 @@ $(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a ${LINUX} ${INITRD} $(DTB)
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)
 
-$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION) ${LINUX_DOWNLOAD_IMAGES_DIR}
+$(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
 	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
