@@ -21,10 +21,10 @@ ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 	INITRD := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
-	LINUX := 98d7ef6542f59df3e614fb62122d42216c36d874-linux
+	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 	INITRD := ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
-	LINUX := 218994f11eb8292e615daee37e417caf6929487b-linux
+	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 	INITRD := ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
