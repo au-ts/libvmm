@@ -17,11 +17,8 @@ CONFIG ?= debug
 BOARD = qemu_virt_aarch64
 
 # Download the Linux kernel and initrd from Trustworthy Systems website
-LINUX_NAME := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-LINUX := $(BUILD_DIR)/$(LINUX_NAME)
-INITRD_NAME := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
-INITRD := $(BUILD_DIR)/$(INITRD_NAME)
-LINUX_DOWNLOAD_IMAGES_DIR := $(BUILD_DIR)/linux_images
+LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
@@ -84,12 +81,13 @@ RUST_TARGET_PATH := .
 RUST_MICROKIT_TARGET := aarch64-microkit-minimal
 TARGET_DIR := $(BUILD_DIR)/target
 
-RUST_ENV := \
+RUST_ENV = \
 	RUST_TARGET_PATH=$(abspath $(RUST_TARGET_PATH)) \
 	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include) \
 	MICROKIT_BOARD_DIR=$(abspath $(BOARD_DIR)) \
 	BUILD_DIR=$(abspath $(BUILD_DIR)) \
-	IMAGE_DIR=$(abspath $(LINUX_DOWNLOAD_IMAGES_DIR)) \
+	LINUX_PATH=$(abspath $(LINUX)) \
+	INITRD_PATH=$(abspath $(INITRD))
 
 RUST_OPTIONS := \
 	-Z unstable-options \
@@ -114,20 +112,19 @@ qemu: all
 directories:
 	mkdir -p $(BUILD_DIR)
 
-${LINUX}: directories
-	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX_NAME}.tar.gz -o $@.tar.gz
-	mkdir -p ${LINUX}
-	tar xf $@.tar.gz -C $(BUILD_DIR)
-${INITRD}: directories
-	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD_NAME}.tar.gz -o $@.tar.gz
-	mkdir -p ${INITRD}
-	tar xf $@.tar.gz -C $(BUILD_DIR)
+${LINUX}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $(BUILD_DIR)/$@.tar.gz
+	mkdir -p $(BUILD_DIR)/linux_download_dir
+	tar -xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/linux_download_dir
+# This eval step is to propagate the image's absolute path into RUST_OPTIONS
+# so that src/vmm.rs can include_bytes! the correct file.
+	$(eval LINUX=$(BUILD_DIR)/linux_download_dir/${LINUX}/linux)
 
-# Copy both the kernel and initrd into 1 directory for the Rust compiler to `include_bytes!` the files
-${LINUX_DOWNLOAD_IMAGES_DIR}: ${LINUX} ${INITRD}
-	mkdir $@
-	cp ${LINUX}/linux ${LINUX_DOWNLOAD_IMAGES_DIR}/linux
-	cp ${INITRD}/rootfs.cpio.gz ${LINUX_DOWNLOAD_IMAGES_DIR}/rootfs.cpio.gz
+${INITRD}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $(BUILD_DIR)/$@.tar.gz
+	mkdir -p $(BUILD_DIR)/initrd_download_dir
+	tar xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/initrd_download_dir
+	$(eval INITRD=$(BUILD_DIR)/initrd_download_dir/${INITRD}/rootfs.cpio.gz)
 
 $(DTB): $(DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
@@ -147,7 +144,7 @@ $(BUILD_DIR)/%.o: $(LIBVMM)/src/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/libvmm.a: $(addprefix $(BUILD_DIR)/, $(LIBVMM_OBJS))
 	$(AR) -crv $@ $^
 
-$(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a $(LINUX_DOWNLOAD_IMAGES_DIR) $(DTB)
+$(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a ${LINUX} ${INITRD} $(DTB)
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)
 
