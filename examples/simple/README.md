@@ -37,8 +37,8 @@ This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
 By default the build system fetches the Linux kernel and initrd images from
-Trustworthy Systems' website. To use your own images, specify `LINUX` and/or
-`INITRD`. For example:
+Trustworthy Systems' website on-demand. To override this anduse your own images,
+specify `LINUX` and/or `INITRD`. For example:
 
 ```sh
 make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd qemu
