@@ -18,14 +18,14 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 IMAGES := vmm.elf
 
 ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
-	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD := 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
-	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD := ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
+	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
-	LINUX := 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD := ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
+	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
@@ -67,11 +67,15 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 
 ${LINUX}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@.tar.gz
-	tar xf $@.tar.gz
+	mkdir -p linux_download_dir
+	tar -xf $@.tar.gz -C linux_download_dir
+	cp linux_download_dir/${LINUX}/linux ${LINUX}
 
 ${INITRD}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
-	tar xf $@.tar.gz
+	mkdir -p initrd_download_dir
+	tar xf $@.tar.gz -C initrd_download_dir
+	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
@@ -84,9 +88,9 @@ vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 
 images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}/rootfs.cpio.gz\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
