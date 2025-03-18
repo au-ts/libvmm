@@ -372,7 +372,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             assert(!err);
             state->reqsbk[req_id] = (reqbk_t){
                 true, desc_head, sddf_data_cell_base, sddf_count, sddf_block_number,
-                sddf_data, body_size_bytes, false, RMW_UNDEFINED};
+                sddf_data, body_size_bytes, STATE_READING};
 
             uintptr_t sddf_offset =
                 sddf_data_cell_base -
@@ -469,12 +469,13 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                     //     state->reqsbk[i].sddf_block_number == sddf_block_number &&
                     //     state->reqsbk[i].read_modify_write_state == RMW_READING) {
                     if (state->reqsbk[i].valid && 
-                        state->reqsbk[i].sddf_block_number == sddf_block_number) {
+                        state->reqsbk[i].sddf_block_number == sddf_block_number &&
+                        state->reqsbk[i].state != STATE_OTHER_REQUEST &&
+                        state->reqsbk[i].state != STATE_READING
+                        ) {
                         LOG_VMM("not aligned and found another req inflight, queueing, this req id is %u\n", req_id);
                         LOG_VMM("i = %d\n", i);
                         LOG_VMM("state->reqsbk[i].valid = %d\n", state->reqsbk[i].valid);
-                        LOG_VMM("state->reqsbk[i].aligned = %d\n", state->reqsbk[i].aligned);
-                        LOG_VMM("state->reqsbk[i].is_read_modify_write = %d\n", state->reqsbk[i].is_read_modify_write);
                         LOG_VMM("state->reqsbk[i].sddf_block_number = %u\n", state->reqsbk[i].sddf_block_number);
                         
                         process = false;
@@ -494,9 +495,9 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
                 state->reqsbk[req_id] = (reqbk_t){
                     true, desc_head, sddf_data_cell_base, sddf_count, sddf_block_number,
-                    sddf_data, body_size_bytes, aligned, true, RMW_READING};
+                    sddf_data, body_size_bytes, STATE_RMW_READING};
                 if (!process) {
-                    state->reqsbk[req_id].read_modify_write_state = RMW_QUEUEING;
+                    state->reqsbk[req_id].state = STATE_RMW_QUEUEING;
                 }
             }
             else
@@ -544,7 +545,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                 ialloc_alloc(&state->ialloc, &req_id);
                 state->reqsbk[req_id] = (reqbk_t){
                     true, desc_head, sddf_data_cell_base, sddf_count, sddf_block_number,
-                    sddf_data, body_size_bytes, aligned, false, RMW_UNDEFINED};
+                    sddf_data, body_size_bytes, STATE_WRITING_ALIGNED};
 
                 uintptr_t sddf_offset =
                     sddf_data_cell_base -
@@ -572,7 +573,7 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             ialloc_alloc(&state->ialloc, &req_id);
             /* except for virtio desc, nothing else needs to be retrieved later
              * so leave as 0 */
-            state->reqsbk[req_id] = (reqbk_t){true, desc_head, 0, 0, 0, 0, 0, false, false, RMW_UNDEFINED};
+            state->reqsbk[req_id] = (reqbk_t){true, desc_head, 0, 0, 0, 0, 0, STATE_OTHER_REQUEST};
 
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
             virt_notify = true;
@@ -716,7 +717,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             }
             case VIRTIO_BLK_T_OUT:
             {
-                if (!reqbk->aligned && reqbk->read_modify_write_state == RMW_READING)
+                if (reqbk->state == STATE_RMW_READING)
                 {
                     LOG_VMM("receive response for unaligned sddf block %u, request id %u, sector %u\n", reqbk->sddf_block_number, sddf_ret_id, virtio_req_header.sector);
 
@@ -777,9 +778,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         reqbk->sddf_block_number,
                         reqbk->sddf_data,
                         reqbk->virtio_body_size_bytes,
-                        false,
-                        true,
-                        RMW_SENT_WRITE,
+                        STATE_RMW_WRITING
                     };
 
                     err = blk_enqueue_req(&state->queue_h, BLK_REQ_WRITE,
@@ -792,8 +791,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                      * (just skip over to next request) */
 
                     continue;
-                } else if (!reqbk->aligned && reqbk->read_modify_write_state == RMW_SENT_WRITE) {
-                    LOG_VMM("finished read modify write for request %u, sector %u\n", sddf_ret_id, virtio_req_header.sector);
                 }
                 break;
             }
@@ -810,20 +807,19 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             }
 
             // monkey see monkey do
-            LOG_VMM("monkey at request id %u, for sddf block %u\n", sddf_ret_id, reqbk->sddf_block_number);
-            for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
-                if (state->reqsbk[i].valid && state->reqsbk[i].is_read_modify_write && state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number) {
-                    LOG_VMM("1 monkey %u, i is %d\n", reqbk->sddf_block_number, i);
-                    if (!state->reqsbk[i].aligned) {
-                        LOG_VMM("2 monkey %u\n", reqbk->sddf_block_number);
-                        if (i != sddf_ret_id && state->reqsbk[i].read_modify_write_state == RMW_QUEUEING) {
+            if (reqbk->state == STATE_WRITING_ALIGNED || reqbk->state == STATE_RMW_WRITING) {
+                LOG_VMM("monkey at request id %u, for sddf block %u\n", sddf_ret_id, reqbk->sddf_block_number);
+                for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
+                    if (state->reqsbk[i].valid && state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number) {
+                        LOG_VMM("1 monkey %u, i is %d\n", reqbk->sddf_block_number, i);
+                        if (i != sddf_ret_id && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
                             if (!sddf_make_req_check(state, 1))
                             {
                                 assert(false);
                             }
                             LOG_VMM("3 monkey %u\n", reqbk->sddf_block_number);
 
-                            state->reqsbk[i].read_modify_write_state = RMW_READING;
+                            state->reqsbk[i].state = STATE_RMW_READING;
                             uintptr_t next_sddf_offset =
                                 state->reqsbk[i].sddf_data_cell_base -
                                 ((struct virtio_blk_device *)dev->device_data)->data_region;
@@ -834,9 +830,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         }
                     }
                 }
+                virt_notify = true;
             }
-            virt_notify = true;
-
         }
 
         if (resp_success)
