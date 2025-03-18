@@ -54,6 +54,19 @@ BOARDS: List[Board] = [
         guest_blk="virtio-blk@150000",
         net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@160000",
+        partition=2
+    ),
+    Board(
+        name="odroidc4",
+        arch=SystemDescription.Arch.AARCH64,
+        paddr_top=0x60000000,
+        serial="soc/bus@ff800000/serial@3000",
+        guest_serial="virtio-console@130000",
+        timer=None,
+        blk="soc/sd@ffe05000",
+        guest_blk="virtio-blk@150000",
+        net="soc/ethernet@ff3f0000",
+        guest_net="virtio-net@160000",
         partition=0
     ),
 ]
@@ -146,6 +159,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
+
+    # Map GPIO region, odroidc4 specific as its blk driver needs gpio
+    if board.name == "odroidc4":
+        gpio_mr = MemoryRegion("gpio", 0x1000, paddr=0xff800000)
+        blk_driver.add_map(Map(gpio_mr, 0xff800000, Map.Perms(r=True, w=True), cached=False))
+        sdf.add_mr(gpio_mr)
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)

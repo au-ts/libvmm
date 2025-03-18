@@ -65,7 +65,9 @@ LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
+ifeq ($(MICROKIT_BOARD), maaxboard)
 include $(TIMER_DRIVER)/timer_driver.mk
+endif
 include $(SERIAL_DRIVER)/serial_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${BLK_DRIVER}/blk_driver.mk

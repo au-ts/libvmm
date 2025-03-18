@@ -21,6 +21,7 @@ The example currently works on the following platforms:
 
 * QEMU virt AArch64
 * Avnet MaaXBoard
+* Hardkernel OdroidC4
 
 ### Metaprogram
 
@@ -140,8 +141,9 @@ divided by the disk's logical size. Partitions that do not follow this restricti
 are unsupported.
 
 By default on QEMU virt AArch64, we mount the first partition of the disk image,
-on Avnet MaaXBoard we mount the third partition of the SD Card. You can change the partition mounted
-by passing `PARTITION=n` when executing the Makefile.
+on Avnet MaaXBoard and Hardkernel OdroidC4 we mount the third and first partition of
+the SD Card respectively. You can change the partition mounted by passing `PARTITION=n`
+when executing the Makefile.
 
 ### virtIO net
 
