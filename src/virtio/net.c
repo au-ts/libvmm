@@ -123,7 +123,7 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
 
 static bool virtio_net_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
-    LOG_NET_ERR("All configuration fields are readonly\n");
+    LOG_NET_ERR("All configuration fields are read-only\n");
     return false;
 }
 
