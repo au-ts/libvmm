@@ -150,6 +150,13 @@ struct virtio_blk_outhdr
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
+typedef enum {
+    RMW_UNDEFINED,
+    RMW_QUEUEING,
+    RMW_READING,
+    RMW_SENT_WRITE,
+} read_modify_write_state_t;
+
 /* This struct exists to bookkeep request metadata when converting sddf requests
  * from a virtio request so that it can be later retrieved when converting a
  * virtio response from sddf response.
@@ -176,7 +183,7 @@ typedef struct reqbk
     bool aligned;
 
     bool is_read_modify_write;
-    bool is_waiting_on_other_unaligned;
+    read_modify_write_state_t read_modify_write_state;
 } reqbk_t;
 
 struct virtio_blk_device
