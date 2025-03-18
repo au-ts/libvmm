@@ -70,6 +70,9 @@
 /* v1.0 compliant. */
 #define VIRTIO_F_VERSION_1      32
 
+/* notification format */
+#define VIRTIO_F_NOTIFICATION_DATA 38
+
 /*
  * If clear - device has the platform DMA (e.g. IOMMU) bypass quirk feature.
  * If set - use platform DMA tools to access the memory.

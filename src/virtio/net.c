@@ -9,6 +9,7 @@
 #include <libvmm/virtio/net.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+#include <sddf/util/printf.h>
 #include <sddf/network/queue.h>
 
 #include <sddf/benchmark/sel4bench.h>
@@ -66,7 +67,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
         break;
     /* Features bits 32 to 63 */
     case 1:
-        *features = BIT_HIGH(VIRTIO_F_VERSION_1);
+        *features = BIT_HIGH(VIRTIO_F_VERSION_1) | BIT_HIGH(VIRTIO_F_NOTIFICATION_DATA);
         break;
     default:
         LOG_NET_ERR("Bad DeviceFeaturesSel 0x%x\n", dev->data.DeviceFeaturesSel);
@@ -89,7 +90,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
 
     /* Features bits 32 to 63 */
     case 1:
-        success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
+        success = (features == BIT_HIGH(VIRTIO_F_VERSION_1) | BIT_HIGH(VIRTIO_F_NOTIFICATION_DATA));
         break;
 
     default:
@@ -182,6 +183,12 @@ static void handle_tx_msg(struct virtio_device *dev,
 
     struct virtq_desc *desc = &virtq->desc[desc_head];
 
+    /* uint8_t *desc_addr = (uint8_t *)desc->addr; */
+    /* for (uint32_t i = 0; i < desc->len; i++) { */
+        /* sddf_printf("%d ", desc_addr[i]); */
+    /* } */
+    /* sddf_printf("\n"); */
+
     while (dest_remaining > 0) {
         uint32_t skipping = 0;
         /* Work out how much of this descriptor must be skipped */
@@ -221,6 +228,7 @@ fail:
 static bool virtio_net_queue_notify(struct virtio_device *dev)
 {
     struct virtio_net_device *state = device_state(dev);
+    /* sddf_printf("queue_notify %d\n", dev->data.QueueNotify); */
 
     if (!driver_ok(dev)) {
         LOG_NET_ERR("Driver not ready\n");
@@ -245,6 +253,7 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
     bool notify_tx_server = false;
     bool respond_to_guest = false;
 
+    net_invocation_cnt += (guest_idx - idx);
     for (; idx != guest_idx; idx++) {
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
         handle_tx_msg(dev, virtq, desc_head, &notify_tx_server, &respond_to_guest);
@@ -257,12 +266,12 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         microkit_notify(state->tx_ch);
     }
 
-    bool success = true;
+    /* bool success = true; */
     /* if (respond_to_guest) { */
         /* success = virtio_net_respond(dev); */
     /* } */
 
-    return success;
+    return true;
 }
 
 static uint32_t copy_rx(struct virtq *virtq,
