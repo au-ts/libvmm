@@ -88,6 +88,9 @@ pub fn build(b: *std.Build) void {
     const target = b.resolveTargetQuery(findTarget(microkit_board_option.?));
     const microkit_board = @tagName(microkit_board_option.?);
 
+    const custom_linux = b.option([]const u8, "linux", "Custom Linux image to use") orelse null;
+    const custom_initrd = b.option([]const u8, "initrd", "Custom initrd image to use") orelse null;
+
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
     const microkit_board_dir = b.fmt("{s}/board/{s}/{s}", .{ microkit_sdk, microkit_board, microkit_config });
@@ -126,6 +129,8 @@ pub fn build(b: *std.Build) void {
     const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
         "sh", "../../tools/dtscat", base_dts_path, overlay
     });
+    dts_cat_cmd.addFileInput(b.path(base_dts_path));
+    dts_cat_cmd.addFileInput(b.path(overlay));
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the DTS into a DTB
@@ -166,11 +171,23 @@ pub fn build(b: *std.Build) void {
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
     guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
 
-    const linux_image_path = b.fmt("board/{s}/linux", .{ microkit_board });
-    const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ linux_image_path });
+    const linux_image_dep = b.lazyDependency("linux", .{});
+    const initrd_image_dep = b.lazyDependency(b.fmt("{s}_initrd", .{ microkit_board }), .{});
 
-    const initrd_image_path = b.fmt("board/{s}/rootfs.cpio.gz", .{ microkit_board });
-    const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ initrd_image_path });
+    if (custom_linux) |c| {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "linux").step);
+    } else if (linux_image_dep) |linux_image| {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
+    }
+
+    if (custom_initrd) |c| {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "rootfs.cpio.gz").step);
+    } else if (initrd_image_dep) |initrd_image| {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
+    }
+
+    const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux") });
+    const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "rootfs.cpio.gz") });
     const dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
     guest_images.addCSourceFile(.{
         .file = libvmm_dep.path("tools/package_guest_images.S"),
