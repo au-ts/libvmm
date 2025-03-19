@@ -18,7 +18,7 @@
 #include <sddf/util/ialloc.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_BLOCK
+#define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...)             \
@@ -197,8 +197,6 @@ static inline void virtio_blk_set_req_fail(struct virtio_device *dev,
     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_WRITE);
     *(uint8_t *)(virtq->desc[curr_desc].addr + virtq->desc[curr_desc].len - 1) =
         VIRTIO_BLK_S_IOERR;
-
-    assert(false);
 }
 
 static inline void virtio_blk_set_req_success(struct virtio_device *dev,
@@ -224,21 +222,18 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state,
     if (ialloc_full(&state->ialloc))
     {
         LOG_BLOCK_ERR("Request bookkeeping array is full\n");
-        assert(false);
         return false;
     }
 
     if (blk_queue_full_req(&state->queue_h))
     {
         LOG_BLOCK_ERR("Request queue is full\n");
-        assert(false);
         return false;
     }
 
     if (fsmalloc_full(&state->fsmalloc, sddf_count))
     {
         LOG_BLOCK_ERR("Data region is full\n");
-        assert(false);
         return false;
     }
 
@@ -800,7 +795,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             {
                 LOG_BLOCK_ERR("Retrieving sDDF block response, but virtIO request type "
                               "is not recognised: %d\n",
-                              virtio_req_header.type);
+                             virtio_req_header.type);
                 resp_success = false;
                 break;
             }
@@ -813,10 +808,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                     if (state->reqsbk[i].valid && state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number) {
                         LOG_VMM("1 monkey %u, i is %d\n", reqbk->sddf_block_number, i);
                         if (i != sddf_ret_id && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
-                            if (!sddf_make_req_check(state, 1))
-                            {
-                                assert(false);
-                            }
+                            sddf_make_req_check(state, 1);
                             LOG_VMM("3 monkey %u\n", reqbk->sddf_block_number);
 
                             state->reqsbk[i].state = STATE_RMW_READING;
