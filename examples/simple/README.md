@@ -36,6 +36,14 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
 This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
+By default the build system fetches the Linux kernel and initrd images from
+Trustworthy Systems' website on-demand. To override this anduse your own images,
+specify `LINUX` and/or `INITRD`. For example:
+
+```sh
+make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd qemu
+```
+
 ## Building with Zig
 
 For educational purposes, you can also build and run this example using the
@@ -57,6 +65,14 @@ Where `<MICROKIT_BOARD>` is one of:
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
 zig build -Dsdk=/path/to/sdk -Dboard=qemu_virt_aarch64 qemu
+```
+
+Similar with Make, the Zig build system will fetch Linux kernel and initrd images
+Trustworthy Systems' website. To use your own images, specify `-Dlinux` and/or
+`-Dinitrd`. For example:
+
+```sh
+zig build -Dsdk=/path/to/sdk -Dboard=qemu_virt_aarch64 -Dlinux=/path/to/linux -Dinitrd=/path/to/initrd qemu
 ```
 
 You can view other options by doing:
