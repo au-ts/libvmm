@@ -18,7 +18,7 @@
 #include <sddf/util/ialloc.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_BLOCK
+#define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...)             \
@@ -197,6 +197,8 @@ static inline void virtio_blk_set_req_fail(struct virtio_device *dev,
     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_WRITE);
     *(uint8_t *)(virtq->desc[curr_desc].addr + virtq->desc[curr_desc].len - 1) =
         VIRTIO_BLK_S_IOERR;
+
+    virtio_blk_used_buffer(dev, desc);
 }
 
 static inline void virtio_blk_set_req_success(struct virtio_device *dev,
@@ -758,7 +760,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
                     if (!sddf_make_req_check(state, 1))
                     {
-                        assert(false);
+                        resp_success = false;
+                        break;
                     }
 
                     uint32_t new_sddf_id;
@@ -808,8 +811,11 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                     if (state->reqsbk[i].valid && state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number) {
                         LOG_BLOCK("1 monkey %u, i is %d\n", reqbk->sddf_block_number, i);
                         if (i != sddf_ret_id && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
-                            sddf_make_req_check(state, 1);
-                            LOG_BLOCK("3 monkey %u\n", reqbk->sddf_block_number);
+                            if (!sddf_make_req_check(state, 1)) {
+                                resp_success = false;
+                                break;
+                            }
+                            LOG_BLOCK("2 monkey %u\n", reqbk->sddf_block_number);
 
                             state->reqsbk[i].state = STATE_RMW_READING;
                             uintptr_t next_sddf_offset =
@@ -818,11 +824,12 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                             err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, next_sddf_offset,
                                                 state->reqsbk[i].sddf_block_number, state->reqsbk[i].sddf_count, i);
                             assert(!err);
+
+                            virt_notify = true;
                             break;
                         }
                     }
                 }
-                virt_notify = true;
             }
         }
 
@@ -841,6 +848,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
         if (virtio_req_header.type == VIRTIO_BLK_T_IN ||
             virtio_req_header.type == VIRTIO_BLK_T_OUT)
         {
+            LOG_BLOCK("freeing fs buff for sector %u\n", virtio_req_header.sector);
             fsmalloc_free(&state->fsmalloc, reqbk->sddf_data_cell_base,
                           reqbk->sddf_count);
         }
