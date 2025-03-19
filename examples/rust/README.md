@@ -29,6 +29,14 @@ From here, you build the example with:
 make MICROKIT_SDK=/path/to/sdk
 ```
 
+By default the build system fetches the Linux kernel and initrd images from
+Trustworthy Systems' website on-demand. To override this anduse your own images,
+specify `LINUX` and/or `INITRD`. For example:
+
+```sh
+make MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd
+```
+
 ## Running the example
 
 You can build and run the example in a single command with:

@@ -1,6 +1,6 @@
 #
 # Copyright 2021, Breakaway Consulting Pty. Ltd.
-# Copyright 2022, UNSW (ABN 57 195 873 179)
+# Copyright 2025, UNSW (ABN 57 195 873 179)
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -15,6 +15,10 @@ BUILD_DIR ?= build
 CONFIG ?= debug
 # Default board supported is QEMU virt AArch64
 BOARD = qemu_virt_aarch64
+
+# Download the Linux kernel and initrd from Trustworthy Systems website
+LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 
 # Specify that we use bash for all shell commands
 SHELL=/bin/bash
@@ -31,10 +35,8 @@ LIBVMM := $(abspath ../../)
 SYSTEM_DESCRIPTION := rust_vmm.system
 
 IMAGE_DIR := images
-LINUX := $(IMAGE_DIR)/linux
 DTS := $(IMAGE_DIR)/linux.dts
 DTB := $(BUILD_DIR)/linux.dtb
-INITRD := $(IMAGE_DIR)/rootfs.cpio.gz
 
 ELFS := vmm.elf
 IMAGE_FILE = $(BUILD_DIR)/loader.img
@@ -79,12 +81,13 @@ RUST_TARGET_PATH := .
 RUST_MICROKIT_TARGET := aarch64-microkit-minimal
 TARGET_DIR := $(BUILD_DIR)/target
 
-RUST_ENV := \
+RUST_ENV = \
 	RUST_TARGET_PATH=$(abspath $(RUST_TARGET_PATH)) \
 	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include) \
 	MICROKIT_BOARD_DIR=$(abspath $(BOARD_DIR)) \
 	BUILD_DIR=$(abspath $(BUILD_DIR)) \
-	IMAGE_DIR=$(abspath $(IMAGE_DIR)) \
+	LINUX_PATH=$(abspath $(LINUX)) \
+	INITRD_PATH=$(abspath $(INITRD))
 
 RUST_OPTIONS := \
 	-Z unstable-options \
@@ -107,7 +110,21 @@ qemu: all
 			-nographic
 
 directories:
-	$(shell mkdir -p $(BUILD_DIR))
+	mkdir -p $(BUILD_DIR)
+
+${LINUX}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $(BUILD_DIR)/$@.tar.gz
+	mkdir -p $(BUILD_DIR)/linux_download_dir
+	tar -xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/linux_download_dir
+# This eval step is to propagate the image's absolute path into RUST_OPTIONS
+# so that src/vmm.rs can include_bytes! the correct file.
+	$(eval LINUX=$(BUILD_DIR)/linux_download_dir/${LINUX}/linux)
+
+${INITRD}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $(BUILD_DIR)/$@.tar.gz
+	mkdir -p $(BUILD_DIR)/initrd_download_dir
+	tar xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/initrd_download_dir
+	$(eval INITRD=$(BUILD_DIR)/initrd_download_dir/${INITRD}/rootfs.cpio.gz)
 
 $(DTB): $(DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
@@ -127,9 +144,9 @@ $(BUILD_DIR)/%.o: $(LIBVMM)/src/arch/aarch64/vgic/%.c Makefile
 $(BUILD_DIR)/libvmm.a: $(addprefix $(BUILD_DIR)/, $(LIBVMM_OBJS))
 	$(AR) -crv $@ $^
 
-$(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a $(LINUX) $(INITRD) $(DTB)
+$(BUILD_DIR)/vmm.elf: src/vmm.rs $(BUILD_DIR)/libvmm.a ${LINUX} ${INITRD} $(DTB)
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)
 
 $(IMAGE_FILE) $(REPORT_FILE): $(addprefix $(BUILD_DIR)/, $(ELFS)) $(SYSTEM_DESCRIPTION)
-	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) $(IMAGE_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
+	$(MICROKIT_TOOL) $(SYSTEM_DESCRIPTION) --search-path $(BUILD_DIR) --board $(BOARD) --config $(CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
