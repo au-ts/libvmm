@@ -61,9 +61,9 @@ fn init() -> VmmHandler {
     // binaries locally and placing them in the final binary that we load
     // onto our platform, in this case the QEMU virt AArch64 board.
     // @ivanv: the way this include works right now is undefined behaviour!
-    let linux = include_bytes!(concat!(env!("IMAGE_DIR"), "/linux"));
+    let linux = include_bytes!(env!("LINUX_PATH"));
     let dtb = include_bytes!(concat!(env!("BUILD_DIR"), "/linux.dtb"));
-    let initrd = include_bytes!(concat!(env!("IMAGE_DIR"), "/rootfs.cpio.gz"));
+    let initrd = include_bytes!(env!("INITRD_PATH"));
     // libvmm does not understand slices like Rust, so we have to
     // turn this slices of u8 into raw addresses.
     let linux_addr = linux.as_ptr() as usize;
