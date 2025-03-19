@@ -26,6 +26,13 @@ You can download Zig [here](https://ziglang.org/download/).
 zig build -Dsdk=/path/to/sdk
 ```
 
+The build system fetches the Linux kernel and initrd images on-demand from
+Trustworthy Systems' website. To override this and use your own images, you can
+specify the paths with the `-Dlinux` and/or `-Dinitrd` options. For example:
+```sh
+zig build -Dsdk=/path/to/sdk -Dlinux=/path/to/linux -Dinitrd=/path/to/initrd
+```
+
 To view other options available when building the example (such as optimisation
 level or the target Microkit configuration), run the following command:
 ```sh
