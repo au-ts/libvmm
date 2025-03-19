@@ -78,12 +78,33 @@ pub fn build(b: *std.Build) void {
     });
     dtc_cmd.addFileArg(b.path("images/linux.dts"));
     const dtb = dtc_cmd.captureStdOut();
+    // The artefacts that are pre-compiled (Linux kernel and init RAM disk) are
+    // dependencies that are fetched by the build process. However the user can specify
+    // the build system to use their copy instead.
+    const custom_linux = b.option([]const u8, "linux", "Custom Linux image to use") orelse null;
+    const custom_initrd = b.option([]const u8, "initrd", "Custom initrd image to use") orelse null;
+
+    const linux_kernel = b.lazyDependency("linux", .{});
+    const initrd = b.lazyDependency("initrd", .{});
+
+    if (custom_linux) |c| {
+        exe.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "linux").step);
+    } else if (linux_kernel) |linux_image| {
+        exe.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
+    }
+
+    if (custom_initrd) |c| {
+        exe.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "rootfs.cpio.gz").step);
+    } else if (initrd) |initrd_image| {
+        exe.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
+    }
+
     // When we embed these artifacts into our VMM code, we use @embedFile provided by
     // the Zig compiler. However, we can't just include any path outside of the 'src/'
     // directory and so we add each file as a "module".
     exe.root_module.addAnonymousImport("dtb", .{ .root_source_file = dtb });
-    exe.root_module.addAnonymousImport("linux", .{ .root_source_file = b.path("images/linux") });
-    exe.root_module.addAnonymousImport("rootfs", .{ .root_source_file = b.path("images/rootfs.cpio.gz") });
+    exe.root_module.addAnonymousImport("linux", .{ .root_source_file = .{ .cwd_relative = b.getInstallPath(.prefix, "linux") } });
+    exe.root_module.addAnonymousImport("initrd", .{ .root_source_file = .{ .cwd_relative = b.getInstallPath(.prefix, "rootfs.cpio.gz") } });
 
     exe.addIncludePath(b.path("src/"));
     // Add microkit.h to be used by the API wrapper.
