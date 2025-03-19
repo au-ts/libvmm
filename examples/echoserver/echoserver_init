@@ -13,6 +13,7 @@
 
 devmem 0x170000 b 0x00 && \
 ifconfig eth0 up && \
+ifconfig && \
 sleep 5 && \
 udhcpc && \
 (/root/echoit &) && \

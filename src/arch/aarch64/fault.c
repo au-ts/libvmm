@@ -445,6 +445,8 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     bool success = false;
     switch (label) {
     case seL4_Fault_VMFault:
+        fault_cnt += 1;
+
         success = fault_handle_vm_exception(vcpu_id);
         break;
     case seL4_Fault_UnknownSyscall:
@@ -460,8 +462,6 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         success = fault_handle_vcpu_exception(vcpu_id);
         break;
     case seL4_Fault_VPPIEvent:
-        fault_cnt += 1;
-
         success = fault_handle_vppi_event(vcpu_id);
         break;
     default:

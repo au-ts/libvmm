@@ -26,10 +26,15 @@
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
 uint32_t net_invocation_cnt;
+uint32_t net_no_buffer_cnt;
 /* uint32_t cycle_cnt; */
 
 uint32_t read_invocation_cnt() {
     return net_invocation_cnt;
+}
+
+uint32_t read_no_buffer_cnt() {
+    return net_no_buffer_cnt;
 }
 
 static inline struct virtio_net_device *device_state(struct virtio_device *dev)
@@ -234,14 +239,15 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         LOG_NET_ERR("Driver not ready\n");
         return false;
     }
-    if (dev->data.QueueSel != VIRTIO_NET_TX_VIRTQ) {
-        LOG_NET_ERR("Invalid queue\n");
-        return false;
-    }
+    /* if (dev->data.QueueNotify != VIRTIO_NET_TX_VIRTQ) { */
+        /* LOG_NET_ERR("Invalid queue\n"); */
+        /* return false; */
+    /* } */
     if (!dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
         LOG_NET_ERR("TX virtq not ready\n");
         return false;
     }
+    net_no_buffer_cnt += 1;
 
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_TX_VIRTQ];
     struct virtq *virtq = &vq->virtq;
@@ -253,7 +259,6 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
     bool notify_tx_server = false;
     bool respond_to_guest = false;
 
-    net_invocation_cnt += (guest_idx - idx);
     for (; idx != guest_idx; idx++) {
         uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
         handle_tx_msg(dev, virtq, desc_head, &notify_tx_server, &respond_to_guest);

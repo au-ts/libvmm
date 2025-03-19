@@ -75,6 +75,7 @@ bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_Us
 
     sddf_printf("[ipbench vm fault handler]:\n", vcpu_id);
 
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     if (val == READY) {
         sddf_printf("Guest is booted, re-enable PMU access\n");
         seL4_BenchmarkNullSyscall();
@@ -103,7 +104,9 @@ bool ipbench_vmfault_handler(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_Us
         sddf_printf("queue_notify cnt: %lu\n", read_net_fault_cnt());
         sddf_printf("queue_notify avg cycles: %lu\n", read_net_handling_avg());
         sddf_printf("net queue_notify cnt: %lu\n", read_invocation_cnt());
+        sddf_printf("net queue_notify no buffer cnt: %lu\n", read_no_buffer_cnt());
     }
+#endif
 
     return true;
 }

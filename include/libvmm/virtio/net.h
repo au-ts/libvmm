@@ -240,3 +240,4 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
 bool virtio_net_handle_rx(struct virtio_net_device *dev);
 
 uint32_t read_invocation_cnt();
+uint32_t read_no_buffer_cnt();
