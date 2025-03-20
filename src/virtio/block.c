@@ -18,7 +18,7 @@
 #include <sddf/util/ialloc.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_BLOCK
+// #define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...)             \
@@ -238,15 +238,14 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state,
 
     if (fsmalloc_full(&state->fsmalloc, sddf_count))
     {
-        LOG_BLOCK_ERR("Data region is full\n");
+        // LOG_BLOCK_ERR("Data region is full\n");
         return false;
     }
 
     return true;
 }
 
-static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
-{
+static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num_reqs_consumed) {
     int err = 0;
     /* If multiqueue feature bit negotiated, should read which queue from
        dev->QueueNotify, but for now we just assume it's the one and only default
@@ -256,16 +255,15 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
     struct virtio_blk_device *state = device_state(dev);
 
-    /* If any request has to be dropped due to any number of reasons, this becomes
+    /* If any request has to be dropped due to any number of reasons, such as an invalid req, this becomes
      * true */
     bool has_dropped = false;
-
-    bool virt_notify = false;
+    int nums_consumed = 0;
 
     /* Handle available requests beginning from the last handled request */
     uint16_t last_handled_avail_idx = vq->last_idx;
 
-    LOG_BLOCK("------------- Driver notified device -------------\n");
+    LOG_BLOCK("------------- virtio_blk_handle_guest_requests start loop -------------\n");
     for (; last_handled_avail_idx != virtq->avail->idx;
          last_handled_avail_idx++)
     {
@@ -382,13 +380,12 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, sddf_offset,
                                   sddf_block_number, sddf_count, req_id);
             assert(!err);
-            virt_notify = true;
             break;
         }
         case VIRTIO_BLK_T_OUT:
         {
             LOG_BLOCK("Request type is VIRTIO_BLK_T_OUT\n");
-            LOG_BLOCK("Sector (read/write offset) is %d\n", virtio_req_header.sector);
+            LOG_BLOCK("Sector (read/write offset) is %d, curr_desc is %u\n", virtio_req_header.sector, curr_desc);
 
             /* Converting virtio sector number to sddf block number, we are rounding
              * down */
@@ -558,7 +555,6 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
                                       sddf_block_number, sddf_count, req_id);
                 assert(!err);
             }
-            virt_notify = true;
             break;
         }
         case VIRTIO_BLK_T_FLUSH:
@@ -581,7 +577,6 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             state->reqsbk[req_id] = (reqbk_t){true, desc_head, 0, 0, 0, 0, 0, STATE_OTHER_REQUEST};
 
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
-            virt_notify = true;
             break;
         }
         default:
@@ -594,28 +589,43 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
             break;
         }
         }
+
+        nums_consumed += 1;
     }
 
-    /* If any request has to be dropped due to any number of reasons, we inject an
-     * interrupt */
+stop_processing:
+    if (num_reqs_consumed) {
+        *num_reqs_consumed = nums_consumed;
+    }
+
+    /* Update virtq index to the next available request to be handled */
+    vq->last_idx = last_handled_avail_idx;
+
+    return !has_dropped;
+}
+
+static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
+{
+    int nums_consumed;
+    LOG_BLOCK("virtio_blk_mmio_queue_notify calling virtio_blk_handle_guest_requests\n");
+    bool consumption_status = virtio_blk_handle_guest_requests(dev, &nums_consumed);
+
     bool virq_inject_success = true;
-    if (has_dropped)
+    if (!consumption_status)
     {
         LOG_BLOCK("virtio_blk_mmio_queue_notify dropped requests\n");
         virtio_blk_set_interrupt_status(dev, true, false);
         virq_inject_success = virtio_blk_virq_inject(dev);
     }
 
-stop_processing:
-    /* Update virtq index to the next available request to be handled */
-    vq->last_idx = last_handled_avail_idx;
-
-    if (virt_notify && !blk_queue_plugged_req(&state->queue_h))
+    struct virtio_blk_device *state = device_state(dev);
+    if (nums_consumed && !blk_queue_plugged_req(&state->queue_h))
     {
+        LOG_BLOCK("virtio_blk_mmio_queue_notify notified virt\n");
         microkit_notify(state->server_ch);
     }
 
-    return true;
+    return virq_inject_success;
 }
 
 bool virtio_blk_handle_resp(struct virtio_blk_device *state)
@@ -631,6 +641,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
     bool virt_notify = false;
     bool resp_handled = false;
+    bool read_write_modify_inflight = false;
     while (!blk_queue_empty_resp(&state->queue_h))
     {
         err = blk_dequeue_resp(&state->queue_h, &sddf_ret_status,
@@ -788,6 +799,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                                           new_sddf_id);
                     assert(!err);
                     virt_notify = true;
+                    read_write_modify_inflight = true;
                     /* The virtIO request is not complete yet so we don't tell the driver
                      * (just skip over to next request) */
 
@@ -825,6 +837,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                             assert(!err);
 
                             virt_notify = true;
+                            read_write_modify_inflight = true;
                             break;
                         }
                     }
@@ -860,8 +873,14 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
     /* We need to know if we handled any responses, if we did, we inject an
      * interrupt, if we didn't we don't inject.
      */
-
-    virtio_blk_mmio_queue_notify(dev);
+    int nums_pending_cmds_consumed = 0;
+    if (!read_write_modify_inflight) {
+        LOG_BLOCK("virtio_blk_handle_resp calling virtio_blk_handle_guest_requests\n");
+        virtio_blk_handle_guest_requests(dev, &nums_pending_cmds_consumed);
+        if (nums_pending_cmds_consumed) {
+            virt_notify = true;
+        }
+    }
 
     bool virq_inject_success = true;
     if (resp_handled)
