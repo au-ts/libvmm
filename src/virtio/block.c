@@ -353,7 +353,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 // virtio_blk_set_req_fail(dev, curr_desc);
                 // has_dropped = true;
                 // break;
-                LOG_VMM("read: data region full at sector %u\n", virtio_req_header.sector);
+                LOG_BLOCK("read: data region full at sector %u\n", virtio_req_header.sector);
                 goto stop_processing;
             }
 
