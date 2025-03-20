@@ -68,6 +68,8 @@ virtio_blk_mmio_get_device_features(struct virtio_device *dev,
     case 0:
         *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
         *features = *features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
+        *features = *features | BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
+        *features = *features | BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
         break;
     /* features bits 32 to 63 */
     case 1:
@@ -95,6 +97,8 @@ virtio_blk_mmio_set_driver_features(struct virtio_device *dev,
     uint32_t device_features = 0;
     device_features |= BIT_LOW(VIRTIO_BLK_F_FLUSH);
     device_features |= BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
+    device_features |= BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
+    device_features |= BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
 
     switch (dev->data.DriverFeaturesSel)
     {
@@ -197,8 +201,6 @@ static inline void virtio_blk_set_req_fail(struct virtio_device *dev,
     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_WRITE);
     *(uint8_t *)(virtq->desc[curr_desc].addr + virtq->desc[curr_desc].len - 1) =
         VIRTIO_BLK_S_IOERR;
-
-    virtio_blk_used_buffer(dev, desc);
 }
 
 static inline void virtio_blk_set_req_success(struct virtio_device *dev,
@@ -219,6 +221,7 @@ static inline void virtio_blk_set_req_success(struct virtio_device *dev,
 static inline bool sddf_make_req_check(struct virtio_blk_device *state,
                                        uint16_t sddf_count)
 {
+    assert(sddf_count <= 1);
     /* Check if ialloc is full, if data region is full, if req queue is full.
        If these all pass then this request can be handled successfully */
     if (ialloc_full(&state->ialloc))
@@ -349,9 +352,11 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
             if (!sddf_make_req_check(state, sddf_count))
             {
-                virtio_blk_set_req_fail(dev, curr_desc);
-                has_dropped = true;
-                break;
+                // virtio_blk_set_req_fail(dev, curr_desc);
+                // has_dropped = true;
+                // break;
+                LOG_VMM("read: data region full at sector %u\n", virtio_req_header.sector);
+                goto stop_processing;
             }
 
             /* Allocate data cells from sddf data region based on sddf_count */
@@ -425,9 +430,11 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
             if (!sddf_make_req_check(state, sddf_count))
             {
-                virtio_blk_set_req_fail(dev, curr_desc);
-                has_dropped = true;
-                break;
+                // virtio_blk_set_req_fail(dev, curr_desc);
+                // has_dropped = true;
+                // break;
+                LOG_VMM("write: data region full at sector %u, body bytes %u, sddf count %u\n", virtio_req_header.sector, body_size_bytes, sddf_count);
+                goto stop_processing;
             }
 
             /* If the write request is not aligned on the sddf transfer size, we need
@@ -560,9 +567,10 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
 
             if (!sddf_make_req_check(state, 0))
             {
-                virtio_blk_set_req_fail(dev, curr_desc);
-                has_dropped = true;
-                break;
+                // virtio_blk_set_req_fail(dev, curr_desc);
+                // has_dropped = true;
+                // break;
+                goto stop_processing;
             }
 
             /* Bookkeep the request */
@@ -588,9 +596,6 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         }
     }
 
-    /* Update virtq index to the next available request to be handled */
-    vq->last_idx = last_handled_avail_idx;
-
     /* If any request has to be dropped due to any number of reasons, we inject an
      * interrupt */
     bool virq_inject_success = true;
@@ -601,12 +606,16 @@ static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
         virq_inject_success = virtio_blk_virq_inject(dev);
     }
 
+stop_processing:
+    /* Update virtq index to the next available request to be handled */
+    vq->last_idx = last_handled_avail_idx;
+
     if (virt_notify && !blk_queue_plugged_req(&state->queue_h))
     {
         microkit_notify(state->server_ch);
     }
 
-    return virq_inject_success;
+    return true;
 }
 
 bool virtio_blk_handle_resp(struct virtio_blk_device *state)
@@ -758,12 +767,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         }
                     }
 
-                    if (!sddf_make_req_check(state, 1))
-                    {
-                        resp_success = false;
-                        break;
-                    }
-
                     uint32_t new_sddf_id;
                     err = ialloc_alloc(&state->ialloc, &new_sddf_id);
                     assert(!err);
@@ -811,10 +814,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                     if (state->reqsbk[i].valid && state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number) {
                         LOG_BLOCK("1 monkey %u, i is %d\n", reqbk->sddf_block_number, i);
                         if (i != sddf_ret_id && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
-                            if (!sddf_make_req_check(state, 1)) {
-                                resp_success = false;
-                                break;
-                            }
                             LOG_BLOCK("2 monkey %u\n", reqbk->sddf_block_number);
 
                             state->reqsbk[i].state = STATE_RMW_READING;
@@ -861,6 +860,9 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
     /* We need to know if we handled any responses, if we did, we inject an
      * interrupt, if we didn't we don't inject.
      */
+
+    virtio_blk_mmio_queue_notify(dev);
+
     bool virq_inject_success = true;
     if (resp_handled)
     {
@@ -892,6 +894,9 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
         blk_dev->config.blk_size = storage_info->sector_size;
         LOG_BLOCK("blk_size: %d\n", blk_dev->config.blk_size);
     }
+
+    blk_dev->config.size_max = BLK_TRANSFER_SIZE;
+    blk_dev->config.seg_max = 1;
 }
 
 static virtio_device_funs_t functions = {
