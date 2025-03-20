@@ -379,6 +379,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 ((struct virtio_blk_device *)dev->device_data)->data_region;
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, sddf_offset,
                                   sddf_block_number, sddf_count, req_id);
+            nums_consumed += 1;
             assert(!err);
             break;
         }
@@ -430,7 +431,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 // virtio_blk_set_req_fail(dev, curr_desc);
                 // has_dropped = true;
                 // break;
-                LOG_VMM("write: data region full at sector %u, body bytes %u, sddf count %u\n", virtio_req_header.sector, body_size_bytes, sddf_count);
+                LOG_BLOCK("write: data region full at sector %u, body bytes %u, sddf count %u\n", virtio_req_header.sector, body_size_bytes, sddf_count);
                 goto stop_processing;
             }
 
@@ -445,7 +446,6 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
 
             if (!aligned)
             {
-                LOG_VMM("not aligned\n");
                 /* Allocate data buffer from data region based on sddf_count */
                 uintptr_t sddf_data_cell_base;
                 assert(fsmalloc_alloc(&state->fsmalloc, &sddf_data_cell_base, sddf_count) == 0);
@@ -492,6 +492,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                         ((struct virtio_blk_device *)dev->device_data)->data_region;
                     err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, sddf_offset,
                                         sddf_block_number, sddf_count, req_id);
+                    nums_consumed += 1;
                     assert(!err);
                 }
 
@@ -554,6 +555,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                     ((struct virtio_blk_device *)dev->device_data)->data_region;
                 err = blk_enqueue_req(&state->queue_h, BLK_REQ_WRITE, sddf_offset,
                                       sddf_block_number, sddf_count, req_id);
+                nums_consumed += 1;
                 assert(!err);
             }
             break;
@@ -578,6 +580,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
             state->reqsbk[req_id] = (reqbk_t){true, desc_head, 0, 0, 0, 0, 0, STATE_OTHER_REQUEST};
 
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
+            nums_consumed += 1;
             break;
         }
         default:
@@ -590,14 +593,10 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
             break;
         }
         }
-
-        nums_consumed += 1;
     }
 
 stop_processing:
-    if (num_reqs_consumed) {
-        *num_reqs_consumed = nums_consumed;
-    }
+    *num_reqs_consumed = nums_consumed;
 
     /* Update virtq index to the next available request to be handled */
     vq->last_idx = last_handled_avail_idx;
@@ -874,13 +873,16 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
     /* We need to know if we handled any responses, if we did, we inject an
      * interrupt, if we didn't we don't inject.
      */
-    int nums_pending_cmds_consumed = 0;
+    volatile int nums_pending_cmds_consumed = 0;
     if (!read_write_modify_inflight) {
         LOG_BLOCK("virtio_blk_handle_resp calling virtio_blk_handle_guest_requests\n");
         virtio_blk_handle_guest_requests(dev, &nums_pending_cmds_consumed);
-        if (nums_pending_cmds_consumed) {
+        LOG_BLOCK("virtio_blk_handle_guest_requests consumed %d reqs\n", nums_pending_cmds_consumed);
+
+        // @billn for some reasons this is always zero even if a req has been consumed...todo investigate
+        // if (nums_pending_cmds_consumed) {
             virt_notify = true;
-        }
+        // }
     }
 
     bool virq_inject_success = true;
@@ -960,9 +962,9 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
     virtio_blk_config_init(blk_dev);
 
     fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE,
-                  num_sddf_cells, &blk_dev->fsmalloc_avail_bitarr,
+                  16, &blk_dev->fsmalloc_avail_bitarr,
                   blk_dev->fsmalloc_avail_bitarr_words,
-                  roundup_bits2words64(num_sddf_cells));
+                  roundup_bits2words64(16));
 
     ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, num_sddf_cells);
 
