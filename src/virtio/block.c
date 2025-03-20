@@ -445,6 +445,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
 
             if (!aligned)
             {
+                LOG_VMM("not aligned\n");
                 /* Allocate data buffer from data region based on sddf_count */
                 uintptr_t sddf_data_cell_base;
                 assert(fsmalloc_alloc(&state->fsmalloc, &sddf_data_cell_base, sddf_count) == 0);
