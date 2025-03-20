@@ -7,6 +7,8 @@ QEMU := qemu-system-aarch64
 DTC := dtc
 PYTHON ?= python3
 
+LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
+
 METAPROGRAM := $(TOP)/meta.py
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
@@ -80,6 +82,12 @@ ${CHECK_FLAGS_BOARD_MD5}:
 client_vm:
 	mkdir -p $@
 
+${LINUX}:
+	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
+	mkdir -p linux_download_dir
+	tar -xf $@.tar.gz -C linux_download_dir
+	cp linux_download_dir/${LINUX}/linux ${LINUX}
+
 echoit.o: $(SDDF_BENCHMARK)/linux/echoit.c
 	$(CC_USERLEVEL) $(CFLAGS_USERLEVEL) -o $@ -c $<
 
@@ -96,7 +104,7 @@ client_vm/rootfs.cpio.gz: $(SYSTEM_DIR)/rootfs.cpio.gz \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL)
 
-client_vm/vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts \
+client_vm/vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -107,9 +115,9 @@ client_vm/vmm.o: $(EXAMPLE_DIR)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	$(SYSTEM_DIR)/linux client_vm/vm.dtb client_vm/rootfs.cpio.gz
+	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"$(SYSTEM_DIR)/linux\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \

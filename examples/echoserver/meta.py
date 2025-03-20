@@ -44,7 +44,7 @@ BOARDS: List[Board] = [
         serial="soc/bus@ff800000/serial@3000",
         net="soc/ethernet@ff3f0000",
         timer="soc/bus@ffd00000/watchdog@f0d0",
-        guest_net="virtio-net@0160000",
+        guest_net="virtio-net@160000",
         passthrough=[
             "soc/bus@ff600000",
             "soc/bus@ffd00000/reset-controller@1004",
@@ -60,7 +60,7 @@ BOARDS: List[Board] = [
         serial="soc@0/bus@30800000/serial@30860000",
         timer="soc@0/bus@30000000/timer@302d0000",
         net="soc@0/bus@30800000/ethernet@30be0000",
-        guest_net="virtio-net@0160000",
+        guest_net="virtio-net@160000",
         passthrough=[
             "soc@0/bus@30000000/syscon@30360000",
             "soc@0/bus@30000000/gpc@303a0000",
@@ -188,17 +188,17 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     # client1 = ProtectionDomain("client1", "client_vmm1.elf", priority=97, budget=20000)
     # vm_client1 = VirtualMachine("client_linux-1", [VirtualMachine.Vcpu(id=0)])
     # vmm_client1 = Vmm(sdf, client1, vm_client1, client_dtb)
-    for device_path in board.passthrough:
-        node = dtb.node(device_path)
-        assert node is not None
-        vmm_client0.add_passthrough_device(node, regions=[0])
+    # for device_path in board.passthrough:
+        # node = dtb.node(device_path)
+        # assert node is not None
+        # vmm_client0.add_passthrough_device(node, regions=[0])
         # vmm_client1.add_passthrough_device(node)
 
-    if board.name == "odroidc4":
-        eth_phy_irq = Irq(96)
-        vmm_client0.add_passthrough_irq(eth_phy_irq)
-        irq_work_irq = Irq(5)
-        vmm_client0.add_passthrough_irq(irq_work_irq)
+    # if board.name == "odroidc4":
+        # eth_phy_irq = Irq(96)
+        # vmm_client0.add_passthrough_irq(eth_phy_irq)
+        # irq_work_irq = Irq(5)
+        # vmm_client0.add_passthrough_irq(irq_work_irq)
 
     # client1_net_copier = ProtectionDomain(
     #     "client1_net_copier", "network_copy1.elf", priority=98, budget=20000

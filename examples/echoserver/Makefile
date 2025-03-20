@@ -23,19 +23,26 @@ ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export TIMER_DRV_DIR := arm
 	export ETH_DRV_DIR := virtio
 	export CPU := cortex-a53
+	export GIC_DT_OVERLAY := gic_v2_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export DRIV_DIR := meson
 	export SERIAL_DRIV_DIR := meson
 	export TIMER_DRV_DIR := meson
 	export ETH_DRV_DIR := meson
 	export CPU := cortex-a55
+	export GIC_DT_OVERLAY := gic_v3_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export DRIV_DIR := imx
 	export SERIAL_DRIV_DIR := imx
 	export TIMER_DRV_DIR := imx
 	export ETH_DRV_DIR := imx
 	export CPU := cortex-a53
+	export GIC_DT_OVERLAY := gic_v3_overlay.dts
 endif
+
+# All platforms use the same Linux and initrd images.
+export LINUX := a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux
+export INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
 export BUILD_DIR:=$(abspath ${BUILD_DIR})
 export MICROKIT_SDK:=$(abspath ${MICROKIT_SDK})
