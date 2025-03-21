@@ -32,9 +32,9 @@ intended to simply boot a Linux guest that has serial input and output.
 * Device Tree Compiler
 * Clang/LLVM tools
 * QEMU
-* Microkit SDK (version 2.0.0)
+* Microkit SDK (version 2.0.1)
 
-For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.0.0).
+For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.0.1).
 
 For all other dependencies, see the below instructions depending on your machine.
 
