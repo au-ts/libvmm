@@ -38,6 +38,7 @@ CFLAGS := \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
 	  -I$(SDDF)/include \
+	  -I$(SDDF)/include/microkit \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)

@@ -36,7 +36,7 @@ endif
 # we need ${SDDF} for virtIO; we need ${LIBVMM} for all
 # the libvmm api interfaces
 ifeq ($(findstring ${SDDF}/include, ${CFLAGS}),)
-CFLAGS += -I${SDDF}/include
+CFLAGS += -I${SDDF}/include -I${SDDF}/include/microkit
 endif
 ifeq ($(findstring ${LIBVMM_DIR}/include,${CFLAGS}),)
 CFLAGS += -I${LIBVMM_DIR}/include
