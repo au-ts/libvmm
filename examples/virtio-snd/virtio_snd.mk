@@ -38,11 +38,10 @@ CFLAGS := \
 	  -DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
+	  -I$(SDDF)/include/microkit \
 	  -I$(LIBVMM)/include \
 	  -I$(VIRTIO_EXAMPLE)/include \
 	  -I$(LIBVMM)/tools/linux/include \
-	  -I$(SDDF)/$(LWIPDIR)/include \
-	  -I$(SDDF)/$(LWIPDIR)/include/ipv4 \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
