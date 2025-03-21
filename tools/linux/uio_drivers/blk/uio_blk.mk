@@ -18,7 +18,7 @@ endif
 
 UIO_BLK_IMAGES := uio_blk_driver
 
-CFLAGS_uio_blk_driver := -I$(SDDF)/include -I$(LIBVMM_TOOLS)/linux/include
+CFLAGS_uio_blk_driver := -I$(SDDF)/include -I$(SDDF)/include/microkit -I$(LIBVMM_TOOLS)/linux/include
 
 CHECK_UIO_BLK_DRIVER_FLAGS_MD5:=.uio_blk_driver_cflags-$(shell echo -- $(CFLAGS_USERLEVEL) $(CFLAGS_uio_blk_driver) | shasum | sed 's/ *-//')
 

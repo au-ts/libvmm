@@ -18,7 +18,7 @@ LIBVMM ?= $(realpath ${LINUX_UIO_DIR}/../../../)
 
 LIBUIO_IMAGES := libuio.a
 
-CFLAGS_libuio := -I$(SDDF)/include -I$(LIBVMM)/tools/linux/include
+CFLAGS_libuio := -I$(SDDF)/include -I$(SDDF)/include/microkit -I$(LIBVMM)/tools/linux/include
 
 CHECK_LIBUIO_FLAGS_MD5:=.libuio_cflags-$(shell echo -- $(CFLAGS_USERLEVEL) $(CFLAGS_libuio) | shasum | sed 's/ *-//')
 
