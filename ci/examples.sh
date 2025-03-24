@@ -153,8 +153,8 @@ simulate_zig "release" "ReleaseSmall"
 
 build_virtio "qemu_virt_aarch64" "debug"
 build_virtio "qemu_virt_aarch64" "release"
-# build_virtio "odroidc4" "debug"
-# build_virtio "odroidc4" "release"
+build_virtio "maaxboard" "debug"
+build_virtio "maaxboard" "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"
