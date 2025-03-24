@@ -87,6 +87,7 @@ pub fn build(b: *std.Build) void {
 
     libvmm.addIncludePath(b.path("include"));
     libvmm.addIncludePath(sddf.path("include"));
+    libvmm.addIncludePath(sddf.path("include/microkit"));
     libvmm.addIncludePath(.{ .cwd_relative = libmicrokit_include_opt.? });
 
     libvmm.installHeadersDirectory(b.path("include/libvmm"), "libvmm", .{});
