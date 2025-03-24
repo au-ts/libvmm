@@ -42,7 +42,7 @@ dependencies are needed:
 
 On apt based Linux distributions run the following commands:
 ```sh
-sudo apt-get install dosfstools
+sudo apt-get install dosfstools python3 python3-pip
 pip3 install sdfgen==0.23.1
 ```
 
@@ -55,7 +55,7 @@ pip3 install --break-system-packages sdfgen==0.23.1
 
 On macOS, you can install the dependencies via Homebrew:
 ```sh
-brew install dosfstools
+brew install dosfstools python3
 pip3 install sdfgen==0.23.1
 ```
 
@@ -66,9 +66,9 @@ pip3 install --break-system-packages sdfgen==0.23.1
 
 ### Nix
 
-The top-level `shell.nix` has everything necessary:
+The top-level `flake.nix` has everything necessary:
 ```sh
-nix-shell ../../shell.nix
+nix develop
 ```
 
 ## Building
@@ -133,6 +133,42 @@ data corruption:
 To prevent this, always shut down the system properly by running `poweroff` after use,
 instead of forcefully terminating the VM.
 
+#### Usage
+
+Within the client VM you can do:
+```sh
+mkdir storage
+mount /dev/vda storage
+echo 'hello there' > storage/hello
+sync
+poweroff
+```
+
+From your local machine, you should now be able to see that the file we created
+and its contents.
+
+If you ran the example on QEMU, we can inspect the virtual storage device after exiting
+QEMU.
+
+On Linux, run the following commands:
+```sh
+$ sudo losetup --find --partscan --show build/blk_storage
+/dev/loopN
+$ mkdir storage
+$ sudo mount /dev/loopNp1 storage
+$ cat storage/hello
+hello there
+```
+
+On macOS, run the following commands:
+```sh
+$ hdiutil attach -imagekey diskimage-class=CRawDiskImage -nomount build/blk_storage
+$ mkdir -p /tmp/fs_read
+$ mount -t msdos $DISK_PARTITION /tmp/fs_read
+```
+
+#### Storage setup
+
 The system expects the storage device to contain an MBR partition table that contains
 one partition. Each partition is allocated to a single client. Partitions must have a
 starting block number that is a multiple of sDDF block's transfer size of 4096 bytes
@@ -151,7 +187,7 @@ the guest are multiplexed through the network virtualiser components.
 
 When the guest boots up, you must bring up the network device. First check the
 name of the network device, it should be called `eth0`:
-```
+```sh
 # ip link show
 1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
@@ -162,13 +198,13 @@ name of the network device, it should be called `eth0`:
 ```
 
 Then bring up the device:
-```
+```sh
 ip link set eth0 up
 ```
 
 Before you can talk on the network, you need an IP address.
 To obtain an IP address, initiate DHCP with:
-```
+```sh
 udhcpc
 ```
 
