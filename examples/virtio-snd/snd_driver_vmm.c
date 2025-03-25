@@ -82,7 +82,7 @@ static void register_passthrough_irq(int irq, microkit_channel irq_ch) {
     assert(irq_ch < MAX_IRQ_CH);
     passthrough_irq_map[irq_ch] = irq;
 
-    int err = virq_register(GUEST_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
+    int err = virq_register(GUEST_BOOT_VCPU_ID, irq, &passthrough_device_ack, (void *)(int64_t)irq_ch);
     if (!err) {
         LOG_VMM_ERR("Failed to register IRQ %d\n", irq);
         return;
@@ -124,7 +124,7 @@ void init(void) {
     }
 
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init(GUEST_VCPU_ID);
+    bool success = virq_controller_init(GUEST_BOOT_VCPU_ID);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
@@ -148,7 +148,7 @@ void init(void) {
                                   SERIAL_TX_CH);
     assert(success);
 
-    success = virq_register(GUEST_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
+    success = virq_register(GUEST_BOOT_VCPU_ID, UIO_SND_IRQ, &uio_sound_virq_ack, NULL);
     assert(success);
 
     success = fault_register_vm_exception_handler(UIO_SND_FAULT_ADDRESS,
@@ -172,7 +172,7 @@ void init(void) {
     cache_clean((uintptr_t)data_paddr, sizeof(uintptr_t));
 
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {

@@ -209,10 +209,10 @@ void vgic_init()
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
     for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
-        vgic.vgic_vcpu[GUEST_VCPU_ID].local_virqs[i].virq = VIRQ_INVALID;
+        vgic.vgic_vcpu[GUEST_BOOT_VCPU_ID].local_virqs[i].virq = VIRQ_INVALID;
     }
     for (int i = 0; i < NUM_LIST_REGS; i++) {
-        vgic.vgic_vcpu[GUEST_VCPU_ID].lr_shadow[i].virq = VIRQ_INVALID;
+        vgic.vgic_vcpu[GUEST_BOOT_VCPU_ID].lr_shadow[i].virq = VIRQ_INVALID;
     }
     vgic.registers = &vgic_regs;
     vgic_regs.dist = &dist;

@@ -12,7 +12,7 @@
 #include <stddef.h>
 #include <libvmm/util/printf.h>
 
-#define GUEST_VCPU_ID 0
+#define GUEST_BOOT_VCPU_ID 0
 
 #ifndef GUEST_NUM_VCPUS
 #define GUEST_NUM_VCPUS 1
