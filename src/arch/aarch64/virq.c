@@ -37,13 +37,13 @@ bool virq_controller_init(size_t boot_vcpu_id) {
 #endif
 
     /* Register the fault handler */
-    success = fault_register_vm_exception_handler(GIC_DIST_PADDR, GIC_DIST_SIZE, handle_vgic_dist_fault, NULL);
+    success = fault_register_vm_exception_handler(GIC_DIST_PADDR, GIC_DIST_SIZE, vgic_handle_fault_dist, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register fault handler for GIC distributor region\n");
         return false;
     }
 #if defined(GIC_V3)
-    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_SIZE, handle_vgic_redist_fault, NULL);
+    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_SIZE, vgic_handle_fault_redist, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register fault handler for GIC redistributor region\n");
         return false;
@@ -71,8 +71,12 @@ bool virq_controller_init(size_t boot_vcpu_id) {
     return true;
 }
 
-bool virq_inject(size_t vcpu_id, int irq) {
+bool virq_inject_vcpu(size_t vcpu_id, int irq) {
     return vgic_inject_irq(vcpu_id, irq);
+}
+
+bool virq_inject(int irq) {
+    return vgic_inject_irq(GUEST_VCPU_ID, irq);
 }
 
 bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data) {
