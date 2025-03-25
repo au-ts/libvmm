@@ -214,7 +214,7 @@ bool smc_handle(size_t vcpu_id, uint32_t hsr)
         if (smc_sip_handler) {
             return smc_sip_handler(vcpu_id, &regs, fn_number);
         }
-    /* If we don't have a SiP handler registered, drop to the default case. */
+        /* If we don't have a SiP handler registered, drop to the default case. */
     default:
         LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
         break;

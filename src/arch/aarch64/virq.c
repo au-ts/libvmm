@@ -24,7 +24,8 @@ static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}
 
-bool virq_controller_init() {
+bool virq_controller_init()
+{
     bool success;
 
     vgic_init();
@@ -71,24 +72,29 @@ bool virq_controller_init() {
     return true;
 }
 
-bool virq_inject_vcpu(size_t vcpu_id, int irq) {
+bool virq_inject_vcpu(size_t vcpu_id, int irq)
+{
     return vgic_inject_irq(vcpu_id, irq);
 }
 
-bool virq_inject(int irq) {
+bool virq_inject(int irq)
+{
     return vgic_inject_irq(GUEST_BOOT_VCPU_ID, irq);
 }
 
-bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data) {
+bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data)
+{
     return vgic_register_irq(vcpu_id, virq_num, ack_fn, ack_data);
 }
 
-static void virq_passthrough_ack(size_t vcpu_id, int irq, void *cookie) {
+static void virq_passthrough_ack(size_t vcpu_id, int irq, void *cookie)
+{
     /* We are down-casting to microkit_channel so must first cast to size_t */
     microkit_irq_ack((microkit_channel)(size_t)cookie);
 }
 
-bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_ch) {
+bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_ch)
+{
     assert(irq_ch < MICROKIT_MAX_CHANNELS);
     if (irq_ch >= MICROKIT_MAX_CHANNELS) {
         LOG_VMM_ERR("Invalid channel number given '0x%lx' for passthrough vIRQ 0x%lx\n", irq_ch, irq);
@@ -108,7 +114,8 @@ bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_
     return true;
 }
 
-bool virq_handle_passthrough(microkit_channel irq_ch) {
+bool virq_handle_passthrough(microkit_channel irq_ch)
+{
     assert(virq_passthrough_map[irq_ch] >= 0);
     if (virq_passthrough_map[irq_ch] < 0) {
         LOG_VMM_ERR("attempted to handle invalid passthrough IRQ channel 0x%lx\n", irq_ch);
@@ -117,7 +124,8 @@ bool virq_handle_passthrough(microkit_channel irq_ch) {
 
     bool success = vgic_inject_irq(GUEST_BOOT_VCPU_ID, virq_passthrough_map[irq_ch]);
     if (!success) {
-        LOG_VMM_ERR("could not inject passthrough vIRQ 0x%lx, dropped on vCPU 0x%lx\n", virq_passthrough_map[irq_ch], GUEST_BOOT_VCPU_ID);
+        LOG_VMM_ERR("could not inject passthrough vIRQ 0x%lx, dropped on vCPU 0x%lx\n", virq_passthrough_map[irq_ch],
+                    GUEST_BOOT_VCPU_ID);
         return false;
     }
 
