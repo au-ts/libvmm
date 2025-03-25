@@ -114,9 +114,9 @@ void init(void) {
 void notified(microkit_channel ch) {
     switch (ch) {
         case SERIAL_IRQ_CH: {
-            bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
+            bool success = virq_inject(SERIAL_IRQ);
             if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
             }
             break;
         }

@@ -464,10 +464,6 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         /* We have reached a genuinely unexpected case, stop the guest. */
         LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
         microkit_vcpu_stop(vcpu_id);
-        /* Dump the TCB and vCPU registers to hopefully get information as
-         * to what has gone wrong. */
-        tcb_print_regs(vcpu_id);
-        vcpu_print_regs(vcpu_id);
     }
 
     if (!success) {
