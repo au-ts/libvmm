@@ -206,6 +206,10 @@ pub fn build(b: *std.Build) !void {
             libvmm_dep.path("tools/linux/blk/blk_client_init"),
             libvmm_dep.path("tools/linux/net/net_client_init"),
         };
+        const home_scripts = .{
+            libvmm_dep.path("tools/linux/blk/blk_integration_tests.sh"),
+            libvmm_dep.path("tools/linux/blk/blk_bench.sh"),
+        };
         const packrootfs = libvmm_dep.path("tools/packrootfs");
         packrootfs_cmd.addFileArg(packrootfs);
         packrootfs_cmd.addFileInput(packrootfs);
@@ -215,6 +219,11 @@ pub fn build(b: *std.Build) !void {
         const packed_rootfs = packrootfs_cmd.addOutputFileArg("rootfs.cpio.gz");
         packrootfs_cmd.addArg("--startup");
         inline for (init_scripts) |s| {
+            packrootfs_cmd.addFileInput(s);
+            packrootfs_cmd.addFileArg(s);
+        }
+        packrootfs_cmd.addArg("--home");
+        inline for (home_scripts) |s| {
             packrootfs_cmd.addFileInput(s);
             packrootfs_cmd.addFileArg(s);
         }

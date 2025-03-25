@@ -40,28 +40,28 @@
 #include <sddf/blk/storage_info.h>
 
 /* Feature bits */
-#define VIRTIO_BLK_F_SIZE_MAX       1   /* Indicates maximum segment size */
-#define VIRTIO_BLK_F_SEG_MAX        2   /* Indicates maximum # of segments */
-#define VIRTIO_BLK_F_GEOMETRY       4   /* Legacy geometry available  */
-#define VIRTIO_BLK_F_RO             5   /* Disk is read-only */
-#define VIRTIO_BLK_F_BLK_SIZE       6   /* Block size of disk is available*/
-#define VIRTIO_BLK_F_FLUSH          9   /* Flush command supported */
-#define VIRTIO_BLK_F_TOPOLOGY       10  /* Topology information is available */
-#define VIRTIO_BLK_F_CONFIG_WCE     11  /* Writeback mode available in config */
-#define VIRTIO_BLK_F_MQ             12  /* support more than one vq */
-#define VIRTIO_BLK_F_DISCARD        13  /* DISCARD is supported */
-#define VIRTIO_BLK_F_WRITE_ZEROES   14  /* WRITE ZEROES is supported */
-#define VIRTIO_BLK_F_SECURE_ERASE   16 /* Secure Erase is supported */
-#define VIRTIO_BLK_F_ZONED          17  /* Zoned block device */
+#define VIRTIO_BLK_F_SIZE_MAX 1      /* Indicates maximum segment size */
+#define VIRTIO_BLK_F_SEG_MAX 2       /* Indicates maximum # of segments */
+#define VIRTIO_BLK_F_GEOMETRY 4      /* Legacy geometry available  */
+#define VIRTIO_BLK_F_RO 5            /* Disk is read-only */
+#define VIRTIO_BLK_F_BLK_SIZE 6      /* Block size of disk is available*/
+#define VIRTIO_BLK_F_FLUSH 9         /* Flush command supported */
+#define VIRTIO_BLK_F_TOPOLOGY 10     /* Topology information is available */
+#define VIRTIO_BLK_F_CONFIG_WCE 11   /* Writeback mode available in config */
+#define VIRTIO_BLK_F_MQ 12           /* support more than one vq */
+#define VIRTIO_BLK_F_DISCARD 13      /* DISCARD is supported */
+#define VIRTIO_BLK_F_WRITE_ZEROES 14 /* WRITE ZEROES is supported */
+#define VIRTIO_BLK_F_SECURE_ERASE 16 /* Secure Erase is supported */
+#define VIRTIO_BLK_F_ZONED 17        /* Zoned block device */
 
 /* Legacy feature bits */
-#define VIRTIO_BLK_F_BARRIER        0   /* Does host support barriers? */
-#define VIRTIO_BLK_F_SCSI           7   /* Supports scsi command passthru */
+#define VIRTIO_BLK_F_BARRIER 0 /* Does host support barriers? */
+#define VIRTIO_BLK_F_SCSI 7    /* Supports scsi command passthru */
 
 /* Old (deprecated) name for VIRTIO_BLK_F_WCE. */
 #define VIRTIO_BLK_F_WCE VIRTIO_BLK_F_FLUSH
 
-#define VIRTIO_BLK_ID_BYTES         20      /* ID string length */
+#define VIRTIO_BLK_ID_BYTES 20 /* ID string length */
 
 struct virtio_blk_config {
     /* The capacity (in 512-byte sectors). */
@@ -105,17 +105,17 @@ struct virtio_blk_config {
  */
 
 /* These two define direction. */
-#define VIRTIO_BLK_T_IN             0
-#define VIRTIO_BLK_T_OUT            1
+#define VIRTIO_BLK_T_IN 0
+#define VIRTIO_BLK_T_OUT 1
 
 /* Cache flush command */
-#define VIRTIO_BLK_T_FLUSH          4
+#define VIRTIO_BLK_T_FLUSH 4
 
 /* Get device ID command */
-#define VIRTIO_BLK_T_GET_ID         8
+#define VIRTIO_BLK_T_GET_ID 8
 
 /* Barrier before this op. */
-#define VIRTIO_BLK_T_BARRIER    0x80000000
+#define VIRTIO_BLK_T_BARRIER 0x80000000
 
 /* This is the first element of the read scatter-gather list. */
 struct virtio_blk_outhdr {
@@ -128,68 +128,81 @@ struct virtio_blk_outhdr {
 } __attribute__((packed));
 
 /* And this is the final byte of the write scatter-gather list. */
-#define VIRTIO_BLK_S_OK             0
-#define VIRTIO_BLK_S_IOERR          1
-#define VIRTIO_BLK_S_UNSUPP         2
+#define VIRTIO_BLK_S_OK 0
+#define VIRTIO_BLK_S_IOERR 1
+#define VIRTIO_BLK_S_UNSUPP 2
 
 #define VIRTIO_BLK_SECTOR_SIZE 512
 
-/* Backend implementation */
+/* Device (backend) implementation */
 #define SDDF_BLK_NUM_HANDLES 1
 #define SDDF_BLK_DEFAULT_HANDLE 0
+// TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
-#define SDDF_MAX_DATA_BUFFERS 8192
+#define SDDF_MAX_DATA_CELLS 128
+/* Maximum sddf queue capacity */
+#define SDDF_MAX_QUEUE_CAPACITY 128
 
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
-/* Bookkeeping request data between virtIO and sDDF */
+typedef enum {
+    STATE_FLUSHING,
+    STATE_READING,
+    STATE_WRITING_ALIGNED,
+    /* Read-modify-write for sectors not aligned on sDDF block transfer size */
+    STATE_RMW_QUEUEING,
+    STATE_RMW_READING,
+    STATE_RMW_WRITING,
+} request_state_t;
+
+/* This struct exists to bookkeep request metadata when converting sddf requests
+ * from a virtio request so that it can be later retrieved when converting a
+ * virtio response from sddf response.
+ */
 typedef struct reqbk {
+    bool valid;
+    /* Descriptor head of the virtio request */
     uint16_t virtio_desc_head;
-    uintptr_t sddf_data;
+    /* For enqueuing sddf req/resp */
+    uintptr_t sddf_data_cell_base;
     uint16_t sddf_count;
-    uint64_t sddf_block_number;
-    uintptr_t virtio_data;
-    uint16_t virtio_data_size;
-    /* Only used for unaligned write from virtIO, if not true, this request is the
-    * "read" part of the read-modify-write */
-    bool aligned;
+    uint32_t sddf_block_number;
+    uintptr_t sddf_data;
+    /* The size of data contained in virtio request */
+    uint32_t virtio_body_size_bytes;
+    request_state_t state;
 } reqbk_t;
 
 struct virtio_blk_device {
     struct virtio_device virtio_device;
-
     struct virtio_blk_config config;
     struct virtio_queue_handler vqs[VIRTIO_BLK_NUM_VIRTQ];
-
-    reqbk_t reqbk[SDDF_MAX_DATA_BUFFERS];
+    /* Request bookkeep indexed by the request id */
+    reqbk_t reqsbk[SDDF_MAX_QUEUE_CAPACITY];
     /* Data struct that handles allocation and freeing of fixed size data cells
      * in sDDF memory region */
     fsmalloc_t fsmalloc;
     bitarray_t fsmalloc_avail_bitarr;
-    word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_BUFFERS)];
-    /* Index allocator */
+    word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_CELLS)];
+    /* Index allocator for sddf request ids */
     ialloc_t ialloc;
-    uint32_t ialloc_idxlist[SDDF_MAX_DATA_BUFFERS];
-
+    uint32_t ialloc_idxlist[SDDF_MAX_QUEUE_CAPACITY];
+    /* Sddf structures */
     blk_storage_info_t *storage_info;
     blk_queue_handle_t queue_h;
+    uint32_t queue_capacity;
     uintptr_t data_region;
+    /* Channel to notify microkit component serving this client */
     int server_ch;
 };
 
-bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
-                          uintptr_t region_base,
-                          uintptr_t region_size,
-                          size_t virq,
-                          uintptr_t data_region,
-                          size_t data_region_size,
-                          blk_storage_info_t *storage_info,
-                          blk_queue_handle_t *queue_h,
-                          int server_ch);
+bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
+                          uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
+                          blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch);
 
 bool virtio_blk_handle_resp(struct virtio_blk_device *blk_dev);
 
 bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, size_t virq, uintptr_t data_region,
                          size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
-                         int server_ch);
+                         uint32_t queue_capacity, int server_ch);

@@ -110,7 +110,7 @@ void init(void)
     assert(success);
 
     success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
-                                  storage_info, &blk_queue, blk_config.virt.id);
+                                  storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
