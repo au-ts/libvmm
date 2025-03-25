@@ -32,6 +32,7 @@ CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
@@ -138,10 +139,11 @@ ${INITRD}:
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
-	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(CLIENT_VM_USERLEVEL_INIT) $(CLIENT_VM_USERLEVEL_HOME) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
