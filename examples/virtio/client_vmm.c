@@ -136,14 +136,10 @@ void init(void)
     assert(success);
 
     /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(&virtio_blk,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
+    success = virtio_mmio_blk_init(&virtio_blk, vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
                                    vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq,
-                                   (uintptr_t)blk_config.data.vaddr,
-                                   blk_config.data.size,
-                                   storage_info,
-                                   &blk_queue,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, (uintptr_t)blk_config.data.vaddr,
+                                   blk_config.data.size, storage_info, &blk_queue, blk_config.virt.num_buffers,
                                    blk_config.virt.id);
     assert(success);
 

@@ -34,7 +34,8 @@ METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 SDDF_CUSTOM_LIBC := 1
 
-CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
+CLIENT_VM_USERLEVEL_INIT := blk_client_init
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
@@ -58,7 +59,9 @@ LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
+ifeq ($(MICROKIT_BOARD), maaxboard)
 include $(TIMER_DRIVER)/timer_driver.mk
+endif
 include $(SERIAL_DRIVER)/serial_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${BLK_DRIVER}/blk_driver.mk
@@ -133,10 +136,11 @@ ${INITRD}:
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
-	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(CLIENT_VM_USERLEVEL_INIT) $(CLIENT_VM_USERLEVEL_HOME) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
