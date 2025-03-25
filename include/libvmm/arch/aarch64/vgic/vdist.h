@@ -247,7 +247,8 @@ static void vgic_dist_clr_pending_irq(struct gic_dist_map *dist, size_t vcpu_id,
     // @ivanv
 }
 
-static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr,
+                                        seL4_UserContext *regs)
 {
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     uint32_t reg = 0;
@@ -359,7 +360,8 @@ static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t o
     case RANGE32(0xDE8, 0xEFC):
         /* Reserved [0xDE8 - 0xE00) */
         /* GIC_DIST_NSACR [0xE00 - 0xF00) - Not supported */
-        break; case RANGE32(GIC_DIST_SGIR, GIC_DIST_SGIR):
+        break;
+    case RANGE32(GIC_DIST_SGIR, GIC_DIST_SGIR):
         reg = gic_dist->sgir;
         break;
     case RANGE32(0xF04, 0xF0C):
@@ -414,7 +416,8 @@ static inline void emulate_reg_write_access(seL4_UserContext *regs, uint64_t add
     *reg = fault_emulate(regs, *reg, addr, fsr, fault_get_data(regs, fsr));
 }
 
-static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr,
+                                         seL4_UserContext *regs)
 {
     bool success = true;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
@@ -599,7 +602,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
 #if defined(GIC_V3)
     // @ivanv: explain GICv3 specific stuff, and also don't use the hardcoded valuees
     case RANGE32(0x6100, 0x7F00):
-    // @ivanv revisit
+        // @ivanv revisit
         // data = fault_get_data(fault);
         // ZF_LOGF_IF(data, "bad dist: 0x%x 0x%x", offset, data);
         break;
@@ -616,4 +619,3 @@ ignore_fault:
 
     return success;
 }
-
