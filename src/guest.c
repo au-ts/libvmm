@@ -34,6 +34,8 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     }
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
         regs.pc, regs.x0, initrd);
+
+    vcpu_set_on(boot_vcpu_id, true);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
     microkit_vcpu_restart(boot_vcpu_id, regs.pc);
 

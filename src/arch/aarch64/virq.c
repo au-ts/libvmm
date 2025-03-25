@@ -50,20 +50,22 @@ bool virq_controller_init(size_t boot_vcpu_id) {
     }
 #endif
 
-    success = vgic_register_irq(boot_vcpu_id, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
-    if (!success) {
-        LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
-        return false;
-    }
-    success = vgic_register_irq(boot_vcpu_id, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
-    if (!success) {
-        LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
-        return false;
-    }
-    success = vgic_register_irq(boot_vcpu_id, SGI_FUNC_CALL, &sgi_ack, NULL);
-    if (!success) {
-        LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
-        return false;
+    for (int vcpu = 0; vcpu < GUEST_NUM_VCPUS; vcpu++) {
+        success = vgic_register_irq(vcpu, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
+        if (!success) {
+            LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
+            return false;
+        }
+        success = vgic_register_irq(vcpu, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
+        if (!success) {
+            LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
+            return false;
+        }
+        success = vgic_register_irq(vcpu, SGI_FUNC_CALL, &sgi_ack, NULL);
+        if (!success) {
+            LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
+            return false;
+        }
     }
 
     return true;
