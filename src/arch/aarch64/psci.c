@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <libvmm/guest.h>
+#include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/psci.h>
 #include <libvmm/arch/aarch64/smc.h>
@@ -44,13 +45,43 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
             break;
         }
         case PSCI_CPU_ON: {
-            uintptr_t target_cpu = smc_get_arg(regs, 1);
-            // Right now we only have one vCPU and so any fault for a target vCPU
-            // that isn't the one that's already on we consider an error on the
-            // guest's side.
-            // @ivanv: adapt for starting other vCPUs
-            if (target_cpu == vcpu_id) {
-                smc_set_return_value(regs, PSCI_ALREADY_ON);
+            size_t target_vcpu = smc_get_arg(regs, 1);
+            if (target_vcpu < GUEST_NUM_VCPUS && target_vcpu >= 0) {
+                /* The guest has given a valid target vCPU */
+                if (vcpu_is_on(target_vcpu)) {
+                    smc_set_return_value(regs, PSCI_ALREADY_ON);
+                } else {
+                    /* We have a valid target vCPU, that is not started yet. So let's turn it on. */
+                    uintptr_t vcpu_entry_point = smc_get_arg(regs, 2);
+                    size_t context_id = smc_get_arg(regs, 3);
+
+                    seL4_UserContext vcpu_regs = {0};
+                    vcpu_regs.x0 = context_id;
+                    vcpu_regs.spsr = 5; // PMODE_EL1h
+                    vcpu_regs.pc = vcpu_entry_point;
+
+                    microkit_vcpu_arm_write_reg(target_vcpu, seL4_VCPUReg_VMPIDR_EL2, target_vcpu);
+
+                    seL4_Error err = seL4_TCB_WriteRegisters(
+                        BASE_VM_TCB_CAP + target_vcpu,
+                        false, // We'll explcitly start the guest below rather than in this call
+                        0, // No flags
+                        SEL4_USER_CONTEXT_SIZE,
+                        &vcpu_regs
+                    );
+                    assert(err == seL4_NoError);
+                    if (err != seL4_NoError) {
+                        return err;
+                    }
+
+                    /* Now that we have started the vCPU, we can set is as turned on. */
+                    vcpu_set_on(target_vcpu, true);
+
+                    LOG_VMM("starting guest vCPU (0x%lx) with entry point 0x%lx, context ID: 0x%lx\n", target_vcpu, vcpu_regs.pc, context_id);
+                    microkit_vcpu_restart(target_vcpu, vcpu_regs.pc);
+
+                    smc_set_return_value(regs, PSCI_SUCCESS);
+                }
             } else {
                 // The guest has requested to turn on a virtual CPU that does
                 // not exist.

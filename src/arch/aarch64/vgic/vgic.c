@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
+#include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
@@ -83,9 +84,10 @@ bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void 
 
 bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
-    LOG_IRQ("Injecting IRQ %d\n", irq);
+    LOG_IRQ("(vCPU %d) injecting IRQ %d\n", vcpu_id, irq);
 
-    return vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
+    bool success = vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
+    assert(success);
 
     // @ivanv: explain why we don't check error before checking this fault stuff
     // @ivanv: seperately, it seems weird to have this fault handling code here?
@@ -94,6 +96,7 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
     //     // ignore_fault(vcpu->vcpu_arch.fault);
     //     err = advance_vcpu_fault(regs);
     // }
+    return success;
 }
 
 // @ivanv: revisit this whole function

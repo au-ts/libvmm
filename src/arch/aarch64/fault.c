@@ -297,11 +297,11 @@ bool fault_handle_user_exception(size_t vcpu_id)
     // @ivanv: print out VM name/vCPU id when we have multiple VMs
     size_t fault_ip = microkit_mr_get(seL4_UserException_FaultIP);
     size_t number = microkit_mr_get(seL4_UserException_Number);
-    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
+    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx from vCPU %d\n", fault_ip, number, vcpu_id);
     /* All we do is dump the TCB registers. */
     tcb_print_regs(vcpu_id);
 
-    return true;
+    return false;
 }
 
 // @ivanv: document where these come from
