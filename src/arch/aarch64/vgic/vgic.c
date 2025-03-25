@@ -1,4 +1,4 @@
-/* @ivanv double check
+/*
  * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
@@ -24,13 +24,13 @@
 /* The driver expects the VGIC state to be initialised before calling any of the driver functionality. */
 extern vgic_t vgic;
 
-bool fault_handle_vgic_maintenance(size_t vcpu_id)
+bool vgic_handle_fault_maintenance(size_t vcpu_id)
 {
     // @ivanv: reivist, also inconsistency between int and bool
     bool success = true;
     int idx = microkit_mr_get(seL4_VGICMaintenance_IDX);
     /* Currently not handling spurious IRQs */
-    // @ivanv: wtf, this comment seems irrelevant to the code.
+    // @ivanv: this comment seems irrelevant to the code.
     assert(idx >= 0);
 
     // @ivanv: Revisit and make sure it's still correct.
@@ -63,14 +63,27 @@ bool fault_handle_vgic_maintenance(size_t vcpu_id)
     }
 
     if (!success) {
-        printf("VGIC|ERROR: maintenance handler failed\n");
+        LOG_VMM_ERR("vGIC maintenance handler failed\n");
         assert(0);
     }
 
     return success;
 }
 
-// @ivanv: maybe this shouldn't be here?
+bool vgic_handle_fault_dist(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    bool success = false;
+    if (fault_is_read(fsr)) {
+        success = vgic_dist_reg_read(vcpu_id, &vgic, offset, fsr, regs);
+        assert(success);
+    } else {
+        success = vgic_dist_reg_write(vcpu_id, &vgic, offset, fsr, regs);
+        assert(success);
+    }
+
+    return success;
+}
+
 bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void *ack_data) {
     assert(virq_num >= 0 && virq_num != VIRQ_INVALID);
     struct virq_handle virq = {
@@ -88,30 +101,6 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 
     bool success = vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
     assert(success);
-
-    // @ivanv: explain why we don't check error before checking this fault stuff
-    // @ivanv: seperately, it seems weird to have this fault handling code here?
-    // @ivanv: revist
-    // if (!fault_handled(vcpu->vcpu_arch.fault) && fault_is_wfi(vcpu->vcpu_arch.fault)) {
-    //     // ignore_fault(vcpu->vcpu_arch.fault);
-    //     err = advance_vcpu_fault(regs);
-    // }
-    return success;
-}
-
-// @ivanv: revisit this whole function
-bool handle_vgic_dist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
-{
-    bool success = false;
-    if (fault_is_read(fsr)) {
-        // printf("VGIC|INFO: Read dist\n");
-        success = vgic_dist_reg_read(vcpu_id, &vgic, offset, fsr, regs);
-        assert(success);
-    } else {
-        // printf("VGIC|INFO: Write dist\n");
-        success = vgic_dist_reg_write(vcpu_id, &vgic, offset, fsr, regs);
-        assert(success);
-    }
 
     return success;
 }

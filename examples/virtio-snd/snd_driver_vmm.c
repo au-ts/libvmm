@@ -185,16 +185,16 @@ void notified(microkit_channel ch) {
         virtio_console_handle_rx(&virtio_console);
         break;
     case SND_CLIENT_CH:
-        success = virq_inject(GUEST_VCPU_ID, UIO_SND_IRQ);
+        success = virq_inject(UIO_SND_IRQ);
         if (!success) {
-            LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", UIO_SND_IRQ, GUEST_VCPU_ID);
+            LOG_VMM_ERR("IRQ %d dropped\n", UIO_SND_IRQ);
         }
         break;
     default:
         if (passthrough_irq_map[ch]) {
-            success = virq_inject(GUEST_VCPU_ID, passthrough_irq_map[ch]);
+            success = virq_inject(passthrough_irq_map[ch]);
             if (!success) {
-                LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", passthrough_irq_map[ch], GUEST_VCPU_ID);
+                LOG_VMM_ERR("IRQ %d dropped\n", passthrough_irq_map[ch]);
             }
         } else {
             printf("Unexpected channel, ch: 0x%lx\n", ch);
