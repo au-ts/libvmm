@@ -13,7 +13,7 @@ use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, deb
 const GUEST_RAM_VADDR: usize = 0x40000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
-const GUEST_VCPU_ID: usize = 0;
+const GUEST_BOOT_VCPU_ID: usize = 0;
 
 /// On the QEMU virt AArch64 platform the UART we are using has an IRQ number of 33.
 const UART_IRQ: usize = 33;
@@ -77,15 +77,15 @@ fn init() -> VmmHandler {
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
                                          );
         // @ivanv, deal with unused vars
-        _ = virq_controller_init(GUEST_VCPU_ID);
-        _ = virq_register(GUEST_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
+        _ = virq_controller_init();
+        _ = virq_register(UART_IRQ as i32, uart_irq_ack, core::ptr::null());
         match UART_CH.irq_ack() {
             Ok(()) => {}
             Err(_e) => {
                 debug_println!("VMM|ERROR: could not ack UART IRQ channel: {_e}");
             }
         }
-        guest_start(GUEST_VCPU_ID, guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+        guest_start(guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     }
 
     VmmHandler {}

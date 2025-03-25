@@ -24,7 +24,7 @@ static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
 
 static void sgi_ack(size_t vcpu_id, int irq, void *cookie) {}
 
-bool virq_controller_init(size_t boot_vcpu_id) {
+bool virq_controller_init() {
     bool success;
 
     vgic_init();
@@ -76,7 +76,7 @@ bool virq_inject_vcpu(size_t vcpu_id, int irq) {
 }
 
 bool virq_inject(int irq) {
-    return vgic_inject_irq(GUEST_VCPU_ID, irq);
+    return vgic_inject_irq(GUEST_BOOT_VCPU_ID, irq);
 }
 
 bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data) {
@@ -98,7 +98,7 @@ bool virq_register_passthrough(size_t vcpu_id, size_t irq, microkit_channel irq_
     LOG_VMM("Register passthrough vIRQ 0x%lx on vCPU 0x%lx (IRQ channel: 0x%lx)\n", irq, vcpu_id, irq_ch);
     virq_passthrough_map[irq_ch] = irq;
 
-    bool success = virq_register(GUEST_VCPU_ID, irq, &virq_passthrough_ack, (void *)(size_t)irq_ch);
+    bool success = virq_register(GUEST_BOOT_VCPU_ID, irq, &virq_passthrough_ack, (void *)(size_t)irq_ch);
     assert(success);
     if (!success) {
         LOG_VMM_ERR("Failed to register passthrough vIRQ %d\n", irq);
@@ -115,9 +115,9 @@ bool virq_handle_passthrough(microkit_channel irq_ch) {
         return false;
     }
 
-    bool success = vgic_inject_irq(GUEST_VCPU_ID, virq_passthrough_map[irq_ch]);
+    bool success = vgic_inject_irq(GUEST_BOOT_VCPU_ID, virq_passthrough_map[irq_ch]);
     if (!success) {
-        LOG_VMM_ERR("could not inject passthrough vIRQ 0x%lx, dropped on vCPU 0x%lx\n", virq_passthrough_map[irq_ch], GUEST_VCPU_ID);
+        LOG_VMM_ERR("could not inject passthrough vIRQ 0x%lx, dropped on vCPU 0x%lx\n", virq_passthrough_map[irq_ch], GUEST_BOOT_VCPU_ID);
         return false;
     }
 
