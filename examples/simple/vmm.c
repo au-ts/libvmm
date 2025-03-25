@@ -99,16 +99,16 @@ void init(void) {
         return;
     }
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init(GUEST_VCPU_ID);
+    bool success = virq_controller_init();
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
-    guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
 void notified(microkit_channel ch) {
