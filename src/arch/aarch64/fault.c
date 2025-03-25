@@ -468,11 +468,9 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     }
 
     if (!success) {
-        /* Dump the TCB and vCPU registers to hopefully get information as
-         * to what has gone wrong. */
+        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
         tcb_print_regs(vcpu_id);
         vcpu_print_regs(vcpu_id);
-        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
     }
 
     return success;
