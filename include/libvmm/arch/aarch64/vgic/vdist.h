@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 
@@ -494,8 +495,8 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
             irq = CTZ(data);
             data &= ~(1U << irq);
             irq += (offset - GIC_DIST_ISPENDR0) * 8;
-            // @ivanv: should be checking this and other calls like it succeed
-            vgic_dist_set_pending_irq(vgic, vcpu_id, irq);
+            success = vgic_dist_set_pending_irq(vgic, vcpu_id, irq);
+            assert(success);
         }
         break;
     case RANGE32(GIC_DIST_ICPENDR0, GIC_DIST_ICPENDRN):
@@ -571,11 +572,15 @@ static bool vgic_dist_reg_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, u
             LOG_VMM_ERR("Unknown SGIR Target List Filter mode");
             goto ignore_fault;
         }
-        // @ivanv: Here we're making the assumption that there's only one vCPU, and
-        // we're also blindly injectnig the given IRQ to that vCPU.
-        // @ivanv: come back to this, do we have two writes to the TCB registers?
-        success = vgic_inject_irq(vcpu_id, virq);
-        assert(success);
+        for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
+            if ((1 << i) & target_list && vcpu_is_on(i)) {
+                success = vgic_inject_irq(i, virq);
+                assert(success);
+                if (!success) {
+                    return false;
+                }
+            }
+        }
         break;
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */
