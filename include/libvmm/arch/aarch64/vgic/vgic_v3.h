@@ -196,11 +196,13 @@ typedef struct {
     // struct gic_redist_sgi_ppi_map *sgi;
 } vgic_reg_t;
 
-static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist) {
+static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
+{
     return gic_dist->ctlr & GIC_500_GRP1_NS;
 }
 
-static inline void vgic_dist_enable(struct gic_dist_map *gic_dist) {
+static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
+{
     gic_dist->ctlr |= GIC_500_GRP1_NS | GIC_500_ARE_S;
 }
 

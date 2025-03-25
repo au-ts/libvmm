@@ -148,7 +148,8 @@ static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
     return gic_dist->ctlr == GIC_ENABLED;
 }
 
-static inline void vgic_dist_enable(struct gic_dist_map *gic_dist) {
+static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
+{
     gic_dist->ctlr = GIC_ENABLED;
 }
 
