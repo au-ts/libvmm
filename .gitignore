@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 build/
+ci_build/
 zig-out/
 .zig-cache/
 *.pdf
