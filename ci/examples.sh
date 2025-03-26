@@ -11,11 +11,16 @@ SDK_PATH=$1
 [[ -z $SDK_PATH ]] && echo "usage: examples.sh [PATH TO SDK]" && exit 1
 [[ ! -d $SDK_PATH ]] && echo "The path to the SDK provided does not exist: '$SDK_PATH'" && exit 1
 
+BUILD_DIR_ROOT="${PWD}/ci_build"
+
+export ZIG_LOCAL_CACHE_DIR="${BUILD_DIR_ROOT}/zig-cache"
+export ZIG_GLOBAL_CACHE_DIR="${BUILD_DIR_ROOT}/zig-cache"
+
 build_simple_make() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building simple example via Make with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/simple/make/${BOARD}/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple/make/${BOARD}/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/simple -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -28,7 +33,7 @@ build_simple_zig() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building simple example via Zig with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple/zig/${BOARD}/${CONFIG}"
     EXAMPLE_DIR="${PWD}/examples/simple"
     pushd ${EXAMPLE_DIR}
     zig build \
@@ -42,7 +47,7 @@ build_simple_zig() {
 build_rust() {
     echo "CI|INFO: building Rust example with config: $1"
     CONFIG=$1
-    BUILD_DIR="${PWD}/build/examples/rust/qemu_virt_aarch64/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/rust/qemu_virt_aarch64/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/rust -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -54,7 +59,7 @@ build_zig() {
     echo "CI|INFO: building Zig example with config: $1, Zig optimize is: $2"
     CONFIG=$1
     ZIG_OPTIMIZE=$2
-    BUILD_DIR="${PWD}/build/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
     EXAMPLE_DIR="${PWD}/examples/zig"
     mkdir -p ${BUILD_DIR}
     pushd ${EXAMPLE_DIR}
@@ -68,7 +73,7 @@ build_zig() {
 
 simulate_rust() {
     echo "CI|INFO: simulating Rust example with config: $1"
-    BUILD_DIR="${PWD}/build/examples/rust/qemu_virt_aarch64/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/rust/qemu_virt_aarch64/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
@@ -76,7 +81,7 @@ simulate_simple_zig() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: simulating simple example via Zig with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/simple/zig/${BOARD}/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple/zig/${BOARD}/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/bin/loader.img
 }
 
@@ -84,7 +89,7 @@ simulate_simple_make() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: simulating simple example via Make with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/simple/make/${BOARD}/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple/make/${BOARD}/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
@@ -92,7 +97,7 @@ build_virtio() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building virtio example via Make with board: $BOARD and config: $CONFIG"
-    BUILD_DIR="${PWD}/build/examples/virtio/make/${BOARD}/${CONFIG}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/virtio/make/${BOARD}/${CONFIG}"
     mkdir -p ${BUILD_DIR}
     make -C examples/virtio -B \
         BUILD_DIR=${BUILD_DIR} \
@@ -103,7 +108,7 @@ build_virtio() {
 
 simulate_zig() {
     echo "CI|INFO: simulating Zig example with config: $1"
-    BUILD_DIR="${PWD}/build/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/bin/loader.img
 }
 

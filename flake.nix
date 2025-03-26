@@ -83,6 +83,11 @@
                 util-linux
                 # Needed for CI testing
                 expect
+                # for shasum
+                perl
+                curl
+                which
+                cpio
               ];
 
               # To avoid Nix adding compiler flags that are not available on a freestanding
