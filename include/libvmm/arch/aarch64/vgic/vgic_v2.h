@@ -138,8 +138,6 @@ typedef struct gic_dist_map vgic_reg_t;
 
 static inline struct gic_dist_map *vgic_get_dist(void *registers)
 {
-    LOG_VMM("sizeof gic_dist_map: %d\n", sizeof(struct gic_dist_map));
-
     return (struct gic_dist_map *) registers;
 }
 
