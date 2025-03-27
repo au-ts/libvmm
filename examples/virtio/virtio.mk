@@ -32,14 +32,14 @@ CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
-CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
-	  -g3 -O3 -Wall \
+	  -g3 -O3 -Wall -Werror \
 	  -Wno-unused-function \
 	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
@@ -65,7 +65,9 @@ LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
+ifeq ($(MICROKIT_BOARD), maaxboard)
 include $(TIMER_DRIVER)/timer_driver.mk
+endif
 include $(SERIAL_DRIVER)/serial_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${BLK_DRIVER}/blk_driver.mk
