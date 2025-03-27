@@ -63,8 +63,7 @@
 
 #define VIRTIO_BLK_ID_BYTES 20 /* ID string length */
 
-struct virtio_blk_config
-{
+struct virtio_blk_config {
     /* The capacity (in 512-byte sectors). */
     uint64_t capacity;
     /* The maximum segment size (if VIRTIO_BLK_F_SIZE_MAX) */
@@ -72,8 +71,7 @@ struct virtio_blk_config
     /* The maximum number of segments (if VIRTIO_BLK_F_SEG_MAX) */
     uint32_t seg_max;
     /* geometry the device (if VIRTIO_BLK_F_GEOMETRY) */
-    struct virtio_blk_geometry
-    {
+    struct virtio_blk_geometry {
         uint16_t cylinders;
         uint8_t heads;
         uint8_t sectors;
@@ -81,8 +79,7 @@ struct virtio_blk_config
     /* block size of device (if VIRTIO_BLK_F_BLK_SIZE) */
     uint32_t blk_size;
     /* the next 4 entries are guarded by VIRTIO_BLK_F_TOPOLOGY  */
-    struct virtio_blk_topology
-    {
+    struct virtio_blk_topology {
         /* exponent for physical block per logical block. */
         uint8_t physical_block_exp;
         /* alignment offset in logical blocks. */
@@ -121,8 +118,7 @@ struct virtio_blk_config
 #define VIRTIO_BLK_T_BARRIER 0x80000000
 
 /* This is the first element of the read scatter-gather list. */
-struct virtio_blk_outhdr
-{
+struct virtio_blk_outhdr {
     /* VIRTIO_BLK_T* */
     uint32_t type;
     /* io priority. */
@@ -150,8 +146,7 @@ struct virtio_blk_outhdr
 #define VIRTIO_BLK_NUM_VIRTQ 1
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
-typedef enum
-{
+typedef enum {
     STATE_FLUSHING,
     STATE_READING,
     STATE_WRITING_ALIGNED,
@@ -165,8 +160,7 @@ typedef enum
  * from a virtio request so that it can be later retrieved when converting a
  * virtio response from sddf response.
  */
-typedef struct reqbk
-{
+typedef struct reqbk {
     bool valid;
     /* Descriptor head of the virtio request */
     uint16_t virtio_desc_head;
@@ -180,8 +174,7 @@ typedef struct reqbk
     request_state_t state;
 } reqbk_t;
 
-struct virtio_blk_device
-{
+struct virtio_blk_device {
     struct virtio_device virtio_device;
     struct virtio_blk_config config;
     struct virtio_queue_handler vqs[VIRTIO_BLK_NUM_VIRTQ];
