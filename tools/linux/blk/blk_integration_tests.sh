@@ -86,6 +86,21 @@ then
     exit 1
 fi
 
+# Make sure the root point is still in a sane state
+
+if [ "$?" -ne 0 ];
+then
+    echo "FAILED, couldn't ls"
+    exit 1
+fi
+
+if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
+then
+    echo "FAILED, encountered FS errors, dmesg dump:"
+    dmesg
+    exit 1
+fi
+
 echo "PASSED"
 
 # =============================================================
@@ -128,6 +143,27 @@ do
     fi
     SEQUENCE=$((SEQUENCE + 1))
 done
+
+if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
+then
+    echo "FAILED, encountered FS errors, dmesg dump:"
+    dmesg
+    exit 1
+fi
+
+sync && echo 3 > /proc/sys/vm/drop_caches
+echo "PASSED"
+
+# =============================================================
+# Now check that writing a bunch of stuff didn't corrupt the filesystem
+echo -n "*** Test 3: Post-stress sanity check..."
+ITEMS=$(ls ..)
+
+if [ "$?" -ne 0 ];
+then
+    echo "FAILED, couldn't ls"
+    exit 1
+fi
 
 if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
 then
