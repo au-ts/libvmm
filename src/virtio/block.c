@@ -297,7 +297,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 curr_desc_bytes_read =
                     sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 header_bytes_read +=
-                        sizeof(struct virtio_blk_outhdr) - header_bytes_read;
+                    sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 /* Don't go to the next descriptor yet, we're not done processing with
                  * current one */
                 assert(false);
@@ -332,7 +332,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                  tmp_curr_desc = virtq->desc[tmp_curr_desc].next) {
                 if (tmp_curr_desc_bytes_read != 0) {
                     body_size_bytes +=
-                            virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
+                        virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
                     tmp_curr_desc_bytes_read = 0;
                 } else {
                     body_size_bytes += virtq->desc[tmp_curr_desc].len;
@@ -408,7 +408,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                  tmp_curr_desc = virtq->desc[tmp_curr_desc].next) {
                 if (tmp_curr_desc_bytes_read != 0) {
                     body_size_bytes +=
-                            virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
+                        virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
                     tmp_curr_desc_bytes_read = 0;
                 } else {
                     body_size_bytes += virtq->desc[tmp_curr_desc].len;
@@ -471,8 +471,8 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
                     if (state->reqsbk[i].valid &&
                     (state->reqsbk[i].sddf_block_number == sddf_block_number ||
-                                                           /* Recall that the guest can issue requests that span multiple sDDF blocks, thus
-                                                           making multiple blocks dirty, we need to account for this. */
+                    /* Recall that the guest can issue requests that span multiple sDDF blocks, thus
+                    making multiple blocks dirty, we need to account for this. */
                     (state->reqsbk[i].sddf_block_number - 1 == sddf_block_number &&
                     state->reqsbk[i].sddf_count == 2) ||
                     (state->reqsbk[i].sddf_block_number + 1 == sddf_block_number &&
@@ -524,7 +524,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                      * at the end.
                      */
                     assert(body_bytes_read + virtq->desc[curr_desc].len <=
-                               body_size_bytes);
+                           body_size_bytes);
                     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
                     if (curr_desc_bytes_read != 0) {
                         void *src_addr = (void *)virtq->desc[curr_desc].addr + curr_desc_bytes_read;
@@ -670,7 +670,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                 curr_desc_bytes_read =
                     sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 header_bytes_read +=
-                        sizeof(struct virtio_blk_outhdr) - header_bytes_read;
+                    sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 /* Don't go to the next descriptor yet, we're not done processing with
                  * current one */
                 break;
@@ -744,7 +744,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                          * end
                          */
                         assert(body_bytes_read + virtq->desc[curr_desc].len <=
-                                   reqbk->virtio_body_size_bytes);
+                               reqbk->virtio_body_size_bytes);
                         assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
                         if (curr_desc_bytes_read != 0) {
                             void *src_addr = (void *)virtq->desc[curr_desc].addr + curr_desc_bytes_read;
@@ -753,7 +753,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                             cache_clean_and_invalidate((uintptr_t)src_addr, ((uintptr_t)src_addr) + copy_sz);
                             memcpy(dst_addr, src_addr, copy_sz);
                             body_bytes_read +=
-                                    virtq->desc[curr_desc].len - curr_desc_bytes_read;
+                                virtq->desc[curr_desc].len - curr_desc_bytes_read;
                             curr_desc_bytes_read = 0;
                         } else {
                             void *src_addr = (void *)virtq->desc[curr_desc].addr;
@@ -800,10 +800,11 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
                     if (state->reqsbk[i].valid && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
                         if (state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number ||
-                        (state->reqsbk[i].sddf_block_number - 1 == reqbk->sddf_block_number &&
-                        state->reqsbk[i].sddf_count == 2) ||
-                        (state->reqsbk[i].sddf_block_number + 1 == reqbk->sddf_block_number &&
-                        reqbk->sddf_count == 2)) {
+                            (state->reqsbk[i].sddf_block_number - 1 == reqbk->sddf_block_number &&
+                            state->reqsbk[i].sddf_count == 2) ||
+                            (state->reqsbk[i].sddf_block_number + 1 == reqbk->sddf_block_number &&
+                            reqbk->sddf_count == 2)) {
+
                             state->reqsbk[i].state = STATE_RMW_READING;
                             uintptr_t next_sddf_offset =
                                 state->reqsbk[i].sddf_data_cell_base -
@@ -832,7 +833,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
          * success status.
          */
         if (virtio_req_header.type == VIRTIO_BLK_T_IN ||
-        virtio_req_header.type == VIRTIO_BLK_T_OUT) {
+            virtio_req_header.type == VIRTIO_BLK_T_OUT) {
+
             LOG_BLOCK("freeing fs buff for sector %u\n", virtio_req_header.sector);
             fsmalloc_free(&state->fsmalloc, reqbk->sddf_data_cell_base,
                           reqbk->sddf_count);
