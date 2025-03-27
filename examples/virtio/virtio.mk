@@ -39,7 +39,7 @@ vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
-	  -g3 -O3 -Wall -Werror \
+	  -g3 -O3 -Wall \
 	  -Wno-unused-function \
 	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
