@@ -471,12 +471,12 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
                     if (state->reqsbk[i].valid &&
                     (state->reqsbk[i].sddf_block_number == sddf_block_number ||
-                    /* Recall that the guest can issue requests that span multiple sDDF blocks, thus
-                    making multiple blocks dirty, we need to account for this. */
-                    (state->reqsbk[i].sddf_block_number - 1 == sddf_block_number &&
-                    state->reqsbk[i].sddf_count == 2) ||
-                    (state->reqsbk[i].sddf_block_number + 1 == sddf_block_number &&
-                    sddf_count == 2))) {
+                     /* Recall that the guest can issue requests that span multiple sDDF blocks, thus
+                     making multiple blocks dirty, we need to account for this. */
+                     (state->reqsbk[i].sddf_block_number - 1 == sddf_block_number &&
+                      state->reqsbk[i].sddf_count == 2) ||
+                     (state->reqsbk[i].sddf_block_number + 1 == sddf_block_number &&
+                      sddf_count == 2))) {
                         LOG_BLOCK("not aligned and found another req inflight, queueing, this req id is %u\n", req_id);
                         LOG_BLOCK("i = %d\n", i);
                         LOG_BLOCK("state->reqsbk[i].valid = %d\n", state->reqsbk[i].valid);
@@ -801,9 +801,9 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                     if (state->reqsbk[i].valid && state->reqsbk[i].state == STATE_RMW_QUEUEING) {
                         if (state->reqsbk[i].sddf_block_number == reqbk->sddf_block_number ||
                             (state->reqsbk[i].sddf_block_number - 1 == reqbk->sddf_block_number &&
-                            state->reqsbk[i].sddf_count == 2) ||
+                             state->reqsbk[i].sddf_count == 2) ||
                             (state->reqsbk[i].sddf_block_number + 1 == reqbk->sddf_block_number &&
-                            reqbk->sddf_count == 2)) {
+                             reqbk->sddf_count == 2)) {
 
                             state->reqsbk[i].state = STATE_RMW_READING;
                             uintptr_t next_sddf_offset =
