@@ -46,7 +46,7 @@ echo -n "*** Test 1: Create 100 folders, stress unaligned access..."
 
 # Create
 for i in $(seq 1 100);
-do 
+do
     mkdir "$i"
 done && sync
 
