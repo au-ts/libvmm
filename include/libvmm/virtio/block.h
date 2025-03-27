@@ -168,9 +168,6 @@ typedef enum
 typedef struct reqbk
 {
     bool valid;
-
-    // /* For writing response byte in virtio descriptor */
-    // uint8_t *virtio_resp_byte;
     /* Descriptor head of the virtio request */
     uint16_t virtio_desc_head;
     /* For enqueuing sddf req/resp */
@@ -180,11 +177,6 @@ typedef struct reqbk
     uintptr_t sddf_data;
     /* The size of data contained in virtio request */
     uint32_t virtio_body_size_bytes;
-    /* Indicates this request is an unaligned write from virtIO. When not true,
-     * this request is the "read" part of the read-modify-write. A subsequent
-     * write request will be enqueued to complete the read-modify-write.
-     */
-    // todo rewrite the above comment
     request_state_t state;
 } reqbk_t;
 

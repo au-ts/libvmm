@@ -499,7 +499,7 @@ static bool virtio_blk_handle_guest_requests(struct virtio_device *dev, int *num
                 assert(!state->reqsbk[req_id].valid);
 
                 /* Before we actually do anything, double check whether we are already handling
-                   an unaligned write op on that sDDF block. */
+                   an unaligned write op on that sDDF block to prevent data race. */
                 bool process = true;
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++)
                 {
@@ -769,7 +769,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         void *src_addr = (void *)reqbk->sddf_data + body_bytes_read;
                         void *dst_addr = (void *)virtq->desc[curr_desc].addr;
                         uint32_t copy_sz = virtq->desc[curr_desc].len;
-                        assert((uint64_t)(src_addr - reqbk->sddf_data_cell_base) == ((virtio_req_header.sector % 8) * 512));
                         memcpy(dst_addr, src_addr, copy_sz);
                         cache_clean_and_invalidate((uintptr_t)dst_addr, ((uintptr_t)dst_addr) + copy_sz);
 
@@ -855,6 +854,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
             if (reqbk->state == STATE_WRITING_ALIGNED || reqbk->state == STATE_RMW_WRITING)
             {
+                /* If we get here, we've just finished processing a normal or unaligned write. Now check
+                   which request is queueing on the same sDDF block we touched and process it. */
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++)
                 {
                     if (state->reqsbk[i].valid && state->reqsbk[i].state == STATE_RMW_QUEUEING)
