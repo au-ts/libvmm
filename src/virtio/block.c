@@ -250,7 +250,8 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state,
 }
 
 /* Returns true if both requests hit the same block */
-bool are_requests_overlap(reqbk_t *req1, reqbk_t *req2) {
+bool are_requests_overlap(reqbk_t *req1, reqbk_t *req2)
+{
     uint32_t start1 = req1->sddf_block_number;
     uint32_t end1 = start1 + req1->sddf_count - 1;
     uint32_t start2 = req2->sddf_block_number;
@@ -258,7 +259,8 @@ bool are_requests_overlap(reqbk_t *req1, reqbk_t *req2) {
     return (start1 <= end2 && start2 <= end1);
 }
 
-bool request_is_write(reqbk_t *req) {
+bool request_is_write(reqbk_t *req)
+{
     return req->state >= STATE_WRITING_ALIGNED;
 }
 
@@ -808,7 +810,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                             ((struct virtio_blk_device *)dev->device_data)->data_region;
 
                         err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, next_sddf_offset,
-                                                state->reqsbk[i].sddf_block_number, state->reqsbk[i].sddf_count, i);
+                                              state->reqsbk[i].sddf_block_number, state->reqsbk[i].sddf_count, i);
                         assert(!err);
 
                         virt_notify = true;
