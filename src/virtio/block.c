@@ -16,7 +16,6 @@
 #include <sddf/blk/queue.h>
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
-#include <sddf/util/cache.h>
 
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
@@ -721,7 +720,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         void *dst_addr = (void *)virtq->desc[curr_desc].addr;
                         uint32_t copy_sz = virtq->desc[curr_desc].len;
                         memcpy(dst_addr, src_addr, copy_sz);
-                        cache_clean_and_invalidate((uintptr_t)dst_addr, ((uintptr_t)dst_addr) + copy_sz);
 
                         body_bytes_read += virtq->desc[curr_desc].len;
                         /* Because there is still the footer, we are guaranteed next
@@ -754,7 +752,6 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                             void *src_addr = (void *)virtq->desc[curr_desc].addr + curr_desc_bytes_read;
                             void *dst_addr = (void *)reqbk->sddf_data + body_bytes_read;
                             uint32_t copy_sz = virtq->desc[curr_desc].len - curr_desc_bytes_read;
-                            cache_clean_and_invalidate((uintptr_t)src_addr, ((uintptr_t)src_addr) + copy_sz);
                             memcpy(dst_addr, src_addr, copy_sz);
                             body_bytes_read +=
                                 virtq->desc[curr_desc].len - curr_desc_bytes_read;
