@@ -14,61 +14,76 @@
 
 set -e
 
+check_fs_errors() {
+    if [ "$(dmesg | grep 'FAT-fs' | grep -vc 'Volume was not properly unmounted' )" -ne 0 ];
+    then
+        echo "FAILED, encountered FS errors, dmesg dump:"
+        dmesg
+        exit 1
+    fi
+}
+
+sync_drop_slab_and_page_caches() {
+    sync && echo 3 > /proc/sys/vm/drop_caches
+}
+
 TEST_ENV=/mnt/libvmm-virtio-blk-test-env
 
 echo "Starting virtio-block integration tests"
-
-echo -n "*** Preparing environment..."
+echo "*** Preparing environment..."
 
 if [ -e "$TEST_ENV" ];
 then
     rm -rf "$TEST_ENV"
-fi && sync
+fi
 
-mkdir "$TEST_ENV" && cd "$TEST_ENV" && sync && echo 3 > /proc/sys/vm/drop_caches
-
-if [ $? -ne 0 ];
+sync_drop_slab_and_page_caches
+if ! mkdir "$TEST_ENV";
 then
     echo "FAILED to create test env folder at $TEST_ENV"
-    exit 1
 fi
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
+if ! cd "$TEST_ENV";
 then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
+    echo "FAILED to enter test env folder at $TEST_ENV"
 fi
+sync_drop_slab_and_page_caches
+
+check_fs_errors
+
 echo "OK"
 
 # =============================================================
 # Check R/W to unaligned sectors on the sDDF 4K transfer window
-echo -n "*** Test 1: Create 100 folders, stress unaligned access..."
+echo "*** Test 1: Create 100 folders, stress unaligned access..."
+
+NUM_FOLDERS_EXPECTED=100
 
 # Create
-for i in $(seq 1 100);
+for SEQUENCE in $(seq 1 "$NUM_FOLDERS_EXPECTED");
 do
-    mkdir "$i"
+    if ! mkdir "$SEQUENCE";
+    then
+        echo "FAILED, couldn't create folder at sequence $SEQUENCE"
+        exit 1
+    fi
 done && sync
 
-if [ "$?" -ne 0 ];
-then
-    echo "FAILED, couldn't create some folders"
-    exit 1
-fi
-
 # Drop page caches to trigger fresh reads from blk dev
-sync && echo 3 > /proc/sys/vm/drop_caches
+sync_drop_slab_and_page_caches
 
 # Now read, first sanity check
-NUM_FOLDERS=$(ls | wc -w)
-if [ "$NUM_FOLDERS" -ne 100 ];
+# shellcheck disable=SC2012
+# Don't need to use find here
+NUM_FOLDERS_GOT=$(ls | wc -w)
+if [ "$NUM_FOLDERS_GOT" -ne "$NUM_FOLDERS_EXPECTED" ];
 then
-    echo "FAILED, expected 100 folders to exists but only found $NUM_FOLDERS"
+    echo "FAILED, expected $NUM_FOLDERS_EXPECTED folders to exists but only found $NUM_FOLDERS_GOT"
     exit 1
 fi
 
 # Then check that the names aren't corrupted
 SEQUENCE="1"
+# shellcheck disable=SC2012
 for FOLDER in $(ls | sort -n);
 do
     if [ "$FOLDER" -ne "$SEQUENCE" ];
@@ -79,48 +94,36 @@ do
     SEQUENCE=$((SEQUENCE + 1))
 done
 
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
-then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
-fi
+check_fs_errors
 
 # Make sure the root point is still in a sane state
-
-if [ "$?" -ne 0 ];
+if ! ls .. >/dev/null;
 then
-    echo "FAILED, couldn't ls"
+    echo "FAILED, couldn't ls the root point"
     exit 1
 fi
 
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
-then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
-fi
+check_fs_errors
 
 echo "PASSED"
 
 # =============================================================
 # Check bulk data transfer, stresses sDDF block data region full handling
-echo -n "*** Test 2: Bulk data transfer (will take a few minutes)..."
-NUMS=1000000
+echo "*** Test 2: Bulk data transfer (will take a few minutes)..."
+SEQ_START=0
+SEQ_END=1000000
 BYTES_EXPECTED=6888897
 
-seq -s ',' 0 "$NUMS" | tr -d '\n' >test_data.txt
-if [ "$?" -ne 0 ];
+if ! seq -s ',' "$SEQ_START" "$SEQ_END" | tr -d '\n' >test_data.txt;
 then
     echo "FAILED, couldn't write data to test file"
     exit 1
 fi
 
-sync && echo 3 > /proc/sys/vm/drop_caches
+sync_drop_slab_and_page_caches
 
 # Now sanity read
-READ_BYTES=$(cat "test_data.txt" | wc -c)
-if [ "$?" -ne 0 ];
+if ! READ_BYTES=$(wc -c <"test_data.txt");
 then
     echo "FAILED, couldn't read back data from test file"
     exit 1
@@ -134,7 +137,7 @@ fi
 # Check that each byte is equal to what we written out
 # Will take a few minutes.
 SEQUENCE="0"
-for READ_NUM in $(cat "test_data.txt" | tr ',' ' ');
+for READ_NUM in $(tr ',' ' ' <"test_data.txt");
 do
     if [ "$READ_NUM" -ne "$SEQUENCE" ];
     then
@@ -144,60 +147,46 @@ do
     SEQUENCE=$((SEQUENCE + 1))
 done
 
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
-then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
-fi
-
-sync && echo 3 > /proc/sys/vm/drop_caches
+check_fs_errors
+sync_drop_slab_and_page_caches
 echo "PASSED"
 
 # =============================================================
 # Now check that writing a bunch of stuff didn't corrupt the filesystem
-echo -n "*** Test 3: Post-stress sanity check..."
-ITEMS=$(ls ..)
+echo "*** Test 3: Root point sanity check..."
 
-if [ "$?" -ne 0 ];
+if ! ls .. >/dev/null;
 then
-    echo "FAILED, couldn't ls"
+    echo "FAILED, couldn't ls the root point"
     exit 1
 fi
 
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
-then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
-fi
-
-sync && echo 3 > /proc/sys/vm/drop_caches
+check_fs_errors
+sync_drop_slab_and_page_caches
 echo "PASSED"
 
 # =============================================================
-echo -n "*** Cleaning environment..."
+echo "*** Cleaning environment..."
 
-cd ~ && rm -rf "$TEST_ENV" && sync
-if [ "$?" -ne 0 ];
+if ! cd ..;
+then
+    echo "FAILED...cannot escape test dir"
+    exit 1
+fi
+if ! rm -rf "$TEST_ENV";
 then
     echo "FAILED...cannot remove test dir"
     exit 1
 fi
 
-echo 3 > /proc/sys/vm/drop_caches
+sync_drop_slab_and_page_caches
 if [ -d "$TEST_ENV" ];
 then
     echo "FAILED, deleted test dir but it still exists?"
     exit 1
 fi
 
-if [ $(dmesg | grep "FAT-fs" | grep -v "Volume was not properly unmounted" | wc -l) -ne 0 ];
-then
-    echo "FAILED, encountered FS errors, dmesg dump:"
-    dmesg
-    exit 1
-fi
+check_fs_errors
 
 echo "OK"
 echo "All is well in the universe"
