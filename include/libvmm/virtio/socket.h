@@ -124,7 +124,8 @@ struct virtio_vsock_device {
    in the peer */
 struct virtio_vsock_recv_space {
     struct virtio_vsock_recv_space_metadata {
-        bool dirty;    // True if the receiver have not processed the payload.
+        bool dirty;           // True if the receiver have not processed the payload.
+        bool signal_required; // True if the receiver still have packets to send.
     } metadata;
     // Not aligned, to do fix
     struct virtio_vsock_packet packet;

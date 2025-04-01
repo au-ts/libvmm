@@ -136,57 +136,70 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev);
 
 bool virtio_vsock_handle_rx(struct virtio_vsock_device *vsock) {
     struct virtio_device *dev = &vsock->virtio_device;
-    struct virtio_queue_handler *vq = &dev->vqs[VIRTIO_VSOCK_RX_QUEUE];
 
-    struct virtio_vsock_packet *packet = (struct virtio_vsock_packet *) &virtio_vsock_buffer_our->packet;
-
-    LOG_VSOCK("processing RX header\n");
-    LOG_VSOCK("src_cid: 0x%lx\n", packet->hdr.src_cid);
-    LOG_VSOCK("dst_cid: 0x%lx\n", packet->hdr.dst_cid);
-    LOG_VSOCK("src_port: 0x%lx\n", packet->hdr.src_port);
-    LOG_VSOCK("dst_port: 0x%lx\n", packet->hdr.dst_port);
-    LOG_VSOCK("len: 0x%lx\n", packet->hdr.len);
-    LOG_VSOCK("type: 0x%lx\n", packet->hdr.type);
-    LOG_VSOCK("op: 0x%lx\n", packet->hdr.op);
-    LOG_VSOCK("flags: 0x%lx\n", packet->hdr.flags);
-    LOG_VSOCK("buf_alloc: 0x%lx\n", packet->hdr.buf_alloc);
-    LOG_VSOCK("fwd_cnt: 0x%lx\n", packet->hdr.fwd_cnt);
-
-    /* Grab an available descriptor and copy over the packet's header */
-    uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
-    struct virtq_desc desc = vq->virtq.desc[desc_head];
-    memcpy((void *) desc.addr, &packet->hdr, sizeof(struct virtio_vsock_hdr));
-
-    if (packet->hdr.op == VIRTIO_VSOCK_OP_RW) {
-        void *payload_dest = (void *)((uintptr_t) desc.addr + sizeof(struct virtio_vsock_hdr));
-        assert(desc.len >= sizeof(struct virtio_vsock_hdr) + packet->hdr.len);
-
-        // struct virtq_desc data_desc = vq->virtq.desc[desc_head + 1];
-        memcpy(payload_dest, packet->data, packet->hdr.len);
-     
-        // desc.flags = VIRTQ_DESC_F_NEXT;
-        // desc.next = desc_head + 1;
+    if (virtio_vsock_buffer_our->metadata.signal_required) {
+        /* If our signal required bit is set, it means that previously we have packets to send while the
+           receiver's buffer is dirty. Now that we got notified, it means that the receiver is ready for
+           our next packet. Send it! */
+        virtio_vsock_handle_tx(dev);
+    } else {
+        /* Normal receive */
+        struct virtio_queue_handler *vq = &dev->vqs[VIRTIO_VSOCK_RX_QUEUE];
+        struct virtio_vsock_packet *packet = (struct virtio_vsock_packet *) &virtio_vsock_buffer_our->packet;
+    
+        LOG_VSOCK("======== RECEIVING ========\n");
+        LOG_VSOCK("src_cid: 0x%lx\n", packet->hdr.src_cid);
+        LOG_VSOCK("dst_cid: 0x%lx\n", packet->hdr.dst_cid);
+        LOG_VSOCK("src_port: 0x%lx\n", packet->hdr.src_port);
+        LOG_VSOCK("dst_port: 0x%lx\n", packet->hdr.dst_port);
+        LOG_VSOCK("len: 0x%lx\n", packet->hdr.len);
+        LOG_VSOCK("type: 0x%lx\n", packet->hdr.type);
+        LOG_VSOCK("op: 0x%lx\n", packet->hdr.op);
+        LOG_VSOCK("flags: 0x%lx\n", packet->hdr.flags);
+        LOG_VSOCK("buf_alloc: 0x%lx\n", packet->hdr.buf_alloc);
+        LOG_VSOCK("fwd_cnt: 0x%lx\n", packet->hdr.fwd_cnt);
+    
+        /* Grab an available descriptor and copy over the packet's header */
+        uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
+        struct virtq_desc desc = vq->virtq.desc[desc_head];
+        memcpy((void *) desc.addr, &packet->hdr, sizeof(struct virtio_vsock_hdr));
+    
+        if (packet->hdr.op == VIRTIO_VSOCK_OP_RW) {
+            void *payload_dest = (void *)((uintptr_t) desc.addr + sizeof(struct virtio_vsock_hdr));
+            /* Some version of Linux likes to chain RX descriptor for zero-copy RX, we have to handle that
+               in the driver as well. */
+            if (desc.flags & VIRTQ_DESC_F_NEXT) {
+                payload_dest = (void *) vq->virtq.desc[desc.next].addr;
+                assert(vq->virtq.desc[desc.next].len >= packet->hdr.len);
+            } else {
+                assert(desc.len >= sizeof(struct virtio_vsock_hdr) + packet->hdr.len);
+            }
+            memcpy(payload_dest, packet->data, packet->hdr.len);
+        }
+    
+        struct virtq_used_elem used_hdr_elem = {desc_head, sizeof(struct virtio_vsock_hdr) + packet->hdr.len};
+        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_hdr_elem;
+        vq->virtq.used->idx++;
+        vq->last_idx++;
+    
+        /* Initiate to our peer that we are ready to accept the next packet. */
+        virtio_vsock_buffer_our->metadata.dirty = false;
+    
+        /* The peer might have stopped sending because our buffer was dirty,
+           or we might have stopped sending because the peer buffer was dirty
+           check if we have anything to send and notify them that we are ready
+           to receive the next packet. */
+        if (virtio_vsock_buffer_peer->metadata.signal_required) {
+            LOG_VSOCK("=> Peer requested signal\n");
+            microkit_notify(vsock->peer_ch);
+        }
+    
+        /* Inject an IRQ to tell the guest that a packet has been received. */
+        dev->data.InterruptStatus = BIT_LOW(0);
+        LOG_VSOCK("operation: injecting virq %d\n", dev->virq);
+        bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
+        assert(success);
     }
-
-    struct virtq_used_elem used_hdr_elem = {desc_head, sizeof(struct virtio_vsock_hdr) + packet->hdr.len };
-    vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_hdr_elem;
-    vq->virtq.used->idx++;
-    vq->last_idx++;
-
-    /* Initiate to our peer that we are ready to accept the next packet. */
-    virtio_vsock_buffer_our->metadata.dirty = false;
-
-    /* The peer might have stopped sending because our buffer was dirty,
-       or we might have stopped sending because the peer buffer was dirty
-       check if we have anything to send and notify them that we are ready
-       to receive the next packet. */
-    virtio_vsock_handle_tx(dev);
-
-    /* Inject an IRQ to tell the guest that a packet has been received. */
-    dev->data.InterruptStatus = BIT_LOW(0);
-    LOG_VSOCK("operation: injecting virq %d\n", dev->virq);
-    bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
-    assert(success);
 
     return true;
 }
@@ -205,7 +218,7 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev) {
         uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
         desc = vq->virtq.desc[desc_idx];
-        LOG_VSOCK("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_idx, desc.addr, desc.addr + desc.len);
+        LOG_VSOCK("======== TRANSMITTING ========\n");
 
         struct virtio_vsock_packet *packet = (struct virtio_vsock_packet *) desc.addr;
         LOG_VSOCK("src_cid: 0x%lx\n", packet->hdr.src_cid);
@@ -263,8 +276,8 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev) {
             if (vq->virtq.desc[desc_idx].flags & VIRTQ_DESC_F_NEXT) {
                 /* Linux tends to put the payload in a separate descriptor for zero-copy TX so we
                    need to handle accordingly. */
-                payload = vq->virtq.desc[desc_idx + 1].addr;
-                assert(vq->virtq.desc[desc_idx + 1].len == packet->hdr.len);
+                payload = vq->virtq.desc[desc.next].addr;
+                assert(vq->virtq.desc[desc.next].len == packet->hdr.len);
             } else {
                 assert(vq->virtq.desc[desc_idx].len == sizeof(struct virtio_vsock_hdr) + packet->hdr.len);
             }
@@ -277,7 +290,20 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev) {
         /* Prevent further TX to the receiver until they have consumed this packet */
         virtio_vsock_buffer_peer->metadata.dirty = true;
 
+        struct virtq_used_elem used_hdr_elem = {desc_idx, sizeof(struct virtio_vsock_hdr) + packet->hdr.len};
+        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_hdr_elem;
+        vq->virtq.used->idx++;
         vq->last_idx++;
+
+        if (vq->last_idx != vq->virtq.avail->idx) {
+            /* Still got packets to send, but out of buffer for now. */
+            LOG_VSOCK("=> Sender requesting signal\n");
+            virtio_vsock_buffer_our->metadata.signal_required = true;
+        } else {
+            LOG_VSOCK("=> Sender processed all TX\n");
+            virtio_vsock_buffer_our->metadata.signal_required = false;
+        }
+
         microkit_notify(vsock->peer_ch);
     }
 }
@@ -290,9 +316,6 @@ static bool virtio_vsock_handle_queue_notify(struct virtio_device *dev) {
         LOG_VSOCK_ERR("invalid virtq index %d\n", vq_idx);
         return false;
     }
-
-    struct virtio_queue_handler *vq = &dev->vqs[vq_idx];
-    LOG_VSOCK("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
 
     if (vq_idx != VIRTIO_VSOCK_TX_QUEUE) return true;
     virtio_vsock_handle_tx(dev);
@@ -321,8 +344,10 @@ bool virtio_mmio_vsock_init(struct virtio_vsock_device *vsock,
         LOG_VSOCK_ERR("attempted to init vsock device with invalid guest CID %d\n", guest_cid);
         return false;
     }
+    LOG_VSOCK("registering vsock device with cid %u\n", guest_cid);
 
     virtio_vsock_buffer_our->metadata.dirty = false;
+    virtio_vsock_buffer_our->metadata.signal_required = false;
 
     struct virtio_device *dev = &vsock->virtio_device;
     dev->data.DeviceID = VIRTIO_DEVICE_ID_SOCKET;
