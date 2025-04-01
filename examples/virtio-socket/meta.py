@@ -38,6 +38,13 @@ BOARDS: List[Board] = [
         serial="soc@0/bus@30800000/serial@30860000",
         guest_serial="virtio-console@130000",
     ),
+    Board(
+        name="odroidc4",
+        arch=SystemDescription.Arch.AARCH64,
+        paddr_top=0x60000000,
+        serial="soc/bus@ff800000/serial@3000",
+        guest_serial="virtio-console@130000",
+    ),
 ]
 
 

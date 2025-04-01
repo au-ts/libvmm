@@ -6,4 +6,4 @@
 
 CID=3
 # Sleep for a bit to make sure the receiver is ready
-sleep 3 && /root/vsock_send.elf "$CID"
+sleep 5 && /root/vsock_send.elf "$CID"

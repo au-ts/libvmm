@@ -1,0 +1,17 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/ {
+    interrupt-controller@ffc01000 {
+        compatible = "arm,gic-400";
+        reg = <0x00 0xffc01000 0x00 0x1000 0x00 0xffc02000 0x00 0x2000 0x00 0xffc04000 0x00 0x2000 0x00 0xffc06000 0x00 0x2000>;
+        interrupt-controller;
+        interrupts = <0x01 0x09 0xff04>;
+        #interrupt-cells = <0x03>;
+        #address-cells = <0x00>;
+        phandle = <0x8001>;
+    };
+};

@@ -21,6 +21,10 @@ ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export UART_DRIVER := imx
 	export CPU := cortex-a55
 	export GIC_DT_OVERLAY := gic_v3_overlay.dts
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+	export UART_DRIVER := meson
+	export CPU := cortex-a55
+	export GIC_DT_OVERLAY := gic_400_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
 	export CPU := cortex-a53
