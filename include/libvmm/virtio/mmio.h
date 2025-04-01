@@ -46,6 +46,7 @@
 #define VIRTIO_DEVICE_ID_NET          1
 #define VIRTIO_DEVICE_ID_BLOCK        2
 #define VIRTIO_DEVICE_ID_CONSOLE      3
+#define VIRTIO_DEVICE_ID_SOCKET       19
 #define VIRTIO_DEVICE_ID_SOUND        25
 
 /* The maximum size (number of elements) of a virtqueue. It is set
