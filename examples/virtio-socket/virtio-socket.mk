@@ -113,9 +113,23 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
-client_vm/rootfs.cpio.gz: ${INITRD} | client_vm
+vsock_send.elf: $(VIRTIO_EXAMPLE)/client_vm_userlevel/vsock_send.c
+	zig cc $^ -target aarch64-linux-musl -o $@
+
+vsock_recv.elf: $(VIRTIO_EXAMPLE)/client_vm_userlevel/vsock_recv.c
+	zig cc $^ -target aarch64-linux-musl -o $@
+
+client_vm/rootfs_sender.cpio.gz: ${INITRD} vsock_send.elf $(VIRTIO_EXAMPLE)/client_vm_userlevel/sender_init.sh | client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
-		client_vm/rootfs_staging -o $@
+		client_vm/rootfs_staging -o $@ \
+		--home vsock_send.elf \
+		--startup $(VIRTIO_EXAMPLE)/client_vm_userlevel/sender_init.sh
+
+client_vm/rootfs_recver.cpio.gz: ${INITRD} vsock_recv.elf $(VIRTIO_EXAMPLE)/client_vm_userlevel/recver_init.sh | client_vm
+	$(LIBVMM)/tools/packrootfs ${INITRD} \
+		client_vm/rootfs_staging -o $@ \
+		--home vsock_recv.elf \
+		--startup $(VIRTIO_EXAMPLE)/client_vm_userlevel/recver_init.sh
 
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
@@ -124,22 +138,34 @@ client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
-	$(CC) $(CFLAGS) -c -o $@ $<
+client_vm/vmm0.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
+	$(CC) $(CFLAGS) -DVIRTIO_VSOCK_GUEST_CID=3 -c -o $@ $<
 
-client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
+client_vm/vmm1.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
+	$(CC) $(CFLAGS) -DVIRTIO_VSOCK_GUEST_CID=4 -c -o $@ $<
+
+client_vm/image_sender.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
+	${LINUX} client_vm/vm.dtb client_vm/rootfs_sender.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs_sender.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm0.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+client_vm/image_recver.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
+	${LINUX} client_vm/vm.dtb client_vm/rootfs_recver.cpio.gz
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs_recver.cpio.gz\" \
+					-target $(TARGET) \
+					$(LIBVMM)/tools/package_guest_images.S -o $@
+
+client_vmm0.elf: client_vm/vmm0.o client_vm/image_recver.o |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
-client_vmm1.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+client_vmm1.elf: client_vm/vmm1.o client_vm/image_sender.o |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files

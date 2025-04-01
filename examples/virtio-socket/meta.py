@@ -42,14 +42,14 @@ BOARDS: List[Board] = [
 
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
-    # Client VM 0
-    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=101)
+    # Client VM 0, receiver
+    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=100)
     vm_client0 = VirtualMachine("client_linux0", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
-    # Client VM 1
-    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=100)
+    # Client VM 1, sender
+    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=99)
     vm_client1 = VirtualMachine("client_linux1", [VirtualMachine.Vcpu(id=0)])
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
@@ -59,7 +59,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
     # Increase the stack size as running with UBSAN uses more stack space than normal.
     serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
-                                      priority=199, stack_size=0x2000)
+                                      priority=199, stack_size=0x3000)
     serial_node = dtb.node(board.serial)
     assert serial_node is not None
     guest_serial_node = client_dtb.node(board.guest_serial)
@@ -78,12 +78,30 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    assert serial_system.connect()
-    assert serial_system.serialise_config(output_dir)
+    # Virtio socket
+    vsock_ch = Channel(vmm_client0, vmm_client1, a_id=24, b_id=24)
+    sdf.add_channel(vsock_ch)
+    vsock_client0_rx_buf = MemoryRegion("vsock_client0_rx_buf", 0x1000)
+    sdf.add_mr(vsock_client0_rx_buf)
+    vsock_client1_rx_buf = MemoryRegion("vsock_client1_rx_buf", 0x1000)
+    sdf.add_mr(vsock_client1_rx_buf)
+
+    vsock_0_our_buf_map = Map(vsock_client0_rx_buf, 0xFFA000000, "rw", cached=False)
+    vmm_client0.add_map(vsock_0_our_buf_map)
+    vsock_0_peer_buf_map = Map(vsock_client1_rx_buf, 0xFFB000000, "rw", cached=False)
+    vmm_client0.add_map(vsock_0_peer_buf_map)
+
+    vsock_1_our_buf_map = Map(vsock_client1_rx_buf, 0xFFA000000, "rw", cached=False)
+    vmm_client1.add_map(vsock_1_our_buf_map)
+    vsock_1_peer_buf_map = Map(vsock_client0_rx_buf, 0xFFB000000, "rw", cached=False)
+    vmm_client1.add_map(vsock_1_peer_buf_map)
+
     assert client0.connect()
     assert client0.serialise_config(output_dir)
     assert client1.connect()
     assert client1.serialise_config(output_dir)
+    assert serial_system.connect()
+    assert serial_system.serialise_config(output_dir)
 
     with open(f"{output_dir}/{sdf_file}", "w+") as f:
         f.write(sdf.render())

@@ -38,6 +38,16 @@ serial_queue_handle_t serial_tx_queue;
 
 static struct virtio_console_device virtio_console;
 
+/* Virtio virtual socket */
+#define VIRTIO_VSOCK_PEER_CHANNEL (24)
+#define VIRTIO_VSOCK_IRQ (75)
+#define VIRTIO_VSOCK_BASE (0x140000)
+#define VIRTIO_VSOCK_SIZE (0x200)
+#ifndef VIRTIO_VSOCK_GUEST_CID
+#error "VIRTIO_VSOCK_GUEST_CID must be specified"
+#endif
+static struct virtio_vsock_device virtio_vsock;
+
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
@@ -45,6 +55,11 @@ void init(void)
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
+
+    // if (microkit_name[10] == '1') {
+    //     return;
+    // }
+
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -97,6 +112,14 @@ void init(void)
                                        serial_config.tx.id);
     assert(success);
 
+    /* Initialise virtIO socket device */
+    success = virtio_mmio_vsock_init(&virtio_vsock,
+                                     VIRTIO_VSOCK_BASE,
+                                     VIRTIO_VSOCK_SIZE,
+                                     VIRTIO_VSOCK_IRQ,
+                                     VIRTIO_VSOCK_GUEST_CID,
+                                     VIRTIO_VSOCK_PEER_CHANNEL);
+
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
@@ -108,6 +131,8 @@ void notified(microkit_channel ch)
         virtio_console_handle_rx(&virtio_console);
     } else if (ch == serial_config.tx.id) {
         /* Nothing to do */
+    } else if (ch == VIRTIO_VSOCK_PEER_CHANNEL) {
+        virtio_vsock_handle_rx(&virtio_vsock);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
