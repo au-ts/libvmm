@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	printf("VSOCK SEND|INFO: preparing payload\n");
+	printf("VSOCK SEND|INFO: connected, preparing payload\n");
 	for (uint16_t i = 0; i < NUMS_TO_SEND; i++) {
 		nums[i] = i;
 	}

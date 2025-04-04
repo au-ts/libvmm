@@ -55,7 +55,7 @@
 		interrupts = <0x00 42 0x04>;
 	};
 
-	virtio-socket@130000 {
+	virtio-socket@140000 {
 		compatible = "virtio,mmio";
 		reg = <0x00 0x140000 0x00 0x200>;
 		interrupts = <0x00 43 0x04>;
