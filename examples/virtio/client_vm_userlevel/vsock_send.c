@@ -12,6 +12,8 @@
 /* 32k buffers of 2-bytes unsigneds. */
 uint16_t nums[NUMS_TO_SEND];
 
+_Static_assert(NUMS_TO_SEND <= UINT16_MAX);
+
 int main(int argc, char *argv[])
 {
 	printf("VSOCK SEND|INFO: starting\n");

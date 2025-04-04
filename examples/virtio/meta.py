@@ -24,10 +24,10 @@ class Board:
     timer: str
     blk: str
     guest_blk: str
+    partition: int
     net: str
     guest_net: str
-    partition: int
-
+    guest_vsock: str
 
 BOARDS: List[Board] = [
     Board(
@@ -39,9 +39,10 @@ BOARDS: List[Board] = [
         timer=None,
         blk="virtio_mmio@a003e00",
         guest_blk="virtio-blk@150000",
+        partition=0,
         net="virtio_mmio@a003c00",
         guest_net="virtio-net@160000",
-        partition=0
+        guest_vsock="virtio-socket@170000",
     ),
     Board(
         name="maaxboard",
@@ -52,19 +53,26 @@ BOARDS: List[Board] = [
         timer="soc@0/bus@30000000/timer@302d0000",
         blk="soc@0/bus@30800000/mmc@30b40000",
         guest_blk="virtio-blk@150000",
+        partition=0,
         net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@160000",
-        partition=0
+        guest_vsock="virtio-socket@170000",
     ),
 ]
 
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
-    # Client VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=100)
-    vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
+    # Client VM 0
+    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=100)
+    vm_client0 = VirtualMachine("client_linux0", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
+
+    # Client VM 1
+    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=99)
+    vm_client1 = VirtualMachine("client_linux1", [VirtualMachine.Vcpu(id=0)])
+    client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
+    sdf.add_pd(vmm_client1)
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
@@ -80,6 +88,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
                                 serial_virt_tx, virt_rx=serial_virt_rx)
     client0.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client1.add_virtio_mmio_console(guest_serial_node, serial_system)
 
     pds = [
         serial_driver,
@@ -101,18 +110,22 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
     net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
     client0_net_copier = ProtectionDomain(
-        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+        "client0_net_copier", "network_copy_vmm0.elf", priority=98, budget=20000)
+    client1_net_copier = ProtectionDomain(
+        "client1_net_copier", "network_copy_vmm1.elf", priority=98, budget=20000)
 
     pds = [
         eth_driver,
         net_virt_rx,
         net_virt_tx,
         client0_net_copier,
+        client1_net_copier,
     ]
     for pd in pds:
         sdf.add_pd(pd)
 
     client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    client1.add_virtio_mmio_net(guest_net_node, net_system, client1_net_copier)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -126,6 +139,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
     client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client1.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition + 1)
     pds = [
         blk_driver,
         blk_virt
@@ -147,6 +161,14 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
 
+    # virtIO socket
+    guest_vsock_node = client_dtb.node(board.guest_vsock)
+    assert guest_vsock_node is not None
+    cid_a = 3
+    cid_b = 4
+    vsock_connection = Vmm.VmmVirtioSocketConnection(sdf, guest_vsock_node, client0, cid_a, client1, cid_b)
+
+    assert vsock_connection.connect()
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
     assert blk_system.connect()
@@ -155,6 +177,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert net_system.serialise_config(output_dir)
     assert client0.connect()
     assert client0.serialise_config(output_dir)
+    assert client1.connect()
+    assert client1.serialise_config(output_dir)
 
     with open(f"{output_dir}/{sdf_file}", "w+") as f:
         f.write(sdf.render())

@@ -11,6 +11,8 @@
 /* 32k buffers of 2-bytes unsigneds. */
 uint16_t nums[NUMS_TO_RECV];
 
+_Static_assert(NUMS_TO_RECV <= UINT16_MAX);
+
 int main(int argc, char *argv[])
 {
 	printf("VSOCK RECV|INFO: starting\n");
