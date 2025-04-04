@@ -1,3 +1,9 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
