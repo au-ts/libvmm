@@ -1,5 +1,5 @@
 #
-# Copyright 2024, UNSW
+# Copyright 2025, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -32,6 +32,7 @@ CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
+CLIENT_VM_USERLEVEL_HOME := vsock_send vsock_recv
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
@@ -75,8 +76,8 @@ include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
 include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 
-IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
-	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
+IMAGES := client_vmm0.elf client_vmm1.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
+	      network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy_vmm0.elf network_copy_vmm1.elf
 
 CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -87,6 +88,11 @@ $(CHECK_FLAGS_BOARD_MD5):
 all: loader.img
 
 -include vmm.d
+
+network_copy_vmm0.elf: network_copy.elf
+	cp $< $@
+network_copy_vmm1.elf: network_copy.elf
+	cp $< $@
 
 $(IMAGES): libsddf_util_debug.a libvmm.a
 
@@ -100,22 +106,31 @@ ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
 	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
 endif
+
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM1.data client_vmm1.elf
+
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM.data client_vmm.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM1.data client_vmm1.elf
+
 	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy_vmm0.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client1_net_copier.data network_copy_vmm1.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM1.data client_vmm1.elf
+
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM1.data client_vmm1.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
@@ -137,11 +152,18 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
+vsock_send: $(VIRTIO_EXAMPLE)/client_vm_userlevel/vsock_send.c
+	zig cc $^ -target aarch64-linux-musl -o $@
+
+vsock_recv: $(VIRTIO_EXAMPLE)/client_vm_userlevel/vsock_recv.c
+	zig cc $^ -target aarch64-linux-musl -o $@
+
 client_vm/rootfs.cpio.gz: ${INITRD} \
-	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(CLIENT_VM_USERLEVEL_INIT) $(CLIENT_VM_USERLEVEL_HOME) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
@@ -165,7 +187,9 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+client_vmm0.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+client_vmm1.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files

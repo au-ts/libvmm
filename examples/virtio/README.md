@@ -1,24 +1,29 @@
 <!--
-     Copyright 2024, UNSW
+     Copyright 2025, UNSW
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# Using multiple virtIO devices with a Linux guest
+# Using multiple virtIO devices with Linux guests
 
-This example shows off the virtIO support that libvmm provides using the
-[seL4 Device Driver Framework (sDDF)](https://github.com/au-ts/sddf) to talk to
-the actual hardware.
+This example shows off the multiple guests and virtIO support that
+libvmm provides using the
+[seL4 Device Driver Framework (sDDF)](https://github.com/au-ts/sddf)
+to talk to the actual hardware.
 
 This example makes use of the following virtIO devices emulated by libvmm:
 * console
 * block
 * network
+* socket (also known as 'vsock' and does not interact with any real hardware)
 
-All of the virtIO devices are emulated with their corresponding native drivers
-from sDDF.
+Note that while we demo all virtIO devices together in one unified example system.
+THeir implementation are independant of each others and thus can be deployed
+independantly.
+
+All of the virtIO devices (except socket) are emulated with their corresponding
+native drivers from sDDF.
 
 The example currently works on the following platforms:
-
 * QEMU virt AArch64
 * Avnet MaaXBoard
 
@@ -28,7 +33,7 @@ Unlike the other examples, this one uses a metaprogram (`meta.py`) with
 the [sdfgen](https://github.com/au-ts/microkit_sdf_gen) tooling to generate the
 System Description File (SDF) and other necessary artefacts. Previously,
 SDFs were written manually, along with C headers for sDDF-specific configurations,
-but this approach was tedious and error-prone. Wit this tooling, we can describe
+but this approach was tedious and error-prone. With this tooling, we can describe
 the system at a higher level, automating the generation of system-specific data.
 
 ## Dependencies
@@ -39,7 +44,7 @@ dependencies are needed:
 * sdfgen (for generating the System Description File with a metaprogram).
 
 ### Linux
-
+<!-- TODO bump sdfgen ver once vsock PR in sdfgen is merged -->
 On apt based Linux distributions run the following commands:
 ```sh
 sudo apt-get install dosfstools
@@ -104,14 +109,18 @@ system running the whole system.
 
 ### virtIO console
 
-This example makes use of the virtIO console device so that the guest has access
+This example makes use of the virtIO console device so that guests has access
 to the serial device on the platform. The virtIO console support in libvmm talks to
 the sDDF serial sub-system which contains a driver for input/output to the physical
 serial device.
 
+Since only 1 guest can read from the console at any given time, by default console
+reading is granted to the first guest (guest #0). You can switch the console input
+by pressing `Ctrl` + `\`, then the guest's index (`0` or `1` in this example).
+
 ### virtIO block
 
-The guest also doubles as a client in the block system that talks virtIO to a native
+The guests also doubles as clients in the block system that talks virtIO to a native
 block device. The requests from the guest are multiplexed through the additional block
 virtualiser component.
 
@@ -139,17 +148,17 @@ starting block number that is a multiple of sDDF block's transfer size of 4096 b
 divided by the disk's logical size. Partitions that do not follow this restriction
 are unsupported.
 
-By default on QEMU virt AArch64, we mount the first partition of the disk image,
-on Avnet MaaXBoard we mount the third partition of the SD Card. You can change the partition mounted
-by passing `PARTITION=n` when executing the Makefile.
+By default on QEMU virt AArch64, we mount the first and second partitions of the disk image to
+guest #0 and #1 respectively. On Avnet MaaXBoard we mount the second and third partitions
+of the SD Card. You can change the partition mounted by passing `PARTITION=n` when executing the Makefile.
 
 ### virtIO net
 
-In addition to virtIO console and block, the guest can also talk with the native
+In addition to virtIO console and block, the guests can also talk with the native
 sDDF network driver via virtIO for in-guest networking. Packets in and out of
-the guest are multiplexed through the network virtualiser components.
+the guests are multiplexed through the network virtualiser components.
 
-When the guest boots up, you must bring up the network device. First check the
+When the guests boots up, you must bring up the network device. First check the
 name of the network device, it should be called `eth0`:
 ```
 # ip link show
@@ -172,7 +181,7 @@ To obtain an IP address, initiate DHCP with:
 udhcpc
 ```
 
-Now the guest network, you can try to ping Google DNS with:
+Now the guest can talk on the network, you can try to ping Google DNS with:
 ```
 # ping 8.8.8.8
 PING 8.8.8.8 (8.8.8.8): 56 data bytes
@@ -188,6 +197,72 @@ round-trip min/avg/max = 5.361/9.776/18.560 ms
 ```
 
 The guest has a DNS resolver so you can also ping a URL.
+
+### virtIO socket
+The virtIO socket device allow inter-guests communication without Ethernet
+or IP protocols. In this example, the two guests act as a sender as receiver
+with corresponding user-level programs packaged into the ramdisk. Guest #0
+and #1 are allocated CID 3 and 4 respectively.
+
+```
+--------- VM ---------            --------- VM ---------
+Userland:                         Userland:
+    vsock_recv                        vsock_send
+    ^                                 |
+    |                                 v
+Kernel:                           Kernel:
+    virtio MMIO vsock driver          virtio MMIO vsock driver
+    ^                                 |
+    |                                 v
+--------- VMM --------            --------- VMM --------
+virtio vsock device           /-- virtio vsock device
+    ^                        /
+    |                       /
+rx buffer <----------------/      rx buffer
+```
+
+In sender VM, `vsock_send` will send 32k worth of data through virtIO socket
+to `vsock_recv` in the receiver VM. Then, the receiver VM will verify that the
+data are all correct and both programs will quit.
+
+Each virtIO socket device have a small receive buffer that the peer can write to
+to send data. The buffer size is advertised to both the sender and receiver via the
+`buf_alloc` field of the packet header for the guest driver to split up packets
+as necessary.
+
+Here is a demo of this process happening. Red (-) is guest #0 while
+green (+) is guest #1:
+```diff
++ Welcome to Buildroot
++ buildroot login: 
+- Welcome to Buildroot
+- buildroot login: root
+- login[262]: root login on 'console'
+- # ./vsock_recv 3
+- VSOCK RECV|INFO: starting
+- VSOCK RECV|INFO: creating socket to wait on CID 3
+VIRT_RX|LOG: switching to client 1
+
++ Welcome to Buildroot
++ buildroot login: root
++ login[260]: root login on 'console'
++ # ./vsock_send 3
++ VSOCK SEND|INFO: starting
++ VSOCK SEND|INFO: creating socket to send on CID 3
+- VSOCK RECV|INFO: peer connected
++ VSOCK SEND|INFO: connected, preparing payload
++ VSOCK SEND|INFO: now sending 32768 bytes!
+- VSOCK RECV|INFO: Accumulatively received 4050 bytes
+- VSOCK RECV|INFO: Accumulatively received 8100 bytes
+- VSOCK RECV|INFO: Accumulatively received 12150 bytes
+- VSOCK RECV|INFO: Accumulatively received 16200 bytes
+- VSOCK RECV|INFO: Accumulatively received 20250 bytes
+- VSOCK RECV|INFO: Accumulatively received 24300 bytes
+- VSOCK RECV|INFO: Accumulatively received 28350 bytes
+- VSOCK RECV|INFO: Accumulatively received 32400 bytes
+- VSOCK RECV|INFO: Total bytes received 32768, verifying data...
+- VSOCK RECV|INFO: All is well in the universe
+```
 
 ### QEMU set up
 
