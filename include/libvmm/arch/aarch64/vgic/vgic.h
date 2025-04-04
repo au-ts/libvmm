@@ -20,6 +20,9 @@
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
+#elif defined(BOARD_rpi4b_1gb)
+#define GIC_V2
+#define GIC_DIST_PADDR      0xff841000
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xf9010000

@@ -1,0 +1,57 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+// added too bootargs maxcpus=1
+//added the modprobe blacklist
+
+/ {
+    memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x10000000 0x10000000>;
+	};
+
+    // scb {
+    //     ethernet@7d580000 {
+    //         status = "disabled";
+    //     };
+    //     hdmi@7ef05700 {
+    //         status = "disabled";
+    //     };
+    // };
+
+    soc {
+        // firmware {
+        //     gpio {
+        //         status = "disabled";
+        //     };
+        // };
+        serial@7e215040 {
+            status = "okay";
+        };
+        mmc@7e300000 {
+            status = "okay";
+        };
+        mmc@7e202000 {
+            status = "okay";
+        };
+    //     serial@7e201000 {
+    //         status = "disabled";
+    //         bluetooth {
+    //             status = "disabled";
+    //         };
+    //     };
+    //     hdmi@7ef00700 {
+    //         status = "disabled";
+    //     };
+    };
+
+    chosen {
+        linux,initrd-start = <0x1c000000>;
+        linux,initrd-end = <0x1e000000>;
+        stdout-path = "serial0:115200n8";
+        bootargs = "initcall_debug nousb console=ttyS0,115200 earlycon=uart8250,mmio32,0xfe215040 8250.nr_uarts=1 rw debug loglevel=8 pci=nomsi maxcpus=1 initcall_blacklist=clk_disable_unused modprobe.blacklist=usbcore,usbhid,ehci-hcd,xhci-pci";
+    };
+};
