@@ -42,11 +42,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	printf("VSOCK RECV|INFO: peer connected\n");
-
 	struct sockaddr_vm peer_addr;
 	socklen_t peer_addr_size = sizeof(struct sockaddr_vm);
 	int peer_fd = accept(s, &peer_addr, &peer_addr_size);
+
+	printf("VSOCK RECV|INFO: peer connected\n");
 
 	size_t bytes_recved = 0;
 	char *buf = (char *) nums;
