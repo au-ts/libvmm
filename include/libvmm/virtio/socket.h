@@ -117,7 +117,11 @@ struct virtio_vsock_device {
     struct virtio_device virtio_device;
     struct virtio_queue_handler vqs[VIRTIO_VSOCK_NUM_VIRTQ];
     uint32_t guest_cid;
-    microkit_channel peer_ch;
+    uint32_t shared_buffer_size;
+    uint32_t payload_size;
+    uintptr_t buffer_our;
+    uintptr_t buffer_peer;
+    uint32_t peer_ch;
 };
 
 /* This is to receive data from the peer. To send data, we write data to the equivalent
@@ -127,14 +131,16 @@ struct virtio_vsock_recv_space {
         bool dirty;           // True if the receiver have not processed the payload.
         bool signal_required; // True if the receiver still have packets to send.
     } metadata;
-    // Not aligned, to do fix
     struct virtio_vsock_packet packet;
 };
 
 bool virtio_mmio_vsock_init(struct virtio_vsock_device *vsock,
-                         uintptr_t region_base,
-                         uintptr_t region_size,
-                         size_t virq,
-                         uint32_t guest_cid,
-                         microkit_channel peer_ch);
+                            uintptr_t region_base,
+                            uintptr_t region_size,
+                            size_t virq,
+                            uint32_t guest_cid,
+                            uint32_t shared_buffer_size,
+                            uintptr_t buffer_our,
+                            uintptr_t buffer_peer,
+                            microkit_channel peer_ch);
 bool virtio_vsock_handle_rx(struct virtio_vsock_device *vsock);

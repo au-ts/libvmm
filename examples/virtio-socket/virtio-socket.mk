@@ -28,7 +28,7 @@ METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
 
-vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
+vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
 CFLAGS := \
 	  -mstrict-align \
@@ -53,7 +53,7 @@ CFLAGS_USERLEVEL := \
 		-Wall -Wno-unused-function -Werror \
 		-D_GNU_SOURCE \
 		-I$(VIRTIO_EXAMPLE)/include \
-		-target aarch64-linux-gnu
+		-target aarch64-linux-musl
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
@@ -90,6 +90,7 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm0.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM1.data client_vmm1.elf
+
 	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm0.elf
 	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM1.data client_vmm1.elf
 

@@ -13,19 +13,43 @@ static char VMM_MAGIC[VMM_MAGIC_LEN] = { 'v', 'm', 'm' };
 #define VMM_MAX_IRQS 32
 #define VMM_MAX_VCPUS 32
 #define VMM_MAX_UIOS 16
-#define VMM_MAX_VIRTIO_MMIO_DEVICES 32
+#define MAX_VIRTIO_MMIO_DEVICES_PER_TYPE 4
 
 typedef struct vmm_config_irq {
     uint8_t id;
     uint32_t irq;
 } vmm_config_irq_t;
 
-typedef struct vmm_config_virtio_mmio_device {
-    uint8_t type;
+typedef struct vmm_config_virtio_mmio_device_regs {
     uint64_t base;
     uint32_t size;
     uint32_t irq;
-} vmm_config_virtio_mmio_device_t;
+} vmm_config_virtio_mmio_device_regs_t;
+
+typedef struct vmm_config_virtio_console_device {
+    vmm_config_virtio_mmio_device_regs_t regs;
+} vmm_config_virtio_console_device_t;
+
+typedef struct vmm_config_virtio_block_device {
+    vmm_config_virtio_mmio_device_regs_t regs;
+} vmm_config_virtio_block_device_t;
+
+typedef struct vmm_config_virtio_net_device {
+    vmm_config_virtio_mmio_device_regs_t regs;
+} vmm_config_virtio_net_device_t;
+
+typedef struct vmm_config_virtio_socket_device {
+    vmm_config_virtio_mmio_device_regs_t regs;
+    uint32_t cid;
+    uint32_t shared_buffer_size;
+    uintptr_t buffer_our;
+    uintptr_t buffer_peer;
+    uint32_t peer_ch;
+} vmm_config_virtio_socket_device_t;
+
+typedef struct vmm_config_virtio_sound_device {
+    vmm_config_virtio_mmio_device_regs_t regs;
+} vmm_config_virtio_sound_device_t;
 
 typedef struct vmm_config_vcpu {
     uint8_t id;
@@ -50,8 +74,22 @@ typedef struct vmm_config {
     vmm_config_irq_t irqs[VMM_MAX_IRQS];
     uint8_t num_vcpus;
     vmm_config_vcpu_t vcpus[VMM_MAX_VCPUS];
-    uint8_t num_virtio_mmio_devices;
-    vmm_config_virtio_mmio_device_t virtio_mmio_devices[VMM_MAX_VIRTIO_MMIO_DEVICES];
+
+    uint8_t num_virtio_mmio_console_devices;
+    vmm_config_virtio_console_device_t virtio_mmio_console_devices[MAX_VIRTIO_MMIO_DEVICES_PER_TYPE];
+
+    uint8_t num_virtio_mmio_block_devices;
+    vmm_config_virtio_block_device_t virtio_mmio_block_devices[MAX_VIRTIO_MMIO_DEVICES_PER_TYPE];
+
+    uint8_t num_virtio_mmio_net_devices;
+    vmm_config_virtio_net_device_t virtio_mmio_net_devices[MAX_VIRTIO_MMIO_DEVICES_PER_TYPE];
+
+    uint8_t num_virtio_mmio_socket_devices;
+    vmm_config_virtio_socket_device_t virtio_mmio_socket_devices[MAX_VIRTIO_MMIO_DEVICES_PER_TYPE];
+
+    uint8_t num_virtio_mmio_sound_devices;
+    vmm_config_virtio_sound_device_t virtio_mmio_sound_devices[MAX_VIRTIO_MMIO_DEVICES_PER_TYPE];
+
     uint8_t num_uio_regions;
     vmm_config_uio_region_t uios[VMM_MAX_UIOS];
 } vmm_config_t;

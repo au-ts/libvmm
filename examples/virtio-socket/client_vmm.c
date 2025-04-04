@@ -35,17 +35,9 @@ uintptr_t guest_ram_vaddr;
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
-
 static struct virtio_console_device virtio_console;
 
-/* Virtio virtual socket */
-#define VIRTIO_VSOCK_PEER_CHANNEL (24)
-#define VIRTIO_VSOCK_IRQ (75)
-#define VIRTIO_VSOCK_BASE (0x140000)
-#define VIRTIO_VSOCK_SIZE (0x200)
-#ifndef VIRTIO_VSOCK_GUEST_CID
-#error "VIRTIO_VSOCK_GUEST_CID must be specified"
-#endif
+/* Virtio socket */
 static struct virtio_vsock_device virtio_vsock;
 
 void init(void)
@@ -86,39 +78,40 @@ void init(void)
         return;
     }
 
-    /* Find the details of VirtIO console device from sdfgen */
-    int console_vdev_idx = -1;
-    assert(vmm_config.num_virtio_mmio_devices == 1);
-    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
-        switch (vmm_config.virtio_mmio_devices[i].type) {
-        case VIRTIO_DEVICE_ID_CONSOLE:
-            console_vdev_idx = i;
-            break;
-        }
-    }
-    assert(console_vdev_idx != -1);
-
+    /* Initialise sDDF serial queues */
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
+    /* Fetch VirtIO console device details from sdfgen */
+    assert(vmm_config.num_virtio_mmio_console_devices == 1);
+    vmm_config_virtio_console_device_t *mmio_console_dev = &vmm_config.virtio_mmio_console_devices[0];
+
     /* Initialise virtIO console device */
     success = virtio_mmio_console_init(&virtio_console,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].base,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
+                                       mmio_console_dev->regs.base,
+                                       mmio_console_dev->regs.size,
+                                       mmio_console_dev->regs.irq,
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
     assert(success);
 
+    /* Fetch VirtIO socket device details from sdfgen */
+    assert(vmm_config.num_virtio_mmio_socket_devices == 1);
+    vmm_config_virtio_socket_device_t *mmio_socket_dev = &vmm_config.virtio_mmio_socket_devices[0];
+
     /* Initialise virtIO socket device */
     success = virtio_mmio_vsock_init(&virtio_vsock,
-                                     VIRTIO_VSOCK_BASE,
-                                     VIRTIO_VSOCK_SIZE,
-                                     VIRTIO_VSOCK_IRQ,
-                                     VIRTIO_VSOCK_GUEST_CID,
-                                     VIRTIO_VSOCK_PEER_CHANNEL);
+                                     mmio_socket_dev->regs.base,
+                                     mmio_socket_dev->regs.size,
+                                     mmio_socket_dev->regs.irq,
+                                     mmio_socket_dev->cid,
+                                     mmio_socket_dev->shared_buffer_size,
+                                     mmio_socket_dev->buffer_our,
+                                     mmio_socket_dev->buffer_peer,
+                                     mmio_socket_dev->peer_ch);
+    assert(success);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
@@ -131,7 +124,7 @@ void notified(microkit_channel ch)
         virtio_console_handle_rx(&virtio_console);
     } else if (ch == serial_config.tx.id) {
         /* Nothing to do */
-    } else if (ch == VIRTIO_VSOCK_PEER_CHANNEL) {
+    } else if (ch == vmm_config.virtio_mmio_socket_devices[0].peer_ch) {
         virtio_vsock_handle_rx(&virtio_vsock);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);

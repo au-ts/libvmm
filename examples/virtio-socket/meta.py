@@ -1,10 +1,8 @@
 # Copyright 2025, UNSW
 # SPDX-License-Identifier: BSD-2-Clause
 import argparse
-import struct
-import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 
 ProtectionDomain = SystemDescription.ProtectionDomain
@@ -13,7 +11,6 @@ MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
-
 @dataclass
 class Board:
     name: str
@@ -21,6 +18,7 @@ class Board:
     paddr_top: int
     serial: str
     guest_serial: str
+    guest_vsock: str
 
 
 BOARDS: List[Board] = [
@@ -30,6 +28,7 @@ BOARDS: List[Board] = [
         paddr_top=0x6_0000_000,
         serial="pl011@9000000",
         guest_serial="virtio-console@130000",
+        guest_vsock="virtio-socket@140000",
     ),
     Board(
         name="maaxboard",
@@ -37,6 +36,7 @@ BOARDS: List[Board] = [
         paddr_top=0x90000000,
         serial="soc@0/bus@30800000/serial@30860000",
         guest_serial="virtio-console@130000",
+        guest_vsock="virtio-socket@140000",
     ),
     Board(
         name="odroidc4",
@@ -44,6 +44,7 @@ BOARDS: List[Board] = [
         paddr_top=0x60000000,
         serial="soc/bus@ff800000/serial@3000",
         guest_serial="virtio-console@130000",
+        guest_vsock="virtio-socket@140000",
     ),
 ]
 
@@ -86,22 +87,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         sdf.add_pd(pd)
 
     # Virtio socket
-    vsock_ch = Channel(vmm_client0, vmm_client1, a_id=24, b_id=24)
-    sdf.add_channel(vsock_ch)
-    vsock_client0_rx_buf = MemoryRegion("vsock_client0_rx_buf", 0x1000)
-    sdf.add_mr(vsock_client0_rx_buf)
-    vsock_client1_rx_buf = MemoryRegion("vsock_client1_rx_buf", 0x1000)
-    sdf.add_mr(vsock_client1_rx_buf)
-
-    vsock_0_our_buf_map = Map(vsock_client0_rx_buf, 0xFFA000000, "rw", cached=False)
-    vmm_client0.add_map(vsock_0_our_buf_map)
-    vsock_0_peer_buf_map = Map(vsock_client1_rx_buf, 0xFFB000000, "rw", cached=False)
-    vmm_client0.add_map(vsock_0_peer_buf_map)
-
-    vsock_1_our_buf_map = Map(vsock_client1_rx_buf, 0xFFA000000, "rw", cached=False)
-    vmm_client1.add_map(vsock_1_our_buf_map)
-    vsock_1_peer_buf_map = Map(vsock_client0_rx_buf, 0xFFB000000, "rw", cached=False)
-    vmm_client1.add_map(vsock_1_peer_buf_map)
+    guest_vsock_node = client_dtb.node(board.guest_vsock)
+    assert guest_vsock_node is not None
+    cid_a = 3
+    cid_b = 4
+    vsock_connection = Vmm.VmmVirtioSocketConnection(sdf, guest_vsock_node, client0, cid_a, client1, cid_b)
+    assert vsock_connection.connect()
 
     assert client0.connect()
     assert client0.serialise_config(output_dir)
