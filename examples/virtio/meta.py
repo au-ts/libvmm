@@ -29,6 +29,7 @@ class Board:
     guest_net: str
     guest_vsock: str
 
+
 BOARDS: List[Board] = [
     Board(
         name="qemu_virt_aarch64",
@@ -166,7 +167,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert guest_vsock_node is not None
     cid_a = 3
     cid_b = 4
-    vsock_connection = Vmm.VmmVirtioSocketConnection(sdf, guest_vsock_node, client0, cid_a, client1, cid_b)
+    vsock_connection = Vmm.VmmVirtioSocketConnection(
+        sdf, guest_vsock_node, client0, cid_a, client1, cid_b)
 
     assert vsock_connection.connect()
     assert serial_system.connect()
