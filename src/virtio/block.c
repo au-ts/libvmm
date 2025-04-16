@@ -250,7 +250,7 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state,
 }
 
 /* Returns true if both requests hit the same block */
-bool are_requests_overlap(reqbk_t *req1, reqbk_t *req2)
+bool do_requests_overlap(reqbk_t *req1, reqbk_t *req2)
 {
     uint32_t start1 = req1->sddf_block_number;
     uint32_t end1 = start1 + req1->sddf_count - 1;
@@ -314,7 +314,6 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                     sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 /* Don't go to the next descriptor yet, we're not done processing with
                  * current one */
-                assert(false);
                 break;
             } else {
                 void *src_addr = (void *)virtq->desc[curr_desc].addr;
@@ -358,8 +357,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             }
 
             /* Figure out whether the guest's read request spills over to the next 4k transfer window */
-            uint16_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
-            uint16_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
+            uint32_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
+            uint32_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
             if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors) > SECTORS_IN_TRANSFER_WINDOW) {
                 sddf_count++;
             }
@@ -435,8 +434,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             LOG_BLOCK("body_size_bytes is %u\n", body_size_bytes);
 
             /* Figure out whether the guest's write request spills over to the next 4k transfer window */
-            uint16_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
-            uint16_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
+            uint32_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
+            uint32_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
             if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors) > SECTORS_IN_TRANSFER_WINDOW) {
                 sddf_count++;
             }
@@ -489,7 +488,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                    an unaligned write op on that sDDF block to prevent data race. */
                 bool process = true;
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
-                    if (i != req_id && state->reqsbk[i].valid && are_requests_overlap(&state->reqsbk[i], &state->reqsbk[req_id]) &&
+                    if (i != req_id && state->reqsbk[i].valid && do_requests_overlap(&state->reqsbk[i], &state->reqsbk[req_id]) &&
                         request_is_write(&state->reqsbk[i])) {
 
                         LOG_BLOCK("not aligned and found another req inflight, queueing, this req id is %u\n", req_id);
@@ -802,7 +801,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                    which request is queueing on the same sDDF block we touched and process it. */
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
                     if (state->reqsbk[i].valid && state->reqsbk[i].state == STATE_RMW_QUEUEING &&
-                        are_requests_overlap(&(state->reqsbk[i]), reqbk)) {
+                        do_requests_overlap(&(state->reqsbk[i]), reqbk)) {
 
                         state->reqsbk[i].state = STATE_RMW_READING;
                         uintptr_t next_sddf_offset =
