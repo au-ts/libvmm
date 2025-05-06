@@ -141,17 +141,21 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev)
 
     /* Process 1 transmit buffer if one exists. */
     if (vq->last_idx != vq->virtq.avail->idx) {
-        /* Before doing anything, check to make sure the other side can actually receive data. */
-        if (peer_buf->metadata.dirty) {
-            return;
-        }
-
         uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc;
         desc = vq->virtq.desc[desc_idx];
-        LOG_VSOCK("======== TRANSMITTING ========\n");
-
         struct virtio_vsock_packet *packet = (struct virtio_vsock_packet *) desc.addr;
+
+        /* Before doing anything, check to make sure the other side can actually receive data. */
+        if (peer_buf->metadata.dirty) {
+            /* But there is a special condition, if the packet is a reset packet, it must be sent
+               no matter what. (Virtio spec v1.2 section 5.10.6.4.2) */
+            if (packet->hdr.op != VIRTIO_VSOCK_OP_RST) {
+                return;
+            }
+        }
+
+        LOG_VSOCK("======== TRANSMITTING ========\n");
         LOG_VSOCK("src_cid: 0x%lx\n", packet->hdr.src_cid);
         LOG_VSOCK("dst_cid: 0x%lx\n", packet->hdr.dst_cid);
         LOG_VSOCK("src_port: 0x%lx\n", packet->hdr.src_port);
@@ -190,10 +194,6 @@ static void virtio_vsock_handle_tx(struct virtio_device *dev)
         }
         default: {
             LOG_VSOCK_ERR("invalid operation %d\n", packet->hdr.op);
-            // TODO: handle
-            // send reset as per spec
-            // 5.10.6.4.2
-            assert(false);
             break;
         }
         }
