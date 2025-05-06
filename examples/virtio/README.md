@@ -234,7 +234,7 @@ Here is a demo of this process happening. Red (-) is guest #0 while
 green (+) is guest #1:
 ```diff
 + Welcome to Buildroot
-+ buildroot login: 
++ buildroot login:
 - Welcome to Buildroot
 - buildroot login: root
 - login[262]: root login on 'console'
