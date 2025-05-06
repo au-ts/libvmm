@@ -1,5 +1,5 @@
 #
-# Copyright 2024, UNSW
+# Copyright 2025, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -33,7 +33,7 @@ else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
 	QEMU := qemu-system-aarch64
 
-	export BLK_NUM_PART = 1
+	export BLK_NUM_PART = 2
 	export BLK_SIZE = 512
 	# 16MiB of disk space
 	export BLK_MEM ?= 16777216
@@ -48,7 +48,7 @@ export PARTITION_ARG := --partition $(PARTITION)
 endif
 
 # All platforms use the same Linux and initrd images.
-export LINUX := a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux
+export LINUX := 372b2c56f55f2d461e4570d79332298e0f7ecce4-linux
 export INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
 export BUILD_DIR:=$(abspath $(BUILD_DIR))
