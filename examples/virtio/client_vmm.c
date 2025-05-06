@@ -140,6 +140,7 @@ void init(void)
                                    blk_config.data.size,
                                    storage_info,
                                    &blk_queue,
+                                   blk_config.virt.num_buffers,
                                    blk_config.virt.id);
     assert(success);
 

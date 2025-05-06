@@ -57,7 +57,7 @@ BOARDS: List[Board] = [
         guest_blk="virtio-blk@150000",
         net="soc@0/bus@30800000/ethernet@30be0000",
         guest_net="virtio-net@160000",
-        partition=0
+        partition=2
     ),
 ]
 
