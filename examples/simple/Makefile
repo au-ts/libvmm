@@ -10,15 +10,14 @@ export MICROKIT_CONFIG ?= debug
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
-export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
+override MICROKIT_SDK := $(abspath $(MICROKIT_SDK))
 
 ifeq ($(strip $(MICROKIT_BOARD)),)
 $(error MICROKIT_BOARD must be specified)
 endif
 
-export BUILD_DIR:=$(abspath $(BUILD_DIR))
-export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
-export EXAMPLE_DIR:=$(abspath .)
+export BUILD_DIR := $(abspath $(BUILD_DIR))
+export EXAMPLE_DIR := $(abspath .)
 
 export TARGET := aarch64-none-elf
 export CC := clang
@@ -28,8 +27,8 @@ export AR := llvm-ar
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-export SDDF=$(abspath ../../dep/sddf)
-export LIBVMM=$(abspath ../../)
+export SDDF = $(abspath ../../dep/sddf)
+export LIBVMM = $(abspath ../../)
 
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
