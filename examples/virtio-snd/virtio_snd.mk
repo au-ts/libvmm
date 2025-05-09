@@ -73,7 +73,7 @@ include $(LIBVMM_TOOLS)/linux/uio_drivers/snd/uio_snd.mk
 IMAGES := client_vmm.elf snd_driver_vmm.elf \
 	$(SERIAL_IMAGES) $(SND_IMAGES) uart_driver.elf
 
-CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
+CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
 $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*

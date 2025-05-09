@@ -10,7 +10,7 @@ export MICROKIT_CONFIG ?= debug
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
-export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
+override MICROKIT_SDK := $(abspath $(MICROKIT_SDK))
 
 # Both QEMU and Maaxboard uses the same guest device tree as the guest does not
 # need to access any physical device. The only difference is that QEMU is GICv2 while
@@ -51,9 +51,9 @@ endif
 export LINUX := a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux
 export INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
-export BUILD_DIR:=$(abspath $(BUILD_DIR))
-export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
-export VIRTIO_EXAMPLE:=$(abspath .)
+BUILD_DIR ?= build
+export BUILD_DIR := $(abspath ${BUILD_DIR})
+export VIRTIO_EXAMPLE := $(abspath .)
 
 export OBJCOPY := llvm-objcopy
 export TARGET := aarch64-none-elf
@@ -65,8 +65,8 @@ export AR := llvm-ar
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-export SDDF=$(abspath ../../dep/sddf)
-export LIBVMM=$(abspath ../../)
+export SDDF = $(abspath ../../dep/sddf)
+export LIBVMM = $(abspath ../../)
 
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
