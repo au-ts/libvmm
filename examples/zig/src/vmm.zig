@@ -3,11 +3,11 @@
 
 const std = @import("std");
 const c = @cImport({
+    @cInclude("microkit.h");
     @cInclude("libvmm/virq.h");
     @cInclude("libvmm/guest.h");
     @cInclude("libvmm/arch/aarch64/linux.h");
 });
-const microkit = @import("libmicrokit.zig");
 
 // In this example we only have one virtual CPU
 const GUEST_BOOT_VCPU_ID = 0;
@@ -54,7 +54,7 @@ const log = struct {
 
     fn debug_uart_put_str(_: u32, str: []const u8) !usize {
         for (str) |ch| {
-            microkit.microkit_dbg_putc(ch);
+            c.microkit_dbg_putc(ch);
         }
         return str.len;
     }
@@ -68,12 +68,12 @@ const log = struct {
     }
 };
 
-const SERIAL_IRQ_CH: microkit.microkit_channel = 1;
+const SERIAL_IRQ_CH: c.microkit_channel = 1;
 const SERIAL_IRQ: i32 = 33;
 
 fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.C) void {
     // Nothing else needs to be done other than acking the IRQ.
-    microkit.microkit_irq_ack(SERIAL_IRQ_CH);
+    c.microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
 export fn init() callconv(.C) void {
@@ -107,7 +107,7 @@ export fn init() callconv(.C) void {
     }
     // Just in case there is already an interrupt from the UART available to
     // handle, we ack it here.
-    microkit.microkit_irq_ack(SERIAL_IRQ_CH);
+    c.microkit_irq_ack(SERIAL_IRQ_CH);
     // Finally we can start the guest
     if (!c.guest_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR)) {
         log.err("Failed to start guest\n", .{});
@@ -115,7 +115,7 @@ export fn init() callconv(.C) void {
     }
 }
 
-export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
+export fn notified(ch: c.microkit_channel) callconv(.C) void {
     switch (ch) {
         SERIAL_IRQ_CH => {
             const success = c.virq_inject(GUEST_BOOT_VCPU_ID, SERIAL_IRQ);
@@ -127,12 +127,12 @@ export fn notified(ch: microkit.microkit_channel) callconv(.C) void {
     }
 }
 
-extern fn fault_handle(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo) callconv(.C) bool;
+extern fn fault_handle(id: c.microkit_child, msginfo: c.microkit_msginfo) callconv(.C) bool;
 
-export fn fault(id: microkit.microkit_child, msginfo: microkit.microkit_msginfo, msginfo_reply: *microkit.microkit_msginfo) callconv(.C) bool {
+export fn fault(id: c.microkit_child, msginfo: c.microkit_msginfo, msginfo_reply: *c.microkit_msginfo) callconv(.C) bool {
     if (fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
-        msginfo_reply.* = microkit.microkit_msginfo_new(0, 0);
+        msginfo_reply.* = c.microkit_msginfo_new(0, 0);
         return true;
     } else {
         log.err("Failed to handle fault\n", .{});
