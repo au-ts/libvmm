@@ -4,9 +4,22 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "libmicrokit.h"
+/* Zig will automatically translate microkit.h when it is imported into vmm.zig.
+ * This is great, but the C translation functionality has one limitation that involves
+ * us doing some extra work. Zig does not auto-translate GCC inline assembly which is
+ * used by libsel4. This means that we need to provide certain functions where the implementation
+ * is not in the header. Our implementations are just copies of the AArch64 libsel4 ones. */
 
-void zig_arm_sys_send(seL4_Word sys, seL4_Word dest, seL4_Word info_arg, seL4_Word mr0, seL4_Word mr1,
+#define arm_sys_send arm_sys_send_header
+#define arm_sys_send_recv arm_sys_send_recv_header
+
+#include <microkit.h>
+
+/* Ignore the implementations of the header so we do not get duplicate function errors. */
+#undef arm_sys_send
+#undef arm_sys_send_recv
+
+void arm_sys_send(seL4_Word sys, seL4_Word dest, seL4_Word info_arg, seL4_Word mr0, seL4_Word mr1,
                                 seL4_Word mr2, seL4_Word mr3)
 {
     register seL4_Word destptr asm("x0") = dest;
@@ -28,7 +41,7 @@ void zig_arm_sys_send(seL4_Word sys, seL4_Word dest, seL4_Word info_arg, seL4_Wo
     );
 }
 
-void zig_arm_sys_send_recv(seL4_Word sys, seL4_Word dest, seL4_Word *out_badge, seL4_Word info_arg,
+void arm_sys_send_recv(seL4_Word sys, seL4_Word dest, seL4_Word *out_badge, seL4_Word info_arg,
                                      seL4_Word *out_info, seL4_Word *in_out_mr0, seL4_Word *in_out_mr1, seL4_Word *in_out_mr2, seL4_Word *in_out_mr3,
                                      LIBSEL4_UNUSED seL4_Word reply)
 {

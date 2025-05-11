@@ -46,7 +46,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    zig_libmicrokit.addCSourceFile(.{ .file = b.path("src/libmicrokit.c"), .flags = &.{} });
+    zig_libmicrokit.addCSourceFile(.{ .file = b.path("src/extern.c"), .flags = &.{} });
     zig_libmicrokit.addIncludePath(b.path("src/"));
     zig_libmicrokit.addIncludePath(.{ .cwd_relative = libmicrokit_include });
 
