@@ -10,7 +10,7 @@ export MICROKIT_CONFIG ?= debug
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
-export override MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
+override MICROKIT_SDK := $(abspath $(MICROKIT_SDK))
 
 ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	export UART_DRIVER := meson
@@ -23,9 +23,9 @@ else
 $(error Unsupported MICROKIT_BOARD given)
 endif
 
-export BUILD_DIR:=$(abspath $(BUILD_DIR))
-export MICROKIT_SDK:=$(abspath $(MICROKIT_SDK))
-export VIRTIO_EXAMPLE:=$(abspath .)
+BUILD_DIR ?= build
+export BUILD_DIR := $(abspath ${BUILD_DIR})
+export VIRTIO_EXAMPLE := $(abspath .)
 
 export TARGET := aarch64-none-elf
 export CC := clang
@@ -36,8 +36,8 @@ export AR := llvm-ar
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-export SDDF=$(abspath ../../dep/sddf)
-export LIBVMM=$(abspath ../../)
+export SDDF = $(abspath ../../dep/sddf)
+export LIBVMM = $(abspath ../../)
 
 # If on macOS, override backend to `coreaudio`
 export QEMU_SND_BACKEND := alsa
