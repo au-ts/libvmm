@@ -10,6 +10,7 @@
 #include <libvmm/virtio/block.h>
 #include <libvmm/virtio/console.h>
 #include <libvmm/virtio/net.h>
+#include <libvmm/virtio/socket.h>
 #include <libvmm/virtio/sound.h>
 
 /*
