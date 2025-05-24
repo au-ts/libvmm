@@ -13,7 +13,6 @@ env:
   MICROKIT_VERSION: 2.0.1
   MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.0.1/microkit-sdk-2.0.1
   SDFGEN_VERSION: 0.23.1
-  ZIG_VERSION: 0.14.1
 
 jobs:
   build_manual:
@@ -53,7 +52,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2.0.0
         with:
-          version: ${{ env.ZIG_VERSION }}
+          version: 0.14.0
       - name: Setup pyenv
         run: |
           python3 -m venv venv
@@ -83,7 +82,7 @@ jobs:
       - name: Install Zig
         uses: mlugg/setup-zig@v2.0.0
         with:
-          version: ${{ env.ZIG_VERSION }}
+          version: 0.14.0
       - name: Setup pyenv
         run: |
           python3 -m venv venv
