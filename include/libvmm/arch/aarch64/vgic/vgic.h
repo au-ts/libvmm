@@ -13,10 +13,10 @@
 #if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
 #define GIC_V2
 #define GIC_DIST_PADDR      0x8000000
-#elif defined(CONFIG_PLAT_ODROIDC4)
+#elif defined(CONFIG_PLAT_ODROIDC4) || defined(CONFIG_PLAT_ODROIDC4_4_CORES)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xffc01000
-#elif defined(CONFIG_PLAT_MAAXBOARD)
+#elif defined(CONFIG_PLAT_MAAXBOARD) || defined(CONFIG_PLAT_MAAXBOARD_4_CORES)
 #define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
