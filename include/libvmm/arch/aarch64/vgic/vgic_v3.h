@@ -91,11 +91,11 @@ struct gic_redist_map {          /* Starting */
 struct gic_redist_sgi_ppi_map {  /* Starting */
     uint32_t    igroupr0;       /* 0x0080 */
     uint32_t    isenable;       /* 0x0100 */
-    uint32_t    icenabler0;     /* 0x0180 */
+    // uint32_t    icenabler0;     /* 0x0180 */
     uint32_t    ispend;         /* 0x0200 */
-    uint32_t    icpend;         /* 0x0280 */
+    // uint32_t    icpend;         /* 0x0280 */
     uint32_t    isactive;       /* 0x0300 */
-    uint32_t    icactiver0;     /* 0x0380 */
+    // uint32_t    icactiver0;     /* 0x0380 */
     uint32_t    ipriorityrn[8]; /* 0x0400 */
     // uint32_t    icfgrn_ro;      /* 0x0C00 */
     uint32_t    icfgrn_rw;      /* 0x0C04 */
@@ -246,10 +246,10 @@ static inline void set_sgi_ppi_enable_v3(struct gic_redist_sgi_ppi_map *sgi, int
 {
     if (set_enable) {
         sgi->isenable |= IRQ_BIT(irq);
-        sgi->icenabler0 |= IRQ_BIT(irq);
+        // sgi->icenabler0 |= IRQ_BIT(irq);
     } else {
         sgi->isenable &= ~IRQ_BIT(irq);
-        sgi->icenabler0 &= ~IRQ_BIT(irq);
+        // sgi->icenabler0 &= ~IRQ_BIT(irq);
     }
 }
 
@@ -262,10 +262,10 @@ static inline void set_sgi_ppi_pending_v3(struct gic_redist_sgi_ppi_map *sgi, in
 {
     if (set_pending) {
         sgi->ispend |= IRQ_BIT(irq);
-        sgi->icpend |= IRQ_BIT(irq);
+        // sgi->icpend |= IRQ_BIT(irq);
     } else {
         sgi->ispend &= ~IRQ_BIT(irq);
-        sgi->icpend &= ~IRQ_BIT(irq);
+        // sgi->icpend &= ~IRQ_BIT(irq);
     }
 }
 
