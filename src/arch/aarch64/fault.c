@@ -264,14 +264,50 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
 {
     uint32_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
+
+    seL4_UserContext regs;
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(err == seL4_NoError);
+    // @billn this code is a bit stupid, todo fix
+    uint32_t iss = hsr & 0xffffff;
+    uint8_t op0 = (iss >> 20) & 0x3;
+    uint8_t op2 = (iss >> 17) & 0x7;
+    uint8_t op1 = (iss >> 14) & 0x7;
+    uint8_t crn = (iss >> 10) & 0xf;
+    uint8_t crm = (iss >> 1) & 0xf;
+    bool is_read = iss & 0x1;
+
     switch (hsr_ec_class) {
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
         // If we get a WFI exception, we just do nothing in the VMM.
         return true;
+    case HSR_SYSREG_64_EXCEPTION:
+        if (op0 == 3 && op2 == 5 && op1 == 0 && crn == 12 && crm == 11 && !is_read) {
+            // LOG_VMM("trapped a write to ICC_SGI1R_EL1 from vcpu %lu\n", vcpu_id);
+            
+            // @billn hack, should be using fault get data!
+            size_t reg_idx = (hsr >> 5) & 0x1f;
+            size_t data = *decode_rt(reg_idx, &regs);
+
+            // LOG_VMM("with data 0x%lx\n", data);
+
+            uint8_t intid = (data >> 24) & 0xf;
+            for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
+                // check the target list and raise IRQ on the approproate vCPUs.
+                if (data >> i & 0x1) {
+                    // LOG_VMM("injecting SGI %u to vcpu %u\n", intid, i);
+                    assert(vgic_inject_irq(i, intid));
+                }
+            }
+            
+            return true;
+        } else {
+            LOG_VMM("trapped sysreg 64 exception with unknown instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is read %u\n", op0, op2, op1, crn, crm, is_read);
+        }
     default:
-        LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
+        LOG_VMM_ERR("unknown vCPU exception, vCPU ID %lu, EC class: 0x%lx, HSR: 0x%lx\n", vcpu_id, hsr_ec_class, hsr);
         return false;
     }
 }

@@ -45,7 +45,7 @@ bool vgic_handle_fault_maintenance(size_t vcpu_id)
     slot->ack_data = NULL;
     /* Clear pending */
     LOG_IRQ("Maintenance IRQ %d\n", lr_virq.virq);
-    set_pending(vgic_get_dist(vgic.registers), lr_virq.virq, false, vcpu_id);
+    set_pending(&vgic, lr_virq.virq, false, vcpu_id);
     virq_ack(vcpu_id, &lr_virq);
     /* Check the overflow list for pending IRQs */
     struct virq_handle *virq = vgic_irq_dequeue(&vgic, vcpu_id);

@@ -30,8 +30,9 @@
 #if defined(GIC_V2)
 #define GIC_DIST_SIZE 0x1000
 #elif defined(GIC_V3)
-#define GIC_DIST_SIZE       0x10000
-#define GIC_REDIST_SIZE     0xc0000
+#define GIC_DIST_SIZE                0x10000
+#define GIC_REDIST_INDIVIDUAL_SIZE   0x20000
+#define GIC_REDIST_TOTAL_SIZE        (GIC_REDIST_INDIVIDUAL_SIZE * GUEST_NUM_VCPUS)
 #else
 #error Unknown GIC version
 #endif

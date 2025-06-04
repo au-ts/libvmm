@@ -44,7 +44,7 @@ bool virq_controller_init()
         return false;
     }
 #if defined(GIC_V3)
-    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_SIZE, vgic_handle_fault_redist, NULL);
+    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_TOTAL_SIZE, vgic_handle_fault_redist, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register fault handler for GIC redistributor region\n");
         return false;
