@@ -1,5 +1,5 @@
 #
-# Copyright 2024, UNSW
+# Copyright 2025, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -9,7 +9,7 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
+SYSTEM_FILE := $(SYSTEM_DIR)/simple-smp.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
@@ -20,13 +20,15 @@ IMAGES := vmm.elf
 LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
-else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4_4_cores)
 	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
-else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
+else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard_4_cores)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
+
+VM_USERLEVEL_INIT := $(EXAMPLE_DIR)/userspace_smp_test.sh
 
 CFLAGS := \
 	  -mstrict-align \
@@ -76,6 +78,11 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
+rootfs.cpio.gz: ${INITRD} $(VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs ${INITRD} \
+		rootfs_staging -o $@ \
+		--startup $(VM_USERLEVEL_INIT)
+
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -85,11 +92,11 @@ vm.dtb: vm.dts
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) rootfs.cpio.gz vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
