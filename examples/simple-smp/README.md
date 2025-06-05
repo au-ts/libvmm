@@ -12,9 +12,9 @@ buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
-* QEMU virt AArch64
-* HardKernel Odroid-C4
-* Avnet MaaXBoard
+* QEMU virt AArch64 (4 cores)
+* HardKernel Odroid-C4 (4 cores)
+* Avnet MaaXBoard (4 cores)
 
 ## Building with Make
 
@@ -46,9 +46,7 @@ specify `LINUX` and/or `INITRD`. For example:
 make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd qemu
 ```
 
-<!-- @billn update zig build system -->
-
-<!-- ## Building with Zig
+## Building with Zig
 
 For educational purposes, you can also build and run this example using the
 [Zig](https://ziglang.org/) build system.
@@ -63,8 +61,8 @@ zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD>
 
 Where `<MICROKIT_BOARD>` is one of:
 * `qemu_virt_aarch64`
-* `odroidc4`
-* `maaxboard`
+* `odroidc4_4_cores`
+* `maaxboard_4_cores`
 
 If you are building for QEMU then you can also run QEMU by doing:
 ```sh
@@ -81,6 +79,6 @@ zig build -Dsdk=/path/to/sdk -Dboard=qemu_virt_aarch64 -Dlinux=/path/to/linux -D
 
 You can view other options by doing:
 ```sh
-zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD> -h -->
+zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD> -h
 ```
 

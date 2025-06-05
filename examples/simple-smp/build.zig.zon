@@ -16,12 +16,12 @@
             .hash = "rootfs_cpio_gz-0.0.0-AAAAAFuyCwDpUITQ72Vk5neE9sZHvBPQTXdJFAvR05wM",
             .lazy = true
         },
-        .odroidc4_initrd = .{
+        .odroidc4_4_cores_initrd = .{
             .url = "https://trustworthy.systems/Downloads/libvmm/images/ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz.tar.gz",
             .hash = "rootfs_cpio_gz-0.0.0-AAAAAIteFwDCe2qFpuICyNBmCl0bQcKNNMxKXFRIus2P",
             .lazy = true
         },
-        .maaxboard_initrd = .{
+        .maaxboard_4_cores_initrd = .{
             .url = "https://trustworthy.systems/Downloads/libvmm/images/ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz.tar.gz",
             .hash = "rootfs_cpio_gz-0.0.0-AAAAAOBNFwDKwj6sAPDBtdu7X77Jg5Nl3lj_wRViitVr",
             .lazy = true

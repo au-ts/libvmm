@@ -1,12 +1,12 @@
-// Copyright 2024, UNSW
+// Copyright 2025, UNSW
 // SPDX-License-Identifier: BSD-2-Clause
 
 const std = @import("std");
 
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
-    odroidc4,
-    maaxboard,
+    odroidc4_4_cores,
+    maaxboard_4_cores,
 };
 
 const Target = struct {
@@ -26,7 +26,7 @@ const targets = [_]Target {
         },
     },
     .{
-        .board = MicrokitBoard.odroidc4,
+        .board = MicrokitBoard.odroidc4_4_cores,
         .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a55 },
@@ -36,7 +36,7 @@ const targets = [_]Target {
         },
     },
     .{
-        .board = MicrokitBoard.maaxboard,
+        .board = MicrokitBoard.maaxboard_4_cores,
         .zig_target = std.Target.Query{
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
@@ -100,8 +100,8 @@ pub fn build(b: *std.Build) void {
     const libmicrokit_include = b.fmt("{s}/include", .{ microkit_board_dir });
 
     const arm_vgic_version: usize = switch (microkit_board_option.?) {
-        .qemu_virt_aarch64, .odroidc4 => 2,
-        .maaxboard => 3,
+        .qemu_virt_aarch64, .odroidc4_4_cores => 2,
+        .maaxboard_4_cores => 3,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -203,7 +203,7 @@ pub fn build(b: *std.Build) void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
+    const system_description_path = b.fmt("board/{s}/simple-smp.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = b.addSystemCommand(&[_][]const u8{
        microkit_tool,
@@ -236,6 +236,8 @@ pub fn build(b: *std.Build) void {
             "virt,virtualization=on,highmem=off,secure=off",
             "-cpu",
             "cortex-a53",
+            "-smp",
+            "4",
             "-serial",
             "mon:stdio",
             "-device",
