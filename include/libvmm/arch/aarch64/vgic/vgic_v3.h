@@ -210,7 +210,7 @@ static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
 {
     /* Enable group 1 non-secure IRQs. */
 
-    // note for self, GIC_500_ARE_S "affinity routing enable for secure state" was removed because setting it to 1 is UNPREDICTABLE because group 1 non-secure is on. Arm IHI 0069H.b ID041224 12-545
+    // @billn: note for review, GIC_500_ARE_S "affinity routing enable for secure state" was removed because setting it to 1 is UNPREDICTABLE because group 1 non-secure is on. Arm IHI 0069H.b ID041224 12-545
     gic_dist->ctlr |= GIC_500_GRP1_NS;
 }
 
@@ -246,10 +246,8 @@ static inline void set_sgi_ppi_enable_v3(struct gic_redist_sgi_ppi_map *sgi, int
 {
     if (set_enable) {
         sgi->isenable |= IRQ_BIT(irq);
-        // sgi->icenabler0 |= IRQ_BIT(irq);
     } else {
         sgi->isenable &= ~IRQ_BIT(irq);
-        // sgi->icenabler0 &= ~IRQ_BIT(irq);
     }
 }
 
@@ -262,10 +260,8 @@ static inline void set_sgi_ppi_pending_v3(struct gic_redist_sgi_ppi_map *sgi, in
 {
     if (set_pending) {
         sgi->ispend |= IRQ_BIT(irq);
-        // sgi->icpend |= IRQ_BIT(irq);
     } else {
         sgi->ispend &= ~IRQ_BIT(irq);
-        // sgi->icpend &= ~IRQ_BIT(irq);
     }
 }
 

@@ -261,7 +261,7 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 
 static void vgic_dist_clr_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
 {
-    // LOG_DIST("Clear pending IRQ %d\n", irq);
+    LOG_DIST("Clear pending IRQ %d\n", irq);
     set_pending(vgic, irq, false, vcpu_id);
     /* TODO: remove from IRQ queue and list registers as well */
     // @ivanv
