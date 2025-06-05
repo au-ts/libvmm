@@ -301,11 +301,11 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
                     assert(vgic_inject_irq(i, intid));
                 }
             }
-            
-            return true;
-        } else {
-            LOG_VMM("trapped sysreg 64 exception with unknown instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is read %u\n", op0, op2, op1, crn, crm, is_read);
+            return fault_advance_vcpu(vcpu_id, &regs);
+            break;
         }
+        LOG_VMM("trapped sysreg 64 exception with unknown instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is read %u\n", op0, op2, op1, crn, crm, is_read);
+        
     default:
         LOG_VMM_ERR("unknown vCPU exception, vCPU ID %lu, EC class: 0x%lx, HSR: 0x%lx\n", vcpu_id, hsr_ec_class, hsr);
         return false;
