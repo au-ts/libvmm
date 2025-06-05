@@ -28,6 +28,8 @@ else
 $(error Unsupported MICROKIT_BOARD given)
 endif
 
+VM_USERLEVEL_INIT := $(EXAMPLE_DIR)/userspace_smp_test.sh
+
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
@@ -76,6 +78,11 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
+rootfs.cpio.gz: ${INITRD} $(VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs ${INITRD} \
+		rootfs_staging -o $@ \
+		--startup $(VM_USERLEVEL_INIT)
+
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -85,11 +92,11 @@ vm.dtb: vm.dts
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) rootfs.cpio.gz vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
