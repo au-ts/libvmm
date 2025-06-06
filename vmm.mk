@@ -19,7 +19,7 @@ endif
 
 AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/linux.c \
-		 src/arch/aarch64/linux.c \
+		 src/arch/aarch64/cpuif.c \
 		 src/arch/aarch64/psci.c \
 		 src/arch/aarch64/smc.c \
 		 src/arch/aarch64/tcb.c \
