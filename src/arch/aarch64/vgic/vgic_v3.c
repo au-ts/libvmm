@@ -1,5 +1,6 @@
 /*
  * Copyright 2017, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2025, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -53,8 +54,8 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
     assert(target_vcpu_id < GUEST_NUM_VCPUS);
+    assert(vcpu_id < GUEST_NUM_VCPUS);
 
-    // LOG_VMM("vcpu %u reading redist at off %x\n", vcpu_id, real_offset);
     struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers, target_vcpu_id);
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
     uint64_t reg = 0;
@@ -90,9 +91,8 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
         assert(success);
     }
 
-    uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
-    uint64_t mask = fault_get_data_mask(fault_addr, fsr);
-    fault_emulate_write(regs, fault_addr, fsr, reg & mask);
+    uint64_t mask = fault_get_data_mask(offset, fsr);
+    fault_emulate_write(regs, offset, fsr, reg & mask);
     // @ivanv: todo error handling
 
     return true;
@@ -104,9 +104,9 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
     size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
+    assert(vcpu_id < GUEST_NUM_VCPUS);
     assert(target_vcpu_id < GUEST_NUM_VCPUS);
 
-    // struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
 
     uint32_t mask = fault_get_data_mask(offset, fsr);
@@ -129,16 +129,15 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
         }
         break;
     case RANGE32(GICR_ICENABLER0, GICR_ICENABLER0):
-        // data = fault_get_data(regs, fsr) & mask;
-        // while (data) {
-        //     int irq;
-        //     irq = CTZ(data);
-        //     data &= ~(1U << irq);
-        //     set_sgi_ppi_enable_v3(gic_redist_sgi_ppi, irq, false);
-        // }
+        data = fault_get_data(regs, fsr) & mask;
+        while (data) {
+            int irq;
+            irq = CTZ(data);
+            data &= ~(1U << irq);
+            set_sgi_ppi_enable_v3(gic_redist_sgi_ppi, irq, false);
+        }
         break;
     case RANGE32(GICR_ICACTIVER0, GICR_ICACTIVER0):
-        // Arm IHI 0069H.b ID041224 12-645, if a 1 is written to this register, disable the interrupt if it is active.
         data = fault_get_data(regs, fsr) & mask;
         while (data) {
             int irq;
@@ -174,10 +173,9 @@ bool vgic_handle_fault_redist(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
 
 static void vgic_dist_reset(struct gic_dist_map *dist)
 {
-    // @ivanv: come back to, right now it's a global so we don't need to init the memory to zero
     memset(dist, 0, sizeof(*dist));
 
-    // @billn, why is the first 4 bits zero???, it means this GIC implementation doesn't support any SPIs
+    // @billn, why are the lowest 4 bits zero???, it means this GIC implementation doesn't support any SPIs??
     // Arm IHI 0069H.b  ID041224  12-621
     dist->typer            = 0x7B04B0; /* RO */
     dist->iidr             = 0x1043B ; /* RO */
@@ -200,9 +198,8 @@ static void vgic_dist_reset(struct gic_dist_map *dist)
 
 static void vgic_redist_reset(struct gic_redist_map *redist, int vcpu_id, bool is_last_vcpu)
 {
-    // @ivanv: come back to, right now it's a global so we don't need to init the memory to zero
     memset(redist, 0, sizeof(*redist));
-    redist->typer           = 0;        /* RO */
+    redist->typer = 0;        /* RO */
 
     if (is_last_vcpu) {
         // if this is the last vcpu in sequence, mark this redistributor frame as the last.
@@ -212,9 +209,6 @@ static void vgic_redist_reset(struct gic_redist_map *redist, int vcpu_id, bool i
     // set processor number
     uint64_t proc_num_mask = vcpu_id << 8;
     redist->typer |= proc_num_mask;
-
-    // enable virtual SGI (vSGI)
-    redist->typer |= BIT_LOW(26);
 
     // set vcpu affinity number
     uint64_t aff0_mask = (uint64_t) vcpu_id << 32;
@@ -247,7 +241,6 @@ vgic_reg_t vgic_regs;
 void vgic_init()
 {
     // @ivanv: audit
-    // TODO: fix for SMP
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
@@ -264,8 +257,6 @@ void vgic_init()
 
         vgic_regs.redist[vcpu] = &redist[vcpu];
         vgic_regs.sgi[vcpu] = &redist_sgi_ppi[vcpu];
-
-        LOG_VMM("initialised vgic redist for vcpu %lu with typer reg 0x%lx\n", vcpu, redist[vcpu].typer);
     }
 
     vgic.registers = &vgic_regs;

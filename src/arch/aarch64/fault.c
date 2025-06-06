@@ -296,8 +296,9 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
             uint8_t intid = (data >> 24) & 0xf;
             for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
                 // check the target list and raise IRQ on the approproate vCPUs.
+                // @billn double check: make sure IRM bit is honoured.
+                // @billn double check: affinity routing?
                 if (data >> i & 0x1) {
-                    // LOG_VMM("injecting SGI %u to vcpu %u\n", intid, i);
                     assert(vgic_inject_irq(i, intid));
                 }
             }
