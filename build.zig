@@ -34,6 +34,16 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vcpu.c",
 };
 
+/// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
+/// equivalent. Assumes musllibc will be used.
+fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.ResolvedTarget {
+    var query = target.query;
+    query.os_tag = .linux;
+    query.abi = .musl;
+
+    return b.resolveTargetQuery(query);
+}
+
 pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
@@ -95,5 +105,24 @@ pub fn build(b: *std.Build) void {
         libvmm.linkLibrary(sddf.artifact("util_putchar_debug"));
 
         b.installArtifact(libvmm);
+
+        const libuio = b.addStaticLibrary(.{
+            .name = "uio",
+            .target = linuxTarget(b, target),
+            .optimize = optimize,
+        });
+        libuio.addCSourceFile(.{
+            .file = b.path("tools/linux/uio/libuio.c"),
+            .flags = &.{
+                "-Wall",
+                "-Werror",
+                "-Wno-unused-function",
+                "-mstrict-align",
+                "-fno-sanitize=undefined", // @ivanv: ideally we wouldn't have to turn off UBSAN
+            }
+        });
+        libuio.addIncludePath(sddf.path("include"));
+        libuio.linkLibC();
+        b.installArtifact(libuio);
     }
 }
