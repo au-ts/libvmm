@@ -73,6 +73,9 @@ void vcpu_reset(size_t vcpu_id)
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1, 0);
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
+    assert(vcpu_id < 16);
+    /* @billn: revisit, once we exceed 16 vCPUs, we need to correctly set the affinity
+       bits in VMPIDR_EL2. */
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2, vcpu_id);
 #endif /* CONFIG_MAX_NUM_NODES > 1 */
     /* general registers x0 to x30 have been saved by traps.S */
