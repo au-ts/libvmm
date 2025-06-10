@@ -11,6 +11,26 @@
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic_v3_cpuif.h>
 
+#define ESR_EL2_IL_BIT 25
+
+/* The ISS encoding was taken from "Arm A-profile Architecture Registers" DDI0601,
+   section "ESR_EL2, Exception Syndrome Register (EL2)",
+   heading "ISS encoding for an exception from MSR, MRS, or System instruction execution in AArch64 state" */
+#define ISS_MASK_FROM_HSR      0xffffff
+#define ISS_SYSREG_IS_READ_BIT 0
+#define ISS_SYSREG_CRM_SHIFT   1
+#define ISS_SYSREG_CRM_MASK    0xf
+#define ISS_SYSREG_RT_SHIFT    5
+#define ISS_SYSREG_RT_MASK     0x1f
+#define ISS_SYSREG_CRN_SHIFT   10
+#define ISS_SYSREG_CRN_MASK    0xf
+#define ISS_SYSREG_OP1_SHIFT   14
+#define ISS_SYSREG_OP1_MASK    0x7
+#define ISS_SYSREG_OP2_SHIFT   17
+#define ISS_SYSREG_OP2_MASK    0x7
+#define ISS_SYSREG_OP0_SHIFT   20
+#define ISS_SYSREG_OP0_MASK    0x3
+
 /* Data structure of system registers we currently emulate. */
 typedef struct aarch64_sysreg_info {
     /* For debugging only. */
@@ -31,8 +51,12 @@ typedef struct aarch64_sysreg_info {
     sysreg_write_exception_handler_t write_fn;
 } aarch64_sysreg_info_t;
 
-const aarch64_sysreg_info_t cpuif_reginfo[] = {
+static const aarch64_sysreg_info_t cpuif_reginfo[] = {
+    /* The following registers values were taken from:
+       "Arm Generic Interrupt Controller Architecture Specification GIC architecture version 3 and version 4".
+       Document IHI0069H.b ID041224. */
     {
+        /* Page 12-276 */
         .name = "ICC_SGI1R_EL1",
         .opc0 = 3, .opc1 = 0, .crn = 12, .crm = 11, .opc2 = 5,
         .access_fn = icc_sgi1r_el1_access,
@@ -41,19 +65,35 @@ const aarch64_sysreg_info_t cpuif_reginfo[] = {
     }
 };
 
-bool handle_sysreg_64_fault(size_t vcpu_id, uint32_t hsr, seL4_UserContext *regs) {
-    // @billn this code is a bit stupid, todo fix
-    uint32_t iss = hsr & 0xffffff;
-    uint8_t op0 = (iss >> 20) & 0x3;
-    uint8_t op2 = (iss >> 17) & 0x7;
-    uint8_t op1 = (iss >> 14) & 0x7;
-    uint8_t crn = (iss >> 10) & 0xf;
-    uint8_t crm = (iss >> 1) & 0xf;
-    bool is_read = iss & 0x1;
+static int sysreg_fault_get_rt(uint64_t hsr)
+{
+    /* Make sure the instruction length bit == 1 for 32-bits instructions. */
+    if (BIT_LOW(ESR_EL2_IL_BIT)) {
+        return (hsr >> ISS_SYSREG_RT_SHIFT) & ISS_SYSREG_RT_MASK;
+    } else {
+        printf("sysreg_fault_get_rt() for 16-bits instructions not implemented.\n");
+        assert(false);
+    }
+}
 
-    // @billn hack, should be using fault get data! and check whether itis actually a write
-    size_t reg_idx = (hsr >> 5) & 0x1f;
-    size_t data = *decode_rt(reg_idx, regs);
+/* We can't use `fault_get_data()` because the HSR register encoding is different in this scenario. */
+static uint64_t sysreg_fault_get_data(seL4_UserContext *regs, uint64_t hsr)
+{
+    /* Get register opearand */
+    int rt = sysreg_fault_get_rt(hsr);
+    uint64_t data = *decode_rt(rt, regs);
+    return data;
+}
+
+bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs) {
+    uint32_t iss = hsr & ISS_MASK_FROM_HSR;
+    uint8_t op0 = (iss >> ISS_SYSREG_OP0_SHIFT) & ISS_SYSREG_OP0_MASK;
+    uint8_t op2 = (iss >> ISS_SYSREG_OP2_SHIFT) & ISS_SYSREG_OP2_MASK;
+    uint8_t op1 = (iss >> ISS_SYSREG_OP1_SHIFT) & ISS_SYSREG_OP1_MASK;
+    uint8_t crn = (iss >> ISS_SYSREG_CRN_SHIFT) & ISS_SYSREG_CRN_MASK;
+    uint8_t crm = (iss >> ISS_SYSREG_CRM_SHIFT) & ISS_SYSREG_CRM_MASK;
+    bool is_read = (iss >> ISS_SYSREG_IS_READ_BIT) & 0x1;
+    uint64_t data = sysreg_fault_get_data(regs, hsr);
 
     for (int i = 0; i < sizeof(cpuif_reginfo) / sizeof(cpuif_reginfo[0]); i++) {
         if (
@@ -77,6 +117,6 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint32_t hsr, seL4_UserContext *regs
         }
     }
 
-    LOG_VMM("trapped sysreg 64 exception with unknown instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is read %u\n", op0, op2, op1, crn, crm, is_read);
+    LOG_VMM("trapped sysreg 64 exception with unimplemented instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is read %u\n", op0, op2, op1, crn, crm, is_read);
     return false;
 }

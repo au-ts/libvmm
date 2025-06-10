@@ -263,7 +263,7 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 
 bool fault_handle_vcpu_exception(size_t vcpu_id)
 {
-    uint32_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
+    uint64_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
 
     seL4_UserContext regs;

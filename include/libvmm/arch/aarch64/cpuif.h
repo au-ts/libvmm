@@ -16,4 +16,4 @@ typedef bool (*sysreg_read_exception_handler_t)(size_t vcpu_id, seL4_UserContext
 typedef bool (*sysreg_write_exception_handler_t)(size_t vcpu_id, seL4_UserContext *regs, uint64_t data);
 
 /* Handles exception from MSR, MRS, or System instruction execution in AArch64 state (EC class 0x18). */
-bool handle_sysreg_64_fault(size_t vcpu_id, uint32_t hsr, seL4_UserContext *regs);
+bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs);

@@ -33,7 +33,7 @@
 #define PSCI_DISABLED -8
 #define PSCI_INVALID_ADDRESS -9
 
-bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint32_t hsr)
+bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint64_t hsr)
 {
     // @ivanv: write a note about what convention we assume, should we be checking
     // the convention?
