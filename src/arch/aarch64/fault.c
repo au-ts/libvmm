@@ -8,6 +8,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/arch/aarch64/cpuif.h>
 #include <libvmm/arch/aarch64/hsr.h>
 #include <libvmm/arch/aarch64/smc.h>
 #include <libvmm/arch/aarch64/fault.h>
@@ -262,16 +263,23 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
 
 bool fault_handle_vcpu_exception(size_t vcpu_id)
 {
-    uint32_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
+    uint64_t hsr = microkit_mr_get(seL4_VCPUFault_HSR);
     uint64_t hsr_ec_class = HSR_EXCEPTION_CLASS(hsr);
+
+    seL4_UserContext regs;
+    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+    assert(err == seL4_NoError);
+
     switch (hsr_ec_class) {
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
         // If we get a WFI exception, we just do nothing in the VMM.
         return true;
+    case HSR_SYSREG_64_EXCEPTION:
+        return handle_sysreg_64_fault(vcpu_id, hsr, &regs);
     default:
-        LOG_VMM_ERR("unknown SMC exception, EC class: 0x%lx, HSR: 0x%lx\n", hsr_ec_class, hsr);
+        LOG_VMM_ERR("unknown vCPU exception, vCPU ID %lu, EC class: 0x%lx, HSR: 0x%lx\n", vcpu_id, hsr_ec_class, hsr);
         return false;
     }
 }
@@ -297,11 +305,11 @@ bool fault_handle_user_exception(size_t vcpu_id)
     // @ivanv: print out VM name/vCPU id when we have multiple VMs
     size_t fault_ip = microkit_mr_get(seL4_UserException_FaultIP);
     size_t number = microkit_mr_get(seL4_UserException_Number);
-    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx", fault_ip, number);
+    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx from vCPU %d\n", fault_ip, number, vcpu_id);
     /* All we do is dump the TCB registers. */
     tcb_print_regs(vcpu_id);
 
-    return true;
+    return false;
 }
 
 // @ivanv: document where these come from
@@ -354,6 +362,7 @@ static size_t vm_exception_handler_index = 0;
 
 bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data)
 {
+
     if (vm_exception_handler_index == MAX_VM_EXCEPTION_HANDLERS - 1) {
         LOG_VMM_ERR("maximum number of VM exception handlers registered");
         return false;
@@ -452,7 +461,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         success = fault_handle_user_exception(vcpu_id);
         break;
     case seL4_Fault_VGICMaintenance:
-        success = fault_handle_vgic_maintenance(vcpu_id);
+        success = vgic_handle_fault_maintenance(vcpu_id);
         break;
     case seL4_Fault_VCPUFault:
         success = fault_handle_vcpu_exception(vcpu_id);
@@ -464,18 +473,12 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         /* We have reached a genuinely unexpected case, stop the guest. */
         LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
         microkit_vcpu_stop(vcpu_id);
-        /* Dump the TCB and vCPU registers to hopefully get information as
-         * to what has gone wrong. */
-        tcb_print_regs(vcpu_id);
-        vcpu_print_regs(vcpu_id);
     }
 
     if (!success) {
-        /* Dump the TCB and vCPU registers to hopefully get information as
-         * to what has gone wrong. */
+        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
         tcb_print_regs(vcpu_id);
         vcpu_print_regs(vcpu_id);
-        LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
     }
 
     return success;

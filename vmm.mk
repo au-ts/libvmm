@@ -8,18 +8,18 @@
 
 LIBVMM_DIR :=  $(abspath $(dir $(lastword ${MAKEFILE_LIST})))
 
-GIC_V3_BOARDS := imx8mm_evk maaxboard
+GIC_V3_BOARDS := imx8mm_evk maaxboard maaxboard_4_cores
 ifeq ($(filter ${MICROKIT_BOARD},${GIC_V3_BOARDS}),)
 	VGIC := GIC_V2
 	VGIC_FILES := src/arch/aarch64/vgic/vgic_v2.c
 else
 	VGIC := GIC_V3
-	VGIC_FILES := src/arch/aarch64/vgic/vgic_v3.c
+	VGIC_FILES := src/arch/aarch64/vgic/vgic_v3.c src/arch/aarch64/vgic/vgic_v3_cpuif.c
 endif
 
 AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/linux.c \
-		 src/arch/aarch64/linux.c \
+		 src/arch/aarch64/cpuif.c \
 		 src/arch/aarch64/psci.c \
 		 src/arch/aarch64/smc.c \
 		 src/arch/aarch64/tcb.c \
