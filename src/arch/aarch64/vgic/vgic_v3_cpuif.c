@@ -38,7 +38,7 @@ bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
     if ((data >> ICC_SGI1R_EL1_IRM_BIT) & 0x1) {
         /* Interrupt routed to all PEs in the system, excluding “self”. */
         for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
-            if (vcpu_is_on(i)) {
+            if (vcpu_is_on(i) && i != vcpu_id) {
                 assert(vgic_inject_irq(i, intid));
             }
         }
