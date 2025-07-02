@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/aarch64/vgic/vgic.h>
 #include <libvmm/arch/aarch64/cpuif.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic_v3_cpuif.h>
@@ -43,15 +44,13 @@ typedef struct aarch64_sysreg_info {
     uint8_t opc1;
     uint8_t opc2;
 
-    /* Access control function, returns true if the operation is permitted. */
-    sysreg_access_fn_t access_fn;
-
-    /* Access functions for both direction. */
+    /* Access functions for both direction. NULL if access will be denied. */
     sysreg_read_exception_handler_t read_fn;
     sysreg_write_exception_handler_t write_fn;
 } aarch64_sysreg_info_t;
 
 static const aarch64_sysreg_info_t cpuif_reginfo[] = {
+#if defined(GIC_V3)
     /* The following registers values were taken from:
        "Arm Generic Interrupt Controller Architecture Specification GIC architecture version 3 and version 4".
        Document IHI0069H.b ID041224. */
@@ -59,10 +58,10 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
         /* Page 12-276 */
         .name = "ICC_SGI1R_EL1",
         .opc0 = 3, .opc1 = 0, .crn = 12, .crm = 11, .opc2 = 5,
-        .access_fn = icc_sgi1r_el1_access,
         .read_fn = NULL,
         .write_fn = icc_sgi1r_el1_write,
     }
+#endif
 };
 
 static int sysreg_fault_get_rt(uint64_t hsr)
@@ -95,7 +94,7 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     bool is_read = (iss >> ISS_SYSREG_IS_READ_BIT) & 0x1;
     uint64_t data = sysreg_fault_get_data(regs, hsr);
 
-    for (int i = 0; i < sizeof(cpuif_reginfo) / sizeof(cpuif_reginfo[0]); i++) {
+    for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
         if (
             cpuif_reginfo[i].opc0 == op0 &&
             cpuif_reginfo[i].opc1 == op1 &&
@@ -104,15 +103,12 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
             cpuif_reginfo[i].opc2 == op2
         ) {
             /* Check access rights */
-            if (cpuif_reginfo[i].access_fn(vcpu_id, regs, is_read)) {
-                /* Ok to access, perform fault emulation. */
-                if (is_read) {
-                    assert(cpuif_reginfo[i].read_fn);
-                    return cpuif_reginfo[i].read_fn(vcpu_id, regs);
-                } else {
-                    assert(cpuif_reginfo[i].write_fn);
-                    return cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
-                }
+            if (is_read) {
+                assert(cpuif_reginfo[i].read_fn);
+                return cpuif_reginfo[i].read_fn(vcpu_id, regs);
+            } else {
+                assert(cpuif_reginfo[i].write_fn);
+                return cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
             }
         }
     }

@@ -16,21 +16,6 @@
 #define ICC_SGI1R_EL1_INTID_SHIFT 24
 #define ICC_SGI1R_EL1_INTID_MASK  0xf
 
-bool icc_sgi1r_el1_access(size_t vcpu_id, seL4_UserContext *regs, bool is_read)
-{
-#if defined(GIC_V3)
-    if (!is_read) {
-        return true;
-    } else {
-        return false;
-    }
-#else
-    /* This register doesn't exist on GICv2. */
-    LOG_VMM("icc_sgi1r_el1_access() was unexpectedly called on a GICv2 build of libvmm\n");
-    return false;
-#endif
-}
-
 bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
 {
     uint8_t intid = (data >> ICC_SGI1R_EL1_INTID_SHIFT) & ICC_SGI1R_EL1_INTID_MASK;
