@@ -235,6 +235,46 @@ char *fault_to_string(seL4_Word fault_label) {
     }
 }
 
+#define VSCAUSE_LOAD_ACCESS_FAULT (21)
+#define VSCAUSE_STORE_ACCESS_FAULT (23)
+
+bool fault_is_read(seL4_Word fsr) {
+    return fsr & VSCAUSE_LOAD_ACCESS_FAULT;
+}
+
+bool fault_is_write(seL4_Word fsr) {
+    return fsr & VSCAUSE_STORE_ACCESS_FAULT;
+}
+
+void fault_emulate_read(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data) {
+    assert(instruction->width == 2 || instruction->width == 4);
+
+    /* TODO: revisit */
+    seL4_Word reg;
+    if (instruction->width == 2) {
+        reg = fault_get_reg_compressed(regs, instruction->rd);
+    } else {
+        reg = fault_get_reg(regs, instruction->rd);
+    }
+
+    reg &= 0xffffffff00000000;
+    reg |= data;
+    if (instruction->width == 2) {
+        fault_set_reg_compressed(regs, instruction->rd, reg);
+    } else {
+        fault_set_reg(regs, instruction->rd, reg);
+    }
+}
+
+uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs) {
+    assert(instruction->width == 2 || instruction->width == 4);
+    if (instruction->width == 2) {
+        return fault_get_reg_compressed(regs, instruction->rs2);
+    } else {
+        return fault_get_reg(regs, instruction->rs2);
+    }
+}
+
 static bool fault_handle_sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
     switch (sbi_fid) {
     case SBI_TIMER_SET: {

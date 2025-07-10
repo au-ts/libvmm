@@ -9,7 +9,12 @@
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/virtq.h>
+
+#if defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/fault.h>
+#elif defined(CONFIG_ARCH_RISCV)
+#include <libvmm/arch/riscv/fault.h>
+#endif
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
@@ -161,6 +166,9 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
+#if defined(CONFIG_ARCH_RISCV)
+    #error "hello"
+#endif
 
     return success;
 }

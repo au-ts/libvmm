@@ -15,7 +15,7 @@ enum fault_op_code {
     OP_CODE_LOAD = 0b0000011,
 };
 
-struct fault_instruction {
+typedef struct fault_instruction {
     uint8_t op_code;
     /* Size of the instruction itself. Necessary for handling compressed instructions */
     uint8_t width;
@@ -23,22 +23,18 @@ struct fault_instruction {
         uint8_t rs2;
         uint8_t rd;
     };
-};
+} fault_instruction_t;
 
 /* Fault-handling functions */
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
+void fault_emulate_read(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data);
+uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs);
+
+bool fault_is_write(seL4_Word fsr);
+bool fault_is_read(seL4_Word fsr);
+
 struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word ip);
-
-// TODO: should we have these?
-// bool fault_is_read(struct fault_instruction *instruction) {
-//     return instruction.op_code == OP_CODE_STORE;
-// }
-
-// bool fault_is_write(struct fault_instruction *instruction) {
-//     return instruction.op_code == OP_CODE_LOAD;
-// }
-
 
 static inline seL4_Word fault_get_reg(seL4_UserContext *regs, int index)
 {

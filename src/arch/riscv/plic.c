@@ -71,7 +71,7 @@ bool plic_inject_timer_irq(size_t vcpu_id) {
 
 uint32_t plic_pending_irq = 0;
 
-static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserContext *regs, struct fault_instruction *instruction) {
+static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserContext *regs, fault_instruction_t *instruction) {
     LOG_PLIC("handling read at offset: 0x%lx\n", offset);
 
     uint32_t data;
@@ -104,28 +104,13 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         LOG_PLIC("invalid offset 0x%lx\n", offset);
         return false;
     }
-    assert(instruction->width == 2 || instruction->width == 4);
 
-    // TODO: we can do this better probably
-    seL4_Word reg;
-    if (instruction->width == 2) {
-        reg = fault_get_reg_compressed(regs, instruction->rd);
-    } else {
-        reg = fault_get_reg(regs, instruction->rd);
-    }
-
-    reg &= 0xffffffff00000000;
-    reg |= data;
-    if (instruction->width == 2) {
-        fault_set_reg_compressed(regs, instruction->rd, reg);
-    } else {
-        fault_set_reg(regs, instruction->rd, reg);
-    }
+    fault_emulate_read(instruction, regs, data);
 
     return true;
 }
 
-static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserContext *regs, struct fault_instruction *instruction) {
+static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserContext *regs, fault_instruction_t *instruction) {
     LOG_PLIC("handling write at offset: 0x%lx\n", offset);
 
     // TODO: need to make sure offset is 4-byte aligned?
@@ -136,8 +121,6 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
     } else {
         data = fault_get_reg(regs, instruction->rs2);
     }
-
-    assert(instruction->width == 2 || instruction->width == 4);
 
     switch (offset) {
     case PLIC_IRQ_ENABLE_START...PLIC_IRQ_ENABLE_END: {
@@ -247,11 +230,13 @@ bool plic_inject_irq(size_t vcpu_id, int irq) {
 }
 
 bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs) {
-    struct fault_instruction instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+    fault_instruction_t instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
     assert(instruction.op_code != 0);
     /* from decode instruction we need: opcode, rs2, and rd */
 
     /* TODO: why not just check the fsr? */
+    /* TODO: we should move this into the fault register exception stuff like we do for vGIC
+     * and all other devices */
     bool success;
     switch (instruction.op_code) {
     case OP_CODE_LOAD:
