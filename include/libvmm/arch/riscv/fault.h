@@ -28,8 +28,10 @@ typedef struct fault_instruction {
 /* Fault-handling functions */
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
-void fault_emulate_read(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data);
+void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data);
 uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs);
+
+bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instruction_t *instruction);
 
 bool fault_is_write(seL4_Word fsr);
 bool fault_is_read(seL4_Word fsr);

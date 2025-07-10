@@ -4,17 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <microkit.h>
+#include <libvmm/fault.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/virtq.h>
-
-#if defined(CONFIG_ARCH_AARCH64)
-#include <libvmm/arch/aarch64/fault.h>
-#elif defined(CONFIG_ARCH_RISCV)
-#include <libvmm/arch/riscv/fault.h>
-#endif
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
@@ -162,12 +157,15 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         success = false;
     }
 
+    /* TODO: disgusting!!! Bad AArch64 API */
+#if defined(CONFIG_ARCH_AARCH64)
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
-#if defined(CONFIG_ARCH_RISCV)
-    #error "hello"
+#elif defined(CONFIG_ARCH_RISCV)
+    fault_instruction_t instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+    fault_emulate_read_access(&instruction, regs, reg);
 #endif
 
     return success;
@@ -177,10 +175,17 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                                          seL4_UserContext *regs)
 {
     bool success = true;
-    uint32_t data = fault_get_data(regs, fsr);
+    uint32_t data;
+
+#if defined(CONFIG_ARCH_AARCH64)
+    data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
     data &= mask;
+#elif defined(CONFIG_ARCH_RISCV)
+    fault_instruction_t instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
+    data = fault_instruction_data(&instruction, regs);
+#endif
 
     // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
 

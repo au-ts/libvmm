@@ -105,7 +105,7 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         return false;
     }
 
-    fault_emulate_read(instruction, regs, data);
+    fault_emulate_read_access(instruction, regs, data);
 
     return true;
 }
@@ -250,8 +250,7 @@ bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserCo
         return false;
     }
 
-    regs->pc += instruction.width;
-    seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
+    fault_advance_vcpu(vcpu_id, regs, &instruction);
 
     return success;
 }

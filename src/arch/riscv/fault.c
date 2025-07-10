@@ -246,7 +246,7 @@ bool fault_is_write(seL4_Word fsr) {
     return fsr & VSCAUSE_STORE_ACCESS_FAULT;
 }
 
-void fault_emulate_read(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data) {
+void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data) {
     assert(instruction->width == 2 || instruction->width == 4);
 
     /* TODO: revisit */
@@ -273,6 +273,19 @@ uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserConte
     } else {
         return fault_get_reg(regs, instruction->rs2);
     }
+}
+
+
+bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instruction_t *instruction) {
+    regs->pc += instruction->width;
+    /*
+     * Do not explicitly resume the TCB because we will eventually reply to the
+     * fault which will result in the TCB being restarted.
+     */
+    seL4_Error err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
+    assert(err == seL4_NoError);
+
+    return (err == seL4_NoError);
 }
 
 static bool fault_handle_sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {

@@ -6,13 +6,14 @@ const LazyPath = std.Build.LazyPath;
 
 const src = [_][]const u8{
     "src/guest.c",
+    "src/fault.c",
     "src/util/util.c",
     "src/util/printf.c",
-    // "src/virtio/mmio.c",
-    // "src/virtio/block.c",
-    // "src/virtio/console.c",
-    // "src/virtio/net.c",
-    // "src/virtio/sound.c",
+    "src/virtio/mmio.c",
+    "src/virtio/block.c",
+    "src/virtio/console.c",
+    "src/virtio/net.c",
+    "src/virtio/sound.c",
 };
 
 const src_aarch64_vgic_v2 = [_][]const u8{
