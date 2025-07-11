@@ -93,7 +93,7 @@ simulate_simple_make() {
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
 }
 
-build_virtio() {
+build_virtio_make() {
     BOARD=$1
     CONFIG=$2
     echo "CI|INFO: building virtio example via Make with board: $BOARD and config: $CONFIG"
@@ -104,6 +104,21 @@ build_virtio() {
         MICROKIT_CONFIG=${CONFIG} \
         MICROKIT_BOARD=${BOARD} \
         MICROKIT_SDK=${SDK_PATH}
+}
+
+build_virtio_zig() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building virtio example via Zig with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/virtio/zig/${BOARD}/${CONFIG}"
+    EXAMPLE_DIR="${PWD}/examples/virtio"
+    pushd ${EXAMPLE_DIR}
+    zig build \
+        -Dsdk=${SDK_PATH} \
+        -Dboard=${BOARD} \
+        -Dconfig=${CONFIG} \
+        -p ${BUILD_DIR}
+    popd
 }
 
 simulate_zig() {
@@ -156,10 +171,14 @@ simulate_zig "release" "ReleaseSafe"
 build_zig "release" "ReleaseSmall"
 simulate_zig "release" "ReleaseSmall"
 
-build_virtio "qemu_virt_aarch64" "debug"
-build_virtio "qemu_virt_aarch64" "release"
-build_virtio "maaxboard" "debug"
-build_virtio "maaxboard" "release"
+build_virtio_make "qemu_virt_aarch64" "debug"
+build_virtio_make "qemu_virt_aarch64" "release"
+build_virtio_make "maaxboard" "debug"
+build_virtio_make "maaxboard" "release"
+build_virtio_zig "qemu_virt_aarch64" "debug"
+build_virtio_zig "qemu_virt_aarch64" "release"
+build_virtio_zig "maaxboard" "debug"
+build_virtio_zig "maaxboard" "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"
