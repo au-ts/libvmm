@@ -5,6 +5,7 @@ const LazyPath = std.Build.LazyPath;
 
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
+    qemu_virt_riscv64,
     odroidc4,
     maaxboard,
 };
@@ -21,6 +22,15 @@ const targets = [_]Target {
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
             .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+   .{
+        .board = MicrokitBoard.qemu_virt_riscv64,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -94,6 +104,7 @@ pub fn build(b: *std.Build) !void {
     const arm_vgic_version: usize = switch (microkit_board_option) {
         .qemu_virt_aarch64, .odroidc4 => 2,
         .maaxboard => 3,
+        .qemu_virt_riscv64 => 0,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -241,6 +252,22 @@ pub fn build(b: *std.Build) !void {
         });
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");
+        simulate_step.dependOn(&qemu_cmd.step);
+    } else if (microkit_board_option = .qemu_virt_riscv64) {
+        const qemu_cmd = b.addSystemCommand(&[_][]const u8{
+            "qemu-system-riscv64",
+            "-machine",
+            "virt",
+            "-serial",
+            "mon:stdio",
+            "-kernel",
+            final_image_dest,
+            "-m",
+            "3G",
+            "-nographic",
+        });
+        qemu_cmd.step.dependOn(b.default_step);
+        const simulate_step = b.step("qemu", "Simulate the image via QEMU");
         simulate_step.dependOn(&qemu_cmd.step);
     }
 }

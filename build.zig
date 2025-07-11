@@ -34,6 +34,14 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vcpu.c",
 };
 
+const src_riscv64 = [_][]const u8{
+    "src/arch/riscv/fault.c",
+    "src/arch/riscv/linux.c",
+    "src/arch/riscv/tcb.c",
+    "src/arch/riscv/vcpu.c",
+    "src/arch/riscv/virq.c",
+};
+
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
 /// equivalent. Assumes musllibc will be used.
 fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.ResolvedTarget {
@@ -79,6 +87,7 @@ pub fn build(b: *std.Build) void {
 
                 break :blk src_aarch64 ++ vgic_src;
             },
+            .riscv64 => &(src ++ src_riscv64),
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
