@@ -47,6 +47,19 @@ BOARDS: List[Board] = [
         partition=0
     ),
     Board(
+        name="qemu_virt_riscv64",
+        arch=SystemDescription.Arch.RISCV64,
+        paddr_top=0xa0000000,
+        serial="soc/serial@10000000",
+        guest_serial="soc/virtio-console@130000",
+        timer=None,
+        blk="virtio_mmio@10008000",
+        guest_blk="soc/virtio-blk@150000",
+        net="virtio_mmio@10007000",
+        guest_net="soc/virtio-net@160000",
+        partition=0
+    ),
+    Board(
         name="maaxboard",
         arch=SystemDescription.Arch.AARCH64,
         paddr_top=0x90000000,
