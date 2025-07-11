@@ -166,7 +166,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dtb", required=True)
-    parser.add_argument("--client_dtb", required=True)
+    parser.add_argument("--client-dtb", required=True)
     parser.add_argument("--sddf", required=True)
     parser.add_argument("--board", required=True, choices=[b.name for b in BOARDS])
     parser.add_argument("--output", required=True)
