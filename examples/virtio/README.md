@@ -66,10 +66,13 @@ pip3 install --break-system-packages sdfgen==0.23.1
 
 ### Nix
 
-The top-level `shell.nix` has everything necessary:
+There is a Nix flake available in the repository, so you can get a development shell via:
 ```sh
-nix-shell ../../shell.nix
+nix develop
 ```
+
+Note that this will set the `MICROKIT_SDK` environment variable to the SDK path, you do not
+need to download the Microkit SDK manually.
 
 ## Building
 
