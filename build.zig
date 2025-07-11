@@ -99,6 +99,7 @@ pub fn build(b: *std.Build) void {
         libvmm.addIncludePath(libmicrokit_include);
 
         libvmm.installHeadersDirectory(b.path("include/libvmm"), "libvmm", .{});
+        libvmm.installHeadersDirectory(sddf.path("include/microkit/os"), "os", .{});
         libvmm.installHeadersDirectory(sddf.path("include/sddf"), "sddf", .{});
 
         libvmm.linkLibrary(sddf.artifact("util"));
