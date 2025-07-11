@@ -94,7 +94,7 @@ $(DTB_FILE): $(DTS_FILE)
 	$(DTC) -q -I dts -O dtb $< > $@
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
-	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB_FILE) --client_dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB_FILE) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
