@@ -85,47 +85,50 @@ enum sbi_return_code {
     SBI_ERR_NO_SHMEM = -9,
 };
 
-static bool sbi_system_reset(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_system_reset(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
+{
     switch (sbi_fid) {
-        case SBI_SYSTEM_RESET: {
-            uint32_t reset_type = regs->a0;
-            uint32_t reset_reason = regs->a1;
-            switch (reset_type) {
-                case SBI_SYSTEM_RESET_SHUTDOWN:
-                    LOG_VMM("guest requested shutdown via SBI (reset reason: 0x%x)\n", reset_reason);
-                    guest_stop(vcpu_id);
-                    return true;
-                default:
-                    LOG_VMM_ERR("unhandled SBI system reset type: 0x%x with reset reason: 0x%x\n", reset_type, reset_reason);
-                    return false;
-            }
+    case SBI_SYSTEM_RESET: {
+        uint32_t reset_type = regs->a0;
+        uint32_t reset_reason = regs->a1;
+        switch (reset_type) {
+        case SBI_SYSTEM_RESET_SHUTDOWN:
+            LOG_VMM("guest requested shutdown via SBI (reset reason: 0x%x)\n", reset_reason);
+            guest_stop(vcpu_id);
             return true;
-        }
         default:
-            LOG_VMM_ERR("invalid SBI system reset FID 0x%lx\n", sbi_fid);
+            LOG_VMM_ERR("unhandled SBI system reset type: 0x%x with reset reason: 0x%x\n", reset_type, reset_reason);
             return false;
+        }
+        return true;
+    }
+    default:
+        LOG_VMM_ERR("invalid SBI system reset FID 0x%lx\n", sbi_fid);
+        return false;
     }
 }
 
-static bool sbi_debug_console(seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_debug_console(seL4_Word sbi_fid, seL4_UserContext *regs)
+{
     switch (sbi_fid) {
-        case SBI_DEBUG_CONSOLE_WRITE: {
-            uint32_t num_bytes = regs->a0;
-            uint64_t base_addr_lo = regs->a1;
-            uint64_t base_addr_hi = regs->a2 << 32;
-            char *bytes = (char *)(base_addr_lo | (base_addr_hi << 32));
-            for (int i = 0; i < num_bytes; i++) {
-                printf("%c", bytes[i]);
-            }
-            return true;
+    case SBI_DEBUG_CONSOLE_WRITE: {
+        uint32_t num_bytes = regs->a0;
+        uint64_t base_addr_lo = regs->a1;
+        uint64_t base_addr_hi = regs->a2 << 32;
+        char *bytes = (char *)(base_addr_lo | (base_addr_hi << 32));
+        for (int i = 0; i < num_bytes; i++) {
+            printf("%c", bytes[i]);
         }
-        default:
-            LOG_VMM_ERR("invalid SBI debug console FID 0x%lx\n", sbi_fid);
-            return false;
+        return true;
+    }
+    default:
+        LOG_VMM_ERR("invalid SBI debug console FID 0x%lx\n", sbi_fid);
+        return false;
     }
 }
 
-static bool sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
+{
     switch (sbi_fid) {
     case SBI_TIMER_SET: {
         /* stime_value is always 64-bit */
@@ -157,7 +160,8 @@ static bool sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
     }
 }
 
-static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs)
+{
     switch (sbi_fid) {
     case SBI_BASE_GET_SBI_SPEC_VERSION:
         regs->a0 = SBI_SUCCESS;
@@ -205,7 +209,8 @@ static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs) {
     return false;
 }
 
-bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
+bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs)
+{
     /* SBI extension ID */
     seL4_Word sbi_eid = regs->a7;
     /* SBI function ID for the given extension */

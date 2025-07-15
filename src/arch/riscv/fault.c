@@ -38,7 +38,8 @@ enum trap_cause {
 
 static uint64_t pt[512];
 
-static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id) {
+static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
+{
     size_t level = 2;
     // uint64_t *ppt = &pt;
     for (int i = 0; i < PT_SIZE; i++) {
@@ -99,7 +100,8 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id) {
 #define FUNCT3_CSW 0b110
 #define FUNCT3_CLW 0b010
 
-struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst) {
+struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst)
+{
     uint32_t instruction;
     if (htinst & 0x1) {
         instruction = htinst | 0x2;
@@ -121,14 +123,14 @@ struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst) {
 
     switch (op_code) {
     case OP_CODE_STORE:
-        return (struct fault_instruction){
+        return (struct fault_instruction) {
             .from_htinst = true,
             .op_code = OP_CODE_STORE,
             .width = width,
             .rs2 = (instruction >> 20) & (BIT(5) - 1),
         };
     case OP_CODE_LOAD:
-        return (struct fault_instruction){
+        return (struct fault_instruction) {
             .from_htinst = true,
             .op_code = OP_CODE_LOAD,
             .width = width,
@@ -145,13 +147,16 @@ struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst) {
     LOG_VMM_ERR("could not decode instruction\n");
     assert(false);
 
-    return (struct fault_instruction){ 0 };
+    return (struct fault_instruction) {
+        0
+    };
 }
 
 // TODO: we need to have some kind of 'guest' struct that we instead pass around or populate upon init.
 extern uintptr_t guest_ram_vaddr;
 
-struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word htinst) {
+struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word htinst)
+{
     if (htinst != 0) {
         // LOG_VMM("decoding fault at 0x%lx, from htinst: 0x%lx\n", regs->pc, htinst);
         return fault_decode_htinst(vcpu_id, htinst);
@@ -171,7 +176,8 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     uint16_t instruction_hi = *(uint16_t *)(guest_physical + 16);
     uint32_t instruction = ((uint32_t)instruction_hi << 16) | instruction_lo;
     // LOG_VMM("instruction is 0x%lx\n", instruction);
-    LOG_VMM("guest_physical: 0x%lx, instruction: 0x%x, instruction_lo: 0x%x, instruction_hi: 0x%x\n", guest_physical, instruction, instruction_lo, instruction_hi);
+    LOG_VMM("guest_physical: 0x%lx, instruction: 0x%x, instruction_lo: 0x%x, instruction_hi: 0x%x\n", guest_physical,
+            instruction, instruction_lo, instruction_hi);
     // TODO: check this.
     uint8_t op_code = instruction & 0x7f;
     /* funct3 is from bits 12:14. */
@@ -183,33 +189,33 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
 
     /* If we are in here, we are dealing with a compressed instruction */
     switch (instruction_lo >> 13) {
-        case FUNCT3_CSW:
-            return (struct fault_instruction){
-                .from_htinst = false,
-                .op_code = OP_CODE_STORE,
-                .width = 2,
-                .rs2 = (instruction_lo >> 2) & (BIT(3) - 1),
-            };
-        case FUNCT3_CLW:
-            return (struct fault_instruction){
-                .from_htinst = false,
-                .op_code = OP_CODE_LOAD,
-                .width = 2,
-                .rd = (instruction_lo >> 2) & (BIT(3) - 1),
-            };
-        default:
-            break;
+    case FUNCT3_CSW:
+        return (struct fault_instruction) {
+            .from_htinst = false,
+            .op_code = OP_CODE_STORE,
+            .width = 2,
+            .rs2 = (instruction_lo >> 2) & (BIT(3) - 1),
+        };
+    case FUNCT3_CLW:
+        return (struct fault_instruction) {
+            .from_htinst = false,
+            .op_code = OP_CODE_LOAD,
+            .width = 2,
+            .rd = (instruction_lo >> 2) & (BIT(3) - 1),
+        };
+    default:
+        break;
     }
 
     switch (op_code) {
     case OP_CODE_STORE:
-        return (struct fault_instruction){
+        return (struct fault_instruction) {
             .op_code = OP_CODE_STORE,
             .width = 4,
             .rs2 = (instruction >> 20) & (BIT(5) - 1),
         };
     case OP_CODE_LOAD:
-        return (struct fault_instruction){
+        return (struct fault_instruction) {
             .op_code = OP_CODE_LOAD,
             .width = 4,
             .rd = (instruction >> 7) & (BIT(5) - 1),
@@ -225,35 +231,46 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     LOG_VMM_ERR("could not decode instruction at PC: 0x%lx\n", ip);
     assert(false);
 
-    return (struct fault_instruction){ 0 };
+    return (struct fault_instruction) {
+        0
+    };
 }
 
 /* This global is valid anytime we are currently handling a virtual memory fault. */
 fault_instruction_t decoded_instruction;
 
-char *fault_to_string(seL4_Word fault_label) {
+char *fault_to_string(seL4_Word fault_label)
+{
     // TODO
     switch (fault_label) {
-    case seL4_Fault_VMFault: return "virtual memory exception";
-    case seL4_Fault_UnknownSyscall: return "unknown syscall";
-    case seL4_Fault_UserException: return "user exception";
-    case seL4_Fault_VCPUFault: return "vCPU";
-    default: return "unknown fault";
+    case seL4_Fault_VMFault:
+        return "virtual memory exception";
+    case seL4_Fault_UnknownSyscall:
+        return "unknown syscall";
+    case seL4_Fault_UserException:
+        return "user exception";
+    case seL4_Fault_VCPUFault:
+        return "vCPU";
+    default:
+        return "unknown fault";
     }
 }
 
 #define VSCAUSE_LOAD_ACCESS_FAULT (21)
 #define VSCAUSE_STORE_ACCESS_FAULT (23)
 
-bool fault_is_read(seL4_Word fsr) {
+bool fault_is_read(seL4_Word fsr)
+{
     return fsr == VSCAUSE_LOAD_ACCESS_FAULT;
 }
 
-bool fault_is_write(seL4_Word fsr) {
+bool fault_is_write(seL4_Word fsr)
+{
     return fsr == VSCAUSE_STORE_ACCESS_FAULT;
 }
 
-void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data) {
+void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data)
+{
     assert(instruction->width == 2 || instruction->width == 4);
 
     /* TODO: revisit */
@@ -273,7 +290,8 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
     }
 }
 
-uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs) {
+uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs)
+{
     assert(instruction->width == 2 || instruction->width == 4);
     if (!instruction->from_htinst && instruction->width == 2) {
         return fault_get_reg_compressed(regs, instruction->rs2);
@@ -283,7 +301,8 @@ uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserConte
 }
 
 
-bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instruction_t *instruction) {
+bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instruction_t *instruction)
+{
     assert(instruction->width == 2 || instruction->width == 4);
     regs->pc += instruction->width;
     /*
@@ -296,42 +315,43 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instructio
     return (err == seL4_NoError);
 }
 
-bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
+bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
+{
     size_t label = microkit_msginfo_get_label(msginfo);
     // LOG_VMM("handling fault '%s'\n", fault_to_string(label));
     bool success = false;
     switch (label) {
-        case seL4_Fault_VMFault: {
-            return fault_handle_vm_exception(vcpu_id);
+    case seL4_Fault_VMFault: {
+        return fault_handle_vm_exception(vcpu_id);
+    }
+    case seL4_Fault_VCPUFault: {
+        seL4_Word cause = seL4_GetMR(seL4_VCPUFault_Cause);
+        seL4_UserContext regs;
+        // TODO: potentially reading TCB registers twice with VM fault handling code
+        seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+        assert(err == seL4_NoError);
+        if (cause == TRAP_ENV_CALL_VS_MODE) {
+            return fault_handle_sbi(vcpu_id, &regs);
+        } else if (cause == TRAP_VIRTUAL_INSTRUCTION) {
+            uint32_t data = seL4_GetMR(seL4_VCPUFault_Data);
+            // if (data == WFI_INST) {
+            // TODO: handle WFI properly
+            // regs.pc += 4;
+            // seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
+            // return true;
+            // } else {
+            LOG_VMM_ERR("unknown vCPU virtual instruction fault, data: 0x%lx, pc: 0x%lx\n", data, regs.pc);
+            // }
+        } else {
+            LOG_VMM_ERR("unhandled vCPU fault cause: 0x%lx\n", seL4_GetMR(seL4_VCPUFault_Cause));
         }
-        case seL4_Fault_VCPUFault: {
-            seL4_Word cause = seL4_GetMR(seL4_VCPUFault_Cause);
-            seL4_UserContext regs;
-            // TODO: potentially reading TCB registers twice with VM fault handling code
-            seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-            assert(err == seL4_NoError);
-            if (cause == TRAP_ENV_CALL_VS_MODE) {
-                return fault_handle_sbi(vcpu_id, &regs);
-            } else if (cause == TRAP_VIRTUAL_INSTRUCTION) {
-                uint32_t data = seL4_GetMR(seL4_VCPUFault_Data);
-                // if (data == WFI_INST) {
-                    // TODO: handle WFI properly
-                    // regs.pc += 4;
-                    // seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
-                    // return true;
-                // } else {
-                LOG_VMM_ERR("unknown vCPU virtual instruction fault, data: 0x%lx, pc: 0x%lx\n", data, regs.pc);
-                // }
-            } else {
-                LOG_VMM_ERR("unhandled vCPU fault cause: 0x%lx\n", seL4_GetMR(seL4_VCPUFault_Cause));
-            }
-            break;
-        }
-        default:
-            /* We have reached a genuinely unexpected case, stop the guest. */
-            LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
-            microkit_vcpu_stop(vcpu_id);
-            break;
+        break;
+    }
+    default:
+        /* We have reached a genuinely unexpected case, stop the guest. */
+        LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
+        microkit_vcpu_stop(vcpu_id);
+        break;
     }
 
     if (!success) {

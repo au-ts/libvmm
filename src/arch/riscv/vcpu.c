@@ -8,11 +8,13 @@
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 
-void vcpu_reset(size_t vcpu_id) {
+void vcpu_reset(size_t vcpu_id)
+{
     // @riscv
 }
 
-void vcpu_print_regs(size_t vcpu_id) {
+void vcpu_print_regs(size_t vcpu_id)
+{
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     printf("    sstatus: 0x%016lx\n", microkit_vcpu_riscv_read_reg(vcpu_id, seL4_VCPUReg_SSTATUS));
     printf("    sie: 0x%016lx\n", microkit_vcpu_riscv_read_reg(vcpu_id, seL4_VCPUReg_SIE));

@@ -39,7 +39,8 @@ extern fault_instruction_t decoded_instruction;
 // TODO: defined both here and in fault.c...
 #define SIP_TIMER (1 << 5)
 
-bool plic_inject_timer_irq(size_t vcpu_id) {
+bool plic_inject_timer_irq(size_t vcpu_id)
+{
     // LOG_VMM("injecting timer irq\n");
     seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP);
     assert(!res.error);
@@ -73,7 +74,9 @@ bool plic_inject_timer_irq(size_t vcpu_id) {
 
 uint32_t plic_pending_irq = 0;
 
-static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserContext *regs, fault_instruction_t *instruction) {
+static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserContext *regs,
+                                   fault_instruction_t *instruction)
+{
     LOG_PLIC("handling read at offset: 0x%lx\n", offset);
 
     uint32_t data;
@@ -83,11 +86,13 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         /* Now that we have the context, we want to find what the IRQ source is so
          * we can figure out the second-level index. */
         size_t enable_group = (offset - (PLIC_IRQ_ENABLE_START + (128 * context))) / 4;
-        LOG_PLIC("reading enable bits for context %d, IRQ source #%d to #%d\n", context, enable_group * 32, ((enable_group + 1) * 32 - 1));
+        LOG_PLIC("reading enable bits for context %d, IRQ source #%d to #%d\n", context, enable_group * 32,
+                 ((enable_group + 1) * 32 - 1));
         data = plic_regs.enable_bits[context][enable_group];
 
         if (data != 0) {
-            LOG_PLIC("reading offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+            LOG_PLIC("reading offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context,
+                     data);
         }
         break;
     }
@@ -112,7 +117,9 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
     return true;
 }
 
-static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserContext *regs, fault_instruction_t *instruction) {
+static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserContext *regs,
+                                    fault_instruction_t *instruction)
+{
     LOG_PLIC("handling write at offset: 0x%lx\n", offset);
 
     // TODO: need to make sure offset is 4-byte aligned?
@@ -125,9 +132,11 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         /* Now that we have the context, we want to find what the IRQ source is so
          * we can figure out the second-level index. */
         size_t enable_group = (offset - (PLIC_IRQ_ENABLE_START + (128 * context))) / 4;
-        LOG_PLIC("writing enable bits for context %d, IRQ source #%d to #%d: data 0x%lx\n", context, enable_group * 32, ((enable_group + 1) * 32 - 1), data);
+        LOG_PLIC("writing enable bits for context %d, IRQ source #%d to #%d: data 0x%lx\n", context, enable_group * 32,
+                 ((enable_group + 1) * 32 - 1), data);
         if (data != 0) {
-            LOG_PLIC("writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+            LOG_PLIC("writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context,
+                     data);
         }
         plic_regs.enable_bits[context][enable_group] = data;
         break;
@@ -179,7 +188,8 @@ struct virq {
 struct virq plic_registered_irqs[PLIC_MAX_REGISTERED_IRQS];
 size_t plic_register_count = 0;
 
-bool plic_register_irq(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *ack_data) {
+bool plic_register_irq(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *ack_data)
+{
     // todo: totally redo this bit with error-checking involved and I need to probably
     // distinguish between cpu local vs external irqs? what if we're emulating the architectural
     // timer?
@@ -194,7 +204,8 @@ bool plic_register_irq(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *a
     return true;
 }
 
-bool plic_inject_irq(size_t vcpu_id, int irq) {
+bool plic_inject_irq(size_t vcpu_id, int irq)
+{
     size_t enable_group = irq / 32;
     // TODO: dont' hardcode context
     if ((plic_regs.enable_bits[1][enable_group] & (1 << (irq % 32))) == 0) {
@@ -227,7 +238,8 @@ bool plic_inject_irq(size_t vcpu_id, int irq) {
     return true;
 }
 
-bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs, void *data) {
+bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs, void *data)
+{
     if (fault_is_read(fsr)) {
         return plic_handle_fault_read(vcpu_id, offset, regs, &decoded_instruction);
     } else {
