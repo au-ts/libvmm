@@ -130,6 +130,7 @@ void init(void)
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
+    assert(success);
 
     /* Initialise virtIO block device */
     success = virtio_mmio_blk_init(&virtio_blk,
