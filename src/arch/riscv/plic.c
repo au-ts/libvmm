@@ -87,7 +87,7 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         data = plic_regs.enable_bits[context][enable_group];
 
         if (data != 0) {
-            LOG_VMM("reading offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+            LOG_PLIC("reading offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
         }
         break;
     }
@@ -127,7 +127,7 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         size_t enable_group = (offset - (PLIC_IRQ_ENABLE_START + (128 * context))) / 4;
         LOG_PLIC("writing enable bits for context %d, IRQ source #%d to #%d: data 0x%lx\n", context, enable_group * 32, ((enable_group + 1) * 32 - 1), data);
         if (data != 0) {
-            LOG_VMM("writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
+            LOG_PLIC("writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", offset, enable_group, context, data);
         }
         plic_regs.enable_bits[context][enable_group] = data;
         break;
