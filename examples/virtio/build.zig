@@ -220,6 +220,15 @@ pub fn build(b: *std.Build) !void {
         guest_images.step.dependOn(&b.addInstallFileWithDir(packed_rootfs, .prefix, "rootfs.cpio.gz").step);
     }
 
+    // Hack to avoid caching of the guest images incbins: https://github.com/ziglang/zig/issues/16919
+    var prng = std.Random.DefaultPrng.init(blk: {
+        var seed: u64 = undefined;
+        try std.posix.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
+    });
+    const rand = prng.random();
+    const random_arg = b.fmt("-DRANDOM=\"{}\"", .{ rand.int(usize) });
+
     const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux") });
     const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "rootfs.cpio.gz") });
     const dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
@@ -229,6 +238,7 @@ pub fn build(b: *std.Build) !void {
             kernel_image_arg,
             dtb_image_arg,
             initrd_image_arg,
+            random_arg,
             "-x",
             "assembler-with-cpp",
         }
