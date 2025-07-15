@@ -16,7 +16,6 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
      * guests, there is no point in prematurely generalising this code.
      */
     seL4_UserContext regs = {0};
-    // @ivanv: is it right to have an ifdef here, or something "cleaner"?
 #if defined(CONFIG_ARCH_AARCH64)
     regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
