@@ -19,6 +19,10 @@
             status = "disabled";
         };
 
+        // Despite disabling this device in the overlay, Linux will still try to touch it
+        // during shutdown. So we just delete it instead.
+        /delete-node/ test@100000;
+
         pci@30000000 {
             status = "disabled";
         };
