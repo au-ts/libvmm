@@ -86,7 +86,7 @@
     };
 
     chosen {
-        bootargs = "console=hvc0 earlycon=sbi earlyprintk=serial debug loglevel=8 no4lvl";
+        bootargs = "console=hvc0 no4lvl";
         linux,initrd-start = <0x87000000>;
         linux,initrd-end = <0x87f00000>;
     };
