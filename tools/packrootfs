@@ -101,5 +101,5 @@ fi
 # This is required as we cannot unpack roofs on macOS.
 ({
     gunzip -dc "$rootfs";
-    cd "$tmpdir" && find . | cpio -o -H newc
+    cd "$tmpdir" && find . | cpio --quiet -o -H newc
 } | gzip > "$final_output_path")
