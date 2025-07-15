@@ -18,18 +18,18 @@ env:
 jobs:
   build_manual:
     name: Build manual
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v25
+        uses: cachix/install-nix-action@v31
         with:
-          nix_path: nixpkgs=channel:nixos-unstable
+          nix_path: nixpkgs=channel:nixos-25.05
       - name: Create nix-shell and build PDF
         run: |
           cd docs
-          nix-shell --run "pandoc MANUAL.md -o MANUAL.pdf"
+          nix-shell -p texliveFull pandoc librsvg --run "pandoc MANUAL.md -o MANUAL.pdf"
       - name: Upload manual PDF
         uses: actions/upload-artifact@v4
         with:
