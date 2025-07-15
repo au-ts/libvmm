@@ -139,7 +139,7 @@ pub fn build(b: *std.Build) !void {
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the guest's DTS into a DTB
-    const guest_dtc_cmd = b.addSystemCommand(&[_][]const u8{
+    const guest_dtc_cmd = b.addSystemCommand(&.{
         "dtc", "-q", "-I", "dts", "-O", "dtb"
     });
     guest_dtc_cmd.addFileArg(.{ .cwd_relative = b.getInstallPath(.prefix, "vm.dts") });
@@ -179,10 +179,40 @@ pub fn build(b: *std.Build) !void {
         guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
     }
 
-    if (custom_initrd) |c| {
-        guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "rootfs.cpio.gz").step);
-    } else if (initrd_image_dep) |initrd_image| {
-        guest_images.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
+    // This is a bit weird but since we are making use of lazy dependencies when Zig evaluates
+    // build.zig to check for lazy dependencies it means that we could have a null initrd.
+    const initrd: ?LazyPath = blk: {
+        if (custom_initrd) |p| {
+            break :blk b.path(p);
+        } else if (initrd_image_dep) |p| {
+            break :blk p.path("rootfs.cpio.gz");
+        } else {
+            break :blk null;
+        }
+    };
+
+    // This steps adds any extra scripts we need as part of the initrd that are not
+    // already packaged into the CPIO archive.
+    if (initrd != null) {
+        const packrootfs_cmd = b.addSystemCommand(&.{
+            "bash"
+        });
+        const init_scripts = .{
+            libvmm_dep.path("tools/linux/blk/blk_client_init")
+        };
+        const packrootfs = libvmm_dep.path("tools/packrootfs");
+        packrootfs_cmd.addFileArg(packrootfs);
+        packrootfs_cmd.addFileInput(packrootfs);
+        packrootfs_cmd.addFileArg(initrd.?);
+        _ = packrootfs_cmd.addOutputDirectoryArg("rootfs_staging");
+        packrootfs_cmd.addArg("-o");
+        const packed_rootfs = packrootfs_cmd.addOutputFileArg("rootfs.cpio.gz");
+        packrootfs_cmd.addArg("--startup");
+        inline for (init_scripts) |s| {
+            packrootfs_cmd.addFileInput(s);
+            packrootfs_cmd.addFileArg(s);
+        }
+        guest_images.step.dependOn(&b.addInstallFileWithDir(packed_rootfs, .prefix, "rootfs.cpio.gz").step);
     }
 
     const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux") });
@@ -410,9 +440,14 @@ pub fn build(b: *std.Build) !void {
         create_disk_cmd.addArgs(&[_][]const u8{
             "1", "512", b.fmt("{}", .{ 1024 * 1024 * 16 }), "GPT",
         });
-        const disk_install = b.addInstallFile(disk, "disk");
-        disk_install.step.dependOn(&create_disk_cmd.step);
-        cmd.step.dependOn(&disk_install.step);
+
+        // We want changes to the virtual disk to persist, so only install it if
+        // it doesn't already exist.
+        std.fs.cwd().access(b.getInstallPath(.prefix, "disk"), .{}) catch {
+            const disk_install = b.addInstallFile(disk, "disk");
+            disk_install.step.dependOn(&create_disk_cmd.step);
+            cmd.step.dependOn(&disk_install.step);
+        };
 
         cmd.addArgs(&.{
             "-global", "virtio-mmio.force-legacy=false",
