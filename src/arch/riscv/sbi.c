@@ -1,6 +1,23 @@
+#include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/riscv/plic.h>
 #include <libvmm/arch/riscv/sbi.h>
+
+/*
+ * We emulate SBI based on version 2.0 of the specification.
+ * Most legacy extensions are not supported as this was written after those
+ * SBI calls were renamed to 'legacy' and given how new the H-extension and RISC-V
+ * in general is, I doubt any guests are expecting legacy calls.
+ *
+ */
+
+// #define DEBUG_SBI
+
+#if defined(DEBUG_SBI)
+#define LOG_SBI(...) do{ LOG_VMM("SBI: "); printf(__VA_ARGS__); }while(0)
+#else
+#define LOG_SBI(...) do{}while(0)
+#endif
 
 /* We support version 2.0 of SBI */
 #define SBI_SPEC_MAJOR_VERSION 2
@@ -15,7 +32,6 @@
  * List of SBI extensions. Note that what extensions
  * we actually support is a subset of this list.
  */
-// TODO: support system reset
 enum sbi_extensions {
     SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR = 0x1,
     SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR = 0x2,
@@ -26,7 +42,7 @@ enum sbi_extensions {
     SBI_EXTENSION_DEBUG_CONSOLE = 0x4442434e,
 };
 
-enum sbi_debug_extension {
+enum sbi_debug_console_function {
     SBI_DEBUG_CONSOLE_WRITE = 0,
 };
 
@@ -46,6 +62,16 @@ enum sbi_base_function {
     SBI_BASE_GET_MACHINE_IMPL_ID = 6,
 };
 
+enum sbi_system_reset_function {
+    SBI_SYSTEM_RESET = 0,
+};
+
+enum sbi_system_reset_type {
+    SBI_SYSTEM_RESET_SHUTDOWN = 0,
+    SBI_SYSTEM_RESET_COLD_REBOOT = 1,
+    SBI_SYSTEM_RESET_WARM_REBOOT = 2,
+};
+
 enum sbi_return_code {
     SBI_SUCCESS = 0,
     SBI_ERR_FAILED = -1,
@@ -59,7 +85,29 @@ enum sbi_return_code {
     SBI_ERR_NO_SHMEM = -9,
 };
 
-static bool fault_handle_sbi_debug(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_system_reset(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+    switch (sbi_fid) {
+        case SBI_SYSTEM_RESET: {
+            uint32_t reset_type = regs->a0;
+            uint32_t reset_reason = regs->a1;
+            switch (reset_type) {
+                case SBI_SYSTEM_RESET_SHUTDOWN:
+                    LOG_VMM("guest requested shutdown via SBI (reset reason: 0x%x)\n", reset_reason);
+                    guest_stop(vcpu_id);
+                    return true;
+                default:
+                    LOG_VMM_ERR("unhandled SBI system reset type: 0x%x with reset reason: 0x%x\n", reset_type, reset_reason);
+                    return false;
+            }
+            return true;
+        }
+        default:
+            LOG_VMM_ERR("invalid SBI system reset FID 0x%lx\n", sbi_fid);
+            return false;
+    }
+}
+
+static bool sbi_debug_console(seL4_Word sbi_fid, seL4_UserContext *regs) {
     switch (sbi_fid) {
         case SBI_DEBUG_CONSOLE_WRITE: {
             uint32_t num_bytes = regs->a0;
@@ -72,13 +120,12 @@ static bool fault_handle_sbi_debug(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserC
             return true;
         }
         default:
-            LOG_VMM_ERR("sbi_fid: 0x%lx\n", sbi_fid);
-            assert(false);
+            LOG_VMM_ERR("invalid SBI debug console FID 0x%lx\n", sbi_fid);
             return false;
     }
 }
 
-static bool fault_handle_sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
     switch (sbi_fid) {
     case SBI_TIMER_SET: {
         /* stime_value is always 64-bit */
@@ -110,7 +157,7 @@ static bool fault_handle_sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserC
     }
 }
 
-static bool fault_handle_sbi_base(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs) {
     switch (sbi_fid) {
     case SBI_BASE_GET_SBI_SPEC_VERSION:
         regs->a0 = SBI_SUCCESS;
@@ -145,8 +192,7 @@ static bool fault_handle_sbi_base(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserCo
             regs->a1 = 1;
             return true;
         default:
-        // TODO: print out string name of extension
-            LOG_VMM("guest probed for SBI EID 0x%lx that is not supported\n", probe_eid);
+            LOG_VMM("guest probed for unhandled SBI extension (EID 0x%lx)\n", probe_eid);
             regs->a0 = SBI_ERR_NOT_SUPPORTED;
             return true;
         }
@@ -164,46 +210,45 @@ bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
     seL4_Word sbi_eid = regs->a7;
     /* SBI function ID for the given extension */
     seL4_Word sbi_fid = regs->a6;
-    // LOG_VMM("SBI handle EID 0x%lx, FID: 0x%lx\n", sbi_eid, sbi_fid);
+
+    LOG_SBI("handling EID 0x%lx, FID 0x%lx\n", sbi_eid, sbi_fid);
+
+    bool success = false;
     switch (sbi_eid) {
     case SBI_EXTENSION_BASE:
-        // TODO: error handling
-        fault_handle_sbi_base(vcpu_id, sbi_fid, regs);
-        regs->pc += 4;
-        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-        return true;
+        success = sbi_base(sbi_fid, regs);
+        break;
     case SBI_EXTENSION_TIMER:
-        fault_handle_sbi_timer(vcpu_id, sbi_fid, regs);
-        regs->pc += 4;
-        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-        return true;
+        success = sbi_timer(vcpu_id, sbi_fid, regs);
+        break;
     case SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR:
         printf("%c", regs->a0);
         regs->a0 = SBI_SUCCESS;
-        regs->pc += 4;
-        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-        return true;
+        success = true;
+        break;
     case SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR:
         /* Not supported by our SBI emulation. On legacy SBI we are supposed to just return -1 for failure. */
         regs->a0 = -1;
-        regs->pc += 4;
-        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-        return true;
+        success = true;
+        break;
     case SBI_EXTENSION_DEBUG_CONSOLE:
-        fault_handle_sbi_debug(vcpu_id, sbi_fid, regs);
-        regs->pc += 4;
-        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-        return true;
-    // case SBI_CONSOLE_PUTCHAR: {
-    //     printf("%c", regs->a0);
-    //     regs->a0 = 0;
-    //     regs->pc += 4;
-    //     seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
-    //     return true;
-    // }
+        success = sbi_debug_console(sbi_fid, regs);
+        break;
+    case SBI_EXTENSION_SYSTEM_RESET:
+        LOG_VMM("handling system reset\n");
+        success = sbi_system_reset(vcpu_id, sbi_fid, regs);
+        break;
     default: {
         LOG_VMM_ERR("unhandled sbi_eid: 0x%lx, sbi_fid 0x%lx\n", sbi_eid, sbi_fid);
     }
     }
-    return false;
+
+    if (success) {
+        regs->pc += 4;
+        seL4_Error err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
+        assert(err == seL4_NoError);
+        return (err == seL4_NoError);
+    }
+
+    return success;
 }
