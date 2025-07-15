@@ -280,4 +280,3 @@ static inline void fault_set_reg(seL4_UserContext *regs, int index, seL4_Word v)
             assert(false);
     }
 }
-

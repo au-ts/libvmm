@@ -33,4 +33,3 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
                              uintptr_t initrd_src,
                              uintptr_t initrd_dest,
                              size_t initrd_size);
-

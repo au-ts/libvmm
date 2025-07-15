@@ -56,7 +56,7 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id) {
     assert(mode == SV39_MODE);
     // switch mode {
     // case SV39_MODE:
-    // case 
+    // case
     // }
 
     seL4_Word ppn = GET_PPN(satp);
