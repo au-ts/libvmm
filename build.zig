@@ -37,6 +37,7 @@ const src_aarch64 = [_][]const u8{
 
 const src_riscv = [_][]const u8{
     "src/arch/riscv/fault.c",
+    "src/arch/riscv/sbi.c",
     "src/arch/riscv/linux.c",
     "src/arch/riscv/tcb.c",
     "src/arch/riscv/vcpu.c",
