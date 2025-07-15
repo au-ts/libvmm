@@ -198,7 +198,8 @@ pub fn build(b: *std.Build) !void {
             "bash"
         });
         const init_scripts = .{
-            libvmm_dep.path("tools/linux/blk/blk_client_init")
+            libvmm_dep.path("tools/linux/blk/blk_client_init"),
+            libvmm_dep.path("tools/linux/net/net_client_init"),
         };
         const packrootfs = libvmm_dep.path("tools/packrootfs");
         packrootfs_cmd.addFileArg(packrootfs);

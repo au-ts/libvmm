@@ -152,30 +152,11 @@ In addition to virtIO console and block, the guest can also talk with the native
 sDDF network driver via virtIO for in-guest networking. Packets in and out of
 the guest are multiplexed through the network virtualiser components.
 
-When the guest boots up, you must bring up the network device. First check the
-name of the network device, it should be called `eth0`:
-```
-# ip link show
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-2: eth0: <BROADCAST,MULTICAST> mtu 1500 qdisc noop qlen 1000
-    link/ether 52:54:01:00:00:fd brd ff:ff:ff:ff:ff:ff
-```
+When the guest starts, it will automatically bring up the network device
+and obtain an IP address via DHCP. This is done with the `net_client_init`
+script that is packaged into the root file system.
 
-Then bring up the device:
-```
-ip link set eth0 up
-```
-
-Before you can talk on the network, you need an IP address.
-To obtain an IP address, initiate DHCP with:
-```
-udhcpc
-```
-
-Now the guest network, you can try to ping Google DNS with:
+To test the guest network, you can try to ping Google DNS with:
 ```
 # ping 8.8.8.8
 PING 8.8.8.8 (8.8.8.8): 56 data bytes
