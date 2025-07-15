@@ -6,6 +6,7 @@
 
 #include <microkit.h>
 #include <libvmm/virq.h>
+#include <libvmm/fault.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>

@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <libvmm/util/util.h>
+#include <libvmm/fault.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/hsr.h>
 #include <libvmm/arch/aarch64/smc.h>
 #include <libvmm/arch/aarch64/fault.h>
