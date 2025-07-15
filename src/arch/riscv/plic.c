@@ -34,6 +34,8 @@ struct plic_regs {
 
 struct plic_regs plic_regs;
 
+extern fault_instruction_t decoded_instruction;
+
 // TODO: defined both here and in fault.c...
 #define SIP_TIMER (1 << 5)
 
@@ -48,7 +50,7 @@ bool plic_inject_timer_irq(size_t vcpu_id) {
     // be checking that the timer interrupt is even enabled, right?
     // seL4_Word sie = res.value;
     sip |= SIP_TIMER;
-    int err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP, sip);
+    seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP, sip);
     assert(!err);
 
     return true;
@@ -115,12 +117,7 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
 
     // TODO: need to make sure offset is 4-byte aligned?
 
-    uint32_t data;
-    if (instruction->width == 2) {
-        data = fault_get_reg_compressed(regs, instruction->rs2);
-    } else {
-        data = fault_get_reg(regs, instruction->rs2);
-    }
+    uint32_t data = fault_instruction_data(instruction, regs);
 
     switch (offset) {
     case PLIC_IRQ_ENABLE_START...PLIC_IRQ_ENABLE_END: {
@@ -159,7 +156,8 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         // size_t irq_pending_group = plic_pending_irq / 32;
         plic_pending_irq = 0;
         // plic_regs.pending_bits[irq_pending_group] = 0;
-        microkit_irq_ack(1);
+        // assert(false);
+        // microkit_irq_ack(1);
         break;
     }
     default:
@@ -229,28 +227,10 @@ bool plic_inject_irq(size_t vcpu_id, int irq) {
     return true;
 }
 
-bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs) {
-    fault_instruction_t instruction = fault_decode_instruction(vcpu_id, regs, regs->pc);
-    assert(instruction.op_code != 0);
-    /* from decode instruction we need: opcode, rs2, and rd */
-
-    /* TODO: why not just check the fsr? */
-    /* TODO: we should move this into the fault register exception stuff like we do for vGIC
-     * and all other devices */
-    bool success;
-    switch (instruction.op_code) {
-    case OP_CODE_LOAD:
-        success = plic_handle_fault_read(vcpu_id, offset, regs, &instruction);
-        break;
-    case OP_CODE_STORE:
-        success = plic_handle_fault_write(vcpu_id, offset, regs, &instruction);
-        break;
-    default:
-        LOG_VMM_ERR("invalid op code when handling PLIC fault\n");
-        return false;
+bool plic_handle_fault(size_t vcpu_id, size_t offset, seL4_Word fsr, seL4_UserContext *regs, void *data) {
+    if (fault_is_read(fsr)) {
+        return plic_handle_fault_read(vcpu_id, offset, regs, &decoded_instruction);
+    } else {
+        return plic_handle_fault_write(vcpu_id, offset, regs, &decoded_instruction);
     }
-
-    fault_advance_vcpu(vcpu_id, regs, &instruction);
-
-    return success;
 }

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <libvmm/fault.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
@@ -25,7 +26,7 @@
  * List of SBI extensions. Note that what extensions
  * we actually support is a subset of this list.
  */
-// TODO: support system suspend
+// TODO: support system reset
 enum sbi_extensions {
     SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR = 0x1,
     SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR = 0x2,
@@ -37,7 +38,7 @@ enum sbi_extensions {
 };
 
 enum sbi_debug_extension {
-    SBI_CONSOLE_PUTCHAR = 1,
+    SBI_DEBUG_CONSOLE_WRITE = 0,
 };
 
 enum sbi_timer_function {
@@ -151,13 +152,69 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id) {
     return 0;
 }
 
-extern uintptr_t guest_ram_vaddr;
-
 #define FUNCT3_CSW 0b110
 #define FUNCT3_CLW 0b010
 
-struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word ip) {
-    // LOG_VMM("decoding at ip 0x%lx\n", ip);
+struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst) {
+    uint32_t instruction;
+    if (htinst & 0x1) {
+        instruction = htinst | 0x2;
+    } else if ((htinst & 0x3) == 0) {
+        // TODO
+        instruction = 0;
+        LOG_VMM_ERR("TODO: htinst: 0x%x\n", htinst);
+        assert(false);
+    } else {
+        instruction = htinst;
+    }
+
+    bool compressed = (htinst & 0x3) == 0x1;
+    uint8_t width = (compressed) ? 2 : 4;
+    // LOG_VMM("htinst 0x%x -> instruction 0x%x, compressed: %d\n", htinst, instruction, compressed);
+
+    // TODO: check this.
+    uint8_t op_code = instruction & 0x7f;
+
+    switch (op_code) {
+    case OP_CODE_STORE:
+        return (struct fault_instruction){
+            .from_htinst = true,
+            .op_code = OP_CODE_STORE,
+            .width = width,
+            .rs2 = (instruction >> 20) & (BIT(5) - 1),
+        };
+    case OP_CODE_LOAD:
+        return (struct fault_instruction){
+            .from_htinst = true,
+            .op_code = OP_CODE_LOAD,
+            .width = width,
+            .rd = (instruction >> 7) & (BIT(5) - 1),
+        };
+    default:
+        LOG_VMM_ERR("htinst invalid op code 0x%x\n", op_code);
+        break;
+    }
+
+    // assert(funct3 == 2);
+
+    /* TODO: not sure if there's a better way to do this */
+    LOG_VMM_ERR("could not decode instruction\n");
+    assert(false);
+
+    return (struct fault_instruction){ 0 };
+}
+
+// TODO: we need to have some kind of 'guest' struct that we instead pass around or populate upon init.
+extern uintptr_t guest_ram_vaddr;
+
+struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word htinst) {
+    if (htinst != 0) {
+        // LOG_VMM("decoding fault at 0x%lx, from htinst: 0x%lx\n", regs->pc, htinst);
+        return fault_decode_htinst(vcpu_id, htinst);
+    }
+
+    seL4_Word ip = regs->pc;
+    LOG_VMM("decoding at ip 0x%lx\n", ip);
     seL4_Word guest_physical = guest_virtual_physical(ip, vcpu_id);
     assert(guest_physical >= guest_ram_vaddr && guest_physical <= guest_ram_vaddr + 0x10000000);
     // LOG_VMM("guest_physical: 0x%lx\n", guest_physical);
@@ -169,7 +226,8 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     uint16_t instruction_lo = *((uint16_t *)guest_physical);
     uint16_t instruction_hi = *(uint16_t *)(guest_physical + 16);
     uint32_t instruction = ((uint32_t)instruction_hi << 16) | instruction_lo;
-    // LOG_VMM("guest_physical: 0x%lx, instruction: 0x%lx, instruction_lo: 0x%x, instruction_hi: 0x%x\n", guest_physical, instruction, instruction_lo, instruction_hi);
+    // LOG_VMM("instruction is 0x%lx\n", instruction);
+    LOG_VMM("guest_physical: 0x%lx, instruction: 0x%x, instruction_lo: 0x%x, instruction_hi: 0x%x\n", guest_physical, instruction, instruction_lo, instruction_hi);
     // TODO: check this.
     uint8_t op_code = instruction & 0x7f;
     /* funct3 is from bits 12:14. */
@@ -183,12 +241,14 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     switch (instruction_lo >> 13) {
         case FUNCT3_CSW:
             return (struct fault_instruction){
+                .from_htinst = false,
                 .op_code = OP_CODE_STORE,
                 .width = 2,
                 .rs2 = (instruction_lo >> 2) & (BIT(3) - 1),
             };
         case FUNCT3_CLW:
             return (struct fault_instruction){
+                .from_htinst = false,
                 .op_code = OP_CODE_LOAD,
                 .width = 2,
                 .rd = (instruction_lo >> 2) & (BIT(3) - 1),
@@ -218,11 +278,14 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     // assert(funct3 == 2);
 
     /* TODO: not sure if there's a better way to do this */
-    LOG_VMM_ERR("could not decode instruction");
+    LOG_VMM_ERR("could not decode instruction at PC: 0x%lx\n", ip);
     assert(false);
 
     return (struct fault_instruction){ 0 };
 }
+
+/* This global is valid anytime we are currently handling a virtual memory fault. */
+fault_instruction_t decoded_instruction;
 
 char *fault_to_string(seL4_Word fault_label) {
     // TODO
@@ -239,11 +302,11 @@ char *fault_to_string(seL4_Word fault_label) {
 #define VSCAUSE_STORE_ACCESS_FAULT (23)
 
 bool fault_is_read(seL4_Word fsr) {
-    return fsr & VSCAUSE_LOAD_ACCESS_FAULT;
+    return fsr == VSCAUSE_LOAD_ACCESS_FAULT;
 }
 
 bool fault_is_write(seL4_Word fsr) {
-    return fsr & VSCAUSE_STORE_ACCESS_FAULT;
+    return fsr == VSCAUSE_STORE_ACCESS_FAULT;
 }
 
 void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data) {
@@ -251,7 +314,7 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
 
     /* TODO: revisit */
     seL4_Word reg;
-    if (instruction->width == 2) {
+    if (!instruction->from_htinst && instruction->width == 2) {
         reg = fault_get_reg_compressed(regs, instruction->rd);
     } else {
         reg = fault_get_reg(regs, instruction->rd);
@@ -259,7 +322,7 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
 
     reg &= 0xffffffff00000000;
     reg |= data;
-    if (instruction->width == 2) {
+    if (!instruction->from_htinst && instruction->width == 2) {
         fault_set_reg_compressed(regs, instruction->rd, reg);
     } else {
         fault_set_reg(regs, instruction->rd, reg);
@@ -268,7 +331,7 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
 
 uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs) {
     assert(instruction->width == 2 || instruction->width == 4);
-    if (instruction->width == 2) {
+    if (!instruction->from_htinst && instruction->width == 2) {
         return fault_get_reg_compressed(regs, instruction->rs2);
     } else {
         return fault_get_reg(regs, instruction->rs2);
@@ -277,6 +340,7 @@ uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserConte
 
 
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instruction_t *instruction) {
+    assert(instruction->width == 2 || instruction->width == 4);
     regs->pc += instruction->width;
     /*
      * Do not explicitly resume the TCB because we will eventually reply to the
@@ -286,6 +350,25 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, fault_instructio
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
+}
+
+static bool fault_handle_sbi_debug(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
+    switch (sbi_fid) {
+        case SBI_DEBUG_CONSOLE_WRITE: {
+            uint32_t num_bytes = regs->a0;
+            uint64_t base_addr_lo = regs->a1;
+            uint64_t base_addr_hi = regs->a2 << 32;
+            char *bytes = (char *)(base_addr_lo | (base_addr_hi << 32));
+            for (int i = 0; i < num_bytes; i++) {
+                printf("%c", bytes[i]);
+            }
+            return true;
+        }
+        default:
+            LOG_VMM_ERR("sbi_fid: 0x%lx\n", sbi_fid);
+            assert(false);
+            return false;
+    }
 }
 
 static bool fault_handle_sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs) {
@@ -399,6 +482,11 @@ static bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
         regs->pc += 4;
         seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
         return true;
+    case SBI_EXTENSION_DEBUG_CONSOLE:
+        fault_handle_sbi_debug(vcpu_id, sbi_fid, regs);
+        regs->pc += 4;
+        seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), regs);
+        return true;
     // case SBI_CONSOLE_PUTCHAR: {
     //     printf("%c", regs->a0);
     //     regs->a0 = 0;
@@ -414,24 +502,19 @@ static bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs) {
 }
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo) {
-    seL4_UserContext regs;
-    seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, sizeof(seL4_UserContext) / sizeof(seL4_Word), &regs);
     size_t label = microkit_msginfo_get_label(msginfo);
     // LOG_VMM("handling fault '%s'\n", fault_to_string(label));
     bool success = false;
     switch (label) {
         case seL4_Fault_VMFault: {
-            // LOG_VMM("fault on addr 0x%lx at pc 0x%lx\n", seL4_GetMR(seL4_VMFault_Addr), regs.pc);
-            seL4_Word addr = seL4_GetMR(seL4_VMFault_Addr);
-            seL4_Word fsr = seL4_GetMR(seL4_VMFault_FSR);
-            if (addr >= PLIC_ADDR && addr < PLIC_ADDR + PLIC_SIZE) {
-                assert(seL4_GetMR(seL4_VMFault_IP) == regs.pc);
-                return plic_handle_fault(vcpu_id, addr - PLIC_ADDR, fsr, &regs);
-            }
-            return false;
+            return fault_handle_vm_exception(vcpu_id);
         }
         case seL4_Fault_VCPUFault: {
             seL4_Word cause = seL4_GetMR(seL4_VCPUFault_Cause);
+            seL4_UserContext regs;
+            // TODO: potentially reading TCB registers twice with VM fault handling code
+            seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
+            assert(err == seL4_NoError);
             if (cause == TRAP_ENV_CALL_VS_MODE) {
                 return fault_handle_sbi(vcpu_id, &regs);
             } else if (cause == TRAP_VIRTUAL_INSTRUCTION) {

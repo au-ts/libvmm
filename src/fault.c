@@ -2,6 +2,10 @@
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 
+#ifdef CONFIG_ARCH_RISCV
+extern fault_instruction_t decoded_instruction;
+#endif
+
 #define MAX_VM_EXCEPTION_HANDLERS 16
 
 struct vm_exception_handler {
@@ -70,12 +74,21 @@ static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr
 
 bool fault_handle_vm_exception(size_t vcpu_id)
 {
-    uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
-    size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
+    seL4_Word addr = microkit_mr_get(seL4_VMFault_Addr);
+    seL4_Word fsr = microkit_mr_get(seL4_VMFault_FSR);
+#ifdef CONFIG_ARCH_RISCV
+    seL4_Word htinst = microkit_mr_get(seL4_VMFault_Instruction);
+#endif
 
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
+
+    assert(fault_is_read(fsr) || fault_is_write(fsr));
+
+#ifdef CONFIG_ARCH_RISCV
+    decoded_instruction = fault_decode_instruction(vcpu_id, &regs, htinst);
+#endif
 
     bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
     if (!success) {
@@ -96,9 +109,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
 #if defined(CONFIG_ARCH_AARCH64)
         return fault_advance_vcpu(vcpu_id, &regs);
 #elif defined(CONFIG_ARCH_RISCV)
-        // TODO: probably should pass instruction to the callback itself on RISC-V.
-        fault_instruction_t instruction = fault_decode_instruction(vcpu_id, &regs, regs.pc);
-        return fault_advance_vcpu(vcpu_id, &regs, &instruction);
+        return fault_advance_vcpu(vcpu_id, &regs, &decoded_instruction);
 #else
 #error "Unknown architecture for fault handling"
 #endif

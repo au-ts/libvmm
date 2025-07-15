@@ -56,10 +56,10 @@
             riscv,cbop-block-size = <0x40>;
             riscv,cboz-block-size = <0x40>;
             riscv,cbom-block-size = <0x40>;
-            riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbom", "zicbop", "zicboz", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu";
+            riscv,isa-extensions = "i\0m\0a\0f\0d\0c\0h\0zic64b\0zicbop\0ziccamoa\0ziccif\0zicclsm\0ziccrse\0zicntr\0zicsr\0zifencei\0zihintntl\0zihintpause\0zihpm\0za64rs\0zawrs\0zfa\0zca\0zcd\0zba\0zbb\0zbc\0zbs\0ssccptr\0sscounterenw\0sstvala\0sstvecd\0svadu";
             riscv,isa-base = "rv64i";
-            riscv,isa = "rv64imafdch_zic64b_zicbom_zicbop_zicboz_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
-            mmu-type = "riscv,sv57";
+            riscv,isa = "rv64imafdch_zic64b_zicbop_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_za64rs_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+            mmu-type = "riscv,sv39";
 
             interrupt-controller {
                 #interrupt-cells = <0x01>;
@@ -86,7 +86,7 @@
     };
 
     chosen {
-        bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8 no4lvl";
+        bootargs = "console=hvc0 earlycon=sbi earlyprintk=serial debug loglevel=8 no4lvl";
         linux,initrd-start = <0x87000000>;
         linux,initrd-end = <0x87f00000>;
     };
@@ -97,22 +97,25 @@
         compatible = "simple-bus";
         ranges;
 
-        virtio-console@130000 {
+        virtio-console {
             compatible = "virtio,mmio";
             reg = <0x00 0x130000 0x00 0x200>;
-            interrupts = <0x00 42 0x04>;
+            interrupts = <42>;
+            interrupt-parent = <0x03>;
         };
 
-        virtio-blk@150000 {
+        virtio-blk {
             compatible = "virtio,mmio";
             reg = <0x00 0x150000 0x00 0x200>;
-            interrupts = <0x00 43 0x04>;
+            interrupts = <43>;
+            interrupt-parent = <0x03>;
         };
 
-        virtio-net@160000 {
+        virtio-net {
             compatible = "virtio,mmio";
             reg = <0x00 0x160000 0x00 0x200>;
-            interrupts = <0x00 44 0x04>;
+            interrupts = <44>;
+            interrupt-parent = <0x03>;
         };
 
         plic@c000000 {

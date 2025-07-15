@@ -1,10 +1,17 @@
+#include <libvmm/fault.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/riscv/plic.h>
 
 bool virq_controller_init(size_t boot_vcpu_id) {
-    // @riscv
-    return true;
+    bool success = fault_register_vm_exception_handler(PLIC_ADDR, PLIC_SIZE, plic_handle_fault, NULL);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register fault handler for PLIC region\n");
+        return false;
+    }
+    assert(success);
+
+    return success;
 }
 
 bool virq_inject(size_t vcpu_id, int irq) {

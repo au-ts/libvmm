@@ -16,11 +16,16 @@ enum fault_op_code {
 };
 
 typedef struct fault_instruction {
+    /* Need to know whether this instruction was decoded from the value of htinst
+     * for handling compressed instructions. */
+    bool from_htinst;
     uint8_t op_code;
     /* Size of the instruction itself. Necessary for handling compressed instructions */
     uint8_t width;
     union {
+        /* Valid when the operation is a store */
         uint8_t rs2;
+        /* Valid when the operation is a load */
         uint8_t rd;
     };
 } fault_instruction_t;
