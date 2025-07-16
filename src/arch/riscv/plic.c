@@ -36,9 +36,6 @@ struct plic_regs plic_regs;
 
 extern fault_instruction_t decoded_instruction;
 
-// TODO: defined both here and in fault.c...
-#define SIP_TIMER (1 << 5)
-
 bool plic_inject_timer_irq(size_t vcpu_id)
 {
     // LOG_VMM("injecting timer irq\n");

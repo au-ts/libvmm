@@ -46,8 +46,6 @@ enum sbi_debug_console_function {
     SBI_DEBUG_CONSOLE_WRITE = 0,
 };
 
-#define SIP_TIMER (1 << 5)
-
 enum sbi_timer_function {
     SBI_TIMER_SET = 0,
 };
