@@ -8,7 +8,8 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 
-bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd) {
+bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
+{
     /*
      * Set the TCB registers to what the virtual machine expects to be started with.
      * You will note that this is currently Linux specific as we currently do not support
@@ -29,32 +30,35 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
 #endif
     /* Write out all the TCB registers */
     seL4_Word err = seL4_TCB_WriteRegisters(
-        BASE_VM_TCB_CAP + boot_vcpu_id,
-        false, // We'll explcitly start the guest below rather than in this call
-        0, // No flags
-        sizeof(seL4_UserContext) / sizeof(seL4_Word), // Writing to x0, pc, and spsr. Due to the ordering of seL4_UserContext the count must be 4.
-        &regs
-    );
+                        BASE_VM_TCB_CAP + boot_vcpu_id,
+                        false, // We'll explcitly start the guest below rather than in this call
+                        0, // No flags
+                        sizeof(seL4_UserContext) / sizeof(
+                            seL4_Word), // Writing to x0, pc, and spsr. Due to the ordering of seL4_UserContext the count must be 4.
+                        &regs
+                    );
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", boot_vcpu_id, err);
         return false;
     }
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
-        kernel_pc, dtb, initrd);
+            kernel_pc, dtb, initrd);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
     microkit_vcpu_restart(boot_vcpu_id, kernel_pc);
 
     return true;
 }
 
-void guest_stop(size_t boot_vcpu_id) {
+void guest_stop(size_t boot_vcpu_id)
+{
     LOG_VMM("Stopping guest\n");
     microkit_vcpu_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
 }
 
-bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr, size_t guest_ram_size) {
+bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr, size_t guest_ram_size)
+{
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
     microkit_vcpu_stop(boot_vcpu_id);
