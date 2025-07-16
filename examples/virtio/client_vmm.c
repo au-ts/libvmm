@@ -184,9 +184,9 @@ void notified(microkit_channel ch)
         virtio_net_handle_rx(&virtio_net);
 #ifdef CONFIG_ARCH_RISCV
     } else if (ch == 2) {
-            #include <libvmm/arch/riscv/plic.h>
-            // TODO: handle vcpu id properly
-            plic_inject_timer_irq(GUEST_VCPU_ID);
+#include <libvmm/arch/riscv/plic.h>
+        // TODO: handle vcpu id properly
+        plic_inject_timer_irq(GUEST_VCPU_ID);
 #endif
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
