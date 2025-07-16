@@ -16,9 +16,6 @@ LIBVMM ?= $(realpath ${LINUX_BLK_DIR}/../../../)
 blk_client_init: $(LIBVMM)/tools/linux/blk/blk_client_init
 	cp $^ $@
 
-net_client_init: $(LIBVMM)/tools/linux/net/net_client_init
-	cp $^ $@
-
 blk_driver_init: $(LIBVMM)/tools/linux/blk/board/$(MICROKIT_BOARD)/blk_driver_init
 	cp $^ $@
 
