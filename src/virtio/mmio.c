@@ -170,7 +170,8 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
     fault_emulate_read_access(&decoded_instruction, regs, reg);
 #endif
 
-    LOG_MMIO("read from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx, value: 0x%lx, PC: 0x%lx\n", dev->data.DeviceID, dev->data.VendorID, offset, reg, regs->pc);
+    LOG_MMIO("read from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx, value: 0x%lx, PC: 0x%lx\n", dev->data.DeviceID,
+             dev->data.VendorID, offset, reg, regs->pc);
 
     return success;
 }
@@ -190,7 +191,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     data = fault_instruction_data(&decoded_instruction, regs);
 #endif
 
-    LOG_MMIO("write from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx with value 0x%x, PC: 0x%lx\n", dev->data.DeviceID, dev->data.VendorID, offset, data, regs->pc);
+    LOG_MMIO("write from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx with value 0x%x, PC: 0x%lx\n", dev->data.DeviceID,
+             dev->data.VendorID, offset, data, regs->pc);
 
     switch (offset) {
     case REG_RANGE(REG_VIRTIO_MMIO_DEVICE_FEATURES_SEL, REG_VIRTIO_MMIO_DRIVER_FEATURES):
