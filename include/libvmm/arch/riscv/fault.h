@@ -1,6 +1,5 @@
 /*
- * Copyright 2022, UNSW (ABN 57 195 873 179)
- *
+ * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
 

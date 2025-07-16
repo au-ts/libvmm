@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, UNSW
- *
+ * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
@@ -10,7 +9,8 @@
 
 void vcpu_reset(size_t vcpu_id)
 {
-    // @riscv
+    // TODO
+    assert(false);
 }
 
 void vcpu_print_regs(size_t vcpu_id)

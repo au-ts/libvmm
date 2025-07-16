@@ -1,3 +1,7 @@
+/*
+ * Copyright 2025, UNSW
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/riscv/plic.h>

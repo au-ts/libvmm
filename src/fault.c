@@ -1,3 +1,8 @@
+/*
+ * Copyright 2025, UNSW
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <libvmm/fault.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
