@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
