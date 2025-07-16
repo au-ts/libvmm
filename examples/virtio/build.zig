@@ -121,12 +121,14 @@ pub fn build(b: *std.Build) !void {
 
     const client_vmm = b.addExecutable(.{
         .name = "client_vmm.elf",
-        .target = target,
-        .optimize = optimize,
-        // Microkit expects and requires the symbol table to exist in the ELF,
-        // this means that even when building for release mode, we want to tell
-        // Zig not to strip symbols from the binary.
-        .strip = false,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            // Microkit expects and requires the symbol table to exist in the ELF,
+            // this means that even when building for release mode, we want to tell
+            // Zig not to strip symbols from the binary.
+            .strip = false,
+        }),
     });
 
     const base_dts_path = "client_vm/linux.dts";
@@ -164,8 +166,10 @@ pub fn build(b: *std.Build) !void {
 
     const guest_images = b.addObject(.{
         .name = "guest_images",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
     guest_images.step.dependOn(&b.addInstallFileWithDir(guest_dtb, .prefix, "linux.dtb").step);

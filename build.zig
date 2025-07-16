@@ -55,10 +55,12 @@ pub fn build(b: *std.Build) void {
     if (maybe_microkit_board_dir) |microkit_board_dir| {
         const libmicrokit_include = microkit_board_dir.path(b, "include");
 
-        const libvmm = b.addStaticLibrary(.{
+        const libvmm = b.addLibrary(.{
             .name = "vmm",
-            .target = target,
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .target = target,
+                .optimize = optimize,
+            }),
         });
 
         const sddf = b.dependency("sddf", .{
@@ -107,10 +109,12 @@ pub fn build(b: *std.Build) void {
 
         b.installArtifact(libvmm);
 
-        const libuio = b.addStaticLibrary(.{
+        const libuio = b.addLibrary(.{
             .name = "uio",
-            .target = linuxTarget(b, target),
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .target = linuxTarget(b, target),
+                .optimize = optimize,
+            }),
         });
         libuio.addCSourceFile(.{
             .file = b.path("tools/linux/uio/libuio.c"),

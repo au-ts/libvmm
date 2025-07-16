@@ -41,8 +41,10 @@ pub fn build(b: *std.Build) !void {
 
     const zig_libmicrokit = b.addObject(.{
         .name = "zig_libmicrokit",
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     zig_libmicrokit.addCSourceFile(.{ .file = b.path("src/extern.c"), .flags = &.{} });
     zig_libmicrokit.addIncludePath(b.path("src/"));
@@ -59,13 +61,15 @@ pub fn build(b: *std.Build) !void {
 
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
-        .root_source_file = b.path("src/vmm.zig"),
-        .target = target,
-        .optimize = optimize,
-        // Microkit expects and requires the symbol table to exist in the ELF,
-        // this means that even when building for release mode, we want to tell
-        // Zig not to strip symbols from the binary.
-        .strip = false,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/vmm.zig"),
+            .target = target,
+            .optimize = optimize,
+            // Microkit expects and requires the symbol table to exist in the ELF,
+            // this means that even when building for release mode, we want to tell
+            // Zig not to strip symbols from the binary.
+            .strip = false,
+        }),
     });
 
     // For actually compiling the DTS into a DTB
