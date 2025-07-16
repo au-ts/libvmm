@@ -27,7 +27,7 @@ IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 DTS_FILE := $(SDDF)/dts/$(MICROKIT_BOARD).dts
 DTB_FILE := $(MICROKIT_BOARD).dtb
-CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
+CLIENT_VM_DIR := $(VIRTIO_EXAMPLE)/client_vm/aarch64
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
@@ -138,11 +138,11 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
+client_vm/vm.dts: $(CLIENT_VM_DIR)/linux.dts $(CLIENT_VM_DIR)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-client_vm/vm.dtb: client_vm/vm.dts
+$(CLIENT_DTB): client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
 client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
