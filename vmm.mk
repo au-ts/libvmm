@@ -19,7 +19,6 @@ endif
 
 AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/linux.c \
-		 src/arch/aarch64/linux.c \
 		 src/arch/aarch64/psci.c \
 		 src/arch/aarch64/smc.c \
 		 src/arch/aarch64/tcb.c \
@@ -49,7 +48,8 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/mmio.c \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
-		    src/guest.c
+		    src/guest.c \
+		    src/fault.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})

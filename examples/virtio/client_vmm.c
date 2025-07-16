@@ -35,8 +35,10 @@ extern char _guest_dtb_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
-/* Microkit will set this variable to the start of the guest RAM memory region. */
+
+#if defined(CONFIG_ARCH_RISCV)
 uintptr_t guest_ram_vaddr;
+#endif
 
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
@@ -89,6 +91,10 @@ void init(void)
         return;
     }
 
+#ifdef CONFIG_ARCH_RISCV
+    guest_ram_vaddr = vmm_config.ram;
+#endif
+
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init(GUEST_VCPU_ID);
     if (!success) {
@@ -130,6 +136,7 @@ void init(void)
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
+    assert(success);
 
     /* Initialise virtIO block device */
     success = virtio_mmio_blk_init(&virtio_blk,
@@ -175,6 +182,12 @@ void notified(microkit_channel ch)
         virtio_blk_handle_resp(&virtio_blk);
     } else if (ch == net_config.rx.id) {
         virtio_net_handle_rx(&virtio_net);
+#ifdef CONFIG_ARCH_RISCV
+    } else if (ch == 2) {
+#include <libvmm/arch/riscv/plic.h>
+        // TODO: handle vcpu id properly
+        plic_inject_timer_irq(GUEST_VCPU_ID);
+#endif
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }
