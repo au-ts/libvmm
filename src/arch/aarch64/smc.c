@@ -194,8 +194,6 @@ bool smc_register_sip_handler(smc_sip_handler_t handler)
 // @ivanv: print out which SMC call as a string we can't handle.
 bool smc_handle(size_t vcpu_id, uint32_t hsr)
 {
-    // @ivanv: An optimisation to be made is to store the TCB registers so we don't
-    // end up reading them multiple times
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
