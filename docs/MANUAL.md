@@ -62,8 +62,6 @@ where the Makefile will look when you pass the `SYSTEM` argument.
 
 ## Specifying a virtual machine
 
-<!-- @ivanv: point to Microkit manual for all options on virtual_machine elements. -->
-
 The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
