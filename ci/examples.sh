@@ -132,7 +132,6 @@ simulate_simple_make "qemu_virt_aarch64" "debug"
 build_simple_make "qemu_virt_aarch64" "release"
 simulate_simple_make "qemu_virt_aarch64" "release"
 
-# @ivanv: we should incorporate the zig optimisation levels as well
 build_simple_zig "qemu_virt_aarch64" "debug"
 simulate_simple_zig "qemu_virt_aarch64" "debug"
 build_simple_zig "qemu_virt_aarch64" "release"
