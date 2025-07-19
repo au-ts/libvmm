@@ -12,16 +12,7 @@
 #include <stddef.h>
 #include <libvmm/util/printf.h>
 
-// @ivanv: these are here for convience, should not be here though
-#define GUEST_VCPU_ID 0
-#define GUEST_NUM_VCPUS 1
-
-// @ivanv: if we keep using this, make sure that we have a static assert
-// that sizeof seL4_UserContext is 0x24
-// Note that this is AArch64 specific
-#if defined(CONFIG_ARCH_AARCH64)
-#define SEL4_USER_CONTEXT_SIZE 0x24
-#endif
+#define SEL4_USER_CONTEXT_SIZE (sizeof(seL4_UserContext) / sizeof(seL4_Word))
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))

@@ -7,6 +7,7 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>

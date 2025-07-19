@@ -8,6 +8,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 
 #define GIC_ENABLED 1

@@ -3,12 +3,13 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+#include <libvmm/guest.h>
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/net.h>
-#include <libvmm/virq.h>
-#include <libvmm/util/util.h>
 #include <sddf/network/queue.h>
 
 /* Uncomment this to enable debug logging */
