@@ -15,7 +15,6 @@
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
 
-// @ivanv: use this logging instead of having commented printfs
 #if defined(DEBUG_MMIO)
 #define LOG_MMIO(...) do{ printf("%s|VIRTIO(MMIO): ", microkit_name); printf(__VA_ARGS__); }while(0)
 #else
@@ -40,7 +39,7 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
     // we only care about the new status
     dev->regs.Status &= reg;
     reg ^= dev->regs.Status;
-    // printf("VIRTIO MMIO|INFO: set status flag 0x%x.\n", reg);
+    LOG_MMIO("set status flag 0x%x.\n", reg);
 
     switch (reg) {
     case VIRTIO_CONFIG_S_RESET:
@@ -78,11 +77,11 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
         break;
 
     case VIRTIO_CONFIG_S_FAILED:
-        printf("VIRTIO MMIO|INFO: received FAILED status from driver, giving up this device.\n");
+        LOG_MMIO("received FAILED status from driver, giving up this device.\n");
         break;
 
     default:
-        printf("VIRTIO MMIO|INFO: unknown device status 0x%x.\n", reg);
+        LOG_VMM_ERR("unknown virtIO MMIO device status 0x%x.\n", reg);
         success = 0;
     }
     return success;
@@ -135,11 +134,9 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
         success = dev->funs->get_device_config(dev, offset, &reg);
-        // uint32_t mask = fault_get_data_mask(fault_addr, fsr);
-        // printf("\"%s\"|VIRTIO MMIO|INFO: device config offset 0x%x, value 0x%x, mask 0x%x\n", sel4cp_name, offset, reg & mask, mask);
         break;
     default:
-        printf("VIRTIO MMIO|INFO: unknown register 0x%x.\n", offset);
+        LOG_VMM_ERR("unknown virtIO MMIO register read at offset 0x%x\n", offset);
         success = false;
     }
 
@@ -251,7 +248,6 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             uintptr_t ptr = (uintptr_t)virtq->avail;
             ptr |= (uintptr_t)data << 32;
             virtq->avail = (struct virtq_avail *)ptr;
-            // printf("VIRTIO MMIO|INFO: virtq avail 0x%lx\n.", ptr);
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
@@ -278,7 +274,6 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             uintptr_t ptr = (uintptr_t)virtq->used;
             ptr |= (uintptr_t)data << 32;
             virtq->used = (struct virtq_used *)ptr;
-            // printf("VIRTIO MMIO|INFO: virtq used 0x%lx\n.", ptr);
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
@@ -290,7 +285,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         success = dev->funs->set_device_config(dev, offset, data);
         break;
     default:
-        printf("VIRTIO MMIO|INFO: unknown register 0x%x.", offset);
+        LOG_VMM_ERR("unknown virtIO MMIO register write at offset 0x%x\n", offset);
         success = false;
     }
 
