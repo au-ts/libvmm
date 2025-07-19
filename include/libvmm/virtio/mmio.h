@@ -99,7 +99,7 @@ typedef struct virtio_device_info {
 
     uint32_t Status;
 
-    // uint32_t ConfigGeneration;
+    uint32_t ConfigGeneration;
 } virtio_device_info_t;
 
 /* Everything needed at runtime for a virtIO device to function. */

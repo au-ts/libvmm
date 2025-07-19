@@ -141,11 +141,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         success = handle_virtio_mmio_get_status_flag(dev, &reg);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG_GENERATION, REG_VIRTIO_MMIO_CONFIG):
-        /* ConfigGeneration will need to be update every time when the device changes any of
-         * the device config. Currently we only have virtio net device that doesn't do any update
-         * on the device config, so the ConfigGeneration is always 0. I left this comment
-         * here as a reminder. */
-        // reg = device->data.ConfigGeneration;
+        reg = dev->data.ConfigGeneration;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
         success = dev->funs->get_device_config(dev, offset, &reg);
