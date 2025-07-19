@@ -7,9 +7,12 @@
 <system>
     <!-- We allocate 256MiB of RAM for the guest. -->
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
-    <!-- We want to map in the serial to get input/output. -->
-    <!-- @ivanv: Unfortunately these buses are still needed to get Linux boot. We need to
-         investigate and get Linux to stop wanting to access these regions of memory. -->
+    <!-- We want to map in the serial (/soc/bus@ff800000/serial@3000) to get input/output. -->
+    <!--
+        In addition to the serial device, the default Linux image requires access to
+        other devices. If you wanted to pass-through *just* the serial device memory,
+        changing the Linux configuration and/or DTS overlay is necessary.
+     -->
     <memory_region name="bus1" size="0x200000" phys_addr="0xff600000" />
     <memory_region name="bus2" size="0x200000" phys_addr="0xff800000" />
     <memory_region name="bus3" size="0x100000" phys_addr="0xffd00000" />
