@@ -48,7 +48,6 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
             // Right now we only have one vCPU and so any fault for a target vCPU
             // that isn't the one that's already on we consider an error on the
             // guest's side.
-            // @ivanv: adapt for starting other vCPUs
             if (target_cpu == vcpu_id) {
                 smc_set_return_value(regs, PSCI_ALREADY_ON);
             } else {
