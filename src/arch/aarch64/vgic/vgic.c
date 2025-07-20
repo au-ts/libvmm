@@ -1,4 +1,4 @@
-/* @ivanv double check
+/*
  * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2022, UNSW (ABN 57 195 873 179)
  *
