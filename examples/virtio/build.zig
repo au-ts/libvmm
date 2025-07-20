@@ -6,6 +6,7 @@ const Step = std.Build.Step;
 
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
+    qemu_virt_riscv64,
     maaxboard,
 };
 
@@ -21,6 +22,15 @@ const targets = [_]Target {
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
             .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+       .{
+        .board = MicrokitBoard.qemu_virt_riscv64,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -100,9 +110,16 @@ pub fn build(b: *std.Build) !void {
     const libmicrokit_include = microkit_board_dir.path(b, "include");
     const libmicrokit_linker_script = microkit_board_dir.path(b, "lib/microkit.ld");
 
-    const arm_vgic_version: usize = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => 2,
-        .maaxboard => 3,
+    const arm_vgic_version: usize = blk: {
+        if (target.result.cpu.arch == .aarch64) {
+             break :blk switch (microkit_board_option) {
+                .qemu_virt_aarch64 => 2,
+                .maaxboard => 3,
+                else => unreachable,
+            };
+        } else {
+            break :blk undefined;
+        }
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -131,13 +148,18 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    const base_dts_path = "client_vm/linux.dts";
-    const overlay = if (arm_vgic_version == 3) "client_vm/gic_v3_overlay.dts" else "client_vm/gic_v2_overlay.dts";
+    const base_dts_path = b.fmt("client_vm/{s}/linux.dts", .{ @tagName(target.result.cpu.arch) });
     const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
-        "sh", "../../tools/dtscat", base_dts_path, overlay
+        "sh", "../../tools/dtscat", base_dts_path
     });
     dts_cat_cmd.addFileInput(b.path(base_dts_path));
-    dts_cat_cmd.addFileInput(b.path(overlay));
+
+    if (target.result.cpu.arch == .aarch64) {
+        const overlay = b.path(b.fmt("client_vm/aarch64/gic_v{d}_overlay.dts", .{ arm_vgic_version }));
+        dts_cat_cmd.addFileArg(overlay);
+        dts_cat_cmd.addFileInput(overlay);
+    }
+
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the guest's DTS into a DTB
@@ -259,17 +281,18 @@ pub fn build(b: *std.Build) !void {
     }
 
     const blk_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64, .qemu_virt_riscv64 => "virtio",
         .maaxboard => "mmc_imx",
     };
 
     const serial_driver_class = switch (microkit_board_option) {
         .qemu_virt_aarch64 => "arm",
+        .qemu_virt_riscv64 => "ns16550a",
         .maaxboard => "imx",
     };
 
     const eth_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64, .qemu_virt_riscv64 => "virtio",
         .maaxboard => "imx",
     };
 
@@ -438,6 +461,19 @@ pub fn build(b: *std.Build) !void {
             "mon:stdio",
             "-device",
             loader_arg,
+            "-m",
+            "2G",
+            "-nographic",
+        });
+    } else if (microkit_board_option == .qemu_virt_riscv64) {
+        qemu_cmd = b.addSystemCommand(&[_][]const u8{
+            "qemu-system-riscv64",
+            "-machine",
+            "virt",
+            "-serial",
+            "mon:stdio",
+            "-kernel",
+            final_image_dest,
             "-m",
             "2G",
             "-nographic",

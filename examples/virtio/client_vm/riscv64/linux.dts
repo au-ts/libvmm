@@ -1,0 +1,138 @@
+/*
+ * Copyright QEMU team
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * This file is derived from an intermediate build stage of the
+ * Linux kernel. The licenses of all input files to this process
+ * are compatible with GPL-2.0-only.
+ */
+/dts-v1/;
+
+/ {
+    #address-cells = <0x02>;
+    #size-cells = <0x02>;
+    compatible = "riscv-virtio";
+    model = "riscv-virtio,qemu";
+
+    poweroff {
+        value = <0x5555>;
+        offset = <0x00>;
+        regmap = <0x04>;
+        compatible = "syscon-poweroff";
+    };
+
+    reboot {
+        value = <0x7777>;
+        offset = <0x00>;
+        regmap = <0x04>;
+        compatible = "syscon-reboot";
+    };
+
+    platform-bus@4000000 {
+        interrupt-parent = <0x03>;
+        ranges = <0x00 0x00 0x4000000 0x2000000>;
+        #address-cells = <0x01>;
+        #size-cells = <0x01>;
+        compatible = "qemu,platform", "simple-bus";
+    };
+
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x00 0x80000000 0x00 0x8000000>;
+    };
+
+    cpus {
+        #address-cells = <0x01>;
+        #size-cells = <0x00>;
+        timebase-frequency = <0x989680>;
+
+        cpu@0 {
+            phandle = <0x01>;
+            device_type = "cpu";
+            reg = <0x00>;
+            status = "okay";
+            compatible = "riscv";
+            riscv,cbop-block-size = <0x40>;
+            riscv,cboz-block-size = <0x40>;
+            riscv,cbom-block-size = <0x40>;
+            riscv,isa-extensions = "i\0m\0a\0f\0d\0c\0h\0zic64b\0zicbop\0ziccamoa\0ziccif\0zicclsm\0ziccrse\0zicntr\0zicsr\0zifencei\0zihintntl\0zihintpause\0zihpm\0za64rs\0zawrs\0zfa\0zca\0zcd\0zba\0zbb\0zbc\0zbs\0ssccptr\0sscounterenw\0sstvala\0sstvecd\0svadu";
+            riscv,isa-base = "rv64i";
+            riscv,isa = "rv64imafdch_zic64b_zicbop_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_za64rs_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu";
+            mmu-type = "riscv,sv39";
+
+            interrupt-controller {
+                #interrupt-cells = <0x01>;
+                interrupt-controller;
+                compatible = "riscv,cpu-intc";
+                phandle = <0x02>;
+            };
+        };
+
+        cpu-map {
+
+            cluster0 {
+
+                core0 {
+                    cpu = <0x01>;
+                };
+            };
+        };
+    };
+
+    pmu {
+        riscv,event-to-mhpmcounters = <0x01 0x01 0x7fff9 0x02 0x02 0x7fffc 0x10019 0x10019 0x7fff8 0x1001b 0x1001b 0x7fff8 0x10021 0x10021 0x7fff8>;
+        compatible = "riscv,pmu";
+    };
+
+    chosen {
+        bootargs = "console=hvc0";
+        linux,initrd-start = <0x87000000>;
+        linux,initrd-end = <0x87f00000>;
+    };
+
+    soc {
+        #address-cells = <0x02>;
+        #size-cells = <0x02>;
+        compatible = "simple-bus";
+        ranges;
+
+        virtio-console {
+            compatible = "virtio,mmio";
+            reg = <0x00 0x130000 0x00 0x200>;
+            interrupts = <42>;
+            interrupt-parent = <0x03>;
+        };
+
+        virtio-blk {
+            compatible = "virtio,mmio";
+            reg = <0x00 0x150000 0x00 0x200>;
+            interrupts = <43>;
+            interrupt-parent = <0x03>;
+        };
+
+        virtio-net {
+            compatible = "virtio,mmio";
+            reg = <0x00 0x160000 0x00 0x200>;
+            interrupts = <44>;
+            interrupt-parent = <0x03>;
+        };
+
+        plic@c000000 {
+            phandle = <0x03>;
+            riscv,ndev = <0x5f>;
+            reg = <0x00 0xc000000 0x00 0x600000>;
+            interrupts-extended = <0x02 0x0b 0x02 0x09>;
+            interrupt-controller;
+            compatible = "sifive,plic-1.0.0", "riscv,plic0";
+            #address-cells = <0x00>;
+            #interrupt-cells = <0x01>;
+        };
+
+        clint@2000000 {
+            interrupts-extended = <0x02 0x03 0x02 0x07>;
+            reg = <0x00 0x2000000 0x00 0x10000>;
+            compatible = "sifive,clint0", "riscv,clint0";
+        };
+    };
+};
