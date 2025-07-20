@@ -10,3 +10,4 @@ zig-out/
 rust/target/
 .cache
 compile_commands.json
+*.orig
