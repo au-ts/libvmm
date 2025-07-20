@@ -50,14 +50,17 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     }
     // First we inspect the kernel image header to confirm it is a valid image
     // and to determine where in memory to place the image.
-    struct linux_image_header *image_header = (struct linux_image_header *) kernel;
-    assert(image_header->magic == LINUX_IMAGE_MAGIC);
-    if (image_header->magic != LINUX_IMAGE_MAGIC) {
+    // The pointer to the kernel image may be unaligned, so to avoid undefined
+    // behaviour, we do an explicit copy.
+    struct linux_image_header image_header = {};
+    memcpy((char *)&image_header, (char *)kernel, sizeof(struct linux_image_header));
+    assert(image_header.magic == LINUX_IMAGE_MAGIC);
+    if (image_header.magic != LINUX_IMAGE_MAGIC) {
         LOG_VMM_ERR("Linux kernel image magic check failed\n");
         return 0;
     }
     // Copy the guest kernel image into the right location
-    uintptr_t kernel_dest = ram_start + image_header->text_offset;
+    uintptr_t kernel_dest = ram_start + image_header.text_offset;
     // This check is because the Linux kernel image requires to be placed at text_offset of
     // a 2MB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,
