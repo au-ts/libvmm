@@ -9,6 +9,7 @@ const src = [_][]const u8{
     "src/fault.c",
     "src/linux.c",
     "src/dtb.c",
+    "src/virq.c",
     "src/util/util.c",
     "src/util/printf.c",
     "src/virtio/mmio.c",
