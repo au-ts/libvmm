@@ -10,6 +10,7 @@ This example shows off the virtIO support that libvmm provides using the
 the actual hardware.
 
 This example makes use of the following virtIO devices emulated by libvmm:
+
 * console
 * block
 * network
@@ -81,6 +82,7 @@ make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<BOARD>` is one of:
+
 * `qemu_virt_aarch64`
 * `maaxboard`
 

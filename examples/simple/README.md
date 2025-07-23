@@ -10,6 +10,7 @@ buildroot/BusyBox root file system. This gives a basic command-line with some
 common Linux utilities.
 
 The example currently works on the following platforms:
+
 * QEMU virt AArch64
 * HardKernel Odroid-C4
 * Avnet MaaXBoard
@@ -21,6 +22,7 @@ make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 ```
 
 Where `<MICROKIT_BOARD>` is one of:
+
 * `qemu_virt_aarch64`
 * `odroidc4`
 * `maaxboard`
@@ -58,6 +60,7 @@ zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD>
 ```
 
 Where `<MICROKIT_BOARD>` is one of:
+
 * `qemu_virt_aarch64`
 * `odroidc4`
 * `maaxboard`
