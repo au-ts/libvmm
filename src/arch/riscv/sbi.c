@@ -6,6 +6,7 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/riscv/plic.h>
+#include <libvmm/arch/riscv/vcpu.h>
 #include <libvmm/arch/riscv/sbi.h>
 
 /*
@@ -146,12 +147,27 @@ char *sbi_eid_to_str(seL4_Word sbi_eid)
     }
 }
 
+static void handle_ipi(size_t vcpu_id, seL4_Word hart_mask, seL4_Word hart_mask_base) {
+    // TODO: logic a bit sus
+   for (seL4_Word i = 0; i < seL4_WordBits; i++) {
+        seL4_Word target_hart_id = i + hart_mask_base;
+        if (hart_mask & (1UL << i)) {
+            seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + target_hart_id, seL4_VCPUReg_SIP);
+            assert(!res.error);
+            res.value |= SIP_IPI;
+            seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + target_hart_id, seL4_VCPUReg_SIP, res.value);
+            assert(err == seL4_NoError);
+        }
+    }
+}
+
 static bool sbi_rfence(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
 {
     switch (sbi_fid) {
     case SBI_RFENCE_FENCE_I:
     case SBI_RFENCE_SFENCE_VMA:
     case SBI_RFENCE_SFENCE_VMA_ASID:
+        handle_ipi(vcpu_id, regs->a0, regs->a1);
         // TODO: need to actually handle fences
         regs->a0 = SBI_SUCCESS;
         return true;
@@ -170,22 +186,8 @@ static bool sbi_ipi(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
         seL4_Word hart_mask_base = regs->a1;
         // TODO: handle
         assert(hart_mask_base != -1);
+        handle_ipi(vcpu_id, hart_mask, hart_mask_base);
         // LOG_VMM("VCPU %d hart mask is 0x%lx, 0x%lx\n", vcpu_id, hart_mask, hart_mask_base);
-
-        // TODO: logic a bit sus
-        for (seL4_Word i = 0; i < 64; i++) {
-            seL4_Word target_hart_id = i + hart_mask_base;
-            if (hart_mask & (1UL << i)) {
-                // LOG_VMM("sending IPI to from %lu to %lu\n", vcpu_id, target_hart_id);
-                seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + target_hart_id, seL4_VCPUReg_SIP);
-                assert(!res.error);
-                res.value |= (1 << 1);
-                seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + target_hart_id, seL4_VCPUReg_SIP, res.value);
-                assert(err == seL4_NoError);
-            } else {
-                // LOG_VMM("not sending IPI to %d\n", i);
-            }
-        }
 
         regs->a0 = SBI_SUCCESS;
         return true;
@@ -216,7 +218,7 @@ static bool sbi_hsm(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
         // TODO: check start addr is valid
         // TODO: check hart ID has not already been started
 
-        seL4_Error err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + hart_id, false, 0, SEL4_USER_CONTEXT_SIZE, &hart_regs);
+        seL4_Error err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + hart_id, true, 0, SEL4_USER_CONTEXT_SIZE, &hart_regs);
         assert(err == seL4_NoError);
 
         if (err == seL4_NoError) {
@@ -352,7 +354,7 @@ static bool sbi_timer(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
     }
 }
 
-static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs)
+static bool sbi_base(size_t vcpu_id, seL4_Word sbi_fid, seL4_UserContext *regs)
 {
     switch (sbi_fid) {
     case SBI_BASE_GET_SBI_SPEC_VERSION:
@@ -390,7 +392,7 @@ static bool sbi_base(seL4_Word sbi_fid, seL4_UserContext *regs)
             regs->a1 = 1;
             return true;
         default:
-            LOG_VMM("guest probed for unhandled SBI extension \"%s\" (EID 0x%lx)\n", sbi_eid_to_str(probe_eid), probe_eid);
+            LOG_VMM("vCPU (0x%lx) probed for unhandled SBI extension \"%s\" (EID 0x%lx)\n", vcpu_id, sbi_eid_to_str(probe_eid), probe_eid);
             regs->a0 = SBI_ERR_NOT_SUPPORTED;
             return true;
         }
@@ -416,7 +418,7 @@ bool fault_handle_sbi(size_t vcpu_id, seL4_UserContext *regs)
     // bool success = false;
     switch (sbi_eid) {
     case SBI_EXTENSION_BASE:
-        sbi_base(sbi_fid, regs);
+        sbi_base(vcpu_id, sbi_fid, regs);
         break;
     case SBI_EXTENSION_TIMER:
         sbi_timer(vcpu_id, sbi_fid, regs);
