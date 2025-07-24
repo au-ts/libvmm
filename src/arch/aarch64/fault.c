@@ -5,9 +5,10 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <libvmm/util/util.h>
+#include <libvmm/fault.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/hsr.h>
 #include <libvmm/arch/aarch64/smc.h>
 #include <libvmm/arch/aarch64/fault.h>
@@ -31,7 +32,7 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs)
      * Do not explicitly resume the TCB because we will eventually reply to the
      * fault which will result in the TCB being restarted.
      */
-    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
+    seL4_Error err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
@@ -338,103 +339,6 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
     }
 
     return fault_advance_vcpu(vcpu_id, &regs);
-}
-
-#define MAX_VM_EXCEPTION_HANDLERS 16
-
-struct vm_exception_handler {
-    uintptr_t base;
-    uintptr_t end;
-    vm_exception_handler_t callback;
-    void *data;
-};
-
-static struct vm_exception_handler registered_vm_exception_handlers[MAX_VM_EXCEPTION_HANDLERS];
-static size_t vm_exception_handler_index = 0;
-
-bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data)
-{
-    if (vm_exception_handler_index == MAX_VM_EXCEPTION_HANDLERS - 1) {
-        LOG_VMM_ERR("maximum number of VM exception handlers registered");
-        return false;
-    }
-
-    if (size == 0) {
-        LOG_VMM_ERR("registered VM exception handler with size 0\n");
-        return false;
-    }
-
-    for (int i = 0; i < vm_exception_handler_index; i++) {
-        struct vm_exception_handler *curr = &registered_vm_exception_handlers[i];
-        if (!(base >= curr->end || base + size <= curr->base)) {
-            LOG_VMM_ERR("VM exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n",
-                        base, base + size, curr->base, curr->end);
-            return false;
-        }
-    }
-
-    registered_vm_exception_handlers[vm_exception_handler_index] = (struct vm_exception_handler) {
-        .base = base,
-        .end = base + size,
-        .callback = callback,
-        .data = data,
-    };
-    vm_exception_handler_index += 1;
-
-    return true;
-}
-
-static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr, size_t fsr, seL4_UserContext *regs)
-{
-    for (int i = 0; i < MAX_VM_EXCEPTION_HANDLERS; i++) {
-        uintptr_t base = registered_vm_exception_handlers[i].base;
-        uintptr_t end = registered_vm_exception_handlers[i].end;
-        vm_exception_handler_t callback = registered_vm_exception_handlers[i].callback;
-        void *data = registered_vm_exception_handlers[i].data;
-        if (addr >= base && addr < end) {
-            bool success = callback(vcpu_id, addr - base, fsr, regs, data);
-            if (!success) {
-                LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base,
-                            end, addr);
-            }
-
-            return success;
-        }
-    }
-
-    /* We could not find a handler for the faulting address. */
-    return false;
-}
-
-bool fault_handle_vm_exception(size_t vcpu_id)
-{
-    uintptr_t addr = microkit_mr_get(seL4_VMFault_Addr);
-    size_t fsr = microkit_mr_get(seL4_VMFault_FSR);
-
-    seL4_UserContext regs;
-    int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
-
-    bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
-    if (!success) {
-        /*
-         * We could not find a registered handler for the address, meaning that the fault
-         * is genuinely unexpected. Surprise!
-         * Now we print out as much information relating to the fault as we can, hopefully
-         * the programmer can figure out what went wrong.
-         */
-        size_t ip = microkit_mr_get(seL4_VMFault_IP);
-        size_t is_prefetch = seL4_GetMR(seL4_VMFault_PrefetchFault);
-        bool is_write = fault_is_write(fsr);
-        LOG_VMM_ERR("unexpected memory fault on address: 0x%lx, FSR: 0x%lx, IP: 0x%lx, is_prefetch: %s, is_write: %s\n",
-                    addr, fsr, ip, is_prefetch ? "true" : "false", is_write ? "true" : "false");
-        tcb_print_regs(vcpu_id);
-        vcpu_print_regs(vcpu_id);
-    } else {
-        return fault_advance_vcpu(vcpu_id, &regs);
-    }
-
-    return success;
 }
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
