@@ -194,7 +194,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NOTIFY, REG_VIRTIO_MMIO_INTERRUPT_STATUS):
-        dev->regs.QueueNotify = (uint32_t)data;
+        dev->regs.QueueNotify = data;
         success = dev->funs->queue_notify(dev);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_ACK, REG_VIRTIO_MMIO_STATUS):
