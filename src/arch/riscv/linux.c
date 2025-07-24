@@ -58,7 +58,8 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uintptr_t kernel_dest = ram_start + image_header.text_offset;
 
     // Before doing any copying, validate the image destinations in respect to each other and RAM.
-    if (!linux_validate_image_locations(ram_start, ram_size, kernel_dest, kernel_size, dtb_dest, dtb_size, initrd_dest, initrd_size)) {
+    if (!linux_validate_image_locations(ram_start, ram_size, kernel_dest, kernel_size, dtb_dest, dtb_size, initrd_dest,
+                                        initrd_size)) {
         LOG_VMM_ERR("invalid image location given\n");
         return 0;
     }

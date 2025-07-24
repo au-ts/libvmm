@@ -90,53 +90,54 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
 
 extern bool hart_waiting_for_timer[];
 
-bool fault_handle_virtual_inst(size_t vcpu_id, seL4_UserContext *regs, uint32_t inst) {
+bool fault_handle_virtual_inst(size_t vcpu_id, seL4_UserContext *regs, uint32_t inst)
+{
     uint8_t op_code = inst & 0x7f;
     uint8_t funct3 = (inst >> 12) & 7;
     uint8_t rd = (inst >> 7) & 0x1f;
     uint8_t rs1 = (inst >> 15) & 0x1f;
 
     switch (op_code) {
-        case OP_CODE_SYSTEM: {
-            uint16_t csr = inst >> 20;
-            switch (csr) {
-                case CSR_STIMECMP: {
-                    if (funct3 == FUNCT3_CSRRW) {
-                        uint64_t curr_time = 0;
-                        asm volatile("rdtime %0" : "=r"(curr_time));
-                        /* We need to put the source (rs1) into the dest (rd) */
-                        seL4_Word source = fault_get_reg(regs, rs1);
-                        // seL4_Word dest = fault_get_reg(regs, rd);
-                        // LOG_VMM("inst: 0x%lx, curr_time 0x%lx, source: 0x%llx, dest: 0x%llx\n", inst, curr_time, source, dest);
-                        seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP);
-                        assert(!res.error);
-                        res.value &= ~SIP_TIMER;
-                        seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP, res.value);
-                        assert(!err);
+    case OP_CODE_SYSTEM: {
+        uint16_t csr = inst >> 20;
+        switch (csr) {
+        case CSR_STIMECMP: {
+            if (funct3 == FUNCT3_CSRRW) {
+                uint64_t curr_time = 0;
+                asm volatile("rdtime %0" : "=r"(curr_time));
+                /* We need to put the source (rs1) into the dest (rd) */
+                seL4_Word source = fault_get_reg(regs, rs1);
+                // seL4_Word dest = fault_get_reg(regs, rd);
+                // LOG_VMM("inst: 0x%lx, curr_time 0x%lx, source: 0x%llx, dest: 0x%llx\n", inst, curr_time, source, dest);
+                seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP);
+                assert(!res.error);
+                res.value &= ~SIP_TIMER;
+                seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP, res.value);
+                assert(!err);
 
-                        if (curr_time >= source) {
-                            inject_timer_irq(vcpu_id);
-                        } else {
-                            // LOG_VMM("waiting for timer\n");
-                            seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_TIMER, source);
-                            hart_waiting_for_timer[vcpu_id] = true;
-                            assert(!err);
-                        }
-                        fault_set_reg(regs, rd, source);
-                        break;
-                    } else {
-                        // TODO
-                        assert(false);
-                    }
-                    break;
+                if (curr_time >= source) {
+                    inject_timer_irq(vcpu_id);
+                } else {
+                    // LOG_VMM("waiting for timer\n");
+                    seL4_Error err = seL4_RISCV_VCPU_WriteRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_TIMER, source);
+                    hart_waiting_for_timer[vcpu_id] = true;
+                    assert(!err);
                 }
-                default:
-                    // TODO
-                    assert(false);
-                    break;
+                fault_set_reg(regs, rd, source);
+                break;
+            } else {
+                // TODO
+                assert(false);
             }
+            break;
         }
-        break;
+        default:
+            // TODO
+            assert(false);
+            break;
+        }
+    }
+    break;
     default:
         // TODO
         assert(false);
