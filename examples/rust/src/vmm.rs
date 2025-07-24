@@ -11,6 +11,7 @@ use core::ffi::{c_void};
 use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, debug_println};
 
 const GUEST_RAM_VADDR: usize = 0x40000000;
+const GUEST_RAM_SIZE: usize = 0x10000000;
 const GUEST_DTB_VADDR: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
 const GUEST_VCPU_ID: usize = 0;
@@ -33,7 +34,7 @@ const UART_CH: Channel = Channel::new(1);
 #[link(name = "vmm", kind = "static")]
 #[link(name = "microkit", kind = "static")]
 extern "C" {
-    fn linux_setup_images(ram_start: usize,
+    fn linux_setup_images(ram_start: usize, ram_size: usize,
                           kernel: usize, kernel_size: usize,
                           dtb_src: usize, dtb_dest: usize, dtb_size: usize,
                           initrd_src: usize, initrd_dest: usize, initrd_size: usize) -> usize;
@@ -70,7 +71,7 @@ fn init() -> VmmHandler {
     let initrd_addr = initrd.as_ptr() as usize;
 
     unsafe {
-        let guest_pc = linux_setup_images(GUEST_RAM_VADDR,
+        let guest_pc = linux_setup_images(GUEST_RAM_VADDR, GUEST_RAM_SIZE,
                                             linux_addr, linux.len(),
                                             dtb_addr, GUEST_DTB_VADDR, dtb.len(),
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
