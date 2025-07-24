@@ -46,7 +46,7 @@ static void virtio_snd_mmio_reset(struct virtio_device *dev)
 
 static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
-    switch (dev->data.DeviceFeaturesSel) {
+    switch (dev->regs.DeviceFeaturesSel) {
     case 0:
         // virtIO sound does not define any features
         *features = 0;
@@ -55,7 +55,7 @@ static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint3
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_SOUND_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
+        LOG_SOUND_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
         return false;
     }
 
@@ -65,7 +65,7 @@ static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint3
 static bool virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     bool success = false;
-    switch (dev->data.DriverFeaturesSel) {
+    switch (dev->regs.DriverFeaturesSel) {
     // feature bits 0 to 31
     case 0:
         success = (features == 0);
@@ -75,12 +75,12 @@ static bool virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint3
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_SOUND_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
+        LOG_SOUND_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
         return false;
     }
 
     if (success) {
-        dev->data.features_happy = 1;
+        dev->features_happy = 1;
     }
 
     return success;
@@ -147,7 +147,7 @@ static const char *code_to_str(uint32_t code)
 
 static void virtio_snd_respond(struct virtio_device *dev)
 {
-    dev->data.InterruptStatus = BIT_LOW(0);
+    dev->regs.InterruptStatus = BIT_LOW(0);
     bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
     assert(success);
 }
@@ -642,7 +642,7 @@ static bool virtio_snd_mmio_queue_notify(struct virtio_device *dev)
 {
     struct virtio_snd_device *state = device_state(dev);
 
-    if (dev->data.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
+    if (dev->regs.QueueSel > VIRTIO_SND_NUM_VIRTQ) {
         LOG_SOUND_ERR("Invalid queue\n");
         return false;
     }
@@ -650,7 +650,7 @@ static bool virtio_snd_mmio_queue_notify(struct virtio_device *dev)
     bool notify_driver = false;
     bool respond = false;
 
-    handle_virtq(dev, dev->data.QueueNotify, &notify_driver, &respond);
+    handle_virtq(dev, dev->regs.QueueNotify, &notify_driver, &respond);
 
     if (notify_driver) {
         microkit_notify(state->server_ch);
@@ -682,8 +682,8 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
 {
     struct virtio_device *dev = &sound_dev->virtio_device;
 
-    dev->data.DeviceID = VIRTIO_DEVICE_ID_SOUND;
-    dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_SOUND;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = sound_dev->vqs;
     dev->num_vqs = VIRTIO_SND_NUM_VIRTQ;

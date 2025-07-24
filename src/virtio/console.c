@@ -54,7 +54,7 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
 {
     LOG_CONSOLE("operation: get device features\n");
 
-    switch (dev->data.DeviceFeaturesSel) {
+    switch (dev->regs.DeviceFeaturesSel) {
     case 0:
         *features = 0;
         break;
@@ -62,7 +62,7 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DeviceFeaturesSel);
+        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
         return false;
     }
 
@@ -76,7 +76,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
 
     bool success = false;
 
-    switch (dev->data.DriverFeaturesSel) {
+    switch (dev->regs.DriverFeaturesSel) {
     // feature bits 0 to 31
     case 0:
         /* We do not offer any features in the first 32-bit bits */
@@ -87,12 +87,12 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->data.DriverFeaturesSel);
+        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
         return false;
     }
 
     if (success) {
-        dev->data.features_happy = 1;
+        dev->features_happy = 1;
         LOG_CONSOLE("device is feature happy\n");
     }
 
@@ -162,7 +162,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
-        dev->data.InterruptStatus = BIT_LOW(0);
+        dev->regs.InterruptStatus = BIT_LOW(0);
         bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
         assert(success);
 
@@ -207,7 +207,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
-        console->virtio_device.data.InterruptStatus = BIT_LOW(0);
+        console->virtio_device.regs.InterruptStatus = BIT_LOW(0);
         bool success = virq_inject(GUEST_VCPU_ID, console->virtio_device.virq);
         assert(success);
 
@@ -235,8 +235,8 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
                               int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
-    dev->data.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = console->vqs;
     dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;

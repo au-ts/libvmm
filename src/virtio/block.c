@@ -42,11 +42,11 @@ static void virtio_blk_mmio_reset(struct virtio_device *dev)
 
 static bool virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
-    if (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_BLOCK_ERR("driver somehow wants to read device features after FEATURES_OK\n");
     }
 
-    switch (dev->data.DeviceFeaturesSel) {
+    switch (dev->regs.DeviceFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
         *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
@@ -58,7 +58,7 @@ static bool virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint3
         break;
     default:
         LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n",
-                      dev->data.DeviceFeaturesSel);
+                      dev->regs.DeviceFeaturesSel);
         return false;
     }
 
@@ -76,7 +76,7 @@ static bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint3
     device_features = device_features | BIT_LOW(VIRTIO_BLK_F_FLUSH);
     device_features = device_features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
 
-    switch (dev->data.DriverFeaturesSel) {
+    switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
         success = (features == device_features);
@@ -87,12 +87,12 @@ static bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint3
         break;
     default:
         LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
-                      dev->data.DriverFeaturesSel);
+                      dev->regs.DriverFeaturesSel);
         return false;
     }
 
     if (success) {
-        dev->data.features_happy = 1;
+        dev->features_happy = 1;
     }
 
     return success;
@@ -147,7 +147,7 @@ static void virtio_blk_set_interrupt_status(struct virtio_device *dev,
     /* Set the reason of the irq.
        bit 0: used buffer
        bit 1: configuration change */
-    dev->data.InterruptStatus = used_buffer | (config_change << 1);
+    dev->regs.InterruptStatus = used_buffer | (config_change << 1);
 }
 
 /* Set response to virtio request to error */
@@ -526,8 +526,8 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
 
-    dev->data.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
-    dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
     dev->num_vqs = VIRTIO_BLK_NUM_VIRTQ;

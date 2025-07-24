@@ -80,17 +80,13 @@ typedef struct virtio_emul_funs {
     bool (*queue_notify)(struct virtio_device *dev);
 } virtio_device_funs_t;
 
-// infomation you need for manipulating MMIO Device Register Layout
-// @ivanv: I don't see why this extra struct is necessary, why not just make it part of the virtio device struct
-// virtio_device?
-typedef struct virtio_device_info {
+/* Emulated MMIO registers for the virtIO device */
+typedef struct virtio_device_regs {
     uint32_t DeviceID;
     uint32_t VendorID;
 
     uint32_t DeviceFeaturesSel;
     uint32_t DriverFeaturesSel;
-    /* True if we are happy with what the driver requires */
-    bool features_happy;
 
     uint32_t QueueSel;
     uint32_t QueueNotify;
@@ -100,11 +96,11 @@ typedef struct virtio_device_info {
     uint32_t Status;
 
     uint32_t ConfigGeneration;
-} virtio_device_info_t;
+} virtio_device_regs_t;
 
 /* Everything needed at runtime for a virtIO device to function. */
 typedef struct virtio_device {
-    virtio_device_info_t data;
+    virtio_device_regs_t regs;
     virtio_device_funs_t *funs;
     /* List of virt queues for the device */
     virtio_queue_handler_t *vqs;
@@ -114,6 +110,8 @@ typedef struct virtio_device {
     size_t virq;
     /* Device specific data such as sDDF queues */
     void *device_data;
+    /* True if we are happy with what the driver requires */
+    bool features_happy;
 } virtio_device_t;
 
 /**

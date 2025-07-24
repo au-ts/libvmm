@@ -40,19 +40,19 @@ static void virtio_net_reset(struct virtio_device *dev)
 
 static bool driver_ok(struct virtio_device *dev)
 {
-    return (dev->data.Status & VIRTIO_CONFIG_S_DRIVER_OK) &&
-           (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK);
+    return (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER_OK) &&
+           (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK);
 }
 
 static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     LOG_NET("operation: get device features\n");
 
-    if (dev->data.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_NET_ERR("Driver tried to read device features after FEATURES_OK\n");
     }
 
-    switch (dev->data.DeviceFeaturesSel) {
+    switch (dev->regs.DeviceFeaturesSel) {
     /* Feature bits 0 to 31 */
     case 0:
         *features = BIT_LOW(VIRTIO_NET_F_MAC);
@@ -62,7 +62,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_NET_ERR("Bad DeviceFeaturesSel 0x%x\n", dev->data.DeviceFeaturesSel);
+        LOG_NET_ERR("Bad DeviceFeaturesSel 0x%x\n", dev->regs.DeviceFeaturesSel);
         return false;
     }
     return true;
@@ -73,7 +73,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
 {
     bool success = true;
 
-    switch (dev->data.DriverFeaturesSel) {
+    switch (dev->regs.DriverFeaturesSel) {
     /* Feature bits 0 to 31 */
     case 0:
         /** F_MAC is required */
@@ -86,11 +86,11 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
         break;
 
     default:
-        LOG_NET_ERR("Bad DriverFeaturesSel 0x%x\n", dev->data.DriverFeaturesSel);
+        LOG_NET_ERR("Bad DriverFeaturesSel 0x%x\n", dev->regs.DriverFeaturesSel);
         success = false;
     }
     if (success) {
-        dev->data.features_happy = 1;
+        dev->features_happy = 1;
     }
     return success;
 }
@@ -138,7 +138,7 @@ static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t
 
 static bool virtio_net_respond(struct virtio_device *dev)
 {
-    dev->data.InterruptStatus = BIT_LOW(0);
+    dev->regs.InterruptStatus = BIT_LOW(0);
     bool success = virq_inject(GUEST_VCPU_ID, dev->virq);
     assert(success);
 
@@ -216,7 +216,7 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         LOG_NET_ERR("Driver not ready\n");
         return false;
     }
-    if (dev->data.QueueSel != VIRTIO_NET_TX_VIRTQ) {
+    if (dev->regs.QueueSel != VIRTIO_NET_TX_VIRTQ) {
         LOG_NET_ERR("Invalid queue\n");
         return false;
     }
@@ -384,8 +384,8 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
-    dev->data.DeviceID = VIRTIO_DEVICE_ID_NET;
-    dev->data.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;
     dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;

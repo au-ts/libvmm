@@ -29,8 +29,8 @@
 
 struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
 {
-    assert(dev->data.QueueSel < dev->num_vqs);
-    return &dev->vqs[dev->data.QueueSel].virtq;
+    assert(dev->regs.QueueSel < dev->num_vqs);
+    return &dev->vqs[dev->regs.QueueSel].virtq;
 }
 
 int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
@@ -38,42 +38,42 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
     int success = 1;
 
     // we only care about the new status
-    dev->data.Status &= reg;
-    reg ^= dev->data.Status;
+    dev->regs.Status &= reg;
+    reg ^= dev->regs.Status;
     // printf("VIRTIO MMIO|INFO: set status flag 0x%x.\n", reg);
 
     switch (reg) {
     case VIRTIO_CONFIG_S_RESET:
-        dev->data.Status = 0;
+        dev->regs.Status = 0;
         dev->funs->device_reset(dev);
         break;
 
     case VIRTIO_CONFIG_S_ACKNOWLEDGE:
         // are we following the initialization protocol?
-        if (dev->data.Status == 0) {
-            dev->data.Status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
+        if (dev->regs.Status == 0) {
+            dev->regs.Status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
             // nothing to do from our side (as the virtio device).
         }
         break;
 
     case VIRTIO_CONFIG_S_DRIVER:
         // are we following the initialization protocol?
-        if (dev->data.Status & VIRTIO_CONFIG_S_ACKNOWLEDGE) {
-            dev->data.Status |= VIRTIO_CONFIG_S_DRIVER;
+        if (dev->regs.Status & VIRTIO_CONFIG_S_ACKNOWLEDGE) {
+            dev->regs.Status |= VIRTIO_CONFIG_S_DRIVER;
             // nothing to do from our side (as the virtio device).
         }
         break;
 
     case VIRTIO_CONFIG_S_FEATURES_OK:
         // are we following the initialization protocol?
-        if (dev->data.Status & VIRTIO_CONFIG_S_DRIVER) {
+        if (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER) {
             // are features OK?
-            dev->data.Status |= (dev->data.features_happy ? VIRTIO_CONFIG_S_FEATURES_OK : 0);
+            dev->regs.Status |= (dev->features_happy ? VIRTIO_CONFIG_S_FEATURES_OK : 0);
         }
         break;
 
     case VIRTIO_CONFIG_S_DRIVER_OK:
-        dev->data.Status |= VIRTIO_CONFIG_S_DRIVER_OK;
+        dev->regs.Status |= VIRTIO_CONFIG_S_DRIVER_OK;
         // probably do some san checks here
         break;
 
@@ -104,10 +104,10 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         reg = VIRTIO_MMIO_DEV_VERSION;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_DEVICE_ID, REG_VIRTIO_MMIO_VENDOR_ID):
-        reg = dev->data.DeviceID;
+        reg = dev->regs.DeviceID;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_VENDOR_ID, REG_VIRTIO_MMIO_DEVICE_FEATURES):
-        reg = dev->data.VendorID;
+        reg = dev->regs.VendorID;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_DEVICE_FEATURES, REG_VIRTIO_MMIO_DEVICE_FEATURES_SEL):
         success = dev->funs->get_device_features(dev, &reg);
@@ -116,22 +116,22 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         reg = QUEUE_SIZE;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
-        if (dev->data.QueueSel < dev->num_vqs) {
-            reg = dev->vqs[dev->data.QueueSel].ready;
+        if (dev->regs.QueueSel < dev->num_vqs) {
+            reg = dev->vqs[dev->regs.QueueSel].ready;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_READY\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_READY\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_STATUS, REG_VIRTIO_MMIO_INTERRUPT_ACK):
-        reg = dev->data.InterruptStatus;
+        reg = dev->regs.InterruptStatus;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_STATUS, REG_VIRTIO_MMIO_QUEUE_DESC_LOW):
-        reg = dev->data.Status;
+        reg = dev->regs.Status;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG_GENERATION, REG_VIRTIO_MMIO_CONFIG):
-        reg = dev->data.ConfigGeneration;
+        reg = dev->regs.ConfigGeneration;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
         success = dev->funs->get_device_config(dev, offset, &reg);
@@ -148,6 +148,9 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
 
+    LOG_MMIO("read from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx, value: 0x%lx, PC: 0x%lx\n", dev->regs.DeviceID,
+             dev->regs.VendorID, offset, reg, regs->pc);
+
     return success;
 }
 
@@ -160,89 +163,90 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     /* Mask the data to write */
     data &= mask;
 
-    // printf("\"%s\"|VIRTIO MMIO|INFO: Write to 0x%x.\n", sel4cp_name, offset);
+    LOG_MMIO("write from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx with value 0x%x, PC: 0x%lx\n", dev->regs.DeviceID,
+             dev->regs.VendorID, offset, data, regs->pc);
 
     switch (offset) {
     case REG_RANGE(REG_VIRTIO_MMIO_DEVICE_FEATURES_SEL, REG_VIRTIO_MMIO_DRIVER_FEATURES):
-        dev->data.DeviceFeaturesSel = data;
+        dev->regs.DeviceFeaturesSel = data;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_DRIVER_FEATURES, REG_VIRTIO_MMIO_DRIVER_FEATURES_SEL):
         success = dev->funs->set_driver_features(dev, data);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_DRIVER_FEATURES_SEL, REG_VIRTIO_MMIO_QUEUE_SEL):
-        dev->data.DriverFeaturesSel = data;
+        dev->regs.DriverFeaturesSel = data;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_SEL, REG_VIRTIO_MMIO_QUEUE_NUM_MAX):
-        dev->data.QueueSel = data;
+        dev->regs.QueueSel = data;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NUM, REG_VIRTIO_MMIO_QUEUE_READY): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             virtq->num = (unsigned int)data;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
         if (data == 0x1) {
-            dev->vqs[dev->data.QueueSel].ready = true;
+            dev->vqs[dev->regs.QueueSel].ready = true;
             // the virtq is already in ram so we don't need to do any initiation
         }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NOTIFY, REG_VIRTIO_MMIO_INTERRUPT_STATUS):
-        dev->data.QueueNotify = (uint32_t)data;
+        dev->regs.QueueNotify = (uint32_t)data;
         success = dev->funs->queue_notify(dev);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_INTERRUPT_ACK, REG_VIRTIO_MMIO_STATUS):
-        dev->data.InterruptStatus &= ~data;
+        dev->regs.InterruptStatus &= ~data;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_STATUS, REG_VIRTIO_MMIO_QUEUE_DESC_LOW):
         success = handle_virtio_mmio_set_status_flag(dev, data);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_DESC_LOW, REG_VIRTIO_MMIO_QUEUE_DESC_HIGH): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->desc;
             ptr |= data;
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_LOW\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_LOW\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_DESC_HIGH, REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->desc;
             ptr |= (uintptr_t)data << 32;
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
     }
     break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW, REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->avail;
             ptr |= data;
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH, REG_VIRTIO_MMIO_QUEUE_USED_LOW): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->avail;
             ptr |= (uintptr_t)data << 32;
@@ -250,26 +254,26 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             // printf("VIRTIO MMIO|INFO: virtq avail 0x%lx\n.", ptr);
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_LOW, REG_VIRTIO_MMIO_QUEUE_USED_HIGH): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->used;
             ptr |= data;
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_LOW\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_LOW\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_USED_HIGH, REG_VIRTIO_MMIO_CONFIG_GENERATION): {
-        if (dev->data.QueueSel < dev->num_vqs) {
+        if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             uintptr_t ptr = (uintptr_t)virtq->used;
             ptr |= (uintptr_t)data << 32;
@@ -277,7 +281,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             // printf("VIRTIO MMIO|INFO: virtq used 0x%lx\n.", ptr);
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_HIGH\n", dev->data.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
