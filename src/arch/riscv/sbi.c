@@ -114,34 +114,35 @@ enum sbi_return_code {
 
 // TODO: these SBI handlers need to handle errors better by actually returning an SBI error.
 
-char *sbi_eid_to_str(seL4_Word sbi_eid) {
+char *sbi_eid_to_str(seL4_Word sbi_eid)
+{
     switch (sbi_eid) {
-        case SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR:
-            return "console putchar";
-        case SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR:
-            return "console getchar";
-        case SBI_EXTENSION_BASE:
-            return "base";
-        case SBI_EXTENSION_TIMER:
-            return "timer";
-        case SBI_EXTENSION_IPI:
-            return "IPI";
-        case SBI_EXTENSION_RFENCE:
-            return "RFENCE";
-        case SBI_EXTENSION_HART_STATE_MANAGEMENT:
-            return "HSM";
-        case SBI_EXTENSION_SYSTEM_RESET:
-            return "system reset";
-        case SBI_EXTENSION_PMU:
-            return "PMU";
-        case SBI_EXTENSION_DEBUG_CONSOLE:
-            return "debug console";
-        case SBI_EXTENSION_SYSTEM_SUSPEND:
-            return "system suspend";
-        case SBI_EXTENSION_CPPC:
-            return "CPPC";
-        default:
-            return "<unknown extension>";
+    case SBI_EXTENSION_LEGACY_CONSOLE_PUTCHAR:
+        return "console putchar";
+    case SBI_EXTENSION_LEGACY_CONSOLE_GETCHAR:
+        return "console getchar";
+    case SBI_EXTENSION_BASE:
+        return "base";
+    case SBI_EXTENSION_TIMER:
+        return "timer";
+    case SBI_EXTENSION_IPI:
+        return "IPI";
+    case SBI_EXTENSION_RFENCE:
+        return "RFENCE";
+    case SBI_EXTENSION_HART_STATE_MANAGEMENT:
+        return "HSM";
+    case SBI_EXTENSION_SYSTEM_RESET:
+        return "system reset";
+    case SBI_EXTENSION_PMU:
+        return "PMU";
+    case SBI_EXTENSION_DEBUG_CONSOLE:
+        return "debug console";
+    case SBI_EXTENSION_SYSTEM_SUSPEND:
+        return "system suspend";
+    case SBI_EXTENSION_CPPC:
+        return "CPPC";
+    default:
+        return "<unknown extension>";
     }
 }
 
@@ -280,7 +281,8 @@ static bool sbi_debug_console(seL4_Word sbi_fid, seL4_UserContext *regs)
 
 bool hart_waiting_for_timer[2];
 
-void inject_timer_irq(size_t vcpu_id) {
+void inject_timer_irq(size_t vcpu_id)
+{
     seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SIP);
     assert(!res.error);
     seL4_Word sip = res.value;
@@ -294,7 +296,8 @@ void inject_timer_irq(size_t vcpu_id) {
     assert(!err);
 }
 
-void sbi_handle_timer() {
+void sbi_handle_timer()
+{
     for (int i = 0; i < 2; i++) {
         if (hart_waiting_for_timer[i]) {
             inject_timer_irq(i);
