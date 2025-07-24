@@ -75,6 +75,7 @@ void init(void)
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
+                                             vmm_config.ram_size,
                                              (uintptr_t) _guest_kernel_image,
                                              kernel_size,
                                              (uintptr_t) _guest_dtb_image,

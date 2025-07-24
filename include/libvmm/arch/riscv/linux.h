@@ -30,6 +30,7 @@ struct linux_image_header {
 };
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
+                             size_t ram_size,
                              uintptr_t kernel,
                              size_t kernel_size,
                              uintptr_t dtb_src,

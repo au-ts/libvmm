@@ -75,15 +75,16 @@ void init(void) {
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
-                                      (uintptr_t) _guest_kernel_image,
-                                      kernel_size,
-                                      (uintptr_t) _guest_dtb_image,
-                                      GUEST_DTB_VADDR,
-                                      dtb_size,
-                                      (uintptr_t) _guest_initrd_image,
-                                      GUEST_INIT_RAM_DISK_VADDR,
-                                      initrd_size
-                                      );
+                                             GUEST_RAM_SIZE,
+                                             (uintptr_t) _guest_kernel_image,
+                                             kernel_size,
+                                             (uintptr_t) _guest_dtb_image,
+                                             GUEST_DTB_VADDR,
+                                             dtb_size,
+                                             (uintptr_t) _guest_initrd_image,
+                                             GUEST_INIT_RAM_DISK_VADDR,
+                                             initrd_size
+                                            );
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
