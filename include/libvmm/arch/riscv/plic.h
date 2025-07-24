@@ -7,8 +7,6 @@
 #include <stddef.h>
 #include <libvmm/virq.h>
 
-#define SIP_TIMER (1 << 5)
-
 #if defined(CONFIG_PLAT_QEMU_RISCV_VIRT)
 #define PLIC_ADDR 0xc000000
 #define PLIC_SIZE 0x4000000
