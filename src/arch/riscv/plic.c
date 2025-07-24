@@ -6,6 +6,7 @@
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/riscv/plic.h>
+#include <libvmm/arch/riscv/vcpu.h>
 #include <libvmm/arch/riscv/fault.h>
 
 // #define DEBUG_PLIC
@@ -40,8 +41,6 @@ struct plic_regs plic_regs;
 
 extern fault_instruction_t decoded_instruction;
 
-#define SIP_EXTERNAL (1 << 9)
-
 #define PLIC_IRQ_ENABLE_START 0x2000
 #define PLIC_IRQ_ENABLE_END 0x1F1FFC
 
@@ -51,6 +50,10 @@ extern fault_instruction_t decoded_instruction;
 
 #define PLIC_PRIOTIY_THRESHOLD_CONTEXT_1_START  0x201000
 #define PLIC_PRIOTIY_THRESHOLD_CONTEXT_1_END    0x201004
+
+#define PLIC_PRIOTIY_THRESHOLD_CONTEXT_3_START  0x203000
+#define PLIC_PRIOTIY_THRESHOLD_CONTEXT_3_END    0x203004
+
 #define PLIC_CLAIM_COMPLETE_CONTEXT_1_START     0x201004
 #define PLIC_CLAIM_COMPLETE_CONTEXT_1_END       0x201008
 
@@ -90,7 +93,7 @@ static bool plic_handle_fault_read(size_t vcpu_id, size_t offset, seL4_UserConte
         break;
     }
     default:
-        LOG_PLIC("invalid offset 0x%lx\n", offset);
+        LOG_VMM_ERR("invalid PLIC read offset 0x%lx (vCPU 0x%lx)\n", offset, vcpu_id);
         return false;
     }
 
@@ -141,6 +144,11 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         plic_regs.priority_threshold[1] = data;
         break;
     }
+    case PLIC_PRIOTIY_THRESHOLD_CONTEXT_3_START: {
+        LOG_PLIC("write priority threshold for context %d: %d\n", 3, data);
+        plic_regs.priority_threshold[3] = data;
+        break;
+    }
     case PLIC_CLAIM_COMPLETE_CONTEXT_1_START: {
         LOG_PLIC("write complete claim for pending IRQ %d\n", plic_pending_irq);
         /* TODO: we should be checking here, and probably in a lot of other places, that the
@@ -152,7 +160,7 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         break;
     }
     default:
-        LOG_VMM_ERR("invalid offset 0x%lx\n", offset);
+        LOG_VMM_ERR("invalid PLIC write offset 0x%lx (vCPU 0x%lx)\n", offset, vcpu_id);
         assert(false);
         return false;
     }

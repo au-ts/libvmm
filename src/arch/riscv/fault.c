@@ -10,6 +10,7 @@
 #include <libvmm/arch/riscv/plic.h>
 #include <libvmm/arch/riscv/fault.h>
 #include <libvmm/arch/riscv/sbi.h>
+#include <libvmm/arch/riscv/vcpu.h>
 
 #define BIT(n) (1ul<<(n))
 #define PT_SIZE 512
@@ -398,7 +399,6 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, bool compressed)
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
 {
     size_t label = microkit_msginfo_get_label(msginfo);
-    // LOG_VMM("handling fault '%s'\n", fault_to_string(label));
     bool success = false;
     switch (label) {
     case seL4_Fault_VMFault: {
