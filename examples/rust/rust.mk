@@ -26,6 +26,8 @@ IMAGES := vmm.elf
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 SYSTEM_FILE := $(EXAMPLE_DIR)/rust_vmm.system
 
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
+
 DTS := $(EXAMPLE_DIR)/images/linux.dts
 DTB := linux.dtb
 
