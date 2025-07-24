@@ -61,7 +61,9 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/guest.c \
-		    src/fault.c
+		    src/fault.c \
+		    src/linux.c \
+		    src/dtb.c
 
 CFILES := ${ARCH_INDEP_FILES}
 
