@@ -3,8 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-QEMU := qemu-system-aarch64
-
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
@@ -15,6 +13,8 @@ SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
+
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
 IMAGES := vmm.elf
@@ -22,10 +22,15 @@ IMAGES := vmm.elf
 LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+	QEMU := qemu-system-aarch64
+	QEMU_ARCH_ARGS := -machine virt,virtualization=on -cpu cortex-a53 -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
 else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
+else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_riscv64)
+	QEMU := qemu-system-riscv64
+	QEMU_ARCH_ARGS := -machine virt -kernel $(IMAGE_FILE)
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
@@ -42,8 +47,17 @@ CFLAGS := \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
 	  -MD \
-	  -MP \
-	  -target $(TARGET)
+	  -MP
+
+ifeq ($(ARCH),aarch64)
+	ARCH_FLAGS := -target aarch64-none-elf
+else ifeq ($(ARCH),riscv64)
+	ARCH_FLAGS := -march=rv64imafdc -target riscv64-none-elf
+else
+	$(error Unsupported ARCH given)
+endif
+
+CFLAGS += $(ARCH_FLAGS)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a --end-group
@@ -92,17 +106,15 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
-					-target $(TARGET) \
+					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include $(LIBVMM)/vmm.mk
 
 qemu: $(IMAGE_FILE)
-	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
+	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
 
