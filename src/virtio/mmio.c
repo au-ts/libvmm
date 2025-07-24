@@ -33,17 +33,6 @@ struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
     return &dev->vqs[dev->data.QueueSel].virtq;
 }
 
-/*
- * Protocol for device status changing can be found in section
- * '3.1 Device Initialization' of the virtIO specification.
- */
-// @ivanv: why is this function necessary, why not just use data.Status?
-int handle_virtio_mmio_get_status_flag(virtio_device_t *dev, uint32_t *retreg)
-{
-    *retreg = dev->data.Status;
-    return 1;
-}
-
 int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
 {
     int success = 1;
@@ -139,7 +128,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         reg = dev->data.InterruptStatus;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_STATUS, REG_VIRTIO_MMIO_QUEUE_DESC_LOW):
-        success = handle_virtio_mmio_get_status_flag(dev, &reg);
+        reg = dev->data.Status;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG_GENERATION, REG_VIRTIO_MMIO_CONFIG):
         reg = dev->data.ConfigGeneration;
