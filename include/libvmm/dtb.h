@@ -31,6 +31,4 @@ struct dtb_header {
     uint32_t size_dt_struct;
 };
 
-bool dtb_check_magic(struct dtb_header *h) {
-    return h->magic == DTB_MAGIC;
-}
+bool dtb_check_magic(char *bytes);
