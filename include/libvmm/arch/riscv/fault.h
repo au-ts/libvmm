@@ -62,6 +62,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo);
 
 void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t data);
 uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs);
+void fault_emulate_write_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t *value, uint32_t write_data);
 
 /* Calls seL4_TCB_WriteRegisters after incrementing the program counter. Incremenets by 2 if
  * we are dealing with a 'compressed' instruction and 4 if not. */
