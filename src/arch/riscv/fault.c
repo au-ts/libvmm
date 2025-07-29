@@ -234,7 +234,7 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     uint8_t op_code = instruction & 0x7f;
     /* funct3 is from bits 12:14. */
     uint8_t funct3 = (instruction >> 12) & 0x7;
-    LOG_VMM("decoding from 0x%lx, 0x%x\n", regs->pc, instruction);
+    // LOG_VMM("decoding from 0x%lx, 0x%x\n", regs->pc, instruction);
 
     /* If we are in here, we are dealing with a compressed instruction */
     switch (instruction_lo >> 13) {
@@ -242,16 +242,18 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
         return (struct fault_instruction) {
             .addr = addr,
             .from_htinst = false,
+            .compressed = true,
             .op_code = OP_CODE_STORE,
-            .funct3 = funct3,
+            .funct3 = FUNCT3_WIDTH_W,
             .rs2 = (instruction_lo >> 2) & (BIT(3) - 1),
         };
     case FUNCT3_CLW:
         return (struct fault_instruction) {
             .addr = addr,
             .from_htinst = false,
+            .compressed = true,
             .op_code = OP_CODE_LOAD,
-            .funct3 = funct3,
+            .funct3 = FUNCT3_WIDTH_W,
             .rd = (instruction_lo >> 2) & (BIT(3) - 1),
         };
     default:
@@ -263,6 +265,7 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
         return (struct fault_instruction) {
             .addr = addr,
             .from_htinst = false,
+            .compressed = false,
             .op_code = OP_CODE_STORE,
             .funct3 = funct3,
             .rs2 = (instruction >> 20) & (BIT(5) - 1),
@@ -270,6 +273,7 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     case OP_CODE_LOAD:
         return (struct fault_instruction) {
             .addr = addr,
+            .compressed = false,
             .from_htinst = false,
             .op_code = OP_CODE_LOAD,
             .funct3 = funct3,
@@ -354,7 +358,7 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
 
     /* If the faulting address is not 4-byte aligned then we manipulate
      * the data to get the right part of it into the resulting register. */
-    seL4_Word data_offset = (instruction->addr & 0x3) * 8;
+    uint8_t data_offset = (instruction->addr & 0x3) * 8;
     reg |= data >> data_offset;
 
     if (!instruction->from_htinst && instruction->compressed) {
@@ -366,9 +370,6 @@ void fault_emulate_read_access(fault_instruction_t *instruction, seL4_UserContex
 
 uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserContext *regs)
 {
-    // TODO: need to handle getting data for non-word sized access
-    assert(instruction->funct3 == 2);
-
     uint32_t reg;
     if (!instruction->from_htinst && instruction->compressed) {
         reg = fault_get_reg_compressed(regs, instruction->rs2);
@@ -377,6 +378,39 @@ uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserConte
     }
 
     return reg;
+}
+
+void fault_emulate_write_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t *value, uint32_t write_data) {
+    uint32_t data = write_data;
+    uint8_t offset = (instruction->addr & 0x3) * 8;
+    uint32_t persistent_data_mask = 0;
+    switch (instruction->funct3) {
+    case FUNCT3_WIDTH_B:
+        persistent_data_mask = ~(0xff << offset);
+        data &= 0x000000ff;
+        break;
+    case FUNCT3_WIDTH_H:
+        /* TODO: potential UB if there's something like a write-half at offset 0x3. I don't
+         * even know if that's legal or how the tf we would handle it. */
+        persistent_data_mask = ~(0xffff << offset);
+        data &= 0x0000ffff;
+        break;
+    case FUNCT3_WIDTH_W:
+        persistent_data_mask = 0;
+        data &= 0xffffffff;
+        break;
+    default:
+        LOG_VMM_ERR("invalid funct3 (0x%hhx) at PC 0x%lx\n", instruction->funct3, regs->pc);
+        assert(false);
+        break;
+    }
+
+    /* Now we need to OR the write data with the bits of the current value we are not writing
+     * to, depending on the data-width of the instruction. */
+
+    /* Finally write out the constructed data */
+    uint32_t persistent_data = *value & persistent_data_mask;
+    *value = (persistent_data | data);
 }
 
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, bool compressed)
