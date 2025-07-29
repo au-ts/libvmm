@@ -17,6 +17,17 @@
 #define LOG_PLIC(...) do{}while(0)
 #endif
 
+#define PLIC_MAX_REGISTERED_IRQS 10
+
+struct virq {
+    int irq;
+    virq_ack_fn_t ack_fn;
+    void *ack_data;
+};
+
+struct virq plic_registered_irqs[PLIC_MAX_REGISTERED_IRQS];
+size_t plic_register_count = 0;
+
 /*
  * Note that this register map is not intended to match
  * the layout of the device itself as we are virtualising access
@@ -121,11 +132,11 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
                  enable_group * 32,
                  ((enable_group + 1) * 32 - 1), data);
         if (data != 0) {
-            LOG_PLIC("(VPCU %lu) writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", vcpu_id, offset,
+            LOG_VMM("(VPCU %lu) writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", vcpu_id, offset,
                      enable_group, context,
                      data);
         }
-        plic_regs.enable_bits[context][enable_group] = data;
+        fault_emulate_write_access(instruction, regs, &plic_regs.enable_bits[context][enable_group], data);
         break;
     }
     case PLIC_IRQ_PRIORITY_START...PLIC_IRQ_PRIORITY_END: {
@@ -136,25 +147,31 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         }
 
         LOG_PLIC("write priority for IRQ source %d: %d\n", irq_index, data);
-        plic_regs.priority[irq_index] = data;
+        fault_emulate_write_access(instruction, regs, &plic_regs.priority[irq_index], data);
         break;
     }
     case PLIC_PRIOTIY_THRESHOLD_CONTEXT_1_START: {
         LOG_PLIC("write priority threshold for context %d: %d\n", 1, data);
-        plic_regs.priority_threshold[1] = data;
+        fault_emulate_write_access(instruction, regs, &plic_regs.priority_threshold[1], data);
         break;
     }
     case PLIC_PRIOTIY_THRESHOLD_CONTEXT_3_START: {
         LOG_PLIC("write priority threshold for context %d: %d\n", 3, data);
-        plic_regs.priority_threshold[3] = data;
+        fault_emulate_write_access(instruction, regs, &plic_regs.priority_threshold[3], data);
         break;
     }
     case PLIC_CLAIM_COMPLETE_CONTEXT_1_START: {
-        LOG_PLIC("write complete claim for pending IRQ %d\n", plic_pending_irq);
+        LOG_VMM("write complete claim for pending IRQ %d\n", plic_pending_irq);
         /* TODO: we should be checking here, and probably in a lot of other places, that the
          * IRQ attempting to be claimed is actually enabled. */
         /* TODO: double check but when we get a claim we should be clearing the pending bit */
         // size_t irq_pending_group = plic_pending_irq / 32;
+        for (int i = 0 ; i < plic_register_count; i++) {
+            struct virq *virq = &plic_registered_irqs[i];
+            if (virq->irq == plic_pending_irq) {
+                virq->ack_fn(vcpu_id, virq->irq, virq->ack_data);
+            }
+        }
         plic_pending_irq = 0;
         // plic_regs.pending_bits[irq_pending_group] = 0;
         break;
@@ -167,17 +184,6 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
 
     return true;
 }
-
-#define PLIC_MAX_REGISTERED_IRQS 10
-
-struct virq {
-    int irq;
-    virq_ack_fn_t ack_fn;
-    void *ack_data;
-};
-
-struct virq plic_registered_irqs[PLIC_MAX_REGISTERED_IRQS];
-size_t plic_register_count = 0;
 
 bool plic_register_irq(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *ack_data)
 {
