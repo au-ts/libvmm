@@ -115,6 +115,9 @@ bool fault_handle_vm_exception(size_t vcpu_id)
         return fault_advance_vcpu(vcpu_id, &regs);
 #elif defined(CONFIG_ARCH_RISCV)
         return fault_advance_vcpu(vcpu_id, &regs, decoded_instruction.compressed);
+#elif defined(CONFIG_ARCH_X86_64)
+        assert(false);
+        return false;
 #else
 #error "Unknown architecture for fault handling"
 #endif

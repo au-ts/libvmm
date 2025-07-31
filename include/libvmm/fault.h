@@ -14,6 +14,8 @@
 #include <libvmm/arch/aarch64/fault.h>
 #elif defined(CONFIG_ARCH_RISCV)
 #include <libvmm/arch/riscv/fault.h>
+#elif defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/fault.h>
 #endif
 
 typedef bool (*vm_exception_handler_t)(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);

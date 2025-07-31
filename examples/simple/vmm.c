@@ -19,6 +19,16 @@
 #include <libvmm/arch/riscv/fault.h>
 #include <libvmm/arch/riscv/sbi.h>
 #endif
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/fault.h>
+#endif
+
+#if defined(CONFIG_ARCH_RISCV) || defined(CONFIG_ARCH_AARCH64)
+#define HAS_SERIAL_IRQ 1
+#else
+#define HAS_SERIAL_IRQ 0
+#endif
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -39,6 +49,9 @@
 #elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#elif defined(BOARD_x86_64_generic_vtx)
+#define GUEST_DTB_VADDR 0x0
+#define GUEST_INIT_RAM_DISK_VADDR 0x0
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -59,8 +72,6 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
-#else
-#error Need to define serial interrupt
 #endif
 
 /* Data for the guest's kernel image. */
@@ -81,8 +92,9 @@ void init(void)
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+#if defined(CONFIG_ARCH_RISCV) || defined(CONFIG_ARCH_AARCH64)
+    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
                                              GUEST_RAM_SIZE,
                                              (uintptr_t) _guest_kernel_image,
@@ -94,6 +106,16 @@ void init(void)
                                              GUEST_INIT_RAM_DISK_VADDR,
                                              initrd_size
                                             );
+#else
+    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr,
+                                         GUEST_RAM_SIZE,
+                                         (uintptr_t) _guest_kernel_image,
+                                         kernel_size,
+                                         (uintptr_t) _guest_initrd_image,
+                                         GUEST_INIT_RAM_DISK_VADDR,
+                                         initrd_size
+                                        );
+#endif
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -104,10 +126,12 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+#if HAS_SERIAL_IRQ
     success = virq_register_passthrough(GUEST_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
     assert(success);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+#endif
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -115,6 +139,7 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
+#if HAS_SERIAL_IRQ
     case SERIAL_IRQ_CH: {
         bool success = virq_handle_passthrough(SERIAL_IRQ_CH);
         if (!success) {
@@ -122,6 +147,7 @@ void notified(microkit_channel ch)
         }
         break;
     }
+#endif
         /* TODO: temporary */
 #ifdef CONFIG_ARCH_RISCV
     case VTIMER_IRQ_CH: {

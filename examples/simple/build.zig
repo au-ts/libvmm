@@ -8,6 +8,7 @@ const MicrokitBoard = enum {
     qemu_virt_riscv64,
     odroidc4,
     maaxboard,
+    x86_64_generic_vtx,
 };
 
 const Target = struct {
@@ -55,6 +56,15 @@ const targets = [_]Target {
             .abi = .none,
         },
     },
+    .{
+        .board = MicrokitBoard.x86_64_generic_vtx,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .x86_64,
+            .cpu_model = .{ .explicit = std.Target.Cpu.Model.generic(.x86_64) },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    }
 };
 
 fn findTarget(board: MicrokitBoard) std.Target.Query {
@@ -104,7 +114,7 @@ pub fn build(b: *std.Build) !void {
     const arm_vgic_version: usize = switch (microkit_board_option) {
         .qemu_virt_aarch64, .odroidc4 => 2,
         .maaxboard => 3,
-        .qemu_virt_riscv64 => 0,
+        .qemu_virt_riscv64, .x86_64_generic_vtx => 0,
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -127,22 +137,28 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    const base_dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
-    const overlay = b.fmt("board/{s}/overlay.dts", .{ microkit_board });
-    const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
-        "sh", "../../tools/dtscat", base_dts_path, overlay
-    });
-    dts_cat_cmd.addFileInput(b.path(base_dts_path));
-    dts_cat_cmd.addFileInput(b.path(overlay));
-    const final_dts = dts_cat_cmd.captureStdOut();
+    const dtb = blk: {
+        if (target.result.cpu.arch != .x86_64) {
+            const base_dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
+            const overlay = b.fmt("board/{s}/overlay.dts", .{ microkit_board });
+            const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
+                "sh", "../../tools/dtscat", base_dts_path, overlay
+            });
+            dts_cat_cmd.addFileInput(b.path(base_dts_path));
+            dts_cat_cmd.addFileInput(b.path(overlay));
+            const final_dts = dts_cat_cmd.captureStdOut();
 
-    // For actually compiling the DTS into a DTB
-    const dtc_cmd = b.addSystemCommand(&[_][]const u8{
-        "dtc", "-q", "-I", "dts", "-O", "dtb"
-    });
-    dtc_cmd.addFileArg(.{ .cwd_relative = b.getInstallPath(.prefix, "final.dts") });
-    dtc_cmd.step.dependOn(&b.addInstallFileWithDir(final_dts, .prefix, "final.dts").step);
-    const dtb = dtc_cmd.captureStdOut();
+            // For actually compiling the DTS into a DTB
+            const dtc_cmd = b.addSystemCommand(&[_][]const u8{
+                "dtc", "-q", "-I", "dts", "-O", "dtb"
+            });
+            dtc_cmd.addFileArg(.{ .cwd_relative = b.getInstallPath(.prefix, "final.dts") });
+            dtc_cmd.step.dependOn(&b.addInstallFileWithDir(final_dts, .prefix, "final.dts").step);
+            break :blk dtc_cmd.captureStdOut();
+        } else {
+            break :blk null;
+        }
+    };
 
     // Add microkit.h to be used by the API wrapper.
     exe.addIncludePath(libmicrokit_include);
@@ -161,7 +177,6 @@ pub fn build(b: *std.Build) !void {
             "-Wall",
             "-Werror",
             "-Wno-unused-function",
-            "-mstrict-align",
             b.fmt("-DBOARD_{s}", .{ microkit_board })
         }
     });
@@ -174,7 +189,9 @@ pub fn build(b: *std.Build) !void {
         }),
     });
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
-    guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
+    if (dtb != null) {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(dtb.?, .prefix, "linux.dtb").step);
+    }
 
     if (custom_linux) |c| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(c, .prefix, "linux").step);
@@ -205,7 +222,10 @@ pub fn build(b: *std.Build) !void {
     });
     const rand = prng.random();
 
-    const dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    var dtb_image_arg: []const u8 = "";
+    if (dtb != null) {
+        dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    }
     const random_arg = b.fmt("-DRANDOM=\"{}\"", .{ rand.int(usize) });
     guest_images.addCSourceFile(.{
         .file = libvmm_dep.path("tools/package_guest_images.S"),
@@ -248,8 +268,8 @@ pub fn build(b: *std.Build) !void {
 
     // This is setting up a `qemu` command for running the system using QEMU,
     // which we only want to do when we have a board that we can actually simulate.
-    const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
     if (microkit_board_option == .qemu_virt_aarch64) {
+        const loader_arg = b.fmt("loader,file={s},addr=0x70000000,cpu-num=0", .{ final_image_dest });
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-aarch64",
             "-machine",
@@ -280,6 +300,36 @@ pub fn build(b: *std.Build) !void {
             "2G",
             "-nographic",
         });
+        qemu_cmd.step.dependOn(b.default_step);
+        const simulate_step = b.step("qemu", "Simulate the image via QEMU");
+        simulate_step.dependOn(&qemu_cmd.step);
+    } else if (microkit_board_option == .x86_64_generic_vtx) {
+        const kernel = microkit_board_dir.path(b, "elf/sel4.elf");
+        const kernel_objcopy = b.addSystemCommand(&.{
+            "llvm-objcopy", "-O", "elf32-i386"
+        });
+        kernel_objcopy.addFileArg(kernel);
+        kernel_objcopy.addFileInput(kernel);
+        const kernel32 = kernel_objcopy.addOutputFileArg("kernel32.elf");
+
+        const qemu_cmd = b.addSystemCommand(&[_][]const u8{
+            "qemu-system-x86_64",
+            "-cpu",
+            // TODO: use +svm on AMD hosts but +vtx on Intel?
+            "Nehalem,+fsgsbase,+pdpe1gb,+pcid,+invpcid,+xsave,+xsaves,+xsaveopt,+vtx,+vme",
+            "-accel",
+            "kvm",
+            "-m",
+            "4G",
+            "-display", "none",
+            "-serial",
+            "mon:stdio",
+            "-kernel",
+            b.getInstallPath(.prefix, "kernel32.elf"),
+            "-initrd",
+            b.getInstallPath(.bin, "loader.img"),
+        });
+        qemu_cmd.step.dependOn(&b.addInstallFileWithDir(kernel32, .prefix, "kernel32.elf").step);
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image via QEMU");
         simulate_step.dependOn(&qemu_cmd.step);

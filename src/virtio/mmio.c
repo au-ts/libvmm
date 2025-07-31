@@ -175,6 +175,11 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     data = fault_instruction_data(&decoded_instruction, regs);
     // TODO: handle non-word writes.
     assert(decoded_instruction.funct3 == FUNCT3_WIDTH_W);
+#elif defined(CONFIG_ARCH_X86_64)
+    data = 0;
+    assert(false);
+#else
+    #error "Unknown architecture for virtIO MMIO"
 #endif
 
     LOG_MMIO("write from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx with value 0x%x, PC: 0x%lx\n", dev->regs.DeviceID,
