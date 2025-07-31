@@ -26,6 +26,9 @@
     -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
+    <memory_region name="pci_cs" size="0x100000" />
+    <memory_region name="memory_resource" size="0xFF00000" />
+
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
         <!--
@@ -36,6 +39,8 @@
             at the same address in the VMMs virutal address space.
         -->
         <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="pci_cs" vaddr="0x20000000" perms="rw" setvar_vaddr="pci_cs" />
+        <map mr="memory_resource" vaddr="0x20100000" perms="rw" setvar_vaddr="memory_resource" />
         <virtual_machine name="linux" >
             <vcpu id="0" />
             <!--
@@ -57,6 +62,7 @@
              accesses will result in virtual memory faults, routed to the VMM.
             -->
             <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
+            <map mr="pci_cs" vaddr="0x10000000" perms="r" />
         </virtual_machine>
         <!--
             When the serial that is mapped into the guest receives input, we
@@ -65,6 +71,7 @@
             so that it can handle it appropriately. The IRQ is for the
             platform's PL011 UART the VMM is expecting the ID of the IRQ to be 1.
          -->
+
         <irq irq="33" id="1" />
     </protection_domain>
 </system>

@@ -8,7 +8,6 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
-#include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/net.h>
 #include <sddf/network/queue.h>
 
@@ -402,4 +401,16 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     net_dev->tx_ch = tx_ch;
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
+}
+
+bool virtio_pci_net_init(virtio_pci_device_t *net_dev, uintptr_t pci_cs)
+{
+    net_dev->device_id = 0x1000;
+    net_dev->vendor_id = 0x1AF4;
+    net_dev->device_class = PCI_CLASS_NETWORK_ETHERNET;
+    net_dev->pci_cs = (struct pci_config_space *)pci_cs;
+
+    pci_add_memory_bar(net_dev, 0, 0x10000);
+
+    return virtio_pci_register_device(net_dev);
 }

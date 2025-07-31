@@ -12,6 +12,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/virtio/net.h>
+#include <libvmm/virtio/pci.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -58,6 +60,11 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+uintptr_t pci_cs;
+uintptr_t memory_resource;
+
+struct virtio_pci_device test_dev;
+
 
 static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
     /*
@@ -97,6 +104,9 @@ void init(void) {
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+
+    pci_add_memory_resource(0x20100000, memory_resource, 0xFF00000);
+    virtio_pci_net_init(&test_dev, pci_cs);
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
