@@ -8,7 +8,7 @@
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/arch/aarch64/fault.h>
 

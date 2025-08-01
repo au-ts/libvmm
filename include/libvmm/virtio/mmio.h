@@ -102,19 +102,24 @@ typedef struct virtio_device_info {
     uint32_t ConfigGeneration;
 } virtio_device_info_t;
 
+typedef struct virtio_mmio_data {
+    uint32_t revision;
+    uint32_t vendor_id;
+} virtio_mmio_data_t;
+
 /* Everything needed at runtime for a virtIO device to function. */
-typedef struct virtio_device {
-    virtio_device_info_t data;
-    virtio_device_funs_t *funs;
-    /* List of virt queues for the device */
-    virtio_queue_handler_t *vqs;
-    /* Length of the vqs list */
-    size_t num_vqs;
-    /* Virtual IRQ associated with this virtIO device */
-    size_t virq;
-    /* Device specific data such as sDDF queues */
-    void *device_data;
-} virtio_device_t;
+/* typedef struct virtio_device { */
+/*     virtio_device_info_t data; */
+/*     virtio_device_funs_t *funs; */
+/*     /\* List of virt queues for the device *\/ */
+/*     virtio_queue_handler_t *vqs; */
+/*     /\* Length of the vqs list *\/ */
+/*     size_t num_vqs; */
+/*     /\* Virtual IRQ associated with this virtIO device *\/ */
+/*     size_t virq; */
+/*     /\* Device specific data such as sDDF queues *\/ */
+/*     void *device_data; */
+/* } virtio_device_t; */
 
 /**
  * Handles MMIO Device Register Layout I/O for VirtIO MMIO
@@ -127,13 +132,3 @@ typedef struct virtio_device {
  */
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
 
-/*
- * Registers a new virtIO device at a given guest-physical region.
- *
- * Assumes the virtio_device_t *dev struct passed has been populated
- * and virtual IRQ associated with the device has been registered.
- */
-bool virtio_mmio_register_device(virtio_device_t *dev,
-                                 uintptr_t region_base,
-                                 uintptr_t region_size,
-                                 size_t virq);

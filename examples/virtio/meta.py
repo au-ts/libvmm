@@ -69,34 +69,38 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
-    # Serial subsystem
-    serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
-    serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
-    # Increase the stack size as running with UBSAN uses more stack space than normal.
-    serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
-                                      priority=199, stack_size=0x2000)
-    serial_node = dtb.node(board.serial)
-    assert serial_node is not None
-    guest_serial_node = client_dtb.node(board.guest_serial)
-    assert guest_serial_node is not None
+    serial_node = dtb.node("pl011@9000000")
+    client0.add_passthrough_device(serial_node)
+    # client0.add_passthrough_irq(serial_node)
 
-    serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
-                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
-    client0.add_virtio_mmio_console(guest_serial_node, serial_system)
+    # # Serial subsystem
+    # serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
+    # serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
+    # # Increase the stack size as running with UBSAN uses more stack space than normal.
+    # serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
+    #                                   priority=199, stack_size=0x2000)
+    # serial_node = dtb.node(board.serial)
+    # assert serial_node is not None
+    # guest_serial_node = client_dtb.node(board.guest_serial)
+    # assert guest_serial_node is not None
 
-    pds = [
-        serial_driver,
-        serial_virt_tx,
-        serial_virt_rx,
-    ]
-    for pd in pds:
-        sdf.add_pd(pd)
+    # serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
+    #                             serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
+    # client0.add_virtio_mmio_console(guest_serial_node, serial_system)
+
+    # pds = [
+    #     serial_driver,
+    #     serial_virt_tx,
+    #     serial_virt_rx,
+    # ]
+    # for pd in pds:
+    #     sdf.add_pd(pd)
 
     # Net subsystem
     net_node = dtb.node(board.net)
     assert net_node is not None
-    guest_net_node = client_dtb.node(board.guest_net)
-    assert guest_net_node is not None
+    # guest_net_node = client_dtb.node(board.guest_net)
+    # assert guest_net_node is not None
 
     eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
                                   priority=101, budget=100, period=400)
@@ -115,7 +119,21 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    net_system.add_client_with_copier(vmm_client0, client0_net_copier)
+
+    ############ VIRTIO PCI ############
+    config_space = MemoryRegion("config-space", 0x10000)
+    sdf.add_mr(config_space)
+    vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
+    vm_client0.add_map(Map(config_space, vaddr=0x10000000, perms="r"))
+
+    memory_resource = MemoryRegion("memory_resource", 0x10000)
+    sdf.add_mr(memory_resource)
+    vmm_client0.add_map(Map(memory_resource, vaddr=0x20100000, perms="rw"))
+    # vm_client0.add_map(Map(memory_resource, vaddr=0x20100000, perms="r"))
+
+    ############ VIRTIO PCI ############
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -150,8 +168,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
 
-    assert serial_system.connect()
-    assert serial_system.serialise_config(output_dir)
+    # assert serial_system.connect()
+    # assert serial_system.serialise_config(output_dir)
     assert blk_system.connect()
     assert blk_system.serialise_config(output_dir)
     assert net_system.connect()

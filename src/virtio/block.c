@@ -103,7 +103,7 @@ static bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_
     struct virtio_blk_device *state = device_state(dev);
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uintptr_t config_field_offset = (uintptr_t)offset;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
     LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
@@ -117,7 +117,7 @@ static bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_
     struct virtio_blk_device *state = device_state(dev);
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uintptr_t config_field_offset = (uintptr_t)offset;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *config_field_addr = val;
     LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with value %d\n",

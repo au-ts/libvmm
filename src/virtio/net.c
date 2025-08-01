@@ -8,6 +8,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
+#include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/net.h>
 #include <sddf/network/queue.h>
 
@@ -100,7 +101,7 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
 {
     struct virtio_net_config *config = &device_state(dev)->config;
 
-    uint32_t word_offset = (offset - REG_VIRTIO_MMIO_CONFIG) / sizeof(uint32_t);
+    uint32_t word_offset = offset / sizeof(uint32_t);
     switch (word_offset) {
     case 0:
         *ret_val = config->mac[0];
@@ -403,14 +404,66 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_net_init(virtio_pci_device_t *net_dev, uintptr_t pci_cs)
+
+static virtio_device_funs_t pci_functions = {
+    .device_reset = virtio_net_reset,
+};
+
+/* bool virtio_pci_net_init(virtio_pci_device_t *net_dev, uintptr_t pci_cs) */
+/* { */
+/*     struct virtio_device *dev */
+/*     net_dev->device_id = 0x1000; */
+/*     net_dev->vendor_id = 0x1AF4; */
+/*     net_dev->device_class = PCI_CLASS_NETWORK_ETHERNET; */
+/*     net_dev->pci_cs = (struct pci_config_space *)pci_cs; */
+/*     net_dev->funs = &pci_functions; */
+
+/*     pci_add_memory_bar(net_dev, 0, 0x10000); */
+
+/*     return virtio_pci_register_device(net_dev); */
+/* } */
+
+bool virtio_pci_net_init(struct virtio_net_device *net_dev,
+                          uintptr_t cfg_space_base_vm,
+                          uintptr_t cfg_space_base_vmm,
+                          uint32_t cfg_space_size,
+                          size_t virq,
+                          net_queue_handle_t *rx,
+                          net_queue_handle_t *tx,
+                          uintptr_t rx_data,
+                          uintptr_t tx_data,
+                          microkit_channel rx_ch,
+                          microkit_channel tx_ch,
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
-    net_dev->device_id = 0x1000;
-    net_dev->vendor_id = 0x1AF4;
-    net_dev->device_class = PCI_CLASS_NETWORK_ETHERNET;
-    net_dev->pci_cs = (struct pci_config_space *)pci_cs;
+    struct virtio_device *dev = &net_dev->virtio_device;
 
-    pci_add_memory_bar(net_dev, 0, 0x10000);
+    dev->data.DeviceID = VIRTIO_DEVICE_ID_NET;
+    dev->data.VendorID = VIRTIO_PCI_VENDOR_ID;
+    dev->funs = &functions;
+    dev->vqs = net_dev->vqs;
+    dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;
+    /* dev->virq = virq; */
+    dev->device_data = net_dev;
 
-    return virtio_pci_register_device(net_dev);
+    memcpy(net_dev->config.mac, mac, VIRTIO_NET_CONFIG_MAC_SZ);
+
+    net_dev->rx = *rx;
+    net_dev->tx = *tx;
+    net_dev->rx_data = (void *)rx_data;
+    net_dev->tx_data = (void *)tx_data;
+    net_dev->rx_ch = rx_ch;
+    net_dev->tx_ch = tx_ch;
+
+    dev->transport_type = VIRTIO_TRANSPORT_PCI;
+    dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
+    dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
+    dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
+    dev->transport.pci.cfg_space = (struct pci_config_space *)cfg_space_base_vmm;
+    dev->transport.pci.cfg_space_vm = cfg_space_base_vm;
+    dev->transport.pci.cfg_size = cfg_space_size;
+
+    pci_add_memory_bar(dev, 0, 0x10000);
+
+    return virtio_pci_register_device(dev);
 }

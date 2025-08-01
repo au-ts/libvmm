@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 #include <sddf/serial/queue.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 
 #define RX_QUEUE 0
 #define TX_QUEUE 1

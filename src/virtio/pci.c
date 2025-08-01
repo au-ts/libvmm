@@ -1,0 +1,533 @@
+/*
+ * Copyright 2025, UNSW (ABN 57 195 873 179)
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <libvmm/virtio/virtio.h>
+#include <libvmm/virtio/config.h>
+#include <libvmm/arch/aarch64/fault.h>
+
+static struct pci_memory_resource registered_pci_memory_resource;
+static struct pci_memory_bar global_memory_bars[MAX_MEM_BARS];
+
+/**
+ * Allocate a memory region from a memory bar for a capability.
+ */
+static uintptr_t pci_allocate_bar_memory(virtio_device_t *dev, uint8_t dev_bar_id, uint32_t size)
+{
+    // TODO: handle 64-bit memory bars??? assumes all bars are 32-bits for now
+
+    // indice of the bar in global_memory_bars
+    uint32_t idx = dev->transport.pci.mem_bar_ids[dev_bar_id];
+
+    assert(global_memory_bars[idx].free_offset + size <= global_memory_bars[idx].size);
+
+    uintptr_t allocated_offset = global_memory_bars[idx].free_offset;
+    global_memory_bars[idx].free_offset = global_memory_bars[idx].free_offset + size;
+
+    return allocated_offset;
+}
+
+/**
+ * @config_space        the target device function to add capabilities to
+ * @offset              offest to place the new cap at
+ * @cfg_type            configuration type to be added
+ */
+static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint8_t cfg_type,
+                           uint8_t bar, uint8_t next_ptr)
+{
+    uintptr_t new_cap_addr = (uintptr_t)dev->transport.pci.cfg_space + offset;
+    uint8_t len;            // length of the new cap
+    uint32_t size = 0;      // size of the structure on the BAR, in bytes
+
+    // Add the capability to the config space
+    switch (cfg_type) {
+    case VIRTIO_PCI_CAP_COMMON_CFG:
+    case VIRTIO_PCI_CAP_ISR_CFG:
+    case VIRTIO_PCI_CAP_DEVICE_CFG:
+        len = sizeof(struct virtio_pci_cap);
+        assert(offset + len < FUNC_CONFIG_SPACE_SIZE);
+        size = 0x1000;
+        break;
+    case VIRTIO_PCI_CAP_NOTIFY_CFG:
+        len = sizeof(struct virtio_pci_notify_cap);
+        assert(offset + len < FUNC_CONFIG_SPACE_SIZE);
+        // TODO: double-check this size
+        size = 0x1000;
+        struct virtio_pci_notify_cap *notify = (struct virtio_pci_notify_cap *)new_cap_addr;
+        notify->notify_off_multiplier = 2;
+        break;
+    case VIRTIO_PCI_CAP_PCI_CFG:
+        len = sizeof(struct virtio_pci_cfg_cap);
+        break;
+    /* case VIRTIO_PCI_CAP_SHARED_MEMORY_CFG: */
+    /* case VIRTIO_PCI_CAP_VENDOR_CFG: */
+    default:
+        LOG_VMM_ERR("Unimplemented capability type: 0x%x\n", cfg_type);
+        return false;
+    }
+
+    uint32_t bar_offset = pci_allocate_bar_memory(dev, bar, size);
+
+    struct virtio_pci_cap *new_cap = (struct virtio_pci_cap *)new_cap_addr;
+    new_cap->cap_id = PCI_CAP_ID_VNDR;
+    new_cap->next_ptr = next_ptr;
+    new_cap->cap_len = len;
+    new_cap->cfg_type = cfg_type;
+    new_cap->bar = bar;
+    new_cap->offset = bar_offset;
+    new_cap->length = size;
+
+    return true;
+}
+
+/**
+ * @config_space        the target device function to add capabilities to
+ * @cap_id              capability id to add
+ * @cfg_type            configuration type to be added
+ * @bar                 where the structure should be located
+ */
+static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg_type, uint8_t bar)
+{
+    // Make sure the byte "cap_len" is within the region
+    struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+    assert(config_space->cap_ptr + 2 < FUNC_CONFIG_SPACE_SIZE);
+
+    uint8_t *last_cap = (uint8_t *)config_space + config_space->cap_ptr;
+    uint8_t offset = config_space->cap_ptr + last_cap[2];
+    bool success = true;
+
+    switch (cap_id) {
+    case PCI_CAP_ID_VNDR:
+        success = pci_add_virtio_capability(dev, offset, cfg_type, bar, config_space->cap_ptr);
+        break;
+    default:
+        success = false;
+        LOG_VMM_ERR("Unimplementeed capability ID: 0x%x\n", cap_id);
+    }
+
+    if (!success) {
+        LOG_VMM_ERR("Failed to add capability: ID (0x%x), type (0x%x), bar (0x%x)\n", cap_id, cfg_type, bar);
+        return false;
+    }
+
+    // Update cap_ptr in config space
+    config_space->cap_ptr = offset;
+    return true;
+}
+
+void pci_add_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size)
+{
+    assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
+    // Assume there are only memory bars, and bar size needs to be 16-byte aligned
+    assert((size & 0xFFFFFFF0) == size);
+
+    uint32_t idx = 0;
+    while (idx < MAX_MEM_BARS && global_memory_bars[idx].dev) idx++;
+
+    global_memory_bars[idx].size = size;
+    global_memory_bars[idx].free_offset = 0;
+    global_memory_bars[idx].dev = dev;
+    global_memory_bars[idx].idx = bar_id;
+
+    struct pci_bar_memory_bits *new_mem_bar = (struct pci_bar_memory_bits *)&dev->transport.pci.cfg_space->bar[bar_id];
+    new_mem_bar->base_address = 0;
+}
+
+/**
+ * Look for the capability of a device by the offset on the memory resource
+ * */
+static struct virtio_pci_cap *find_pci_cap_by_offset(virtio_device_t *dev, uint8_t bar, uint32_t offset)
+{
+    struct virtio_pci_cap *cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.cfg_space + dev->transport.pci.cfg_space->cap_ptr);
+    while (cap != dev->transport.pci.cfg_space) {
+        if (cap->cap_id == PCI_CAP_ID_VNDR && cap->bar == bar && (cap->offset <= offset && offset < cap->offset + cap->length)) {
+            return cap;
+        }
+        cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.cfg_space + cap->next_ptr);
+    }
+    return NULL;
+}
+
+static int handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg)
+{
+    int success = 1;
+
+    // we only care about the new status
+    dev->data.Status &= reg;
+    reg ^= dev->data.Status;
+
+    switch (reg) {
+    case VIRTIO_CONFIG_S_RESET:
+        dev->data.Status = 0;
+        dev->funs->device_reset(dev);
+        printf("VIRTIO PCI|INFO: device reset\n");
+        break;
+
+    case VIRTIO_CONFIG_S_ACKNOWLEDGE:
+        // are we following the initialization protocol?
+        if (dev->data.Status == 0) {
+            dev->data.Status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
+            printf("Set ACKNOWLEDGE\n");
+            // nothing to do from our side (as the virtio device).
+        }
+        break;
+
+    case VIRTIO_CONFIG_S_DRIVER:
+        // are we following the initialization protocol?
+        if (dev->data.Status & VIRTIO_CONFIG_S_ACKNOWLEDGE) {
+            dev->data.Status |= VIRTIO_CONFIG_S_DRIVER;
+            // nothing to do from our side (as the virtio device).
+        }
+        break;
+
+    case VIRTIO_CONFIG_S_FEATURES_OK:
+        // are we following the initialization protocol?
+        if (dev->data.Status & VIRTIO_CONFIG_S_DRIVER) {
+            // are features OK?
+            dev->data.Status |= (dev->data.features_happy ? VIRTIO_CONFIG_S_FEATURES_OK : 0);
+        }
+        break;
+
+    case VIRTIO_CONFIG_S_DRIVER_OK:
+        dev->data.Status |= VIRTIO_CONFIG_S_DRIVER_OK;
+        // probably do some san checks here
+        break;
+
+    case VIRTIO_CONFIG_S_FAILED:
+        printf("VIRTIO MMIO|INFO: received FAILED status from driver, giving up this device.\n");
+        break;
+
+    default:
+        printf("VIRTIO MMIO|INFO: unknown device status 0x%x.\n", reg);
+        success = 0;
+    }
+    return success;
+}
+
+static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    printf("VIRTIO PCI|INFO: common read at 0x%x\n", offset);
+    uint32_t reg = 0;
+    bool success = true;
+
+    switch (offset) {
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE, VIRTIO_PCI_COMMON_DRI_FEATURE_SEL):
+        success = dev->funs->get_device_features(dev, &reg);
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE_SEL, VIRTIO_PCI_COMMON_DRI_FEATURE):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE, VIRTIO_PCI_COMMON_MSIX):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_Q_SIZE):
+        reg = dev->data.Status;
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_DESC_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_HI, VIRTIO_PCI_COMMON_Q_AVAIL_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_LO, VIRTIO_PCI_COMMON_Q_AVAIL_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_HI, VIRTIO_PCI_COMMON_Q_USED_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_LO, VIRTIO_PCI_COMMON_Q_USED_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_HI, VIRTIO_PCI_COMMON_Q_NOTIF_DATA):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_DATA, VIRTIO_PCI_COMMON_ADM_Q_IDX):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_ADM_Q_IDX, VIRTIO_PCI_COMMON_END):
+        break;
+    }
+
+    printf("Read data: 0x%x\n", reg);
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    // @ivanv: make it clearer that just passing the offset is okay,
+    // possibly just fix the API
+    fault_emulate_write(regs, offset, fsr, reg & mask);
+
+    return success;
+}
+
+static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    bool success = true;
+    uint32_t data = fault_get_data(regs, fsr);
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    /* Mask the data to write */
+    data &= mask;
+    printf("VIRTIO PCI|INFO: common write 0x%x at 0x%x\n", data, offset);
+
+    switch (offset) {
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
+        dev->data.DeviceFeaturesSel = data;
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE, VIRTIO_PCI_COMMON_DRI_FEATURE_SEL):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE_SEL, VIRTIO_PCI_COMMON_DRI_FEATURE):
+        dev->data.DriverFeaturesSel = data;
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE, VIRTIO_PCI_COMMON_MSIX):
+        success = dev->funs->set_driver_features(dev, data);
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_Q_SIZE):
+        success = handle_virtio_pci_set_status_flag(dev, data);
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_DESC_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_HI, VIRTIO_PCI_COMMON_Q_AVAIL_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_LO, VIRTIO_PCI_COMMON_Q_AVAIL_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_HI, VIRTIO_PCI_COMMON_Q_USED_LO):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_LO, VIRTIO_PCI_COMMON_Q_USED_HI):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_HI, VIRTIO_PCI_COMMON_Q_NOTIF_DATA):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_DATA, VIRTIO_PCI_COMMON_ADM_Q_IDX):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_ADM_Q_IDX, VIRTIO_PCI_COMMON_END):
+        break;
+    }
+
+    return success;
+}
+
+static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    printf("VIRTIO PCI|INFO: device read at 0x%x\n", offset);
+    uint32_t reg = 0;
+    bool success = true;
+    success = dev->funs->get_device_config(dev, offset, &reg);
+
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    // @ivanv: make it clearer that just passing the offset is okay,
+    // possibly just fix the API
+    fault_emulate_write(regs, offset, fsr, reg & mask);
+    return success;
+}
+
+static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    bool success = true;
+    uint32_t data = fault_get_data(regs, fsr);
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    /* Mask the data to write */
+    data &= mask;
+    printf("VIRTIO PCI|INFO: device write 0x%x at 0x%x\n", data, offset);
+    success = dev->funs->set_device_config(dev, offset, data);
+    return false;
+}
+
+static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    uintptr_t vmm_addr = offset + registered_pci_memory_resource.vmm_addr;
+    printf("[BAR fault]: 0x%x\n", offset);
+
+    // Search for dev from global_memory_bars
+    uint32_t i = 0;
+    for (i = 0; i < MAX_MEM_BARS; i++) {
+        if (global_memory_bars[i].vaddr <= vmm_addr &&
+            vmm_addr < global_memory_bars[i].vaddr + global_memory_bars[i].size) {
+            break;
+        }
+    }
+    if (i == MAX_MEM_BARS) {
+        LOG_VMM_ERR("Fault address 0x%x is not located within any registered memory bars\n", registered_pci_memory_resource.vm_addr + offset);
+        return false;
+    }
+
+    // Search for the capability
+    uint32_t bar_offset = vmm_addr - global_memory_bars[i].vaddr;
+    virtio_device_t *dev = global_memory_bars[i].dev;
+    struct  virtio_pci_cap *cap = find_pci_cap_by_offset(dev, global_memory_bars[i].idx, bar_offset);
+    /* printf("Found cap_type 0x%x on bar %d\n", cap->cfg_type, global_memory_bars[i].idx); */
+
+    virtio_pci_cfg_exception_handler_t cfg_handler = NULL;
+    switch (cap->cfg_type) {
+        case VIRTIO_PCI_CAP_COMMON_CFG:
+            cfg_handler = fault_is_read(fsr) ? virtio_pci_common_reg_read : virtio_pci_common_reg_write;
+            break;
+        case VIRTIO_PCI_CAP_DEVICE_CFG:
+            cfg_handler = fault_is_read(fsr) ? virtio_pci_device_reg_read : virtio_pci_device_reg_write;
+            break;
+        default:
+            printf("Unimplemented type: 0x%x\n", cap->cfg_type);
+            break;
+    }
+
+    if (cfg_handler) {
+        offset = offset - cap->offset;
+        return cfg_handler(dev, vcpu_id, offset, fsr, regs);
+    }
+    return false;
+}
+
+void pci_add_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size)
+{
+    // We assume that there is only one memory resource for each VM.
+    registered_pci_memory_resource.vm_addr = vm_addr;
+    registered_pci_memory_resource.vmm_addr = vmm_addr;
+    registered_pci_memory_resource.size = size;
+
+    bool success = fault_register_vm_exception_handler(vm_addr,
+                                                  size,
+                                                  &virtio_pci_bar_fault_handle,
+                                                  NULL);
+
+
+    if (!success) {
+        LOG_VMM_ERR("Could not register virtual memory fault handler for pci device");
+    }
+}
+
+static bool handle_virtio_cfg_space_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    uint32_t data = fault_get_data(regs, fsr);
+    printf("[cfg_space] offset: 0x%x, data: 0x%llx\n", offset, data);
+
+    switch (offset) {
+        case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
+            struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+            config_space->command = data & PCI_COMMAND_MEMORY;
+            break;
+        }
+        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
+            uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
+            uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
+
+            printf("global_bar_id: 0x%x\n", global_bar_id);
+            // Memory negotiation process:
+            //     1. The driver writes all 1s to the BAR register.
+            //     2. The device writes the size mask ~(size - 1) to the BAR register.
+            //     3. The driver writes the original value (all 0s in our code) back
+            //         to the BAR register. (no action from the device)
+            //     4. The driver allocates memory from the memory resources, and writes
+            //         the allocated address to the BAR register.
+            //     5. The device parse the memory address and bookkeep it.
+            if (global_memory_bars[global_bar_id].size) {
+                if (data == 0xFFFFFFFF) {
+                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(dev->transport.pci.cfg_space->bar[dev_bar_id]);
+                    bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
+                    printf("bar address: 0x%x\n", bar->base_address);
+                } else if (data != 0x0) {
+                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&dev->transport.pci.cfg_space->bar[dev_bar_id];
+                    uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
+                    bar->base_address = allocated_addr >> 4;        // 16-byte aligned
+                    global_memory_bars[global_bar_id].vaddr = allocated_addr;
+                }
+            }
+            break;
+
+        }
+    }
+    return true;
+}
+
+static bool virtio_cfg_space_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
+    virtio_device_t *dev = (virtio_device_t *) data;
+    assert(dev);
+    if (fault_is_read(fsr)) {
+        uint32_t data = 0;
+        /* if (offset < 0x1000) { */
+        /*     /\* LOG_VMM_ERR("Configuration space should be readable.\n"); *\/ */
+        /*     uint32_t *reg = dev->transport.pci.cfg_space; */
+        /*     /\* printf("[cfg_space fault]: read at 0x%x, cfg_space: 0x%x\n", offset, reg); *\/ */
+        /*     data = reg[offset / 4]; */
+        /* } */
+
+        uint32_t mask = fault_get_data_mask(offset, fsr);
+        // @ivanv: make it clearer that just passing the offset is okay,
+        // possibly just fix the API
+        fault_emulate_write(regs, offset, fsr, data & mask);
+        return true;
+    } else {
+        return handle_virtio_cfg_space_reg_write(dev, vcpu_id, offset, fsr, regs);
+    }
+}
+
+bool virtio_pci_register_device(virtio_device_t *dev)
+{
+    assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
+
+    // TODO: search for available device/function slots
+    struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+    bool success;
+
+    uint8_t *data = (uint8_t *)dev->transport.pci.cfg_space;
+    for (uint32_t i = 0; i < 256; i++) {
+        if (i % 16 == 0) {
+            printf("\n");
+        }
+        data[i] = 0;
+        printf("%02x ", data[i]);
+    }
+    printf("\n");
+
+    config_space->vendor_id = dev->transport.pci.vendor_id;
+    config_space->device_id = dev->transport.pci.device_id;
+    config_space->command = 0;
+    config_space->status = PCI_STATUS_CAP_LIST;
+    config_space->revision_id = VIRTIO_PCI_REVISION;
+    // TODO: make the class variable
+    config_space->subclass = PCI_SUB_CLASS(dev->transport.pci.device_class);
+    config_space->class_code = PCI_CLASS_CODE(dev->transport.pci.device_class);
+    config_space->subsystem_vendor_id = dev->data.VendorID;
+    config_space->subsystem_device_id = dev->data.DeviceID;
+
+    config_space->cap_ptr = 0x40;
+    success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_COMMON_CFG, 0);
+    assert(success);
+    success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_ISR_CFG, 0);
+    assert(success);
+    success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_DEVICE_CFG, 0);
+    assert(success);
+    success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_NOTIFY_CFG, 0);
+    assert(success);
+    success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_PCI_CFG, 0);
+    assert(success);
+
+    data = (uint8_t *)dev->transport.pci.cfg_space;
+    for (uint32_t i = 0; i < 256; i++) {
+        if (i % 16 == 0) {
+            printf("\n");
+        }
+        printf("%02x ", data[i]);
+    }
+    printf("\n");
+
+    success = fault_register_vm_exception_handler(dev->transport.pci.cfg_space_vm,
+                                                  dev->transport.pci.cfg_size,
+                                                  &virtio_cfg_space_fault_handle,
+                                                  dev);
+
+
+    if (!success) {
+        LOG_VMM_ERR("Could not register virtual memory fault handler for pci device");
+        return false;
+    }
+
+    return success;
+}

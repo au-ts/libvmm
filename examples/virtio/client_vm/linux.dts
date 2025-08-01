@@ -32,6 +32,20 @@
 		};
 	};
 
+	platform@c000000 {
+		interrupt-parent = <0x8001>;
+		ranges = <0x00 0x00 0xc000000 0x2000000>;
+		#address-cells = <0x01>;
+		#size-cells = <0x01>;
+		compatible = "qemu,platform\0simple-bus";
+	};
+
+	flash@0 {
+		bank-width = <0x04>;
+		reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
+		compatible = "cfi-flash";
+	};
+
 	timer {
 		interrupts = <0x01 0x0d 0x104 0x01 0x0e 0x104 0x01 0x0b 0x104 0x01 0x0a 0x104>;
 		always-on;
@@ -44,15 +58,27 @@
 	};
 
 	chosen {
-		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8";
+		stdout-path = "/pl011@9000000";
+        bootargs = "earlycon=pl011,0x9000000 earlyprintk=serial debug loglevel=8";
+        linux,stdout-path = "/pl011@9000000";
 		linux,initrd-start = <0x47000000>;
 		linux,initrd-end = <0x47f00000>;
 	};
 
-	virtio-console@130000 {
-		compatible = "virtio,mmio";
-		reg = <0x00 0x130000 0x00 0x200>;
-		interrupts = <0x00 42 0x04>;
+	pl011@9000000 {
+		clock-names = "uartclk\0apb_pclk";
+		clocks = <0x8000 0x8000>;
+		interrupts = <0x00 0x01 0x04>;
+		reg = <0x00 0x9000000 0x00 0x1000>;
+		compatible = "arm,pl011\0arm,primecell";
+	};
+
+	apb-pclk {
+		phandle = <0x8000>;
+		clock-output-names = "clk24mhz";
+		clock-frequency = <0x16e3600>;
+		#clock-cells = <0x00>;
+		compatible = "fixed-clock";
 	};
 
 	virtio-blk@150000 {
@@ -61,9 +87,4 @@
 		interrupts = <0x00 43 0x04>;
 	};
 
-	virtio-net@160000 {
-		compatible = "virtio,mmio";
-		reg = <0x00 0x160000 0x00 0x200>;
-		interrupts = <0x00 44 0x04>;
-	};
 };
