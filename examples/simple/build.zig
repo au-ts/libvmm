@@ -316,7 +316,7 @@ pub fn build(b: *std.Build) !void {
             "qemu-system-x86_64",
             "-cpu",
             // TODO: use +svm on AMD hosts but +vtx on Intel?
-            "Nehalem,+fsgsbase,+pdpe1gb,+pcid,+invpcid,+xsave,+xsaves,+xsaveopt,+vtx,+vme",
+            "Nehalem,+fsgsbase,+pdpe1gb,+pcid,+invpcid,+xsave,+xsaves,+xsaveopt,+vmx,+vme",
             "-accel",
             "kvm",
             "-m",
