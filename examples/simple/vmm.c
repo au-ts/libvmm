@@ -50,8 +50,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_DTB_VADDR 0x0
-#define GUEST_INIT_RAM_DISK_VADDR 0x0
+char *cmdline = "loglevel=8";
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -112,8 +111,8 @@ void init(void)
                                          (uintptr_t) _guest_kernel_image,
                                          kernel_size,
                                          (uintptr_t) _guest_initrd_image,
-                                         GUEST_INIT_RAM_DISK_VADDR,
-                                         initrd_size
+                                         initrd_size,
+                                         cmdline
                                         );
 #endif
     if (!kernel_pc) {
@@ -133,7 +132,11 @@ void init(void)
     microkit_irq_ack(SERIAL_IRQ_CH);
 #endif
     /* Finally start the guest */
+#ifdef CONFIG_ARCH_X86_64
+    guest_start(GUEST_VCPU_ID, kernel_pc, 0, 0);
+#else
     guest_start(GUEST_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+#endif
 }
 
 void notified(microkit_channel ch)

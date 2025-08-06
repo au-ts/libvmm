@@ -26,6 +26,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     regs.a1 = dtb;
     regs.pc = kernel_pc;
 #elif defined(CONFIG_ARCH_X86_64)
+    regs.rip = kernel_pc;
     // Nothign to do???
 #else
 #error "Unsupported guest architecture"
@@ -46,8 +47,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n",
             kernel_pc, dtb, initrd);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
-    assert(false);
-    // microkit_vcpu_restart(boot_vcpu_id, kernel_pc);
+    microkit_vcpu_restart(boot_vcpu_id, kernel_pc);
 
     return true;
 }
@@ -56,7 +56,7 @@ void guest_stop(size_t boot_vcpu_id)
 {
     LOG_VMM("Stopping guest\n");
     assert(false);
-    // microkit_vcpu_stop(boot_vcpu_id);
+    microkit_vcpu_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
 }
 
@@ -64,8 +64,7 @@ bool guest_restart(size_t boot_vcpu_id, uintptr_t guest_ram_vaddr, size_t guest_
 {
     LOG_VMM("Attempting to restart guest\n");
     // First, stop the guest
-    // TODO:
-    // microkit_vcpu_stop(boot_vcpu_id);
+    microkit_vcpu_stop(boot_vcpu_id);
     LOG_VMM("Stopped guest\n");
     // Then, we need to clear all of RAM
     LOG_VMM("Clearing guest RAM\n");
