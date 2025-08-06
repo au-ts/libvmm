@@ -36,8 +36,8 @@ export AR := llvm-ar
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-export SDDF = $(abspath ../../dep/sddf)
-export LIBVMM = $(abspath ../../)
+export SDDF := $(abspath ../../dep/sddf)
+export LIBVMM := $(abspath ../../)
 
 # If on macOS, override backend to `coreaudio`
 export QEMU_SND_BACKEND := alsa

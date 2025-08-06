@@ -65,8 +65,8 @@ export AR := llvm-ar
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-export SDDF = $(abspath ../../dep/sddf)
-export LIBVMM = $(abspath ../../)
+export SDDF := $(abspath ../../dep/sddf)
+export LIBVMM := $(abspath ../../)
 
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
