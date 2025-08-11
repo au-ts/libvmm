@@ -19,3 +19,10 @@ void vcpu_print_regs(size_t vcpu_id)
     // TODO
     assert(false);
 }
+
+int vcpu_write_vmcs(size_t vcpu_id, seL4_Word field, seL4_Word value) {
+    seL4_X86_VCPU_WriteVMCS_t ret = seL4_X86_VCPU_WriteVMCS(BASE_VCPU_CAP + vcpu_id, field, value);
+    assert(ret.error == seL4_NoError);
+
+    return ret.error;
+}

@@ -27,7 +27,7 @@ bool guest_start(size_t boot_vcpu_id, uintptr_t kernel_pc, uintptr_t dtb, uintpt
     regs.pc = kernel_pc;
 #elif defined(CONFIG_ARCH_X86_64)
     regs.rip = kernel_pc;
-    // Nothign to do???
+    regs.rsp = 0x99000;
 #else
 #error "Unsupported guest architecture"
 #endif

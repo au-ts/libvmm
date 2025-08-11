@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <libvmm/linux.h>
+#include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/linux.h>
 
 #define HEADER_SECTOR_SIZE 512
@@ -23,6 +25,8 @@
 #define HEADER_TYPE_RAM_DISK_SIZE_OFFSET 0x21c
 #define HEADER_HEAP_END_PTR_OFFSET 0x224
 #define HEADER_CMD_LINE_PTR_OFFSET 0x228
+
+#define LOADFLAGS_CAN_USE_HEAP (1 << 7)
 
 #define INITRD_DEST 0x10100000
 
@@ -68,15 +72,22 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uint8_t loadflags = *(uint8_t *)(kernel + HEADER_LOADFLAGS_OFFSET);
     LOG_VMM("loadflags: 0x%x\n", loadflags);
 
+    uintptr_t base_ptr = 0x90000;
+    char *kernel_real_mode_dest = KERNEL_DEST + (char *)base_ptr;
+
+    // Copy real mode part of kernel
+    memcpy(kernel_real_mode_dest, (char *)kernel, 0x7fff);
+
     // Obligatory fields to fill out
 
-    char *setup = (char *)KERNEL_DEST;
+    char *setup = kernel_real_mode_dest;
 
     uint8_t setup_sects = *(uint8_t *)((char *)kernel + HEADER_SETUP_SECTS_OFFSET);
-
+    if (setup_sects == 0) {
+        setup_sects = 4;
+    }
 
     // vid_mode
-    // loadflags
 
     // type_of_loader
     setup[HEADER_TYPE_OF_LOADER_OFFSET] = TYPE_OF_LOADER;
@@ -91,15 +102,17 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     *(uint32_t *)(setup + HEADER_TYPE_RAM_DISK_SIZE_OFFSET) = initrd_size;
     // heap_end_ptr
     uint16_t heap_end;
-    if (protocol_version >= 0x0201 && loadflags & 0x1) {
-        heap_end = 0xe000;
+    if (protocol_version >= 0x0202 && loadflags & 0x1) {
+        heap_end = base_ptr + 0xe000;
     } else {
-        heap_end = 0x9800;
+        heap_end = base_ptr + 0x9800;
     }
+
+    LOG_VMM("heap_end: 0x%lx\n", heap_end);
 
     if (protocol_version >= 0x201) {
         *(uint16_t *)(setup + HEADER_HEAP_END_PTR_OFFSET) = heap_end - 0x200;
-        setup[HEADER_LOADFLAGS_OFFSET] = loadflags | 0x80;
+        setup[HEADER_LOADFLAGS_OFFSET] = loadflags | LOADFLAGS_CAN_USE_HEAP;
     }
 
     // cmd_line_ptr
@@ -108,6 +121,7 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
         char *cmdline_dest = setup + heap_end;
         strcpy(cmdline_dest, cmdline);
         *(uint32_t *)(setup + HEADER_CMD_LINE_PTR_OFFSET) = heap_end;
+        LOG_VMM("command line: '%s'\n", cmdline_dest);
     } else {
         assert(false);
     }
@@ -116,14 +130,25 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     // copy the kernel and initrd to the right place.
     bool is_bzImage = (protocol_version >= 0x0200) && (loadflags & 0x01);
     uintptr_t load_address = is_bzImage ? 0x100000 : 0x10000;
-
-    // Copy real mode part of kernel
-    memcpy((char *)(KERNEL_DEST + load_address), (char *)kernel, 0x7fff);
+    assert(load_address == 0x100000);
 
     // Copy non-real mode part of kernel
     size_t non_real_mode_offset = ((setup_sects + 1) * HEADER_SECTOR_SIZE);
-    char *non_real_mode = (char *)kernel + non_real_mode_offset;
-    memcpy((char *)(KERNEL_DEST + load_address), non_real_mode, kernel_size - non_real_mode_offset);
+    char *non_real_mode_bytes = (char *)kernel + non_real_mode_offset;
+    size_t non_real_mode_size = kernel_size - non_real_mode_offset;
+    memcpy(kernel_real_mode_dest + load_address, non_real_mode_bytes, non_real_mode_size);
+    LOG_VMM("non-real-mode load_address: 0x%lx, size of non-real mode: 0x%lx\n", load_address, non_real_mode_size);
 
-    return false;
+    uintptr_t seg = base_ptr >> 4;
+
+    // TODO: handle error
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_SS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_ES_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_DS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_FS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_GS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_RIP, seg + 0x20);
+    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_RSP, 0x99000);
+
+    return seg + 0x20;
 }

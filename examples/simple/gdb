@@ -1,0 +1,3 @@
+target remote:1234
+add-symbol-file zig-out/kernel32.elf
+add-symbol-file zig-out/bin/initrd.elf

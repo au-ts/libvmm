@@ -105,6 +105,8 @@ pub fn build(b: *std.Build) !void {
     const custom_linux = b.option(std.Build.LazyPath, "linux", "Custom Linux image to use") orelse null;
     const custom_initrd = b.option(std.Build.LazyPath, "initrd", "Custom initrd image to use") orelse null;
 
+    const qemu_opts = b.option([]const u8, "qemu-opts", "Additional options to pass to QEMU") orelse null;
+
     const microkit_board_dir = microkit_sdk.path(b, "board").path(b, microkit_board).path(b, microkit_config);
     const microkit_tool = microkit_sdk.path(b, "bin/microkit");
     const libmicrokit = microkit_board_dir.path(b, "lib/libmicrokit.a");
@@ -243,7 +245,7 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(exe);
 
     const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
-    const final_image_dest = b.getInstallPath(.bin, "./loader.img");
+    const final_image_dest = if (target.result.cpu.arch != .x86_64) b.getInstallPath(.bin, "./loader.img") else b.getInstallPath(.bin, "./initrd.elf");
     const microkit_tool_cmd = std.Build.Step.Run.create(b, "run microkit tool");
     microkit_tool_cmd.addFileArg(microkit_tool);
     microkit_tool_cmd.addArgs(&[_][]const u8{
@@ -327,8 +329,14 @@ pub fn build(b: *std.Build) !void {
             "-kernel",
             b.getInstallPath(.prefix, "kernel32.elf"),
             "-initrd",
-            b.getInstallPath(.bin, "loader.img"),
+            final_image_dest,
         });
+        if (qemu_opts) |opts| {
+            var it = std.mem.splitScalar(u8, opts, ' ');
+            while (it.next()) |a| {
+                qemu_cmd.addArg(a);
+            }
+        }
         qemu_cmd.step.dependOn(&b.addInstallFileWithDir(kernel32, .prefix, "kernel32.elf").step);
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image via QEMU");
