@@ -34,7 +34,7 @@ const guest_initrd_image = @embedFile("initrd");
 // In Zig the standard library comes with printf-like functionality with the
 // ability to provide your own function to ouput the characters. This is
 // extremely useful for us! Without changing the standard library or bringing
-// in a 3rd party library, in a couple of lines of code we can get formatted
+// in a 3rd party library, in a dozen lines of code we can get formatted
 // printing functionality that ends up calling to microkit_dbg_puts which then
 // outputs to the platform's serial connection.
 //
@@ -42,34 +42,56 @@ const guest_initrd_image = @embedFile("initrd");
 // user-level UART driver, but for the example we only need logging for debug
 // mode.
 const log = struct {
-    const Writer = std.io.Writer(u32, error{}, debug_uart_put_str);
-    const debug_uart = Writer { .context = 0 };
-
-    fn debug_uart_put_str(_: u32, str: []const u8) !usize {
-        for (str) |ch| {
-            c.microkit_dbg_putc(ch);
+    var writer: std.Io.Writer = .{
+        // Having an empty buffer means the writer flushes everything out
+        // immediately.
+        .buffer = &.{},
+        .vtable = &.{
+            .drain = debug_uart_put_str
         }
-        return str.len;
+    };
+
+    fn debug_uart_put_str(_: *std.Io.Writer, data: []const []const u8, splat: usize) std.Io.Writer.Error!usize {
+        var written: usize = 0;
+        for (data, 0..) |str, i| {
+            for (str) |ch| {
+                c.microkit_dbg_putc(ch);
+            }
+            written += str.len;
+
+            // If we're on the last item of data, we must print it `splat`
+            // times and therefore repeat it `splat - 1` times.
+            if (i == data.len - 1) {
+                for (0..splat - 1) |_| {
+                    for (str) |ch| {
+                        c.microkit_dbg_putc(ch);
+                    }
+                    written += str.len;
+                }
+            }
+        }
+
+        return written;
     }
 
     pub fn info(comptime fmt: []const u8, args: anytype) void {
-        debug_uart.print("VMM|INFO: " ++ fmt ++ "\n", args) catch {};
+        writer.print("VMM|INFO: " ++ fmt ++ "\n", args) catch {};
     }
 
     pub fn err(comptime fmt: []const u8, args: anytype) void {
-        debug_uart.print("VMM|ERROR: " ++ fmt ++ "\n", args) catch {};
+        writer.print("VMM|ERROR: " ++ fmt ++ "\n", args) catch {};
     }
 };
 
 const SERIAL_IRQ_CH: c.microkit_channel = 1;
 const SERIAL_IRQ: i32 = 33;
 
-fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.C) void {
+fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.c) void {
     // Nothing else needs to be done other than acking the IRQ.
     c.microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
-export fn init() callconv(.C) void {
+export fn init() callconv(.c) void {
     // Initialise the VMM, the VCPU(s), and start the guest
     log.info("starting", .{});
     // Place all the binaries in the right locations before starting the guest
@@ -108,7 +130,7 @@ export fn init() callconv(.C) void {
     }
 }
 
-export fn notified(ch: c.microkit_channel) callconv(.C) void {
+export fn notified(ch: c.microkit_channel) callconv(.c) void {
     switch (ch) {
         SERIAL_IRQ_CH => {
             const success = c.virq_inject(GUEST_BOOT_VCPU_ID, SERIAL_IRQ);
@@ -120,9 +142,9 @@ export fn notified(ch: c.microkit_channel) callconv(.C) void {
     }
 }
 
-extern fn fault_handle(id: c.microkit_child, msginfo: c.microkit_msginfo) callconv(.C) bool;
+extern fn fault_handle(id: c.microkit_child, msginfo: c.microkit_msginfo) callconv(.c) bool;
 
-export fn fault(id: c.microkit_child, msginfo: c.microkit_msginfo, msginfo_reply: *c.microkit_msginfo) callconv(.C) bool {
+export fn fault(id: c.microkit_child, msginfo: c.microkit_msginfo, msginfo_reply: *c.microkit_msginfo) callconv(.c) bool {
     if (fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
         msginfo_reply.* = c.microkit_msginfo_new(0, 0);

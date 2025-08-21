@@ -18,7 +18,7 @@ the Zig C compiler. Building the example is done via the Zig build system.
 
 ## Building the example
 
-This example expects to be built with Zig 0.14.*.
+This example expects to be built with Zig 0.15.x.
 
 You can download Zig [here](https://ziglang.org/download/).
 
