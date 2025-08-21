@@ -326,7 +326,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     // Build up objcopys
-    var objcopys = std.ArrayList(*Step.Run).init(b.allocator);
+    var objcopys = std.array_list.Managed(*Step.Run).init(b.allocator);
     // Block
     {
         const virt_objcopy = updateSectionObjcopy(b, ".blk_virt_config", meta_output, "blk_virt.data", "blk_virt.elf");

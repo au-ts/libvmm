@@ -40,10 +40,10 @@
               };
 
               llvm = pkgs.llvmPackages_18;
-              zig = zig-overlay.packages.${system}."0.14.0";
+              zig = zig-overlay.packages.${system}."0.15.1";
               rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
 
-              pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
+              pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig-overlay.packages.${system}."0.14.1"; pythonPackages = pkgs.python312Packages; };
 
               python = pkgs.python312.withPackages (ps: [
                 pysdfgen

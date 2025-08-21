@@ -51,7 +51,7 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/l
 For educational purposes, you can also build and run this example using the
 [Zig](https://ziglang.org/) build system.
 
-This example expects to be built with Zig 0.14.*.
+This example expects to be built with Zig 0.15.x.
 
 You can download Zig [here](https://ziglang.org/download/).
 
