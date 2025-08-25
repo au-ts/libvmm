@@ -8,10 +8,13 @@ QEMU := qemu-system-aarch64
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
 SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
+
+SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
@@ -38,13 +41,14 @@ CFLAGS := \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
 	  -I$(SDDF)/include \
+	  -I$(SDDF)/include/sddf/util/custom_libc \
 	  -I$(SDDF)/include/microkit \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -59,7 +63,7 @@ all: loader.img
 
 -include vmm.d
 
-$(IMAGES): libvmm.a
+$(IMAGES): libvmm.a libsddf_util_debug.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
@@ -94,6 +98,7 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include $(LIBVMM)/vmm.mk
+include ${SDDF}/util/util.mk
 
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi

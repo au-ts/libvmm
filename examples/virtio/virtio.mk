@@ -22,6 +22,7 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
@@ -30,6 +31,8 @@ DTB_FILE := $(MICROKIT_BOARD).dtb
 CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
+
+SDDF_CUSTOM_LIBC := 1
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 

@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-
+#include <string.h>
 #include <libvmm/dtb.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/linux.h>

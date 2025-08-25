@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <string.h>
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 

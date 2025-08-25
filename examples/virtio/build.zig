@@ -152,6 +152,7 @@ pub fn build(b: *std.Build) !void {
     client_vmm.addObjectFile(libmicrokit);
     client_vmm.setLinkerScript(libmicrokit_linker_script);
     client_vmm.linkLibrary(libvmm);
+    client_vmm.linkLibrary(sddf_dep.artifact("util"));
 
     client_vmm.addCSourceFiles(.{
         .files = &.{"client_vmm.c"},

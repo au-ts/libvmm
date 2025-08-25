@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
-
 #include <microkit.h>
+#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <libvmm/guest.h>
