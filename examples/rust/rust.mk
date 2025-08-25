@@ -24,6 +24,7 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 IMAGES := vmm.elf
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_FILE := $(EXAMPLE_DIR)/rust_vmm.system
 
 DTS := $(EXAMPLE_DIR)/images/linux.dts
@@ -43,6 +44,7 @@ CFLAGS := \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
 	  -I$(SDDF)/include \
+	  -I$(SDDF)/include/sddf/util/custom_libc \
 	  -I$(SDDF)/include/microkit \
 	  -MD \
 	  -MP \
@@ -75,7 +77,7 @@ all: $(IMAGE_FILE)
 
 -include vmm.d
 
-$(IMAGES): libvmm.a
+$(IMAGES): libvmm.a libsddf_util_debug.a
 
 qemu: $(IMAGE_FILE)
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
@@ -103,6 +105,7 @@ $(DTB): $(DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
 
 include $(LIBVMM)/vmm.mk
+include $(SDDF)/util/util.mk
 
 vmm.elf: ${EXAMPLE_DIR}/src/vmm.rs ${LINUX} ${INITRD} $(DTB)
 	cp ${EXAMPLE_DIR}/rust-toolchain.toml .

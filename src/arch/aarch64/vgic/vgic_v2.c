@@ -39,7 +39,7 @@
  *         destroy our state. The affects of this will be an IRQ that is never acknowledged and hence,
  *         will never occur again.
  */
-
+#include <string.h>
 #include <stdint.h>
 #include <microkit.h>
 
