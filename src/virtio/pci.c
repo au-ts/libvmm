@@ -79,6 +79,8 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
     new_cap->offset = bar_offset;
     new_cap->length = size;
 
+    printf("Add capability 0x%u, offset: 0x%x, size: 0x%x\n", cfg_type, bar_offset, size);
+
     return true;
 }
 
@@ -362,7 +364,6 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
     uint32_t bar_offset = vmm_addr - global_memory_bars[i].vaddr;
     virtio_device_t *dev = global_memory_bars[i].dev;
     struct  virtio_pci_cap *cap = find_pci_cap_by_offset(dev, global_memory_bars[i].idx, bar_offset);
-    /* printf("Found cap_type 0x%x on bar %d\n", cap->cfg_type, global_memory_bars[i].idx); */
 
     virtio_pci_cfg_exception_handler_t cfg_handler = NULL;
     switch (cap->cfg_type) {
@@ -411,7 +412,7 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     switch (offset) {
         case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
             struct pci_config_space *config_space = dev->transport.pci.ecam;
-            config_space->command = data & PCI_COMMAND_MEMORY;
+            config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
             break;
         }
         case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
@@ -462,6 +463,7 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
         // @ivanv: make it clearer that just passing the offset is okay,
         // possibly just fix the API
         fault_emulate_write(regs, offset, fsr, data & mask);
+        printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x\n", offset, data & mask, mask);
         return true;
     } else {
         return handle_virtio_ecam_reg_write(dev, vcpu_id, offset, fsr, regs);
@@ -496,6 +498,8 @@ bool virtio_pci_register_device(virtio_device_t *dev)
     config_space->class_code = PCI_CLASS_CODE(dev->transport.pci.device_class);
     config_space->subsystem_vendor_id = dev->data.VendorID;
     config_space->subsystem_device_id = dev->data.DeviceID;
+    config_space->interrupt_line = 0x14;
+    config_space->interrupt_pin = 0x1;
 
     config_space->cap_ptr = 0x40;
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_COMMON_CFG, 0);

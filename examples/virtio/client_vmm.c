@@ -162,37 +162,37 @@ void init(void)
     /*                                storage_info, */
     /*                                &blk_queue, */
     /*                                blk_config.virt.id); */
-    assert(success);
+    /* assert(success); */
 
-    /* Initialise virtIO net device */
-    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
-                   net_config.rx.num_buffers);
-    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
-                   net_config.tx.num_buffers);
-    net_buffers_init(&net_tx_queue, 0);
-    /* success = virtio_mmio_net_init(&virtio_net, */
-    /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].base, */
-    /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].size, */
-    /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].irq, */
+    /* /\* Initialise virtIO net device *\/ */
+    /* net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr, */
+    /*                net_config.rx.num_buffers); */
+    /* net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr, */
+    /*                net_config.tx.num_buffers); */
+    /* net_buffers_init(&net_tx_queue, 0); */
+    /* /\* success = virtio_mmio_net_init(&virtio_net, *\/ */
+    /* /\*                                vmm_config.virtio_mmio_devices[net_vdev_idx].base, *\/ */
+    /* /\*                                vmm_config.virtio_mmio_devices[net_vdev_idx].size, *\/ */
+    /* /\*                                vmm_config.virtio_mmio_devices[net_vdev_idx].irq, *\/ */
+    /* /\*                                &net_rx_queue, &net_tx_queue, *\/ */
+    /* /\*                                (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, *\/ */
+    /* /\*                                net_config.rx.id, net_config.tx.id, *\/ */
+    /* /\*                                net_config.mac_addr *\/ */
+    /* /\*                               ); *\/ */
+
+    /* pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000); */
+    /* success = virtio_pci_net_init(&virtio_net, */
+    /*                                0x10000000, */
+    /*                                0x100000, */
+    /*                                0x100000, */
+    /*                                0, */
     /*                                &net_rx_queue, &net_tx_queue, */
     /*                                (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, */
     /*                                net_config.rx.id, net_config.tx.id, */
     /*                                net_config.mac_addr */
     /*                               ); */
 
-    pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000);
-    success = virtio_pci_net_init(&virtio_net,
-                                   0x10000000,
-                                   0x100000,
-                                   0x100000,
-                                   0,
-                                   &net_rx_queue, &net_tx_queue,
-                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                   net_config.rx.id, net_config.tx.id,
-                                   net_config.mac_addr
-                                  );
-
-    assert(success);
+    /* assert(success); */
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
@@ -201,6 +201,7 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+    LOG_VMM("Notified by ch %d\n", ch);
     if (ch == SERIAL_IRQ_CH) {
         bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
         if (!success) {
