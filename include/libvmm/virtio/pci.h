@@ -178,33 +178,14 @@ struct pci_memory_resource {
     uint32_t size;
 };
 
-typedef struct virtio_pci_device_info {
-    uint32_t DeviceID;
-    uint32_t VendorID;
-
-    uint32_t DeviceFeaturesSel;
-    uint32_t DriverFeaturesSel;
-    /* True if we are happy with what the driver requires */
-    bool features_happy;
-
-    uint32_t QueueSel;
-    uint32_t QueueNotify;
-
-    uint32_t InterruptStatus;
-
-    uint32_t Status;
-
-    uint32_t ConfigGeneration;
-} virtio_pci_device_info_t;
-
 typedef struct virtio_pci_data {
     uint32_t device_id;
     uint32_t vendor_id;
     uint32_t device_class;
     // Leave this so multiple PCI buses can be supported in the future
-    struct pci_config_space *cfg_space;
-    uintptr_t cfg_space_vm;
-    uint32_t cfg_size;
+    struct pci_config_space *ecam;
+    uintptr_t ecam_vm;
+    uint32_t ecam_size;
     // Indices to the bar in global_memory_bars
     uint32_t mem_bar_ids[6];
     // Leave this so multiple memory regions can be supported in the future

@@ -119,6 +119,7 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
         LOG_NET_ERR("Unknown device config register: 0x%x\n", offset);
         return false;
     }
+
     return true;
 }
 
@@ -424,9 +425,9 @@ static virtio_device_funs_t pci_functions = {
 /* } */
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev,
-                          uintptr_t cfg_space_base_vm,
-                          uintptr_t cfg_space_base_vmm,
-                          uint32_t cfg_space_size,
+                          uintptr_t ecam_base_vm,
+                          uintptr_t ecam_base_vmm,
+                          uint32_t ecam_size,
                           size_t virq,
                           net_queue_handle_t *rx,
                           net_queue_handle_t *tx,
@@ -459,9 +460,9 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
     dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
-    dev->transport.pci.cfg_space = (struct pci_config_space *)cfg_space_base_vmm;
-    dev->transport.pci.cfg_space_vm = cfg_space_base_vm;
-    dev->transport.pci.cfg_size = cfg_space_size;
+    dev->transport.pci.ecam = (struct pci_config_space *)ecam_base_vmm;
+    dev->transport.pci.ecam_vm = ecam_base_vm;
+    dev->transport.pci.ecam_size = ecam_size;
 
     pci_add_memory_bar(dev, 0, 0x10000);
 

@@ -174,7 +174,6 @@ qemu: $(IMAGE_FILE) blk_storage
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
 			-drive file=blk_storage,format=raw,if=none,id=drive0 \
-			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1 \
 			-device virtio-net-device,netdev=netdev0 \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 

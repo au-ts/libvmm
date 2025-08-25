@@ -126,7 +126,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     config_space = MemoryRegion("config-space", 0x10000)
     sdf.add_mr(config_space)
     vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
-    vm_client0.add_map(Map(config_space, vaddr=0x10000000, perms="r"))
+    # vm_client0.add_map(Map(config_space, vaddr=0x10000000, perms="r"))
 
     memory_resource = MemoryRegion("memory_resource", 0x10000)
     sdf.add_mr(memory_resource)
@@ -136,23 +136,23 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     ############ VIRTIO PCI ############
 
     # Block subsystem
-    blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
-    blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
+    # blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
+    # blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
 
-    blk_node = dtb.node(board.blk)
-    assert blk_node is not None
-    guest_blk_node = client_dtb.node(board.guest_blk)
-    assert guest_blk_node is not None
+    # blk_node = dtb.node(board.blk)
+    # assert blk_node is not None
+    # guest_blk_node = client_dtb.node(board.guest_blk)
+    # assert guest_blk_node is not None
 
-    blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
-    partition = int(args.partition) if args.partition else board.partition
-    client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    pds = [
-        blk_driver,
-        blk_virt
-    ]
-    for pd in pds:
-        sdf.add_pd(pd)
+    # blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
+    # partition = int(args.partition) if args.partition else board.partition
+    # client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    # pds = [
+        # blk_driver,
+        # blk_virt
+    # ]
+    # for pd in pds:
+        # sdf.add_pd(pd)
 
     # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
     if board.name == "maaxboard":
@@ -162,7 +162,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=210)
         timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
 
-        timer_system.add_client(blk_driver)
+        # timer_system.add_client(blk_driver)
         sdf.add_pd(timer_driver)
 
         assert timer_system.connect()
@@ -170,8 +170,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     # assert serial_system.connect()
     # assert serial_system.serialise_config(output_dir)
-    assert blk_system.connect()
-    assert blk_system.serialise_config(output_dir)
+    # assert blk_system.connect()
+    # assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
     assert net_system.serialise_config(output_dir)
     assert client0.connect()

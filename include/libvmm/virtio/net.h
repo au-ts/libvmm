@@ -241,9 +241,9 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
 bool virtio_net_handle_rx(struct virtio_net_device *dev);
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev,
-                          uintptr_t cfg_space_base_vm,
-                          uintptr_t cfg_space_base_vmm,
-                          uint32_t cfg_space_size,
+                          uintptr_t ecam_base_vm,
+                          uintptr_t ecam_base_vmm,
+                          uint32_t ecam_size,
                           size_t virq,
                           net_queue_handle_t *rx,
                           net_queue_handle_t *tx,

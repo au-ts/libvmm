@@ -37,7 +37,7 @@ static uintptr_t pci_allocate_bar_memory(virtio_device_t *dev, uint8_t dev_bar_i
 static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint8_t cfg_type,
                            uint8_t bar, uint8_t next_ptr)
 {
-    uintptr_t new_cap_addr = (uintptr_t)dev->transport.pci.cfg_space + offset;
+    uintptr_t new_cap_addr = (uintptr_t)dev->transport.pci.ecam + offset;
     uint8_t len;            // length of the new cap
     uint32_t size = 0;      // size of the structure on the BAR, in bytes
 
@@ -91,7 +91,7 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
 static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg_type, uint8_t bar)
 {
     // Make sure the byte "cap_len" is within the region
-    struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+    struct pci_config_space *config_space = dev->transport.pci.ecam;
     assert(config_space->cap_ptr + 2 < FUNC_CONFIG_SPACE_SIZE);
 
     uint8_t *last_cap = (uint8_t *)config_space + config_space->cap_ptr;
@@ -131,7 +131,7 @@ void pci_add_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size)
     global_memory_bars[idx].dev = dev;
     global_memory_bars[idx].idx = bar_id;
 
-    struct pci_bar_memory_bits *new_mem_bar = (struct pci_bar_memory_bits *)&dev->transport.pci.cfg_space->bar[bar_id];
+    struct pci_bar_memory_bits *new_mem_bar = (struct pci_bar_memory_bits *)&dev->transport.pci.ecam->bar[bar_id];
     new_mem_bar->base_address = 0;
 }
 
@@ -140,12 +140,12 @@ void pci_add_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size)
  * */
 static struct virtio_pci_cap *find_pci_cap_by_offset(virtio_device_t *dev, uint8_t bar, uint32_t offset)
 {
-    struct virtio_pci_cap *cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.cfg_space + dev->transport.pci.cfg_space->cap_ptr);
-    while (cap != dev->transport.pci.cfg_space) {
+    struct virtio_pci_cap *cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.ecam + dev->transport.pci.ecam->cap_ptr);
+    while (cap != dev->transport.pci.ecam) {
         if (cap->cap_id == PCI_CAP_ID_VNDR && cap->bar == bar && (cap->offset <= offset && offset < cap->offset + cap->length)) {
             return cap;
         }
-        cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.cfg_space + cap->next_ptr);
+        cap = (struct virtio_pci_cap *)((uintptr_t)dev->transport.pci.ecam + cap->next_ptr);
     }
     return NULL;
 }
@@ -162,14 +162,12 @@ static int handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg)
     case VIRTIO_CONFIG_S_RESET:
         dev->data.Status = 0;
         dev->funs->device_reset(dev);
-        printf("VIRTIO PCI|INFO: device reset\n");
         break;
 
     case VIRTIO_CONFIG_S_ACKNOWLEDGE:
         // are we following the initialization protocol?
         if (dev->data.Status == 0) {
             dev->data.Status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
-            printf("Set ACKNOWLEDGE\n");
             // nothing to do from our side (as the virtio device).
         }
         break;
@@ -196,11 +194,11 @@ static int handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg)
         break;
 
     case VIRTIO_CONFIG_S_FAILED:
-        printf("VIRTIO MMIO|INFO: received FAILED status from driver, giving up this device.\n");
+        printf("VIRTIO PCI|INFO: received FAILED status from driver, giving up this device.\n");
         break;
 
     default:
-        printf("VIRTIO MMIO|INFO: unknown device status 0x%x.\n", reg);
+        printf("VIRTIO PCI|INFO: unknown device status 0x%x.\n", reg);
         success = 0;
     }
     return success;
@@ -225,8 +223,12 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_Q_SIZE):
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         reg = dev->data.Status;
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_CFG_GENERATION, VIRTIO_PCI_COMMON_Q_SIZE):
+        reg = dev->data.ConfigGeneration;
+        /* dev->data.ConfigGeneration += 1; */
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         break;
@@ -250,10 +252,10 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     }
 
-    printf("Read data: 0x%x\n", reg);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
+    printf("Read data: 0x%x\n", reg);
     fault_emulate_write(regs, offset, fsr, reg & mask);
 
     return success;
@@ -342,7 +344,6 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
     uintptr_t vmm_addr = offset + registered_pci_memory_resource.vmm_addr;
-    printf("[BAR fault]: 0x%x\n", offset);
 
     // Search for dev from global_memory_bars
     uint32_t i = 0;
@@ -372,7 +373,7 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
             cfg_handler = fault_is_read(fsr) ? virtio_pci_device_reg_read : virtio_pci_device_reg_write;
             break;
         default:
-            printf("Unimplemented type: 0x%x\n", cap->cfg_type);
+            printf("Unimplemented bar fault handler for type: 0x%x\n", cap->cfg_type);
             break;
     }
 
@@ -401,15 +402,15 @@ void pci_add_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t siz
     }
 }
 
-static bool handle_virtio_cfg_space_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
                                          seL4_UserContext *regs)
 {
     uint32_t data = fault_get_data(regs, fsr);
-    printf("[cfg_space] offset: 0x%x, data: 0x%llx\n", offset, data);
+    printf("[ecam write] offset: 0x%x, data: 0x%llx\n", offset, data);
 
     switch (offset) {
         case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
-            struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+            struct pci_config_space *config_space = dev->transport.pci.ecam;
             config_space->command = data & PCI_COMMAND_MEMORY;
             break;
         }
@@ -428,14 +429,15 @@ static bool handle_virtio_cfg_space_reg_write(virtio_device_t *dev, size_t vcpu_
             //     5. The device parse the memory address and bookkeep it.
             if (global_memory_bars[global_bar_id].size) {
                 if (data == 0xFFFFFFFF) {
-                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(dev->transport.pci.cfg_space->bar[dev_bar_id]);
+                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(dev->transport.pci.ecam->bar[dev_bar_id]);
                     bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
                     printf("bar address: 0x%x\n", bar->base_address);
                 } else if (data != 0x0) {
-                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&dev->transport.pci.cfg_space->bar[dev_bar_id];
+                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&dev->transport.pci.ecam->bar[dev_bar_id];
                     uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
                     bar->base_address = allocated_addr >> 4;        // 16-byte aligned
                     global_memory_bars[global_bar_id].vaddr = allocated_addr;
+                    printf("allocated bar addr: 0x%x\n", allocated_addr);
                 }
             }
             break;
@@ -445,18 +447,16 @@ static bool handle_virtio_cfg_space_reg_write(virtio_device_t *dev, size_t vcpu_
     return true;
 }
 
-static bool virtio_cfg_space_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
     if (fault_is_read(fsr)) {
         uint32_t data = 0;
-        /* if (offset < 0x1000) { */
-        /*     /\* LOG_VMM_ERR("Configuration space should be readable.\n"); *\/ */
-        /*     uint32_t *reg = dev->transport.pci.cfg_space; */
-        /*     /\* printf("[cfg_space fault]: read at 0x%x, cfg_space: 0x%x\n", offset, reg); *\/ */
-        /*     data = reg[offset / 4]; */
-        /* } */
+        if (offset < 0x1000) {
+            uint32_t *reg = dev->transport.pci.ecam;
+            data = reg[offset / 4];
+        }
 
         uint32_t mask = fault_get_data_mask(offset, fsr);
         // @ivanv: make it clearer that just passing the offset is okay,
@@ -464,7 +464,7 @@ static bool virtio_cfg_space_fault_handle(size_t vcpu_id, size_t offset, size_t 
         fault_emulate_write(regs, offset, fsr, data & mask);
         return true;
     } else {
-        return handle_virtio_cfg_space_reg_write(dev, vcpu_id, offset, fsr, regs);
+        return handle_virtio_ecam_reg_write(dev, vcpu_id, offset, fsr, regs);
     }
 }
 
@@ -473,10 +473,10 @@ bool virtio_pci_register_device(virtio_device_t *dev)
     assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
 
     // TODO: search for available device/function slots
-    struct pci_config_space *config_space = dev->transport.pci.cfg_space;
+    struct pci_config_space *config_space = dev->transport.pci.ecam;
     bool success;
 
-    uint8_t *data = (uint8_t *)dev->transport.pci.cfg_space;
+    uint8_t *data = (uint8_t *)dev->transport.pci.ecam;
     for (uint32_t i = 0; i < 256; i++) {
         if (i % 16 == 0) {
             printf("\n");
@@ -509,7 +509,7 @@ bool virtio_pci_register_device(virtio_device_t *dev)
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_PCI_CFG, 0);
     assert(success);
 
-    data = (uint8_t *)dev->transport.pci.cfg_space;
+    data = (uint8_t *)dev->transport.pci.ecam;
     for (uint32_t i = 0; i < 256; i++) {
         if (i % 16 == 0) {
             printf("\n");
@@ -518,9 +518,9 @@ bool virtio_pci_register_device(virtio_device_t *dev)
     }
     printf("\n");
 
-    success = fault_register_vm_exception_handler(dev->transport.pci.cfg_space_vm,
-                                                  dev->transport.pci.cfg_size,
-                                                  &virtio_cfg_space_fault_handle,
+    success = fault_register_vm_exception_handler(dev->transport.pci.ecam_vm,
+                                                  dev->transport.pci.ecam_size,
+                                                  &virtio_ecam_fault_handle,
                                                   dev);
 
 

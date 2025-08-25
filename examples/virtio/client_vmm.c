@@ -74,17 +74,17 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie) {
 void init(void)
 {
     /* assert(serial_config_check_magic(&serial_config)); */
-    assert(blk_config_check_magic(&blk_config));
+    /* assert(blk_config_check_magic(&blk_config)); */
     assert(vmm_config_check_magic(&vmm_config));
     /* assert(net_config_check_magic(&net_config)); */
 
-    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
-                   blk_config.virt.num_buffers);
+    /* blk_queue_init(&blk_queue, blk_config.virt/\* .req_queue.vaddr, blk_config.virt.resp_queue.vaddr, *\/ */
+                   /* blk_config.virt.num_buffers); */
     /* Want to print out configuration information, so wait until the config is ready. */
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    /* blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr; */
 
     /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
+    /* while (!blk_storage_is_ready(storage_info)); */
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -115,25 +115,25 @@ void init(void)
     }
 
     /* Find the details of VirtIO console, net and block devices from sdfgen */
-    int console_vdev_idx = -1;
-    int blk_vdev_idx = -1;
-    int net_vdev_idx = -1;
-    assert(vmm_config.num_virtio_mmio_devices == 1);
-    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
-        switch (vmm_config.virtio_mmio_devices[i].type) {
-        case VIRTIO_DEVICE_ID_CONSOLE:
-            console_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_BLOCK:
-            blk_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_NET:
-            net_vdev_idx = i;
-            break;
-        }
-    }
+    /* int console_vdev_idx = -1; */
+    /* int blk_vdev_idx = -1; */
+    /* int net_vdev_idx = -1; */
+    /* assert(vmm_config.num_virtio_mmio_devices == 1); */
+    /* for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) { */
+    /*     switch (vmm_config.virtio_mmio_devices[i].type) { */
+    /*     case VIRTIO_DEVICE_ID_CONSOLE: */
+    /*         console_vdev_idx = i; */
+    /*         break; */
+    /*     case VIRTIO_DEVICE_ID_BLOCK: */
+    /*         blk_vdev_idx = i; */
+    /*         break; */
+    /*     case VIRTIO_DEVICE_ID_NET: */
+    /*         net_vdev_idx = i; */
+    /*         break; */
+    /*     } */
+    /* } */
     /* assert(console_vdev_idx != -1); */
-    assert(blk_vdev_idx != -1);
+    /* assert(blk_vdev_idx != -1); */
     /* assert(net_vdev_idx != -1); */
 
     success = virq_register(GUEST_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
@@ -153,15 +153,15 @@ void init(void)
     /* assert(success); */
 
     /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(&virtio_blk,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq,
-                                   (uintptr_t)blk_config.data.vaddr,
-                                   blk_config.data.size,
-                                   storage_info,
-                                   &blk_queue,
-                                   blk_config.virt.id);
+    /* success = virtio_mmio_blk_init(&virtio_blk, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].base, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].size, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, */
+    /*                                (uintptr_t)blk_config.data.vaddr, */
+    /*                                blk_config.data.size, */
+    /*                                storage_info, */
+    /*                                &blk_queue, */
+    /*                                blk_config.virt.id); */
     assert(success);
 
     /* Initialise virtIO net device */
@@ -202,7 +202,6 @@ void init(void)
 void notified(microkit_channel ch)
 {
     if (ch == SERIAL_IRQ_CH) {
-        printf("inject serial IRQ\n");
         bool success = virq_inject(GUEST_VCPU_ID, SERIAL_IRQ);
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped on vCPU %d\n", SERIAL_IRQ, GUEST_VCPU_ID);
