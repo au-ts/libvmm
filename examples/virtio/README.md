@@ -44,12 +44,12 @@ dependencies are needed:
 On apt based Linux distributions run the following commands:
 ```sh
 sudo apt-get install dosfstools
-pip3 install sdfgen==0.23.1
+pip3 install sdfgen==0.26.0
 ```
 
 If you get error: `externally-managed-environment` when installing via pip, instead run:
 ```sh
-pip3 install --break-system-packages sdfgen==0.23.1
+pip3 install --break-system-packages sdfgen==0.26.0
 ```
 
 ### macOS
@@ -57,12 +57,12 @@ pip3 install --break-system-packages sdfgen==0.23.1
 On macOS, you can install the dependencies via Homebrew:
 ```sh
 brew install dosfstools
-pip3 install sdfgen==0.23.1
+pip3 install sdfgen==0.26.0
 ```
 
 If you get error: `externally-managed-environment` when installing via pip, instead run:
 ```sh
-pip3 install --break-system-packages sdfgen==0.23.1
+pip3 install --break-system-packages sdfgen==0.26.0
 ```
 
 ### Nix
