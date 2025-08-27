@@ -55,6 +55,10 @@ net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
 static struct virtio_net_device virtio_net;
 
+/* PCI Configuration */
+uintptr_t pci_ecam;
+uintptr_t pci_memory_resource;
+
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
@@ -153,6 +157,18 @@ void init(void)
     /*                                net_config.mac_addr */
     /*                               ); */
     /* assert(success); */
+
+    pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000);
+    success = virtio_pci_net_init(&virtio_net,
+                                   0x10000000,
+                                   0x100000,
+                                   0x100000,
+                                   0,
+                                   &net_rx_queue, &net_tx_queue,
+                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                   net_config.rx.id, net_config.tx.id,
+                                   net_config.mac_addr
+                                  );
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);
