@@ -238,7 +238,10 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         reg = VIRTIO_PCI_QUEUE_SIZE;
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_DESC_LO):
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_OFF, VIRTIO_PCI_COMMON_Q_DESC_LO):
+        reg = 1 << 16;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
         break;
@@ -423,12 +426,13 @@ static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, si
                                          seL4_UserContext *regs)
 {
     bool success = true;
-    printf("VIRTIO PCI|INFO: notfiy write at 0x%x\n", offset);
     uint32_t data = fault_get_data(regs, fsr);
-    dev->data.QueueNotify = (uint32_t)data / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
-    if (dev->data.QueueNotify) {
-        success = dev->funs->queue_notify(dev);
-    }
+    printf("VIRTIO PCI|INFO: notfiy write 0x%x at 0x%x\n", data, offset);
+    dev->data.QueueNotify = (uint32_t)data;
+
+    /* TODO: virtio-pci does not write to queue_sel */
+    dev->data.QueueSel = offset / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
+    success = dev->funs->queue_notify(dev);
     return success;
 }
 
