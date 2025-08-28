@@ -149,9 +149,9 @@ client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
+	$(VIRTIO_EXAMPLE)/linux client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_KERNEL_IMAGE_PATH=\"$(VIRTIO_EXAMPLE)/linux\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \

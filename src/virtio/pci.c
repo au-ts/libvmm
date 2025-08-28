@@ -223,7 +223,10 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE, VIRTIO_PCI_COMMON_MSIX):
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
+    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_NUM_QUEUES):
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
+        reg = VIRTIO_PCI_QUEUE_NUM_MAX << 16;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         reg = dev->data.Status;
@@ -233,6 +236,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         /* dev->data.ConfigGeneration += 1; */
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
+        reg = VIRTIO_PCI_QUEUE_SIZE;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_DESC_LO):
         break;
@@ -257,7 +261,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
-    printf("Read data: 0x%x\n", reg);
+    printf("Read data: 0x%x, mask: 0x%x\n", reg & mask, mask);
     fault_emulate_write(regs, offset, fsr, reg & mask);
 
     return success;
@@ -415,6 +419,11 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
             break;
         }
+        case REG_RANGE(PCI_CFG_OFFSET_STATUS, PCI_CFG_OFFSET_BAR1): {
+            struct pci_config_space *config_space = dev->transport.pci.ecam;
+            config_space->status = data;
+            break;
+        }
         case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
             uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
             uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
@@ -463,7 +472,7 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
         // @ivanv: make it clearer that just passing the offset is okay,
         // possibly just fix the API
         fault_emulate_write(regs, offset, fsr, data & mask);
-        printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x\n", offset, data & mask, mask);
+        printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x, fsr: 0x%x\n", offset, data & mask, mask, fsr);
         return true;
     } else {
         return handle_virtio_ecam_reg_write(dev, vcpu_id, offset, fsr, regs);
@@ -490,7 +499,7 @@ bool virtio_pci_register_device(virtio_device_t *dev)
 
     config_space->vendor_id = dev->transport.pci.vendor_id;
     config_space->device_id = dev->transport.pci.device_id;
-    config_space->command = 0;
+    config_space->command = (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
     config_space->status = PCI_STATUS_CAP_LIST;
     config_space->revision_id = VIRTIO_PCI_REVISION;
     // TODO: make the class variable
@@ -498,7 +507,7 @@ bool virtio_pci_register_device(virtio_device_t *dev)
     config_space->class_code = PCI_CLASS_CODE(dev->transport.pci.device_class);
     config_space->subsystem_vendor_id = dev->data.VendorID;
     config_space->subsystem_device_id = dev->data.DeviceID;
-    config_space->interrupt_line = 0x14;
+    config_space->interrupt_line = 44;
     config_space->interrupt_pin = 0x1;
 
     config_space->cap_ptr = 0x40;
