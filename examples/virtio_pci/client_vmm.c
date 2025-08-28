@@ -158,19 +158,16 @@ void init(void)
     /*                               ); */
     /* assert(success); */
 
-    /* TODO: Replace with the one from metaprogram */
-    uint8_t mac_addr[VIRTIO_NET_CONFIG_MAC_SZ] = { 0x52, 0x54, 0x00, 0x00, 0x12, 0x34 };
-
     pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000);
     success = virtio_pci_net_init(&virtio_net,
                                    0x10000000,
                                    0x100000,
                                    0x100000,
-                                   0,
+                                   48,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
                                    net_config.rx.id, net_config.tx.id,
-                                   mac_addr
+                                   net_config.mac_addr
                                   );
 
     /* Finally start the guest */
@@ -187,6 +184,7 @@ void notified(microkit_channel ch)
     /* } else if (ch == blk_config.virt.id) { */
         /* virtio_blk_handle_resp(&virtio_blk); */
     } else if (ch == net_config.rx.id) {
+        printf("rx\n");
         virtio_net_handle_rx(&virtio_net);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);

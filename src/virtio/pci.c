@@ -4,8 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <libvmm/guest.h>
+#include <libvmm/virq.h>
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/config.h>
+#include <libvmm/virtio/virtq.h>
 #include <libvmm/arch/aarch64/fault.h>
 
 static struct pci_memory_resource registered_pci_memory_resource;
@@ -569,14 +572,20 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
         // @ivanv: make it clearer that just passing the offset is okay,
         // possibly just fix the API
         fault_emulate_write(regs, offset, fsr, data & mask);
-        printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x, fsr: 0x%x\n", offset, data & mask, mask, fsr);
+        /* printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x, fsr: 0x%x\n", offset, data & mask, mask, fsr); */
         return true;
     } else {
         return handle_virtio_ecam_reg_write(dev, vcpu_id, offset, fsr, regs);
     }
 }
 
-bool virtio_pci_register_device(virtio_device_t *dev)
+/*
+ * If the guest acknowledges the virtual IRQ associated with the virtIO
+ * device, there is nothing that we need to do.
+ */
+static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
+
+bool virtio_pci_register_device(virtio_device_t *dev, int virq)
 {
     assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
 
@@ -638,6 +647,14 @@ bool virtio_pci_register_device(virtio_device_t *dev)
         LOG_VMM_ERR("Could not register virtual memory fault handler for pci device");
         return false;
     }
+
+    /* Register the virtual IRQ that will be used to communicate from the device
+     * to the guest. This assumes that the interrupt controller is already setup. */
+    // @ivanv: we should check that (on AArch64) the virq is an SPI.
+    // TODO: register after the driver writing to interrupt line
+    printf("reigster irq: %d\n", virq);
+    success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
+    assert(success);
 
     return success;
 }

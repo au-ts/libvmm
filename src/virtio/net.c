@@ -445,7 +445,7 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;
     dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;
-    /* dev->virq = virq; */
+    dev->virq = virq;
     dev->device_data = net_dev;
 
     memcpy(net_dev->config.mac, mac, VIRTIO_NET_CONFIG_MAC_SZ);
@@ -467,5 +467,5 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
 
     pci_add_memory_bar(dev, 0, 0x10000);
 
-    return virtio_pci_register_device(dev);
+    return virtio_pci_register_device(dev, virq);
 }

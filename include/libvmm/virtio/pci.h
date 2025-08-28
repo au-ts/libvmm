@@ -316,7 +316,7 @@ typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t 
  * Assumes the virtio_device_t *dev struct passed has been populated
  * and virtual IRQ associated with the device has been registered.
  */
-bool virtio_pci_register_device(virtio_device_t *dev);
+bool virtio_pci_register_device(virtio_device_t *dev, int virq);
 
 void pci_add_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);
 void pci_add_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);
