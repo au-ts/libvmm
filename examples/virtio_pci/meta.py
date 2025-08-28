@@ -92,31 +92,31 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    # # # Net subsystem
-    # net_node = dtb.node(board.net)
-    # assert net_node is not None
-    # # guest_net_node = client_dtb.node(board.guest_net)
-    # # assert guest_net_node is not None
+    # # Net subsystem
+    net_node = dtb.node(board.net)
+    assert net_node is not None
+    # guest_net_node = client_dtb.node(board.guest_net)
+    # assert guest_net_node is not None
 
-    # eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
-    #                               priority=101, budget=100, period=400)
-    # net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
-    # net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
-    # net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
-    # client0_net_copier = ProtectionDomain(
-    #     "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+                                  priority=101, budget=100, period=400)
+    net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
+    net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
+    net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
+    client0_net_copier = ProtectionDomain(
+        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
 
-    # pds = [
-    #     eth_driver,
-    #     net_virt_rx,
-    #     net_virt_tx,
-    #     client0_net_copier,
-    # ]
-    # for pd in pds:
-    #     sdf.add_pd(pd)
+    pds = [
+        eth_driver,
+        net_virt_rx,
+        net_virt_tx,
+        client0_net_copier,
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
 
-    # # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
-    # net_system.add_client_with_copier(vmm_client0, client0_net_copier)
+    # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    net_system.add_client_with_copier(vmm_client0, client0_net_copier)
 
     ############ VIRTIO PCI ############
     config_space = MemoryRegion("ecam", 0x10000)
@@ -129,8 +129,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
-    # assert net_system.connect()
-    # assert net_system.serialise_config(output_dir)
+    assert net_system.connect()
+    assert net_system.serialise_config(output_dir)
     assert client0.connect()
     assert client0.serialise_config(output_dir)
 

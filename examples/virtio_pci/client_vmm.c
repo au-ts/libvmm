@@ -142,11 +142,11 @@ void init(void)
     /* assert(success); */
 
     /* Initialise virtIO net device */
-    /* net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr, */
-    /*                net_config.rx.num_buffers); */
-    /* net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr, */
-    /*                net_config.tx.num_buffers); */
-    /* net_buffers_init(&net_tx_queue, 0); */
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
     /* success = virtio_mmio_net_init(&virtio_net, */
     /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].base, */
     /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].size, */
@@ -186,8 +186,8 @@ void notified(microkit_channel ch)
         /* Nothing to do */
     /* } else if (ch == blk_config.virt.id) { */
         /* virtio_blk_handle_resp(&virtio_blk); */
-    /* } else if (ch == net_config.rx.id) { */
-        /* virtio_net_handle_rx(&virtio_net); */
+    } else if (ch == net_config.rx.id) {
+        virtio_net_handle_rx(&virtio_net);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
     }

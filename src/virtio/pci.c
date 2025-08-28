@@ -277,8 +277,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     uint32_t data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
-    data &= mask;
-    printf("VIRTIO PCI|INFO: common write 0x%x at 0x%x\n", data, offset);
+    printf("VIRTIO PCI|INFO: common write 0x%x at 0x%x, mask 0x%x\n", data, offset, mask);
+    /* data &= mask; */
 
     switch (offset) {
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
@@ -303,6 +303,11 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
+        if (data == 0x1) {
+            dev->vqs[dev->data.QueueSel].ready = true;
+            // the virtq is already in ram so we don't need to do any initiation
+            printf("queue %d is ready\n", dev->data.QueueSel);
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
         if (dev->data.QueueSel < dev->num_vqs) {
