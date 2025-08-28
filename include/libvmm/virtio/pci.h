@@ -100,30 +100,30 @@
 #define  PCI_COMMAND_INTX_DISABLE       0x400  /* INTx Emulation Disable */
 
 // PCI Common configuration
-#define VIRTIO_PCI_COMMON_DEV_FEATURE_SEL       0
-#define VIRTIO_PCI_COMMON_DEV_FEATURE           4
-#define VIRTIO_PCI_COMMON_DRI_FEATURE_SEL       8
-#define VIRTIO_PCI_COMMON_DRI_FEATURE           12
-#define VIRTIO_PCI_COMMON_MSIX                  16
-#define VIRTIO_PCI_COMMON_NUM_QUEUES            18
-#define VIRTIO_PCI_COMMON_DEV_STATUS            20
-#define VIRTIO_PCI_COMMON_CFG_GENERATION        21
-#define VIRTIO_PCI_COMMON_Q_SELECT              22
-#define VIRTIO_PCI_COMMON_Q_SIZE                24
-#define VIRTIO_PCI_COMMON_Q_MSIX                26
-#define VIRTIO_PCI_COMMON_Q_ENABLE              28
-#define VIRTIO_PCI_COMMON_Q_NOTIF_OFF           30
-#define VIRTIO_PCI_COMMON_Q_DESC_LO             32
-#define VIRTIO_PCI_COMMON_Q_DESC_HI             36
-#define VIRTIO_PCI_COMMON_Q_AVAIL_LO            40
-#define VIRTIO_PCI_COMMON_Q_AVAIL_HI            44
-#define VIRTIO_PCI_COMMON_Q_USED_LO             48
-#define VIRTIO_PCI_COMMON_Q_USED_HI             52
-#define VIRTIO_PCI_COMMON_Q_NOTIF_DATA          56
-#define VIRTIO_PCI_COMMON_Q_RESET               58
-#define VIRTIO_PCI_COMMON_ADM_Q_IDX             60
-#define VIRTIO_PCI_COMMON_ADM_Q_NUM             62
-#define VIRTIO_PCI_COMMON_END                   64
+#define VIRTIO_PCI_COMMON_DEV_FEATURE_SEL       0x0
+#define VIRTIO_PCI_COMMON_DEV_FEATURE           0x4
+#define VIRTIO_PCI_COMMON_DRI_FEATURE_SEL       0x8
+#define VIRTIO_PCI_COMMON_DRI_FEATURE           0xc
+#define VIRTIO_PCI_COMMON_MSIX                  0x10
+#define VIRTIO_PCI_COMMON_NUM_QUEUES            0x12
+#define VIRTIO_PCI_COMMON_DEV_STATUS            0x14
+#define VIRTIO_PCI_COMMON_CFG_GENERATION        0x15
+#define VIRTIO_PCI_COMMON_Q_SELECT              0x16
+#define VIRTIO_PCI_COMMON_Q_SIZE                0x18
+#define VIRTIO_PCI_COMMON_Q_MSIX                0x1a
+#define VIRTIO_PCI_COMMON_Q_ENABLE              0x1c
+#define VIRTIO_PCI_COMMON_Q_NOTIF_OFF           0x1e
+#define VIRTIO_PCI_COMMON_Q_DESC_LO             0x20
+#define VIRTIO_PCI_COMMON_Q_DESC_HI             0x24
+#define VIRTIO_PCI_COMMON_Q_AVAIL_LO            0x28
+#define VIRTIO_PCI_COMMON_Q_AVAIL_HI            0x2c
+#define VIRTIO_PCI_COMMON_Q_USED_LO             0x30
+#define VIRTIO_PCI_COMMON_Q_USED_HI             0x34
+#define VIRTIO_PCI_COMMON_Q_NOTIF_DATA          0x38
+#define VIRTIO_PCI_COMMON_Q_RESET               0x3a
+#define VIRTIO_PCI_COMMON_ADM_Q_IDX             0x3c
+#define VIRTIO_PCI_COMMON_ADM_Q_NUM             0x3e
+#define VIRTIO_PCI_COMMON_END                   0x40
 
 #define BUS_NUM                         256
 #define DEVS_PER_BUS                    32
@@ -133,6 +133,7 @@
 
 #define VIRTIO_PCI_VENDOR_ID            0x1AF4
 #define VIRTIO_PCI_NET_DEV_ID           0x1000
+#define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
 #define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
 #define VIRTIO_PCI_QUEUE_SIZE           0x100
 

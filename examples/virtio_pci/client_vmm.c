@@ -158,6 +158,9 @@ void init(void)
     /*                               ); */
     /* assert(success); */
 
+    /* TODO: Replace with the one from metaprogram */
+    uint8_t mac_addr[VIRTIO_NET_CONFIG_MAC_SZ] = { 0x52, 0x54, 0x00, 0x00, 0x12, 0x34 };
+
     pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000);
     success = virtio_pci_net_init(&virtio_net,
                                    0x10000000,
@@ -167,7 +170,7 @@ void init(void)
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
                                    net_config.rx.id, net_config.tx.id,
-                                   net_config.mac_addr
+                                   mac_addr
                                   );
 
     /* Finally start the guest */

@@ -56,7 +56,7 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
         // TODO: double-check this size
         size = 0x1000;
         struct virtio_pci_notify_cap *notify = (struct virtio_pci_notify_cap *)new_cap_addr;
-        notify->notify_off_multiplier = 2;
+        notify->notify_off_multiplier = VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
         break;
     case VIRTIO_PCI_CAP_PCI_CFG:
         len = sizeof(struct virtio_pci_cfg_cap);
@@ -226,7 +226,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_NUM_QUEUES):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
-        reg = VIRTIO_PCI_QUEUE_NUM_MAX << 16;
+        reg = dev->num_vqs << 16;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         reg = dev->data.Status;
@@ -291,29 +291,94 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_Q_SIZE):
+    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         success = handle_virtio_pci_set_status_flag(dev, data);
+        break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_SELECT, VIRTIO_PCI_COMMON_Q_SIZE):
+        dev->data.QueueSel = data;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_DESC_LO):
+    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->desc;
+            ptr |= data;
+            virtq->desc = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_HI, VIRTIO_PCI_COMMON_Q_AVAIL_LO):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->desc;
+            ptr |= (uintptr_t)data << 32;
+            virtq->desc = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_LO, VIRTIO_PCI_COMMON_Q_AVAIL_HI):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->avail;
+            ptr |= data;
+            virtq->avail = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_HI, VIRTIO_PCI_COMMON_Q_USED_LO):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->avail;
+            ptr |= (uintptr_t)data << 32;
+            virtq->avail = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_LO, VIRTIO_PCI_COMMON_Q_USED_HI):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->used;
+            ptr |= data;
+            virtq->used = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_HI, VIRTIO_PCI_COMMON_Q_NOTIF_DATA):
+        if (dev->data.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->data.QueueSel].virtq;
+            uintptr_t ptr = (uintptr_t)virtq->used;
+            ptr |= (uintptr_t)data << 32;
+            virtq->used = (struct virtq_desc *)ptr;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->data.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_DATA, VIRTIO_PCI_COMMON_ADM_Q_IDX):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_ADM_Q_IDX, VIRTIO_PCI_COMMON_END):
         break;
+    default:
+        printf("VIRTIO PCI|ERR: driver should never write to the offset 0x%x\n", offset);
     }
 
     return success;
@@ -322,7 +387,6 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
                                          seL4_UserContext *regs)
 {
-    printf("VIRTIO PCI|INFO: device read at 0x%x\n", offset);
     uint32_t reg = 0;
     bool success = true;
     success = dev->funs->get_device_config(dev, offset, &reg);
@@ -331,6 +395,7 @@ static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
+    printf("VIRTIO PCI|INFO: device read 0x%x at 0x%x\n", reg & mask, offset);
     return success;
 }
 
@@ -345,6 +410,26 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     printf("VIRTIO PCI|INFO: device write 0x%x at 0x%x\n", data, offset);
     success = dev->funs->set_device_config(dev, offset, data);
     return false;
+}
+
+static bool virtio_pci_notify_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    printf("VIRTIO PCI|INFO: notfiy read at 0x%x\n", offset);
+    return false;
+}
+
+static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    bool success = true;
+    printf("VIRTIO PCI|INFO: notfiy write at 0x%x\n", offset);
+    uint32_t data = fault_get_data(regs, fsr);
+    dev->data.QueueNotify = (uint32_t)data / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
+    if (dev->data.QueueNotify) {
+        success = dev->funs->queue_notify(dev);
+    }
+    return success;
 }
 
 static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
@@ -376,6 +461,9 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
             break;
         case VIRTIO_PCI_CAP_DEVICE_CFG:
             cfg_handler = fault_is_read(fsr) ? virtio_pci_device_reg_read : virtio_pci_device_reg_write;
+            break;
+        case VIRTIO_PCI_CAP_NOTIFY_CFG:
+            cfg_handler = fault_is_read(fsr) ? virtio_pci_notify_reg_read : virtio_pci_notify_reg_write;
             break;
         default:
             printf("Unimplemented bar fault handler for type: 0x%x\n", cap->cfg_type);
