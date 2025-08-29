@@ -405,25 +405,6 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-
-static virtio_device_funs_t pci_functions = {
-    .device_reset = virtio_net_reset,
-};
-
-/* bool virtio_pci_net_init(virtio_pci_device_t *net_dev, uintptr_t pci_cs) */
-/* { */
-/*     struct virtio_device *dev */
-/*     net_dev->device_id = 0x1000; */
-/*     net_dev->vendor_id = 0x1AF4; */
-/*     net_dev->device_class = PCI_CLASS_NETWORK_ETHERNET; */
-/*     net_dev->pci_cs = (struct pci_config_space *)pci_cs; */
-/*     net_dev->funs = &pci_functions; */
-
-/*     pci_add_memory_bar(net_dev, 0, 0x10000); */
-
-/*     return virtio_pci_register_device(net_dev); */
-/* } */
-
 bool virtio_pci_net_init(struct virtio_net_device *net_dev,
                           uintptr_t ecam_base_vm,
                           uintptr_t ecam_base_vmm,

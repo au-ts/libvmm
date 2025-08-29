@@ -133,7 +133,7 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		# --startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
