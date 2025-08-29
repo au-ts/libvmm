@@ -184,7 +184,6 @@ void notified(microkit_channel ch)
     /* } else if (ch == blk_config.virt.id) { */
         /* virtio_blk_handle_resp(&virtio_blk); */
     } else if (ch == net_config.rx.id) {
-        printf("rx\n");
         virtio_net_handle_rx(&virtio_net);
     } else {
         LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);

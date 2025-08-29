@@ -82,8 +82,6 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
     new_cap->offset = bar_offset;
     new_cap->length = size;
 
-    printf("Add capability 0x%u, offset: 0x%x, size: 0x%x\n", cfg_type, bar_offset, size);
-
     return true;
 }
 
@@ -212,7 +210,6 @@ static int handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg)
 static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
                                          seL4_UserContext *regs)
 {
-    printf("VIRTIO PCI|INFO: common read at 0x%x\n", offset);
     uint32_t reg = 0;
     bool success = true;
 
@@ -229,6 +226,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_NUM_QUEUES):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
+        // TODO: proper way?
         reg = dev->num_vqs << 16;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
@@ -244,6 +242,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_OFF, VIRTIO_PCI_COMMON_Q_DESC_LO):
+        // TODO: proper way?
         reg = 1 << 16;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
@@ -267,7 +266,6 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
-    printf("Read data: 0x%x, mask: 0x%x\n", reg & mask, mask);
     fault_emulate_write(regs, offset, fsr, reg & mask);
 
     return success;
@@ -280,7 +278,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     uint32_t data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
-    printf("VIRTIO PCI|INFO: common write 0x%x at 0x%x, mask 0x%x\n", data, offset, mask);
+    /* TODO: Why? Given queue_sel is not the case */
     /* data &= mask; */
 
     switch (offset) {
@@ -309,7 +307,6 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
         if (data == 0x1) {
             dev->vqs[dev->data.QueueSel].ready = true;
             // the virtq is already in ram so we don't need to do any initiation
-            printf("queue %d is ready\n", dev->data.QueueSel);
         }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
@@ -406,7 +403,6 @@ static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
-    printf("VIRTIO PCI|INFO: device read 0x%x at 0x%x\n", reg & mask, offset);
     return success;
 }
 
@@ -418,7 +414,6 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
     data &= mask;
-    printf("VIRTIO PCI|INFO: device write 0x%x at 0x%x\n", data, offset);
     success = dev->funs->set_device_config(dev, offset, data);
     return false;
 }
@@ -426,7 +421,7 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 static bool virtio_pci_notify_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
                                          seL4_UserContext *regs)
 {
-    printf("VIRTIO PCI|INFO: notfiy read at 0x%x\n", offset);
+    printf("VIRTIO PCI|ERR: notfiy_cfg should not be read\n");
     return false;
 }
 
@@ -435,13 +430,31 @@ static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 {
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
-    printf("VIRTIO PCI|INFO: notfiy write 0x%x at 0x%x\n", data, offset);
     dev->data.QueueNotify = (uint32_t)data;
 
     /* TODO: virtio-pci does not write to queue_sel */
     dev->data.QueueSel = offset / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
     success = dev->funs->queue_notify(dev);
     return success;
+}
+
+static bool virtio_pci_isr_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    uint32_t reg = dev->data.InterruptStatus;
+    uint32_t mask = fault_get_data_mask(offset, fsr);
+    // @ivanv: make it clearer that just passing the offset is okay,
+    // possibly just fix the API
+    fault_emulate_write(regs, offset, fsr, reg & mask);
+    dev->data.InterruptStatus = 0;
+    return true;
+}
+
+static bool virtio_pci_isr_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                         seL4_UserContext *regs)
+{
+    printf("VIRTIO PCI|ERR: isr should not be written by the driver\n");
+    return false;
 }
 
 static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
@@ -477,6 +490,9 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
         case VIRTIO_PCI_CAP_NOTIFY_CFG:
             cfg_handler = fault_is_read(fsr) ? virtio_pci_notify_reg_read : virtio_pci_notify_reg_write;
             break;
+        case VIRTIO_PCI_CAP_ISR_CFG:
+            cfg_handler = fault_is_read(fsr) ? virtio_pci_isr_reg_read : virtio_pci_isr_reg_write;
+            break;
         default:
             printf("Unimplemented bar fault handler for type: 0x%x\n", cap->cfg_type);
             break;
@@ -511,7 +527,6 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                                          seL4_UserContext *regs)
 {
     uint32_t data = fault_get_data(regs, fsr);
-    printf("[ecam write] offset: 0x%x, data: 0x%llx\n", offset, data);
 
     switch (offset) {
         case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
@@ -528,7 +543,6 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
             uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
 
-            printf("global_bar_id: 0x%x\n", global_bar_id);
             // Memory negotiation process:
             //     1. The driver writes all 1s to the BAR register.
             //     2. The device writes the size mask ~(size - 1) to the BAR register.
@@ -541,13 +555,11 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                 if (data == 0xFFFFFFFF) {
                     struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(dev->transport.pci.ecam->bar[dev_bar_id]);
                     bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
-                    printf("bar address: 0x%x\n", bar->base_address);
                 } else if (data != 0x0) {
                     struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&dev->transport.pci.ecam->bar[dev_bar_id];
                     uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
                     bar->base_address = allocated_addr >> 4;        // 16-byte aligned
                     global_memory_bars[global_bar_id].vaddr = allocated_addr;
-                    printf("allocated bar addr: 0x%x\n", allocated_addr);
                 }
             }
             break;
@@ -593,16 +605,6 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     struct pci_config_space *config_space = dev->transport.pci.ecam;
     bool success;
 
-    uint8_t *data = (uint8_t *)dev->transport.pci.ecam;
-    for (uint32_t i = 0; i < 256; i++) {
-        if (i % 16 == 0) {
-            printf("\n");
-        }
-        data[i] = 0;
-        printf("%02x ", data[i]);
-    }
-    printf("\n");
-
     config_space->vendor_id = dev->transport.pci.vendor_id;
     config_space->device_id = dev->transport.pci.device_id;
     config_space->command = (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
@@ -628,15 +630,6 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_PCI_CFG, 0);
     assert(success);
 
-    data = (uint8_t *)dev->transport.pci.ecam;
-    for (uint32_t i = 0; i < 256; i++) {
-        if (i % 16 == 0) {
-            printf("\n");
-        }
-        printf("%02x ", data[i]);
-    }
-    printf("\n");
-
     success = fault_register_vm_exception_handler(dev->transport.pci.ecam_vm,
                                                   dev->transport.pci.ecam_size,
                                                   &virtio_ecam_fault_handle,
@@ -652,7 +645,6 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
      * to the guest. This assumes that the interrupt controller is already setup. */
     // @ivanv: we should check that (on AArch64) the virq is an SPI.
     // TODO: register after the driver writing to interrupt line
-    printf("reigster irq: %d\n", virq);
     success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
     assert(success);
 

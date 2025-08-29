@@ -127,6 +127,20 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     sdf.add_mr(memory_resource)
     vmm_client0.add_map(Map(memory_resource, vaddr=0x20100000, perms="rw"))
 
+    # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
+    if board.name == "maaxboard":
+        timer_node = dtb.node(board.timer)
+        assert timer_node is not None
+
+        timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=210)
+        timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
+
+        # timer_system.add_client(blk_driver)
+        sdf.add_pd(timer_driver)
+
+        assert timer_system.connect()
+        assert timer_system.serialise_config(output_dir)
+
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
     assert net_system.connect()

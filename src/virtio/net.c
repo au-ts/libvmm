@@ -194,7 +194,6 @@ static void handle_tx_msg(struct virtio_device *dev,
         }
     }
 
-    printf("written bytes: %d\n", written);
     sddf_buffer.len = written;
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we check above */
