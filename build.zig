@@ -83,10 +83,10 @@ pub fn build(b: *std.Build) !void {
             .microkit_board_dir = microkit_board_dir
         });
 
-        var srcs = std.ArrayList([]const u8).init(b.allocator);
-        defer srcs.deinit();
+        var srcs = std.ArrayList([]const u8){};
+        defer srcs.deinit(b.allocator);
 
-        try srcs.appendSlice(&src);
+        try srcs.appendSlice(b.allocator, &src);
 
         switch (target.result.cpu.arch) {
             .aarch64 => {
@@ -95,10 +95,10 @@ pub fn build(b: *std.Build) !void {
                     3 => src_aarch64_vgic_v3,
                     else => @panic("Unsupported vGIC version given"),
                 };
-                try srcs.appendSlice(&src_aarch64);
-                try srcs.appendSlice(&vgic_src);
+                try srcs.appendSlice(b.allocator, &src_aarch64);
+                try srcs.appendSlice(b.allocator, &vgic_src);
             },
-            .riscv64 => try srcs.appendSlice(&src_riscv),
+            .riscv64 => try srcs.appendSlice(b.allocator, &src_riscv),
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
