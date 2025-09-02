@@ -132,7 +132,7 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
                  enable_group * 32,
                  ((enable_group + 1) * 32 - 1), data);
         if (data != 0) {
-            LOG_VMM("(VPCU %lu) writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", vcpu_id, offset,
+            LOG_PLIC("(VPCU %lu) writing offset: 0x%lx, enable_group %d, context: %d, non-zero data: 0x%lx\n", vcpu_id, offset,
                      enable_group, context,
                      data);
         }
@@ -161,7 +161,7 @@ static bool plic_handle_fault_write(size_t vcpu_id, size_t offset, seL4_UserCont
         break;
     }
     case PLIC_CLAIM_COMPLETE_CONTEXT_1_START: {
-        LOG_VMM("write complete claim for pending IRQ %d\n", plic_pending_irq);
+        LOG_PLIC("write complete claim for pending IRQ %d\n", plic_pending_irq);
         /* TODO: we should be checking here, and probably in a lot of other places, that the
          * IRQ attempting to be claimed is actually enabled. */
         /* TODO: double check but when we get a claim we should be clearing the pending bit */
