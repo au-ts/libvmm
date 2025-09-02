@@ -28,5 +28,5 @@ This will compile the VMM, camera driver, and client components for the Raspberr
 
 ## Running
 
-After building, this should produce a loader.img file in the /build directory.
+After building, this should produce a loader.img file in the /build directory to be booted on the Raspberry Pi 4B.
 
