@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-QEMU := qemu-system-aarch64
 PYTHON ?= python3
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
@@ -23,14 +22,19 @@ NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
+
 SYSTEM_FILE := virtio.system
-IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 DTS_FILE := $(SDDF)/dts/$(MICROKIT_BOARD).dts
 DTB_FILE := $(MICROKIT_BOARD).dtb
-CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
+CLIENT_VM_DIR := $(VIRTIO_EXAMPLE)/client_vm/$(ARCH)
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
+IMAGE_FILE := loader.img
+
+# All platforms use the same Linux and initrd images.
+LINUX ?= a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux
+INITRD ?= b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
 SDDF_CUSTOM_LIBC := 1
 
@@ -49,10 +53,21 @@ CFLAGS := \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
 	  -I$(LIBVMM)/include \
-	  -I$(VIRTIO_EXAMPLE)/include \
 	  -MD \
-	  -MP \
-	  -target $(TARGET)
+	  -MP
+
+ifeq ($(ARCH),aarch64)
+	ARCH_FLAGS := -target aarch64-none-elf
+	CLIENT_VM_DT_OVERLAYS := $(CLIENT_VM_DIR)/$(GIC_DT_OVERLAY)
+else ifeq ($(ARCH),riscv64)
+	# No overlays on RISC-V
+	CLIENT_VM_DT_OVERLAYS :=
+	ARCH_FLAGS := -march=rv64imafdc -target riscv64-none-elf
+else
+	$(error Unsupported ARCH given)
+endif
+
+CFLAGS += $(ARCH_FLAGS)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
@@ -79,7 +94,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-all: loader.img
+all: $(IMAGE_FILE)
 
 -include vmm.d
 
@@ -141,11 +156,11 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
-client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
+client_vm/vm.dts: $(CLIENT_VM_DIR)/linux.dts $(CLIENT_VM_DT_OVERLAYS) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-client_vm/vm.dtb: client_vm/vm.dts
+$(CLIENT_DTB): client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
 client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
@@ -157,7 +172,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
-					-target $(TARGET) \
+					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
@@ -168,11 +183,8 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
-	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
-	$(QEMU) -machine virt,virtualization=on,secure=off \
-			-cpu cortex-a53 \
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \

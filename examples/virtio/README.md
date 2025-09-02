@@ -21,6 +21,7 @@ from sDDF.
 The example currently works on the following platforms:
 
 * QEMU virt AArch64
+* QEMU virt RISC-V (64-bit)
 * Avnet MaaXBoard
 
 ### Metaprogram
@@ -84,6 +85,7 @@ make MICROKIT_BOARD=<BOARD> MICROKIT_SDK=/path/to/sdk
 Where `<BOARD>` is one of:
 
 * `qemu_virt_aarch64`
+* `qemu_virt_riscv64`
 * `maaxboard`
 
 Other configuration options can be passed to the Makefile such as `CONFIG`
@@ -144,8 +146,8 @@ starting block number that is a multiple of sDDF block's transfer size of 4096 b
 divided by the disk's logical size. Partitions that do not follow this restriction
 are unsupported.
 
-By default on QEMU virt AArch64, we mount the first partition of the disk image,
-on Avnet MaaXBoard we mount the third partition of the SD Card. You can change the partition mounted
+By default on QEMU, we mount the first partition of the disk image. On Avnet MaaXBoard
+we mount the third partition of the SD Card. You can change the partition mounted
 by passing `PARTITION=n` when executing the Makefile.
 
 ### virtIO net

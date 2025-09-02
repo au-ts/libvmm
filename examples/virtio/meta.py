@@ -47,6 +47,19 @@ BOARDS: List[Board] = [
         partition=0
     ),
     Board(
+        name="qemu_virt_riscv64",
+        arch=SystemDescription.Arch.RISCV64,
+        paddr_top=0xa0000000,
+        serial="soc/serial@10000000",
+        guest_serial="soc/virtio-console",
+        timer=None,
+        blk="soc/virtio_mmio@10008000",
+        guest_blk="soc/virtio-blk",
+        net="soc/virtio_mmio@10007000",
+        guest_net="soc/virtio-net",
+        partition=0
+    ),
+    Board(
         name="maaxboard",
         arch=SystemDescription.Arch.AARCH64,
         paddr_top=0x90000000,
@@ -68,6 +81,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
+
+    if board.arch == SystemDescription.Arch.RISCV64:
+        vmm_client0.add_irq(SystemDescription.Irq(97, id=2))
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
