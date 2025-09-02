@@ -1,0 +1,76 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    /* Need to specify how much RAM the guest will have */
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x10000000>;
+    };
+
+    flash@20000000 {
+        status = "disabled";
+    };
+
+    cpus {
+        cpu@0 {
+            /* This is the same as the base DTS for QEMU, except we do not support the Zicbom and Zicboz extensions. */
+            riscv,isa-extensions = "i", "m", "a", "f", "d", "c", "h", "zic64b", "zicbop", "ziccamoa", "ziccif", "zicclsm", "ziccrse", "zicntr", "zicsr", "zifencei", "zihintntl", "zihintpause", "zihpm", "zmmul", "za64rs", "zaamo", "zalrsc", "zawrs", "zfa", "zca", "zcd", "zba", "zbb", "zbc", "zbs", "ssccptr", "sscounterenw", "sstc", "sstvala", "sstvecd", "svadu", "svvptc";
+            riscv,isa = "rv64imafdch_zic64b_zicbop_ziccamoa_ziccif_zicclsm_ziccrse_zicntr_zicsr_zifencei_zihintntl_zihintpause_zihpm_zmmul_za64rs_zaamo_zalrsc_zawrs_zfa_zca_zcd_zba_zbb_zbc_zbs_ssccptr_sscounterenw_sstc_sstvala_sstvecd_svadu_svvptc";
+        };
+    };
+
+    soc {
+        rtc@101000 {
+            status = "disabled";
+        };
+
+        // Despite disabling this device in the overlay, Linux will still try to touch it
+        // during shutdown. So we just delete it instead.
+        /delete-node/ test@100000;
+
+        pci@30000000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10008000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10007000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10006000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10005000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10004000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10003000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10002000 {
+            status = "disabled";
+        };
+
+        virtio_mmio@10001000 {
+            status = "disabled";
+        };
+    };
+
+    chosen {
+        stdout-path = "/soc/serial@10000000";
+        linux,initrd-start = <0x8c000000>;
+        linux,initrd-end = <0x8e000000>;
+    };
+};
