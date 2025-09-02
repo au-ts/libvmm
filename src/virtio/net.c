@@ -418,6 +418,8 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
                           microkit_channel tx_ch,
                           uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
+    // TODO: request an ECAM slot for the device
+
     struct virtio_device *dev = &net_dev->virtio_device;
 
     dev->data.DeviceID = VIRTIO_DEVICE_ID_NET;

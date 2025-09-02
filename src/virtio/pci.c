@@ -214,16 +214,8 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     bool success = true;
 
     switch (offset) {
-    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
-        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE, VIRTIO_PCI_COMMON_DRI_FEATURE_SEL):
         success = dev->funs->get_device_features(dev, &reg);
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE_SEL, VIRTIO_PCI_COMMON_DRI_FEATURE):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE, VIRTIO_PCI_COMMON_MSIX):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_NUM_QUEUES):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
         // TODO: proper way?
@@ -239,28 +231,12 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         reg = VIRTIO_PCI_QUEUE_SIZE;
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
-        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_OFF, VIRTIO_PCI_COMMON_Q_DESC_LO):
         // TODO: proper way?
         reg = 1 << 16;
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_HI, VIRTIO_PCI_COMMON_Q_AVAIL_LO):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_LO, VIRTIO_PCI_COMMON_Q_AVAIL_HI):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_AVAIL_HI, VIRTIO_PCI_COMMON_Q_USED_LO):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_LO, VIRTIO_PCI_COMMON_Q_USED_HI):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_USED_HI, VIRTIO_PCI_COMMON_Q_NOTIF_DATA):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_DATA, VIRTIO_PCI_COMMON_ADM_Q_IDX):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_ADM_Q_IDX, VIRTIO_PCI_COMMON_END):
-        break;
+    default:
+        printf("VIRTIO PCI|ERR: read operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
     }
 
     uint32_t mask = fault_get_data_mask(offset, fsr);
@@ -285,23 +261,17 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
         dev->data.DeviceFeaturesSel = data;
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE, VIRTIO_PCI_COMMON_DRI_FEATURE_SEL):
-        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE_SEL, VIRTIO_PCI_COMMON_DRI_FEATURE):
         dev->data.DriverFeaturesSel = data;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DRI_FEATURE, VIRTIO_PCI_COMMON_MSIX):
         success = dev->funs->set_driver_features(dev, data);
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_DEV_STATUS):
-        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         success = handle_virtio_pci_set_status_flag(dev, data);
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SELECT, VIRTIO_PCI_COMMON_Q_SIZE):
         dev->data.QueueSel = data;
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
         if (data == 0x1) {
@@ -381,12 +351,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             success = false;
         }
         break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_DATA, VIRTIO_PCI_COMMON_ADM_Q_IDX):
-        break;
-    case REG_RANGE(VIRTIO_PCI_COMMON_ADM_Q_IDX, VIRTIO_PCI_COMMON_END):
-        break;
     default:
-        printf("VIRTIO PCI|ERR: driver should never write to the offset 0x%x\n", offset);
+        printf("VIRTIO PCI|ERR: write operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
     }
 
     return success;
@@ -574,15 +540,9 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
     if (fault_is_read(fsr)) {
-        uint32_t data = 0;
-        if (offset < 0x1000) {
-            uint32_t *reg = dev->transport.pci.ecam;
-            data = reg[offset / 4];
-        }
-
+        uint32_t *reg = dev->transport.pci.ecam;
+        uint32_t data = reg[offset / 4];
         uint32_t mask = fault_get_data_mask(offset, fsr);
-        // @ivanv: make it clearer that just passing the offset is okay,
-        // possibly just fix the API
         fault_emulate_write(regs, offset, fsr, data & mask);
         /* printf("[ecam read] offset: 0x%x, data: 0x%x, mask: 0x%x, fsr: 0x%x\n", offset, data & mask, mask, fsr); */
         return true;
@@ -615,8 +575,10 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     config_space->class_code = PCI_CLASS_CODE(dev->transport.pci.device_class);
     config_space->subsystem_vendor_id = dev->data.VendorID;
     config_space->subsystem_device_id = dev->data.DeviceID;
+    // TODO: what needs to be configured here?
     config_space->interrupt_line = 44;
-    config_space->interrupt_pin = 0x1;
+    // TODO: decide which INT pin to use, why up to 4 pins can be used?
+    config_space->interrupt_pin = 0x2;
 
     config_space->cap_ptr = 0x40;
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_COMMON_CFG, 0);
@@ -647,6 +609,8 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     // TODO: register after the driver writing to interrupt line
     success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
     assert(success);
+
+    printf("register a device\n");
 
     return success;
 }
