@@ -141,6 +141,11 @@ void init(void)
     /*                                blk_config.virt.id); */
     /* assert(success); */
 
+    success = virtio_pci_ecam_init(0x10000000, 0x100000, 0x100000);
+    assert(success);
+    success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
+    assert(success);
+
     /* Initialise virtIO net device */
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
                    net_config.rx.num_buffers);
@@ -158,11 +163,13 @@ void init(void)
     /*                               ); */
     /* assert(success); */
 
-    pci_add_memory_resource(0x20100000, 0x20100000, 0xFF00000);
+    uint32_t pci_bus_id = 0;
+    uint32_t pci_device_id = 0;
+    uint32_t pci_function_id = 0;
     success = virtio_pci_net_init(&virtio_net,
-                                   0x10000000,
-                                   0x100000,
-                                   0x100000,
+                                   pci_bus_id,
+                                   pci_device_id,
+                                   pci_function_id,
                                    48,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,

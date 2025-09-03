@@ -406,9 +406,9 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
 }
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev,
-                          uintptr_t ecam_base_vm,
-                          uintptr_t ecam_base_vmm,
-                          uint32_t ecam_size,
+                          uint32_t bus_id,
+                          uint32_t dev_slot,
+                          uint32_t func_id,
                           size_t virq,
                           net_queue_handle_t *rx,
                           net_queue_handle_t *tx,
@@ -443,11 +443,11 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
     dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
-    dev->transport.pci.ecam = (struct pci_config_space *)ecam_base_vmm;
-    dev->transport.pci.ecam_vm = ecam_base_vm;
-    dev->transport.pci.ecam_size = ecam_size;
 
-    pci_add_memory_bar(dev, 0, 0x10000);
+    bool success = virtio_pci_alloc_dev_cfg_space(dev, bus_id, dev_slot, func_id);
+    assert(success);
+
+    virtio_pci_alloc_memory_bar(dev, 0, 0x10000);
 
     return virtio_pci_register_device(dev, virq);
 }

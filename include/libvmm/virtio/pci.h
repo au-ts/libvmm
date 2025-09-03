@@ -125,11 +125,12 @@
 #define VIRTIO_PCI_COMMON_ADM_Q_NUM             0x3e
 #define VIRTIO_PCI_COMMON_END                   0x40
 
-#define BUS_NUM                         256
-#define DEVS_PER_BUS                    32
-#define FUNCS_PER_DEV                   8
-#define FUNC_CONFIG_SPACE_SIZE          256
-#define MAX_MEM_BARS                    16
+#define VIRTIO_PCI_BUS_NUM                      0x1
+#define VIRTIO_PCI_DEVS_PER_BUS                 (1 << 5)
+#define VIRTIO_PCI_FUNCS_PER_DEV                1         // (1 << 3)
+#define VIRTIO_PCI_DEV_FUNC_MAX                 (VIRTIO_PCI_BUS_NUM * VIRTIO_PCI_DEVS_PER_BUS * VIRTIO_PCI_FUNCS_PER_DEV)
+#define VIRTIO_PCI_FUNC_CFG_SPACE_SIZE          0x100
+#define VIRTIO_PCI_MAX_MEM_BARS                 0x10
 
 #define VIRTIO_PCI_VENDOR_ID            0x1AF4
 #define VIRTIO_PCI_NET_DEV_ID           0x1000
@@ -181,39 +182,24 @@ struct pci_memory_resource {
     uint32_t size;
 };
 
+struct virtio_pci_ecam {
+    uintptr_t vm_base;
+    uintptr_t vmm_base;
+    uint32_t size;
+};
+
 typedef struct virtio_pci_data {
     uint32_t device_id;
     uint32_t vendor_id;
     uint32_t device_class;
-    // Leave this so multiple PCI buses can be supported in the future
-    struct pci_config_space *ecam;
-    uintptr_t ecam_vm;
-    uint32_t ecam_size;
+    // Index to get dev's data structure:
+    //   dev_table_idx = ((bus_id * #dev_per_bus) + dev_slot) * #funcs_per_dev + func_id
+    uint32_t dev_table_idx;
     // Indices to the bar in global_memory_bars
     uint32_t mem_bar_ids[6];
     // Leave this so multiple memory regions can be supported in the future
     struct pci_memory_resource *mem_resources;
 } virtio_pci_data_t;
-
-/* typedef struct virtio_pci_device { */
-/*     uint32_t device_id; */
-/*     uint32_t device_class; */
-/*     uint32_t vendor_id; */
-/*     virtio_pci_device_info_t data; */
-/*     virtio_device_funs_t *funs; */
-/*     /\* List of virt queues for the device *\/ */
-/*     virtio_queue_handler_t *vqs; */
-/*     /\* Length of the vqs list *\/ */
-/*     size_t num_vqs; */
-/*     /\* Virtual IRQ associated with this virtIO device *\/ */
-/*     size_t virq; */
-/*     /\* Device specific data such as sDDF queues *\/ */
-/*     void *device_data; */
-/*     struct pci_config_space *pci_cs; */
-/*     /\* struct pci_memory_bar mem_bars[6]; /\\* Assume there are only 32-bit memory bars *\\/ *\/ */
-/*     uint32_t mem_bar_ids[6];    // Bar id in global_memory_bars */
-/*     struct pci_memory_resource *mem_resources; */
-/* } virtio_pci_device_t; */
 
 typedef struct virtio_device virtio_device_t;
 
@@ -309,7 +295,11 @@ struct virtio_pci_common_cfg {
     uint16_t admin_queue_num;           /* read-only for driver */
 };
 
+
 typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs);
+
+
+bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint32_t ecam_size);
 /*
  * Registers a new virtIO device at a given guest-physical region.
  *
@@ -318,5 +308,6 @@ typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t 
  */
 bool virtio_pci_register_device(virtio_device_t *dev, int virq);
 
-void pci_add_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);
-void pci_add_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);
+bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint16_t bus_id, uint8_t dev_slot, uint8_t func_id);
+bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);
+void virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);
