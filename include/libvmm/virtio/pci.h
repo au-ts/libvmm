@@ -65,6 +65,8 @@
 
 // PCI Class
 #define PCI_CLASS_NETWORK_ETHERNET       0x0200
+
+
 #define PCI_CLASS_CODE(x) ((x >> 8) & 0xFF)
 #define PCI_SUB_CLASS(x) (x & 0xFF)
 
@@ -134,6 +136,7 @@
 
 #define VIRTIO_PCI_VENDOR_ID            0x1AF4
 #define VIRTIO_PCI_NET_DEV_ID           0x1000
+#define VIRTIO_PCI_BLK_DEV_ID           0x1001
 #define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
 #define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
 #define VIRTIO_PCI_QUEUE_SIZE           0x100
@@ -195,6 +198,7 @@ typedef struct virtio_pci_data {
     // Index to get dev's data structure:
     //   dev_table_idx = ((bus_id * #dev_per_bus) + dev_slot) * #funcs_per_dev + func_id
     uint32_t dev_table_idx;
+    uint32_t interrupt_pin;
     // Indices to the bar in global_memory_bars
     uint32_t mem_bar_ids[6];
     // Leave this so multiple memory regions can be supported in the future

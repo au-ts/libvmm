@@ -12,6 +12,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/console.h>
+#include <libvmm/virtio/block.h>
 #include <libvmm/virtio/net.h>
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
@@ -24,7 +25,7 @@
 #include <sddf/util/printf.h>
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
-/* __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config; */
+__attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
@@ -47,8 +48,8 @@ serial_queue_handle_t serial_tx_queue;
 static struct virtio_console_device virtio_console;
 
 /* /\* Virtio Block *\/ */
-/* static blk_queue_handle_t blk_queue; */
-/* static struct virtio_blk_device virtio_blk; */
+static blk_queue_handle_t blk_queue;
+static struct virtio_blk_device virtio_blk;
 
 /* /\* Virtio Net *\/ */
 net_queue_handle_t net_rx_queue;
@@ -62,8 +63,17 @@ uintptr_t pci_memory_resource;
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
+    assert(blk_config_check_magic(&blk_config));
     assert(vmm_config_check_magic(&vmm_config));
     /* assert(net_config_check_magic(&net_config)); */
+
+    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
+                   blk_config.virt.num_buffers);
+    /* Want to print out configuration information, so wait until the config is ready. */
+    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+
+    /* Busy wait until blk device is ready */
+    while (!blk_storage_is_ready(storage_info));
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -95,24 +105,24 @@ void init(void)
 
     /* Find the details of VirtIO console, net and block devices from sdfgen */
     int console_vdev_idx = -1;
-    /* int blk_vdev_idx = -1; */
+    int blk_vdev_idx = -1;
     /* int net_vdev_idx = -1; */
-    assert(vmm_config.num_virtio_mmio_devices == 1);
+    assert(vmm_config.num_virtio_mmio_devices == 2);
     for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
         switch (vmm_config.virtio_mmio_devices[i].type) {
         case VIRTIO_DEVICE_ID_CONSOLE:
             console_vdev_idx = i;
             break;
-        /* case VIRTIO_DEVICE_ID_BLOCK: */
-        /*     blk_vdev_idx = i; */
-        /*     break; */
+        case VIRTIO_DEVICE_ID_BLOCK:
+            blk_vdev_idx = i;
+            break;
         /* case VIRTIO_DEVICE_ID_NET: */
         /*     net_vdev_idx = i; */
         /*     break; */
         }
     }
     assert(console_vdev_idx != -1);
-    /* assert(blk_vdev_idx != -1); */
+    assert(blk_vdev_idx != -1);
     /* assert(net_vdev_idx != -1); */
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
@@ -129,21 +139,24 @@ void init(void)
                                        serial_config.tx.id);
     assert(success);
 
-    /* Initialise virtIO block device */
-    /* success = virtio_mmio_blk_init(&virtio_blk, */
-    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].base, */
-    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].size, */
-    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, */
-    /*                                (uintptr_t)blk_config.data.vaddr, */
-    /*                                blk_config.data.size, */
-    /*                                storage_info, */
-    /*                                &blk_queue, */
-    /*                                blk_config.virt.id); */
-    /* assert(success); */
-
     success = virtio_pci_ecam_init(0x10000000, 0x100000, 0x100000);
     assert(success);
     success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
+    assert(success);
+
+    printf("base: 0x%x, size: 0x%x, cfg_data_size: 0x%x\n", vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
+           vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
+           blk_config.data.size);
+    /* Initialise virtIO block device */
+    success = virtio_mmio_blk_init(&virtio_blk,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq,
+                                   (uintptr_t)blk_config.data.vaddr,
+                                   blk_config.data.size,
+                                   storage_info,
+                                   &blk_queue,
+                                   blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -152,6 +165,7 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
+
     /* success = virtio_mmio_net_init(&virtio_net, */
     /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].base, */
     /*                                vmm_config.virtio_mmio_devices[net_vdev_idx].size, */
@@ -163,13 +177,11 @@ void init(void)
     /*                               ); */
     /* assert(success); */
 
-    uint32_t pci_bus_id = 0;
-    uint32_t pci_device_id = 0;
-    uint32_t pci_function_id = 0;
     success = virtio_pci_net_init(&virtio_net,
-                                   pci_bus_id,
-                                   pci_device_id,
-                                   pci_function_id,
+                                   0,
+                                   0,
+                                   0,
+                                   0x1,
                                    48,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
@@ -188,8 +200,8 @@ void notified(microkit_channel ch)
         virtio_console_handle_rx(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
-    /* } else if (ch == blk_config.virt.id) { */
-        /* virtio_blk_handle_resp(&virtio_blk); */
+    } else if (ch == blk_config.virt.id) {
+        virtio_blk_handle_resp(&virtio_blk);
     } else if (ch == net_config.rx.id) {
         virtio_net_handle_rx(&virtio_net);
     } else {

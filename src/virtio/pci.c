@@ -153,6 +153,7 @@ void virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t 
 
     uint32_t idx = 0;
     while (idx < VIRTIO_PCI_MAX_MEM_BARS && global_memory_bars[idx].dev) idx++;
+    assert(idx < VIRTIO_PCI_MAX_MEM_BARS);
 
     global_memory_bars[idx].size = size;
     global_memory_bars[idx].free_offset = 0;
@@ -643,7 +644,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     // TODO: what needs to be configured here?
     config_space->interrupt_line = 44;
     // TODO: decide which INT pin to use, why up to 4 pins can be used?
-    config_space->interrupt_pin = 0x1;
+    config_space->interrupt_pin = dev->transport.pci.interrupt_pin;
 
     bool success = true;
     config_space->cap_ptr = 0x40;
