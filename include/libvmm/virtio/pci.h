@@ -66,6 +66,7 @@
 // PCI Class
 #define PCI_CLASS_STORAGE_SCSI           0x0100
 #define PCI_CLASS_NETWORK_ETHERNET       0x0200
+#define PCI_CLASS_COMMUNICATION_OTHER    0x0780
 
 
 #define PCI_CLASS_CODE(x) ((x >> 8) & 0xFF)
@@ -138,6 +139,7 @@
 #define VIRTIO_PCI_VENDOR_ID            0x1AF4
 #define VIRTIO_PCI_NET_DEV_ID           0x1000
 #define VIRTIO_PCI_BLK_DEV_ID           0x1001
+#define VIRTIO_PCI_CONSOLE_DEV_ID       0x1003
 #define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
 #define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
 #define VIRTIO_PCI_QUEUE_SIZE           0x100

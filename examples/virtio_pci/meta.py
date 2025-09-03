@@ -77,13 +77,13 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
                                       priority=199, stack_size=0x2000)
     serial_node = dtb.node(board.serial)
     assert serial_node is not None
-    guest_serial_node = client_dtb.node(board.guest_serial)
-    assert guest_serial_node is not None
+    # guest_serial_node = client_dtb.node(board.guest_serial)
+    # assert guest_serial_node is not None
 
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
                                 serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
-    client0.add_virtio_mmio_console(guest_serial_node, serial_system)
-
+    # client0.add_virtio_mmio_console(guest_serial_node, serial_system)
+    serial_system.add_client(vmm_client0)
     pds = [
         serial_driver,
         serial_virt_tx,

@@ -104,26 +104,31 @@ void init(void)
     }
 
     /* Find the details of VirtIO console, net and block devices from sdfgen */
-    int console_vdev_idx = -1;
+    /* int console_vdev_idx = -1; */
     /* int blk_vdev_idx = -1; */
     /* int net_vdev_idx = -1; */
-    assert(vmm_config.num_virtio_mmio_devices == 1);
-    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
-        switch (vmm_config.virtio_mmio_devices[i].type) {
-        case VIRTIO_DEVICE_ID_CONSOLE:
-            console_vdev_idx = i;
-            break;
+    /* assert(vmm_config.num_virtio_mmio_devices == 1); */
+    /* for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) { */
+    /*     switch (vmm_config.virtio_mmio_devices[i].type) { */
+    /*     case VIRTIO_DEVICE_ID_CONSOLE: */
+    /*         console_vdev_idx = i; */
+    /*         break; */
         /* case VIRTIO_DEVICE_ID_BLOCK: */
             /* blk_vdev_idx = i; */
             /* break; */
         /* case VIRTIO_DEVICE_ID_NET: */
         /*     net_vdev_idx = i; */
         /*     break; */
-        }
-    }
-    assert(console_vdev_idx != -1);
+        /* } */
+    /* } */
+    /* assert(console_vdev_idx != -1); */
     /* assert(blk_vdev_idx != -1); */
     /* assert(net_vdev_idx != -1); */
+
+    success = virtio_pci_ecam_init(0x10000000, 0x100000, 0x100000);
+    assert(success);
+    success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
+    assert(success);
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
@@ -131,18 +136,20 @@ void init(void)
                       serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(&virtio_console,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].base,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
+    /* success = virtio_mmio_console_init(&virtio_console, */
+    /*                                    vmm_config.virtio_mmio_devices[console_vdev_idx].base, */
+    /*                                    vmm_config.virtio_mmio_devices[console_vdev_idx].size, */
+    /*                                    vmm_config.virtio_mmio_devices[console_vdev_idx].irq, */
+    /*                                    &serial_rx_queue, &serial_tx_queue, */
+    /*                                    serial_config.tx.id); */
+    /* assert(success); */
+    success = virtio_pci_console_init(&virtio_console,
+                                       0,
+                                       0,
+                                       0,
+                                       48,
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
-    assert(success);
-
-    success = virtio_pci_ecam_init(0x10000000, 0x100000, 0x100000);
-    assert(success);
-    success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
-    assert(success);
 
     /* printf("base: 0x%x, size: 0x%x, cfg_data_size: 0x%x\n", vmm_config.virtio_mmio_devices[blk_vdev_idx].base, */
     /*        vmm_config.virtio_mmio_devices[blk_vdev_idx].size, */
@@ -160,9 +167,9 @@ void init(void)
     /* assert(success); */
     success = virtio_pci_blk_init(&virtio_blk,
                                    0,
+                                   1,
                                    0,
-                                   0,
-                                   48,
+                                   49,
                                    (uintptr_t)blk_config.data.vaddr,
                                    blk_config.data.size,
                                    storage_info,
@@ -191,9 +198,9 @@ void init(void)
 
     success = virtio_pci_net_init(&virtio_net,
                                    0,
-                                   1,
+                                   2,
                                    0,
-                                   49,
+                                   50,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
                                    net_config.rx.id, net_config.tx.id,
