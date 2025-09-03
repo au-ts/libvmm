@@ -108,9 +108,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
 bool virtio_console_handle_rx(struct virtio_console_device *console);
 
 bool virtio_pci_console_init(struct virtio_console_device *console,
-                              uint32_t bus_id,
                               uint32_t dev_slot,
-                              uint32_t func_id,
                               size_t virq,
                               serial_queue_handle_t *rxq,
                               serial_queue_handle_t *txq,

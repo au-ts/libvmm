@@ -251,9 +251,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
 }
 
 bool virtio_pci_console_init(struct virtio_console_device *console,
-                              uint32_t bus_id,
                               uint32_t dev_slot,
-                              uint32_t func_id,
                               size_t virq,
                               serial_queue_handle_t *rxq,
                               serial_queue_handle_t *txq,
@@ -277,7 +275,7 @@ bool virtio_pci_console_init(struct virtio_console_device *console,
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_COMMUNICATION_OTHER;
 
-    bool success = virtio_pci_alloc_dev_cfg_space(dev, bus_id, dev_slot, func_id);
+    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
     assert(success);
 
     virtio_pci_alloc_memory_bar(dev, 0, 0x10000);

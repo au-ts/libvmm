@@ -603,8 +603,12 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
  */
 static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
 
-bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint16_t bus_id, uint8_t dev_slot, uint8_t func_id)
+bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint8_t dev_slot)
 {
+    // Always use the only bus and func for each device.
+    uint16_t bus_id = 0;
+    uint8_t func_id = 0;
+
     uint32_t dev_table_idx = ((bus_id * VIRTIO_PCI_DEVS_PER_BUS) + dev_slot) * VIRTIO_PCI_FUNCS_PER_DEV + func_id;
 
     if (virtio_pci_dev_table[dev_table_idx]) {

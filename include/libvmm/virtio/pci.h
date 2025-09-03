@@ -315,6 +315,6 @@ bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint3
  */
 bool virtio_pci_register_device(virtio_device_t *dev, int virq);
 
-bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint16_t bus_id, uint8_t dev_slot, uint8_t func_id);
+bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint8_t dev_slot);
 bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);
 bool virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);

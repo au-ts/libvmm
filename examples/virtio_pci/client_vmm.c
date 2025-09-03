@@ -145,8 +145,6 @@ void init(void)
     /* assert(success); */
     success = virtio_pci_console_init(&virtio_console,
                                        0,
-                                       0,
-                                       0,
                                        48,
                                        &serial_rx_queue, &serial_tx_queue,
                                        serial_config.tx.id);
@@ -166,9 +164,7 @@ void init(void)
     /*                                blk_config.virt.id); */
     /* assert(success); */
     success = virtio_pci_blk_init(&virtio_blk,
-                                   0,
                                    1,
-                                   0,
                                    49,
                                    (uintptr_t)blk_config.data.vaddr,
                                    blk_config.data.size,
@@ -197,9 +193,7 @@ void init(void)
     /* assert(success); */
 
     success = virtio_pci_net_init(&virtio_net,
-                                   0,
                                    2,
-                                   0,
                                    50,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
