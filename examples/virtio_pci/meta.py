@@ -119,7 +119,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     net_system.add_client_with_copier(vmm_client0, client0_net_copier)
 
     ############ VIRTIO PCI ############
-    config_space = MemoryRegion("ecam", 0x10000)
+    config_space = MemoryRegion("ecam", 0x100000)
     sdf.add_mr(config_space)
     vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
 
@@ -147,18 +147,20 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     blk_node = dtb.node(board.blk)
     assert blk_node is not None
-    guest_blk_node = client_dtb.node(board.guest_blk)
-    assert guest_blk_node is not None
+    # guest_blk_node = client_dtb.node(board.guest_blk)
+    # assert guest_blk_node is not None
 
     blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
-    client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    # client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
     pds = [
         blk_driver,
         blk_virt
     ]
     for pd in pds:
         sdf.add_pd(pd)
+
+    blk_system.add_client(vmm_client0, partition=partition)
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)

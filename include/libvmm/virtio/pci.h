@@ -64,6 +64,7 @@
 #define PCI_CAP_ID_EA       0x14    // PCI Enhanced Allocation
 
 // PCI Class
+#define PCI_CLASS_STORAGE_SCSI           0x0100
 #define PCI_CLASS_NETWORK_ETHERNET       0x0200
 
 
@@ -183,6 +184,7 @@ struct pci_memory_resource {
     uintptr_t vm_addr;
     uintptr_t vmm_addr;
     uint32_t size;
+    uint32_t free_offset;
 };
 
 struct virtio_pci_ecam {
@@ -198,6 +200,7 @@ typedef struct virtio_pci_data {
     // Index to get dev's data structure:
     //   dev_table_idx = ((bus_id * #dev_per_bus) + dev_slot) * #funcs_per_dev + func_id
     uint32_t dev_table_idx;
+    uint32_t interrupt_line;
     uint32_t interrupt_pin;
     // Indices to the bar in global_memory_bars
     uint32_t mem_bar_ids[6];
@@ -314,4 +317,4 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq);
 
 bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint16_t bus_id, uint8_t dev_slot, uint8_t func_id);
 bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);
-void virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);
+bool virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size);

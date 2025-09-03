@@ -145,7 +145,7 @@ static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg
     return true;
 }
 
-void virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size)
+bool virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t size)
 {
     assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
     // Assume there are only memory bars, and bar size needs to be 16-byte aligned
@@ -153,12 +153,22 @@ void virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t 
 
     uint32_t idx = 0;
     while (idx < VIRTIO_PCI_MAX_MEM_BARS && global_memory_bars[idx].dev) idx++;
-    assert(idx < VIRTIO_PCI_MAX_MEM_BARS);
+    if (idx == VIRTIO_PCI_MAX_MEM_BARS) {
+        LOG_VMM_ERR("No more available memory bar slots. Please increase VIRTIO_PCI_MAX_MEM_BARS\n");
+        return false;
+    }
+
+    if (registered_pci_memory_resource.free_offset + size > registered_pci_memory_resource.size) {
+        LOG_VMM_ERR("Could not allocate 0x%x bytes for new memory bar. 0x%x bytes left.\n", size, registered_pci_memory_resource.size - registered_pci_memory_resource.free_offset);
+        return false;
+    }
 
     global_memory_bars[idx].size = size;
     global_memory_bars[idx].free_offset = 0;
     global_memory_bars[idx].dev = dev;
     global_memory_bars[idx].idx = bar_id;
+
+    dev->transport.pci.mem_bar_ids[bar_id] = idx;
 
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
     struct pci_bar_memory_bits *new_mem_bar = (struct pci_bar_memory_bits *)&config_space->bar[bar_id];
@@ -273,7 +283,6 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
-
     return success;
 }
 
@@ -498,8 +507,7 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
     }
 
     if (cfg_handler) {
-        offset = offset - cap->offset;
-        return cfg_handler(dev, vcpu_id, offset, fsr, regs);
+        return cfg_handler(dev, vcpu_id, bar_offset - cap->offset, fsr, regs);
     }
     return false;
 }
@@ -510,6 +518,7 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
     registered_pci_memory_resource.vm_addr = vm_addr;
     registered_pci_memory_resource.vmm_addr = vmm_addr;
     registered_pci_memory_resource.size = size;
+    registered_pci_memory_resource.free_offset = 0;
 
     bool success = fault_register_vm_exception_handler(vm_addr,
                                                   size,
@@ -558,7 +567,7 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                     struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&config_space->bar[dev_bar_id];
                     uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
                     bar->base_address = allocated_addr >> 4;        // 16-byte aligned
-                    global_memory_bars[global_bar_id].vaddr = allocated_addr;
+                    global_memory_bars[global_bar_id].vaddr = allocated_addr - registered_pci_memory_resource.vm_addr + registered_pci_memory_resource.vmm_addr;
                 }
             }
             break;
@@ -579,12 +588,12 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
         uint32_t data = 0;
         if (dev) {
             uint32_t *reg = (uint32_t *)virtio_pci_find_dev_cfg_space(dev);
-            data = reg[offset / 4];
+            data = reg[(offset & 0xFF) / 4];
         }
         fault_emulate_write(regs, offset, fsr, data & mask);
         return true;
     } else {
-        return handle_virtio_ecam_reg_write(dev, vcpu_id, offset, fsr, regs);
+        return handle_virtio_ecam_reg_write(dev, vcpu_id, offset & 0xFF, fsr, regs);
     }
 }
 
@@ -642,7 +651,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     config_space->subsystem_vendor_id = dev->data.VendorID;
     config_space->subsystem_device_id = dev->data.DeviceID;
     // TODO: what needs to be configured here?
-    config_space->interrupt_line = 44;
+    /* config_space->interrupt_line = dev->transport.pci.interrupt_line; */
     // TODO: decide which INT pin to use, why up to 4 pins can be used?
     config_space->interrupt_pin = dev->transport.pci.interrupt_pin;
 

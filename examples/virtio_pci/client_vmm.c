@@ -105,24 +105,24 @@ void init(void)
 
     /* Find the details of VirtIO console, net and block devices from sdfgen */
     int console_vdev_idx = -1;
-    int blk_vdev_idx = -1;
+    /* int blk_vdev_idx = -1; */
     /* int net_vdev_idx = -1; */
-    assert(vmm_config.num_virtio_mmio_devices == 2);
+    assert(vmm_config.num_virtio_mmio_devices == 1);
     for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
         switch (vmm_config.virtio_mmio_devices[i].type) {
         case VIRTIO_DEVICE_ID_CONSOLE:
             console_vdev_idx = i;
             break;
-        case VIRTIO_DEVICE_ID_BLOCK:
-            blk_vdev_idx = i;
-            break;
+        /* case VIRTIO_DEVICE_ID_BLOCK: */
+            /* blk_vdev_idx = i; */
+            /* break; */
         /* case VIRTIO_DEVICE_ID_NET: */
         /*     net_vdev_idx = i; */
         /*     break; */
         }
     }
     assert(console_vdev_idx != -1);
-    assert(blk_vdev_idx != -1);
+    /* assert(blk_vdev_idx != -1); */
     /* assert(net_vdev_idx != -1); */
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
@@ -144,20 +144,34 @@ void init(void)
     success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
     assert(success);
 
-    printf("base: 0x%x, size: 0x%x, cfg_data_size: 0x%x\n", vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
-           vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-           blk_config.data.size);
+    /* printf("base: 0x%x, size: 0x%x, cfg_data_size: 0x%x\n", vmm_config.virtio_mmio_devices[blk_vdev_idx].base, */
+    /*        vmm_config.virtio_mmio_devices[blk_vdev_idx].size, */
+    /*        blk_config.data.size); */
     /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(&virtio_blk,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq,
+    /* success = virtio_mmio_blk_init(&virtio_blk, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].base, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].size, */
+    /*                                vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, */
+    /*                                (uintptr_t)blk_config.data.vaddr, */
+    /*                                blk_config.data.size, */
+    /*                                storage_info, */
+    /*                                &blk_queue, */
+    /*                                blk_config.virt.id); */
+    /* assert(success); */
+    success = virtio_pci_blk_init(&virtio_blk,
+                                   0,
+                                   0,
+                                   0,
+                                   44,
+                                   0x1,
+                                   48,
                                    (uintptr_t)blk_config.data.vaddr,
                                    blk_config.data.size,
                                    storage_info,
                                    &blk_queue,
                                    blk_config.virt.id);
     assert(success);
+
 
     /* Initialise virtIO net device */
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
@@ -179,15 +193,17 @@ void init(void)
 
     success = virtio_pci_net_init(&virtio_net,
                                    0,
+                                   1,
                                    0,
-                                   0,
+                                   45,
                                    0x1,
-                                   48,
+                                   49,
                                    &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
                                    net_config.rx.id, net_config.tx.id,
                                    net_config.mac_addr
                                   );
+    assert(success);
 
     /* Finally start the guest */
     guest_start(GUEST_VCPU_ID, kernel_pc, vmm_config.dtb, vmm_config.initrd);

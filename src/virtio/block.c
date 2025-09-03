@@ -19,7 +19,7 @@
 #include <sddf/util/ialloc.h>
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_BLOCK
+/* #define DEBUG_BLOCK */
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...) do{ printf("VIRTIO(BLOCK): "); printf(__VA_ARGS__); }while(0)
@@ -108,7 +108,6 @@ static bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_
     *ret_val = *config_field_addr;
     LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
               config_base_addr, config_field_addr, *ret_val);
-    printf("read device config 0x%x at 0x%x\n", *ret_val, offset);
 
     return true;
 }
@@ -504,8 +503,6 @@ static void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
     } else {
         blk_dev->config.blk_size = storage_info->sector_size;
     }
-    printf("configure blk_size: 0x%x at 0x%x\n", blk_dev->config.blk_size, &blk_dev->config.blk_size);
-    printf("dev ptr: 0x%x, config ptr: 0x%x\n", blk_dev, &blk_dev->config);
 }
 
 static virtio_device_funs_t functions = {
@@ -567,6 +564,8 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
                           uint32_t bus_id,
                           uint32_t dev_slot,
                           uint32_t func_id,
+                          uint32_t irq_line,
+                          uint32_t irq_pin,
                           size_t virq,
                           uintptr_t data_region,
                           size_t data_region_size,
@@ -610,7 +609,9 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
     dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
-    dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
+    dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
+    dev->transport.pci.interrupt_pin = irq_line;
+    dev->transport.pci.interrupt_pin = irq_pin;
 
     bool success = virtio_pci_alloc_dev_cfg_space(dev, bus_id, dev_slot, func_id);
     assert(success);
