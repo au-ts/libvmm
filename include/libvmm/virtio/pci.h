@@ -200,8 +200,6 @@ typedef struct virtio_pci_data {
     // Index to get dev's data structure:
     //   dev_table_idx = ((bus_id * #dev_per_bus) + dev_slot) * #funcs_per_dev + func_id
     uint32_t dev_table_idx;
-    uint32_t interrupt_line;
-    uint32_t interrupt_pin;
     // Indices to the bar in global_memory_bars
     uint32_t mem_bar_ids[6];
     // Leave this so multiple memory regions can be supported in the future

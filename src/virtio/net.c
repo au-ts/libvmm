@@ -409,8 +409,6 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
                           uint32_t bus_id,
                           uint32_t dev_slot,
                           uint32_t func_id,
-                          uint32_t irq_line,
-                          uint32_t irq_pin,
                           size_t virq,
                           net_queue_handle_t *rx,
                           net_queue_handle_t *tx,
@@ -443,8 +441,6 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev,
     dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
-    dev->transport.pci.interrupt_pin = irq_line;
-    dev->transport.pci.interrupt_pin = irq_pin;
 
     bool success = virtio_pci_alloc_dev_cfg_space(dev, bus_id, dev_slot, func_id);
     assert(success);

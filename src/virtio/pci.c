@@ -645,15 +645,13 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     config_space->command = (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
     config_space->status = PCI_STATUS_CAP_LIST;
     config_space->revision_id = VIRTIO_PCI_REVISION;
-    // TODO: make the class variable
     config_space->subclass = PCI_SUB_CLASS(dev->transport.pci.device_class);
     config_space->class_code = PCI_CLASS_CODE(dev->transport.pci.device_class);
     config_space->subsystem_vendor_id = dev->data.VendorID;
     config_space->subsystem_device_id = dev->data.DeviceID;
-    // TODO: what needs to be configured here?
-    /* config_space->interrupt_line = dev->transport.pci.interrupt_line; */
-    // TODO: decide which INT pin to use, why up to 4 pins can be used?
-    config_space->interrupt_pin = dev->transport.pci.interrupt_pin;
+
+    // Always use dev's first interrupt pin specified in interrupt-map
+    config_space->interrupt_pin = 0x1;
 
     bool success = true;
     config_space->cap_ptr = 0x40;
@@ -671,7 +669,6 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
     /* Register the virtual IRQ that will be used to communicate from the device
      * to the guest. This assumes that the interrupt controller is already setup. */
     // @ivanv: we should check that (on AArch64) the virq is an SPI.
-    // TODO: register after the driver writing to interrupt line
     success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
     assert(success);
 

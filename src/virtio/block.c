@@ -564,8 +564,6 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
                           uint32_t bus_id,
                           uint32_t dev_slot,
                           uint32_t func_id,
-                          uint32_t irq_line,
-                          uint32_t irq_pin,
                           size_t virq,
                           uintptr_t data_region,
                           size_t data_region_size,
@@ -610,8 +608,6 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
     dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
-    dev->transport.pci.interrupt_pin = irq_line;
-    dev->transport.pci.interrupt_pin = irq_pin;
 
     bool success = virtio_pci_alloc_dev_cfg_space(dev, bus_id, dev_slot, func_id);
     assert(success);
