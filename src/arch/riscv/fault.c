@@ -28,15 +28,9 @@
 #define PTE_GET_4K(x)   (((x >> 10) & (BIT(44) - 1)))
 #define SV39_MODE       0x8
 
-_Static_assert(VPN_SHIFT(2) == 30, "ruh roh");
-_Static_assert(VPN_SHIFT(1) == 21, "ruh roh");
-
 static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
 {
     size_t level = 2;
-    // for (int i = 0; i < PT_SIZE; i++) {
-    //     pt[i] = 0;
-    // }
 
     seL4_Word satp = 0;
     seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SATP);
@@ -52,11 +46,7 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
 
     /* Read the guest's page table */
     while (level > 0) {
-        // LOG_VMM("copy in %lx level %d\n", gpa, level);
         assert(gpa != 0);
-        // for (int i = 0; i < PT_SIZE; i++) {
-        //     pt[i] = *(uint64_t *)(gpa + 8 * i);
-        // }
         int vpn = GET_VPN(addr, level);
         pte = *(uint64_t *)(gpa + 8 * vpn);
         if (pte & PTE_V && (pte & PTE_R || pte & PTE_X)) {
@@ -209,13 +199,12 @@ struct fault_instruction fault_decode_htinst(size_t vcpu_id, uint32_t htinst, se
 struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word htinst,
                                                   seL4_Word addr)
 {
-    // if (htinst != 0) {
-    //     return fault_decode_htinst(vcpu_id, htinst, addr);
-    // }
+    if (htinst != 0) {
+        return fault_decode_htinst(vcpu_id, htinst, addr);
+    }
 
     seL4_Word ip = regs->pc;
     seL4_Word guest_physical = guest_virtual_physical(ip, vcpu_id);
-    LOG_VMM("virtual: 0x%lx, guest_physical: 0x%lx\n", ip, guest_physical);
     // TODO: we should assert that the physical address is less than the size of the guest RAM,
     // and within RAM but we do not have enough information to do so right now.
 
@@ -230,7 +219,6 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
     uint8_t op_code = instruction & 0x7f;
     /* funct3 is from bits 12:14. */
     uint8_t funct3 = (instruction >> 12) & 0x7;
-    // LOG_VMM("decoding fault 0x%lx from 0x%lx, 0x%x, 0x%x\n", addr, ip, instruction, instruction_lo);
 
     /* If we are in here, we are dealing with a compressed instruction */
     switch (instruction_lo >> 13) {
@@ -256,7 +244,6 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
         break;
     }
 
-    LOG_VMM("instruction: 0x%x\n", instruction);
     switch (op_code) {
     case OP_CODE_STORE:
         return (struct fault_instruction) {
