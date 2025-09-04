@@ -4,7 +4,7 @@ import argparse
 import struct
 import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
@@ -25,11 +25,11 @@ class Board:
     serial: str
     guest_serial: str
     timer: str
-    blk: str
-    guest_blk: str
+    blk: Optional[str]
+    guest_blk: Optional[str]
     net: str
     guest_net: str
-    partition: int
+    partition: Optional[int]
 
 
 BOARDS: List[Board] = [
@@ -60,6 +60,19 @@ BOARDS: List[Board] = [
         partition=0
     ),
     Board(
+        name="hifive_p550",
+        arch=SystemDescription.Arch.RISCV64,
+        paddr_top=0x59400000,
+        serial="soc/serial@0x50900000",
+        guest_serial="soc/virtio-console",
+        timer=None,
+        blk=None,
+        guest_blk=None,
+        net="soc/ethernet@50400000",
+        guest_net="soc/virtio-net",
+        partition=None
+    ),
+    Board(
         name="maaxboard",
         arch=SystemDescription.Arch.AARCH64,
         paddr_top=0x90000000,
@@ -82,8 +95,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
-    if board.arch == SystemDescription.Arch.RISCV64:
+    if board.name == "qemu_virt_riscv64":
         vmm_client0.add_irq(SystemDescription.Irq(97, id=2))
+    elif board.name == "hifive_p550":
+        vmm_client0.add_irq(SystemDescription.Irq(522, id=2))
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
@@ -133,24 +148,25 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
 
-    # Block subsystem
-    blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
-    blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
+    if board.blk is not None:
+        # Block subsystem
+        blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
+        blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
 
-    blk_node = dtb.node(board.blk)
-    assert blk_node is not None
-    guest_blk_node = client_dtb.node(board.guest_blk)
-    assert guest_blk_node is not None
+        blk_node = dtb.node(board.blk)
+        assert blk_node is not None
+        guest_blk_node = client_dtb.node(board.guest_blk)
+        assert guest_blk_node is not None
 
-    blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
-    partition = int(args.partition) if args.partition else board.partition
-    client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    pds = [
-        blk_driver,
-        blk_virt
-    ]
-    for pd in pds:
-        sdf.add_pd(pd)
+        blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
+        partition = int(args.partition) if args.partition else board.partition
+        client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+        pds = [
+            blk_driver,
+            blk_virt
+        ]
+        for pd in pds:
+            sdf.add_pd(pd)
 
     # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
     if board.name == "maaxboard":
@@ -168,8 +184,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
-    assert blk_system.connect()
-    assert blk_system.serialise_config(output_dir)
+    if board.blk is not None:
+        assert blk_system.connect()
+        assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
     assert net_system.serialise_config(output_dir)
     assert client0.connect()
