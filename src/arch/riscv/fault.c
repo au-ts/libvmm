@@ -380,6 +380,34 @@ uint32_t fault_instruction_data(fault_instruction_t *instruction, seL4_UserConte
     return reg;
 }
 
+void fault_instruction_dump(fault_instruction_t *instruction, seL4_UserContext *regs) {
+    LOG_VMM("decoded instruction at PC 0x%lx:\n", regs->pc);
+    LOG_VMM("   fault addr: 0x%lx\n", instruction->addr);
+    LOG_VMM("   derived from htinst: %s\n", instruction->from_htinst ? "true" : "false");
+    LOG_VMM("   compressed: %s\n", instruction->compressed ? "true" : "false");
+    LOG_VMM("   funct3: 0x%hu\n", instruction->funct3);
+    LOG_VMM("   operation: ");
+    switch (instruction->op_code) {
+    case OP_CODE_STORE:
+        printf("store");
+        break;
+    case OP_CODE_LOAD:
+        printf("load");
+        break;
+    case OP_CODE_SYSTEM:
+        printf("system register access");
+        break;
+    default:
+        printf("<unknown op code>");
+    }
+    printf("\n");
+    if (instruction->op_code == OP_CODE_STORE) {
+        LOG_VMM("   rs2: 0x%hu\n", instruction->rs2);
+    } else if (instruction->op_code == OP_CODE_LOAD) {
+        LOG_VMM("   rd: 0x%hu\n", instruction->rd);
+    }
+}
+
 void fault_emulate_write_access(fault_instruction_t *instruction, seL4_UserContext *regs, uint32_t *value, uint32_t write_data) {
     uint32_t data = write_data;
     uint8_t offset = (instruction->addr & 0x3) * 8;

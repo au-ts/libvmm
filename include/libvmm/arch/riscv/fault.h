@@ -71,6 +71,8 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, bool compressed)
 bool fault_is_write(seL4_Word fsr);
 bool fault_is_read(seL4_Word fsr);
 
+void fault_instruction_dump(fault_instruction_t *instruction, seL4_UserContext *regs);
+
 struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserContext *regs, seL4_Word ip, seL4_Word addr);
 
 static inline seL4_Word fault_get_reg(seL4_UserContext *regs, int index)
@@ -148,7 +150,7 @@ static inline seL4_Word fault_get_reg(seL4_UserContext *regs, int index)
     }
 }
 
-static inline seL4_Word fault_get_reg_compressed(seL4_UserContext *regs, int index)
+static inline seL4_Word fault_get_reg_compressed(seL4_UserContext *regs, uint8_t index)
 {
     switch (index) {
     case 0:
@@ -174,7 +176,7 @@ static inline seL4_Word fault_get_reg_compressed(seL4_UserContext *regs, int ind
     }
 }
 
-static inline void fault_set_reg_compressed(seL4_UserContext *regs, int index, seL4_Word value)
+static inline void fault_set_reg_compressed(seL4_UserContext *regs, uint8_t index, seL4_Word value)
 {
     switch (index) {
     case 0:
