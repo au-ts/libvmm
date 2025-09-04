@@ -225,7 +225,7 @@ struct fault_instruction fault_decode_instruction(size_t vcpu_id, seL4_UserConte
      * to be aligned to 16-bits.
      */
     uint16_t instruction_lo = *((uint16_t *)guest_physical);
-    uint16_t instruction_hi = *(uint16_t *)(guest_physical + 16);
+    uint16_t instruction_hi = *(uint16_t *)(guest_physical + 2);
     uint32_t instruction = ((uint32_t)instruction_hi << 16) | instruction_lo;
     uint8_t op_code = instruction & 0x7f;
     /* funct3 is from bits 12:14. */
