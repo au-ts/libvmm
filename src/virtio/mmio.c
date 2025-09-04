@@ -18,7 +18,7 @@ extern fault_instruction_t decoded_instruction;
 #endif
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_MMIO
+// #define DEBUG_MMIO
 
 #if defined(DEBUG_MMIO)
 #define LOG_MMIO(...) do{ printf("%s|VIRTIO(MMIO): ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -313,7 +313,6 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
 
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
-    fault_instruction_dump(&decoded_instruction, regs);
     virtio_device_t *dev = (virtio_device_t *) data;
     assert(dev);
     if (fault_is_read(fsr)) {
