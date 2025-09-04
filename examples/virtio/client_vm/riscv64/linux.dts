@@ -86,7 +86,7 @@
     };
 
     chosen {
-        bootargs = "console=hvc0";
+        bootargs = "earlycon=sbi console=hvc0 no4lvl";
         linux,initrd-start = <0x87000000>;
         linux,initrd-end = <0x87f00000>;
     };
@@ -109,6 +109,7 @@
             reg = <0x00 0x150000 0x00 0x200>;
             interrupts = <43>;
             interrupt-parent = <0x03>;
+            status = "disabled";
         };
 
         virtio-net {
@@ -116,6 +117,7 @@
             reg = <0x00 0x160000 0x00 0x200>;
             interrupts = <44>;
             interrupt-parent = <0x03>;
+            status = "disabled";
         };
 
         plic@c000000 {
