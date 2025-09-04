@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <libvmm/virq.h>
 
-#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT)
+#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_HIFIVE_P550)
 #define PLIC_ADDR 0xc000000
 #define PLIC_SIZE 0x4000000
 #else
