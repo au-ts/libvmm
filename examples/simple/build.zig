@@ -178,6 +178,8 @@ pub fn build(b: *std.Build) !void {
 
     if (custom_linux) |c| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(c, .prefix, "linux").step);
+    } else if (target.result.cpu.arch == .riscv64) {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(b.path("board/qemu_virt_riscv64/linux"), .prefix, "linux").step);
     } else {
         const linux_image_dep = b.lazyDependency("linux", .{});
         if (linux_image_dep) |linux_image| {
@@ -187,6 +189,8 @@ pub fn build(b: *std.Build) !void {
 
     if (custom_initrd) |c| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(c, .prefix, "rootfs.cpio.gz").step);
+    } else if (target.result.cpu.arch == .riscv64) {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(b.path("board/qemu_virt_riscv64/rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
     } else {
         const initrd_image_dep = b.lazyDependency(b.fmt("{s}_initrd", .{ microkit_board }), .{});
         if (initrd_image_dep) |initrd_image| {
