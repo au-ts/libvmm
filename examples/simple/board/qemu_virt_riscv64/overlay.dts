@@ -69,6 +69,7 @@
     };
 
     chosen {
+        bootargs = "earlycon=sbi no4lvl";
         stdout-path = "/soc/serial@10000000";
         linux,initrd-start = <0x8c000000>;
         linux,initrd-end = <0x8e000000>;
