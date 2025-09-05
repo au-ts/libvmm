@@ -37,6 +37,10 @@ static void assert_fail(
     __builtin_trap();
 }
 
+#ifndef BIT
+#define BIT(n) (1ul<<(n))
+#endif
+
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
 
