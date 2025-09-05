@@ -1,0 +1,33 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    /* Need to specify how much RAM the guest will have */
+    memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x10000000>;
+    };
+
+    soc {
+        gpio@51600000 {
+            status = "disabled";
+        };
+
+        serial@0x50910000 {
+            status = "disabled";
+        };
+
+        serial@0x50920000 {
+            status = "disabled";
+        };
+    };
+
+    chosen {
+        bootargs = "earlycon=sbi console=ttyS0 loglevel=8 maxcpus=1";
+        stdout-path = "/soc/serial@0x50900000";
+        linux,initrd-start = <0x8c000000>;
+        linux,initrd-end = <0x8e000000>;
+    };
+};
