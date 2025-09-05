@@ -86,7 +86,7 @@
     };
 
     chosen {
-        bootargs = "earlycon=sbi console=hvc0 no4lvl";
+        bootargs = "earlycon=sbi console=hvc0";
         linux,initrd-start = <0x87000000>;
         linux,initrd-end = <0x87f00000>;
     };

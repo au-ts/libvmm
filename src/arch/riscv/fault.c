@@ -12,7 +12,6 @@
 #include <libvmm/arch/riscv/sbi.h>
 #include <libvmm/arch/riscv/vcpu.h>
 
-#define BIT(n) (1ul<<(n))
 #define PT_SIZE 512
 #define GET_PPN(x)      (x & (BIT(44) - 1))
 #define VPN_MASK        0x1ff
@@ -26,19 +25,36 @@
 #define PTE_GET_1G(x)   (((x >> 28) & 0x3ffffff))
 #define PTE_GET_2M(x)   (((x >> 19) & (BIT(35) - 1)))
 #define PTE_GET_4K(x)   (((x >> 10) & (BIT(44) - 1)))
-#define SV39_MODE       0x8
+
+#define MODE_SV39 8
+#define MODE_SV48 9
+#define MODE_SV57 10
 
 static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
 {
-    size_t level = 2;
-
     seL4_Word satp = 0;
     seL4_RISCV_VCPU_ReadRegs_t res = seL4_RISCV_VCPU_ReadRegs(BASE_VCPU_CAP + vcpu_id, seL4_VCPUReg_SATP);
     assert(!res.error);
     satp = res.value;
 
     uint8_t mode = satp >> 60;
-    assert(mode == SV39_MODE);
+
+    int level = -1;
+    switch (mode) {
+    case MODE_SV39:
+        level = 2;
+        break;
+    case MODE_SV48:
+        level = 3;
+        break;
+    case MODE_SV57:
+        level = 4;
+        break;
+    default:
+        LOG_VMM_ERR("unsupported satp mode received %d\n", mode);
+        assert(false);
+        return 0;
+    }
 
     seL4_Word ppn = GET_PPN(satp);
     seL4_Word gpa = ppn << PPN_SHIFT;
@@ -50,18 +66,18 @@ static seL4_Word guest_virtual_physical(seL4_Word addr, size_t vcpu_id)
         int vpn = GET_VPN(addr, level);
         pte = *(uint64_t *)(gpa + 8 * vpn);
         if (pte & PTE_V && (pte & PTE_R || pte & PTE_X)) {
-            /* we reach a leaf page */
+            /* We are dealing with a leaf entry */
             if (level == 2) {
                 /* 1 GiB page */
                 return (PTE_GET_1G(pte) << 30)  | (addr & (BIT(30) - 1));
-            }
-            if (level == 1) {
+            } else if (level == 1) {
                 /* 2 MiB page */
                 return (PTE_GET_2M(pte) << 21) | (addr & (BIT(21) - 1));
-            }
-            if (level == 0) {
+            } else if (level == 0) {
                 /* 4 KiB page */
                 return ((PTE_GET_4K(pte) << 12) | (addr & (BIT(12) - 1)));
+            } else {
+                assert(false);
             }
         } else {
             assert(pte & PTE_V);
