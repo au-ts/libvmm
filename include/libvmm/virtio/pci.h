@@ -10,7 +10,6 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 
-
 /* PCI REVISION */
 #define VIRTIO_PCI_REVISION 0
 
@@ -68,7 +67,6 @@
 #define PCI_CLASS_NETWORK_ETHERNET       0x0200
 #define PCI_CLASS_COMMUNICATION_OTHER    0x0780
 
-
 #define PCI_CLASS_CODE(x) ((x >> 8) & 0xFF)
 #define PCI_SUB_CLASS(x) (x & 0xFF)
 
@@ -91,17 +89,17 @@
 #define PCI_STATUS_DETECTED_PARITY      0x8000  /* Set on parity error */
 
 // PCI Command Register
-#define  PCI_COMMAND_IO                 0x1    /* Enable response in I/O space */
-#define  PCI_COMMAND_MEMORY             0x2    /* Enable response in Memory space */
-#define  PCI_COMMAND_MASTER             0x4    /* Enable bus mastering */
-#define  PCI_COMMAND_SPECIAL            0x8    /* Enable response to special cycles */
-#define  PCI_COMMAND_INVALIDATE         0x10   /* Use memory write and invalidate */
-#define  PCI_COMMAND_VGA_PALETTE        0x20   /* Enable palette snooping */
-#define  PCI_COMMAND_PARITY             0x40   /* Enable parity checking */
-#define  PCI_COMMAND_WAIT               0x80   /* Enable address/data stepping */
-#define  PCI_COMMAND_SERR               0x100  /* Enable SERR */
-#define  PCI_COMMAND_FAST_BACK          0x200  /* Enable back-to-back writes */
-#define  PCI_COMMAND_INTX_DISABLE       0x400  /* INTx Emulation Disable */
+#define PCI_COMMAND_IO                 0x1    /* Enable response in I/O space */
+#define PCI_COMMAND_MEMORY             0x2    /* Enable response in Memory space */
+#define PCI_COMMAND_MASTER             0x4    /* Enable bus mastering */
+#define PCI_COMMAND_SPECIAL            0x8    /* Enable response to special cycles */
+#define PCI_COMMAND_INVALIDATE         0x10   /* Use memory write and invalidate */
+#define PCI_COMMAND_VGA_PALETTE        0x20   /* Enable palette snooping */
+#define PCI_COMMAND_PARITY             0x40   /* Enable parity checking */
+#define PCI_COMMAND_WAIT               0x80   /* Enable address/data stepping */
+#define PCI_COMMAND_SERR               0x100  /* Enable SERR */
+#define PCI_COMMAND_FAST_BACK          0x200  /* Enable back-to-back writes */
+#define PCI_COMMAND_INTX_DISABLE       0x400  /* INTx Emulation Disable */
 
 // PCI Common configuration
 #define VIRTIO_PCI_COMMON_DEV_FEATURE_SEL       0x0
@@ -151,14 +149,14 @@ struct pci_config_space {
     uint16_t device_id;           // 0x02: Device ID
     uint16_t command;             // 0x04: Command Register
     uint16_t status;              // 0x06: Status Register
-    uint8_t  revision_id;         // 0x08: Revision ID
-    uint8_t  prog_if;             // 0x09: Programming Interface
-    uint8_t  subclass;            // 0x0A: Sub Class Code
-    uint8_t  class_code;          // 0x0B: Base Class Code
-    uint8_t  cache_line_size;     // 0x0C: Cache Line Size
-    uint8_t  latency_timer;       // 0x0D: Latency Timer
-    uint8_t  header_type;         // 0x0E: Header Type
-    uint8_t  bist;                // 0x0F: Built-in Self Test
+    uint8_t revision_id;         // 0x08: Revision ID
+    uint8_t prog_if;             // 0x09: Programming Interface
+    uint8_t subclass;            // 0x0A: Sub Class Code
+    uint8_t class_code;          // 0x0B: Base Class Code
+    uint8_t cache_line_size;     // 0x0C: Cache Line Size
+    uint8_t latency_timer;       // 0x0D: Latency Timer
+    uint8_t header_type;         // 0x0E: Header Type
+    uint8_t bist;                // 0x0F: Built-in Self Test
 
     // Base Address Registers (BARs)
     uint32_t bar[6];              // 0x10-0x27: Base Address Registers
@@ -170,13 +168,13 @@ struct pci_config_space {
     uint32_t expansion_rom_addr;  // 0x30: Expansion ROM Base Address
 
     // Capabilities and Interrupts
-    uint8_t  cap_ptr;             // 0x34: Capabilities Pointer
-    uint8_t  reserved1[3];        // 0x35-0x37: Reserved
+    uint8_t cap_ptr;             // 0x34: Capabilities Pointer
+    uint8_t reserved1[3];        // 0x35-0x37: Reserved
     uint32_t reserved2;           // 0x38-0x3B: Reserved
-    uint8_t  interrupt_line;      // 0x3C: Interrupt Line
-    uint8_t  interrupt_pin;       // 0x3D: Interrupt Pin
-    uint8_t  min_gnt;             // 0x3E: Min_Gnt
-    uint8_t  max_lat;             // 0x3F: Max_Lat
+    uint8_t interrupt_line;      // 0x3C: Interrupt Line
+    uint8_t interrupt_pin;       // 0x3D: Interrupt Pin
+    uint8_t min_gnt;             // 0x3E: Min_Gnt
+    uint8_t max_lat;             // 0x3F: Max_Lat
 
     // Capability list
     uint8_t cap_data[192];
@@ -219,16 +217,16 @@ struct pci_memory_bar {
 };
 
 struct pci_bar_memory_bits {
-    uint32_t memory_type       : 1;    // Bit 0: 0 = Memory space
-    uint32_t mem_type          : 2;    // Bits 2-1: Memory type
-    uint32_t prefetchable      : 1;    // Bit 3: Prefetchable
-    uint32_t base_address      : 28;   // Bits 31-4: Base address
+    uint32_t memory_type : 1;    // Bit 0: 0 = Memory space
+    uint32_t mem_type : 2;    // Bits 2-1: Memory type
+    uint32_t prefetchable : 1;    // Bit 3: Prefetchable
+    uint32_t base_address : 28;   // Bits 31-4: Base address
 } __attribute__((packed));
 
 struct pci_bar_io_bits {
-    uint32_t io_type           : 1;    // Bit 0: 1 = I/O space
-    uint32_t reserved          : 1;    // Bit 1: Reserved (must be 0)
-    uint32_t base_address      : 30;   // Bits 31-2: I/O base address
+    uint32_t io_type : 1;    // Bit 0: 1 = I/O space
+    uint32_t reserved : 1;    // Bit 1: Reserved (must be 0)
+    uint32_t base_address : 30;   // Bits 31-2: I/O base address
 } __attribute__((packed));
 
 // Vendor-specific Capability (ID 0x09)
@@ -246,8 +244,8 @@ struct virtio_pci_cap {
 
 // MSI-X Capability (ID 0x11)
 struct msix_capability {
-    uint8_t  cap_id;              // 0x11 (MSI-X capability ID)
-    uint8_t  next_ptr;            // Pointer to next capability
+    uint8_t cap_id;              // 0x11 (MSI-X capability ID)
+    uint8_t next_ptr;            // Pointer to next capability
     uint16_t message_control;     // Control register
     uint32_t table_offset_bir;    // Table offset and BAR indicator
     uint32_t pba_offset_bir;      // Pending bit array offset and BAR
@@ -302,9 +300,8 @@ struct virtio_pci_common_cfg {
     uint16_t admin_queue_num;           /* read-only for driver */
 };
 
-
-typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs);
-
+typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+                                                   seL4_UserContext *regs);
 
 bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint32_t ecam_size);
 /*

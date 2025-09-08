@@ -50,7 +50,4 @@ typedef struct virtio_device {
  * Assumes the virtio_device_t *dev struct passed has been populated
  * and virtual IRQ associated with the device has been registered.
  */
-bool virtio_mmio_register_device(virtio_device_t *dev,
-                                 uintptr_t region_base,
-                                 uintptr_t region_size,
-                                 size_t virq);
+bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size, size_t virq);

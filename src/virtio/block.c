@@ -560,14 +560,9 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
-                          uint32_t dev_slot,
-                          size_t virq,
-                          uintptr_t data_region,
-                          size_t data_region_size,
-                          blk_storage_info_t *storage_info,
-                          blk_queue_handle_t *queue_h,
-                          int server_ch)
+bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, size_t virq, uintptr_t data_region,
+                         size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
+                         int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
 
@@ -592,12 +587,8 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
 
     virtio_blk_config_init(blk_dev);
 
-    fsmalloc_init(&blk_dev->fsmalloc,
-                  data_region,
-                  BLK_TRANSFER_SIZE,
-                  sddf_data_buffers,
-                  &blk_dev->fsmalloc_avail_bitarr,
-                  blk_dev->fsmalloc_avail_bitarr_words,
+    fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE, sddf_data_buffers,
+                  &blk_dev->fsmalloc_avail_bitarr, blk_dev->fsmalloc_avail_bitarr_words,
                   roundup_bits2words64(sddf_data_buffers));
 
     ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, sddf_data_buffers);

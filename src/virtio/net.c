@@ -406,16 +406,9 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_net_init(struct virtio_net_device *net_dev,
-                          uint32_t dev_slot,
-                          size_t virq,
-                          net_queue_handle_t *rx,
-                          net_queue_handle_t *tx,
-                          uintptr_t rx_data,
-                          uintptr_t tx_data,
-                          microkit_channel rx_ch,
-                          microkit_channel tx_ch,
-                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, size_t virq, net_queue_handle_t *rx,
+                         net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch,
+                         microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
