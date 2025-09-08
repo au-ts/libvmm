@@ -250,12 +250,8 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_console_init(struct virtio_console_device *console,
-                              uint32_t dev_slot,
-                              size_t virq,
-                              serial_queue_handle_t *rxq,
-                              serial_queue_handle_t *txq,
-                              int tx_ch)
+bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
+                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;

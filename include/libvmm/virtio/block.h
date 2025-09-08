@@ -190,11 +190,6 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
 
 bool virtio_blk_handle_resp(struct virtio_blk_device *blk_dev);
 
-bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
-                          uint32_t dev_slot,
-                          size_t virq,
-                          uintptr_t data_region,
-                          size_t data_region_size,
-                          blk_storage_info_t *storage_info,
-                          blk_queue_handle_t *queue_h,
-                          int server_ch);
+bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, size_t virq, uintptr_t data_region,
+                         size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
+                         int server_ch);

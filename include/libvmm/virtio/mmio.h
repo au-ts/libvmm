@@ -113,4 +113,3 @@ typedef struct virtio_mmio_data {
  * @param data pointer to virtIO device registered with the fault handler
  */
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
-

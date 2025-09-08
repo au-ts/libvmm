@@ -81,16 +81,9 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
-                                             (uintptr_t) _guest_kernel_image,
-                                             kernel_size,
-                                             (uintptr_t) _guest_dtb_image,
-                                             vmm_config.dtb,
-                                             dtb_size,
-                                             (uintptr_t) _guest_initrd_image,
-                                             vmm_config.initrd,
-                                             initrd_size
-                                            );
+    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram, (uintptr_t)_guest_kernel_image, kernel_size,
+                                             (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
+                                             (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -113,23 +106,12 @@ void init(void)
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console,
-                                       0,
-                                       48,
-                                       &serial_rx_queue, &serial_tx_queue,
-                                       serial_config.tx.id);
+    success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id);
     assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk,
-                                   1,
-                                   49,
-                                   (uintptr_t)blk_config.data.vaddr,
-                                   blk_config.data.size,
-                                   storage_info,
-                                   &blk_queue,
-                                   blk_config.virt.id);
+    success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
+                                  storage_info, &blk_queue, blk_config.virt.id);
     assert(success);
-
 
     /* Initialise virtIO net device */
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
@@ -138,14 +120,9 @@ void init(void)
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
 
-    success = virtio_pci_net_init(&virtio_net,
-                                   2,
-                                   50,
-                                   &net_rx_queue, &net_tx_queue,
-                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                   net_config.rx.id, net_config.tx.id,
-                                   net_config.mac_addr
-                                  );
+    success = virtio_pci_net_init(&virtio_net, 2, 50, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                  net_config.mac_addr);
     assert(success);
 
     /* Finally start the guest */

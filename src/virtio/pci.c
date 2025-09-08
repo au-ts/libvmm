@@ -62,8 +62,8 @@ static uintptr_t pci_allocate_bar_memory(virtio_device_t *dev, uint8_t dev_bar_i
  * @offset              offest to place the new cap at
  * @cfg_type            configuration type to be added
  */
-static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint8_t cfg_type,
-                           uint8_t bar, uint8_t next_ptr)
+static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint8_t cfg_type, uint8_t bar,
+                                      uint8_t next_ptr)
 {
     uintptr_t new_cap_addr = (uintptr_t)virtio_pci_find_dev_cfg_space(dev) + offset;
     uint8_t len;            // length of the new cap
@@ -159,7 +159,8 @@ bool virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t 
     }
 
     if (registered_pci_memory_resource.free_offset + size > registered_pci_memory_resource.size) {
-        LOG_VMM_ERR("Could not allocate 0x%x bytes for new memory bar. 0x%x bytes left.\n", size, registered_pci_memory_resource.size - registered_pci_memory_resource.free_offset);
+        LOG_VMM_ERR("Could not allocate 0x%x bytes for new memory bar. 0x%x bytes left.\n", size,
+                    registered_pci_memory_resource.size - registered_pci_memory_resource.free_offset);
         return false;
     }
 
@@ -185,7 +186,8 @@ static struct virtio_pci_cap *find_pci_cap_by_offset(virtio_device_t *dev, uint8
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
     struct virtio_pci_cap *cap = (struct virtio_pci_cap *)((uintptr_t)config_space + config_space->cap_ptr);
     while (cap != (struct virtio_pci_cap *)config_space) {
-        if (cap->cap_id == PCI_CAP_ID_VNDR && cap->bar == bar && (cap->offset <= offset && offset < cap->offset + cap->length)) {
+        if (cap->cap_id == PCI_CAP_ID_VNDR && cap->bar == bar
+            && (cap->offset <= offset && offset < cap->offset + cap->length)) {
             return cap;
         }
         cap = (struct virtio_pci_cap *)((uintptr_t)config_space + cap->next_ptr);
@@ -248,7 +250,7 @@ static int handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg)
 }
 
 static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                       seL4_UserContext *regs)
 {
     uint32_t reg = 0;
     bool success = true;
@@ -289,7 +291,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
 }
 
 static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                        seL4_UserContext *regs)
 {
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
@@ -331,7 +333,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -343,7 +346,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -355,7 +359,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -367,7 +372,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -379,7 +385,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -391,7 +398,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -403,7 +411,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 }
 
 static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                       seL4_UserContext *regs)
 {
     uint32_t reg = 0;
     bool success = true;
@@ -417,7 +425,7 @@ static bool virtio_pci_device_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
 }
 
 static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                        seL4_UserContext *regs)
 {
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
@@ -430,14 +438,14 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 }
 
 static bool virtio_pci_notify_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                       seL4_UserContext *regs)
 {
     printf("VIRTIO PCI|ERR: notfiy_cfg should not be read\n");
     return false;
 }
 
 static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                        seL4_UserContext *regs)
 {
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
@@ -449,7 +457,7 @@ static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 }
 
 static bool virtio_pci_isr_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                    seL4_UserContext *regs)
 {
     uint32_t reg = dev->regs.InterruptStatus;
     uint32_t mask = fault_get_data_mask(offset, fsr);
@@ -461,7 +469,7 @@ static bool virtio_pci_isr_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t
 }
 
 static bool virtio_pci_isr_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                         seL4_UserContext *regs)
+                                     seL4_UserContext *regs)
 {
     printf("VIRTIO PCI|ERR: isr should not be written by the driver\n");
     return false;
@@ -474,38 +482,39 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
     // Search for dev from global_memory_bars
     uint32_t i = 0;
     for (i = 0; i < VIRTIO_PCI_MAX_MEM_BARS; i++) {
-        if (global_memory_bars[i].vaddr <= vmm_addr &&
-            vmm_addr < global_memory_bars[i].vaddr + global_memory_bars[i].size) {
+        if (global_memory_bars[i].vaddr <= vmm_addr
+            && vmm_addr < global_memory_bars[i].vaddr + global_memory_bars[i].size) {
             break;
         }
     }
     if (i == VIRTIO_PCI_MAX_MEM_BARS) {
-        LOG_VMM_ERR("Fault address 0x%x is not located within any registered memory bars\n", registered_pci_memory_resource.vm_addr + offset);
+        LOG_VMM_ERR("Fault address 0x%x is not located within any registered memory bars\n",
+                    registered_pci_memory_resource.vm_addr + offset);
         return false;
     }
 
     // Search for the capability
     uint32_t bar_offset = vmm_addr - global_memory_bars[i].vaddr;
     virtio_device_t *dev = global_memory_bars[i].dev;
-    struct  virtio_pci_cap *cap = find_pci_cap_by_offset(dev, global_memory_bars[i].idx, bar_offset);
+    struct virtio_pci_cap *cap = find_pci_cap_by_offset(dev, global_memory_bars[i].idx, bar_offset);
 
     virtio_pci_cfg_exception_handler_t cfg_handler = NULL;
     switch (cap->cfg_type) {
-        case VIRTIO_PCI_CAP_COMMON_CFG:
-            cfg_handler = fault_is_read(fsr) ? virtio_pci_common_reg_read : virtio_pci_common_reg_write;
-            break;
-        case VIRTIO_PCI_CAP_DEVICE_CFG:
-            cfg_handler = fault_is_read(fsr) ? virtio_pci_device_reg_read : virtio_pci_device_reg_write;
-            break;
-        case VIRTIO_PCI_CAP_NOTIFY_CFG:
-            cfg_handler = fault_is_read(fsr) ? virtio_pci_notify_reg_read : virtio_pci_notify_reg_write;
-            break;
-        case VIRTIO_PCI_CAP_ISR_CFG:
-            cfg_handler = fault_is_read(fsr) ? virtio_pci_isr_reg_read : virtio_pci_isr_reg_write;
-            break;
-        default:
-            printf("Unimplemented bar fault handler for type: 0x%x\n", cap->cfg_type);
-            break;
+    case VIRTIO_PCI_CAP_COMMON_CFG:
+        cfg_handler = fault_is_read(fsr) ? virtio_pci_common_reg_read : virtio_pci_common_reg_write;
+        break;
+    case VIRTIO_PCI_CAP_DEVICE_CFG:
+        cfg_handler = fault_is_read(fsr) ? virtio_pci_device_reg_read : virtio_pci_device_reg_write;
+        break;
+    case VIRTIO_PCI_CAP_NOTIFY_CFG:
+        cfg_handler = fault_is_read(fsr) ? virtio_pci_notify_reg_read : virtio_pci_notify_reg_write;
+        break;
+    case VIRTIO_PCI_CAP_ISR_CFG:
+        cfg_handler = fault_is_read(fsr) ? virtio_pci_isr_reg_read : virtio_pci_isr_reg_write;
+        break;
+    default:
+        printf("Unimplemented bar fault handler for type: 0x%x\n", cap->cfg_type);
+        break;
     }
 
     if (cfg_handler) {
@@ -522,11 +531,7 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
     registered_pci_memory_resource.size = size;
     registered_pci_memory_resource.free_offset = 0;
 
-    bool success = fault_register_vm_exception_handler(vm_addr,
-                                                  size,
-                                                  &virtio_pci_bar_fault_handle,
-                                                  NULL);
-
+    bool success = fault_register_vm_exception_handler(vm_addr, size, &virtio_pci_bar_fault_handle, NULL);
 
     if (!success) {
         LOG_VMM_ERR("Could not register virtual memory fault handler for pci device");
@@ -541,17 +546,17 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
 
     switch (offset) {
-        case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
-            config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
-            break;
-        }
-        case REG_RANGE(PCI_CFG_OFFSET_STATUS, PCI_CFG_OFFSET_BAR1): {
-            config_space->status = data;
-            break;
-        }
-        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
-            uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
-            uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
+    case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
+        config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
+        break;
+    }
+    case REG_RANGE(PCI_CFG_OFFSET_STATUS, PCI_CFG_OFFSET_BAR1): {
+        config_space->status = data;
+        break;
+    }
+    case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
+        uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
+        uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
 
             // Memory negotiation process:
             //     1. The driver writes all 1s to the BAR register.
@@ -561,28 +566,29 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             //     4. The driver allocates memory from the memory resources, and writes
             //         the allocated address to the BAR register.
             //     5. The device parse the memory address and bookkeep it.
-            if (global_memory_bars[global_bar_id].size) {
-                if (data == 0xFFFFFFFF) {
-                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(config_space->bar[dev_bar_id]);
-                    bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
-                } else if (data != 0x0) {
-                    struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&config_space->bar[dev_bar_id];
-                    uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
-                    bar->base_address = allocated_addr >> 4;        // 16-byte aligned
-                    global_memory_bars[global_bar_id].vaddr = allocated_addr - registered_pci_memory_resource.vm_addr + registered_pci_memory_resource.vmm_addr;
-                }
+        if (global_memory_bars[global_bar_id].size) {
+            if (data == 0xFFFFFFFF) {
+                struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&(config_space->bar[dev_bar_id]);
+                bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
+            } else if (data != 0x0) {
+                struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&config_space->bar[dev_bar_id];
+                uintptr_t allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
+                bar->base_address = allocated_addr >> 4;        // 16-byte aligned
+                global_memory_bars[global_bar_id].vaddr = allocated_addr - registered_pci_memory_resource.vm_addr
+                                                        + registered_pci_memory_resource.vmm_addr;
             }
-            break;
-
         }
+        break;
+    }
     }
     return true;
 }
 
 static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
-    uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) +
-                              (offset >> 15) & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + ((offset >> 12) & 7);
+    uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
+                               * VIRTIO_PCI_FUNCS_PER_DEV
+                           + ((offset >> 12) & 7);
     virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
 
     if (fault_is_read(fsr)) {
@@ -603,7 +609,9 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
  * If the guest acknowledges the virtual IRQ associated with the virtIO
  * device, there is nothing that we need to do.
  */
-static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
+static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie)
+{
+}
 
 bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint8_t dev_slot)
 {
@@ -629,10 +637,7 @@ bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint3
     global_pci_ecam.vmm_base = ecam_base_vmm;
     global_pci_ecam.size = ecam_size;
 
-    bool success = fault_register_vm_exception_handler(ecam_base_vm,
-                                                  ecam_size,
-                                                  &virtio_ecam_fault_handle,
-                                                  NULL);
+    bool success = fault_register_vm_exception_handler(ecam_base_vm, ecam_size, &virtio_ecam_fault_handle, NULL);
 
     if (!success) {
         LOG_VMM_ERR("Could not register virtual memory fault handler for PCI ECAM area!\n");
