@@ -12,14 +12,14 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/block.h>
 #include <sddf/blk/queue.h>
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_BLOCK
+/* #define DEBUG_BLOCK */
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...) do{ printf("VIRTIO(BLOCK): "); printf(__VA_ARGS__); }while(0)
@@ -103,7 +103,7 @@ static bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_
     struct virtio_blk_device *state = device_state(dev);
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uintptr_t config_field_offset = (uintptr_t)offset;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *ret_val = *config_field_addr;
     LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
@@ -117,7 +117,7 @@ static bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_
     struct virtio_blk_device *state = device_state(dev);
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
+    uintptr_t config_field_offset = (uintptr_t)offset;
     uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
     *config_field_addr = val;
     LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with value %d\n",
@@ -558,4 +558,59 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev,
     ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, sddf_data_buffers);
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
+}
+
+bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev,
+                          uint32_t dev_slot,
+                          size_t virq,
+                          uintptr_t data_region,
+                          size_t data_region_size,
+                          blk_storage_info_t *storage_info,
+                          blk_queue_handle_t *queue_h,
+                          int server_ch)
+{
+    struct virtio_device *dev = &blk_dev->virtio_device;
+
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->funs = &functions;
+    dev->vqs = blk_dev->vqs;
+    dev->num_vqs = VIRTIO_BLK_NUM_VIRTQ;
+    dev->virq = virq;
+    dev->device_data = blk_dev;
+
+    blk_dev->storage_info = storage_info;
+    blk_dev->queue_h = *queue_h;
+    blk_dev->data_region = data_region;
+    blk_dev->server_ch = server_ch;
+
+    size_t sddf_data_buffers = data_region_size / BLK_TRANSFER_SIZE;
+    /* This assert is necessary as the bookkeeping data structures need to have a
+     * defined size at compile time and that depends on the number of buffers
+     * passed to us during initialisation. */
+    assert(sddf_data_buffers <= SDDF_MAX_DATA_BUFFERS);
+
+    virtio_blk_config_init(blk_dev);
+
+    fsmalloc_init(&blk_dev->fsmalloc,
+                  data_region,
+                  BLK_TRANSFER_SIZE,
+                  sddf_data_buffers,
+                  &blk_dev->fsmalloc_avail_bitarr,
+                  blk_dev->fsmalloc_avail_bitarr_words,
+                  roundup_bits2words64(sddf_data_buffers));
+
+    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, sddf_data_buffers);
+
+    dev->transport_type = VIRTIO_TRANSPORT_PCI;
+    dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
+    dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
+    dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
+
+    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
+    assert(success);
+
+    virtio_pci_alloc_memory_bar(dev, 0, 0x10000);
+
+    return virtio_pci_register_device(dev, virq);
 }

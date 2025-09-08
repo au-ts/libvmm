@@ -9,7 +9,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/net.h>
 #include <sddf/network/queue.h>
 
@@ -102,7 +102,7 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
 {
     struct virtio_net_config *config = &device_state(dev)->config;
 
-    uint32_t word_offset = (offset - REG_VIRTIO_MMIO_CONFIG) / sizeof(uint32_t);
+    uint32_t word_offset = offset / sizeof(uint32_t);
     switch (word_offset) {
     case 0:
         *ret_val = config->mac[0];
@@ -120,6 +120,7 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
         LOG_NET_ERR("Unknown device config register: 0x%x\n", offset);
         return false;
     }
+
     return true;
 }
 
@@ -403,4 +404,47 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
     net_dev->tx_ch = tx_ch;
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
+}
+
+bool virtio_pci_net_init(struct virtio_net_device *net_dev,
+                          uint32_t dev_slot,
+                          size_t virq,
+                          net_queue_handle_t *rx,
+                          net_queue_handle_t *tx,
+                          uintptr_t rx_data,
+                          uintptr_t tx_data,
+                          microkit_channel rx_ch,
+                          microkit_channel tx_ch,
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+{
+    struct virtio_device *dev = &net_dev->virtio_device;
+
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
+    dev->regs.VendorID = VIRTIO_PCI_VENDOR_ID;
+    dev->funs = &functions;
+    dev->vqs = net_dev->vqs;
+    dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;
+    dev->virq = virq;
+    dev->device_data = net_dev;
+
+    memcpy(net_dev->config.mac, mac, VIRTIO_NET_CONFIG_MAC_SZ);
+
+    net_dev->rx = *rx;
+    net_dev->tx = *tx;
+    net_dev->rx_data = (void *)rx_data;
+    net_dev->tx_data = (void *)tx_data;
+    net_dev->rx_ch = rx_ch;
+    net_dev->tx_ch = tx_ch;
+
+    dev->transport_type = VIRTIO_TRANSPORT_PCI;
+    dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
+    dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
+    dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
+
+    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
+    assert(success);
+
+    virtio_pci_alloc_memory_bar(dev, 0, 0x10000);
+
+    return virtio_pci_register_device(dev, virq);
 }

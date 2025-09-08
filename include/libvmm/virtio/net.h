@@ -31,7 +31,8 @@
 
 #include <stdint.h>
 #include <sddf/network/queue.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
+#include <libvmm/virtio/pci.h>
 
 /* The feature bitmap for virtio net */
 #define VIRTIO_NET_F_CSUM               0   /* Host handles pkts w/ partial csum */
@@ -238,3 +239,14 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
                           uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);
 
 bool virtio_net_handle_rx(struct virtio_net_device *dev);
+
+bool virtio_pci_net_init(struct virtio_net_device *net_dev,
+                          uint32_t pci_dev_slot,
+                          size_t virq,
+                          net_queue_handle_t *rx,
+                          net_queue_handle_t *tx,
+                          uintptr_t rx_data,
+                          uintptr_t tx_data,
+                          microkit_channel rx_ch,
+                          microkit_channel tx_ch,
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);

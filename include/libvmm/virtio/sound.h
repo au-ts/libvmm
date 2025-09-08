@@ -34,7 +34,7 @@
 
 #include <stdint.h>
 #include <libvmm/util/queue.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 #include <sddf/sound/queue.h>
 #include <sddf/util/ialloc.h>
 
