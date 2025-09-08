@@ -16,7 +16,7 @@ static struct virtio_pci_ecam global_pci_ecam;
 static struct pci_memory_resource registered_pci_memory_resource;
 static struct pci_memory_bar global_memory_bars[VIRTIO_PCI_MAX_MEM_BARS];
 
-static struct virtio_device_t *virtio_pci_dev_table[VIRTIO_PCI_DEV_FUNC_MAX];
+static virtio_device_t *virtio_pci_dev_table[VIRTIO_PCI_DEV_FUNC_MAX];
 
 static struct pci_config_space *virtio_pci_find_dev_cfg_space(virtio_device_t *dev)
 {
@@ -173,6 +173,8 @@ bool virtio_pci_alloc_memory_bar(virtio_device_t *dev, uint8_t bar_id, uint32_t 
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
     struct pci_bar_memory_bits *new_mem_bar = (struct pci_bar_memory_bits *)&config_space->bar[bar_id];
     new_mem_bar->base_address = 0;
+
+    return true;
 }
 
 /**
@@ -350,7 +352,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->avail;
             ptr |= data;
-            virtq->avail = (struct virtq_desc *)ptr;
+            virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
@@ -362,7 +364,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->avail;
             ptr |= (uintptr_t)data << 32;
-            virtq->avail = (struct virtq_desc *)ptr;
+            virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
@@ -374,7 +376,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->used;
             ptr |= data;
-            virtq->used = (struct virtq_desc *)ptr;
+            virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
@@ -386,7 +388,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->used;
             ptr |= (uintptr_t)data << 32;
-            virtq->used = (struct virtq_desc *)ptr;
+            virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n", dev->regs.QueueSel, dev->num_vqs);
@@ -423,7 +425,8 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     /* Mask the data to write */
     data &= mask;
     success = dev->funs->set_device_config(dev, offset, data);
-    return false;
+
+    return success;
 }
 
 static bool virtio_pci_notify_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
