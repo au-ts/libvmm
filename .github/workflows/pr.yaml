@@ -15,8 +15,23 @@ jobs:
     steps:
     - uses: seL4/ci-actions/git-diff-check@master
 
-  style:
-    name: Style
+  style_c:
+    name: Style (C)
     runs-on: ubuntu-latest
     steps:
-    - uses: seL4/ci-actions/style@master
+      - name: Checkout repository
+        # We use this form as this creates a "test-revision" rev in the git repo,
+        # which we can use to compare against. Also, git-clang-format only diffs
+        # changed files, so we need a proper checkout.
+        run: |
+          curl https://raw.githubusercontent.com/seL4/ci-actions/master/scripts/checkout.sh | bash
+          curl https://raw.githubusercontent.com/seL4/ci-actions/master/scripts/fetch-base.sh | bash
+          git rev-parse test-revision
+
+      - name: Ensure clang-format-18
+        run: |
+          clang-format-18 --version
+
+      - name: Check formatting
+        run: |
+          git clang-format-18 --diff ${GITHUB_BASE_REF} test-revision --verbose
