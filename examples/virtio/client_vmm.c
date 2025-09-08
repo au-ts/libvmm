@@ -11,6 +11,9 @@
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/virtio.h>
+#include <libvmm/virtio/console.h>
+#include <libvmm/virtio/block.h>
+#include <libvmm/virtio/net.h>
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <sddf/serial/queue.h>
