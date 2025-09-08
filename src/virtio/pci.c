@@ -293,9 +293,9 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 {
     bool success = true;
     uint32_t data = fault_get_data(regs, fsr);
-    uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
     /* Why commented out? Given queue_sel is not the case */
+    // uint32_t mask = fault_get_data_mask(offset, fsr);
     /* data &= mask; */
 
     switch (offset) {
