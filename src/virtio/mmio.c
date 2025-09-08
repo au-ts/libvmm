@@ -5,12 +5,17 @@
  */
 #include <microkit.h>
 #include <libvmm/guest.h>
+#include <libvmm/fault.h>
+#include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/virtq.h>
-#include <libvmm/arch/aarch64/fault.h>
+
+#ifdef CONFIG_ARCH_RISCV
+extern fault_instruction_t decoded_instruction;
+#endif
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_MMIO
@@ -82,7 +87,7 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
 
     default:
         LOG_VMM_ERR("unknown virtIO MMIO device status 0x%x.\n", reg);
-        success = 0;
+        break;
     }
     return success;
 }
@@ -93,7 +98,6 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
 
     uint32_t reg = 0;
     bool success = true;
-    LOG_MMIO("read from 0x%lx\n", offset);
 
     switch (offset) {
     case REG_RANGE(REG_VIRTIO_MMIO_MAGIC_VALUE, REG_VIRTIO_MMIO_VERSION):
@@ -140,10 +144,15 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         success = false;
     }
 
+    /* TODO: disgusting!!! Bad AArch64 API */
+#if defined(CONFIG_ARCH_AARCH64)
     uint32_t mask = fault_get_data_mask(offset, fsr);
     // @ivanv: make it clearer that just passing the offset is okay,
     // possibly just fix the API
     fault_emulate_write(regs, offset, fsr, reg & mask);
+#elif defined(CONFIG_ARCH_RISCV)
+    fault_emulate_read_access(&decoded_instruction, regs, reg);
+#endif
 
     LOG_MMIO("read from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx, value: 0x%lx, PC: 0x%lx\n", dev->regs.DeviceID,
              dev->regs.VendorID, offset, reg, regs->pc);
@@ -155,10 +164,18 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                                          seL4_UserContext *regs)
 {
     bool success = true;
-    uint32_t data = fault_get_data(regs, fsr);
+    uint32_t data;
+
+#if defined(CONFIG_ARCH_AARCH64)
+    data = fault_get_data(regs, fsr);
     uint32_t mask = fault_get_data_mask(offset, fsr);
     /* Mask the data to write */
     data &= mask;
+#elif defined(CONFIG_ARCH_RISCV)
+    data = fault_instruction_data(&decoded_instruction, regs);
+    // TODO: handle non-word writes.
+    assert(decoded_instruction.funct3 == FUNCT3_WIDTH_W);
+#endif
 
     LOG_MMIO("write from device (ID: 0x%x, Vendor 0x%x), offset 0x%lx with value 0x%x, PC: 0x%lx\n", dev->regs.DeviceID,
              dev->regs.VendorID, offset, data, regs->pc);
@@ -179,7 +196,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NUM, REG_VIRTIO_MMIO_QUEUE_READY): {
         if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
-            virtq->num = (unsigned int)data;
+            virtq->num = data;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n", dev->regs.QueueSel, dev->num_vqs);
@@ -188,9 +205,11 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
-        if (data == 0x1) {
-            dev->vqs[dev->regs.QueueSel].ready = true;
+        if (data) {
             // the virtq is already in ram so we don't need to do any initiation
+            dev->vqs[dev->regs.QueueSel].ready = true;
+        } else {
+            dev->vqs[dev->regs.QueueSel].ready = false;
         }
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NOTIFY, REG_VIRTIO_MMIO_INTERRUPT_STATUS):

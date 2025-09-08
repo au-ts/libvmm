@@ -18,10 +18,6 @@ bool fault_handle_vcpu_exception(size_t vcpu_id);
 bool fault_handle_vppi_event(size_t vcpu_id);
 bool fault_handle_user_exception(size_t vcpu_id);
 bool fault_handle_unknown_syscall(size_t vcpu_id);
-bool fault_handle_vm_exception(size_t vcpu_id);
-
-typedef bool (*vm_exception_handler_t)(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
-bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data);
 
 /* Helpers for emulating the fault and getting fault details */
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs);

@@ -5,7 +5,9 @@ const LazyPath = std.Build.LazyPath;
 const Step = std.Build.Step;
 
 const MicrokitBoard = enum {
+    hifive_p550,
     qemu_virt_aarch64,
+    qemu_virt_riscv64,
     maaxboard,
 };
 
@@ -21,6 +23,24 @@ const targets = [_]Target {
             .cpu_arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
             .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+   .{
+        .board = MicrokitBoard.qemu_virt_riscv64,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+   .{
+        .board = MicrokitBoard.hifive_p550,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .riscv64,
+            .cpu_model = .{ .explicit = &std.Target.riscv.cpu.baseline_rv64 },
             .os_tag = .freestanding,
             .abi = .none,
         },
@@ -100,9 +120,16 @@ pub fn build(b: *std.Build) !void {
     const libmicrokit_include = microkit_board_dir.path(b, "include");
     const libmicrokit_linker_script = microkit_board_dir.path(b, "lib/microkit.ld");
 
-    const arm_vgic_version: usize = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => 2,
-        .maaxboard => 3,
+    const arm_vgic_version: usize = blk: {
+        if (target.result.cpu.arch == .aarch64) {
+             break :blk switch (microkit_board_option) {
+                .qemu_virt_aarch64 => 2,
+                .maaxboard => 3,
+                else => unreachable,
+            };
+        } else {
+            break :blk undefined;
+        }
     };
 
     const libvmm_dep = b.dependency("libvmm", .{
@@ -131,13 +158,18 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    const base_dts_path = "client_vm/linux.dts";
-    const overlay = if (arm_vgic_version == 3) "client_vm/gic_v3_overlay.dts" else "client_vm/gic_v2_overlay.dts";
+    const base_dts_path = b.fmt("client_vm/{s}/linux.dts", .{ @tagName(target.result.cpu.arch) });
     const dts_cat_cmd = b.addSystemCommand(&[_][]const u8{
-        "sh", "../../tools/dtscat", base_dts_path, overlay
+        "sh", "../../tools/dtscat", base_dts_path
     });
     dts_cat_cmd.addFileInput(b.path(base_dts_path));
-    dts_cat_cmd.addFileInput(b.path(overlay));
+
+    if (target.result.cpu.arch == .aarch64) {
+        const overlay = b.path(b.fmt("client_vm/aarch64/gic_v{d}_overlay.dts", .{ arm_vgic_version }));
+        dts_cat_cmd.addFileArg(overlay);
+        dts_cat_cmd.addFileInput(overlay);
+    }
+
     const final_dts = dts_cat_cmd.captureStdOut();
 
     // For actually compiling the guest's DTS into a DTB
@@ -180,6 +212,8 @@ pub fn build(b: *std.Build) !void {
 
     if (custom_linux) |c| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "linux").step);
+    } else if (target.result.cpu.arch == .riscv64) {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(b.path("../simple/board/qemu_virt_riscv64/linux"), .prefix, "linux").step);
     } else if (linux_image_dep) |linux_image| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
     }
@@ -189,6 +223,8 @@ pub fn build(b: *std.Build) !void {
     const initrd: ?LazyPath = blk: {
         if (custom_initrd) |p| {
             break :blk b.path(p);
+        } else if (target.result.cpu.arch == .riscv64) {
+            break :blk b.path("../simple/board/qemu_virt_riscv64/rootfs.cpio.gz");
         } else if (initrd_image_dep) |p| {
             break :blk p.path("rootfs.cpio.gz");
         } else {
@@ -259,34 +295,47 @@ pub fn build(b: *std.Build) !void {
         timer_driver_install = b.addInstallArtifact(driver, .{ .dest_sub_path = "timer_driver.elf" });
     }
 
-    const blk_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+    const blk_driver_class: ?[]const u8 = switch (microkit_board_option) {
+        .qemu_virt_aarch64, .qemu_virt_riscv64 => "virtio",
         .maaxboard => "mmc_imx",
+        .hifive_p550 => null,
     };
+
+    const blk_support = blk_driver_class != null;
 
     const serial_driver_class = switch (microkit_board_option) {
         .qemu_virt_aarch64 => "arm",
+        .qemu_virt_riscv64, .hifive_p550 => "ns16550a",
         .maaxboard => "imx",
     };
 
     const eth_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64, .qemu_virt_riscv64 => "virtio",
         .maaxboard => "imx",
+        .hifive_p550 => "dwmac-5.10a",
     };
 
-    const blk_driver = sddf_dep.artifact(b.fmt("driver_blk_{s}.elf", .{ blk_driver_class }));
+    var blk_driver: *Step.Compile = undefined;
+    if (blk_support) {
+        blk_driver = sddf_dep.artifact(b.fmt("driver_blk_{s}.elf", .{ blk_driver_class.? }));
+    }
     const serial_driver = sddf_dep.artifact(b.fmt("driver_serial_{s}.elf", .{ serial_driver_class }));
     const eth_driver = sddf_dep.artifact(b.fmt("driver_net_{s}.elf", .{ eth_driver_class }));
 
-    b.installArtifact(blk_driver);
-    b.installArtifact(sddf_dep.artifact("blk_virt.elf"));
+    if (blk_support) {
+        b.installArtifact(blk_driver);
+        b.installArtifact(sddf_dep.artifact("blk_virt.elf"));
+    }
     b.installArtifact(sddf_dep.artifact("serial_virt_rx.elf"));
     b.installArtifact(sddf_dep.artifact("serial_virt_tx.elf"));
     const net_virt_rx = sddf_dep.artifact("net_virt_rx.elf");
     const net_virt_tx = sddf_dep.artifact("net_virt_tx.elf");
     const net_copy = sddf_dep.artifact("net_copy.elf");
     // Because our SDF expects a different ELF name for these articats, we have some extra steps.
-    const blk_driver_install = b.addInstallArtifact(blk_driver, .{ .dest_sub_path = "blk_driver.elf" });
+    var blk_driver_install: *Step.InstallArtifact = undefined;
+    if (blk_support) {
+        blk_driver_install = b.addInstallArtifact(blk_driver, .{ .dest_sub_path = "blk_driver.elf" });
+    }
     const serial_driver_install = b.addInstallArtifact(serial_driver, .{ .dest_sub_path = "serial_driver.elf" });
     const eth_driver_install = b.addInstallArtifact(eth_driver, .{ .dest_sub_path = "eth_driver.elf" });
 
@@ -328,7 +377,7 @@ pub fn build(b: *std.Build) !void {
     // Build up objcopys
     var objcopys = std.array_list.Managed(*Step.Run).init(b.allocator);
     // Block
-    {
+    if (blk_support) {
         const virt_objcopy = updateSectionObjcopy(b, ".blk_virt_config", meta_output, "blk_virt.data", "blk_virt.elf");
         const driver_resources_objcopy = updateSectionObjcopy(b, ".device_resources", meta_output, "blk_driver_device_resources.data", "blk_driver.elf");
         const driver_config_objcopy = updateSectionObjcopy(b, ".blk_driver_config", meta_output, "blk_driver.data", "blk_driver.elf");
@@ -443,9 +492,24 @@ pub fn build(b: *std.Build) !void {
             "2G",
             "-nographic",
         });
+    } else if (microkit_board_option == .qemu_virt_riscv64) {
+        qemu_cmd = b.addSystemCommand(&[_][]const u8{
+            "qemu-system-riscv64",
+            "-machine",
+            "virt",
+            "-serial",
+            "mon:stdio",
+            "-kernel",
+            final_image_dest,
+            "-m",
+            "2G",
+            "-nographic",
+        });
     }
 
     if (qemu_cmd) |cmd| {
+        const qemu_opts = b.option([]const u8, "qemu-opts", "QEMU args to append") orelse null;
+
         const create_disk_cmd = b.addSystemCommand(&[_][]const u8{
             "bash",
         });
@@ -472,6 +536,13 @@ pub fn build(b: *std.Build) !void {
             "-device", "virtio-net-device,netdev=netdev0",
             "-netdev", "user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235",
         });
+
+        if (qemu_opts) |opts| {
+            var it = std.mem.splitScalar(u8, opts, ' ');
+            while (it.next()) |arg| {
+                cmd.addArg(arg);
+            }
+        }
 
         cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");

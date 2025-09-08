@@ -6,6 +6,10 @@ const LazyPath = std.Build.LazyPath;
 
 const src = [_][]const u8{
     "src/guest.c",
+    "src/fault.c",
+    "src/linux.c",
+    "src/dtb.c",
+    "src/virq.c",
     "src/util/util.c",
     "src/util/printf.c",
     "src/virtio/mmio.c",
@@ -34,6 +38,16 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vcpu.c",
 };
 
+const src_riscv = [_][]const u8{
+    "src/arch/riscv/fault.c",
+    "src/arch/riscv/sbi.c",
+    "src/arch/riscv/linux.c",
+    "src/arch/riscv/tcb.c",
+    "src/arch/riscv/vcpu.c",
+    "src/arch/riscv/virq.c",
+    "src/arch/riscv/plic.c",
+};
+
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
 /// equivalent. Assumes musllibc will be used.
 fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.ResolvedTarget {
@@ -44,7 +58,7 @@ fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.Resolv
     return b.resolveTargetQuery(query);
 }
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
@@ -69,23 +83,29 @@ pub fn build(b: *std.Build) void {
             .microkit_board_dir = microkit_board_dir
         });
 
-        const src_arch = switch (target.result.cpu.arch) {
-            .aarch64 => blk: {
+        var srcs = std.ArrayList([]const u8){};
+        defer srcs.deinit(b.allocator);
+
+        try srcs.appendSlice(b.allocator, &src);
+
+        switch (target.result.cpu.arch) {
+            .aarch64 => {
                 const vgic_src = switch (arm_vgic_version.?) {
                     2 => src_aarch64_vgic_v2,
                     3 => src_aarch64_vgic_v3,
                     else => @panic("Unsupported vGIC version given"),
                 };
-
-                break :blk src_aarch64 ++ vgic_src;
+                try srcs.appendSlice(b.allocator, &src_aarch64);
+                try srcs.appendSlice(b.allocator, &vgic_src);
             },
+            .riscv64 => try srcs.appendSlice(b.allocator, &src_riscv),
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
             }
-        };
+        }
         libvmm.addCSourceFiles(.{
-            .files = &(src ++ src_arch),
+            .files = srcs.items,
             .flags = &.{
                 "-Wall",
                 "-Werror",

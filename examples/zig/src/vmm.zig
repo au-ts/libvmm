@@ -97,6 +97,7 @@ export fn init() callconv(.c) void {
     // Place all the binaries in the right locations before starting the guest
     const kernel_pc = c.linux_setup_images(
                 GUEST_RAM_VADDR,
+                GUEST_RAM_SIZE,
                 @intFromPtr(guest_kernel_image),
                 guest_kernel_image.len,
                 @intFromPtr(guest_dtb_image),
