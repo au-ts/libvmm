@@ -226,6 +226,28 @@ virtio_device_funs_t functions = {
     .queue_notify = virtio_console_handle_tx,
 };
 
+static struct virtio_device *virtio_console_init(struct virtio_console_device *console,
+                                                 size_t virq,
+                                                 serial_queue_handle_t *rxq,
+                                                 serial_queue_handle_t *txq,
+                                                 int tx_ch)
+{
+    struct virtio_device *dev = &console->virtio_device;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->funs = &functions;
+    dev->vqs = console->vqs;
+    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
+    dev->virq = virq;
+    dev->device_data = console;
+
+    console->rxq = rxq;
+    console->txq = txq;
+    console->tx_ch = tx_ch;
+
+    return dev;
+}
+
 bool virtio_mmio_console_init(struct virtio_console_device *console,
                               uintptr_t region_base,
                               uintptr_t region_size,
@@ -234,18 +256,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
                               serial_queue_handle_t *txq,
                               int tx_ch)
 {
-    struct virtio_device *dev = &console->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
-    dev->funs = &functions;
-    dev->vqs = console->vqs;
-    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
-    dev->virq = virq;
-    dev->device_data = console;
-
-    console->rxq = rxq;
-    console->txq = txq;
-    console->tx_ch = tx_ch;
+    struct virtio_device *dev = virtio_console_init(console, virq, rxq, txq, tx_ch);
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
@@ -253,18 +264,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console,
 bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
                              serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
-    struct virtio_device *dev = &console->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
-    dev->funs = &functions;
-    dev->vqs = console->vqs;
-    dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
-    dev->virq = virq;
-    dev->device_data = console;
-
-    console->rxq = rxq;
-    console->txq = txq;
-    console->tx_ch = tx_ch;
+    struct virtio_device *dev = virtio_console_init(console, virq, rxq, txq, tx_ch);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
     dev->transport.pci.device_id = VIRTIO_PCI_CONSOLE_DEV_ID;
