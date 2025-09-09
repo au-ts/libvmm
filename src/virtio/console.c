@@ -226,11 +226,8 @@ virtio_device_funs_t functions = {
     .queue_notify = virtio_console_handle_tx,
 };
 
-static struct virtio_device *virtio_console_init(struct virtio_console_device *console,
-                                                 size_t virq,
-                                                 serial_queue_handle_t *rxq,
-                                                 serial_queue_handle_t *txq,
-                                                 int tx_ch)
+static struct virtio_device *virtio_console_init(struct virtio_console_device *console, size_t virq,
+                                                 serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
@@ -248,13 +245,8 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
     return dev;
 }
 
-bool virtio_mmio_console_init(struct virtio_console_device *console,
-                              uintptr_t region_base,
-                              uintptr_t region_size,
-                              size_t virq,
-                              serial_queue_handle_t *rxq,
-                              serial_queue_handle_t *txq,
-                              int tx_ch)
+bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
+                              size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
     struct virtio_device *dev = virtio_console_init(console, virq, rxq, txq, tx_ch);
 
