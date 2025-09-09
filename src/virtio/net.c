@@ -372,15 +372,10 @@ static virtio_device_funs_t functions = {
     .queue_notify = virtio_net_queue_notify,
 };
 
-static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev,
-                            size_t virq,
-                          net_queue_handle_t *rx,
-                          net_queue_handle_t *tx,
-                          uintptr_t rx_data,
-                          uintptr_t tx_data,
-                          microkit_channel rx_ch,
-                          microkit_channel tx_ch,
-                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, size_t virq, net_queue_handle_t *rx,
+                                             net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
+                                             microkit_channel rx_ch, microkit_channel tx_ch,
+                                             uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
@@ -404,18 +399,9 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev,
     return dev;
 }
 
-
-bool virtio_mmio_net_init(struct virtio_net_device *net_dev,
-                          uintptr_t region_base,
-                          uintptr_t region_size,
-                          size_t virq,
-                          net_queue_handle_t *rx,
-                          net_queue_handle_t *tx,
-                          uintptr_t rx_data,
-                          uintptr_t tx_data,
-                          microkit_channel rx_ch,
-                          microkit_channel tx_ch,
-                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
+                          net_queue_handle_t *rx, net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
+                          microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = virtio_net_init(net_dev, virq, rx, tx, rx_data, tx_data, rx_ch, tx_ch, mac);
 
