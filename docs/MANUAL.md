@@ -221,7 +221,8 @@ and implements the following devices:
 * Sound
 * Network
 
-These devices are implemented using MMIO, we do not use any PCI devices at this stage.
+These devices can be registered on either MMIO or PCI buses, which is transparent to 
+device-specific implementation.
 
 For each of these devices, libvmm will perform I/O using the protocols and interfaces provided
 by the [seL4 Device Driver Framework](https://github.com/au-ts/sddf). This allows libvmm to
