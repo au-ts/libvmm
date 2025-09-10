@@ -8,7 +8,7 @@
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/config.h>
-#include <libvmm/virtio/mmio.h>
+#include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/arch/aarch64/fault.h>
 
@@ -133,7 +133,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         reg = dev->regs.ConfigGeneration;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
-        success = dev->funs->get_device_config(dev, offset, &reg);
+        success = dev->funs->get_device_config(dev, offset - REG_VIRTIO_MMIO_CONFIG, &reg);
         break;
     default:
         LOG_VMM_ERR("unknown virtIO MMIO register read at offset 0x%x\n", offset);

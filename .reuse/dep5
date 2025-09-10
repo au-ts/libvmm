@@ -8,6 +8,7 @@ Files:
     build.zig.zon
     examples/simple/build.zig.zon
     examples/virtio/build.zig.zon
+    examples/virtio_pci/build.zig.zon
     examples/zig/build.zig.zon
     examples/rust/Cargo.lock
     examples/rust/.cargo/config
