@@ -78,7 +78,7 @@ libvmm.a: ${OBJECTS}
 	${AR} crv $@ $^
 
 ${OBJECTS}: ${SDDF}/include
-${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic
+${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic $(LIBVMM_LIBC_INCLUDE)
 
 libvmm/%.o: src/%.c
 	${CC} ${CFLAGS} -c -o $@ $<
