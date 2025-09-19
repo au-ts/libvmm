@@ -30,6 +30,10 @@
 
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
+/* This is the default for PCI devices as it allows enough space
+ * for all the PCI capabilities */
+#define VIRTIO_PCI_DEFAULT_BAR_SIZE 0x10000
+
 #define PCI_CFG_OFFSET_COMMAND       0x04
 #define PCI_CFG_OFFSET_STATUS        0x06
 #define PCI_CFG_OFFSET_BAR1          0x10

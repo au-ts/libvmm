@@ -103,8 +103,7 @@ static bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_
     struct virtio_blk_device *state = device_state(dev);
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)offset;
-    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + offset);
     *ret_val = *config_field_addr;
     LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has value %d\n",
               config_base_addr, config_field_addr, *ret_val);
@@ -578,7 +577,7 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, s
     bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
     assert(success);
 
-    virtio_pci_alloc_memory_bar(dev, 0, 0x10000);
+    virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
 
     return virtio_pci_register_device(dev, virq);
 }
