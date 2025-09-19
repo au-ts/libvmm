@@ -88,6 +88,9 @@
                 curl
                 which
                 cpio
+                texliveFull
+                pandoc
+                librsvg
               ];
 
               # To avoid Nix adding compiler flags that are not available on a freestanding
