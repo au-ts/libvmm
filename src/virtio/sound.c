@@ -90,8 +90,7 @@ static bool virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_
 {
     struct virtio_snd_device *state = device_state(dev);
     uintptr_t config_base_addr = (uintptr_t)&state->config;
-    uintptr_t config_field_offset = (uintptr_t)(offset - REG_VIRTIO_MMIO_CONFIG);
-    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + config_field_offset);
+    uint32_t *config_field_addr = (uint32_t *)(config_base_addr + offset);
     *ret_val = *config_field_addr;
 
     return true;
