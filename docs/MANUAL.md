@@ -221,7 +221,7 @@ and implements the following devices:
 * Sound
 * Network
 
-These devices can be registered on either MMIO or PCI buses, which is transparent to 
+These devices can be registered on either MMIO or PCI buses, which is transparent to
 device-specific implementation.
 
 For each of these devices, libvmm will perform I/O using the protocols and interfaces provided
@@ -286,6 +286,18 @@ The legacy interface is not supported.
 The network device communicates with a hardware network card via a pair of sDDF RX and TX
 net virtualisers. In the future, this communication may be done through
 intermediary components such as a virtual network switch (VSwitch).
+
+## PCI support
+
+We have the ability to emulate virtIO PCI devices.
+
+Currently it is assumed that only one PCI node exists, and each device on the PCI bus
+has only one function.
+
+BARs are assumed to be 32-bit.
+
+These limitations exist because for our current use-cases this PCI support is sufficient,
+however the functionality can be extended if needed.
 
 # Adding platform support
 
