@@ -121,6 +121,19 @@ build_virtio_zig() {
     popd
 }
 
+build_virtio_pci_make() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building virtio_pci example via Make with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/virtio_pci/make/${BOARD}/${CONFIG}"
+    mkdir -p ${BUILD_DIR}
+    make -C examples/virtio_pci -B \
+        BUILD_DIR=${BUILD_DIR} \
+        MICROKIT_CONFIG=${CONFIG} \
+        MICROKIT_BOARD=${BOARD} \
+        MICROKIT_SDK=${SDK_PATH}
+}
+
 simulate_zig() {
     echo "CI|INFO: simulating Zig example with config: $1"
     BUILD_DIR="${BUILD_DIR_ROOT}/examples/zig/qemu_virt_aarch64/${CONFIG}/${ZIG_OPTIMIZE}"
@@ -178,6 +191,11 @@ build_virtio_zig "qemu_virt_aarch64" "debug"
 build_virtio_zig "qemu_virt_aarch64" "release"
 build_virtio_zig "maaxboard" "debug"
 build_virtio_zig "maaxboard" "release"
+
+build_virtio_pci_make "qemu_virt_aarch64" "debug"
+build_virtio_pci_make "qemu_virt_aarch64" "release"
+build_virtio_pci_make "maaxboard" "debug"
+build_virtio_pci_make "maaxboard" "release"
 
 echo ""
 echo "CI|INFO: Passed all VMM tests"
