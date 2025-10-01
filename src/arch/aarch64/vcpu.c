@@ -5,6 +5,7 @@
  */
 
 #include <microkit.h>
+#include <libvmm/guest.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/util/util.h>
 
@@ -25,7 +26,30 @@
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
-void vcpu_reset(size_t vcpu_id) {
+bool vcpu_on_state[GUEST_NUM_VCPUS];
+
+bool vcpu_is_on(size_t vcpu_id)
+{
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+    if (vcpu_id >= GUEST_NUM_VCPUS) {
+        return false;
+    }
+
+    return vcpu_on_state[vcpu_id];
+}
+
+void vcpu_set_on(size_t vcpu_id, bool on)
+{
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+    if (vcpu_id >= GUEST_NUM_VCPUS) {
+        return;
+    }
+
+    vcpu_on_state[vcpu_id] = on;
+}
+
+void vcpu_reset(size_t vcpu_id)
+{
     // @ivanv this is an incredible amount of system calls
     // Reset registers
     // @ivanv: double check, shouldn't we be setting sctlr?
@@ -50,7 +74,10 @@ void vcpu_reset(size_t vcpu_id) {
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1, 0);
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
-    microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2, 0);
+    assert(vcpu_id < 16);
+    /* TODO: support more than 16 vCPUs, we need to correctly set the affinity
+     * bits in VMPIDR_EL2. */
+    microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2, vcpu_id);
 #endif /* CONFIG_MAX_NUM_NODES > 1 */
     /* general registers x0 to x30 have been saved by traps.S */
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_SP_EL1, 0);
@@ -63,7 +90,8 @@ void vcpu_reset(size_t vcpu_id) {
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_CNTKCTL_EL1, 0);
 }
 
-void vcpu_print_regs(size_t vcpu_id) {
+void vcpu_print_regs(size_t vcpu_id)
+{
     // @ivanv this is an incredible amount of system calls
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     /* VM control registers EL1 */

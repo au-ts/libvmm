@@ -30,8 +30,9 @@
 #if defined(GIC_V2)
 #define GIC_DIST_SIZE 0x1000
 #elif defined(GIC_V3)
-#define GIC_DIST_SIZE       0x10000
-#define GIC_REDIST_SIZE     0xc0000
+#define GIC_DIST_SIZE                0x10000
+#define GIC_REDIST_INDIVIDUAL_SIZE   0x20000
+#define GIC_REDIST_TOTAL_SIZE        (GIC_REDIST_INDIVIDUAL_SIZE * GUEST_NUM_VCPUS)
 #else
 #error Unknown GIC version
 #endif
@@ -52,9 +53,15 @@
 #define LOG_DIST(...) do{}while(0)
 #endif
 
+#define IRQ_IDX(irq) ((irq) / 32)
+#define IRQ_BIT(irq) (1U << ((irq) % 32))
+
 void vgic_init();
-bool fault_handle_vgic_maintenance(size_t vcpu_id);
-bool handle_vgic_dist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
-bool handle_vgic_redist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+
+bool vgic_handle_fault_maintenance(size_t vcpu_id);
+
+bool vgic_handle_fault_dist(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+bool vgic_handle_fault_redist(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data);
+
 bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void *ack_data);
 bool vgic_inject_irq(size_t vcpu_id, int irq);

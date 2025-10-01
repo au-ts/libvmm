@@ -157,7 +157,7 @@ static inline void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t de
 
 static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
 {
-    return virq_inject(GUEST_VCPU_ID, dev->virq);
+    return virq_inject(dev->virq);
 }
 
 static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
