@@ -164,8 +164,8 @@ build_simple_zig "maaxboard" "release"
 
 build_rust "debug"
 simulate_rust "debug"
-# build_rust "release"
-# simulate_rust "release"
+build_rust "release"
+simulate_rust "release"
 
 # Here there are two kinds of configuration that we need to test. There is the
 # configuration of Microkit itself for which we test debug and release. This
