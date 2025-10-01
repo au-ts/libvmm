@@ -44,6 +44,34 @@ build_simple_zig() {
     popd
 }
 
+build_simple_smp_make() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building simple smp example via Make with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple-smp/make/${BOARD}/${CONFIG}"
+    mkdir -p ${BUILD_DIR}
+    make -C examples/simple-smp -B \
+        BUILD_DIR=${BUILD_DIR} \
+        MICROKIT_CONFIG=${CONFIG} \
+        MICROKIT_BOARD=${BOARD} \
+        MICROKIT_SDK=${SDK_PATH}
+}
+
+build_simple_smp_zig() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: building simple-smp example via Zig with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple-smp/zig/${BOARD}/${CONFIG}"
+    EXAMPLE_DIR="${PWD}/examples/simple-smp"
+    pushd ${EXAMPLE_DIR}
+    zig build \
+        -Dsdk=${SDK_PATH} \
+        -Dboard=${BOARD} \
+        -Dconfig=${CONFIG} \
+        -p ${BUILD_DIR}
+    popd
+}
+
 build_rust() {
     echo "CI|INFO: building Rust example with config: $1"
     CONFIG=$1
@@ -91,6 +119,22 @@ simulate_simple_make() {
     echo "CI|INFO: simulating simple example via Make with board: $BOARD and config: $CONFIG"
     BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple/make/${BOARD}/${CONFIG}"
     ./ci/buildroot_login.exp ${BUILD_DIR}/loader.img
+}
+
+simulate_simple_smp_zig() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: simulating simple-smp example via Zig with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple-smp/zig/${BOARD}/${CONFIG}"
+    ./ci/buildroot_login_smp.exp ${BUILD_DIR}/bin/loader.img
+}
+
+simulate_simple_smp_make() {
+    BOARD=$1
+    CONFIG=$2
+    echo "CI|INFO: simulating simple-smp example via Make with board: $BOARD and config: $CONFIG"
+    BUILD_DIR="${BUILD_DIR_ROOT}/examples/simple-smp/make/${BOARD}/${CONFIG}"
+    ./ci/buildroot_login_smp.exp ${BUILD_DIR}/loader.img
 }
 
 build_virtio_make() {
@@ -162,6 +206,27 @@ build_simple_make "maaxboard" "release"
 build_simple_zig "maaxboard" "debug"
 build_simple_zig "maaxboard" "release"
 
+build_simple_smp_make "qemu_virt_aarch64" "debug"
+simulate_simple_smp_make "qemu_virt_aarch64" "debug"
+build_simple_smp_make "qemu_virt_aarch64" "release"
+simulate_simple_smp_make "qemu_virt_aarch64" "release"
+
+build_simple_smp_zig "qemu_virt_aarch64" "debug"
+simulate_simple_smp_zig "qemu_virt_aarch64" "debug"
+build_simple_smp_zig "qemu_virt_aarch64" "release"
+simulate_simple_smp_zig "qemu_virt_aarch64" "release"
+
+build_simple_smp_make "odroidc4_4_cores" "debug"
+build_simple_smp_make "odroidc4_4_cores" "release"
+
+build_simple_smp_zig "odroidc4_4_cores" "debug"
+build_simple_smp_zig "odroidc4_4_cores" "release"
+
+build_simple_smp_make "maaxboard_4_cores" "debug"
+build_simple_smp_make "maaxboard_4_cores" "release"
+
+build_simple_smp_zig "maaxboard_4_cores" "debug"
+build_simple_smp_zig "maaxboard_4_cores" "release"
 build_rust "debug"
 simulate_rust "debug"
 # build_rust "release"

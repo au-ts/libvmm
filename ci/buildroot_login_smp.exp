@@ -1,0 +1,33 @@
+#!/usr/bin/env -S expect -f
+
+# Copyright 2024, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+set IMAGE [lindex $argv 0]
+
+# Wait enough (forever) until a long-time boot
+set timeout 30
+
+# Start QEMU
+spawn qemu-system-aarch64 \
+        -machine virt,virtualization=on,highmem=off,secure=off \
+        -cpu cortex-a53 \
+        -smp 4 \
+        -serial mon:stdio \
+        -device loader,file=$IMAGE,addr=0x70000000,cpu-num=0 \
+        -m size=2G \
+        -nographic
+
+# Login
+expect "buildroot login: "
+send "root\n"
+expect "# "
+
+# Attempt to reboot the guest, make sure we can login again
+# send "reboot\n"
+# expect "buildroot login: "
+# send "root\n"
+# expect "# "
+
+send "\x21"; send "x"
