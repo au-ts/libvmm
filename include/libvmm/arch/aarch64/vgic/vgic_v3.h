@@ -1,9 +1,12 @@
 /*
  * Copyright 2019, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2019, DornerWorks
+ * Copyright 2025, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+
+#pragma once
 
 #define GIC_500_GRP0     (1 << 0)
 #define GIC_500_GRP1_NS  (1 << 1)
@@ -84,22 +87,22 @@ struct gic_redist_map {          /* Starting */
 };
 
 /* Memory map for the GIC Redistributor Registers for the SGI and PPI's */
-// struct gic_redist_sgi_ppi_map {  /* Starting */
-//     uint32_t    igroup[32];     /* 0x0080 */
-//     uint32_t    isenable[32];   /* 0x0100 */
-//     uint32_t    icenable[32];   /* 0x0180 */
-//     uint32_t    ispend[32];     /* 0x0200 */
-//     uint32_t    icpend[32];     /* 0x0280 */
-//     uint32_t    isactive[32];   /* 0x0300 */
-//     uint32_t    icactive[32];   /* 0x0380 */
-//     uint32_t    ipriorityrn[8]; /* 0x0400 */
-//     uint32_t    icfgrn_ro;      /* 0x0C00 */
-//     uint32_t    icfgrn_rw;      /* 0x0C04 */
-//     uint32_t    igrpmod[64];    /* 0x0D00 */
-//     uint32_t    nsac;           /* 0x0E00 */
-//     uint32_t    miscstatsr;     /* 0xC000 */
-//     uint32_t    ppisr;          /* 0xC080 */
-// };
+struct gic_redist_sgi_ppi_map {  /* Starting */
+    uint32_t igroupr0;       /* 0x0080 */
+    uint32_t isenable;       /* 0x0100 */
+    // uint32_t    icenabler0;     /* 0x0180 */
+    uint32_t ispend;         /* 0x0200 */
+    // uint32_t    icpend;         /* 0x0280 */
+    uint32_t isactive;       /* 0x0300 */
+    // uint32_t    icactiver0;     /* 0x0380 */
+    uint32_t ipriorityrn[8]; /* 0x0400 */
+    // uint32_t    icfgrn_ro;      /* 0x0C00 */
+    uint32_t icfgrn_rw;      /* 0x0C04 */
+    // uint32_t    igrpmod[64];    /* 0x0D00 */
+    // uint32_t    nsac;           /* 0x0E00 */
+    // uint32_t    miscstatsr;     /* 0xC000 */
+    // uint32_t    ppisr;          /* 0xC080 */
+};
 
 /*
  * GIC Distributor Register Map
@@ -178,6 +181,7 @@ struct gic_redist_map {          /* Starting */
 #define GICR_IIDR           0x004
 #define GICR_TYPER          0x008
 #define GICR_WAKER          0x014
+#define GICR_PIDR2          0xffe8
 
 #define GICR_IGROUPR0       0x10080
 #define GICR_ISENABLER0     0x10100
@@ -191,9 +195,9 @@ typedef struct {
     /// Virtual distributor registers
     struct gic_dist_map *dist;
     /// Virtual redistributor registers for control and physical LPIs
-    struct gic_redist_map *redist;
+    struct gic_redist_map *redist[GUEST_NUM_VCPUS];
     /// Virtual redistributor for SGI and PPIs
-    // struct gic_redist_sgi_ppi_map *sgi;
+    struct gic_redist_sgi_ppi_map *sgi[GUEST_NUM_VCPUS];
 } vgic_reg_t;
 
 static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
@@ -203,12 +207,15 @@ static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
 
 static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
 {
-    gic_dist->ctlr |= GIC_500_GRP1_NS | GIC_500_ARE_S;
+    /* Enable group 1 non-secure IRQs. */
+
+    // @billn: note for review, GIC_500_ARE_S "affinity routing enable for secure state" was removed because setting it to 1 is UNPREDICTABLE because group 1 non-secure is on. Arm IHI 0069H.b ID041224 12-545
+    gic_dist->ctlr |= GIC_500_GRP1_NS;
 }
 
 static inline void vgic_dist_disable(struct gic_dist_map *gic_dist)
 {
-    gic_dist->ctlr &= ~(GIC_500_GRP1_NS | GIC_500_ARE_S);
+    gic_dist->ctlr &= ~(GIC_500_GRP1_NS);
 }
 
 static inline struct gic_dist_map *vgic_get_dist(void *registers)
@@ -217,9 +224,56 @@ static inline struct gic_dist_map *vgic_get_dist(void *registers)
     return ((vgic_reg_t *) registers)->dist;
 }
 
-static inline struct gic_redist_map *vgic_get_redist(void *registers)
+static inline struct gic_redist_map *vgic_get_redist(void *registers, size_t vcpu_id)
 {
     assert(registers);
-    return ((vgic_reg_t *) registers)->redist;
+    return ((vgic_reg_t *)registers)->redist[vcpu_id];
 }
 
+static inline struct gic_redist_sgi_ppi_map *vgic_get_redist_sgi_ppi(void *registers, size_t vcpu_id)
+{
+    assert(registers);
+    return ((vgic_reg_t *)registers)->sgi[vcpu_id];
+}
+
+static inline bool is_sgi_ppi_enabled_v3(struct gic_redist_sgi_ppi_map *sgi, int irq)
+{
+    return (sgi->isenable & IRQ_BIT(irq));
+}
+
+static inline void set_sgi_ppi_enable_v3(struct gic_redist_sgi_ppi_map *sgi, int irq, bool set_enable)
+{
+    if (set_enable) {
+        sgi->isenable |= IRQ_BIT(irq);
+    } else {
+        sgi->isenable &= ~IRQ_BIT(irq);
+    }
+}
+
+static inline bool is_sgi_ppi_pending_v3(struct gic_redist_sgi_ppi_map *sgi, int irq)
+{
+    return !!(sgi->ispend & IRQ_BIT(irq));
+}
+
+static inline void set_sgi_ppi_pending_v3(struct gic_redist_sgi_ppi_map *sgi, int irq, bool set_pending)
+{
+    if (set_pending) {
+        sgi->ispend |= IRQ_BIT(irq);
+    } else {
+        sgi->ispend &= ~IRQ_BIT(irq);
+    }
+}
+
+static inline bool is_sgi_ppi_active_v3(struct gic_redist_sgi_ppi_map *sgi, int irq)
+{
+    return !!(sgi->isactive & IRQ_BIT(irq));
+}
+
+static inline void set_sgi_ppi_active_v3(struct gic_redist_sgi_ppi_map *sgi, int irq, bool set_active)
+{
+    if (set_active) {
+        sgi->isactive |= IRQ_BIT(irq);
+    } else {
+        sgi->isactive &= ~IRQ_BIT(irq);
+    }
+}

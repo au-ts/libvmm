@@ -207,6 +207,12 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
     // @ivanv: why is the priority 0?
+    // @billn reply: it shouldnt be, because the guest tell us the priority via register writes, to fix
+
+#if defined(GIC_V3)
+    assert(group == 1);
+#endif
+
     microkit_vcpu_arm_inject_irq(vcpu_id, virq->virq, 0, group, idx);
     vgic_vcpu->lr_shadow[idx] = *virq;
 

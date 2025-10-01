@@ -13,7 +13,7 @@
 #include <microkit.h>
 
 /* SMC vCPU fault handler */
-bool smc_handle(size_t vcpu_id, uint32_t hsr);
+bool smc_handle(size_t vcpu_id, uint64_t hsr);
 
 /*
  * A custom handler for SMC SiP calls can be registered.

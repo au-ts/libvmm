@@ -1,5 +1,6 @@
 /*
  * Copyright 2017, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2025, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -37,6 +38,8 @@
 
 #include <stdint.h>
 
+#include <string.h>
+#include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 #include <libvmm/arch/aarch64/vgic/virq.h>
@@ -45,14 +48,20 @@
 
 vgic_t vgic;
 
-static bool handle_vgic_redist_read_fault(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr,
+                                          seL4_UserContext *regs)
 {
-    struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
-    struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers);
-    uint32_t reg = 0;
-    uintptr_t base_reg;
-    uint32_t *reg_ptr;
-    switch (offset) {
+    size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
+    uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
+
+    assert(target_vcpu_id < GUEST_NUM_VCPUS);
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+
+    struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers, target_vcpu_id);
+    struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
+    uint64_t reg = 0;
+
+    switch (real_offset) {
     case RANGE32(GICR_CTLR, GICR_CTLR):
         reg = gic_redist->ctlr;
         break;
@@ -65,101 +74,111 @@ static bool handle_vgic_redist_read_fault(size_t vcpu_id, vgic_t *vgic, uint64_t
     case RANGE32(GICR_WAKER, GICR_WAKER):
         reg = gic_redist->waker;
         break;
-    case RANGE32(0xFFD0, 0xFFFC):
-        base_reg = (uintptr_t) & (gic_redist->pidr4);
-        reg_ptr = (uint32_t *)(base_reg + (offset - 0xFFD0));
-        reg = *reg_ptr;
+    case RANGE32(GICR_PIDR2, GICR_PIDR2):
+        reg = gic_redist->pidr2;
         break;
     case RANGE32(GICR_IGROUPR0, GICR_IGROUPR0):
-        base_reg = (uintptr_t) & (gic_dist->irq_group0[vcpu_id]);
-        reg_ptr = (uint32_t *)(base_reg + (offset - GICR_IGROUPR0));
-        reg = *reg_ptr;
-        break;
+        reg = gic_redist_sgi_ppi->igroupr0;
     case RANGE32(GICR_ICFGR1, GICR_ICFGR1):
-        base_reg = (uintptr_t) & (gic_dist->config[1]);
-        reg_ptr = (uint32_t *)(base_reg + (offset - GICR_ICFGR1));
-        reg = *reg_ptr;
+        reg = gic_redist_sgi_ppi->icfgrn_rw;
         break;
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x\n", offset);
+        LOG_VMM_ERR("Unknown vgic redist register read offset 0x%x from vcpu %lu for vcpu %lu\n", real_offset, vcpu_id,
+                    target_vcpu_id);
+        assert(false);
         // @ivanv: used to be ignore_fault, double check this is right
         bool success = fault_advance_vcpu(vcpu_id, regs);
         // @ivanv: todo error handling
         assert(success);
     }
 
-    uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
-    uint32_t mask = fault_get_data_mask(fault_addr, fsr);
-    fault_emulate_write(regs, fault_addr, fsr, reg & mask);
+    uint64_t mask = fault_get_data_mask(offset, fsr);
+    fault_emulate_write(regs, offset, fsr, reg & mask);
     // @ivanv: todo error handling
 
     return true;
 }
 
-
-static bool handle_vgic_redist_write_fault(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr, seL4_UserContext *regs)
+static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr,
+                                           seL4_UserContext *regs)
 {
-    // @ivanv: why is this not reading from the redist?
-    uintptr_t fault_addr = GIC_REDIST_PADDR + offset;
-    struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
-    uint32_t mask = fault_get_data_mask(GIC_REDIST_PADDR + offset, fsr);
+    size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
+    uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
+
+    assert(vcpu_id < GUEST_NUM_VCPUS);
+    assert(target_vcpu_id < GUEST_NUM_VCPUS);
+
+    struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
+
+    uint32_t mask = fault_get_data_mask(offset, fsr);
     uint32_t data;
-    switch (offset) {
+
+    switch (real_offset) {
     case RANGE32(GICR_WAKER, GICR_WAKER):
         /* Writes are ignored */
         break;
     case RANGE32(GICR_IGROUPR0, GICR_IGROUPR0):
-        emulate_reg_write_access(regs, fault_addr, fsr, &gic_dist->irq_group0[vcpu_id]);
+        emulate_reg_write_access(regs, offset, fsr, &(gic_redist_sgi_ppi->igroupr0));
         break;
     case RANGE32(GICR_ISENABLER0, GICR_ISENABLER0):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
+        data = fault_get_data(regs, fsr) & mask;
         while (data) {
             int irq;
             irq = CTZ(data);
             data &= ~(1U << irq);
-            vgic_dist_enable_irq(vgic, vcpu_id, irq);
+            set_sgi_ppi_enable_v3(gic_redist_sgi_ppi, irq, true);
         }
         break;
     case RANGE32(GICR_ICENABLER0, GICR_ICENABLER0):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
+        data = fault_get_data(regs, fsr) & mask;
         while (data) {
             int irq;
             irq = CTZ(data);
             data &= ~(1U << irq);
-            set_enable(gic_dist, irq, false, vcpu_id);
+            set_sgi_ppi_enable_v3(gic_redist_sgi_ppi, irq, false);
         }
         break;
     case RANGE32(GICR_ICACTIVER0, GICR_ICACTIVER0):
-    // @ivanv: understand, this is a comment left over from kent
-    // TODO fix this
-        emulate_reg_write_access(regs, fault_addr, fsr, &gic_dist->active0[vcpu_id]);
+        data = fault_get_data(regs, fsr) & mask;
+        while (data) {
+            int irq;
+            irq = CTZ(data);
+            data &= ~(1U << irq);
+            set_sgi_ppi_active_v3(gic_redist_sgi_ppi, irq, false);
+        }
         break;
     case RANGE32(GICR_IPRIORITYR0, GICR_IPRIORITYRN):
+        // @billn: revisit, this register sets the priority for SGIs and PPIs, this is an opportunity for us to
+        // invoke microkit_vcpu_arm_inject_irq in inject code path with the correct priority rather than just using zero.
+        // The `GICR_IPRIORITYR<n>` have 8x 32-bits registers, we need to access the correct one based on the offset faulted.
+        assert((real_offset - GICR_IPRIORITYR0) / 4 < 8);
+        emulate_reg_write_access(regs, offset, fsr,
+                                 &(gic_redist_sgi_ppi->ipriorityrn[(real_offset - GICR_IPRIORITYR0) / 4]));
         break;
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x, value: 0x%x\n", offset, fault_get_data(regs, fsr));
+        LOG_VMM_ERR("Unknown vgic redist register write offset 0x%x from vcpu %lu for vcpu %lu, value: 0x%lx\n",
+                    real_offset, vcpu_id, target_vcpu_id, fault_get_data(regs, fsr));
+        assert(false);
     }
 
     return true;
 }
 
-bool handle_vgic_redist_fault(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
+bool vgic_handle_fault_redist(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
+{
     if (fault_is_read(fsr)) {
-        return handle_vgic_redist_read_fault(vcpu_id, &vgic, offset, fsr, regs);
+        return vgic_handle_fault_redist_read(vcpu_id, &vgic, offset, fsr, regs);
     } else {
-        return handle_vgic_redist_write_fault(vcpu_id, &vgic, offset, fsr, regs);
+        return vgic_handle_fault_redist_write(vcpu_id, &vgic, offset, fsr, regs);
     }
 }
 
 static void vgic_dist_reset(struct gic_dist_map *dist)
 {
-    // @ivanv: come back to, right now it's a global so we don't need to init the memory to zero
-    // memset(gic_dist, 0, sizeof(*gic_dist));
+    memset(dist, 0, sizeof(*dist));
 
+    // @billn, why are the lowest 4 bits zero???, it means this GIC implementation doesn't support any SPIs??
+    // Arm IHI 0069H.b  ID041224  12-621
     dist->typer            = 0x7B04B0; /* RO */
     dist->iidr             = 0x1043B ; /* RO */
 
@@ -179,10 +198,24 @@ static void vgic_dist_reset(struct gic_dist_map *dist)
     dist->cidrn[3]         = 0xB1;     /* RO */
 }
 
-static void vgic_redist_reset(struct gic_redist_map *redist) {
-    // @ivanv: come back to, right now it's a global so we don't need to init the memory to zero
-    // memset(redist, 0, sizeof(*redist));
-    redist->typer           = 0x11;      /* RO */
+static void vgic_redist_reset(struct gic_redist_map *redist, int vcpu_id, bool is_last_vcpu)
+{
+    memset(redist, 0, sizeof(*redist));
+    redist->typer = 0; /* RO */
+
+    if (is_last_vcpu) {
+        // if this is the last vcpu in sequence, mark this redistributor frame as the last.
+        redist->typer |= BIT_LOW(4);
+    }
+
+    // set processor number
+    uint64_t proc_num_mask = vcpu_id << 8;
+    redist->typer |= proc_num_mask;
+
+    // set vcpu affinity number
+    uint64_t aff0_mask = (uint64_t)vcpu_id << 32;
+    redist->typer |= aff0_mask;
+
     redist->iidr            = 0x1143B;  /* RO */
 
     redist->pidr0           = 0x93;     /* RO */
@@ -196,9 +229,15 @@ static void vgic_redist_reset(struct gic_redist_map *redist) {
     redist->cidr3           = 0xB1;     /* RO */
 }
 
+static void vgic_redist_sgi_ppi_reset(struct gic_redist_sgi_ppi_map *redist_sgi_ppi)
+{
+    memset(redist_sgi_ppi, 0, sizeof(*redist_sgi_ppi));
+}
+
 // @ivanv: come back to
 struct gic_dist_map dist;
-struct gic_redist_map redist;
+struct gic_redist_map redist[GUEST_NUM_VCPUS];
+struct gic_redist_sgi_ppi_map redist_sgi_ppi[GUEST_NUM_VCPUS];
 vgic_reg_t vgic_regs;
 
 void vgic_init()
@@ -207,16 +246,23 @@ void vgic_init()
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
-    for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
-        vgic.vgic_vcpu[GUEST_VCPU_ID].local_virqs[i].virq = VIRQ_INVALID;
+    for (int vcpu = 0; vcpu < GUEST_NUM_VCPUS; vcpu++) {
+        for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
+            vgic.vgic_vcpu[vcpu].local_virqs[i].virq = VIRQ_INVALID;
+        }
+        for (int i = 0; i < NUM_LIST_REGS; i++) {
+            vgic.vgic_vcpu[vcpu].lr_shadow[i].virq = VIRQ_INVALID;
+        }
+
+        vgic_redist_reset(&redist[vcpu], vcpu, vcpu == GUEST_NUM_VCPUS - 1);
+        vgic_redist_sgi_ppi_reset(&redist_sgi_ppi[vcpu]);
+
+        vgic_regs.redist[vcpu] = &redist[vcpu];
+        vgic_regs.sgi[vcpu] = &redist_sgi_ppi[vcpu];
     }
-    for (int i = 0; i < NUM_LIST_REGS; i++) {
-        vgic.vgic_vcpu[GUEST_VCPU_ID].lr_shadow[i].virq = VIRQ_INVALID;
-    }
+
     vgic.registers = &vgic_regs;
     vgic_regs.dist = &dist;
-    vgic_regs.redist = &redist;
 
     vgic_dist_reset(&dist);
-    vgic_redist_reset(&redist);
 }
