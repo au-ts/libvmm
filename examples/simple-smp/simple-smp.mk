@@ -1,5 +1,5 @@
 #
-# Copyright 2024, UNSW
+# Copyright 2025, UNSW
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -8,13 +8,10 @@ QEMU := qemu-system-aarch64
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
+SYSTEM_FILE := $(SYSTEM_DIR)/simple-smp.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
-
-SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
@@ -23,13 +20,18 @@ IMAGES := vmm.elf
 LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
-else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4_4_cores)
 	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
+
+ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
+SDDF_CUSTOM_LIBC := 1
+
+VM_USERLEVEL_INIT := $(EXAMPLE_DIR)/userspace_smp_test.sh
 
 CFLAGS := \
 	  -mstrict-align \
@@ -41,16 +43,17 @@ CFLAGS := \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
 	  -I$(SDDF)/include \
-	  -I$(SDDF)/include/sddf/util/custom_libc \
 	  -I$(SDDF)/include/microkit \
+	  -I$(SDDF)/include/sddf/util/custom_libc \
+	  -DGUEST_NUM_VCPUS=4 \
 	  -MD \
 	  -MP \
 	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a --end-group
 
-CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
+CHECK_FLAGS_BOARD_MD5:=.board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
 $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
@@ -80,6 +83,11 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
+rootfs.cpio.gz: ${INITRD} $(VM_USERLEVEL_INIT)
+	$(LIBVMM)/tools/packrootfs ${INITRD} \
+		rootfs_staging -o $@ \
+		--startup $(VM_USERLEVEL_INIT)
+
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -89,16 +97,16 @@ vm.dtb: vm.dts
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) rootfs.cpio.gz vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include $(LIBVMM)/vmm.mk
-include ${SDDF}/util/util.mk
+include $(SDDF)/util/util.mk
 
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
