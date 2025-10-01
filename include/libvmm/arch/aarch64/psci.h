@@ -44,4 +44,4 @@ typedef enum psci {
  * Issue E (PSCI version 1.2)
  */
 
-bool handle_psci(size_t vcpu_id, seL4_UserContext *regs,  uint64_t fn_number, uint32_t hsr);
+bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint64_t hsr);

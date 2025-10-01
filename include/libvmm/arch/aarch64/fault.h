@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, UNSW (ABN 57 195 873 179)
+ * Copyright 2025, UNSW (ABN 57 195 873 179)
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -24,6 +24,7 @@ typedef bool (*vm_exception_handler_t)(size_t vcpu_id, size_t offset, size_t fsr
 bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_exception_handler_t callback, void *data);
 
 /* Helpers for emulating the fault and getting fault details */
+seL4_Word *decode_rt(size_t reg_idx, seL4_UserContext *regs);
 bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs);
 bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64_t fsr, uint64_t reg_val);
 uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr);

@@ -661,7 +661,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, int virq)
 
     /* Register the virtual IRQ that will be used to communicate from the device
      * to the guest. This assumes that the interrupt controller is already setup. */
-    success = virq_register(GUEST_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
+    success = virq_register(GUEST_BOOT_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
     assert(success);
 
     return success;

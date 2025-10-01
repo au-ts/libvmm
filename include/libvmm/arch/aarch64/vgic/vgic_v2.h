@@ -156,3 +156,14 @@ static inline void vgic_dist_disable(struct gic_dist_map *gic_dist)
 {
     gic_dist->ctlr = 0;
 }
+
+static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
+{
+    if (set_pending) {
+        gic_dist->pending_set0[vcpu_id] |= IRQ_BIT(irq);
+        gic_dist->pending_clr0[vcpu_id] |= IRQ_BIT(irq);
+    } else {
+        gic_dist->pending_set0[vcpu_id] &= ~IRQ_BIT(irq);
+        gic_dist->pending_clr0[vcpu_id] &= ~IRQ_BIT(irq);
+    }
+}
