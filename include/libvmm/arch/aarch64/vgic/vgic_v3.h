@@ -208,8 +208,6 @@ static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
 static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
 {
     /* Enable group 1 non-secure IRQs. */
-
-    // @billn: note for review, GIC_500_ARE_S "affinity routing enable for secure state" was removed because setting it to 1 is UNPREDICTABLE because group 1 non-secure is on. Arm IHI 0069H.b ID041224 12-545
     gic_dist->ctlr |= GIC_500_GRP1_NS;
 }
 
