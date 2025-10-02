@@ -151,6 +151,9 @@ when compiling libvmm.
 
 libvmm expects the vCPU IDs to be consecutive, with zero being the boot vCPU ID.
 
+When making use of multiple vCPUs make sure that the guest is aware there are
+multiple CPUs enabled (e.g in the Device Tree).
+
 # Passthrough
 
 This section describes what is generally referred to as "passthrough". Passthrough
