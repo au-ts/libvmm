@@ -22,6 +22,7 @@ const src_aarch64_vgic_v2 = [_][]const u8{
 
 const src_aarch64_vgic_v3 = [_][]const u8{
     "src/arch/aarch64/vgic/vgic_v3.c",
+    "src/arch/aarch64/vgic/vgic_v3_cpuif.c",
 };
 
 const src_aarch64 = [_][]const u8{
@@ -33,6 +34,7 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/linux.c",
     "src/arch/aarch64/tcb.c",
     "src/arch/aarch64/vcpu.c",
+    "src/arch/aarch64/cpuif.c",
 };
 
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
@@ -45,7 +47,7 @@ fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.Resolv
     return b.resolveTargetQuery(query);
 }
 
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
@@ -70,23 +72,28 @@ pub fn build(b: *std.Build) void {
             .microkit_board_dir = microkit_board_dir
         });
 
-        const src_arch = switch (target.result.cpu.arch) {
-            .aarch64 => blk: {
-                const vgic_src = switch (arm_vgic_version.?) {
-                    2 => src_aarch64_vgic_v2,
-                    3 => src_aarch64_vgic_v3,
-                    else => @panic("Unsupported vGIC version given"),
-                };
+        var srcs = std.ArrayList([]const u8){};
+        defer srcs.deinit(b.allocator);
 
-                break :blk src_aarch64 ++ vgic_src;
+        try srcs.appendSlice(b.allocator, &src);
+
+        switch (target.result.cpu.arch) {
+            .aarch64 => {
+                switch (arm_vgic_version.?) {
+                    2 => try srcs.appendSlice(b.allocator, &src_aarch64_vgic_v2),
+                    3 => try srcs.appendSlice(b.allocator, &src_aarch64_vgic_v3),
+                    else => @panic("Unsupported vGIC version given"),
+                }
+
+                try srcs.appendSlice(b.allocator, &src_aarch64);
             },
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
             }
-        };
+        }
         libvmm.addCSourceFiles(.{
-            .files = &(src ++ src_arch),
+            .files = srcs.items,
             .flags = &.{
                 "-Wall",
                 "-Werror",

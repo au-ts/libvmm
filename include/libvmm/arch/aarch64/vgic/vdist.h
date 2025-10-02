@@ -28,7 +28,7 @@ static inline void set_pending(vgic_t *vgic, int irq, bool set_pending, int vcpu
 {
     if (irq < NUM_VCPU_LOCAL_VIRQS) {
 #if defined(GIC_V2)
-        set_sgi_ppi_pending_v2(vgic_get_dist(vgic->registers), irq, set_pending, vcpu_id);
+        set_sgi_ppi_pending(vgic_get_dist(vgic->registers), irq, set_pending, vcpu_id);
 #else
         set_sgi_ppi_pending_v3(vgic_get_redist_sgi_ppi(vgic->registers, vcpu_id), irq, set_pending);
 #endif

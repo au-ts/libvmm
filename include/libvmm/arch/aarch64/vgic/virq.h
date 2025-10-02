@@ -217,8 +217,8 @@ static inline bool vgic_vcpu_load_list_reg(vgic_t *vgic, size_t vcpu_id, int idx
     vgic_vcpu_t *vgic_vcpu = get_vgic_vcpu(vgic, vcpu_id);
     assert(vgic_vcpu);
     assert((idx >= 0) && (idx < ARRAY_SIZE(vgic_vcpu->lr_shadow)));
-    // @ivanv: why is the priority 0?
-    // @billn reply: it shouldnt be, because the guest tell us the priority via register writes, to fix
+    // TODO: we always set the priority to zero, but the guest tells us the priority so we should be
+    // respecting that instead.
 
 #if defined(GIC_V3)
     assert(group == 1);
