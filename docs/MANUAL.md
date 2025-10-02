@@ -142,6 +142,15 @@ region for the GIC into the guest.
 
 The rest of the GIC is virtualised in the vGIC driver in libvmm.
 
+## Multiple vCPUs
+
+There is support for multiple vCPUs (up to 16) on ARM.
+
+To change the number of vCPUs supported, override the value of `GUEST_NUM_VCPUS`
+when compiling libvmm.
+
+libvmm expects the vCPU IDs to be consecutive, with zero being the boot vCPU ID.
+
 # Passthrough
 
 This section describes what is generally referred to as "passthrough". Passthrough
