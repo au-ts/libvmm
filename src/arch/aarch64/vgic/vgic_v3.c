@@ -173,13 +173,13 @@ bool vgic_handle_fault_redist(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
     }
 }
 
+#define GICD_TYPER (0x7B04A0 | ITLINES)
+
 static void vgic_dist_reset(struct gic_dist_map *dist)
 {
     memset(dist, 0, sizeof(*dist));
 
-    // @billn, why are the lowest 4 bits zero???, it means this GIC implementation doesn't support any SPIs??
-    // Arm IHI 0069H.b  ID041224  12-621
-    dist->typer            = 0x7B04B0; /* RO */
+    dist->typer            = GICD_TYPER; /* RO */
     dist->iidr             = 0x1043B ; /* RO */
 
     dist->enable_set[0]    = 0x0000ffff; /* 16bit RO */
