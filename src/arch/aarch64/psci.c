@@ -60,9 +60,9 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
                 vcpu_regs.spsr = 5; // PMODE_EL1h
                 vcpu_regs.pc = vcpu_entry_point;
 
+                /* TODO: support more than 16 vCPUs, we need to correctly set the affinity
+                 * bits in VMPIDR_EL2. */
                 assert(vcpu_id < 16);
-                /* @billn: revisit, once we exceed 16 vCPUs, we need to correctly set the affinity
-                bits in VMPIDR_EL2. */
                 microkit_vcpu_arm_write_reg(target_vcpu, seL4_VCPUReg_VMPIDR_EL2, target_vcpu);
 
                 seL4_Error err = seL4_TCB_WriteRegisters(
