@@ -54,6 +54,8 @@
 vgic_t vgic;
 struct gic_dist_map dist;
 
+#define GICD_TYPER (0x0000fce7 | ITLINES)
+
 static void vgic_dist_reset(struct gic_dist_map *gic_dist)
 {
     gic_dist->typer = 0x0000fce7; /* RO */

@@ -24,10 +24,21 @@
 #define NUM_VCPU_LOCAL_VIRQS    (NUM_SGI_VIRQS + NUM_PPI_VIRQS)
 
 /* Usually, VMs do not use all SPIs. To reduce the memory footprint, our vGIC
- * implementation manages the SPIs in a fixed size slot list. 200 entries have
- * been good trade-off that is sufficient for most systems.
+ * implementation manages the SPIs in a fixed size slot list. 128 entries has
+ * been a good trade-off that is sufficient for most systems.
+ * For the encoding of ITLinesNumber, it is optimal for this to be a power of two.
  */
-#define NUM_SLOTS_SPI_VIRQ      200
+#define NUM_SLOTS_SPI_VIRQ      128
+
+#define NUM_VIRQS               (NUM_VCPU_LOCAL_VIRQS + NUM_SLOTS_SPI_VIRQ)
+/*
+ * The GIC specification describes ITLinesNumber=N where the maximum number
+ * of interrupts is 32(N+1).
+ * Arm IHI 0069H.b  ID041224  12-621
+ */
+#define ITLINES                 ((NUM_VIRQS / 32) - 1)
+
+_Static_assert(ITLINES < 32, "Maximum ITLinesNumber value is 32 (0b11111)");
 
 #define VIRQ_INVALID -1
 
