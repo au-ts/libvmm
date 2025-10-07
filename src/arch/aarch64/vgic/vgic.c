@@ -100,8 +100,5 @@ bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
     LOG_IRQ("(vCPU %d) injecting IRQ %d\n", vcpu_id, irq);
 
-    bool success = vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
-    assert(success);
-
-    return success;
+    return vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
 }
