@@ -2,11 +2,13 @@
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <sddf/util/custom_libc/string.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/linux.h>
+#include <sddf/util/custom_libc/string.h>
+
+// @billn revisit what kind of black magic is going on here
 
 #define HEADER_SECTOR_SIZE 512
 

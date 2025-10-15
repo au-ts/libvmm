@@ -29,6 +29,10 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 #error "Unsupported guest architecture"
 #endif
     /* Write out all the TCB registers */
+
+    // @billn the following is probably not correct for x86?
+    // should just be seL4_VMEnter() revisit
+
     seL4_Word err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + GUEST_BOOT_VCPU_ID,
         false, // We'll explcitly start the guest below rather than in this call
