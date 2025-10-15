@@ -29,8 +29,10 @@
 #elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#elif defined(BOARD_x86_64_generic_vtx)
+#define GUEST_CMDLINE "loglevel=8";
 #else
-#error Need to define guest kernel image address and DTB address
+#error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
 #endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
@@ -43,6 +45,9 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
+#elif defined(BOARD_x86_64_generic_vtx)
+// @billn revisit
+#define SERIAL_IRQ 0
 #else
 #error Need to define serial interrupt
 #endif
@@ -76,9 +81,18 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+
+#if defined(CONFIG_ARCH_AARCH64)
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
                                              (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
                                              (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
+#elif defined(CONFIG_ARCH_X86_64)
+    uintptr_t kernel_pc = 42;
+
+#else
+#error unsupported architecture
+#endif
+
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -89,11 +103,18 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
+
     success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
+
+#ifdef CONFIG_ARCH_X86_64
     /* Finally start the guest */
+    guest_start(kernel_pc, 0, 0);
+#else
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+#endif
+
 }
 
 void notified(microkit_channel ch)

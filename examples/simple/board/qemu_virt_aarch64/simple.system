@@ -26,7 +26,7 @@
     -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
-    <protection_domain name="VMM" priority="254">
+    <protection_domain name="VMM" priority="253">
         <program_image path="vmm.elf" />
         <!--
             Currently the VMM is expecting the address set to the variable
