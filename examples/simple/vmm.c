@@ -30,7 +30,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_CMDLINE "loglevel=8";
+#define GUEST_CMDLINE "earlycon=uart8250,io,0x3f8,115200n8 console=ttyS0,115200n8 loglevel=8 keep_bootcon";
 #else
 #error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
 #endif
