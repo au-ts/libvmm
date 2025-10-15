@@ -24,6 +24,7 @@ export CC := clang
 export LD := ld.lld
 export AS := llvm-as
 export AR := llvm-ar
+export OBJCOPY := llvm-objcopy
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit

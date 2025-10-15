@@ -39,10 +39,11 @@ else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+	KERNEL = $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)/elf/sel4.elf
 	COPIED_KERNEL := sel4_32b.elf
 	QEMU := qemu-system-x86_64
 	QEMU_ARCH_ARGS := -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(COPIED_KERNEL) -initrd $(IMAGE_FILE)
-	INITRD ?= dummy_initrd
+	INITRD ?= $(SYSTEM_DIR)/dummy_initrd
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif
@@ -104,6 +105,14 @@ vm.dtb: vm.dts
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+ifeq ($(ARCH),x86_64)
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD)
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					$(ARCH_FLAGS) \
+					$(LIBVMM)/tools/package_guest_images.S -o $@
+else
 images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
@@ -111,16 +120,18 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
 					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
+endif
 
 include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
 
 qemu: $(IMAGE_FILE)
+ifeq ($(ARCH),x86_64)
+	$(OBJCOPY) -O elf32-i386 $(KERNEL) $(COPIED_KERNEL)
+endif
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
 
