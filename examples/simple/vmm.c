@@ -10,8 +10,14 @@
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+
+#if defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#elif defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/fault.h>
+#endif
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -30,7 +36,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_CMDLINE "earlycon=uart8250,io,0x3f8,115200n8 console=ttyS0,115200n8 loglevel=8 keep_bootcon";
+#define GUEST_CMDLINE "earlycon=uart8250,io,0x3f8,115200n8 console=ttyS0,115200n8 loglevel=8 keep_bootcon"
 #else
 #error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
 #endif
@@ -87,7 +93,7 @@ void init(void)
                                              (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
                                              (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
 #elif defined(CONFIG_ARCH_X86_64)
-    uintptr_t kernel_pc = 42;
+    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0, GUEST_CMDLINE);
 
 #else
 #error unsupported architecture
@@ -106,9 +112,13 @@ void init(void)
 
     success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    // @billn revisit
+    // microkit_irq_ack(SERIAL_IRQ_CH);
 
 #ifdef CONFIG_ARCH_X86_64
+    // @billn revisit
+    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 10, 0x3f8, 0x3f8 + 7);
+
     /* Finally start the guest */
     guest_start(kernel_pc, 0, 0);
 #else
