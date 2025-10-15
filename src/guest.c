@@ -18,15 +18,22 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
      * guests, there is no point in prematurely generalising this code.
      */
     seL4_UserContext regs = {0};
+#if defined(CONFIG_ARCH_AARCH64)
     regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
+#elif defined(CONFIG_ARCH_X86_64)
+    regs.rip = kernel_pc;
+    regs.rsp = 0x99000;
+#else
+#error "Unsupported guest architecture"
+#endif
     /* Write out all the TCB registers */
     seL4_Word err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + GUEST_BOOT_VCPU_ID,
         false, // We'll explcitly start the guest below rather than in this call
         0, // No flags
-        4, // Writing to x0, pc, and spsr. Due to the ordering of seL4_UserContext the count must be 4.
+        sizeof(seL4_UserContext) / sizeof(seL4_Word),
         &regs);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
@@ -34,11 +41,12 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
                     err);
         return false;
     }
-    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n", regs.pc, regs.x0, initrd);
+    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n", kernel_pc, dtb, initrd);
 
-    vcpu_set_on(GUEST_BOOT_VCPU_ID, true);
+    // @billn revisit
+    // vcpu_set_on(GUEST_BOOT_VCPU_ID, true);
     /* Restart the boot vCPU to the program counter of the TCB associated with it */
-    microkit_vcpu_restart(GUEST_BOOT_VCPU_ID, regs.pc);
+    microkit_vcpu_restart(GUEST_BOOT_VCPU_ID, kernel_pc);
 
     return true;
 }

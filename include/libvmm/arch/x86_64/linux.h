@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              size_t ram_size,

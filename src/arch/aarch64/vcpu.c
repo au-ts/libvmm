@@ -26,6 +26,7 @@
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
+// @billn revisit, should be arch agnostic
 bool vcpu_on_state[GUEST_NUM_VCPUS];
 
 bool vcpu_is_on(size_t vcpu_id)

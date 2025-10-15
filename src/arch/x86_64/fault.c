@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <libvmm/fault.h>
+#include <sddf/util/util.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/fault.h>
 
 bool fault_is_read(seL4_Word fsr) {
     assert(false);

@@ -3,16 +3,16 @@
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <libvmm/fault.h>
+#include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 
-bool virq_controller_init(size_t boot_vcpu_id)
+bool virq_controller_init()
 {
     return true;
 }
 
-bool virq_inject(size_t vcpu_id, int irq)
+bool virq_inject(int irq)
 {
     return true;
 }

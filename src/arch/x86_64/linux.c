@@ -2,7 +2,7 @@
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <libvmm/linux.h>
+#include <sddf/util/custom_libc/string.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
@@ -31,19 +31,6 @@
 #define INITRD_DEST 0x10100000
 
 #define KERNEL_DEST 0x80000000
-
-// TODO: ugh
-char *strcpy(char *restrict dst, const char *restrict src)
-{
-    int i = 0;
-    while (src[i]) {
-        dst[i] = src[i];
-        i++;
-    }
-    dst[i] = '\0';
-
-    return dst;
-}
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              size_t ram_size,
@@ -142,13 +129,13 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uintptr_t seg = base_ptr >> 4;
 
     // TODO: handle error
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_SS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_ES_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_DS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_FS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_GS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_RIP, seg + 0x20);
-    vcpu_write_vmcs(GUEST_VCPU_ID, VMX_GUEST_RSP, 0x99000);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_SELECTOR, seg);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, seg + 0x20);
+    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RSP, 0x99000);
 
     return seg + 0x20;
 }
