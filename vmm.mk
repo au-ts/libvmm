@@ -28,6 +28,11 @@ AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/vgic/vgic.c \
 		 ${VGIC_FILES}
 
+X86_64_FILES = src/arch/x86_64/fault.c \
+			   src/arch/x86_64/linux.c \
+			   src/arch/x86_64/vcpu.c \
+			   src/arch/x86_64/virq.c
+
 # VIRTIO MMIO depends on sddf
 ifeq ($(strip $(SDDF)),)
     $(error libvmm needs the location of the SDDF to build virtIO components)
@@ -52,7 +57,13 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/sound.c \
 		    src/guest.c
 
-CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
+ifeq ($(ARCH),aarch64)
+CFILES := ${AARCH64_FILES}
+else ifeq ($(ARCH),x86_64)
+CFILES := ${X86_64_FILES}
+endif
+
+CFILES += ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
 
@@ -69,16 +80,21 @@ CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS} | shasum | sed 's/ *-
 
 # This is ugly, but needed to distinguish  directories in the BUILD area
 # from directories in the source area.
-libvmm/arch/aarch64/vgic:
+.PHONY: directories
+directories:
+ifeq ($(ARCH),aarch64)
 	mkdir -p libvmm/arch/aarch64/vgic/
+else ifeq ($(ARCH),x86_64)
+	mkdir -p libvmm/arch/x86_64
+endif
 	mkdir -p libvmm/util
 	mkdir -p libvmm/virtio
 
 libvmm.a: ${OBJECTS}
 	${AR} crv $@ $^
 
-${OBJECTS}: ${SDDF}/include
-${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} |libvmm/arch/aarch64/vgic $(LIBVMM_LIBC_INCLUDE)
+${OBJECTS}: directories ${SDDF}/include
+${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} | $(LIBVMM_LIBC_INCLUDE)
 
 libvmm/%.o: src/%.c
 	${CC} ${CFLAGS} -c -o $@ $<
