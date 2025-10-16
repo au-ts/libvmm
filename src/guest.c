@@ -9,6 +9,10 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/vcpu.h>
+#endif
+
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 {
     /*
@@ -55,13 +59,15 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 #elif defined(CONFIG_ARCH_X86_64)
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n", kernel_pc, dtb, initrd);
 
+    assert(vcpu_init(GUEST_BOOT_VCPU_ID, kernel_pc, 0x99000));
+
     // @billn explain
     // SEL4_VMENTER_CALL_EIP_MR
     microkit_mr_set(0, kernel_pc);
     // SEL4_VMENTER_CALL_CONTROL_PPC_MR
-    microkit_mr_set(1, (1u<<31) | (1u<<28) | (1u<<25) | (1u<<23) | (1u<<7) | (1u<<3));
+    microkit_mr_set(1, (1u<<31) | 1<<7);
     // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
-    microkit_mr_set(2, (1u<<9) | (1u<<14) | (1u<<15));
+    microkit_mr_set(2, 0);
 
     while (true) {
         seL4_Word badge;
@@ -119,7 +125,7 @@ bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size)
     //     LOG_VMM_ERR("Failed to initialise guest images\n");
     //     return false;
     // }
-    vcpu_reset(GUEST_BOOT_VCPU_ID);
+    // vcpu_reset(GUEST_BOOT_VCPU_ID);
     // Now we need to re-initialise all the VMM state
     // vmm_init();
     // linux_start(GUEST_BOOT_VCPU_ID, kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);

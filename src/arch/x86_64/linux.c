@@ -4,7 +4,6 @@
  */
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
-#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <sddf/util/custom_libc/string.h>
 
@@ -31,8 +30,6 @@
 #define LOADFLAGS_CAN_USE_HEAP (1 << 7)
 
 #define INITRD_DEST 0x10100000
-
-#define KERNEL_DEST 0x80000000
 
 uintptr_t linux_setup_images(uintptr_t ram_start,
                              size_t ram_size,
@@ -62,7 +59,7 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     LOG_VMM("loadflags: 0x%x\n", loadflags);
 
     uintptr_t base_ptr = 0x90000;
-    char *kernel_real_mode_dest = KERNEL_DEST + (char *)base_ptr;
+    char *kernel_real_mode_dest = ram_start + (char *)base_ptr;
 
     // Copy real mode part of kernel
     memcpy(kernel_real_mode_dest, (char *)kernel, 0x7fff);
@@ -131,13 +128,5 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     uintptr_t seg = base_ptr >> 4;
 
     // TODO: handle error
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_SELECTOR, seg);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, seg + 0x20);
-    vcpu_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RSP, 0x99000);
-
     return seg + 0x20;
 }

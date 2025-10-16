@@ -3,26 +3,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <stdbool.h>
 #include <microkit.h>
-#include <libvmm/vcpu.h>
+#include <stdbool.h>
+
 #include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/vmcs.h>
 
-void vcpu_reset(size_t vcpu_id)
-{
-    // TODO
-    assert(false);
-}
-
-void vcpu_print_regs(size_t vcpu_id)
-{
-    // TODO
-    assert(false);
-}
-
-int vcpu_write_vmcs(size_t vcpu_id, seL4_Word field, seL4_Word value) {
-    seL4_X86_VCPU_WriteVMCS_t ret = seL4_X86_VCPU_WriteVMCS(BASE_VCPU_CAP + vcpu_id, field, value);
-    assert(ret.error == seL4_NoError);
-
-    return ret.error;
+bool vcpu_init(size_t vcpu_id, uintptr_t rip, uintptr_t rsp) {
+    LOG_VMM("vcpu_init: vcpu_id %d, rip 0x%x, rsp 0x%x\n", vcpu_id, rip, rsp);
 }
