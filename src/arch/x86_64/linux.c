@@ -47,6 +47,10 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
     uintptr_t pdpt_gpa = pml4_gpa - PAGE_SIZE_4K;
     uintptr_t pd_gpa = pdpt_gpa - PAGE_SIZE_4K;
 
+    memset((void *)(ram_start + pml4_gpa), 0, PAGE_SIZE_4K);
+    memset((void *)(ram_start + pdpt_gpa), 0, PAGE_SIZE_4K);
+    memset((void *)(ram_start + pd_gpa),   0, PAGE_SIZE_4K);
+
     uint64_t *pml4_entries = (uint64_t *) (ram_start + pml4_gpa);
     uint64_t *pdpt_entries = (uint64_t *) (ram_start + pdpt_gpa);
     uint64_t *pd_entries = (uint64_t *) (ram_start + pd_gpa);
@@ -129,8 +133,8 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     struct boot_e820_entry *e820_table = (struct boot_e820_entry *)(ram_start + ZERO_PAGE_GPA
                                                                     + ZERO_PAGE_E820_TABLE_OFFSET);
     e820_table[0].addr = RAM_START_GPA;
-    e820_table[1].size = ram_size;
-    e820_table[2].type = E820_RAM;
+    e820_table[0].size = ram_size;
+    e820_table[0].type = E820_RAM;
 
     /* Since we are booting into long mode, we must set up a minimal page table for Linux to start
      * and read the configuration structures. */
@@ -143,8 +147,8 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     /* Build GDT */
     uint64_t *gdt = (uint64_t *) (ram_start + GDT_GPA);
     gdt[0] = 0;
-    gdt[1] = 0xFFFF | (1 << 49) | (1 << 47) | 0xf << 48;
-    gdt[2] = 0xFFFF | 0xf << 48 | (1 << 41) | (1 << 47);
+    gdt[1] = 0x00AF9A000000FFFFull;
+    gdt[2] = 0x00AF92000000FFFFull;
 
     ret->kernel_entry_gpa = kernel_gpa + KERNEL_64_HANDOVER_OFFSET;
     ret->kernel_stack_gpa = INIT_RSP_GPA;
