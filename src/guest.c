@@ -98,7 +98,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 
     // 25-4 Vol. 3C @billn explain
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 0xA09B);
-    // vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 0xC093);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_ACCESS_RIGHTS, 0xC093);
@@ -111,7 +111,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, linux_setup->kernel_entry_gpa);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_EIP, linux_setup->kernel_entry_gpa);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_ESP, linux_setup->kernel_stack_gpa);
-    // vmcs_write(GUEST_BOOT_VCPU_ID, VMX_DATA_IO_RSI, linux_setup->zero_page_gpa);
 
     // SEL4_VMENTER_CALL_EIP_MR
     microkit_mr_set(0, kernel_pc);
@@ -120,34 +119,58 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
     microkit_mr_set(2, VMCS_ENTRY_CTRL_DEfAULT);
 
-    LOG_VMM("VMEnter!!!!\n");
+    LOG_VMM("VMEnter!\n");
 
     while (true) {
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
 
+        LOG_VMM("VMExit!\n");
+
         if (ret == 0) {
             LOG_VMM("notif\n");
         } else if (ret == 1) {
-            LOG_VMM("fault\n");
-            seL4_Word rip = microkit_mr_get(0);
-            LOG_VMM("ip = 0x%x\n", rip);
+            seL4_Word rip = microkit_mr_get(0); // SEL4_VMENTER_CALL_EIP_MR
             seL4_Word cppc = microkit_mr_get(1); // SEL4_VMENTER_CALL_CONTROL_PPC_MR
-            LOG_VMM("vm exec control = 0x%x\n", cppc);
             seL4_Word vmec = microkit_mr_get(2); // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
-            LOG_VMM("vm entry control = 0x%x\n", vmec);
             seL4_Word f_reason = microkit_mr_get(3); // SEL4_VMENTER_FAULT_REASON_MR
-            LOG_VMM("fault reason = 0x%x\n", f_reason);
             seL4_Word f_qual = microkit_mr_get(4); // SEL4_VMENTER_FAULT_QUALIFICATION_MR
+            seL4_Word ins_len = microkit_mr_get(5); // SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR
+            seL4_Word g_p_addr = microkit_mr_get(6); // SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR
+            seL4_Word rflags = microkit_mr_get(7); // SEL4_VMENTER_FAULT_RFLAGS_MR
+            seL4_Word interruptability = microkit_mr_get(8); // SEL4_VMENTER_FAULT_GUEST_INT_MR
+            seL4_Word cr3 = microkit_mr_get(9); // SEL4_VMENTER_FAULT_CR3_MR
+
+            seL4_Word eax = microkit_mr_get(10);
+            seL4_Word ebx = microkit_mr_get(11);
+            seL4_Word ecx = microkit_mr_get(12);
+            seL4_Word edx = microkit_mr_get(13);
+            seL4_Word esi = microkit_mr_get(14);
+            seL4_Word edi = microkit_mr_get(15);
+            seL4_Word ebp = microkit_mr_get(16);
+
+            LOG_VMM("fault\n");
+            LOG_VMM("ip = 0x%x\n", rip);
+            LOG_VMM("vm exec control = 0x%x\n", cppc);
+            LOG_VMM("vm entry control = 0x%x\n", vmec);
+            LOG_VMM("fault reason = 0x%x\n", f_reason);
             // reasons: /Users/dreamliner787-9/TS/microkit-capdl-dev/seL4/include/arch/x86/arch/object/vcpu.h
             LOG_VMM("fault qualification = 0x%x\n", f_qual);
-            seL4_Word ins_len = microkit_mr_get(5); // SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR
             LOG_VMM("instruction length = 0x%x\n", ins_len);
-            seL4_Word g_p_addr = microkit_mr_get(6); // SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR
             LOG_VMM("guest physical addr = 0x%x\n", g_p_addr);
-            seL4_Word rflags = microkit_mr_get(7); // SEL4_VMENTER_FAULT_RFLAGS_MR
             LOG_VMM("rflags = 0x%x\n", rflags);
+            LOG_VMM("interruptability = 0x%x\n", interruptability);
+            LOG_VMM("cr3 = 0x%x\n", cr3);
+            LOG_VMM("=========================\n");
+            LOG_VMM("eax = 0x%x\n", eax);
+            LOG_VMM("ebx = 0x%x\n", ebx);
+            LOG_VMM("ecx = 0x%x\n", ecx);
+            LOG_VMM("edx = 0x%x\n", edx);
+            LOG_VMM("esi = 0x%x\n", esi);
+            LOG_VMM("edi = 0x%x\n", edi);
+            LOG_VMM("ebp = 0x%x\n", ebp);
         }
+
 
         // @billn, doing a vmenter after a fault without handling the fault first causes seL4 to crash. issue?
         break;
