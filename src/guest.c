@@ -11,9 +11,11 @@
 
 #if defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/vcpu.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/linux.h>
 #endif
 
-bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
+bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *linux_x86_setup)
 {
     /*
      * Set the TCB registers to what the virtual machine expects to be started with.
@@ -27,7 +29,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
 #elif defined(CONFIG_ARCH_X86_64)
-
+    assert(linux_x86_setup);
+    linux_x86_setup_ret_t *linux_setup = (linux_x86_setup_ret_t *) linux_x86_setup;
 #else
 #error "Unsupported guest architecture"
 #endif
@@ -59,15 +62,46 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 #elif defined(CONFIG_ARCH_X86_64)
     LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n", kernel_pc, dtb, initrd);
 
-    assert(vcpu_init(GUEST_BOOT_VCPU_ID, kernel_pc, 0x99000));
-
     // @billn explain
+
+    // Set up system registers
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0, CR0_DEFAULT);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR3, linux_setup->pml4_gpa);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, CR4_DEFAULT);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_DEFAULT);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0); // no irq
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, linux_setup->gdt_gpa);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_LIMIT, 24);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, VMCS_SPC_DEFAULT);
+
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_BASE, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_BASE, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_BASE, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_BASE, 0);
+
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_SELECTOR, 8);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, 16);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, 16);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, 16);
+
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_LIMIT, 0xfffff);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_LIMIT, 0xfffff);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_LIMIT, 0xfffff);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_LIMIT, 0xfffff);
+
+    // Set up CPU registers according to Linux boot protocol
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, linux_setup->kernel_entry_gpa);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_EIP, linux_setup->kernel_entry_gpa);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_ESP, linux_setup->kernel_stack_gpa);
+    // vmcs_write(GUEST_BOOT_VCPU_ID, VMX_DATA_IO_RSI, linux_setup->zero_page_gpa);
+
     // SEL4_VMENTER_CALL_EIP_MR
     microkit_mr_set(0, kernel_pc);
     // SEL4_VMENTER_CALL_CONTROL_PPC_MR
-    microkit_mr_set(1, (1u<<31) | 1<<7);
+    microkit_mr_set(1, VMCS_PCC_DEFAULT);
     // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
-    microkit_mr_set(2, 0);
+    microkit_mr_set(2, VMCS_ENTRY_CTRL_DEfAULT);
 
     while (true) {
         seL4_Word badge;

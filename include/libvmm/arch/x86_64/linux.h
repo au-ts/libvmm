@@ -12,67 +12,72 @@
 // Documents referenced.
 // 1. https://www.kernel.org/doc/html/v6.1/x86/boot.html
 // 2. Linux: arch/x86/include/uapi/asm/bootparam.h
+// 3. Linux: include/uapi/linux/edd.h
+// 4. Linux: arch/x86/include/uapi/asm/setup_data.h
 
-/* The so-called "zeropage", taken from [2], as referenced in Section 1.15 "64-bit Boot Protocol" of [1] */
+// [2]
+struct setup_header {
+    uint8_t  setup_sects;
+    uint16_t root_flags;
+    uint32_t syssize;
+    uint16_t ram_size;
+    uint16_t vid_mode;
+    uint16_t root_dev;
+    uint16_t boot_flag;
+    uint16_t jump;
+    uint32_t header;
+    uint16_t version;
+    uint32_t realmode_swtch;
+    uint16_t start_sys_seg;
+    uint16_t kernel_version;
+    uint8_t  type_of_loader;
+    uint8_t  loadflags;
+    uint16_t setup_move_size;
+    uint32_t code32_start;
+    uint32_t ramdisk_image;
+    uint32_t ramdisk_size;
+    uint32_t bootsect_kludge;
+    uint16_t heap_end_ptr;
+    uint8_t  ext_loader_ver;
+    uint8_t  ext_loader_type;
+    uint32_t cmd_line_ptr;
+    uint32_t initrd_addr_max;
+    uint32_t kernel_alignment;
+    uint8_t  relocatable_kernel;
+    uint8_t  min_alignment;
+    uint16_t xloadflags;
+    uint32_t cmdline_size;
+    uint32_t hardware_subarch;
+    uint64_t hardware_subarch_data;
+    uint32_t payload_offset;
+    uint32_t payload_length;
+    uint64_t setup_data;
+    uint64_t pref_address;
+    uint32_t init_size;
+    uint32_t handover_offset;
+    uint32_t kernel_info_offset;
+} __attribute__((packed));
 
-// @billn maybe put these three in a conversion.h
-typedef uint8_t __u8;
-typedef uint32_t __u32;
-typedef uint64_t __u64;
+// [4] The E820 memory region entry of the boot protocol ABI:
+struct boot_e820_entry {
+	uint64_t addr;
+	uint64_t size;
+	uint32_t type;
+} __attribute__((packed));
 
-// struct boot_params {
-// 	struct screen_info screen_info;			/* 0x000 */
-// 	struct apm_bios_info apm_bios_info;		/* 0x040 */
-// 	__u8  _pad2[4];					/* 0x054 */
-// 	__u64  tboot_addr;				/* 0x058 */
-// 	struct ist_info ist_info;			/* 0x060 */
-// 	__u64 acpi_rsdp_addr;				/* 0x070 */
-// 	__u8  _pad3[8];					/* 0x078 */
-// 	__u8  hd0_info[16];	/* obsolete! */		/* 0x080 */
-// 	__u8  hd1_info[16];	/* obsolete! */		/* 0x090 */
-// 	struct sys_desc_table sys_desc_table; /* obsolete! */	/* 0x0a0 */
-// 	struct olpc_ofw_header olpc_ofw_header;		/* 0x0b0 */
-// 	__u32 ext_ramdisk_image;			/* 0x0c0 */
-// 	__u32 ext_ramdisk_size;				/* 0x0c4 */
-// 	__u32 ext_cmd_line_ptr;				/* 0x0c8 */
-// 	__u8  _pad4[112];				/* 0x0cc */
-// 	__u32 cc_blob_address;				/* 0x13c */
-// 	struct edid_info edid_info;			/* 0x140 */
-// 	struct efi_info efi_info;			/* 0x1c0 */
-// 	__u32 alt_mem_k;				/* 0x1e0 */
-// 	__u32 scratch;		/* Scratch field! */	/* 0x1e4 */
-// 	__u8  e820_entries;				/* 0x1e8 */
-// 	__u8  eddbuf_entries;				/* 0x1e9 */
-// 	__u8  edd_mbr_sig_buf_entries;			/* 0x1ea */
-// 	__u8  kbd_status;				/* 0x1eb */
-// 	__u8  secure_boot;				/* 0x1ec */
-// 	__u8  _pad5[2];					/* 0x1ed */
-// 	/*
-// 	 * The sentinel is set to a nonzero value (0xff) in header.S.
-// 	 *
-// 	 * A bootloader is supposed to only take setup_header and put
-// 	 * it into a clean boot_params buffer. If it turns out that
-// 	 * it is clumsy or too generous with the buffer, it most
-// 	 * probably will pick up the sentinel variable too. The fact
-// 	 * that this variable then is still 0xff will let kernel
-// 	 * know that some variables in boot_params are invalid and
-// 	 * kernel should zero out certain portions of boot_params.
-// 	 */
-// 	__u8  sentinel;					/* 0x1ef */
-// 	__u8  _pad6[1];					/* 0x1f0 */
-// 	struct setup_header hdr;    /* setup header */	/* 0x1f1 */
-// 	__u8  _pad7[0x290-0x1f1-sizeof(struct setup_header)];
-// 	__u32 edd_mbr_sig_buffer[EDD_MBR_SIG_MAX];	/* 0x290 */
-// 	struct boot_e820_entry e820_table[E820_MAX_ENTRIES_ZEROPAGE]; /* 0x2d0 */
-// 	__u8  _pad8[48];				/* 0xcd0 */
-// 	struct edd_info eddbuf[EDDMAXNR];		/* 0xd00 */
-// 	__u8  _pad9[276];				/* 0xeec */
-// } __attribute__((packed));
+typedef struct linux_setup_ret {
+    uintptr_t kernel_entry_gpa;
+    uintptr_t kernel_stack_gpa;
+    uintptr_t pml4_gpa;
+    uintptr_t zero_page_gpa;
+    uintptr_t gdt_gpa;
+} linux_x86_setup_ret_t;
 
-uintptr_t linux_setup_images(uintptr_t ram_start,
-                             size_t ram_size,
-                             uintptr_t kernel,
-                             size_t kernel_size,
-                             uintptr_t initrd_src,
-                             size_t initrd_size,
-                             char *cmdline);
+bool linux_setup_images(uintptr_t ram_start,
+                        size_t ram_size,
+                        uintptr_t kernel,
+                        size_t kernel_size,
+                        uintptr_t initrd_src,
+                        size_t initrd_size,
+                        char *cmdline,
+                        linux_x86_setup_ret_t *ret);
