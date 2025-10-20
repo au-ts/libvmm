@@ -82,6 +82,10 @@ all: loader.img
 $(IMAGES): libvmm.a libsddf_util_debug.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
+ifeq ($(ARCH),x86_64)
+	$(OBJCOPY) -O elf32-i386 $(KERNEL) $(COPIED_KERNEL)
+endif
+
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 ${LINUX}:
@@ -126,9 +130,6 @@ include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
 
 qemu: $(IMAGE_FILE)
-ifeq ($(ARCH),x86_64)
-	$(OBJCOPY) -O elf32-i386 $(KERNEL) $(COPIED_KERNEL)
-endif
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
 	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
