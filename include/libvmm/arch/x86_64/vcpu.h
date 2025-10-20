@@ -14,6 +14,7 @@
  *   [1a] Location: "SYSTEM ARCHITECTURE OVERVIEW", page: "Vol. 3A 2-15"
  *   [1b] Location: "SYSTEM ARCHITECTURE OVERVIEW", page: "Vol. 3A 2-17"
  *   [1c] Location: "SYSTEM ARCHITECTURE OVERVIEW", page: "Vol. 3A 2-9"
+ *   [1d] Location: "BASIC EXECUTION ENVIRONMENT", page: "3-16 Vol. 1" 
  */
 
 /* "CR0 — Contains system control flags that control operating mode and states of the processor."
@@ -41,3 +42,8 @@
 #define IA32_EFER_LME (BIT_LOW(8) | BIT_LOW(10)) /* Enable IA-32e mode operation */
 
 #define IA32_EFER_DEFAULT (IA32_EFER_LME)
+
+/* The 32-bit EFLAGS/RFLAGS register contains a group of status flags, a control flag, and a group of system flags.
+ * We don't use anything here, but the 2nd bit must always be set as 1. See [1d]
+ */
+#define RFLAGS_DEFAULT BIT_LOW(1)

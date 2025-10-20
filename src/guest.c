@@ -69,7 +69,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR3, linux_setup->pml4_gpa);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, CR4_DEFAULT);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_DEFAULT);
-    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0); // no irq
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, RFLAGS_DEFAULT);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, linux_setup->gdt_gpa);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_LIMIT, 24);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
