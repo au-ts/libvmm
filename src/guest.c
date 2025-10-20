@@ -126,6 +126,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
             LOG_VMM("instruction length = 0x%x\n", ins_len);
             seL4_Word g_p_addr = microkit_mr_get(6); // SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR
             LOG_VMM("guest physical addr = 0x%x\n", g_p_addr);
+            seL4_Word rflags = microkit_mr_get(7); // SEL4_VMENTER_FAULT_RFLAGS_MR
+            LOG_VMM("rflags = 0x%x\n", rflags);
         }
 
         // @billn, doing a vmenter after a fault without handling the fault first causes seL4 to crash. issue?

@@ -34,18 +34,26 @@
 #define CMDLINE_GPA 0x1000
 #define GDT_GPA 0x2000
 #define INIT_RSP_GPA 0x10000
-#define DEFAULT_KERNEL_GPA 0x100000
+#define DEFAULT_KERNEL_GPA 0x20000
 
 #define KERNEL_64_HANDOVER_OFFSET 0x200
 
 // Returns GPA to the PML4 object
 static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram_size, uintptr_t kernel_gpa, size_t init_size)
 {
-    int num_pt_created = 1;
-    uintptr_t ram_size_round_down = ROUND_DOWN(ram_size, PAGE_SIZE_4K);
-    uintptr_t pml4_gpa = ram_size_round_down - (PAGE_SIZE_4K * num_pt_created);
+    // hackily build an initial page table for [0x0..0x200000)
+    uintptr_t ram_size_round_down = ROUND_DOWN(ram_size, PAGE_SIZE_4K) - PAGE_SIZE_4K;
+    uintptr_t pml4_gpa = ram_size_round_down - PAGE_SIZE_4K;
+    uintptr_t pdpt_gpa = pml4_gpa - PAGE_SIZE_4K;
+    uintptr_t pd_gpa = pdpt_gpa - PAGE_SIZE_4K;
 
-    // @billn todo
+    uint64_t *pml4_entries = (uint64_t *) (ram_start + pml4_gpa);
+    uint64_t *pdpt_entries = (uint64_t *) (ram_start + pdpt_gpa);
+    uint64_t *pd_entries = (uint64_t *) (ram_start + pd_gpa);
+
+    pml4_entries[0] = 1 | 1 << 1 | 1 << 2;
+    pdpt_entries[0] = 1 | 1 << 1 | 1 << 2;
+    pd_entries[0] = 1 | 1 << 1 | 1 << 2 | 1 << 7;
 
     return pml4_gpa;
 }
@@ -100,8 +108,8 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
      * configuration structures and setting up the kernel's page table later. */
     uintptr_t kernel_gpa = DEFAULT_KERNEL_GPA;
     if (setup_header.pref_address) {
-        LOG_VMM("Linux preferred load GPA 0x%x\n", setup_header.pref_address);
-        kernel_gpa = setup_header.pref_address;
+        LOG_VMM("Linux load GPA 0x%x\n", setup_header.pref_address);
+        // kernel_gpa = setup_header.pref_address; // @billn revisit
     }
     // @billn check minimum alignment of DEFAULT_KERNEL_GPA
     // @billn check that preferred address doesnt overlap with things
@@ -130,10 +138,10 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
 
     /* First make the PML4 (top level) paging object. Place it at the end of memory to not conflict with
      * anything vital. */
-    uintptr_t pml4_gpa = build_initial_kernel_page_table(ram_start, ram_start, kernel_gpa, setup_header.init_size);
+    uintptr_t pml4_gpa = build_initial_kernel_page_table(ram_start, ram_size, kernel_gpa, setup_header.init_size);
 
     /* Build GDT */
-    uint16_t *gdt = (uint16_t *) (ram_start + GDT_GPA);
+    uint64_t *gdt = (uint16_t *) (ram_start + GDT_GPA);
     gdt[0] = 0;
     gdt[1] = 0xFFFF | (1 << 49) | (1 << 47) | 0xf << 48;
     gdt[2] = 0xFFFF | 0xf << 48 | (1 << 41) | (1 << 47);
