@@ -92,17 +92,22 @@ void init(void)
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
                                              (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
                                              (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
-#elif defined(CONFIG_ARCH_X86_64)
-    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0, GUEST_CMDLINE);
-
-#else
-#error unsupported architecture
-#endif
 
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+#elif defined(CONFIG_ARCH_X86_64)
+    linux_x86_setup_ret_t linux_setup;
+    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0,
+                            GUEST_CMDLINE, &linux_setup)) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        return;
+    }
+#else
+#error unsupported architecture
+#endif
+
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init();
     if (!success) {
@@ -120,11 +125,10 @@ void init(void)
     seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 10, 0x3f8, 0x3f8 + 7);
 
     /* Finally start the guest */
-    guest_start(kernel_pc, 0, 0);
+    guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
 #else
-    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR, null);
 #endif
-
 }
 
 void notified(microkit_channel ch)

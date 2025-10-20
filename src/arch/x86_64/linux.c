@@ -6,127 +6,142 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <sddf/util/custom_libc/string.h>
+#include <sddf/util/util.h>
 
-// @billn revisit what kind of black magic is going on here
+/* Document referenced:
+ * [1] https://www.kernel.org/doc/html/latest/arch/x86/boot.html
+ * [2] https://www.kernel.org/doc/html/latest/arch/x86/zero-page.html
+ */
 
-#define HEADER_SECTOR_SIZE 512
-
+#define IMAGE_SETUP_HEADER_OFFSET 0x1f1
 #define HEADER_MAGIC 0x53726448
 
+#define E820_RAM 1
+
 /* We do not have an assigned ID in the table of loader IDs, so we do 0xff. */
-#define TYPE_OF_LOADER 0xff
+#define SETUP_HDR_TYPE_OF_LOADER  0xff
+#define SETUP_HDR_VGA_MODE_NORMAL 0xffff
 
-#define HEADER_SETUP_SECTS_OFFSET 0x1f1
-#define HEADER_MAGIC_OFFSET 0x202
-#define HEADER_PROTOCOL_VERSION_OFFSET 0x206
-#define HEADER_KERNEL_VERSION_OFFSET 0x20e
-#define HEADER_TYPE_OF_LOADER_OFFSET 0x210
-#define HEADER_LOADFLAGS_OFFSET 0x211
-#define HEADER_TYPE_RAM_DISK_IMAGE_OFFSET 0x218
-#define HEADER_TYPE_RAM_DISK_SIZE_OFFSET 0x21c
-#define HEADER_HEAP_END_PTR_OFFSET 0x224
-#define HEADER_CMD_LINE_PTR_OFFSET 0x228
+#define ZERO_PAGE_E820_ENTRIES_OFFSET 0x1e8
+#define ZERO_PAGE_E820_ENTRIES_TYPE   uint8_t
 
-#define LOADFLAGS_CAN_USE_HEAP (1 << 7)
+#define ZERO_PAGE_E820_TABLE_OFFSET   0x2d0
 
-#define INITRD_DEST 0x10100000
+#define PAGE_SIZE_4K 0x1000
 
-uintptr_t linux_setup_images(uintptr_t ram_start,
-                             size_t ram_size,
-                             uintptr_t kernel,
-                             size_t kernel_size,
-                             uintptr_t initrd_src,
-                             size_t initrd_size,
-                             char *cmdline)
+#define RAM_START_GPA 0x0
+#define ZERO_PAGE_GPA 0x0 // Doesn't have to be at 0, but just matching the name
+#define CMDLINE_GPA 0x1000
+#define GDT_GPA 0x2000
+#define INIT_RSP_GPA 0x10000
+#define DEFAULT_KERNEL_GPA 0x100000
+
+#define KERNEL_64_HANDOVER_OFFSET 0x200
+
+// Returns GPA to the PML4 object
+static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram_size, uintptr_t kernel_gpa, size_t init_size)
 {
-    uint32_t magic = *(uint32_t *)((char *)kernel + HEADER_MAGIC_OFFSET);
-    if (magic != HEADER_MAGIC) {
-        LOG_VMM_ERR("invalid Linux kernel magic or boot protocol too old (< 2.0)\n");
-        return 0;
+    int num_pt_created = 1;
+    uintptr_t ram_size_round_down = ROUND_DOWN(ram_size, PAGE_SIZE_4K);
+    uintptr_t pml4_gpa = ram_size_round_down - (PAGE_SIZE_4K * num_pt_created);
+
+    // @billn todo
+
+    return pml4_gpa;
+}
+
+bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, size_t kernel_size,
+                        uintptr_t initrd_src, size_t initrd_size, char *cmdline, linux_x86_setup_ret_t *ret)
+{
+
+    if (ram_size % PAGE_SIZE_4K) {
+        LOG_VMM_ERR("expected ram size to be page aligned, but got 0x%x\n", ram_size);
+        return false;
     }
 
-    uint16_t protocol_version = *(uint16_t *)((char *)kernel + HEADER_PROTOCOL_VERSION_OFFSET);
+    struct setup_header *setup_header_src = (struct setup_header *)((char *)kernel + IMAGE_SETUP_HEADER_OFFSET);
+
+    /* Make a copy as we don't want to mutate the original image. */
+    struct setup_header setup_header;
+    memcpy(&setup_header, setup_header_src, sizeof(struct setup_header));
+
+    if (setup_header.header != HEADER_MAGIC) {
+        LOG_VMM_ERR("invalid Linux kernel magic or boot protocol too old (< 2.0): expected 0x%x, got 0x%x\n",
+                    HEADER_MAGIC, setup_header.header);
+        return false;
+    }
+
+    uint16_t protocol_version = setup_header.version;
     uint8_t protocol_version_major = protocol_version >> 8;
     uint8_t protocol_version_minor = protocol_version & 0xff;
     LOG_VMM("Linux boot protocol %d.%d\n", protocol_version_major, protocol_version_minor);
 
-    uint16_t kernel_version_offset = *(uint16_t *)((char *)kernel + HEADER_KERNEL_VERSION_OFFSET);
-    // TODO: null terminate check and check that setup sects is valid
-    char *kernel_version = (char *)(kernel + kernel_version_offset + 0x200);
-    LOG_VMM("Linux kernel version string: %s\n", kernel_version);
-
-    uint8_t loadflags = *(uint8_t *)(kernel + HEADER_LOADFLAGS_OFFSET);
-    LOG_VMM("loadflags: 0x%x\n", loadflags);
-
-    uintptr_t base_ptr = 0x90000;
-    char *kernel_real_mode_dest = ram_start + (char *)base_ptr;
-
-    // Copy real mode part of kernel
-    memcpy(kernel_real_mode_dest, (char *)kernel, 0x7fff);
-
-    // Obligatory fields to fill out
-
-    char *setup = kernel_real_mode_dest;
-
-    uint8_t setup_sects = *(uint8_t *)((char *)kernel + HEADER_SETUP_SECTS_OFFSET);
-    if (setup_sects == 0) {
-        setup_sects = 4;
+    uint16_t kernel_version_offset = setup_header.kernel_version;
+    if (kernel_version_offset != 0) {
+        char *kernel_version = (char *)(kernel + kernel_version_offset + 0x200);
+        LOG_VMM("Linux kernel version string: %s\n", kernel_version);
     }
 
-    // vid_mode
+    /* Fill in bootloader "obligatory fields" then copy it into guest RAM. */
+    setup_header.vid_mode = SETUP_HDR_VGA_MODE_NORMAL;
+    setup_header.type_of_loader = SETUP_HDR_TYPE_OF_LOADER;
+    setup_header.ramdisk_image = 0; // @billn for now
+    setup_header.ramdisk_size = 0; // @billn for now
+    setup_header.cmd_line_ptr = CMDLINE_GPA;
+    strcpy((char *)(ram_start + CMDLINE_GPA), cmdline);
+    LOG_VMM("Linux command line: '%s'\n", cmdline);
 
-    // type_of_loader
-    setup[HEADER_TYPE_OF_LOADER_OFFSET] = TYPE_OF_LOADER;
-
-    // setup_move_size
-    // TODO: we assume protocol is not 2.00 or 2.01 so we do not set setup_move_size
-    assert(protocol_version >= 0x0202);
-
-    // ramdisk_image
-    *(uint32_t *)(setup + HEADER_TYPE_RAM_DISK_IMAGE_OFFSET) = INITRD_DEST;
-    // ramdisk_size
-    *(uint32_t *)(setup + HEADER_TYPE_RAM_DISK_SIZE_OFFSET) = initrd_size;
-    // heap_end_ptr
-    uint16_t heap_end;
-    if (protocol_version >= 0x0202 && loadflags & 0x1) {
-        heap_end = base_ptr + 0xe000;
-    } else {
-        heap_end = base_ptr + 0x9800;
+    if (!(setup_header.xloadflags & 1)) {
+        LOG_VMM_ERR("Kernel must support the 64-bit entry point flag XLF_KERNEL_64");
+        return false;
     }
 
-    LOG_VMM("heap_end: 0x%lx\n", heap_end);
-
-    if (protocol_version >= 0x201) {
-        *(uint16_t *)(setup + HEADER_HEAP_END_PTR_OFFSET) = heap_end - 0x200;
-        setup[HEADER_LOADFLAGS_OFFSET] = loadflags | LOADFLAGS_CAN_USE_HEAP;
+    /* Check where Linux wants to be loaded. But not listen to it verbatim as we are reserving memory for
+     * configuration structures and setting up the kernel's page table later. */
+    uintptr_t kernel_gpa = DEFAULT_KERNEL_GPA;
+    if (setup_header.pref_address) {
+        LOG_VMM("Linux preferred load GPA 0x%x\n", setup_header.pref_address);
+        kernel_gpa = setup_header.pref_address;
     }
+    // @billn check minimum alignment of DEFAULT_KERNEL_GPA
+    // @billn check that preferred address doesnt overlap with things
 
-    // cmd_line_ptr
-    if (protocol_version >= 0x202) {
-        // TODO: check that length of command line is valid;
-        char *cmdline_dest = setup + heap_end;
-        strcpy(cmdline_dest, cmdline);
-        *(uint32_t *)(setup + HEADER_CMD_LINE_PTR_OFFSET) = heap_end;
-        LOG_VMM("command line: '%s'\n", cmdline_dest);
-    } else {
-        assert(false);
-    }
+    /* Copy over the important things: kernel and the "zero page" which contains `struct setup_header` */
+    memcpy((void *)ram_start + kernel_gpa, (const void *)kernel, kernel_size);
+    memset((void *)ram_start + ZERO_PAGE_GPA, 0, PAGE_SIZE_4K);
+    memcpy((void *)ram_start + ZERO_PAGE_GPA + IMAGE_SETUP_HEADER_OFFSET, (const void *)&setup_header,
+           sizeof(struct setup_header));
 
-    // We have setup the header now. So all that is left to do is
-    // copy the kernel and initrd to the right place.
-    bool is_bzImage = (protocol_version >= 0x0200) && (loadflags & 0x01);
-    uintptr_t load_address = is_bzImage ? 0x100000 : 0x10000;
-    assert(load_address == 0x100000);
+    /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
+    // @billn acpi rsdp
 
-    // Copy non-real mode part of kernel
-    size_t non_real_mode_offset = ((setup_sects + 1) * HEADER_SECTOR_SIZE);
-    char *non_real_mode_bytes = (char *)kernel + non_real_mode_offset;
-    size_t non_real_mode_size = kernel_size - non_real_mode_offset;
-    memcpy(kernel_real_mode_dest + load_address, non_real_mode_bytes, non_real_mode_size);
-    LOG_VMM("non-real-mode load_address: 0x%lx, size of non-real mode: 0x%lx\n", load_address, non_real_mode_size);
+    /* Just 1 memory region for now */
+    uint8_t *e820_entries = (uint8_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_E820_ENTRIES_OFFSET);
+    *e820_entries = 1;
+    struct boot_e820_entry *e820_table = (struct boot_e820_entry *)(ram_start + ZERO_PAGE_GPA
+                                                                    + ZERO_PAGE_E820_TABLE_OFFSET);
+    e820_table[0].addr = RAM_START_GPA;
+    e820_table[1].size = ram_size;
+    e820_table[2].type = E820_RAM;
 
-    uintptr_t seg = base_ptr >> 4;
+    /* Since we are booting into long mode, we must set up a minimal page table for Linux to start
+     * and read the configuration structures. */
+    LOG_VMM("Linux init region: [0x%x..0x%x)\n", kernel_gpa, kernel_gpa + setup_header.init_size);
 
-    // TODO: handle error
-    return seg + 0x20;
+    /* First make the PML4 (top level) paging object. Place it at the end of memory to not conflict with
+     * anything vital. */
+    uintptr_t pml4_gpa = build_initial_kernel_page_table(ram_start, ram_start, kernel_gpa, setup_header.init_size);
+
+    /* Build GDT */
+    uint16_t *gdt = (uint16_t *) (ram_start + GDT_GPA);
+    gdt[0] = 0;
+    gdt[1] = 0xFFFF | (1 << 49) | (1 << 47) | 0xf << 48;
+    gdt[2] = 0xFFFF | 0xf << 48 | (1 << 41) | (1 << 47);
+
+    ret->kernel_entry_gpa = kernel_gpa + KERNEL_64_HANDOVER_OFFSET;
+    ret->kernel_stack_gpa = INIT_RSP_GPA;
+    ret->pml4_gpa = pml4_gpa;
+    ret->zero_page_gpa = ZERO_PAGE_GPA;
+
+    return true;
 }
