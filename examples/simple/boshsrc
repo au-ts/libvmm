@@ -1,4 +1,4 @@
-megs:                   512
+megs:                   1024
 cpu:                    count=1, ips=20000000, reset_on_triple_fault=1, model=corei7_skylake_x
 
 ata0:                   enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
