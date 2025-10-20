@@ -51,9 +51,9 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
     uint64_t *pdpt_entries = (uint64_t *) (ram_start + pdpt_gpa);
     uint64_t *pd_entries = (uint64_t *) (ram_start + pd_gpa);
 
-    pml4_entries[0] = 1 | 1 << 1 | 1 << 2;
-    pdpt_entries[0] = 1 | 1 << 1 | 1 << 2;
-    pd_entries[0] = 1 | 1 << 1 | 1 << 2 | 1 << 7;
+    pml4_entries[0] = 1 | 1 << 1 | ((pdpt_gpa >> 12) << 12);
+    pdpt_entries[0] = 1 | 1 << 1 | ((pd_gpa >> 12) << 12);
+    pd_entries[0] = 1 | 1 << 1 | 1 << 7;
 
     return pml4_gpa;
 }
@@ -141,7 +141,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     uintptr_t pml4_gpa = build_initial_kernel_page_table(ram_start, ram_size, kernel_gpa, setup_header.init_size);
 
     /* Build GDT */
-    uint64_t *gdt = (uint16_t *) (ram_start + GDT_GPA);
+    uint64_t *gdt = (uint64_t *) (ram_start + GDT_GPA);
     gdt[0] = 0;
     gdt[1] = 0xFFFF | (1 << 49) | (1 << 47) | 0xf << 48;
     gdt[2] = 0xFFFF | 0xf << 48 | (1 << 41) | (1 << 47);
@@ -150,6 +150,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     ret->kernel_stack_gpa = INIT_RSP_GPA;
     ret->pml4_gpa = pml4_gpa;
     ret->zero_page_gpa = ZERO_PAGE_GPA;
+    ret->gdt_gpa = GDT_GPA;
 
     return true;
 }

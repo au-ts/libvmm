@@ -79,16 +79,33 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_BASE, 0);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_BASE, 0);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_BASE, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_BASE, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_BASE, 0);
 
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_SELECTOR, 8);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, 16);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, 16);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, 16);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_SELECTOR, 0);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_SELECTOR, 0);
 
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_LIMIT, 0xfffff);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_LIMIT, 0xfffff);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_LIMIT, 0xfffff);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_LIMIT, 0xfffff);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_LIMIT, 0xfffff);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_LIMIT, 0xfffff);
+
+    // 25-4 Vol. 3C @billn explain
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 0xA09B);
+    // vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 0xC093);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_ACCESS_RIGHTS, 0xC093);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, 0x2 | 1 << 7);
+    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7);
 
     // Set up CPU registers according to Linux boot protocol
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, linux_setup->kernel_entry_gpa);
@@ -102,6 +119,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     microkit_mr_set(1, VMCS_PCC_DEFAULT);
     // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
     microkit_mr_set(2, VMCS_ENTRY_CTRL_DEfAULT);
+
+    LOG_VMM("VMEnter!!!!\n");
 
     while (true) {
         seL4_Word badge;
