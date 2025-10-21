@@ -249,6 +249,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     ret->pml4_gpa = pml4_gpa;
     ret->zero_page_gpa = ZERO_PAGE_GPA;
     ret->gdt_gpa = GDT_GPA;
+    ret->gdt_limit = 24; // 8 * 3 entries
 
     return true;
 }
