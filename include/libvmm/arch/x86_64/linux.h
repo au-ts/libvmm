@@ -67,7 +67,6 @@ struct boot_e820_entry {
 
 typedef struct linux_setup_ret {
     uintptr_t kernel_entry_gpa;
-    uintptr_t kernel_stack_gpa;
     uintptr_t pml4_gpa;
     uintptr_t zero_page_gpa;
     uintptr_t gdt_gpa;
