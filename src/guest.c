@@ -14,7 +14,6 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <sel4/arch/vmenter.h>
-
 #endif
 
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *linux_x86_setup)
@@ -122,9 +121,9 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 
         LOG_VMM("VMExit!\n");
 
-        if (ret == 0) {
+        if (ret == SEL4_VMENTER_RESULT_NOTIF) {
             LOG_VMM("notif\n");
-        } else if (ret == 1) {
+        } else if (ret == SEL4_VMENTER_RESULT_FAULT) {
             seL4_Word cppc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
             seL4_Word vmec = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR);
             seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
@@ -138,22 +137,22 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
             seL4_Word rip = vmcs_read(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP);
             seL4_Word rsp = vmcs_read(GUEST_BOOT_VCPU_ID, VMX_GUEST_RSP);
 
-            seL4_Word eax = microkit_mr_get(10);
-            seL4_Word ebx = microkit_mr_get(11);
-            seL4_Word ecx = microkit_mr_get(12);
-            seL4_Word edx = microkit_mr_get(13);
-            seL4_Word esi = microkit_mr_get(14);
-            seL4_Word edi = microkit_mr_get(15);
-            seL4_Word ebp = microkit_mr_get(16);
+            seL4_Word eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
+            seL4_Word ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
+            seL4_Word ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
+            seL4_Word edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
+            seL4_Word esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
+            seL4_Word edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
+            seL4_Word ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
 
-            seL4_Word r8 = microkit_mr_get(17);
-            seL4_Word r9 = microkit_mr_get(18);
-            seL4_Word r10 = microkit_mr_get(19);
-            seL4_Word r11 = microkit_mr_get(20);
-            seL4_Word r12 = microkit_mr_get(21);
-            seL4_Word r13 = microkit_mr_get(22);
-            seL4_Word r14 = microkit_mr_get(23);
-            seL4_Word r15 = microkit_mr_get(24);
+            seL4_Word r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
+            seL4_Word r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
+            seL4_Word r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
+            seL4_Word r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
+            seL4_Word r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
+            seL4_Word r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
+            seL4_Word r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
+            seL4_Word r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
 
             LOG_VMM("fault\n");
             LOG_VMM("vm exec control = 0x%lx\n", cppc);

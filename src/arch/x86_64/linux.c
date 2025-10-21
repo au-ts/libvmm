@@ -121,6 +121,7 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
     memset((void *)(ram_start + pml4_gpa), 0, PAGE_SIZE_4K);
 
     // Map range [0x0..0x200000) for zero page, cmdline and GDT
+    LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", 0, PAGE_SIZE_2M);
     assert(map_page(pml4_gpa, 0, ram_start, ram_size_round_down, &n_pt_created));
 
     // Then kernel entry..kernel entry + init_size
@@ -131,6 +132,7 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
         + 1;
     for (int i = 0; i < num_init_pages; i += 1) {
         uint64_t base_page_gpa = ROUND_DOWN(kernel_entry_gpa + (i * PAGE_SIZE_2M), PAGE_SIZE_2M);
+        LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", base_page_gpa, base_page_gpa + PAGE_SIZE_2M);
         assert(map_page(pml4_gpa, base_page_gpa, ram_start, ram_size_round_down, &n_pt_created));
     }
 
