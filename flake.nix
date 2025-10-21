@@ -31,26 +31,33 @@
       forAllSystems = with nixpkgs.lib; genAttrs (builtins.attrNames microkit-platforms);
     in
     {
-      devShells = forAllSystems
-        (system: {
-          default =
-            let
-              pkgs = import nixpkgs {
-                inherit system overlays;
-              };
+      devShells = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system overlays;
+          };
 
-              llvm = pkgs.llvmPackages_18;
-              zig = zig-overlay.packages.${system}."0.15.1";
-              rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
+          llvm = pkgs.llvmPackages_18;
+          zig = zig-overlay.packages.${system}."0.15.1";
+          rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
 
-              pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
+          pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
 
-              python = pkgs.python312.withPackages (ps: [
-                pysdfgen
-              ]);
-            in
+          python = pkgs.python312.withPackages (ps: [
+            pysdfgen
+          ]);
+        in
+        {
+            docs = pkgs.mkShell rec {
+              nativeBuildInputs = with pkgs; [
+                texliveFull
+                pandoc
+                librsvg
+              ];
+            };
             # mkShellNoCC, because we do not want the cc from stdenv to leak into this shell
-            pkgs.mkShellNoCC rec {
+            default = pkgs.mkShellNoCC rec {
               name = "libvmm-dev";
 
               microkit-platform = microkit-platforms.${system} or (throw "Unsupported system: ${system}");
@@ -88,9 +95,6 @@
                 curl
                 which
                 cpio
-                texliveFull
-                pandoc
-                librsvg
               ];
 
               # To avoid Nix adding compiler flags that are not available on a freestanding
@@ -99,6 +103,7 @@
               # Necessary for Rust bindgen
               LIBCLANG_PATH = "${llvm.libclang.lib}/lib";
             };
-        });
-    };
+        }
+    );
+  };
 }
