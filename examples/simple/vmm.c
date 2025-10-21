@@ -153,6 +153,7 @@ void notified(microkit_channel ch)
  */
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
 {
+#if defined(CONFIG_ARCH_AARCH64)
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
@@ -160,6 +161,7 @@ seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo
         *reply_msginfo = microkit_msginfo_new(0, 0);
         return seL4_True;
     }
+#endif
 
     return seL4_False;
 }
