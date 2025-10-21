@@ -8,12 +8,13 @@
 #include <libvmm/vcpu.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
-#include <sel4/arch/vmenter.h>
 
 #if defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/linux.h>
+#include <sel4/arch/vmenter.h>
+
 #endif
 
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *linux_x86_setup)
@@ -108,18 +109,10 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, 0x2 | 1 << 7);
     vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7);
 
-    // Set up CPU registers according to Linux boot protocol
-    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP, linux_setup->kernel_entry_gpa);
-    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_RSP, linux_setup->kernel_stack_gpa);
-    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_EIP, linux_setup->kernel_entry_gpa);
-    vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_SYSENTER_ESP, linux_setup->kernel_stack_gpa);
 
-    // SEL4_VMENTER_CALL_EIP_MR
-    microkit_mr_set(0, kernel_pc);
-    // SEL4_VMENTER_CALL_CONTROL_PPC_MR
-    microkit_mr_set(1, VMCS_PCC_DEFAULT);
-    // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
-    microkit_mr_set(2, VMCS_ENTRY_CTRL_DEfAULT);
+    microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, kernel_pc);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, VMCS_ENTRY_CTRL_DEfAULT);
 
     LOG_VMM("VMEnter!\n");
 
@@ -132,15 +125,15 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
         if (ret == 0) {
             LOG_VMM("notif\n");
         } else if (ret == 1) {
-            seL4_Word cppc = microkit_mr_get(1); // SEL4_VMENTER_CALL_CONTROL_PPC_MR
-            seL4_Word vmec = microkit_mr_get(2); // SEL4_VMENTER_CALL_CONTROL_ENTRY_MR
-            seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR); // SEL4_VMENTER_FAULT_REASON_MR
-            seL4_Word f_qual = microkit_mr_get(4); // SEL4_VMENTER_FAULT_QUALIFICATION_MR
-            seL4_Word ins_len = microkit_mr_get(5); // SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR
-            seL4_Word g_p_addr = microkit_mr_get(6); // SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR
-            seL4_Word rflags = microkit_mr_get(7); // SEL4_VMENTER_FAULT_RFLAGS_MR
-            seL4_Word interruptability = microkit_mr_get(8); // SEL4_VMENTER_FAULT_GUEST_INT_MR
-            seL4_Word cr3 = microkit_mr_get(9); // SEL4_VMENTER_FAULT_CR3_MR
+            seL4_Word cppc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
+            seL4_Word vmec = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR);
+            seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
+            seL4_Word f_qual = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
+            seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+            seL4_Word g_p_addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+            seL4_Word rflags = microkit_mr_get(SEL4_VMENTER_FAULT_RFLAGS_MR);
+            seL4_Word interruptability = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_INT_MR);
+            seL4_Word cr3 = microkit_mr_get(SEL4_VMENTER_FAULT_CR3_MR);
 
             seL4_Word rip = vmcs_read(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP);
             seL4_Word rsp = vmcs_read(GUEST_BOOT_VCPU_ID, VMX_GUEST_RSP);
@@ -192,7 +185,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
             LOG_VMM("r14 = 0x%lx\n", r14);
             LOG_VMM("r15 = 0x%lx\n", r15);
             LOG_VMM("=========================\n");
-            LOG_VMM("8 bytes at rip = 0x%lx\n", *((uint64_t *)(0x80000000 + rip)));
         }
 
 
