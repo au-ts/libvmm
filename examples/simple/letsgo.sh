@@ -1,10 +1,14 @@
 #!/bin/sh
 
+# ./configure --with-nogui --enable-vmx=2 --enable-avx=yes --enable-x86-64=yes --enable-debugger && make -j10 && sudo make install
+
 BUILD_DIR=/Volumes/scratch/vmm_x86
 MICROKIT_SDK=/Users/dreamliner787-9/TS/microkit-capdl-dev/release/microkit-sdk-2.0.1-dev
-BOOTLOADER_CFG=/Users/dreamliner787-9/TS/libvmm/examples/simple/limine.cfg
-BOOTLOADER=/Users/dreamliner787-9/TS/libvmm/examples/simple/Limine
-BOSHRC=/Users/dreamliner787-9/TS/libvmm/examples/simple/boshsrc
+
+EXAMPLE_DIR=$(pwd)
+BOOTLOADER_CFG=$EXAMPLE_DIR/limine.cfg
+BOOTLOADER=$EXAMPLE_DIR/Limine
+BOSHRC=$EXAMPLE_DIR/boshsrc
 KERNEL_ELF=$MICROKIT_SDK/board/x86_64_generic_vtx/debug/elf/sel4.elf
 ISO_STAGING_DIR=$BUILD_DIR/iso
 
@@ -29,13 +33,14 @@ xorriso -as mkisofs -R -r -J -b limine-bios-cd.bin \
 cd $BUILD_DIR && \
 bochs -q -f $BOSHRC
 cd -
+
 # qemu-system-x86_64 \
-#   -cpu qemu64,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave \
+#   -accel kvm \
+#   -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
 #   -m 512 \
-#   -vga std \
 #   -boot d \
-#   -drive if=ide,media=cdrom,file=/Volumes/scratch/vmm_x86/os-limine.iso \
-#   -serial stdio
+#   -drive if=ide,media=cdrom,file=os-limine.iso \
+#   -serial mon:stdio --nographic -d guest_errors
 
 
 # scp /Volumes/scratch/vmm_x86/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
