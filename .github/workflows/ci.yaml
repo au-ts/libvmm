@@ -84,7 +84,7 @@ jobs:
           version: ${{ env.ZIG_VERSION }}
       - name: Setup pyenv
         run: |
-          python3 -m venv venv
+          python3.13 -m venv venv
           ./venv/bin/pip install --upgrade sdfgen==${{ env.SDFGEN_VERSION }}
       - name: Build and run examples
         run: ./ci/examples.sh ${PWD}/microkit-sdk-${{ env.MICROKIT_VERSION }}
