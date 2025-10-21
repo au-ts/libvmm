@@ -14,6 +14,7 @@
             <map mr="guest_ram" vaddr="0x0" perms="rwx" />
         </virtual_machine>
 
-        <ioport id="10" addr="0x3f8" size="8" />
+        <!-- <ioport id="10" addr="0x3f8" size="8" /> -->
+        <ioport id="10" addr="0" size="1016" />
     </protection_domain>
 </system>

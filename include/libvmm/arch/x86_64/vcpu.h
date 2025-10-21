@@ -44,6 +44,6 @@
 #define IA32_EFER_DEFAULT (IA32_EFER_LME)
 
 /* The 32-bit EFLAGS/RFLAGS register contains a group of status flags, a control flag, and a group of system flags.
- * We don't use anything here, but the 2nd bit must always be set as 1. See [1d]
+ * We don't use anything here during boot to mask all IRQs, but the 2nd bit must always be set as 1. See [1d]
  */
 #define RFLAGS_DEFAULT BIT_LOW(1)
