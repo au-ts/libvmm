@@ -70,6 +70,7 @@ typedef struct linux_setup_ret {
     uintptr_t pml4_gpa;
     uintptr_t zero_page_gpa;
     uintptr_t gdt_gpa;
+    uint64_t gdt_limit;
 } linux_x86_setup_ret_t;
 
 bool linux_setup_images(uintptr_t ram_start,
