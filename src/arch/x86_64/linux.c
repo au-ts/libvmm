@@ -22,8 +22,9 @@
 #define SETUP_HDR_TYPE_OF_LOADER  0xff
 #define SETUP_HDR_VGA_MODE_NORMAL 0xffff
 
+#define ZERO_PAGE_ACPI_RSDP_OFFSET    0x70
+
 #define ZERO_PAGE_E820_ENTRIES_OFFSET 0x1e8
-#define ZERO_PAGE_E820_ENTRIES_TYPE   uint8_t
 
 #define ZERO_PAGE_E820_TABLE_OFFSET   0x2d0
 
@@ -33,31 +34,89 @@
 #define ZERO_PAGE_GPA 0x0 // Doesn't have to be at 0, but just matching the name
 #define CMDLINE_GPA 0x1000
 #define GDT_GPA 0x2000
-#define INIT_RSP_GPA 0x10000
-#define DEFAULT_KERNEL_GPA 0x20000
+#define INIT_RSP_GPA 0x10000 // initial stack might overflow into GDT? idk @billn revisit
+#define DEFAULT_KERNEL_GPA 0x100000
 
 #define KERNEL_64_HANDOVER_OFFSET 0x200
 
+#define PTE_PRESENT_BIT BIT(0)
+#define PTE_RW_BIT BIT(1)
+#define PTE_PS_BIT BIT(7) // 1 if point to a page instead of paging structure
+#define PTE_ADDR_MASK (0xfffffffff000ull) // @billn check number of Fs
+
+// Assume 2MiB large page
+static bool map_page(uintptr_t pml4_gpa, uintptr_t target_gpa, uintptr_t ram_start, uint64_t ram_size_round_down, uint64_t *n_pt_created) {
+    uint16_t pml4_idx = (target_gpa >> (12 + 9 + 9 + 9)) & 0x1ff;
+    uint16_t pdpt_idx = (target_gpa >> (12 + 9 + 9)) & 0x1ff;
+    uint16_t pd_idx = (target_gpa >> (12 + 9)) & 0x1ff;
+
+    LOG_VMM("mapping page at GPA 0x%lx, pml4_idx = 0x%x, pdpt_idx = 0x%x, pd_idx = 0x%x\n", target_gpa, pml4_idx, pdpt_idx, pd_idx);
+    LOG_VMM("PML4 GPA @ 0x%lx\n", pml4_gpa);
+
+    // Check if PML4 pointer to PDPT is present, create PDPT obj and point to it if not.
+    uint64_t *pml4_entries = (uint64_t *) (ram_start + pml4_gpa);
+    uint64_t pml4_entry = pml4_entries[pml4_idx];
+    uint64_t pdpt_gpa;
+    if (pml4_entry & PTE_PRESENT_BIT) {
+        LOG_VMM("PML4 present\n");
+        pdpt_gpa = pml4_entry & PTE_ADDR_MASK;
+    } else {
+        pdpt_gpa = ram_size_round_down - (PAGE_SIZE_4K * (*n_pt_created + 1));
+        *n_pt_created = *n_pt_created + 1;
+
+        LOG_VMM("PML4 entry not present, linking to PDPT GPA @ 0x%lx\n", pdpt_gpa);
+        pml4_entries[pml4_idx] = PTE_PRESENT_BIT | PTE_RW_BIT | (pdpt_gpa & PTE_ADDR_MASK);
+    }
+
+    // Same thing, but PDPT -> PT
+    uint64_t *pdpt_entries = (uint64_t *) (ram_start + pdpt_gpa);
+    uint64_t pdpt_entry = pdpt_entries[pdpt_idx];
+    uint64_t pd_gpa;
+    if (pdpt_entry & PTE_PRESENT_BIT) {
+        LOG_VMM("PDPT present\n");
+        pd_gpa = pdpt_entry & PTE_ADDR_MASK;
+    } else {
+        pd_gpa = ram_size_round_down - (PAGE_SIZE_4K * (*n_pt_created + 1));
+        *n_pt_created = *n_pt_created + 1;
+
+        LOG_VMM("PDPT entry not present, linking to PD GPA @ 0x%lx\n", pd_gpa);
+        pdpt_entries[pdpt_idx] = PTE_PRESENT_BIT | PTE_RW_BIT | (pd_gpa & PTE_ADDR_MASK);
+    }
+
+    // Now PT -> Page
+    uint64_t *pd_entries = (uint64_t *) (ram_start + pd_gpa);
+    uint64_t pd_entry = pd_entries[pd_idx];
+    if (pd_entry & PTE_PRESENT_BIT) {
+        LOG_VMM_ERR("uh oh\n"); // @billn todo make proper
+        return true;
+    } else {
+        LOG_VMM("map ok\n");
+        pd_entries[pd_idx] = PTE_PRESENT_BIT | PTE_RW_BIT | PTE_PS_BIT | (target_gpa & PTE_ADDR_MASK);
+        return true;
+    }
+}
+
 // Returns GPA to the PML4 object
+// Not correct for SMP where each guest needs their own page table.
 static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram_size, uintptr_t kernel_gpa, size_t init_size)
 {
-    // hackily build an initial page table for [0x0..0x200000)
-    uintptr_t ram_size_round_down = ROUND_DOWN(ram_size, PAGE_SIZE_4K) - PAGE_SIZE_4K;
-    uintptr_t pml4_gpa = ram_size_round_down - PAGE_SIZE_4K;
-    uintptr_t pdpt_gpa = pml4_gpa - PAGE_SIZE_4K;
-    uintptr_t pd_gpa = pdpt_gpa - PAGE_SIZE_4K;
+    uint64_t n_pt_created = 0;
+    uint64_t ram_size_round_down = ROUND_DOWN(ram_size, PAGE_SIZE_4K);
+    uintptr_t pml4_gpa = ram_size_round_down - (PAGE_SIZE_4K * (n_pt_created + 1));
+    n_pt_created += 1;
 
     memset((void *)(ram_start + pml4_gpa), 0, PAGE_SIZE_4K);
-    memset((void *)(ram_start + pdpt_gpa), 0, PAGE_SIZE_4K);
-    memset((void *)(ram_start + pd_gpa),   0, PAGE_SIZE_4K);
 
-    uint64_t *pml4_entries = (uint64_t *) (ram_start + pml4_gpa);
-    uint64_t *pdpt_entries = (uint64_t *) (ram_start + pdpt_gpa);
-    uint64_t *pd_entries = (uint64_t *) (ram_start + pd_gpa);
+    // Map range [0x0..0x200000) for zero page, cmdline, gdt and initial stack
+    assert(map_page(pml4_gpa, 0, ram_start, ram_size_round_down, &n_pt_created));
 
-    pml4_entries[0] = 1 | 1 << 1 | ((pdpt_gpa >> 12) << 12);
-    pdpt_entries[0] = 1 | 1 << 1 | ((pd_gpa >> 12) << 12);
-    pd_entries[0] = 1 | 1 << 1 | 1 << 7;
+    // Then kernel
+    // todo check no overlap
+    // @billn revisit +20 shenanigans
+    int num_init_pages = (init_size / 0x200000) + 20;
+    for (int i = 0; i < num_init_pages; i += 1) {
+        assert(map_page(pml4_gpa, kernel_gpa + i * 0x200000, ram_start, ram_size_round_down, &n_pt_created));
+    }
 
     return pml4_gpa;
 }
@@ -70,6 +129,8 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
         LOG_VMM_ERR("expected ram size to be page aligned, but got 0x%x\n", ram_size);
         return false;
     }
+
+    LOG_VMM("Linux kernel size: %ld bytes\n", kernel_size);
 
     struct setup_header *setup_header_src = (struct setup_header *)((char *)kernel + IMAGE_SETUP_HEADER_OFFSET);
 
@@ -104,7 +165,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     LOG_VMM("Linux command line: '%s'\n", cmdline);
 
     if (!(setup_header.xloadflags & 1)) {
-        LOG_VMM_ERR("Kernel must support the 64-bit entry point flag XLF_KERNEL_64");
+        LOG_VMM_ERR("Kernel must support the 64-bit entry point flag XLF_KERNEL_64\n");
         return false;
     }
 
@@ -112,20 +173,31 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
      * configuration structures and setting up the kernel's page table later. */
     uintptr_t kernel_gpa = DEFAULT_KERNEL_GPA;
     if (setup_header.pref_address) {
-        LOG_VMM("Linux load GPA 0x%x\n", setup_header.pref_address);
-        // kernel_gpa = setup_header.pref_address; // @billn revisit
+        LOG_VMM("Linux preferred load GPA 0x%x\n", setup_header.pref_address);
+        kernel_gpa = setup_header.pref_address;
+        // @billn todo check that this doesnt overlap with anything importantn
     }
+
+    LOG_VMM("Linux code32_start 0x%x\n", setup_header.code32_start);
+    uint64_t setup_sects = setup_header.setup_sects;
+    if (setup_sects == 0) {
+        setup_sects = 4;
+    }
+    LOG_VMM("Linux setup_sects 0x%x\n", setup_sects);
+
     // @billn check minimum alignment of DEFAULT_KERNEL_GPA
     // @billn check that preferred address doesnt overlap with things
 
     /* Copy over the important things: kernel and the "zero page" which contains `struct setup_header` */
-    memcpy((void *)ram_start + kernel_gpa, (const void *)kernel, kernel_size);
+    memcpy((void *)ram_start + kernel_gpa, (const void *)(kernel), kernel_size);
     memset((void *)ram_start + ZERO_PAGE_GPA, 0, PAGE_SIZE_4K);
     memcpy((void *)ram_start + ZERO_PAGE_GPA + IMAGE_SETUP_HEADER_OFFSET, (const void *)&setup_header,
            sizeof(struct setup_header));
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
     // @billn acpi rsdp
+    uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);
+    *acpi_rsdp = 0x88abcdef;
 
     /* Just 1 memory region for now */
     uint8_t *e820_entries = (uint8_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_E820_ENTRIES_OFFSET);
@@ -150,7 +222,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     gdt[1] = 0x00AF9A000000FFFFull;
     gdt[2] = 0x00AF92000000FFFFull;
 
-    ret->kernel_entry_gpa = kernel_gpa + KERNEL_64_HANDOVER_OFFSET;
+    ret->kernel_entry_gpa = kernel_gpa + ((setup_sects + 1) * 512) + 0x200;
     ret->kernel_stack_gpa = INIT_RSP_GPA;
     ret->pml4_gpa = pml4_gpa;
     ret->zero_page_gpa = ZERO_PAGE_GPA;
