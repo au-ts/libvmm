@@ -151,7 +151,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
         return false;
     }
 
-    LOG_VMM("Linux kernel size: %ld bytes\n", kernel_size);
+    LOG_VMM("Linux kernel size: %dMiB (%ld bytes)\n", kernel_size / 1024 / 1024, kernel_size);
 
     struct setup_header *setup_header_src = (struct setup_header *)((char *)kernel + IMAGE_SETUP_HEADER_OFFSET);
 
