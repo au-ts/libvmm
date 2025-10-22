@@ -110,15 +110,86 @@ enum exit_reasons {
 //     LOG_VMM("  Code: 0x%lx\n", microkit_mr_get(seL4_UserException_Code));
 // }
 
-bool fault_handle(size_t vcpu_id) {
+static inline void cpuid(uint32_t leaf, uint32_t subleaf,
+                         uint32_t *a, uint32_t *b,
+                         uint32_t *c, uint32_t *d) {
+    __asm__ __volatile__(
+        "cpuid"
+        : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d)
+        : "a"(leaf), "c"(subleaf)
+    );
+}
+
+bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
     bool success = false;
 
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
+    seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+    seL4_Word rip = vmcs_read(vcpu_id, VMX_GUEST_RIP);
+
     switch (f_reason) {
         case CPUID:
+            // 3-218 Vol. 2A
+            seL4_Word eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
+            seL4_Word ebx, ecx, edx;
 
+            seL4_VCPUContext vctx;
+
+            if (eax == 0) {
+                // 3-240 Vol. 2A
+                // GenuineIntel
+                eax = 0x1; // ???
+                ebx = 0x756e6547;
+                ecx = 0x49656e69;
+                edx = 0x6c65746e;
+            } else if (eax == 1) {
+                // Encoding from:
+                // https://en.wikipedia.org/wiki/CPUID
+                // "EAX=1: Processor Info and Feature Bits"
+
+                // Values from:
+                // https://en.wikichip.org/wiki/intel/cpuid
+                // Using value for "Haswell (Client)" Microarch and "HSW-U" Core
+
+                // OEM processor: bit 12 and 13 zero
+                uint32_t model_id = 0x5 << 4;
+                uint32_t ext_model_id = 0x4 << 16;
+                // Pentium and Intel Core family
+                uint32_t family_id = 0x6 << 8;
+
+                eax = model_id | ext_model_id | family_id;
+
+
+
+            } else {
+                goto ohno;
+            }
+
+
+            vctx.eax = eax;
+            vctx.ebx = ebx;
+            vctx.ecx = ecx;
+            vctx.edx = edx;
+            vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
+            vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
+            vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
+            vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
+            vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
+            vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
+            vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
+            vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
+            vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
+            vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
+            vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
+
+            seL4_X86_VCPU_WriteRegisters(BASE_VCPU_CAP + vcpu_id, &vctx);
+
+
+            success = true;
+            *new_rip = rip + ins_len;
             break;
         default:
+ohno:
             LOG_VMM_ERR("unhandled fault\n");
             vcpu_print_regs(vcpu_id);
     };

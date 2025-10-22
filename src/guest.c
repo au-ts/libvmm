@@ -114,9 +114,9 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, VMCS_ENTRY_CTRL_DEfAULT);
 
-    LOG_VMM("VMEnter!\n");
-
+    
     while (true) {
+        LOG_VMM("VMEnter!\n");
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
 
@@ -125,12 +125,10 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
         if (ret == SEL4_VMENTER_RESULT_NOTIF) {
             LOG_VMM("notif\n");
         } else if (ret == SEL4_VMENTER_RESULT_FAULT) {
-            assert(fault_handle(GUEST_BOOT_VCPU_ID));
+            uint64_t new_rip;
+            assert(fault_handle(GUEST_BOOT_VCPU_ID, &new_rip));
+            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, new_rip);
         }
-
-
-        // @billn, doing a vmenter after a fault without handling the fault first causes seL4 to crash. issue?
-        break;
     }
     LOG_VMM("done\n");
 #endif

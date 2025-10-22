@@ -177,7 +177,7 @@
 // [2a] Primary Processor-Based VM-Execution Controls Register
 #define VMCS_PPC_ACTIVATE_SECONDARY_CTRL BIT_LOW(31)
 
-#define VMCS_PCC_DEFAULT VMCS_PPC_ACTIVATE_SECONDARY_CTRL
+#define VMCS_PCC_DEFAULT (VMCS_PPC_ACTIVATE_SECONDARY_CTRL)
 
 // [2b] Secondary Processor-Based VM-Execution Controls Register
 #define VMCS_SPC_ENABLE_EPT BIT_LOW(1)
