@@ -69,13 +69,13 @@ void vcpu_print_regs(size_t vcpu_id) {
     LOG_VMM("=========================\n");
     LOG_VMM("    rip = 0x%lx\n", rip);
     LOG_VMM("    rsp = 0x%lx\n", rsp);
-    LOG_VMM("    eax = 0x%lx\n", eax);
-    LOG_VMM("    ebx = 0x%lx\n", ebx);
-    LOG_VMM("    ecx = 0x%lx\n", ecx);
-    LOG_VMM("    edx = 0x%lx\n", edx);
-    LOG_VMM("    esi = 0x%lx\n", esi);
-    LOG_VMM("    edi = 0x%lx\n", edi);
-    LOG_VMM("    ebp = 0x%lx\n", ebp);
+    LOG_VMM("    rax = 0x%lx\n", eax);
+    LOG_VMM("    rbx = 0x%lx\n", ebx);
+    LOG_VMM("    rcx = 0x%lx\n", ecx);
+    LOG_VMM("    rdx = 0x%lx\n", edx);
+    LOG_VMM("    rsi = 0x%lx\n", esi);
+    LOG_VMM("    rdi = 0x%lx\n", edi);
+    LOG_VMM("    rbp = 0x%lx\n", ebp);
     LOG_VMM("    r8 = 0x%lx\n", r8);
     LOG_VMM("    r9 = 0x%lx\n", r9);
     LOG_VMM("    r10 = 0x%lx\n", r10);
@@ -85,4 +85,9 @@ void vcpu_print_regs(size_t vcpu_id) {
     LOG_VMM("    r14 = 0x%lx\n", r14);
     LOG_VMM("    r15 = 0x%lx\n", r15);
     LOG_VMM("=========================\n");
+    // LOG_VMM("faulting instruction: 0x");
+    // for (int i = 0; i < ins_len; i++) {
+    //     printf("%hhx", *((char *)(0x80000000 + rip + i)));
+    // }
+    // printf("\n");
 }

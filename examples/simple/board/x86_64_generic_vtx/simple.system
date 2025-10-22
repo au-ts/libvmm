@@ -15,5 +15,6 @@
         </virtual_machine>
 
         <ioport id="10" addr="0x3f8" size="8" />
+        <ioport id="11" addr="0x40" size="4" />
     </protection_domain>
 </system>
