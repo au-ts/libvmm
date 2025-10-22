@@ -50,7 +50,7 @@
 #define ZERO_PAGE_GPA 0x0
 #define CMDLINE_GPA 0x1000
 #define GDT_GPA 0x2000
-#define DEFAULT_KERNEL_LOAD_GPA 0x100000
+#define BZIMAGE_LOAD_GPA 0x100000
 
 #define KERNEL_64_HANDOVER_OFFSET 0x200
 
@@ -78,6 +78,7 @@ static bool map_page(uintptr_t pml4_gpa, uintptr_t target_gpa, uintptr_t ram_sta
         pdpt_gpa = pml4_entry & PTE_ADDR_MASK;
     } else {
         pdpt_gpa = ram_size_round_down - (PAGE_SIZE_4K * (*n_pt_created + 1));
+        memset((void *)(ram_start + pdpt_gpa), 0, PAGE_SIZE_4K);
         *n_pt_created = *n_pt_created + 1;
 
         pml4_entries[pml4_idx] = PTE_PRESENT_BIT | PTE_RW_BIT | (pdpt_gpa & PTE_ADDR_MASK);
@@ -91,6 +92,7 @@ static bool map_page(uintptr_t pml4_gpa, uintptr_t target_gpa, uintptr_t ram_sta
         pd_gpa = pdpt_entry & PTE_ADDR_MASK;
     } else {
         pd_gpa = ram_size_round_down - (PAGE_SIZE_4K * (*n_pt_created + 1));
+        memset((void *)(ram_start + pd_gpa), 0, PAGE_SIZE_4K);
         *n_pt_created = *n_pt_created + 1;
 
         pdpt_entries[pdpt_idx] = PTE_PRESENT_BIT | PTE_RW_BIT | (pd_gpa & PTE_ADDR_MASK);
@@ -121,15 +123,14 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
     memset((void *)(ram_start + pml4_gpa), 0, PAGE_SIZE_4K);
 
     // Map range [0x0..0x200000) for zero page, cmdline and GDT
-    LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", 0, PAGE_SIZE_2M);
-    assert(map_page(pml4_gpa, 0, ram_start, ram_size_round_down, &n_pt_created));
+    // LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", 0, PAGE_SIZE_2M);
+    // assert(map_page(pml4_gpa, 0, ram_start, ram_size_round_down, &n_pt_created));
 
     // Then kernel entry..kernel entry + init_size
     // todo check no overlap
     int num_init_pages =
         ((ROUND_UP(kernel_entry_gpa + init_size, PAGE_SIZE_2M) - ROUND_DOWN(kernel_entry_gpa, PAGE_SIZE_2M))
-         / PAGE_SIZE_2M)
-        + 1;
+         / PAGE_SIZE_2M) + 10;
     for (int i = 0; i < num_init_pages; i += 1) {
         uint64_t base_page_gpa = ROUND_DOWN(kernel_entry_gpa + (i * PAGE_SIZE_2M), PAGE_SIZE_2M);
         LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", base_page_gpa, base_page_gpa + PAGE_SIZE_2M);
@@ -190,33 +191,35 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     setup_header.ramdisk_image = 0; // @billn for now
     setup_header.ramdisk_size = 0; // @billn for now
     setup_header.cmd_line_ptr = CMDLINE_GPA;
+    assert(strlen(cmdline) <= setup_header.cmdline_size);
     strcpy((char *)(ram_start + CMDLINE_GPA), cmdline);
-    LOG_VMM("Linux command line: '%s'\n", cmdline);
+    LOG_VMM("Linux command line: '%s'\n", (char *)(ram_start + CMDLINE_GPA));
 
     if (!(setup_header.xloadflags & XLF_KERNEL_64)) {
         LOG_VMM_ERR("Kernel must support the 64-bit entry point flag XLF_KERNEL_64\n");
         return false;
     }
 
-    /* Check where Linux wants to be loaded. But not listen to it verbatim as we are reserving memory for
-     * configuration structures and setting up the kernel's page table later. */
-    uintptr_t kernel_load_gpa = DEFAULT_KERNEL_LOAD_GPA;
-    if (setup_header.pref_address) {
-        LOG_VMM("Linux preferred load GPA 0x%x\n", setup_header.pref_address);
-        kernel_load_gpa = setup_header.pref_address;
-        // @billn todo check that this doesnt overlap with anything important
+    uintptr_t kernel_load_gpa = BZIMAGE_LOAD_GPA;
+    /* See "1.10. Loading The Rest of The Kernel" of [1] */
+    uint64_t setup_sects = setup_header.setup_sects;
+    if (setup_sects == 0) {
+        setup_sects = 4;
     }
+    uint64_t setup_size = (setup_sects + 1) * 512;
 
-    /* Copy over the important things: bzImage and the "zero page" which contains `struct setup_header` */
-    memcpy((void *)ram_start + kernel_load_gpa, (const void *)(kernel), kernel_size);
+    LOG_VMM("Linux load GPA 0x%x\n", kernel_load_gpa);
+
+    /* Copy over the important things: kernel code and the "zero page" which contains `struct setup_header` */
+    memcpy((void *)ram_start + kernel_load_gpa, (const void *)(kernel + setup_size), setup_header.syssize * 16);
     memset((void *)ram_start + ZERO_PAGE_GPA, 0, PAGE_SIZE_4K);
-    memcpy((void *)ram_start + ZERO_PAGE_GPA + IMAGE_SETUP_HEADER_OFFSET, (const void *)&setup_header,
+    memcpy((void *)ram_start + ZERO_PAGE_GPA + IMAGE_SETUP_HEADER_OFFSET, &setup_header,
            sizeof(struct setup_header));
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
     // @billn acpi rsdp
     uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);
-    *acpi_rsdp = 0x88abcdef;
+    *acpi_rsdp = 0x8888abcdef;
 
     /* Just 1 memory region for now */
     uint8_t *e820_entries = (uint8_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_E820_ENTRIES_OFFSET);
@@ -227,12 +230,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     e820_table[0].size = ram_size;
     e820_table[0].type = E820_RAM;
 
-    /* See "1.10. Loading The Rest of The Kernel" of [1] */
-    uint64_t setup_sects = setup_header.setup_sects;
-    if (setup_sects == 0) {
-        setup_sects = 4;
-    }
-    uint64_t kernel_entry_gpa = kernel_load_gpa + ((setup_sects + 1) * 512) + KERNEL_64_HANDOVER_OFFSET;
+    uint64_t kernel_entry_gpa = BZIMAGE_LOAD_GPA + KERNEL_64_HANDOVER_OFFSET;
 
     /* Since we are booting into long mode, we must set up a minimal page table for Linux to start
      * and read the configuration structures. */

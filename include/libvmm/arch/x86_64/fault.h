@@ -14,4 +14,4 @@ bool fault_is_write(seL4_Word fsr);
 bool fault_is_read(seL4_Word fsr);
 
 /* @billn revisit, seL4 vmexit doesnt have msginfo! */
-bool fault_handle(size_t vcpu_id);
+bool fault_handle(size_t vcpu_id, uint64_t *new_rip);
