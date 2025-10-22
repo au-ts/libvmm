@@ -85,10 +85,10 @@ void init(void)
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
-    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
 
 #if defined(CONFIG_ARCH_AARCH64)
+    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
+    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
                                              (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
                                              (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
