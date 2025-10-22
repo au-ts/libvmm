@@ -38,9 +38,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 #endif
     /* Write out all the TCB registers */
 
-    // @billn the following is probably not correct for x86?
-    // should just be seL4_VMEnter() revisit
-
 #if defined(CONFIG_ARCH_AARCH64)
     seL4_Word err = seL4_TCB_WriteRegisters(
         BASE_VM_TCB_CAP + GUEST_BOOT_VCPU_ID,
@@ -121,11 +118,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 
     
     while (true) {
-        LOG_VMM("VMEnter!\n");
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
-
-        LOG_VMM("VMExit!\n");
 
         if (ret == SEL4_VMENTER_RESULT_NOTIF) {
             LOG_VMM("notif\n");
