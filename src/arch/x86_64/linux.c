@@ -130,7 +130,7 @@ static uintptr_t build_initial_kernel_page_table(uintptr_t ram_start, size_t ram
     // todo check no overlap
     int num_init_pages =
         ((ROUND_UP(kernel_entry_gpa + init_size, PAGE_SIZE_2M) - ROUND_DOWN(kernel_entry_gpa, PAGE_SIZE_2M))
-         / PAGE_SIZE_2M) + 10;
+         / PAGE_SIZE_2M) + 500;
     for (int i = 0; i < num_init_pages; i += 1) {
         uint64_t base_page_gpa = ROUND_DOWN(kernel_entry_gpa + (i * PAGE_SIZE_2M), PAGE_SIZE_2M);
         LOG_VMM("mapping GPA [0x%lx..0x%lx)\n", base_page_gpa, base_page_gpa + PAGE_SIZE_2M);
