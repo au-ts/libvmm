@@ -36,7 +36,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_CMDLINE "no5lvl nokaslr earlyprintk=serial,0x3f8,115200 console=ttyS0,115200 earlycon=serial,0x3f8,115200 keep_bootcon"
+#define GUEST_CMDLINE "no5lvl nokaslr earlyprintk=serial,0x3f8,115200 console=ttyS0,115200 earlycon=serial,0x3f8,115200 keep_bootcon loglevel=7"
 #else
 #error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
 #endif
@@ -124,6 +124,8 @@ void init(void)
     // @billn revisit
     seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 10, 0x3f8, 0x3f8 + 7);
     seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 11, 0x40, 0x40 + 3);
+    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 12, 0xcf8, 0xcf8 + 3);
+    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 13, 0xcfc, 0xcfc + 3);
 
     /* Finally start the guest */
     guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
