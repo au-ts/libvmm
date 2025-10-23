@@ -16,5 +16,8 @@
 
         <ioport id="10" addr="0x3f8" size="8" />
         <ioport id="11" addr="0x40" size="4" />
+        <!-- pci passthrough hack -->
+        <ioport id="12" addr="0xcf8" size="4" />
+        <ioport id="13" addr="0xcfc" size="4" />
     </protection_domain>
 </system>
