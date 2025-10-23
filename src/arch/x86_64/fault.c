@@ -120,6 +120,8 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             vcpu_print_regs(vcpu_id);
     };
 
+    assert(success);
+
     if (success) {
         seL4_X86_VCPU_WriteRegisters(BASE_VCPU_CAP + vcpu_id, &vctx);
         *new_rip = rip + ins_len;

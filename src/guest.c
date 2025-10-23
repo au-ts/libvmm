@@ -116,7 +116,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, VMCS_ENTRY_CTRL_DEfAULT);
 
-    
     while (true) {
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
@@ -127,6 +126,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
             uint64_t new_rip;
             assert(fault_handle(GUEST_BOOT_VCPU_ID, &new_rip));
             microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, new_rip);
+        } else {
+            LOG_VMM_ERR("unexpected VM exit reason 0x%x\n", ret);
         }
     }
     LOG_VMM("done\n");
