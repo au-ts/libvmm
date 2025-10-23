@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 
@@ -24,23 +25,23 @@ struct XSDP {
 } __attribute__ ((packed));
 
 struct ACPISDTHeader {
-  char Signature[4];
-  uint32_t Length;
-  uint8_t Revision;
-  uint8_t Checksum;
-  char OEMID[6];
-  char OEMTableID[8];
-  uint32_t OEMRevision;
-  uint32_t CreatorID;
-  uint32_t CreatorRevision;
+    char Signature[4];
+    uint32_t Length;
+    uint8_t Revision;
+    uint8_t Checksum;
+    char OEMID[6];
+    char OEMTableID[8];
+    uint32_t OEMRevision;
+    uint32_t CreatorID;
+    uint32_t CreatorRevision;
 };
 
 typedef struct {
-  uint8_t AddressSpace;
-  uint8_t BitWidth;
-  uint8_t BitOffset;
-  uint8_t AccessSize;
-  uint64_t Address;
+    uint8_t AddressSpace;
+    uint8_t BitWidth;
+    uint8_t BitOffset;
+    uint8_t AccessSize;
+    uint64_t Address;
 } GenericAddressStructure;
 
 struct FADT {
@@ -113,24 +114,45 @@ struct FADT {
 // One entry for FADT, and one entry for DSDT
 #define XSDT_ENTRIES 2
 
-static uint8_t acpi_sdt_sum(struct ACPISDTHeader *xsdt) {
+static uint8_t acpi_sdt_sum(struct ACPISDTHeader *hdr) {
     uint8_t sum = 0;
-    for (int i = 0; i < xsdt->Length; i++) {
-        sum += ((char *)(xsdt))[i];
+    for (int i = 0; i < hdr->Length; i++) {
+        sum += ((char *)(hdr))[i];
     }
 
     return sum;
 }
 
-static bool acpi_sdt_header_check(struct ACPISDTHeader *xsdt) {
-    return acpi_sdt_sum(xsdt) == 0;
+static bool acpi_sdt_header_check(struct ACPISDTHeader *hdr) {
+    return acpi_sdt_sum(hdr) == 0;
 }
 
-static uint8_t acpi_sdt_header_checksum(struct ACPISDTHeader *xsdt) {
-    return 0x100 - acpi_sdt_sum(xsdt);
+static uint8_t acpi_sdt_header_checksum(struct ACPISDTHeader *hdr) {
+    return 0x100 - acpi_sdt_sum(hdr);
 }
 
-static void xsdt_build(void *xsdt_ram, uint64_t table_ptrs_gpa) {
+static void fadt_build(struct FADT *fadt, uint64_t xsdt_gpa) {
+    /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
+     * hence the inconsistency. */
+    memcpy(fadt->h.Signature, "FACP", 4);
+
+    fadt->h.Length = sizeof(struct FADT);
+    fadt->h.Revision = 6;
+
+    memcpy(fadt->h.OEMID, XSDT_OEMID, 6);
+    memcpy(fadt->h.OEMTableID, XSDT_OEMID, 6);
+    fadt->h.OEMRevision = 1;
+
+    fadt->h.CreatorID = 1;
+    fadt->h.CreatorRevision = 1;
+
+    /* Fill out data fields of FADT */
+
+    fadt->h.Checksum = acpi_sdt_header_checksum(&fadt->h);
+    assert(acpi_sdt_header_check(&fadt->h));
+}
+
+static size_t xsdt_build(void *xsdt_ram, uint64_t table_ptrs_gpa) {
     struct ACPISDTHeader *xsdt = (struct ACPISDTHeader *)xsdt_ram;
     memcpy(xsdt->Signature, "XSDT", 4);
 
@@ -155,15 +177,64 @@ static void xsdt_build(void *xsdt_ram, uint64_t table_ptrs_gpa) {
 
     xsdt->Checksum = acpi_sdt_header_checksum(xsdt);
     assert(acpi_sdt_header_check(xsdt));
+
+    return xsdt->Length;
 }
 
-void acpi_rsdp_init(uint64_t guest_ram_start, struct XSDP *xsdp) {
+static uint8_t acpi_rsdp_sum(struct XSDP *xsdp) {
+    uint8_t sum = 0;
+    for (int i = 0; i < offsetof(struct XSDP, RsdtAddress); i++) {
+        sum += ((char *)(xsdp))[i];
+    }
+
+    return sum;
+}
+
+static bool acpi_rsdp_header_check(struct XSDP *xsdp) {
+    return acpi_rsdp_sum(xsdp) == 0;
+}
+
+static uint8_t acpi_rsdp_header_checksum(struct XSDP *xsdp) {
+    return 0x100 - acpi_rsdp_sum(xsdp);
+}
+
+static uint8_t acpi_xsdp_sum(struct XSDP *xsdp) {
+    assert(xsdp->Checksum != 0);
+    uint8_t sum = 0;
+    for (int i = 0; i < xsdp->Length; i++) {
+        sum += ((char *)(xsdp))[i];
+    }
+
+    return sum;
+}
+
+static bool acpi_xsdp_header_check(struct XSDP *xsdp) {
+    return acpi_xsdp_sum(xsdp) == 0;
+}
+
+static uint8_t acpi_xsdp_header_checksum(struct XSDP *xsdp) {
+    return 0x100 - acpi_xsdp_sum(xsdp);
+}
+
+size_t acpi_rsdp_init(uint64_t guest_ram_end, struct XSDP *xsdp) {
     // memcpy as we do not want to null-termiante
     memcpy(xsdp->Signature, "RSD PTR ", 8);
-
-    // TODO: checksum
 
     memcpy(xsdp->OEMID, XSDP_OEMID, strlen(XSDP_OEMID));
 
     xsdp->Revision = XSDP_REVISION;
+
+    // Explicitly set to zero as it should be ignored since we are
+    // using 64-bit XSDT instead.
+    xsdp->RsdtAddress = 0;
+
+    xsdp->Length = sizeof(struct XSDP);
+    xsdp->XsdtAddress = guest_ram_end - sizeof(struct XSDP);
+
+    xsdp->Checksum = acpi_rsdp_header_checksum(xsdp);
+    assert(acpi_rsdp_header_check(xsdp));
+    xsdp->ExtendedChecksum = acpi_xsdp_header_checksum(xsdp);
+    assert(acpi_xsdp_header_check(xsdp));
+
+    return xsdp->Length + xsdt_build();
 }
