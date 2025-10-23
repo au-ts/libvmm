@@ -1,9 +1,11 @@
+
 /*
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
@@ -30,7 +32,17 @@
 #define XLF_KERNEL_64 BIT(0) // Kernel have 64-bits entry
 
 /* [3] */
-#define E820_RAM 1
+#define E820_RAM    1
+#define E820_RESERVED   2
+#define E820_ACPI   3
+#define E820_NVS    4
+#define E820_UNUSABLE   5
+#define E820_PMEM   7
+
+#define E820_MAX_ENTRIES_ZEROPAGE 128
+
+// TODO: Must be page aligned, temporary
+#define XSDP_SIZE (0x1000)
 
 /* We do not have an assigned ID in the table of loader IDs, so we do 0xff. */
 #define SETUP_HDR_TYPE_OF_LOADER  0xff
@@ -218,17 +230,30 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
     // @billn acpi rsdp
+    uint64_t xsdp_offset = ram_size - XSDP_SIZE;
+    uint64_t xsdp_addr_gpa = RAM_START_GPA + xsdp_offset;
+    uint64_t xsdp_addr_vaddr = ram_start + xsdp_offset;
     uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);
-    *acpi_rsdp = 0x8888abcdef;
+    *acpi_rsdp = xsdp_addr_gpa;
+
+    acpi_rsdp_init(ram_start, (void *)xsdp_addr_vaddr);
 
     /* Just 1 memory region for now */
     uint8_t *e820_entries = (uint8_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_E820_ENTRIES_OFFSET);
-    *e820_entries = 1;
+    *e820_entries = 2;
     struct boot_e820_entry *e820_table = (struct boot_e820_entry *)(ram_start + ZERO_PAGE_GPA
                                                                     + ZERO_PAGE_E820_TABLE_OFFSET);
-    e820_table[0].addr = RAM_START_GPA;
-    e820_table[0].size = ram_size;
-    e820_table[0].type = E820_RAM;
+    assert(*e820_entries <= E820_MAX_ENTRIES_ZEROPAGE);
+    e820_table[0] = (struct boot_e820_entry){
+        .addr = RAM_START_GPA,
+        .size = ram_size - XSDP_SIZE,
+        .type = E820_RAM,
+    };
+    e820_table[1] = (struct boot_e820_entry){
+        .addr = xsdp_addr_gpa,
+        .size = XSDP_SIZE,
+        .type = E820_ACPI,
+    };
 
     uint64_t kernel_entry_gpa = BZIMAGE_LOAD_GPA + KERNEL_64_HANDOVER_OFFSET;
 
