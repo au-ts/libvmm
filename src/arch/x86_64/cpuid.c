@@ -28,8 +28,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
         // GenuineIntel
         vctx->eax = 0x1; // ???
         vctx->ebx = 0x756e6547;
-        vctx->ecx = 0x49656e69;
-        vctx->edx = 0x6c65746e;
+        vctx->edx = 0x49656e69;
+        vctx->ecx = 0x6c65746e;
     } else if (vctx->eax == 1) {
         // Encoding from:
         // https://en.wikipedia.org/wiki/CPUID
@@ -51,6 +51,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
         vctx->eax = 0;
     } else if (vctx->eax == 0x80000001) {
         vctx->eax = 0;
+        vctx->ecx = 0;
+        vctx->edx = (1 << 11);
     } else {
         LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);
         return false;
