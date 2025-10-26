@@ -91,3 +91,8 @@ void vcpu_print_regs(size_t vcpu_id) {
     // }
     // printf("\n");
 }
+
+void vcpu_msr_write(size_t vcpu_id, seL4_Word field, seL4_Word value) {
+    seL4_X86_VCPU_WriteMSR_t result = seL4_X86_VCPU_WriteMSR(BASE_VCPU_CAP + vcpu_id, field, value);
+    assert(result.error == seL4_NoError);
+}

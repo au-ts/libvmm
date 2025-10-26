@@ -116,7 +116,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_wrmsr(&vctx);
             break;
         default:
-            LOG_VMM_ERR("unhandled fault\n");
+            LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
             vcpu_print_regs(vcpu_id);
     };
 

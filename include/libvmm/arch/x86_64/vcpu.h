@@ -49,3 +49,4 @@
 #define RFLAGS_DEFAULT BIT_LOW(1)
 
 void vcpu_print_regs(size_t vcpu_id);
+void vcpu_msr_write(size_t vcpu_id, seL4_Word field, seL4_Word value);
