@@ -79,6 +79,12 @@ enum exit_reasons {
     XSETBV = 0x37
 };
 
+bool emulate_vmfault(seL4_VCPUContext *vctx) {
+    uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+    LOG_VMM("handling fault on 0x%lx\n", addr);
+    return false;
+}
+
 // @billn todo exit reason -> human frenly string
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
@@ -114,6 +120,9 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             break;
         case WRMSR:
             success = emulate_wrmsr(&vctx);
+            break;
+        case EPT_VIOLATION:
+            success = emulate_vmfault(&vctx);
             break;
         default:
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
