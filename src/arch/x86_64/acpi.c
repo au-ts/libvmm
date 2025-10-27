@@ -74,7 +74,7 @@ struct dst_header {
     uint32_t oem_revision;
     uint32_t creator_id;
     uint32_t creator_revision;
-};
+} __attribute__ ((packed));
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
