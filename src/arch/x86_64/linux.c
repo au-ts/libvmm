@@ -246,9 +246,9 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     LOG_VMM("ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa, acpi_end_gpa);
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
-    uint64_t xsdp_offset = ram_size - XSDP_SIZE;
-    uint64_t xsdp_addr_gpa = RAM_START_GPA + xsdp_offset;
-    uint64_t xsdp_addr_vaddr = ram_start + xsdp_offset;
+    // uint64_t xsdp_offset = ram_size - XSDP_SIZE;
+    // uint64_t xsdp_addr_gpa = RAM_START_GPA + xsdp_offset;
+    // uint64_t xsdp_addr_vaddr = ram_start + xsdp_offset;
     uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);
     *acpi_rsdp = acpi_rsdp_gpa;
 
