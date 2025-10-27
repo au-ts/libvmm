@@ -9,6 +9,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 
+#define EDX_APIC (1 << 9)
+
 static inline void cpuid(uint32_t leaf, uint32_t subleaf,
                          uint32_t *a, uint32_t *b,
                          uint32_t *c, uint32_t *d) {
@@ -46,6 +48,9 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
         uint32_t family_id = 0x6 << 8;
 
         vctx->eax = model_id | ext_model_id | family_id;
+
+        /* Table 1-20. */
+        vctx->edx = EDX_APIC;
 
     } else if (vctx->eax == 0x80000000) {
         vctx->eax = 0;
