@@ -19,19 +19,19 @@
  *     [1c] "5.2.8 Extended System Description Table (XSDT)"
  */
 
-static uint8_t acpi_table_sum(const char *table, int size) {
+static uint8_t acpi_table_sum(char *table, int size) {
     uint8_t sum = 0;
     for (int i = 0; i < size; i++) {
-        sum += table[i];
+        sum += (unsigned char)table[i];
     }
     return sum;
 }
 
-static bool acpi_checksum_ok(const char *table, int size) {
+static bool acpi_checksum_ok(char *table, int size) {
     return acpi_table_sum(table, size) == 0;
 }
 
-static uint8_t acpi_compute_checksum(const char *table, int size) {
+static uint8_t acpi_compute_checksum(char *table, int size) {
     return 0x100 - acpi_table_sum(table, size);
 }
 
@@ -141,7 +141,6 @@ static void madt_add_entry(struct madt *madt, char *dest, void *entry) {
     struct madt_irq_controller *madt_entry = (struct madt_irq_controller *)entry;
 
     madt->h.length += madt_entry->length;
-    printf("madt->h.length: 0x%lx\n", madt->h.length);
 
     memcpy(dest, entry, madt_entry->length);
 }
@@ -312,9 +311,7 @@ static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_tab
         xsdt->tables[i] = table_ptrs[i];
     }
 
-    printf("xsdt->h.length: %d\n", xsdt->h.length);
     xsdt->h.checksum = acpi_compute_checksum((char *)xsdt, xsdt->h.length);
-    printf("xsdt->h.checksum: %d\n", xsdt->h.checksum);
     assert(acpi_checksum_ok((char *)xsdt, xsdt->h.length));
 
     return xsdt->h.length;
@@ -335,7 +332,7 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
 
     // We want to place everything at "ram_top", do that we can carve out a chunk
     // at the end and mark it as "ACPI" memory in the E820 table.
-    uint64_t xsdp_gpa = ROUND_DOWN(ram_top - sizeof(struct xsdp), XSDP_ALIGN);
+    uint64_t xsdp_gpa = acpi_allocate_gpa(sizeof(struct xsdp));
     struct xsdp *xsdp = (struct xsdp *) (guest_ram_vaddr + xsdp_gpa);
     memset(xsdp, 0, sizeof(struct xsdp));
 
@@ -357,12 +354,14 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     assert(acpi_checksum_ok((char *)xsdp, sizeof(struct xsdp)));
 
     // TODO: hack
-    uint64_t madt_gpa = acpi_allocate_gpa(0x10000);
+    uint64_t madt_gpa = acpi_allocate_gpa(0x1000);
     struct madt *madt = (struct madt *)(guest_ram_vaddr + madt_gpa);
     madt_build(madt);
-    assert(madt->h.length <= 0x10000);
+    assert(madt->h.length <= 0x1000);
 
     struct xsdt *xsdt = (struct xsdt *) (guest_ram_vaddr + xsdp->xsdt_gpa);
+
+    memset(xsdt, 0, sizeof(struct xsdt));
     uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
