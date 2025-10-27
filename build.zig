@@ -37,6 +37,17 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/cpuif.c",
 };
 
+const src_x86_64 = [_][]const u8{
+    "src/arch/x86_64/linux.c",
+    "src/arch/x86_64/fault.c",
+    "src/arch/x86_64/vcpu.c",
+    "src/arch/x86_64/virq.c",
+    "src/arch/x86_64/vmcs.c",
+    "src/arch/x86_64/cpuid.c",
+    "src/arch/x86_64/msr.c",
+    "src/arch/x86_64/acpi.c",
+};
+
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
 /// equivalent. Assumes musllibc will be used.
 fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.ResolvedTarget {
@@ -87,6 +98,9 @@ pub fn build(b: *std.Build) !void {
 
                 try srcs.appendSlice(b.allocator, &src_aarch64);
             },
+            .x86_64 => {
+                try srcs.appendSlice(b.allocator, &src_x86_64);
+            },
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
@@ -98,8 +112,8 @@ pub fn build(b: *std.Build) !void {
                 "-Wall",
                 "-Werror",
                 "-Wno-unused-function",
-                "-mstrict-align",
-                "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
+                // "-mstrict-align",
+                // "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
             }
         });
 
@@ -130,8 +144,8 @@ pub fn build(b: *std.Build) !void {
                 "-Wall",
                 "-Werror",
                 "-Wno-unused-function",
-                "-mstrict-align",
-                "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
+                // "-mstrict-align",
+                // "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
             }
         });
         libuio.addIncludePath(sddf.path("include"));
