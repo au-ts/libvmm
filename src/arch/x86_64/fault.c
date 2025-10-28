@@ -83,12 +83,24 @@ enum exit_reasons {
 #define APIC_BASE 0xFFFE0000
 #define APIC_SIZE 0x1000
 
-bool emulate_vmfault(seL4_VCPUContext *vctx) {
+/* Table 29-7. Exit Qualification for EPT Violations */
+#define EPT_VIOLATION_READ (1 << 0)
+#define EPT_VIOLATION_WRITE (1 << 1)
+
+bool fault_is_read(seL4_Word qualification) {
+    return qualification & EPT_VIOLATION_READ;
+}
+
+bool fault_is_write(seL4_Word qualification) {
+    return qualification & EPT_VIOLATION_WRITE;
+}
+
+bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
-    LOG_VMM("handling fault on 0x%lx\n", addr);
+    LOG_VMM("handling fault on 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
     if (addr >= APIC_BASE && addr < APIC_BASE + APIC_SIZE) {
-        return apic_fault_handle(addr - APIC_BASE);
+        return apic_fault_handle(addr - APIC_BASE, qualification);
     }
 
     return false;
@@ -101,6 +113,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
 
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
     seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+    seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
 
     seL4_VCPUContext vctx;
@@ -131,18 +144,19 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_wrmsr(&vctx);
             break;
         case EPT_VIOLATION:
-            success = emulate_vmfault(&vctx);
+            success = emulate_vmfault(&vctx, qualification);
             break;
         default:
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
             vcpu_print_regs(vcpu_id);
     };
 
-    assert(success);
-
     if (success) {
         seL4_X86_VCPU_WriteRegisters(BASE_VCPU_CAP + vcpu_id, &vctx);
         *new_rip = rip + ins_len;
+    } else {
+        LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);
+        vcpu_print_regs(vcpu_id);
     }
 
     return success;
