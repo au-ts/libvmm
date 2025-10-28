@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/msr.h>
+#include <libvmm/arch/x86_64/apic.h>
 #include <sel4/arch/vmenter.h>
 
 /* Documents referenced:
@@ -79,9 +80,17 @@ enum exit_reasons {
     XSETBV = 0x37
 };
 
+#define APIC_BASE 0xFFFE0000
+#define APIC_SIZE 0x1000
+
 bool emulate_vmfault(seL4_VCPUContext *vctx) {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     LOG_VMM("handling fault on 0x%lx\n", addr);
+
+    if (addr >= APIC_BASE && addr < APIC_BASE + APIC_SIZE) {
+        return apic_fault_handle(addr - APIC_BASE);
+    }
+
     return false;
 }
 
