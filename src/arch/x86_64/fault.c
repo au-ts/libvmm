@@ -153,10 +153,11 @@ uint64_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_
     LOG_VMM("pt_gpa: 0x%lx\n", pt_gpa);
     uint64_t *pt = gpa_to_vaddr(pt_gpa);
 
-    seL4_Word page_idx = (rip >> (12)) & 0x1ff;
+    seL4_Word page_idx = (rip >> 12) & 0x1ff;
+    seL4_Word pte = pt[page_idx];
     seL4_Word page_gpa = pte_to_gpa((pt[page_idx])) + rip & 0x1ff;
     uint64_t *page = gpa_to_vaddr(page_gpa);
-    LOG_VMM("page: 0x%lx\n", page);
+    LOG_VMM("page: 0x%lx, page_idx: 0x%lx, page_gpa: 0x%lx, pte: 0x%lx\n", page, page_idx, page_gpa, pte);
 
     assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
     uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
