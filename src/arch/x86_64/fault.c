@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <string.h>
 #include <sddf/util/util.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
@@ -106,6 +107,69 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
     return false;
 }
 
+#define X86_MAX_INSTRUCTION_LENGTH 15
+
+extern uint64_t guest_ram_vaddr;
+
+/* Convert guest physical address to the VMM's virtual memory. */
+void *gpa_to_vaddr(uint64_t gpa) {
+    return (void *)(guest_ram_vaddr + gpa);
+}
+
+seL4_Word pte_to_gpa(seL4_Word pte) {
+    return pte & 0xffffffffff000;
+}
+
+uint64_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len) {
+
+    LOG_VMM("getting instruction at GVA 0x%lx\n", rip);
+
+    seL4_Word cr4 = vmcs_read(vcpu_id, VMX_GUEST_CR4);
+
+    LOG_VMM("cr4: 0x%lx\n", cr4);
+
+    seL4_Word cr3 = vmcs_read(vcpu_id, VMX_GUEST_CR3);
+
+    seL4_Word pml4_gpa = (cr3 >> 12) << 12;
+
+    LOG_VMM("pml4_gpa: 0x%lx\n", pml4_gpa);
+
+    seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
+
+    seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
+    LOG_VMM("pml4_idx: 0x%lx\n", pml4_idx);
+
+    seL4_Word pdpt_gpa = pte_to_gpa(pml4[pml4_idx]);
+    LOG_VMM("pdpt_gpa: 0x%lx\n", pdpt_gpa);
+    uint64_t *pdpt = gpa_to_vaddr(pdpt_gpa);
+
+    seL4_Word pdpt_idx = (rip >> (12 + (9 * 2))) & 0x1ff;
+    seL4_Word pd_gpa = pte_to_gpa(pdpt[pdpt_idx]);
+    LOG_VMM("pd_gpa: 0x%lx\n", pd_gpa);
+    uint64_t *pd = gpa_to_vaddr(pd_gpa);
+
+    seL4_Word pt_idx = (rip >> (12 + 9)) & 0x1ff;
+    seL4_Word pt_gpa = pte_to_gpa(pd[pt_idx]);
+    LOG_VMM("pt_gpa: 0x%lx\n", pt_gpa);
+    uint64_t *pt = gpa_to_vaddr(pt_gpa);
+
+    seL4_Word page_idx = (rip >> (12)) & 0x1ff;
+    seL4_Word page_gpa = pte_to_gpa((pt[page_idx])) + rip & 0x1ff;
+    uint64_t *page = gpa_to_vaddr(page_gpa);
+    LOG_VMM("page: 0x%lx\n", page);
+
+    assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
+    uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
+    memcpy(instruction_buf, (uint8_t *)page, instruction_len);
+
+    LOG_VMM("decoded instruction:\n");
+    for (int i = 0; i < instruction_len; i++) {
+        LOG_VMM("[%d]: 0x%x\n", i, instruction_buf[i]);
+    }
+
+    return 0;
+}
+
 // @billn todo exit reason -> human frenly string
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
@@ -144,6 +208,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_wrmsr(&vctx);
             break;
         case EPT_VIOLATION:
+            fault_instruction(vcpu_id, rip, ins_len);
             success = emulate_vmfault(&vctx, qualification);
             break;
         default:
