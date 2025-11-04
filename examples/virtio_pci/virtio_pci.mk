@@ -139,7 +139,7 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 		--startup $(CLIENT_VM_USERLEVEL_INIT)
 
 blk_storage:
-	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
+	$(SDDF)/tools/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM) GPT
 
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
