@@ -7,7 +7,7 @@ boot:                   cdrom
 
 display_library:        nogui
 
-com1: enabled=1, mode=file, dev="/Users/dreamliner787-9/TS/libvmm/examples/simple/log.txt"
+com1: enabled=1, mode=file, dev="/Users/dreamliner787-9/TS/libvmm/examples/simple/board/x86_64_generic_vtx/stdout.txt"
 mouse: enabled=0
 panic:                  action=ask
 error:                  action=report
