@@ -186,9 +186,8 @@
 
 // [2c] VM-Entry Controls Register
 #define VMCS_ENTRY_CTRL_IA_32E_MODE BIT_LOW(9)
-#define VMCS_ENTRY_CTRL_LOAD_IA_32E_EFER BIT_LOW(15)
 
-#define VMCS_ENTRY_CTRL_DEfAULT (VMCS_ENTRY_CTRL_IA_32E_MODE | VMCS_ENTRY_CTRL_LOAD_IA_32E_EFER)
+#define VMCS_ENTRY_CTRL_DEfAULT (VMCS_ENTRY_CTRL_IA_32E_MODE)
 
 int vmcs_write(size_t vcpu_id, seL4_Word field, seL4_Word value);
 seL4_Word vmcs_read(size_t vcpu_id, seL4_Word field);
