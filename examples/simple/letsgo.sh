@@ -6,10 +6,11 @@ BUILD_DIR=/Volumes/scratch/vmm_x86
 MICROKIT_SDK=/Users/dreamliner787-9/TS/microkit-capdl-dev/release/microkit-sdk-2.0.1-dev
 
 EXAMPLE_DIR=$(pwd)
-BOOTLOADER_CFG=$EXAMPLE_DIR/limine.cfg
-BOOTLOADER=$EXAMPLE_DIR/Limine
-BOSHRC=$EXAMPLE_DIR/boshsrc
-KERNEL_ELF=$MICROKIT_SDK/board/x86_64_generic_vtx/debug/elf/sel4.elf
+SYSTEM_DIR=$EXAMPLE_DIR/board/x86_64_generic_vtx/
+BOOTLOADER_CFG=$SYSTEM_DIR/limine.cfg
+BOOTLOADER=$SYSTEM_DIR/Limine
+BOSHRC=$SYSTEM_DIR/boshsrc
+KERNEL64_ELF=$MICROKIT_SDK/board/x86_64_generic_vtx/debug/elf/sel4.elf
 ISO_STAGING_DIR=$BUILD_DIR/iso
 
 rm -rfd $BUILD_DIR && \
@@ -18,7 +19,7 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 
 mkdir -p $ISO_STAGING_DIR/boot/ && \
 mkdir -p $ISO_STAGING_DIR/EFI/BOOT && \
-cp $KERNEL_ELF $ISO_STAGING_DIR/boot/kernel.elf && \
+cp $KERNEL64_ELF $ISO_STAGING_DIR/boot/kernel.elf && \
 cp $BUILD_DIR/loader.img $ISO_STAGING_DIR/boot/loader.elf && \
 cp $BOOTLOADER_CFG $ISO_STAGING_DIR/limine.conf && \
 cp $BOOTLOADER/limine-bios-cd.bin $ISO_STAGING_DIR/limine-bios-cd.bin && \
