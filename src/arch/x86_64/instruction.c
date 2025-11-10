@@ -4,48 +4,61 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <stdbool.h>
+#include <string.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/util/util.h>
+#include <sddf/util/util.h>
+
+// https://wiki.osdev.org/X86-64_Instruction_Encoding
 
 #define X86_MAX_INSTRUCTION_LENGTH 15
 
-typedef struct decode_fail_instruction_data {
-} decode_fail_instruction_data_t;
-
-typedef struct memory_instruction_data {
-
-} memory_instruction_data_t;
-
-typedef union instruction_data {
-    decode_fail_instruction_data_t decode_fail;
-    memory_instruction_data_t memory_instruction;
-} instruction_data_t;
-
-typedef enum instruction_type {
-    DECODE_FAIL,
-    MEMORY,
-} instruction_type_t;
-
-typedef struct decoded_instruction_ret {
-    instruction_type_t type;
-    instruction_data_t decoded;
-} decoded_instruction_ret_t;
-
-static uint8_t *mov_opcodes[] = { 0x88, 0x89, 0x8a, 0x8b };
+// https://c9x.me/x86/html/file_module_x86_id_176.html
+#define NUM_MOV_OPCODES 4
+#define OPCODE_MOV_BYTE_TO_MEM 0x88
+#define OPCODE_MOV_WORD_TO_MEM 0x89
+#define OPCODE_MOV_BYTE_FROM_MEM 0x8a
+#define OPCODE_MOV_WORD_FROM_MEM 0x8b
+static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM, OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
 extern uint64_t guest_ram_vaddr;
 
 /* Convert guest physical address to the VMM's virtual memory. */
-void *gpa_to_vaddr(uint64_t gpa) {
+void *gpa_to_vaddr(uint64_t gpa)
+{
     return (void *)(guest_ram_vaddr + gpa);
 }
 
-seL4_Word pte_to_gpa(seL4_Word pte) {
+seL4_Word pte_to_gpa(seL4_Word pte)
+{
     assert(pte & 1);
     return pte & 0xffffffffff000;
 }
 
-decoded_instruction_ret_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len) {
+bool pt_page_present(seL4_Word pte) {
+    return pte & BIT(7);
+}
+
+static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg) {
+    switch (reg) {
+        case 0:
+            return RAX_IDX;
+        case 1:
+            return RBX_IDX;
+        case 2:
+            return RCX_IDX;
+        case 3:
+            return RDX_IDX;
+        default:
+            LOG_VMM_ERR("unknown mod rm reg: 0x%x\n", reg);
+            assert(false);
+    }
+}
+
+decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len)
+{
     seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
 
     seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
@@ -84,13 +97,46 @@ decoded_instruction_ret_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_
     memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
     memcpy(instruction_buf, (uint8_t *)page, instruction_len);
 
-    // @billn scan for rex
+    decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
 
+    // @billn scan for rex byte to detect 64-bit r/w, at this point all APIC accesses are 32-bit so this isnt an issue
 
-    LOG_VMM("decoded instruction:\n");
-    for (int i = 0; i < instruction_len; i++) {
-        LOG_VMM("[%d]: 0x%x\n", i, instruction_buf[i]);
+    bool opcode_valid = false;
+
+    // First step is to match the opcode against a list of known opcodes that we provide decoding logic for.
+    for (int i = 0; i < NUM_MOV_OPCODES; i++) {
+        // An opcode can be multi-bytes, but `mov`s are only 1-byte
+        if (instruction_buf[0] == mov_opcodes[i]) {
+            opcode_valid = true;
+            
+            // An opcode byte is followed by a ModR/M byte to encode src/dest register.
+            uint8_t modrm = instruction_buf[1];
+            // uint8_t mod = modrm >> 6;
+            uint8_t reg = (modrm >> 3) & 0x7;
+            // uint8_t rm = modrm & 0x7;
+
+            ret.type = INSTRUCTION_MEMORY;
+            switch (instruction_buf[0]) {
+                case OPCODE_MOV_BYTE_TO_MEM:
+                case OPCODE_MOV_BYTE_FROM_MEM:
+                    ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
+                    break;
+                case OPCODE_MOV_WORD_TO_MEM:
+                case OPCODE_MOV_WORD_FROM_MEM:
+                    // @billn revisit 16-byte access decoding
+                    ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
+                    break;
+            }
+            
+            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg);
+
+            break;
+        }
     }
 
-    return 0;
+    // LOG_VMM("raw instruction:\n");
+    // for (int i = 0; i < instruction_len; i++) {
+    //     LOG_VMM("[%d]: 0x%x\n", i, instruction_buf[i]);
+    // }
+    return ret;
 }

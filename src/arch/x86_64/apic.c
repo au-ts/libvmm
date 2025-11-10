@@ -30,14 +30,36 @@ bool apic_handle_read(uint64_t offset) {
     }
 }
 
-bool apic_fault_handle(uint64_t offset, seL4_Word qualification) {
+bool apic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins) {
     // TODO: support other alignments?
     assert(offset % 4 == 0);
+    // if (ept_fault_is_read(qualification)) {
+    //     LOG_APIC("handling read at offset 0x%lx\n", offset);
+    // } else if (ept_fault_is_write(qualification)) {
+    //     LOG_APIC("handling write at offset 0x%lx\n", offset);
+    // }
+
+    uint64_t *vctx_raw = (uint64_t *) vctx;
+
     if (ept_fault_is_read(qualification)) {
-        LOG_APIC("handling read at offset 0x%lx\n", offset);
-    } else if (ept_fault_is_write(qualification)) {
-        LOG_APIC("handling write at offset 0x%lx\n", offset);
+        switch (offset) {
+            case 0x20:
+                vctx_raw[decoded_mem_ins.target_reg] = 0;
+                break;
+            case 0x30:
+                vctx_raw[decoded_mem_ins.target_reg] = 0x10;
+                break;
+            default:
+                LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
+                return false;
+        }
+    } else {
+        switch (offset) {
+            default:
+                LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x\n", offset);
+                return false;
+        }
     }
 
-    return false;
+    return true;
 }
