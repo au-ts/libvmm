@@ -16,6 +16,8 @@
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
 
+#define IA32_APIC_BASE (0x1b)
+
 #define MSR_TEST_CTRL (0x33)
 
 /* x86-64 specific MSRs */
@@ -30,11 +32,11 @@
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
 bool emulate_rdmsr(seL4_VCPUContext *vctx) {
+    uint64_t result = 0;
+
     switch (vctx->ecx) {
     case MSR_EFER: {
-        uint32_t efer_low = (uint32_t) microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
-        vctx->eax = efer_low;
-        vctx->edx = 0;
+        result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
         break;
     }
     case IA32_PLATFORM_ID:
@@ -42,14 +44,20 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx) {
     case IA32_MISC_ENABLE:
     case IA32_BIOS_SIGN_ID:
     case MSR_TEST_CTRL:
-        vctx->eax = 0;
-        vctx->edx = 0;
+        break;
+    case IA32_APIC_BASE:
+        // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
+        // @billn todo expose #define for dedup
+        //                          enable    is boot cpu
+        result = 0xFFFE0000 | BIT(11) | BIT(8);
         break;
     default:
         LOG_VMM_ERR("unknown rdmsr 0x%x\n", vctx->ecx);
         return false;
     }
 
+    vctx->eax = result & 0xffffffff;
+    vctx->edx = (result >> 32) & 0xffffffff;
     return true;
 }
 

@@ -124,6 +124,7 @@ struct madt_ioapic {
 // TODO: when creating MADT, get the user to pass the address of APIC that is definitely
 // outside of RAM, or determine it ourselves.
 
+// @billn dedup
 // This just matches the x86 CPU default physical address from
 // See bit 9 of 'Table 1-20. More on Feature Information Returned in the EDX Register'.
 #define MADT_LOCAL_APIC_ADDR 0xFFFE0000

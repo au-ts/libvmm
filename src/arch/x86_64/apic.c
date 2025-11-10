@@ -13,6 +13,7 @@
 #endif
 
 #define REG_LAPIC_ID 0x20
+#define REG_LAPIC_REV 0x30
 
 struct lapic_regs {
     uint32_t id;
@@ -20,33 +21,23 @@ struct lapic_regs {
 
 struct lapic_regs lapic_regs;
 
-bool apic_handle_read(uint64_t offset) {
-    switch (offset) {
-    case REG_LAPIC_ID:
-        return lapic_regs.id;
-    default:
-        LOG_VMM_ERR("unknown LAPIC offset: 0x%lx\n", offset);
-        return false;
-    }
-}
-
-bool apic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins) {
+bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins) {
     // TODO: support other alignments?
     assert(offset % 4 == 0);
-    // if (ept_fault_is_read(qualification)) {
-    //     LOG_APIC("handling read at offset 0x%lx\n", offset);
-    // } else if (ept_fault_is_write(qualification)) {
-    //     LOG_APIC("handling write at offset 0x%lx\n", offset);
-    // }
+    if (ept_fault_is_read(qualification)) {
+        LOG_APIC("handling LAPIC read at offset 0x%lx\n", offset);
+    } else if (ept_fault_is_write(qualification)) {
+        LOG_APIC("handling LAPIC write at offset 0x%lx\n", offset);
+    }
 
     uint64_t *vctx_raw = (uint64_t *) vctx;
 
     if (ept_fault_is_read(qualification)) {
         switch (offset) {
-            case 0x20:
+            case REG_LAPIC_ID:
                 vctx_raw[decoded_mem_ins.target_reg] = 0;
                 break;
-            case 0x30:
+            case REG_LAPIC_REV:
                 vctx_raw[decoded_mem_ins.target_reg] = 0x10;
                 break;
             default:

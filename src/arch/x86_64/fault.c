@@ -150,8 +150,9 @@ char *fault_to_string(int exit_reason) {
     return exit_reason_strs[exit_reason];
 }
 
-#define APIC_BASE 0xFFFE0000
-#define APIC_SIZE 0x1000
+// @billn dedup
+#define LAPIC_BASE 0xFFFE0000
+#define LAPIC_SIZE 0x1000
 
 /* Table 29-7. Exit Qualification for EPT Violations */
 #define EPT_VIOLATION_READ (1 << 0)
@@ -169,8 +170,8 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
-    if (addr >= APIC_BASE && addr < APIC_BASE + APIC_SIZE) {
-        return apic_fault_handle(vctx, addr - APIC_BASE, qualification, decoded_mem_ins);
+    if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
+        return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
     }
 
     return false;
