@@ -54,9 +54,6 @@
 #define PAGE_SIZE_2M 0x200000
 
 #define RAM_START_GPA 0x0
-// @billn, Linux boot protocol expects zero page GPA to be in %rsi at entry,
-// but there is no way to set this in seL4, so leaving it as zero since all
-// registers are conveniently zero on entry, revisit.
 #define ZERO_PAGE_GPA 0x0
 #define CMDLINE_GPA 0x1000
 #define GDT_GPA 0x2000
