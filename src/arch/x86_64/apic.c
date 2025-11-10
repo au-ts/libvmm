@@ -82,10 +82,18 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
             switch (ioapic_regs.selected_reg) {
                 case 0:
                     vctx_raw[decoded_mem_ins.target_reg] = 0;
+                    break;
                 case 1:
                     // supports 64 irqs
                     // @billn move to #define
-                    vctx_raw[decoded_mem_ins.target_reg] = 128 << 16;
+                    vctx_raw[decoded_mem_ins.target_reg] = 64 << 16;
+                    break;
+                case 2:
+                    vctx_raw[decoded_mem_ins.target_reg] = 0;
+                    break;
+                default:
+                    LOG_VMM_ERR("Reading unknown I/O APIC register 0x%x\n", ioapic_regs.selected_reg);
+                    return false;
             }
         } else {
             LOG_VMM_ERR("Reading unknown I/O APIC register offset 0x%x\n", offset);
