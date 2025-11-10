@@ -10,8 +10,10 @@
 #include <stddef.h>
 #include <microkit.h>
 
-bool fault_is_write(seL4_Word qualification);
-bool fault_is_read(seL4_Word qualification);
+bool ept_fault_is_write(seL4_Word qualification);
+bool ept_fault_is_read(seL4_Word qualification);
 
+char *fault_to_string(int exit_reason);
 /* @billn revisit, seL4 vmexit doesnt have msginfo! */
+
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip);
