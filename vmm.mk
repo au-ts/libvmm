@@ -31,7 +31,6 @@ AARCH64_FILES := src/arch/aarch64/fault.c \
 X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/linux.c \
 			   src/arch/x86_64/vcpu.c \
-			   src/arch/x86_64/vmcs.c \
 			   src/arch/x86_64/virq.c \
 			   src/arch/x86_64/cpuid.c \
 			   src/arch/x86_64/msr.c \

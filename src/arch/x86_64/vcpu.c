@@ -36,8 +36,8 @@ void vcpu_print_regs(size_t vcpu_id) {
     seL4_Word interruptability = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_INT_MR);
     seL4_Word cr3 = microkit_mr_get(SEL4_VMENTER_FAULT_CR3_MR);
 
-    seL4_Word rip = vmcs_read(vcpu_id, VMX_GUEST_RIP);
-    seL4_Word rsp = vmcs_read(vcpu_id, VMX_GUEST_RSP);
+    seL4_Word rip = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RIP);
+    seL4_Word rsp = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RSP);
 
     seL4_Word eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
     seL4_Word ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
@@ -92,7 +92,3 @@ void vcpu_print_regs(size_t vcpu_id) {
     // printf("\n");
 }
 
-void vcpu_msr_write(size_t vcpu_id, seL4_Word field, seL4_Word value) {
-    seL4_X86_VCPU_WriteMSR_t result = seL4_X86_VCPU_WriteMSR(BASE_VCPU_CAP + vcpu_id, field, value);
-    assert(result.error == seL4_NoError);
-}

@@ -125,11 +125,11 @@ uint64_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_
 
     LOG_VMM("getting instruction at GVA 0x%lx\n", rip);
 
-    seL4_Word cr4 = vmcs_read(vcpu_id, VMX_GUEST_CR4);
+    seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
     LOG_VMM("cr4: 0x%lx\n", cr4);
 
 
-    seL4_Word pml4_gpa = vmcs_read(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
+    seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
     seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
     seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
     LOG_VMM("pml4_gpa: 0x%lx\n", pml4_gpa);
@@ -228,7 +228,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
     };
 
     if (success) {
-        seL4_X86_VCPU_WriteRegisters(BASE_VCPU_CAP + vcpu_id, &vctx);
+        microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
     } else {
         LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);

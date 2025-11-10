@@ -32,7 +32,7 @@
 bool emulate_rdmsr(seL4_VCPUContext *vctx) {
     switch (vctx->ecx) {
     case MSR_EFER: {
-        uint32_t efer_low = (uint32_t) vmcs_read(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
+        uint32_t efer_low = (uint32_t) microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
         vctx->eax = efer_low;
         vctx->edx = 0;
         break;
@@ -57,7 +57,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx) {
 
     switch (vctx->ecx) {
     case MSR_EFER:
-        vmcs_write(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, vctx->eax);
+        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, vctx->eax);
         break;
     case MSR_TEST_CTRL:
     case IA32_BIOS_SIGN_ID:
@@ -65,7 +65,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx) {
     case MSR_STAR:
     case MSR_LSTAR:
     case MSR_SYSCALL_MASK:
-        vcpu_msr_write(GUEST_BOOT_VCPU_ID, vctx->ecx, (vctx->edx << 32) | (vctx->eax));
+        microkit_vcpu_x86_write_msr(GUEST_BOOT_VCPU_ID, vctx->ecx, (vctx->edx << 32) | (vctx->eax));
         return true;
     default:
         LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);

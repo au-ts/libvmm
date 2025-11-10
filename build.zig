@@ -42,7 +42,6 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/fault.c",
     "src/arch/x86_64/vcpu.c",
     "src/arch/x86_64/virq.c",
-    "src/arch/x86_64/vmcs.c",
     "src/arch/x86_64/cpuid.c",
     "src/arch/x86_64/msr.c",
     "src/arch/x86_64/acpi.c",
