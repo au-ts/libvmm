@@ -154,6 +154,9 @@ char *fault_to_string(int exit_reason) {
 #define LAPIC_BASE 0xFFFE0000
 #define LAPIC_SIZE 0x1000
 
+#define IOAPIC_BASE 0x11000000
+#define IOAPIC_SIZE 0x1000
+
 /* Table 29-7. Exit Qualification for EPT Violations */
 #define EPT_VIOLATION_READ (1 << 0)
 #define EPT_VIOLATION_WRITE (1 << 1)
@@ -172,6 +175,8 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
 
     if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
         return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
+    } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
+        return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
     }
 
     return false;

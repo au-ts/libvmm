@@ -95,7 +95,7 @@ struct xsdt {
 // TODO: do not hard-code this address
 #define IOAPIC_ADDRESS 0x11000000
 // TODO: do this properly?
-#define IOAPIC_GLOBAL_IRQ_BASE 128
+// #define IOAPIC_GLOBAL_IRQ_BASE 128
 
 struct madt_irq_controller {
     uint8_t type;
@@ -177,7 +177,7 @@ static void madt_build(struct madt *madt) {
         .id = 0,
         .res = 0,
         .address = IOAPIC_ADDRESS,
-        .global_system_irq_base = IOAPIC_GLOBAL_IRQ_BASE,
+        .global_system_irq_base = 0,
     };
 
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
