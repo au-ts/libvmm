@@ -18,6 +18,8 @@
 
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
+ * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
+ *   [2a] Location: Table C-1 "VMX BASIC EXIT REASONS", page: "Vol. 3D C-1"
  */
 
 /* Exit reasons. 
@@ -78,8 +80,72 @@ enum exit_reasons {
     VMX_PREEMPTION_TIMER = 0x34,
     INVVPID = 0x35,
     WBINVD = 0x36,
-    XSETBV = 0x37
+    XSETBV = 0x37,
+    NUM_EXIT_REASONS = 0x38,
 };
+
+/* [2a] */
+static char *exit_reason_strs[NUM_EXIT_REASONS] = {
+    "Exception or non-maskable interrupt (NMI)",
+    "External interrupt",
+    "Triple Fault",
+    "INIT signal",
+    "Start-up IPI (SIPI)",
+    "I/O system-management interrupt (SMI)",
+    "Other SMI",
+    "Interrupt window",
+    "NMI window",
+    "Task switch",
+    "CPUID",
+    "GETSEC",
+    "HLT",
+    "INVD",
+    "INVLPG",
+    "RDPMC",
+    "RDTSC",
+    "RSM",
+    "VMCALL",
+    "VMCLEAR",
+    "VMLAUNCH",
+    "VMPTRLD",
+    "VMPTRST",
+    "VMREAD",
+    "VMRESUME",
+    "VMWRITE",
+    "VMXOFF",
+    "VMXON",
+    "Control-register accesses",
+    "MOV DR",
+    "I/O instruction",
+    "RDMSR",
+    "WRMSR",
+    "VM-entry failure due to invalid guest state",
+    "VM-entry failure due to MSR loading",
+    "MWAIT",
+    "Monitor trap flag",
+    "MONITOR",
+    "PAUSE",
+    "VM-entry failure due to machine-check event",
+    "TPR below threshold",
+    "APIC access",
+    "Virtualized EOI",
+    "Access to GDTR or IDTR",
+    "Access to LDTR or TR",
+    "EPT violation",
+    "EPT misconfiguration",
+    "INVEPT",
+    "RDTSCP",
+    "VMX-preemption timer expired",
+    "INVVPID",
+    "WBINVD or WBNOINVD",
+    "XSETBV",
+    "APIC write"
+};
+
+char *fault_to_string(int exit_reason) {
+    assert(exit_reason < NUM_EXIT_REASONS);
+    return exit_reason_strs[exit_reason];
+}
 
 #define APIC_BASE 0xFFFE0000
 #define APIC_SIZE 0x1000
@@ -88,12 +154,16 @@ enum exit_reasons {
 #define EPT_VIOLATION_READ (1 << 0)
 #define EPT_VIOLATION_WRITE (1 << 1)
 
-bool fault_is_read(seL4_Word qualification) {
+bool ept_fault_is_read(seL4_Word qualification) {
     return qualification & EPT_VIOLATION_READ;
 }
 
-bool fault_is_write(seL4_Word qualification) {
+bool ept_fault_is_write(seL4_Word qualification) {
     return qualification & EPT_VIOLATION_WRITE;
+}
+
+bool pt_page_present(seL4_Word pte) {
+    return pte & BIT(7);
 }
 
 bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
@@ -106,82 +176,6 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
 
     return false;
 }
-
-#define X86_MAX_INSTRUCTION_LENGTH 15
-
-extern uint64_t guest_ram_vaddr;
-
-/* Convert guest physical address to the VMM's virtual memory. */
-void *gpa_to_vaddr(uint64_t gpa) {
-    return (void *)(guest_ram_vaddr + gpa);
-}
-
-seL4_Word pte_to_gpa(seL4_Word pte) {
-    assert(pte & 1);
-    return pte & 0xffffffffff000;
-}
-
-uint64_t fault_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len) {
-
-    LOG_VMM("getting instruction at GVA 0x%lx\n", rip);
-
-    seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
-    LOG_VMM("cr4: 0x%lx\n", cr4);
-
-
-    seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
-    seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
-    seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
-    LOG_VMM("pml4_gpa: 0x%lx\n", pml4_gpa);
-    LOG_VMM("pml4_idx: 0x%lx\n", pml4_idx);
-
-    seL4_Word pdpt_gpa = pte_to_gpa(pml4[pml4_idx]);
-    uint64_t *pdpt = gpa_to_vaddr(pdpt_gpa);
-    seL4_Word pdpt_idx = (rip >> (12 + (9 * 2))) & 0x1ff;
-    LOG_VMM("pdpt_gpa: 0x%lx\n", pdpt_gpa);
-    LOG_VMM("pdpt_idx: 0x%lx\n", pdpt_idx);
-
-    seL4_Word pd_gpa = pte_to_gpa(pdpt[pdpt_idx]);
-    uint64_t *pd = gpa_to_vaddr(pd_gpa);
-    seL4_Word pd_idx = (rip >> (12 + (9 * 1))) & 0x1ff;
-    LOG_VMM("pd_gpa: 0x%lx\n", pd_gpa);
-    LOG_VMM("pd_idx: 0x%lx\n", pd_idx);
-
-    uint64_t *page;
-    if (pd[pd_idx] & BIT(7)) {
-        LOG_VMM("uh oh big page\n");
-        seL4_Word page_gpa = pte_to_gpa((pd[pd_idx])) | (rip & 0x1fffff);
-        page = gpa_to_vaddr(page_gpa);
-    } else {
-        LOG_VMM_ERR("implement me\n");
-        assert(false);
-    }
-
-    // seL4_Word pt_gpa = pte_to_gpa(pd[pd_idx]);
-    // uint64_t *pt = gpa_to_vaddr(pt_gpa);
-    // seL4_Word pt_idx = (rip >> (12)) & 0x1ff;
-    // LOG_VMM("pt_gpa: 0x%lx\n", pt_gpa);
-    // LOG_VMM("pt_idx: 0x%lx\n", pt_idx);
-
-    // seL4_Word page_gpa = pte_to_gpa((pt[pt_idx])) | (rip & 0xfff);
-    // LOG_VMM("pt pte: 0x%lx\n", pt[pt_idx]);
-    // LOG_VMM("page gpa: 0x%lx\n", page_gpa);
-    // uint64_t *page = gpa_to_vaddr(page_gpa);
-    // LOG_VMM("page: 0x%lx\n", page);
-
-    assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
-    uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
-    memcpy(instruction_buf, (uint8_t *)page, instruction_len);
-
-    LOG_VMM("decoded instruction:\n");
-    for (int i = 0; i < instruction_len; i++) {
-        LOG_VMM("[%d]: 0x%x\n", i, instruction_buf[i]);
-    }
-
-    return 0;
-}
-
-// @billn todo exit reason -> human frenly string
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
     bool success = false;
@@ -219,7 +213,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_wrmsr(&vctx);
             break;
         case EPT_VIOLATION:
-            fault_instruction(vcpu_id, rip, ins_len);
             success = emulate_vmfault(&vctx, qualification);
             break;
         default:

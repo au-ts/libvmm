@@ -11,6 +11,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/fault.h>
 #include <sel4/arch/vmenter.h>
 
 // void vcpu_reset(size_t vcpu_id) {
@@ -59,7 +60,7 @@ void vcpu_print_regs(size_t vcpu_id) {
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     LOG_VMM("    vm exec control = 0x%lx\n", cppc);
     LOG_VMM("    vm entry control = 0x%lx\n", vmec);
-    LOG_VMM("    fault reason = 0x%lx\n", f_reason);
+    LOG_VMM("    fault reason = 0x%lx (%s)\n", f_reason, fault_to_string(f_reason));
     LOG_VMM("    fault qualification = 0x%lx\n", f_qual);
     LOG_VMM("    instruction length = 0x%lx\n", ins_len);
     LOG_VMM("    guest physical addr = 0x%lx\n", g_p_addr);

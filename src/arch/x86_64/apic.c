@@ -33,9 +33,9 @@ bool apic_handle_read(uint64_t offset) {
 bool apic_fault_handle(uint64_t offset, seL4_Word qualification) {
     // TODO: support other alignments?
     assert(offset % 4 == 0);
-    if (fault_is_read(qualification)) {
+    if (ept_fault_is_read(qualification)) {
         LOG_APIC("handling read at offset 0x%lx\n", offset);
-    } else if (fault_is_write(qualification)) {
+    } else if (ept_fault_is_write(qualification)) {
         LOG_APIC("handling write at offset 0x%lx\n", offset);
     }
 
