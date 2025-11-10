@@ -14,6 +14,7 @@
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/msr.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/instruction.h>
 #include <sel4/arch/vmenter.h>
 
 /* Documents referenced:
@@ -121,11 +122,14 @@ static char *exit_reason_strs[NUM_EXIT_REASONS] = {
     "WRMSR",
     "VM-entry failure due to invalid guest state",
     "VM-entry failure due to MSR loading",
+    "",
     "MWAIT",
     "Monitor trap flag",
+    "",
     "MONITOR",
     "PAUSE",
     "VM-entry failure due to machine-check event",
+    "",
     "TPR below threshold",
     "APIC access",
     "Virtualized EOI",
@@ -139,7 +143,6 @@ static char *exit_reason_strs[NUM_EXIT_REASONS] = {
     "INVVPID",
     "WBINVD or WBNOINVD",
     "XSETBV",
-    "APIC write"
 };
 
 char *fault_to_string(int exit_reason) {
@@ -162,16 +165,12 @@ bool ept_fault_is_write(seL4_Word qualification) {
     return qualification & EPT_VIOLATION_WRITE;
 }
 
-bool pt_page_present(seL4_Word pte) {
-    return pte & BIT(7);
-}
-
-bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
+bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins) {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
-    LOG_VMM("handling fault on 0x%lx, qualification: 0x%lx\n", addr, qualification);
+    // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
     if (addr >= APIC_BASE && addr < APIC_BASE + APIC_SIZE) {
-        return apic_fault_handle(addr - APIC_BASE, qualification);
+        return apic_fault_handle(vctx, addr - APIC_BASE, qualification, decoded_mem_ins);
     }
 
     return false;
@@ -179,6 +178,7 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification) {
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
     bool success = false;
+    decoded_instruction_ret_t decoded_ins;
 
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
     seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
@@ -213,7 +213,9 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_wrmsr(&vctx);
             break;
         case EPT_VIOLATION:
-            success = emulate_vmfault(&vctx, qualification);
+            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            success = emulate_vmfault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
             break;
         default:
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);

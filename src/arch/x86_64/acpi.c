@@ -160,7 +160,7 @@ static void madt_build(struct madt *madt) {
 
     struct madt_lapic lapic = {
         .entry = {
-            .type = MADT_ENTRY_TYPE_IOAPIC,
+            .type = MADT_ENTRY_TYPE_LAPIC,
             .length = MADT_ENTRY_LAPIC_LENGTH,
         },
         .acpi_processor_id = 0,
