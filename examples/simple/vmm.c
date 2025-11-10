@@ -122,10 +122,10 @@ void init(void)
 
 #ifdef CONFIG_ARCH_X86_64
     // @billn revisit
-    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 10, 0x3f8, 0x3f8 + 7);
-    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 11, 0x40, 0x40 + 3);
-    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 12, 0xcf8, 0xcf8 + 3);
-    seL4_X86_VCPU_EnableIOPort(BASE_VCPU_CAP + GUEST_BOOT_VCPU_ID, BASE_IOPORT_CAP + 13, 0xcfc, 0xcfc + 3);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 11, 0x40, 4);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
     /* Finally start the guest */
     guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
