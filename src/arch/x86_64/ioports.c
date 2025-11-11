@@ -54,6 +54,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
         assert(is_read);
         vctx->eax = 0;
         success = true;
+    } else if (port_addr == 0x80) {
+        // io port access delay, no-op
+        if (!is_read) {
+            success = true;
+        }
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }
