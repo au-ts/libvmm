@@ -124,8 +124,8 @@ void init(void)
     // @billn revisit
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 11, 0x40, 4);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
+    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
+    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
     /* Finally start the guest */
     guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
