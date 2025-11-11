@@ -16,14 +16,14 @@
 
 #define REG_LAPIC_ID 0x20
 #define REG_LAPIC_REV 0x30
+#define REG_LAPIC_SVR 0xf0
 
 #define REG_IOAPIC_IOREGSEL_OFF 0x0
 #define REG_IOAPIC_IOWIN_OFF 0x10
 
-
-
 struct lapic_regs {
     uint32_t id;
+    uint32_t svr;
 };
 
 struct lapic_regs lapic_regs;
@@ -51,7 +51,13 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 vctx_raw[decoded_mem_ins.target_reg] = 0;
                 break;
             case REG_LAPIC_REV:
-                vctx_raw[decoded_mem_ins.target_reg] = 0x10;
+                // Figure 11-7. Local APIC Version Register
+                // 32 local vector table entries. @billn is enough??
+                vctx_raw[decoded_mem_ins.target_reg] = 0x10 | 32 << 16;
+                break;
+            case REG_LAPIC_SVR:
+                // Figure 11-23. Spurious-Interrupt Vector Register (SVR)
+                vctx_raw[decoded_mem_ins.target_reg] = 0xff; // reset value
                 break;
             default:
                 LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
@@ -60,7 +66,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
     } else {
         switch (offset) {
             default:
-                LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x\n", offset);
+                LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset, vctx_raw[decoded_mem_ins.target_reg]);
                 return false;
         }
     }
