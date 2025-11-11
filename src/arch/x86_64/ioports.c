@@ -36,6 +36,26 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
             vctx->eax = 0xffffffff;
         }
         success = true;
+    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21) {
+        // PIC1/2 access
+        if (is_read) {
+            // invalid read
+            vctx->eax = 0xffffffff;
+        }
+        success = true;
+    } else if (port_addr == 0x70) {
+        // cmos select
+        assert(!is_read);
+        success = true;
+    } else if (port_addr == 0x71) {
+        // cmos data
+        // i feel like we should do this properly, because seeing things like this on console:
+        // "returned 0 after 0 usecs", so there might be issues if the timings isn't correct
+        assert(is_read);
+        vctx->eax = 0;
+        success = true;
+    } else {
+        LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }
 
     return success;

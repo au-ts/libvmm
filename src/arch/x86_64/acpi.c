@@ -130,7 +130,7 @@ struct madt_ioapic {
 #define MADT_LOCAL_APIC_ADDR 0xFFFE0000
 
 #define MADT_REVISION 5
-#define MADT_FLAGS 0
+#define MADT_FLAGS BIT(0) // PCAT_COMPAT, no 8259 present
 
 struct madt {
     struct dst_header h;
