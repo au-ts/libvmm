@@ -9,6 +9,7 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/cpuid.h>
@@ -223,9 +224,11 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             assert(decoded_ins.type == INSTRUCTION_MEMORY);
             success = emulate_vmfault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
             break;
+        case IO:
+            success = emulate_ioports(&vctx, qualification);
+            break;
         default:
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
-            vcpu_print_regs(vcpu_id);
     };
 
     if (success) {
