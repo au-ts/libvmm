@@ -6,7 +6,7 @@
 // https://wiki.osdev.org/APIC
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_APIC
+// #define DEBUG_APIC
 
 #if defined(DEBUG_APIC)
 #define LOG_APIC(...) do{ printf("%s|APIC: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -36,8 +36,11 @@
 #define REG_LAPIC_IRR_5 0x250
 #define REG_LAPIC_IRR_6 0x260
 #define REG_LAPIC_IRR_7 0x270
+#define REG_LAPIC_ESR 0x280
+#define REG_LAPIC_ICR 0x300
 #define REG_LAPIC_LVT_LINT0 0x350
 #define REG_LAPIC_LVT_LINT1 0x360
+#define REG_LAPIC_LVT_ERR 0x370
 
 #define REG_IOAPIC_IOREGSEL_MMIO_OFF 0x0
 #define REG_IOAPIC_IOWIN_MMIO_OFF 0x10
@@ -54,8 +57,10 @@ struct lapic_regs {
     uint32_t tpr;
     uint32_t isr[8];
     uint32_t irr[8];
+    uint32_t icr;
     uint32_t lint0;
     uint32_t lint1;
+    // uint32_t esr;
 };
 
 struct lapic_regs lapic_regs = {
@@ -71,6 +76,8 @@ struct lapic_regs lapic_regs = {
     .isr = { 0 },
     // Interrupt Request Register
     .irr = { 0 },
+    // Interrupt Command Register
+    .icr = 0,
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
     // Figure 11-8. Local Vector Table (LVT)
     .lint0 = 0x10000, // reset value
@@ -174,6 +181,13 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_ISR_7:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[7];
             break;
+        case REG_LAPIC_LVT_ERR:
+        case REG_LAPIC_ESR:
+            vctx_raw[decoded_mem_ins.target_reg] = 0;
+            break;
+        case REG_LAPIC_ICR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr;
+            break;
         case REG_LAPIC_LVT_LINT0:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.lint0;
             break;
@@ -197,6 +211,13 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_LVT_LINT1:
             lapic_regs.lint1 = vctx_raw[decoded_mem_ins.target_reg];
+            break;
+        case REG_LAPIC_ICR:
+            lapic_regs.icr = vctx_raw[decoded_mem_ins.target_reg];
+            break;
+        case REG_LAPIC_ESR:
+        case REG_LAPIC_LVT_ERR:
+            // lapic_regs.esr = 0;
             break;
         default:
             LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset,

@@ -53,6 +53,8 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg) {
             return RDX_IDX;
         case 6:
             return RSI_IDX;
+        case 7:
+            return RDI_IDX;
         default:
             LOG_VMM_ERR("unknown mod rm reg: 0x%x\n", reg);
             assert(false);
