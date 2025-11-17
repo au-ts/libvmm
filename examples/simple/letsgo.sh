@@ -32,7 +32,7 @@ xorriso -as mkisofs -R -r -J -b limine-bios-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
         $ISO_STAGING_DIR -o $BUILD_DIR/os-limine.iso && \
 cd $BUILD_DIR && \
-bochs -q -f $BOSHRC
+echo c | bochs -q -f $BOSHRC
 cd -
 
 # qemu-system-x86_64 \
