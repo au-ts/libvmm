@@ -10,7 +10,7 @@ SYSTEM_DIR=$EXAMPLE_DIR/board/x86_64_generic_vtx/
 BOOTLOADER_CFG=$SYSTEM_DIR/limine.cfg
 BOOTLOADER=$SYSTEM_DIR/Limine
 BOSHRC=$SYSTEM_DIR/boshsrc
-KERNEL64_ELF=$MICROKIT_SDK/board/x86_64_generic_vtx/debug/elf/sel4.elf
+KERNEL64_ELF=$BUILD_DIR/sel4.elf
 ISO_STAGING_DIR=$BUILD_DIR/iso
 
 rm -rfd $BUILD_DIR && \
