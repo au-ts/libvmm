@@ -9,7 +9,11 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 
-#define EDX_APIC (1 << 9)
+// Table 3-11. More on Feature Information Returned in the EDX Register
+#define CPUID_01_EDX_TSC (1 << 4)
+#define CPUID_01_EDX_MSR (1 << 5)
+#define CPUID_01_EDX_PAE (1 << 6)
+#define CPUID_01_EDX_APIC (1 << 9)
 
 static inline void cpuid(uint32_t leaf, uint32_t subleaf,
                          uint32_t *a, uint32_t *b,
@@ -50,14 +54,14 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
         vctx->eax = model_id | ext_model_id | family_id;
 
         /* Table 1-20. */
-        vctx->edx = EDX_APIC;
+        vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC;
 
     } else if (vctx->eax == 0x80000000) {
-        vctx->eax = 0;
+        vctx->eax = 1;
     } else if (vctx->eax == 0x80000001) {
         vctx->eax = 0;
         vctx->ecx = 0;
-        vctx->edx = (1 << 11);
+        vctx->edx = (1 << 11) | (1 << 29); // SYSCALL/SYSRET + Intel® 64
     } else {
         LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);
         return false;
