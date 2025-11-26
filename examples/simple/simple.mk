@@ -19,6 +19,9 @@ SDDF_CUSTOM_LIBC := 1
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
 IMAGES := vmm.elf
+ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+IMAGES += timer_driver.elf
+endif
 
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
@@ -128,6 +131,11 @@ endif
 
 include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
+ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+TIMER_DRIVER_DIR := hpet
+TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER_DIR)
+include ${TIMER_DRIVER}/timer_driver.mk
+endif
 
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi

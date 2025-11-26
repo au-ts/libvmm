@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
+#include <libvmm/arch/x86_64/pit.h>
 
 // intel manual
 // [1] Table 28-5. Exit Qualification for I/O Instructions
@@ -60,7 +61,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
             success = true;
         }
     } else if (port_addr == 0x61) {
+        // some sort of PS2 controller?
         success = true;
+    } else if (port_addr >= 0x40 && port_addr <= 0x43) {
+        return emulate_pit(vctx, port_addr, is_read);
+
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }
