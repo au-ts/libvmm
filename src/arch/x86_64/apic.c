@@ -182,6 +182,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[7];
             break;
         case REG_LAPIC_LVT_ERR:
+            break;
         case REG_LAPIC_ESR:
             vctx_raw[decoded_mem_ins.target_reg] = 0;
             break;

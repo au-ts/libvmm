@@ -17,6 +17,7 @@
 #elif defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/pit.h>
 #endif
 
 /*
@@ -123,7 +124,7 @@ void init(void)
 #ifdef CONFIG_ARCH_X86_64
     // @billn revisit
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 11, 0x40, 4);
+    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 11, 0x40, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
@@ -142,6 +143,10 @@ void notified(microkit_channel ch)
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
         }
+        break;
+    }
+    case TIMER_DRV_CH: {
+        pit_handle_timer_ntfn();
         break;
     }
     default:
