@@ -10,6 +10,7 @@
 #include <libvmm/arch/x86_64/cpuid.h>
 
 // Table 3-11. More on Feature Information Returned in the EDX Register
+#define CPUID_01_EDX_FPU (1 << 0)
 #define CPUID_01_EDX_TSC (1 << 4)
 #define CPUID_01_EDX_MSR (1 << 5)
 #define CPUID_01_EDX_PAE (1 << 6)
@@ -66,7 +67,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
             vctx->ebx = 0;
             // vctx->ecx = BIT(24); // TSC deadline supported
             vctx->ecx = 0;
-            vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC;
+            vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU;
             break;
         case 0x6:
             // vctx->eax = BIT(2); // ARAT. APIC-Timer-always-running feature is supported if set.
