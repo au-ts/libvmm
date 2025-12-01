@@ -25,7 +25,7 @@
     <protection_domain name="timer_driver" priority="254">
         <program_image path="timer_driver.elf" />
         <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
-        <irq pin="0" vector="0" id="0" ioapic="0" />
+        <irq pin="20" vector="30" id="0" ioapic="0" />
     </protection_domain>
 
     <channel>

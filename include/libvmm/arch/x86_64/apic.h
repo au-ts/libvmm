@@ -10,5 +10,36 @@
 #include <sel4/sel4.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
+#define LAPIC_NUM_ISR_IRR_32B 8
+
+struct lapic_regs {
+    uint32_t id;
+    uint32_t revision;
+    uint32_t svr;
+    uint32_t tpr;
+    // These two are actually 256-bit register
+    uint32_t isr[LAPIC_NUM_ISR_IRR_32B];
+    uint32_t irr[LAPIC_NUM_ISR_IRR_32B];
+    uint32_t timer;
+    uint32_t icr;
+    uint32_t lint0;
+    uint32_t lint1;
+    // uint32_t esr;
+};
+
+#define IOAPIC_LAST_INDIRECT_INDEX 0x17
+#define IOAPIC0_BASE_VECTOR 0x0
+
+struct ioapic_regs {
+    uint32_t selected_reg;
+
+    uint32_t ioapicid;
+    uint32_t ioapicver;
+    uint32_t ioapicarb;
+    uint64_t ioredtbl[IOAPIC_LAST_INDIRECT_INDEX + 1]
+};
+
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
+
+bool inject_ioapic_irq(size_t vcpu_id, int pin);

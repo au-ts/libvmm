@@ -7,6 +7,8 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/pit.h>
+#include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/guest.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
@@ -51,14 +53,11 @@ bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
                 return false;
             }
 
-            LOG_VMM("ch0 mode2 reload value 0x%x\n", global_pit.ch0_reload);
+            LOG_VMM("PIT ch0 mode2 reload value 0x%x\n", global_pit.ch0_reload);
             double tick_us = global_pit.ch0_reload * PIT_TICK_TIME_US;
             uint64_t tick_ns = (uint64_t) (tick_us * NS_IN_US);
             
-            // sddf_timer_set_timeout(TIMER_DRV_CH, tick_ns);
-
-            sddf_timer_set_timeout(TIMER_DRV_CH, 10);
-            microkit_dbg_puts("HPET client set timeout return\n");
+            sddf_timer_set_timeout(TIMER_DRV_CH, tick_ns);
         } else {
             LOG_VMM_ERR("Invalid PIT state\n");
         }
@@ -114,8 +113,11 @@ bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
 // @billn revisit whether it is correct to do it like this, looks sus af
 void pit_handle_timer_ntfn(void) {
     assert(global_pit.state == CH0_MODE2_TICKING);
-    LOG_VMM("PIT tick\n");
     double tick_us = global_pit.ch0_reload * PIT_TICK_TIME_US;
     uint64_t tick_ns = (uint64_t) (tick_us * NS_IN_US);
     sddf_timer_set_timeout(TIMER_DRV_CH, tick_ns);
+
+    // PIT ch0 irq is always 0
+
+    assert(inject_ioapic_irq(GUEST_BOOT_VCPU_ID,0));
 }

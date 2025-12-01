@@ -121,7 +121,27 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
         seL4_Word ret = seL4_VMEnter(&badge);
 
         if (ret == SEL4_VMENTER_RESULT_NOTIF) {
-            LOG_VMM("notif\n");
+            // @billn refactor
+            seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+            seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
+
+            // @billn highly fucking sus, need to incorporate vmenter into the microkit event loop
+            uint64_t is_endpoint = badge >> 63;
+            uint64_t is_fault = (badge >> 62) & 1;
+
+            assert(!is_endpoint);
+            assert(!is_fault);
+
+            unsigned int idx = 0;
+            do  {
+                if (badge & 1) {
+                    notified(idx);
+                }
+                badge >>= 1;
+                idx++;
+            } while (badge != 0);
+
+            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, rip);
         } else if (ret == SEL4_VMENTER_RESULT_FAULT) {
             uint64_t new_rip;
             assert(fault_handle(GUEST_BOOT_VCPU_ID, &new_rip));

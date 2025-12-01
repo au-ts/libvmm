@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/apic.h>
 #include <sddf/util/util.h>
 
 #define PAGE_SIZE_4K 0x1000
@@ -177,11 +178,11 @@ static void madt_build(struct madt *madt) {
         .id = 0,
         .res = 0,
         .address = IOAPIC_ADDRESS,
-        .global_system_irq_base = 0,
+        .global_system_irq_base = IOAPIC0_BASE_VECTOR,
     };
 
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
-    madt->flags = MADT_FLAGS;
+    madt->flags = 0;
 
     char *madt_end = (char *)madt + sizeof(struct madt);
 
