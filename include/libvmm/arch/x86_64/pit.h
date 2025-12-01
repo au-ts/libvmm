@@ -8,8 +8,6 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 
-#define TIMER_DRV_CH 0
-
 // Programmable Interval Timer
 bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read);
 void pit_handle_timer_ntfn(void);

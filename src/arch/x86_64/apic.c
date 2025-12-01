@@ -5,6 +5,7 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/guest.h>
 #include <sddf/util/util.h>
+#include <sddf/timer/client.h>
 
 // https://wiki.osdev.org/APIC
 
@@ -43,9 +44,13 @@
 #define REG_LAPIC_ESR 0x280
 #define REG_LAPIC_ICR 0x300
 #define REG_LAPIC_TIMER 0x320
+#define REG_LAPIC_PERF_MON_CNTER 0x340
 #define REG_LAPIC_LVT_LINT0 0x350
 #define REG_LAPIC_LVT_LINT1 0x360
 #define REG_LAPIC_LVT_ERR 0x370
+#define REG_LAPIC_INIT_CNT 0x380
+#define REG_LAPIC_CURR_CNT 0x390
+#define REG_LAPIC_DCR 0x3e0
 
 #define REG_IOAPIC_IOREGSEL_MMIO_OFF 0x0
 #define REG_IOAPIC_IOWIN_MMIO_OFF 0x10
@@ -139,7 +144,25 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_LVT_ERR:
             break;
+        case REG_LAPIC_INIT_CNT:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count;
+            break;
+        case REG_LAPIC_CURR_CNT:
+            // vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count - (sddf_timer_time_now(TIMER_DRV_CH) - lapic_regs.native_timestamp_when_count_down);
+
+            uint64_t native_ns_now = sddf_timer_time_now(TIMER_DRV_CH) / 1000;
+            uint64_t elapsed_ns = native_ns_now - lapic_regs.native_timestamp_when_count_down;
+
+            // uint64_t remaining = 0;
+            // if (elapsed_ns < lapic_regs.init_count) {
+            //     remaining = lapic_regs.init_count - elapsed_ns;
+            // }
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count - elapsed_ns;
+            break;
+            
+            break;
         case REG_LAPIC_ESR:
+        case REG_LAPIC_PERF_MON_CNTER:
             vctx_raw[decoded_mem_ins.target_reg] = 0;
             break;
         case REG_LAPIC_ICR:
@@ -150,6 +173,9 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_LVT_LINT1:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.lint1;
+            break;
+        case REG_LAPIC_DCR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.dcr;
             break;
         default:
             LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
@@ -162,6 +188,8 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_EOI:
             // @billn really sus, need to check what is the last in service interrupt and only clear that.
+            LOG_VMM("lapic EOI\n");
+            
             lapic_regs.isr[0] = 0;
             lapic_regs.isr[1] = 0;
             lapic_regs.isr[2] = 0;
@@ -185,12 +213,33 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             lapic_regs.icr = vctx_raw[decoded_mem_ins.target_reg];
             break;
         case REG_LAPIC_TIMER:
-            assert(vctx_raw[decoded_mem_ins.target_reg] == 0x10000);
             lapic_regs.timer = vctx_raw[decoded_mem_ins.target_reg];
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_LVT_ERR:
+        case REG_LAPIC_PERF_MON_CNTER:
             // lapic_regs.esr = 0;
+            break;
+        case REG_LAPIC_INIT_CNT:
+            // @billn handle case when the guest turns off the timer by writing 0
+            // Figure 11-8. Local Vector Table (LVT)
+            assert(vctx_raw[decoded_mem_ins.target_reg]);
+
+            if (lapic_regs.timer & BIT(16)) {
+                LOG_VMM("LAPIC timer started while irq MASKED\n");
+            } else {
+                LOG_VMM("LAPIC timer started while irq UNMASKED, mode 0x%x\n", (lapic_regs.timer >> 17) % 0x3);
+                
+                // make sure the guest isn't using tsc-deadline mode
+                assert(((lapic_regs.timer >> 17) & 0x3) != 0x2);
+
+                sddf_timer_set_timeout(TIMER_DRV_CH, lapic_regs.init_count);
+            }
+            lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.native_timestamp_when_count_down = sddf_timer_time_now(TIMER_DRV_CH);
+            break;
+        case REG_LAPIC_DCR:
+            lapic_regs.dcr = vctx_raw[decoded_mem_ins.target_reg];
             break;
         default:
             LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset,
@@ -283,37 +332,20 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     return true;
 }
 
-bool inject_ioapic_irq(size_t vcpu_id, int pin) {
-    if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
-        LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
-        return false;
-    }
+bool inject_lapic_irq(size_t vcpu_id, uint8_t vector) {
+    assert(vcpu_id == 0);
 
-    // step 1, read what vector the guest want the PIT irq0 to be delivered to.
-    // page 13 of the ioapic spec pdf
-    uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
-
-    // check if the irq is masked
-    if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
-        // LOG_VMM("masked pin %d, vector %d\n", pin, cpu_vector);
-        return true;
-    }
-
-    // step 2, update the LAPIC state.
-    // set the vector's bit in the interrupt request register (IRR)
-    int irr_n = cpu_vector / 32;
-    int irr_idx = cpu_vector % 32;
-
-    if (cpu_vector > 255) {
-        LOG_VMM_ERR("guest tried to inject IRQ with vector > 255\n");
-        return false;
-    }
-
+    int irr_n = vector / 32;
+    int irr_idx = vector % 32;
     if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
-        // interrupt already awaiting service, drop.
-        LOG_VMM("ioapic irq inject pin %d, vector %d dropped\n", pin, cpu_vector);
-        return true;
+        LOG_VMM("LAPIC irq inject vector %d already pending\n", vector);
+        return false;
     }
+    if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
+        LOG_VMM("LAPIC irq inject vector %d already in service\n", vector);
+        return false;
+    }
+
     // lapic_regs.irr[irr_n] |= BIT(irr_idx);
 
     // @billn properly handle interrupt priority
@@ -322,13 +354,88 @@ bool inject_ioapic_irq(size_t vcpu_id, int pin) {
     // lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
     lapic_regs.isr[irr_n] |= BIT(irr_idx);
 
-    // step 3, tell the hardware that we are injecting an irq on next vmenter.
+    assert(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) == 0);
+    assert(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9));
+
+    // step 3, tell the hardware to inject an irq on next vmenter.
     // Table 25-17. Format of the VM-Entry Interruption-Information Field
-    uint32_t vm_entry_interruption = (uint32_t) cpu_vector;
+    uint32_t vm_entry_interruption = (uint32_t) vector;
     vm_entry_interruption |= BIT(31); // valid bit
     microkit_vcpu_x86_write_vmcs(vcpu_id, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vm_entry_interruption);
 
-    // LOG_VMM("injected I/O APIC IRQ vector %d, pin %d\n",cpu_vector,pin );
+    return true;
+}
+
+bool handle_lapic_timer_nftn(size_t vcpu_id) {
+    if (!(lapic_regs.timer & BIT(16))) {
+        // timer not masked in local APIC
+
+        uint8_t vector = lapic_regs.timer & 0xff;
+        if (!inject_lapic_irq(vcpu_id, vector)) {
+            LOG_VMM_ERR("failed to inject LAPIC timer IRQ vector 0x%x\n", vector);
+            return false;
+        }
+
+        // restart timeout if periodic
+        if (((lapic_regs.timer >> 17) & 0x3) == 1) {
+            lapic_regs.native_timestamp_when_count_down = sddf_timer_time_now(TIMER_DRV_CH);
+            sddf_timer_set_timeout(TIMER_DRV_CH, lapic_regs.init_count);
+        } else {
+            assert(false);
+        }
+
+        LOG_VMM("lapic tick\n");
+    }
 
     return true;
 }
+
+// bool inject_ioapic_irq(size_t vcpu_id, int pin) {
+//     if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
+//         LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
+//         return false;
+//     }
+
+//     // step 1, read what vector the guest want the PIT irq0 to be delivered to.
+//     // page 13 of the ioapic spec pdf
+//     uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
+
+//     // check if the irq is masked
+//     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
+//         // LOG_VMM("masked pin %d, vector %d\n", pin, cpu_vector);
+//         return true;
+//     }
+
+//     // step 2, update the LAPIC state.
+//     // set the vector's bit in the interrupt request register (IRR)
+//     int irr_n = cpu_vector / 32;
+//     int irr_idx = cpu_vector % 32;
+
+//     if (cpu_vector > 255) {
+//         LOG_VMM_ERR("guest tried to inject IRQ with vector > 255\n");
+//         return false;
+//     }
+
+//     if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
+//         // interrupt already awaiting service, drop.
+//         LOG_VMM("ioapic irq inject pin %d, vector %d dropped\n", pin, cpu_vector);
+//         return true;
+//     }
+//     // lapic_regs.irr[irr_n] |= BIT(irr_idx);
+
+//     // @billn properly handle interrupt priority
+//     // sus maxxing
+//     // move request to servicing.
+//     // lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
+//     lapic_regs.isr[irr_n] |= BIT(irr_idx);
+
+//     // step 3, tell the hardware that we are injecting an irq on next vmenter.
+//     // Table 25-17. Format of the VM-Entry Interruption-Information Field
+//     uint32_t vm_entry_interruption = (uint32_t) cpu_vector;
+//     vm_entry_interruption |= BIT(31); // valid bit
+//     microkit_vcpu_x86_write_vmcs(vcpu_id, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vm_entry_interruption);
+
+//     // LOG_VMM("injected I/O APIC IRQ vector %d, pin %d\n",cpu_vector,pin );
+
+//     return true;
+// }
