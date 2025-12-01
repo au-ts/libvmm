@@ -10,6 +10,8 @@
 #include <sel4/sel4.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
+#define TIMER_DRV_CH 0
+
 #define LAPIC_NUM_ISR_IRR_32B 8
 
 struct lapic_regs {
@@ -20,6 +22,10 @@ struct lapic_regs {
     // These two are actually 256-bit register
     uint32_t isr[LAPIC_NUM_ISR_IRR_32B];
     uint32_t irr[LAPIC_NUM_ISR_IRR_32B];
+    uint32_t dcr;
+    // Native world's wall clock time when the initial count register is written.
+    uint32_t native_timestamp_when_count_down;
+    uint32_t init_count;
     uint32_t timer;
     uint32_t icr;
     uint32_t lint0;
@@ -36,10 +42,12 @@ struct ioapic_regs {
     uint32_t ioapicid;
     uint32_t ioapicver;
     uint32_t ioapicarb;
-    uint64_t ioredtbl[IOAPIC_LAST_INDIRECT_INDEX + 1]
+    uint64_t ioredtbl[IOAPIC_LAST_INDIRECT_INDEX + 1];
 };
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 
-bool inject_ioapic_irq(size_t vcpu_id, int pin);
+bool handle_lapic_timer_nftn(size_t vcpu_id);
+
+// bool inject_ioapic_irq(size_t vcpu_id, int pin);

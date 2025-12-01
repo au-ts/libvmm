@@ -8,6 +8,7 @@
 #include <microkit.h>
 
 #include <libvmm/util/util.h>
+#include <sddf/util/util.h>
 
 /* Document referenced:
  * [1] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
@@ -46,6 +47,6 @@
 /* The 32-bit EFLAGS/RFLAGS register contains a group of status flags, a control flag, and a group of system flags.
  * We don't use anything here during boot to mask all IRQs, but the 2nd bit must always be set as 1. See [1d]
  */
-#define RFLAGS_DEFAULT BIT_LOW(1)
+#define RFLAGS_DEFAULT BIT(1)
 
 void vcpu_print_regs(size_t vcpu_id);

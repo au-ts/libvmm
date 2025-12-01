@@ -26,7 +26,7 @@ bool virq_controller_init()
     // Interrupt Command Register
     lapic_regs.icr = 0;
     // LVT Timer Register
-    lapic_regs.timer = 0x00010000; // reset value
+    lapic_regs.timer = 0x00010000; // reset value, masked.
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
     // Figure 11-8. Local Vector Table (LVT)
     lapic_regs.lint0 = 0x10000; // reset value

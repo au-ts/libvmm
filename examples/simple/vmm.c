@@ -17,7 +17,7 @@
 #elif defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
-#include <libvmm/arch/x86_64/pit.h>
+#include <libvmm/arch/x86_64/apic.h>
 #include <sddf/timer/client.h>
 #endif
 
@@ -38,7 +38,7 @@
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_CMDLINE "nokaslr earlyprintk=serial,0x3f8,115200 debug initcall_debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8 apic=debug"
+#define GUEST_CMDLINE "nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8 apic=debug"
 #else
 #error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
 #endif
@@ -131,9 +131,8 @@ void init(void)
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
-    LOG_VMM("Self-testing timeout\n");
-    LOG_VMM("Current timestamp is %lu\n", sddf_timer_time_now(TIMER_DRV_CH));
-    sddf_timer_set_timeout(TIMER_DRV_CH, NS_IN_MS);
+    LOG_VMM("Testing timer...\n");
+    sddf_timer_set_timeout(TIMER_DRV_CH, NS_IN_S);
 #endif
 }
 
@@ -149,11 +148,11 @@ void notified(microkit_channel ch)
     }
     case TIMER_DRV_CH: {
         if (x86_timer_self_test) {
-            LOG_VMM("Self-test timeout passed, starting guest...\n");
+            LOG_VMM("Timer ticked\n");
             x86_timer_self_test = false;
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
         } else {
-            pit_handle_timer_ntfn();
+            assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));
         }
         break;
     }
