@@ -2,6 +2,9 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/guest.h>
+#include <sddf/util/util.h>
 
 // https://wiki.osdev.org/APIC
 
@@ -18,8 +21,9 @@
 #define REG_LAPIC_ID 0x20
 #define REG_LAPIC_REV 0x30
 #define REG_LAPIC_TPR 0x80
+#define REG_LAPIC_EOI 0xb0
 #define REG_LAPIC_SVR 0xf0
-// @billn can make this less hardcodey
+// @billn make this less hardcodey
 #define REG_LAPIC_ISR_0 0x100
 #define REG_LAPIC_ISR_1 0x110
 #define REG_LAPIC_ISR_2 0x120
@@ -38,6 +42,7 @@
 #define REG_LAPIC_IRR_7 0x270
 #define REG_LAPIC_ESR 0x280
 #define REG_LAPIC_ICR 0x300
+#define REG_LAPIC_TIMER 0x320
 #define REG_LAPIC_LVT_LINT0 0x350
 #define REG_LAPIC_LVT_LINT1 0x360
 #define REG_LAPIC_LVT_ERR 0x370
@@ -50,61 +55,9 @@
 #define REG_IOAPIC_IOREDTBL_FIRST_OFF 0x10
 #define REG_IOAPIC_IOREDTBL_LAST_OFF 0x40
 
-struct lapic_regs {
-    uint32_t id;
-    uint32_t revision;
-    uint32_t svr;
-    uint32_t tpr;
-    uint32_t isr[8];
-    uint32_t irr[8];
-    uint32_t icr;
-    uint32_t lint0;
-    uint32_t lint1;
-    // uint32_t esr;
-};
-
-struct lapic_regs lapic_regs = {
-    .id = 0,
-    // Figure 11-7. Local APIC Version Register
-    // 32 local vector table entries. @billn is enough??
-    .revision = 0x10 | 32 << 16,
-    // Figure 11-18. Task-Priority Register (TPR)
-    .tpr = 0, // reset value
-    // Figure 11-23. Spurious-Interrupt Vector Register (SVR)
-    .svr = 0xff, // reset value
-    // In-Service Register
-    .isr = { 0 },
-    // Interrupt Request Register
-    .irr = { 0 },
-    // Interrupt Command Register
-    .icr = 0,
-    // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
-    // Figure 11-8. Local Vector Table (LVT)
-    .lint0 = 0x10000, // reset value
-    .lint1 = 0x10000, // reset value
-};
-
-#define IOAPIC_LAST_INDIRECT_INDEX 0x17
-
-struct ioapic_regs {
-    uint32_t selected_reg;
-
-    uint32_t ioapicid;
-    uint32_t ioapicver;
-    uint32_t ioapicarb;
-    uint64_t ioredtbl[IOAPIC_LAST_INDIRECT_INDEX + 1]
-};
-
+struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
-struct ioapic_regs ioapic_regs = {
-    .selected_reg = 0,
-
-    .ioapicid = 0,
-    // default value for the Intel 82093AA IOAPIC.
-    // supports 0x17 indirection entries.
-    .ioapicver = 0x11 | (IOAPIC_LAST_INDIRECT_INDEX << 16),
-    .ioapicarb = 0,
-};
+struct ioapic_regs ioapic_regs;
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                         memory_instruction_data_t decoded_mem_ins)
@@ -181,6 +134,9 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_ISR_7:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[7];
             break;
+        case REG_LAPIC_TIMER:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.timer;
+            break;
         case REG_LAPIC_LVT_ERR:
             break;
         case REG_LAPIC_ESR:
@@ -204,6 +160,18 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_TPR:
             lapic_regs.tpr = vctx_raw[decoded_mem_ins.target_reg];
             break;
+        case REG_LAPIC_EOI:
+            // @billn really sus, need to check what is the last in service interrupt and only clear that.
+            lapic_regs.isr[0] = 0;
+            lapic_regs.isr[1] = 0;
+            lapic_regs.isr[2] = 0;
+            lapic_regs.isr[3] = 0;
+            lapic_regs.isr[4] = 0;
+            lapic_regs.isr[5] = 0;
+            lapic_regs.isr[6] = 0;
+            lapic_regs.isr[7] = 0;
+
+            break;
         case REG_LAPIC_SVR:
             lapic_regs.svr = vctx_raw[decoded_mem_ins.target_reg];
             break;
@@ -215,6 +183,10 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_ICR:
             lapic_regs.icr = vctx_raw[decoded_mem_ins.target_reg];
+            break;
+        case REG_LAPIC_TIMER:
+            assert(vctx_raw[decoded_mem_ins.target_reg] == 0x10000);
+            lapic_regs.timer = vctx_raw[decoded_mem_ins.target_reg];
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_LVT_ERR:
@@ -250,9 +222,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
             } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICARB_REG_OFF) {
                 vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioapicarb;
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
-                       && ioapic_regs.selected_reg < REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((offset - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
-                int is_high = offset & 0x1;
+                       && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
+                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
+                int is_high = ioapic_regs.selected_reg & 0x1;
+
+                LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
 
                 if (is_high) {
                     vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
@@ -271,15 +245,17 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     } else {
         if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
             ioapic_regs.selected_reg = vctx_raw[decoded_mem_ins.target_reg] & 0xff;
-            LOG_APIC("selecting I/O APIC register 0x%x\n", ioapic_regs.selected_reg);
+            LOG_VMM("selecting I/O APIC register 0x%x\n", ioapic_regs.selected_reg);
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
                 LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", vctx_raw[decoded_mem_ins.target_reg]);
                 ioapic_regs.ioapicid = vctx_raw[decoded_mem_ins.target_reg];
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
-                       && ioapic_regs.selected_reg < REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((offset - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
-                int is_high = offset & 0x1;
+                       && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
+                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
+                int is_high = ioapic_regs.selected_reg & 0x1;
+
+                LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
 
                 if (is_high) {
                     uint64_t new_high = vctx_raw[decoded_mem_ins.target_reg] << 32;
@@ -290,6 +266,10 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                     uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
                     ioapic_regs.ioredtbl[redirection_reg_idx] = new_low | high;
                 }
+
+                
+                LOG_VMM("written value for redirection %d is %lx\n", redirection_reg_idx, ioapic_regs.ioredtbl[redirection_reg_idx]);
+                
             } else {
                 LOG_VMM_ERR("Writing unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);
                 return false;
@@ -299,6 +279,56 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
             return false;
         }
     }
+
+    return true;
+}
+
+bool inject_ioapic_irq(size_t vcpu_id, int pin) {
+    if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
+        LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
+        return false;
+    }
+
+    // step 1, read what vector the guest want the PIT irq0 to be delivered to.
+    // page 13 of the ioapic spec pdf
+    uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
+
+    // check if the irq is masked
+    if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
+        // LOG_VMM("masked pin %d, vector %d\n", pin, cpu_vector);
+        return true;
+    }
+
+    // step 2, update the LAPIC state.
+    // set the vector's bit in the interrupt request register (IRR)
+    int irr_n = cpu_vector / 32;
+    int irr_idx = cpu_vector % 32;
+
+    if (cpu_vector > 255) {
+        LOG_VMM_ERR("guest tried to inject IRQ with vector > 255\n");
+        return false;
+    }
+
+    if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
+        // interrupt already awaiting service, drop.
+        LOG_VMM("ioapic irq inject pin %d, vector %d dropped\n", pin, cpu_vector);
+        return true;
+    }
+    // lapic_regs.irr[irr_n] |= BIT(irr_idx);
+
+    // @billn properly handle interrupt priority
+    // sus maxxing
+    // move request to servicing.
+    // lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
+    lapic_regs.isr[irr_n] |= BIT(irr_idx);
+
+    // step 3, tell the hardware that we are injecting an irq on next vmenter.
+    // Table 25-17. Format of the VM-Entry Interruption-Information Field
+    uint32_t vm_entry_interruption = (uint32_t) cpu_vector;
+    vm_entry_interruption |= BIT(31); // valid bit
+    microkit_vcpu_x86_write_vmcs(vcpu_id, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vm_entry_interruption);
+
+    // LOG_VMM("injected I/O APIC IRQ vector %d, pin %d\n",cpu_vector,pin );
 
     return true;
 }

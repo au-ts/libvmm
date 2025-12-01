@@ -1,9 +1,11 @@
 megs:                   1024
-cpu:                    count=1, ips=35000000, reset_on_triple_fault=1, model=corei7_skylake_x
+cpu:                    count=1, ips=40000000, reset_on_triple_fault=1, model=corei7_skylake_x
 
 ata0:                   enabled=1, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
 ata0-master:            type=cdrom, path="os-limine.iso", status=inserted
 boot:                   cdrom
+
+pci: enabled=1, chipset=i440fx
 
 display_library:        nogui
 

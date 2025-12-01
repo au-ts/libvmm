@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/pit.h>
+#include <sddf/timer/client.h>
 #endif
 
 /*
@@ -71,6 +72,9 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+bool x86_timer_self_test = true;
+linux_x86_setup_ret_t linux_setup;
+
 static void serial_ack(size_t vcpu_id, int irq, void *cookie)
 {
     /*
@@ -99,7 +103,6 @@ void init(void)
         return;
     }
 #elif defined(CONFIG_ARCH_X86_64)
-    linux_x86_setup_ret_t linux_setup;
     if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0,
                             GUEST_CMDLINE, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
@@ -128,10 +131,9 @@ void init(void)
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
-    /* Finally start the guest */
-    guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
-#else
-    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR, null);
+    LOG_VMM("Self-testing timeout\n");
+    LOG_VMM("Current timestamp is %lu\n", sddf_timer_time_now(TIMER_DRV_CH));
+    sddf_timer_set_timeout(TIMER_DRV_CH, NS_IN_MS);
 #endif
 }
 
@@ -146,7 +148,13 @@ void notified(microkit_channel ch)
         break;
     }
     case TIMER_DRV_CH: {
-        pit_handle_timer_ntfn();
+        if (x86_timer_self_test) {
+            LOG_VMM("Self-test timeout passed, starting guest...\n");
+            x86_timer_self_test = false;
+            guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
+        } else {
+            pit_handle_timer_ntfn();
+        }
         break;
     }
     default:

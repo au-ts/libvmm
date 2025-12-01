@@ -11,12 +11,17 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 
+// Table 2-2. IA-32 Architectural MSRs
+
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
 
 #define IA32_APIC_BASE (0x1b)
+#define IA32_FEATURE_CONTROL (0x3a)
+#define MISC_FEATURE_ENABLES (0x140)
+#define MSR_PLATFORM_INFO (0xce)
 
 #define MSR_TEST_CTRL (0x33)
 
@@ -44,12 +49,17 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx) {
     case IA32_MISC_ENABLE:
     case IA32_BIOS_SIGN_ID:
     case MSR_TEST_CTRL:
+    case MISC_FEATURE_ENABLES:
+    case MSR_PLATFORM_INFO:
         break;
     case IA32_APIC_BASE:
         // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
         // @billn todo expose #define for dedup
         //                          enable    is boot cpu
         result = 0xFFFE0000 | BIT(11) | BIT(8);
+        break;
+    case IA32_FEATURE_CONTROL:
+        result = 1; // locked
         break;
     default:
         LOG_VMM_ERR("unknown rdmsr 0x%x\n", vctx->ecx);
@@ -67,9 +77,10 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx) {
     case MSR_EFER:
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, vctx->eax);
         break;
-    case MSR_TEST_CTRL:
     case IA32_BIOS_SIGN_ID:
+    case MISC_FEATURE_ENABLES:
         return true;
+    case MSR_TEST_CTRL:
     case MSR_STAR:
     case MSR_LSTAR:
     case MSR_SYSCALL_MASK:
