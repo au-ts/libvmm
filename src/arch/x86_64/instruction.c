@@ -87,6 +87,10 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
         // 2MiB page
         seL4_Word page_gpa = pte_to_gpa((pd[pd_idx])) | (rip & 0x1fffff);
         page = gpa_to_vaddr(page_gpa);
+
+        // @billn todo
+        // instruction that crosses a page boundary is unimplemented, bail...
+        assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x200000));
     } else {
         // 4k page
         seL4_Word pt_gpa = pte_to_gpa(pd[pd_idx]);
@@ -95,6 +99,10 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
         seL4_Word page_gpa = pte_to_gpa((pt[pt_idx])) | (rip & 0xfff);
         page = gpa_to_vaddr(page_gpa);
+
+        // @billn todo
+        // instruction that crosses a page boundary is unimplemented, bail...
+        assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x1000));
     }
 
     // @billn I really think something more "industrial grade" should be used for a job like this.
