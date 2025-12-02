@@ -38,6 +38,6 @@
     </channel>
     <channel>
         <end pd="timer_driver" id="3" />
-        <end pd="VMM" id="13" notify="false" pp="true" />
+        <end pd="VMM" id="12" notify="false" pp="true" />
     </channel>
 </system>

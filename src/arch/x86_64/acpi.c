@@ -202,7 +202,7 @@ static void madt_build(struct madt *madt) {
 
 #define HPET_LEGACY_IRQ_CAPABLE BIT(15)
 #define HPET_64B_COUNTER BIT(13)
-#define HPET_NUM_COMPARATORS_VALUE 3
+#define HPET_NUM_COMPARATORS_VALUE 2
 #define HPET_NUM_COMPARATORS_SHIFT 8
 
 #define HPET_GPA 0xfed00000
