@@ -53,8 +53,8 @@ struct hpet_regs {
 #define ENABLE_CNF BIT(0)
 
 static struct hpet_regs hpet_regs = {
-    .general_capabilities = REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | COUNT_SIZE_CAP | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT),
-    .general_config = LEG_RT_CNF | ENABLE_CNF,
+    .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | COUNT_SIZE_CAP | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)),
+    .general_config = (LEG_RT_CNF | ENABLE_CNF),
 };
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
@@ -87,6 +87,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                     LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                     return false;
                 }
+                break;
             case GENERAL_CONFIG_REG_MMIO_OFF:
                 vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_config;
                 break;

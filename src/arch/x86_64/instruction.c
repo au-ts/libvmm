@@ -21,7 +21,8 @@
 #define OPCODE_MOV_WORD_TO_MEM 0x89
 #define OPCODE_MOV_BYTE_FROM_MEM 0x8a
 #define OPCODE_MOV_WORD_FROM_MEM 0x8b
-static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM, OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
+static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM,
+                                                OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
 extern uint64_t guest_ram_vaddr;
 
@@ -37,27 +38,31 @@ seL4_Word pte_to_gpa(seL4_Word pte)
     return pte & 0xffffffffff000;
 }
 
-bool pt_page_present(seL4_Word pte) {
+bool pt_page_present(seL4_Word pte)
+{
     return pte & BIT(7);
 }
 
-static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg) {
+static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg)
+{
     switch (reg) {
-        case 0:
-            return RAX_IDX;
-        case 1:
-            return RBX_IDX;
-        case 2:
-            return RCX_IDX;
-        case 3:
-            return RDX_IDX;
-        case 6:
-            return RSI_IDX;
-        case 7:
-            return RDI_IDX;
-        default:
-            LOG_VMM_ERR("unknown mod rm reg: 0x%x\n", reg);
-            assert(false);
+    case 0:
+        return RAX_IDX;
+    case 1:
+        return RCX_IDX;
+    case 2:
+        return RDX_IDX;
+    case 3:
+        return RBX_IDX;
+    case 5:
+        return RBP_IDX;
+    case 6:
+        return RSI_IDX;
+    case 7:
+        return RDI_IDX;
+    default:
+        LOG_VMM_ERR("unknown mod rm reg: 0x%x\n", reg);
+        assert(false);
     }
 }
 
@@ -112,7 +117,7 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
         // An opcode can be multi-bytes, but `mov`s are only 1-byte
         if (instruction_buf[0] == mov_opcodes[i]) {
             opcode_valid = true;
-            
+
             // An opcode byte is followed by a ModR/M byte to encode src/dest register.
             uint8_t modrm = instruction_buf[1];
             // uint8_t mod = modrm >> 6;
@@ -121,22 +126,24 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
             ret.type = INSTRUCTION_MEMORY;
             switch (instruction_buf[0]) {
-                case OPCODE_MOV_BYTE_TO_MEM:
-                case OPCODE_MOV_BYTE_FROM_MEM:
-                    ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
-                    break;
-                case OPCODE_MOV_WORD_TO_MEM:
-                case OPCODE_MOV_WORD_FROM_MEM:
-                    // @billn revisit 16-byte access decoding
-                    ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
-                    break;
+            case OPCODE_MOV_BYTE_TO_MEM:
+            case OPCODE_MOV_BYTE_FROM_MEM:
+                ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
+                break;
+            case OPCODE_MOV_WORD_TO_MEM:
+            case OPCODE_MOV_WORD_FROM_MEM:
+                // @billn revisit 16-byte access decoding
+                ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
+                break;
             }
-            
+
             ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg);
 
             break;
         }
     }
+
+    assert(opcode_valid);
 
     // LOG_VMM("raw instruction:\n");
     // for (int i = 0; i < instruction_len; i++) {
