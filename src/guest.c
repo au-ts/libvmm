@@ -120,8 +120,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
 
-        assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_INTERRUPTION_INFO) >> 31 == 0);
-
         if (ret == SEL4_VMENTER_RESULT_NOTIF) {
             // @billn refactor
             uint64_t rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);

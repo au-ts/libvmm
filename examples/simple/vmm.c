@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/pit.h>
 #include <sddf/timer/client.h>
 #endif
 
@@ -133,7 +134,7 @@ void init(void)
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
     LOG_VMM("Detecting TSC frequency...\n");
-    sddf_timer_set_timeout(TIMER_DRV_CH, NS_IN_S);
+    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
     tsc_pre = rdtsc();
 #endif
 }
@@ -148,7 +149,7 @@ void notified(microkit_channel ch)
         }
         break;
     }
-    case TIMER_DRV_CH: {
+    case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
             tsc_post = rdtsc();
             uint64_t tsc_hz = tsc_post - tsc_pre;
@@ -161,13 +162,15 @@ void notified(microkit_channel ch)
                 LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
                 return;
             }
-
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
         } else {
             assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));
         }
         break;
     }
+    case TIMER_DRV_CH_FOR_PIT:
+        pit_handle_timer_ntfn();
+        break;
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);
     }

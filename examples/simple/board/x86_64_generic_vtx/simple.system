@@ -30,6 +30,14 @@
 
     <channel>
         <end pd="timer_driver" id="1" />
-        <end pd="VMM" id="0" notify="false" pp="true" />
+        <end pd="VMM" id="10" notify="false" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="2" />
+        <end pd="VMM" id="11" notify="false" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="3" />
+        <end pd="VMM" id="13" notify="false" pp="true" />
     </channel>
 </system>
