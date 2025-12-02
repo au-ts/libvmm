@@ -114,14 +114,17 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 
     microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, kernel_pc);
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, VMCS_ENTRY_CTRL_DEfAULT);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, 0);
 
     while (true) {
         seL4_Word badge;
         seL4_Word ret = seL4_VMEnter(&badge);
 
+        assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_INTERRUPTION_INFO) >> 31 == 0);
+
         if (ret == SEL4_VMENTER_RESULT_NOTIF) {
             // @billn refactor
+            uint64_t rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
 
             // @billn highly fucking sus, need to incorporate vmenter into the microkit event loop
             uint64_t is_endpoint = badge >> 63;
@@ -139,7 +142,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
                 idx++;
             } while (badge != 0);
 
-            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RIP));
+            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, rip);
         } else if (ret == SEL4_VMENTER_RESULT_FAULT) {
             uint64_t new_rip;
             assert(fault_handle(GUEST_BOOT_VCPU_ID, &new_rip));

@@ -72,8 +72,9 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-bool x86_timer_self_test = true;
+bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
+uint64_t tsc_pre, tsc_post;
 
 static void serial_ack(size_t vcpu_id, int irq, void *cookie)
 {
@@ -102,6 +103,13 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+
+    /* Initialise the virtual GIC driver */
+    bool success = virq_controller_init();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+        return;
+    }
 #elif defined(CONFIG_ARCH_X86_64)
     if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0,
                             GUEST_CMDLINE, &linux_setup)) {
@@ -112,14 +120,7 @@ void init(void)
 #error unsupported architecture
 #endif
 
-    /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init();
-    if (!success) {
-        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
-        return;
-    }
-
-    success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    bool success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     // @billn revisit
     // microkit_irq_ack(SERIAL_IRQ_CH);
@@ -131,8 +132,9 @@ void init(void)
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
-    LOG_VMM("Testing timer...\n");
+    LOG_VMM("Detecting TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH, NS_IN_S);
+    tsc_pre = rdtsc();
 #endif
 }
 
@@ -147,9 +149,19 @@ void notified(microkit_channel ch)
         break;
     }
     case TIMER_DRV_CH: {
-        if (x86_timer_self_test) {
-            LOG_VMM("Timer ticked\n");
-            x86_timer_self_test = false;
+        if (tsc_calibrating) {
+            tsc_post = rdtsc();
+            uint64_t tsc_hz = tsc_post - tsc_pre;
+            LOG_VMM("TSC frequency is %lu Hz\n", tsc_hz);
+            tsc_calibrating = false;
+
+            /* Initialise the virtual GIC driver */
+            bool success = virq_controller_init(tsc_hz);
+            if (!success) {
+                LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+                return;
+            }
+
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
         } else {
             assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));

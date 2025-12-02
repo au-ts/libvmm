@@ -15,6 +15,10 @@
 #define LAPIC_NUM_ISR_IRR_32B 8
 
 struct lapic_regs {
+    // @billn make a container struct?
+    // Not a LAPIC register, just bookkeeping
+    uint32_t native_tsc_when_timer_starts;
+
     uint32_t id;
     uint32_t revision;
     uint32_t svr;
@@ -23,8 +27,6 @@ struct lapic_regs {
     uint32_t isr[LAPIC_NUM_ISR_IRR_32B];
     uint32_t irr[LAPIC_NUM_ISR_IRR_32B];
     uint32_t dcr;
-    // Native world's wall clock time when the initial count register is written.
-    uint32_t native_timestamp_when_count_down;
     uint32_t init_count;
     uint32_t timer;
     uint32_t icr;
@@ -49,5 +51,6 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 
 bool handle_lapic_timer_nftn(size_t vcpu_id);
+void lapic_maintenance(void);
 
 // bool inject_ioapic_irq(size_t vcpu_id, int pin);

@@ -227,6 +227,11 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
         case IO:
             success = emulate_ioports(&vctx, qualification);
             break;
+        case INTERRUPT_WINDOW:
+            vcpu_print_regs(vcpu_id);
+            lapic_maintenance();
+            success = true;
+            break;
         default:
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };

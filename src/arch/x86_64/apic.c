@@ -4,6 +4,7 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/guest.h>
+#include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
@@ -63,6 +64,12 @@
 struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 struct ioapic_regs ioapic_regs;
+uint64_t lapic_timer_hz;
+
+static uint64_t tsc_ticks_to_ns(uint64_t tsc_hz, uint64_t tsc_ticks) {
+    double seconds = (double) tsc_ticks / (double) tsc_hz;
+    return (uint64_t) (seconds * (double) NS_IN_S);
+}
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                         memory_instruction_data_t decoded_mem_ins)
@@ -148,16 +155,14 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count;
             break;
         case REG_LAPIC_CURR_CNT:
-            // vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count - (sddf_timer_time_now(TIMER_DRV_CH) - lapic_regs.native_timestamp_when_count_down);
+            uint64_t tsc_tick_now = rdtsc();
+            uint64_t elapsed_tsc_tick = tsc_tick_now - lapic_regs.native_tsc_when_timer_starts;
 
-            uint64_t native_ns_now = sddf_timer_time_now(TIMER_DRV_CH) / 1000;
-            uint64_t elapsed_ns = native_ns_now - lapic_regs.native_timestamp_when_count_down;
-
-            // uint64_t remaining = 0;
-            // if (elapsed_ns < lapic_regs.init_count) {
-            //     remaining = lapic_regs.init_count - elapsed_ns;
-            // }
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count - elapsed_ns;
+            uint64_t remaining = 0;
+            if (elapsed_tsc_tick < lapic_regs.init_count) {
+                remaining = lapic_regs.init_count - elapsed_tsc_tick;
+            }
+            vctx_raw[decoded_mem_ins.target_reg] = remaining;
             break;
             
             break;
@@ -224,6 +229,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // @billn handle case when the guest turns off the timer by writing 0
             // Figure 11-8. Local Vector Table (LVT)
             assert(vctx_raw[decoded_mem_ins.target_reg]);
+            lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
 
             if (lapic_regs.timer & BIT(16)) {
                 LOG_VMM("LAPIC timer started while irq MASKED\n");
@@ -233,10 +239,10 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 // make sure the guest isn't using tsc-deadline mode
                 assert(((lapic_regs.timer >> 17) & 0x3) != 0x2);
 
-                sddf_timer_set_timeout(TIMER_DRV_CH, lapic_regs.init_count);
+                LOG_VMM("setting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
+                sddf_timer_set_timeout(TIMER_DRV_CH, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
             }
-            lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
-            lapic_regs.native_timestamp_when_count_down = sddf_timer_time_now(TIMER_DRV_CH);
+            lapic_regs.native_tsc_when_timer_starts = rdtsc();
             break;
         case REG_LAPIC_DCR:
             lapic_regs.dcr = vctx_raw[decoded_mem_ins.target_reg];
@@ -332,6 +338,51 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     return true;
 }
 
+void lapic_maintenance(void) {
+    // scan IRRs for pending interrupt
+    // do it "right-to-left" as the higer vector is higher prio (generally)
+
+    // for (int i = 7; i >= 0; i--) {
+
+    // }
+
+    uint8_t vector = lapic_regs.timer & 0xff; //@billn hack
+    int irr_n = vector / 32;
+    int irr_idx = vector % 32;
+
+    // Should not be in service
+    assert(!(lapic_regs.isr[irr_n] & BIT(irr_idx)));
+
+    // Move IRQ from pending to in-service
+    lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
+    lapic_regs.isr[irr_n] |= BIT(irr_idx);
+
+    assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_INTERRUPTABILITY) == 0);
+    assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS) & BIT(9));
+
+    // step 3, tell the hardware to inject an irq on next vmenter.
+    // Table 25-17. Format of the VM-Entry Interruption-Information Field
+    uint32_t vm_entry_interruption = (uint32_t) vector;
+    vm_entry_interruption |= BIT(31); // valid bit
+
+    LOG_VMM("vm_entry_interruption %lx\n", vm_entry_interruption);
+
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, vm_entry_interruption);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
+
+    LOG_VMM("irq injected\n");
+}
+
+bool vcpu_can_take_irq(size_t vcpu_id) {
+    if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) != 0) {
+        return false;
+    }
+    if (!(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9))) {
+        return false;
+    }
+    return true;
+}
+
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector) {
     assert(vcpu_id == 0);
 
@@ -341,28 +392,19 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector) {
         LOG_VMM("LAPIC irq inject vector %d already pending\n", vector);
         return false;
     }
-    if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
-        LOG_VMM("LAPIC irq inject vector %d already in service\n", vector);
-        return false;
+
+    // Mark as pending for injection:
+    // 1. immediately if the vCPU can take it,
+    // 2. at some point in the future when the vCPU re-enable IRQs
+    lapic_regs.irr[irr_n] |= BIT(irr_idx);
+
+    if (vcpu_can_take_irq(vcpu_id)) {
+        LOG_VMM("irq ready\n");
+        lapic_maintenance();
+    } else {
+        LOG_VMM("wait for window\n");
+        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_EXIT_IRQ_WINDOW);
     }
-
-    // lapic_regs.irr[irr_n] |= BIT(irr_idx);
-
-    // @billn properly handle interrupt priority
-    // sus maxxing
-    // move request to servicing.
-    // lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
-    lapic_regs.isr[irr_n] |= BIT(irr_idx);
-
-    assert(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) == 0);
-    assert(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9));
-
-    // step 3, tell the hardware to inject an irq on next vmenter.
-    // Table 25-17. Format of the VM-Entry Interruption-Information Field
-    uint32_t vm_entry_interruption = (uint32_t) vector;
-    vm_entry_interruption |= BIT(31); // valid bit
-    microkit_vcpu_x86_write_vmcs(vcpu_id, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vm_entry_interruption);
-
     return true;
 }
 
@@ -376,13 +418,14 @@ bool handle_lapic_timer_nftn(size_t vcpu_id) {
             return false;
         }
 
-        // restart timeout if periodic
-        if (((lapic_regs.timer >> 17) & 0x3) == 1) {
-            lapic_regs.native_timestamp_when_count_down = sddf_timer_time_now(TIMER_DRV_CH);
-            sddf_timer_set_timeout(TIMER_DRV_CH, lapic_regs.init_count);
-        } else {
-            assert(false);
-        }
+        // // restart timeout if periodic
+        // if (((lapic_regs.timer >> 17) & 0x3) == 1) {
+        //     lapic_regs.native_tsc_when_timer_starts = rdtsc();
+        //     LOG_VMM("restarting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
+        //     sddf_timer_set_timeout(TIMER_DRV_CH, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
+        // } else {
+        //     assert(false);
+        // }
 
         LOG_VMM("lapic tick\n");
     }

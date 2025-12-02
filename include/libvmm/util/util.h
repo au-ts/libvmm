@@ -67,3 +67,12 @@ void print_mem_hex(uintptr_t addr, size_t size);
 
 #endif
 #endif
+
+#if defined(CONFIG_ARCH_X86_64)
+static __inline__ uint64_t rdtsc(void)
+{
+    uint32_t lo, hi;
+    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+#endif

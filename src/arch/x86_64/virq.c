@@ -11,14 +11,17 @@
 
 extern struct lapic_regs lapic_regs;
 extern struct ioapic_regs ioapic_regs;
+extern uint64_t lapic_timer_hz;
 
-bool virq_controller_init()
+bool virq_controller_init(uint64_t tsc_hz)
 {
     LOG_VMM("initialising LAPIC\n");
+    lapic_timer_hz = tsc_hz;
+
     lapic_regs.id = 0;
     // Figure 11-7. Local APIC Version Register
-    // 32 local vector table entries. @billn is enough??
-    lapic_regs.revision = 0x10 | 32 << 16;
+    // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
+    lapic_regs.revision = 0x10 | 6 << 16;
     // Figure 11-18. Task-Priority Register (TPR)
     lapic_regs.tpr = 0; // reset value
     // Figure 11-23. Spurious-Interrupt Vector Register (SVR)

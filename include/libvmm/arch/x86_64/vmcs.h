@@ -15,7 +15,6 @@
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  *   [2a] Location: "VIRTUAL MACHINE CONTROL STRUCTURES", page: "25-10 Vol. 3C"
  *   [2b] Location: "VIRTUAL MACHINE CONTROL STRUCTURES", page: "25-12 Vol. 3C"
- *   [2c] Location: "VIRTUAL MACHINE CONTROL STRUCTURES", page: "Vol. 3C 25-23"
  */
 
 // [1] Virtual Machine Control Structure (VMCS) field selectors used by seL4
@@ -176,15 +175,12 @@
 
 // [2a] Primary Processor-Based VM-Execution Controls Register
 #define VMCS_PPC_ACTIVATE_SECONDARY_CTRL BIT_LOW(31)
+#define VMCS_PPC_IRQ_WINDOW_EXITING BIT_LOW(2)
 
 #define VMCS_PCC_DEFAULT (VMCS_PPC_ACTIVATE_SECONDARY_CTRL)
+#define VMCS_PCC_EXIT_IRQ_WINDOW (VMCS_PCC_DEFAULT | VMCS_PPC_IRQ_WINDOW_EXITING)
 
 // [2b] Secondary Processor-Based VM-Execution Controls Register
 #define VMCS_SPC_ENABLE_EPT BIT_LOW(1)
 
 #define VMCS_SPC_DEFAULT VMCS_SPC_ENABLE_EPT
-
-// [2c] VM-Entry Controls Register
-#define VMCS_ENTRY_CTRL_IA_32E_MODE BIT_LOW(9)
-
-#define VMCS_ENTRY_CTRL_DEfAULT (VMCS_ENTRY_CTRL_IA_32E_MODE)
