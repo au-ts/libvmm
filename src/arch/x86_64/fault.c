@@ -162,7 +162,7 @@ char *fault_to_string(int exit_reason) {
 #define HPET_BASE 0xfed00000
 #define HPET_SIZE 0x1000
 
-/* Table 29-7. Exit Qualification for EPT Violations */
+/* Table 28-7. Exit Qualification for EPT Violations */
 #define EPT_VIOLATION_READ (1 << 0)
 #define EPT_VIOLATION_WRITE (1 << 1)
 
