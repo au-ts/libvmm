@@ -67,9 +67,53 @@ struct lapic_regs lapic_regs;
 struct ioapic_regs ioapic_regs;
 uint64_t lapic_timer_hz;
 
-static uint64_t tsc_ticks_to_ns(uint64_t tsc_hz, uint64_t tsc_ticks) {
-    double seconds = (double) tsc_ticks / (double) tsc_hz;
-    return (uint64_t) (seconds * (double) NS_IN_S);
+static uint64_t tsc_ticks_to_ns(uint64_t tsc_hz, uint64_t tsc_ticks)
+{
+    double seconds = (double)tsc_ticks / (double)tsc_hz;
+    return (uint64_t)(seconds * (double)NS_IN_S);
+}
+
+static int n_irq_in_service(void)
+{
+    int n = 0;
+    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
+            if (lapic_regs.isr[i] & BIT(j)) {
+                n += 1;
+            }
+        }
+    }
+
+    // @billn sus
+    assert(n <= 1);
+    return n;
+}
+
+static int get_next_queued_irq_vector(void) {
+    // scan IRRs for *a* pending interrupt
+    // do it "right-to-left" as the higer vector is higher prio (generally)
+    int vector = -1;
+    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0 && vector == -1; i--) {
+        for (int j = 31; j >= 0 && vector == -1; j--) {
+            if (lapic_regs.irr[i] & BIT(j)) {
+                vector = i * 32 + j;
+            }
+        }
+    }
+    return vector;
+}
+
+bool vcpu_can_take_irq(size_t vcpu_id)
+{
+    // Not executing anything that blocks IRQs
+    if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) != 0) {
+        return false;
+    }
+    // IRQ on in cpu register
+    if (!(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9))) {
+        return false;
+    }
+    return true;
 }
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
@@ -166,7 +210,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             }
             vctx_raw[decoded_mem_ins.target_reg] = remaining;
             break;
-            
+
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_PERF_MON_CNTER:
@@ -196,15 +240,24 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_EOI:
             // @billn really sus, need to check what is the last in service interrupt and only clear that.
             // LOG_VMM("lapic EOI\n");
-            
-            lapic_regs.isr[0] = 0;
-            lapic_regs.isr[1] = 0;
-            lapic_regs.isr[2] = 0;
-            lapic_regs.isr[3] = 0;
-            lapic_regs.isr[4] = 0;
-            lapic_regs.isr[5] = 0;
-            lapic_regs.isr[6] = 0;
-            lapic_regs.isr[7] = 0;
+
+            // @billn sus:
+            // there can only be 1 interrupt in service at any given time.
+            if (n_irq_in_service() == 1) {
+                lapic_regs.isr[0] = 0;
+                lapic_regs.isr[1] = 0;
+                lapic_regs.isr[2] = 0;
+                lapic_regs.isr[3] = 0;
+                lapic_regs.isr[4] = 0;
+                lapic_regs.isr[5] = 0;
+                lapic_regs.isr[6] = 0;
+                lapic_regs.isr[7] = 0;
+                
+                int next_irq_vector = get_next_queued_irq_vector();
+                if (next_irq_vector != -1) {
+                    inject_lapic_irq(GUEST_BOOT_VCPU_ID, next_irq_vector);
+                }
+            }
 
             break;
         case REG_LAPIC_SVR:
@@ -212,11 +265,9 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_LVT_LINT0:
             lapic_regs.lint0 = vctx_raw[decoded_mem_ins.target_reg];
-            LOG_VMM("REG_LAPIC_LVT_LINT0 write 0x%lx\n", lapic_regs.lint0);
             break;
         case REG_LAPIC_LVT_LINT1:
             lapic_regs.lint1 = vctx_raw[decoded_mem_ins.target_reg];
-            LOG_VMM("REG_LAPIC_LVT_LINT1 write 0x%lx\n", lapic_regs.lint1);
             break;
         case REG_LAPIC_ICR:
             lapic_regs.icr = vctx_raw[decoded_mem_ins.target_reg];
@@ -235,20 +286,20 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // Figure 11-8. Local Vector Table (LVT)
             if (vctx_raw[decoded_mem_ins.target_reg] > 0) {
                 lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
-    
+
                 if (lapic_regs.timer & BIT(16)) {
                     LOG_VMM("LAPIC timer started while irq MASKED\n");
                 } else {
                     LOG_VMM("LAPIC timer started while irq UNMASKED, mode 0x%x\n", (lapic_regs.timer >> 17) % 0x3);
-                    
+
                     // make sure the guest isn't using tsc-deadline mode
                     assert(((lapic_regs.timer >> 17) & 0x3) != 0x2);
-    
+
                     LOG_VMM("setting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
-                    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
+                    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC,
+                                           tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
                 }
                 lapic_regs.native_tsc_when_timer_starts = rdtsc();
-
             }
             break;
         case REG_LAPIC_DCR:
@@ -285,10 +336,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioapicarb;
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
                        && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
+                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
+                                        / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
 
-                // LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
+                LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
 
                 if (is_high) {
                     vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
@@ -314,10 +366,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 ioapic_regs.ioapicid = vctx_raw[decoded_mem_ins.target_reg];
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
                        && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1)) / 2;
+                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
+                                        / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
 
-                // LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
+                LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
 
                 if (is_high) {
                     uint64_t new_high = vctx_raw[decoded_mem_ins.target_reg] << 32;
@@ -329,9 +382,8 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                     ioapic_regs.ioredtbl[redirection_reg_idx] = new_low | high;
                 }
 
-                
                 // LOG_VMM("written value for redirection %d is %lx\n", redirection_reg_idx, ioapic_regs.ioredtbl[redirection_reg_idx]);
-                
+
             } else {
                 LOG_VMM_ERR("Writing unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);
                 return false;
@@ -345,77 +397,66 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     return true;
 }
 
-void lapic_maintenance(void) {
-    // scan IRRs for pending interrupt
-    // do it "right-to-left" as the higer vector is higher prio (generally)
+// When lapic_maintenance() is called, the vCPU *must* be ready to take the interrupt.
+void lapic_maintenance(void)
+{
+    int vector = get_next_queued_irq_vector();
+    if (vector == -1) {
+        // no pending IRQ to inject
+        return;
+    }
 
-    // for (int i = 7; i >= 0; i--) {
-
-    // }
-
-    uint8_t vector = lapic_regs.timer & 0xff; //@billn hack
     int irr_n = vector / 32;
     int irr_idx = vector % 32;
 
-    // Should not be in service
-    // assert(!(lapic_regs.isr[irr_n] & BIT(irr_idx)));
+    if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
+        // interrupt already in service, remains queued until guest issues EOI.
+        return;
+    }
 
     // Move IRQ from pending to in-service
     lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
     lapic_regs.isr[irr_n] |= BIT(irr_idx);
-
+    
     assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_INTERRUPTABILITY) == 0);
     assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS) & BIT(9));
 
-    // step 3, tell the hardware to inject an irq on next vmenter.
+    // Tell the hardware to inject an irq on next vmenter.
     // Table 25-17. Format of the VM-Entry Interruption-Information Field
-    uint32_t vm_entry_interruption = (uint32_t) vector;
+    uint32_t vm_entry_interruption = (uint32_t)vector;
     vm_entry_interruption |= BIT(31); // valid bit
 
-    // LOG_VMM("vm_entry_interruption %lx\n", vm_entry_interruption);
-
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, vm_entry_interruption);
+    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vm_entry_interruption);
+    // Clear interrupt window exiting bit if set.
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-
-    // LOG_VMM("irq injected\n");
 }
 
-bool vcpu_can_take_irq(size_t vcpu_id) {
-    if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) != 0) {
-        return false;
-    }
-    if (!(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9))) {
-        return false;
-    }
-    return true;
-}
-
-bool inject_lapic_irq(size_t vcpu_id, uint8_t vector) {
+bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
+{
     assert(vcpu_id == 0);
 
     int irr_n = vector / 32;
     int irr_idx = vector % 32;
     if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
-        // LOG_VMM("LAPIC irq inject vector %d already pending\n", vector);
-        return false;
+        // already pending, drop.
+        return true;
     }
 
-    // Mark as pending for injection:
+    // Mark as pending for injection, there will be 2 scenarios that play out:
     // 1. immediately if the vCPU can take it,
     // 2. at some point in the future when the vCPU re-enable IRQs
     lapic_regs.irr[irr_n] |= BIT(irr_idx);
 
     if (vcpu_can_take_irq(vcpu_id)) {
-        // LOG_VMM("irq ready\n");
         lapic_maintenance();
     } else {
-        // LOG_VMM("wait for window\n");
         microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_EXIT_IRQ_WINDOW);
     }
     return true;
 }
 
-bool handle_lapic_timer_nftn(size_t vcpu_id) {
+bool handle_lapic_timer_nftn(size_t vcpu_id)
+{
     if (!(lapic_regs.timer & BIT(16))) {
         // timer not masked in local APIC
 
