@@ -15,6 +15,7 @@
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/msr.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <sel4/arch/vmenter.h>
 
@@ -158,6 +159,9 @@ char *fault_to_string(int exit_reason) {
 #define IOAPIC_BASE 0x11000000
 #define IOAPIC_SIZE 0x1000
 
+#define HPET_BASE 0xfed00000
+#define HPET_SIZE 0x1000
+
 /* Table 29-7. Exit Qualification for EPT Violations */
 #define EPT_VIOLATION_READ (1 << 0)
 #define EPT_VIOLATION_WRITE (1 << 1)
@@ -178,6 +182,8 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
         return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
         return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
+    } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
+        return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_mem_ins);
     }
 
     return false;
@@ -228,7 +234,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             success = emulate_ioports(&vctx, qualification);
             break;
         case INTERRUPT_WINDOW:
-            vcpu_print_regs(vcpu_id);
             lapic_maintenance();
             success = true;
             break;
@@ -236,10 +241,11 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
             LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
 
-    if (success) {
+    *new_rip = rip;
+    if (success && f_reason != INTERRUPT_WINDOW) {
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
-    } else {
+    } else if (!success) {
         LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);
         vcpu_print_regs(vcpu_id);
     }

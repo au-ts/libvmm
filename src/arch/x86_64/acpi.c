@@ -18,6 +18,9 @@
  *     [1a] "5.2.5.3 Root System Description Pointer (RSDP) Structure"
  *     [1b] "5.2.6 System Description Table Header"
  *     [1c] "5.2.8 Extended System Description Table (XSDT)"
+ * [2] IA-PC HPET (High Precision Event Timers) Specification Revision: 1.0a Date: October 2004
+ *     https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+ *     [2a] "3.2.4 The ACPI 2.0 HPET Description Table (HPET)"
  */
 
 static uint8_t acpi_table_sum(char *table, int size) {
@@ -79,7 +82,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 1
+#define XSDT_ENTRIES 2
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -95,8 +98,6 @@ struct xsdt {
 
 // TODO: do not hard-code this address
 #define IOAPIC_ADDRESS 0x11000000
-// TODO: do this properly?
-// #define IOAPIC_GLOBAL_IRQ_BASE 128
 
 struct madt_irq_controller {
     uint8_t type;
@@ -178,10 +179,11 @@ static void madt_build(struct madt *madt) {
         .id = 0,
         .res = 0,
         .address = IOAPIC_ADDRESS,
-        .global_system_irq_base = IOAPIC0_BASE_VECTOR,
+        .global_system_irq_base = 0,
     };
 
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
+    // madt->flags = MADT_FLAGS;
     madt->flags = 0;
 
     char *madt_end = (char *)madt + sizeof(struct madt);
@@ -192,6 +194,58 @@ static void madt_build(struct madt *madt) {
     // Finished building, now do the checksum.
     madt->h.checksum = acpi_compute_checksum((char *)madt, madt->h.length);
     assert(acpi_checksum_ok((char *)madt, madt->h.length));
+}
+
+/* [2a] HPET Description Table */
+#define HPET_SIGNATURE "HPET"
+#define HPET_REVISION 0x1
+
+#define HPET_LEGACY_IRQ_CAPABLE BIT(15)
+#define HPET_64B_COUNTER BIT(13)
+#define HPET_NUM_COMPARATORS_VALUE 3
+#define HPET_NUM_COMPARATORS_SHIFT 8
+
+#define HPET_GPA 0xfed00000
+
+struct address_structure
+{
+    uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port
+    uint8_t register_bit_width;
+    uint8_t register_bit_offset;
+    uint8_t reserved;
+    uint64_t address;
+} __attribute__((packed));
+
+struct hpet {
+    struct dst_header h;
+    uint32_t evt_timer_block_id;
+    struct address_structure address_desc;
+    uint8_t hpet_number;
+    uint16_t minimum_clk_tick;
+    uint8_t page_protection;
+} __attribute__ ((packed));
+
+static void hpet_build(struct hpet *hpet) {
+    memcpy(hpet->h.signature, HPET_SIGNATURE, 4);
+    hpet->h.length = sizeof(struct hpet);
+    hpet->h.revision = HPET_REVISION;
+    memcpy(hpet->h.oem_id, ACPI_OEMID, 6);
+    memcpy(hpet->h.oem_table_id, ACPI_OEMID, 6);
+    hpet->h.creator_id = 1;
+    hpet->h.creator_revision = 1;
+
+    hpet->evt_timer_block_id = HPET_LEGACY_IRQ_CAPABLE | HPET_64B_COUNTER | (HPET_NUM_COMPARATORS_VALUE << HPET_NUM_COMPARATORS_SHIFT);
+
+    hpet->address_desc.address_space_id = 0;
+    hpet->address_desc.register_bit_width = 32;
+    hpet->address_desc.address = HPET_GPA;
+
+    hpet->hpet_number = 0;
+    hpet->minimum_clk_tick = 1; // @billn ??? revisit
+    hpet->page_protection = 0;
+
+    hpet->h.checksum = acpi_compute_checksum((char *)hpet, hpet->h.length);
+    assert(acpi_checksum_ok((char *)hpet, hpet->h.length));
 }
 
 // typedef struct {
@@ -361,10 +415,16 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     madt_build(madt);
     assert(madt->h.length <= 0x1000);
 
+    // @billn todo really need some sort of memory range allocator
+    uint64_t hpet_gpa = acpi_allocate_gpa(0x1000);
+    struct hpet *hpet = (struct hpet *)(guest_ram_vaddr + hpet_gpa);
+    hpet_build(hpet);
+    assert(hpet->h.length <= 0x1000);
+
     struct xsdt *xsdt = (struct xsdt *) (guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);

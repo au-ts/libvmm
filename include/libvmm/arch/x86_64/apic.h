@@ -10,7 +10,7 @@
 #include <sel4/sel4.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
-#define TIMER_DRV_CH 0
+#define TIMER_DRV_CH_FOR_LAPIC 11
 
 #define LAPIC_NUM_ISR_IRR_32B 8
 
@@ -36,7 +36,7 @@ struct lapic_regs {
 };
 
 #define IOAPIC_LAST_INDIRECT_INDEX 0x17
-#define IOAPIC0_BASE_VECTOR 0x0
+#define IOAPIC0_BASE_VECTOR 0x20
 
 struct ioapic_regs {
     uint32_t selected_reg;
@@ -50,6 +50,7 @@ struct ioapic_regs {
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 
+bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
 bool handle_lapic_timer_nftn(size_t vcpu_id);
 void lapic_maintenance(void);
 

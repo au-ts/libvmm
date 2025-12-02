@@ -29,7 +29,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
 
     bool success = false;
 
-    if (port_addr == 0xCF8) {
+    if (port_addr >= 0xCF8 && port_addr < 0xCF8 + 4) {
         success = true;
     } else if (port_addr >= 0xCFC && port_addr < 0xCFC + 4) {
         if (is_read) {
