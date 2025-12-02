@@ -28,7 +28,7 @@
 
 void vcpu_print_regs(size_t vcpu_id) {
     seL4_Word cppc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
-    seL4_Word vmec = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR);
+    seL4_Word irq_info = microkit_mr_get(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR);
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
     seL4_Word f_qual = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
@@ -59,7 +59,7 @@ void vcpu_print_regs(size_t vcpu_id) {
 
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     LOG_VMM("    vm exec control = 0x%lx\n", cppc);
-    LOG_VMM("    vm entry control = 0x%lx\n", vmec);
+    LOG_VMM("    vm enter irq = 0x%lx\n", irq_info);
     LOG_VMM("    fault reason = 0x%lx (%s)\n", f_reason, fault_to_string(f_reason));
     LOG_VMM("    fault qualification = 0x%lx\n", f_qual);
     LOG_VMM("    instruction length = 0x%lx\n", ins_len);

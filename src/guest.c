@@ -114,7 +114,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
 
     microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, kernel_pc);
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, 0);
+    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, 0);
 
     while (true) {
         seL4_Word badge;
