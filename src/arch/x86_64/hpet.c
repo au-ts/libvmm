@@ -2,6 +2,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
@@ -9,12 +10,13 @@
 #include <sddf/timer/client.h>
 
 // @billn address all manner of sus in this code.
+// @billn handle overflows gracefully.
 
 // https://wiki.osdev.org/HPET
 // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_HPET
+// #define DEBUG_HPET
 
 #if defined(DEBUG_HPET)
 #define LOG_HPET(...) do{ printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -41,20 +43,20 @@
 #define COUNTER_CLK_PERIOD_SHIFT 32
 // Legacy IRQ replacement capable (replace the old PIT)
 #define LEG_RT_CAP BIT(15)
-// 64-bit main counter
-#define COUNT_SIZE_CAP BIT(13)
 // 2 comparators
 #define NUM_TIM_CAP_VAL 1ul // last index
 #define NUM_TIM_CAP_SHIFT 8
 #define REV_ID 1ul
 
 // General Config register
-#define LEG_RT_CNF BIT(1)
-#define ENABLE_CNF BIT(0)
+#define LEG_RT_CNF BIT(1) // legacy routing on
+#define ENABLE_CNF BIT(0) // counter and irq on
 
 // Comparator config register
 #define Tn_PER_INT_CAP BIT(4) // Periodic capable
-#define Tn_SIZE_CAP BIT(5) // 64-bit comparator
+#define Tn_INT_ENB_CNF BIT(2) // irq on
+#define Tn_INT_TYPE_CNF BIT(1) // irq type, 0 = edge, 1 = level
+#define Tn_TYPE_CNF BIT(3) // periodic mode on
 
 struct comparator_regs {
     uint64_t config;
@@ -68,13 +70,23 @@ struct hpet_regs {
     struct comparator_regs comparators[NUM_TIM_CAP_VAL + 1];
 };
 
-static uint64_t hpet_counter_offset;
+static uint32_t hpet_counter_offset = 0;
 static struct hpet_regs hpet_regs = {
-    .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | COUNT_SIZE_CAP | LEG_RT_CAP
+    // 32-bit main counter, 2 comparators (both periodic capable), legacy IRQ routing capable, and
+    // tick period = 1ns, same as sDDF timer interface.
+    .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP
                              | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)),
-    .comparators[0] = { .config = Tn_PER_INT_CAP | Tn_SIZE_CAP | BIT(42) }, // ioapic pin 10
-    .comparators[1] = { .config = Tn_SIZE_CAP | BIT(43) }, // ioapic pin 11
+    .comparators[0] = { .config = Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10
+    .comparators[1] = { .config = Tn_PER_INT_CAP | BIT(43) }, // ioapic pin 11
 };
+
+static uint32_t time_now_32(void) {
+    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET) & 0xffffffff;
+}
+
+static uint32_t main_counter_value(void) {
+    return time_now_32() - hpet_counter_offset;
+}
 
 static int timer_n_config_reg_mmio_off(int n)
 {
@@ -86,18 +98,74 @@ static int timer_n_comparator_mmio_off(int n)
     return 0x108 + (0x20 * n);
 }
 
-// returns which I/O APIC pins this timer is wired to.
-// if Legacy Replacement Route is set in the general config register,
-// the value returned is meaningless.
-static uint8_t get_timer_n_int_route_cnf(int n)
+static uint8_t get_timer_n_ioapic_pin(int n)
 {
-    return hpet_regs.comparators[n].config >> 32;
+    assert(n <= NUM_TIM_CAP_VAL);
+    if (hpet_regs.general_config & LEG_RT_CNF) {
+        if (n == 0) {
+            return 2;
+        } else if (n == 1) {
+            return 8;
+        } else {
+            assert(false);
+        }
+    } else {
+        return hpet_regs.comparators[n].config >> 32;
+    }
+}
+
+static bool timer_n_should_generate_irq(uint32_t main_counter_val, int n)
+{
+    return hpet_regs.general_config & ENABLE_CNF && hpet_regs.comparators[n].config & Tn_INT_ENB_CNF;
+    // susss, have to stop the counter when the enable bit is zero in general config?
+        // && main_counter_val < hpet_regs.comparators[n].comparator;
+}
+
+static bool timer_n_in_periodic_mode(int n)
+{
+    return hpet_regs.comparators[n].config & Tn_TYPE_CNF;
+}
+
+static bool timer_n_irq_edge_triggered(int n)
+{
+    return hpet_regs.comparators[n].config & Tn_INT_TYPE_CNF == 0;
+}
+
+void hpet_handle_timer_ntfn(void) {
+    // sus, handle timer 1 as well.
+
+    int ioapic_pin = get_timer_n_ioapic_pin(0);
+
+    // don't check for error, as the pin may be masked in the I/O APIC in early boot.
+    inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
+
+    if (timer_n_in_periodic_mode(0) && timer_n_should_generate_irq(0, 0)) {
+        sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET, 10000000);
+    }
+}
+
+bool hpet_maintenance(void)
+{
+    uint64_t main_counter_val = main_counter_value();
+    
+    // @billn sus
+    assert(!timer_n_should_generate_irq(main_counter_val, 1));
+
+    // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
+    if (timer_n_should_generate_irq(main_counter_val, 0)) {
+        uint64_t delay_ns = main_counter_val - hpet_regs.comparators[0].comparator;
+        LOG_VMM("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
+        LOG_VMM("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0), get_timer_n_ioapic_pin(0));
+
+        sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET, 10000000);
+    }
 }
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                        memory_instruction_data_t decoded_mem_ins)
 {
     uint64_t *vctx_raw = (uint64_t *)vctx;
+    uint32_t main_counter = main_counter_value();
 
     if (ept_fault_is_read(qualification)) {
         LOG_HPET("handling HPET read at offset 0x%lx\n", offset);
@@ -128,7 +196,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_config;
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            vctx_raw[decoded_mem_ins.target_reg] = sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET) - hpet_counter_offset;
+            vctx_raw[decoded_mem_ins.target_reg] = main_counter_value();
 
         } else if (offset == timer_n_config_reg_mmio_off(0)) {
             if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
@@ -168,8 +236,11 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+
+
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            hpet_counter_offset = sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET);
+            assert(vctx_raw[decoded_mem_ins.target_reg] == 0);
+            hpet_counter_offset = time_now_32();
 
         } else if (offset == timer_n_config_reg_mmio_off(0)) {
             if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
@@ -195,10 +266,16 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+        } else if (offset == timer_n_comparator_mmio_off(0)) {
+            assert(decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH);
+            hpet_regs.comparators[0].comparator = vctx_raw[decoded_mem_ins.target_reg];
+
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
             return false;
         }
+
+        hpet_maintenance();
     }
 
     return true;

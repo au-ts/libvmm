@@ -49,7 +49,7 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
     // the REX.R prefix will expand the register index to be 4-bits wide
     uint8_t idx = (reg & 0x7) | (rex_r ? 0x8 : 0);
 
-    switch (reg) {
+    switch (idx) {
     case 0:
         return RAX_IDX;
     case 1:
@@ -144,8 +144,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
     // scan for REX byte, which is always 0b0100WRXB
     if (instruction_buf[0] >> 4 == 4) {
+        uint8_t rex_byte = instruction_buf[parsed_byte];
         parsed_byte += 1;
-        uint8_t rex_byte = instruction_buf[0];
         switch (rex_byte & 0xf) {
         case 4:
             rex_r = true;

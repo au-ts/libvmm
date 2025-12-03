@@ -123,6 +123,14 @@ struct madt_ioapic {
     uint32_t global_system_irq_base;
 } __attribute__ ((packed));
 
+struct madt_ioapic_source_override {
+    struct madt_irq_controller entry;
+    uint8_t bus;
+    uint8_t source;
+    uint32_t gsi;
+    uint16_t flags;
+} __attribute__ ((packed));
+
 // TODO: when creating MADT, get the user to pass the address of APIC that is definitely
 // outside of RAM, or determine it ourselves.
 
@@ -182,14 +190,27 @@ static void madt_build(struct madt *madt) {
         .global_system_irq_base = 0,
     };
 
+    // Hook the HPET in legacy replacement mode to I/O APIC pin 2
+    struct madt_ioapic_source_override ioapic_override = {
+        .entry = {
+            .type = 2,
+            .length = 10
+        },
+        .bus = 0,
+        .source = 0,
+        .gsi = 2,
+        .flags = 0,
+    };
+
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
-    // madt->flags = MADT_FLAGS;
-    madt->flags = 0;
+    madt->flags = MADT_FLAGS;
+    // madt->flags = 0;
 
     char *madt_end = (char *)madt + sizeof(struct madt);
 
     madt_add_entry(madt, madt_end, &lapic);
     madt_add_entry(madt, madt_end + sizeof(struct madt_lapic), &ioapic);
+    madt_add_entry(madt, madt_end + sizeof(struct madt_lapic) + sizeof(struct madt_ioapic), &ioapic_override);
 
     // Finished building, now do the checksum.
     madt->h.checksum = acpi_compute_checksum((char *)madt, madt->h.length);

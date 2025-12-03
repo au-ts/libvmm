@@ -3,7 +3,7 @@
 # ./configure --with-nogui --enable-vmx=2 --enable-avx=yes --enable-x86-64=yes --enable-debugger && make -j10 && sudo make install
 
 BUILD_DIR=/Volumes/scratch/vmm_x86
-MICROKIT_SDK=/Users/dreamliner787-9/TS/microkit-capdl-dev/release/microkit-sdk-2.0.1-dev
+MICROKIT_SDK=/Users/dreamliner787-9/TS/microkit-capdl-dev/release/microkit-sdk-2.1.0-dev
 
 EXAMPLE_DIR=$(pwd)
 SYSTEM_DIR=$EXAMPLE_DIR/board/x86_64_generic_vtx/

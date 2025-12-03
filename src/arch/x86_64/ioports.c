@@ -63,8 +63,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
     } else if (port_addr == 0x61) {
         // some sort of PS2 controller?
         success = true;
-    } else if (port_addr >= 0x40 && port_addr <= 0x43) {
-        return emulate_pit(vctx, port_addr, is_read);
+    // } else if (port_addr >= 0x40 && port_addr <= 0x43) {
+    //     return emulate_pit(vctx, port_addr, is_read);
 
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
