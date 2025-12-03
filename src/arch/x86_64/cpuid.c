@@ -26,13 +26,6 @@ static inline void cpuid(uint32_t leaf, uint32_t subleaf,
     );
 }
 
-static uint32_t get_native_tsc(void) {
-    uint32_t base_freq_mhz;
-    uint32_t b, c, d;
-    cpuid(0x16, 0, &base_freq_mhz, &b, &c, &d);
-    return base_freq_mhz;
-}
-
 bool emulate_cpuid(seL4_VCPUContext *vctx) {
     // @billn todo revisit likely need to turn on some important features.
     // 3-218 Vol. 2A
@@ -41,7 +34,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
         case 0x0:
             // 3-240 Vol. 2A
             // GenuineIntel
-            vctx->eax = 0x16; // ???
+            vctx->eax = 0x16;
             vctx->ebx = 0x756e6547;
             vctx->edx = 0x49656e69;
             vctx->ecx = 0x6c65746e;
@@ -96,9 +89,16 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
             vctx->edx = 0;
             break;
         case 0x16:
-            vctx->eax = get_native_tsc();
-            vctx->ebx = get_native_tsc();
-            vctx->ecx = 0;
+            // Table 3-8. Information Returned by CPUID Instruction (Contd.)
+            // page "3-232 Vol. 2A"
+            // processor and bus clock in MHz
+            // set to 1GHz so that the "clock tick" is in 1ns, which
+            // is conveniently the same as the sDDF timer interface
+            // vctx->eax = 1000;
+            // vctx->ebx = 1000;
+            // vctx->ecx = 1000;
+
+            cpuid(0x16, 0, &vctx->eax, &vctx->ebx, &vctx->ecx, &vctx->edx);
             break;
         case 0x80000000:
             vctx->eax = 1;

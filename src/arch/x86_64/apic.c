@@ -96,10 +96,11 @@ static int get_next_queued_irq_vector(void) {
     for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0 && vector == -1; i--) {
         for (int j = 31; j >= 0 && vector == -1; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
-                return i * 32 + j;
+                vector = i * 32 + j;
             }
         }
     }
+    return vector;
 }
 
 bool vcpu_can_take_irq(size_t vcpu_id)
