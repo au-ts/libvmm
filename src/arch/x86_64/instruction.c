@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
@@ -43,8 +44,11 @@ bool pt_page_present(seL4_Word pte)
     return pte & BIT(7);
 }
 
-static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg)
+static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
 {
+    // the REX.R prefix will expand the register index to be 4-bits wide
+    uint8_t idx = (reg & 0x7) | (rex_r ? 0x8 : 0);
+
     switch (reg) {
     case 0:
         return RAX_IDX;
@@ -60,8 +64,24 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg)
         return RSI_IDX;
     case 7:
         return RDI_IDX;
+    case 8:
+        return R8_IDX;
+    case 9:
+        return R9_IDX;
+    case 10:
+        return R10_IDX;
+    case 11:
+        return R11_IDX;
+    case 12:
+        return R12_IDX;
+    case 13:
+        return R13_IDX;
+    case 14:
+        return R14_IDX;
+    case 15:
+        return R15_IDX;
     default:
-        LOG_VMM_ERR("unknown mod rm reg: 0x%x\n", reg);
+        LOG_VMM_ERR("unknown register idx: 0x%x, reg: 0x%x, REX.W: %d\n", idx, reg, rex_r);
         assert(false);
     }
 }
@@ -119,21 +139,39 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     // @billn scan for rex byte to detect 64-bit r/w, at this point all APIC accesses are 32-bit so this isnt an issue
 
     bool opcode_valid = false;
+    int parsed_byte = 0;
+    bool rex_r = false; // 4-bit operand, rather than 3-bit
 
-    // First step is to match the opcode against a list of known opcodes that we provide decoding logic for.
+    // scan for REX byte, which is always 0b0100WRXB
+    if (instruction_buf[0] >> 4 == 4) {
+        parsed_byte += 1;
+        uint8_t rex_byte = instruction_buf[0];
+        switch (rex_byte & 0xf) {
+        case 4:
+            rex_r = true;
+            break;
+
+        default:
+            LOG_VMM_ERR("unimplemented REX prefix parsing: 0x%x\n", rex_byte);
+            break;
+        }
+    }
+
+    // match the opcode against a list of known opcodes that we provide decoding logic for.
     for (int i = 0; i < NUM_MOV_OPCODES; i++) {
         // An opcode can be multi-bytes, but `mov`s are only 1-byte
-        if (instruction_buf[0] == mov_opcodes[i]) {
+        if (instruction_buf[parsed_byte] == mov_opcodes[i]) {
             opcode_valid = true;
+            uint8_t opcode = instruction_buf[parsed_byte];
 
             // An opcode byte is followed by a ModR/M byte to encode src/dest register.
-            uint8_t modrm = instruction_buf[1];
+            uint8_t modrm = instruction_buf[parsed_byte + 1];
             // uint8_t mod = modrm >> 6;
             uint8_t reg = (modrm >> 3) & 0x7;
             // uint8_t rm = modrm & 0x7;
 
             ret.type = INSTRUCTION_MEMORY;
-            switch (instruction_buf[0]) {
+            switch (opcode) {
             case OPCODE_MOV_BYTE_TO_MEM:
             case OPCODE_MOV_BYTE_FROM_MEM:
                 ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
@@ -145,13 +183,17 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
                 break;
             }
 
-            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg);
+            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
 
             break;
         }
     }
 
-    assert(opcode_valid);
+    if (!opcode_valid) {
+        LOG_VMM_ERR("uh-oh can't decode instruction, bail\n");
+        vcpu_print_regs(0);
+        assert(opcode_valid);
+    }
 
     // LOG_VMM("raw instruction:\n");
     // for (int i = 0; i < instruction_len; i++) {
