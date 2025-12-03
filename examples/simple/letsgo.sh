@@ -43,6 +43,8 @@ cd -
 #   -drive if=ide,media=cdrom,file=os-limine.iso \
 #   -serial mon:stdio --nographic -d guest_errors
 
+# scp board/x86_64_generic_vtx/bzImage billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/bzImage && \
+# ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/bzImage -serial mon:stdio --nographic -d guest_errors -append 'nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8 apic=debug'"
 
 # scp /Volumes/scratch/vmm_x86/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
 # scp /Volumes/scratch/vmm_x86/sel4_32b.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32b.elf && \
