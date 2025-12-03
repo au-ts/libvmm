@@ -43,8 +43,8 @@
 #define COUNTER_CLK_PERIOD_SHIFT 32
 // Legacy IRQ replacement capable (replace the old PIT)
 #define LEG_RT_CAP BIT(15)
-// 2 comparators
-#define NUM_TIM_CAP_VAL 1ul // last index
+// 3 comparators
+#define NUM_TIM_CAP_VAL 2ul // last index
 #define NUM_TIM_CAP_SHIFT 8
 #define REV_ID 1ul
 
@@ -76,8 +76,9 @@ static struct hpet_regs hpet_regs = {
     // tick period = 1ns, same as sDDF timer interface.
     .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP
                              | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)),
-    .comparators[0] = { .config = Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10
-    .comparators[1] = { .config = Tn_PER_INT_CAP | BIT(43) }, // ioapic pin 11
+    .comparators[0] = { .config = Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10, if no legacy
+    .comparators[1] = { .config = Tn_PER_INT_CAP | BIT(43) }, // ioapic pin 11, if no legacy
+    .comparators[2] = { .config = Tn_PER_INT_CAP | BIT(44) }, // ioapic pin 12, if no legacy
 };
 
 static uint32_t time_now_32(void) {
@@ -150,6 +151,7 @@ bool hpet_maintenance(void)
     
     // @billn sus
     assert(!timer_n_should_generate_irq(main_counter_val, 1));
+    assert(!timer_n_should_generate_irq(main_counter_val, 2));
 
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
     if (timer_n_should_generate_irq(main_counter_val, 0)) {
@@ -218,6 +220,16 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+        } else if (offset == timer_n_config_reg_mmio_off(2)) {
+            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].config & 0xffffffff;
+            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
+                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].config;
+            } else {
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                return false;
+            }
+
         } else {
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%x\n", offset);
             return false;
@@ -257,6 +269,18 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
         } else if (offset == timer_n_config_reg_mmio_off(1)) {
             if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
                 uint64_t curr_hi = (hpet_regs.comparators[1].config >> 32) << 32;
+                uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                hpet_regs.comparators[1].config = curr_hi | new_low;
+            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
+                hpet_regs.comparators[1].config = vctx_raw[decoded_mem_ins.target_reg];
+            } else {
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                return false;
+            }
+
+        } else if (offset == timer_n_config_reg_mmio_off(2)) {
+            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+                uint64_t curr_hi = (hpet_regs.comparators[2].config >> 32) << 32;
                 uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
                 hpet_regs.comparators[1].config = curr_hi | new_low;
             } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
