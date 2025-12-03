@@ -37,6 +37,12 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
             vctx->eax = 0xffffffff;
         }
         success = true;
+    } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
+        if (is_read) {
+            // invalid read to simulate no device on pci bus
+            vctx->eax = 0xffffffff;
+        }
+        success = true;
     } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21) {
         // PIC1/2 access
         if (is_read) {
