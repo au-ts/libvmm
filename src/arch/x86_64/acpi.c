@@ -222,8 +222,7 @@ static void madt_build(struct madt *madt) {
 #define HPET_REVISION 0x1
 
 #define HPET_LEGACY_IRQ_CAPABLE BIT(15)
-#define HPET_64B_COUNTER BIT(13)
-#define HPET_NUM_COMPARATORS_VALUE 2
+#define HPET_NUM_COMPARATORS_VALUE 3
 #define HPET_NUM_COMPARATORS_SHIFT 8
 
 #define HPET_GPA 0xfed00000
@@ -255,7 +254,7 @@ static void hpet_build(struct hpet *hpet) {
     hpet->h.creator_id = 1;
     hpet->h.creator_revision = 1;
 
-    hpet->evt_timer_block_id = HPET_LEGACY_IRQ_CAPABLE | HPET_64B_COUNTER | (HPET_NUM_COMPARATORS_VALUE << HPET_NUM_COMPARATORS_SHIFT);
+    hpet->evt_timer_block_id = HPET_LEGACY_IRQ_CAPABLE | (HPET_NUM_COMPARATORS_VALUE << HPET_NUM_COMPARATORS_SHIFT);
 
     hpet->address_desc.address_space_id = 0;
     hpet->address_desc.register_bit_width = 32;
