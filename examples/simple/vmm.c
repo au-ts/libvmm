@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <sddf/timer/client.h>
 #endif
@@ -170,6 +171,9 @@ void notified(microkit_channel ch)
     }
     case TIMER_DRV_CH_FOR_PIT:
         pit_handle_timer_ntfn();
+        break;
+    case TIMER_DRV_CH_FOR_HPET:
+        hpet_handle_timer_ntfn();
         break;
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);

@@ -340,7 +340,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                                         / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
 
-                LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
+                // LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
 
                 if (is_high) {
                     vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
@@ -359,7 +359,8 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     } else {
         if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
             ioapic_regs.selected_reg = vctx_raw[decoded_mem_ins.target_reg] & 0xff;
-            // LOG_VMM("selecting I/O APIC register 0x%x\n", ioapic_regs.selected_reg);
+            // LOG_VMM("selecting I/O APIC register 0x%x for write\n", ioapic_regs.selected_reg);
+
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
                 LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", vctx_raw[decoded_mem_ins.target_reg]);
@@ -370,7 +371,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                                         / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
 
-                LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
+                // LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
 
                 if (is_high) {
                     uint64_t new_high = vctx_raw[decoded_mem_ins.target_reg] << 32;
@@ -443,11 +444,11 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     }
 
     // Mark as pending for injection, there will be 2 scenarios that play out:
-    // 1. immediately if the vCPU can take it,
+    // 1. immediately if the vCPU can take it and LAPIC have no in service IRQ, @billn the second part is a bit sus
     // 2. at some point in the future when the vCPU re-enable IRQs
     lapic_regs.irr[irr_n] |= BIT(irr_idx);
 
-    if (vcpu_can_take_irq(vcpu_id)) {
+    if (vcpu_can_take_irq(vcpu_id) && n_irq_in_service() == 0) {
         lapic_maintenance();
     } else {
         microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_EXIT_IRQ_WINDOW);
@@ -481,52 +482,21 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
     return true;
 }
 
-// bool inject_ioapic_irq(size_t vcpu_id, int pin) {
-//     if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
-//         LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
-//         return false;
-//     }
+bool inject_ioapic_irq(size_t vcpu_id, int pin) {
+    if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
+        LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
+        return false;
+    }
 
-//     // step 1, read what vector the guest want the PIT irq0 to be delivered to.
-//     // page 13 of the ioapic spec pdf
-//     uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
+    // read what vector the guest want the PIT irq0 to be delivered to.
+    // page 13 of the ioapic spec pdf
+    uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
 
-//     // check if the irq is masked
-//     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
-//         // LOG_VMM("masked pin %d, vector %d\n", pin, cpu_vector);
-//         return true;
-//     }
+    // check if the irq is masked
+    if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
+        // LOG_VMM("pin %u is masked\n", pin);
+        return false;
+    }
 
-//     // step 2, update the LAPIC state.
-//     // set the vector's bit in the interrupt request register (IRR)
-//     int irr_n = cpu_vector / 32;
-//     int irr_idx = cpu_vector % 32;
-
-//     if (cpu_vector > 255) {
-//         LOG_VMM_ERR("guest tried to inject IRQ with vector > 255\n");
-//         return false;
-//     }
-
-//     if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
-//         // interrupt already awaiting service, drop.
-//         LOG_VMM("ioapic irq inject pin %d, vector %d dropped\n", pin, cpu_vector);
-//         return true;
-//     }
-//     // lapic_regs.irr[irr_n] |= BIT(irr_idx);
-
-//     // @billn properly handle interrupt priority
-//     // sus maxxing
-//     // move request to servicing.
-//     // lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
-//     lapic_regs.isr[irr_n] |= BIT(irr_idx);
-
-//     // step 3, tell the hardware that we are injecting an irq on next vmenter.
-//     // Table 25-17. Format of the VM-Entry Interruption-Information Field
-//     uint32_t vm_entry_interruption = (uint32_t) cpu_vector;
-//     vm_entry_interruption |= BIT(31); // valid bit
-//     microkit_vcpu_x86_write_vmcs(vcpu_id, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vm_entry_interruption);
-
-//     // LOG_VMM("injected I/O APIC IRQ vector %d, pin %d\n",cpu_vector,pin );
-
-//     return true;
-// }
+    return inject_lapic_irq(vcpu_id, cpu_vector);
+}
