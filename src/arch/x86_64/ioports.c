@@ -29,6 +29,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
 
     bool success = false;
 
+    if (is_read) {
+        // prime the result
+        vctx->eax = 0;
+    }
+
     if (port_addr >= 0xCF8 && port_addr < 0xCF8 + 4) {
         success = true;
     } else if (port_addr >= 0xCFC && port_addr < 0xCFC + 4) {
@@ -43,7 +48,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
             vctx->eax = 0xffffffff;
         }
         success = true;
-    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21) {
+    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1 || port_addr == 0x4d0) {
         // PIC1/2 access
         if (is_read) {
             // invalid read
@@ -56,9 +61,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
         success = true;
     } else if (port_addr == 0x71) {
         // cmos data
-        // i feel like we should do this properly, because seeing things like this on console:
-        // "returned 0 after 0 usecs", so there might be issues if the timings isn't correct
-        assert(is_read);
+        // @billn i feel like we should do this properly
+        // assert(is_read);
         vctx->eax = 0;
         success = true;
     } else if (port_addr == 0x80) {
@@ -74,6 +78,18 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
 
     } else if (port_addr == 0x87) {
         // dma controller
+        success = true;
+
+    } else if (port_addr == 0x2f9) {
+        // parallel port
+        success = true;
+
+    } else if (port_addr == 0x3e9 || port_addr == 0x2e9) {
+        // some sort of serial device
+        success = true;
+
+    } else if (port_addr == 0x64) {
+        // PS2 controller
         success = true;
 
     } else {

@@ -25,7 +25,7 @@
     <protection_domain name="timer_driver" priority="254">
         <program_image path="timer_driver.elf" />
         <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
-        <irq pin="20" vector="30" id="0" ioapic="0" />
+        <irq pin="2" vector="40" id="0" ioapic="0" />
     </protection_domain>
 
     <channel>
@@ -39,5 +39,13 @@
     <channel>
         <end pd="timer_driver" id="3" />
         <end pd="VMM" id="12" notify="false" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="4" />
+        <end pd="VMM" id="13" notify="false" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="5" />
+        <end pd="VMM" id="14" notify="false" pp="true" />
     </channel>
 </system>
