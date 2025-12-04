@@ -144,6 +144,29 @@ int lapic_dcr_to_divider(void)
     }
 }
 
+enum lapic_timer_mode {
+    LAPIC_TIMER_ONESHOT,
+    LAPIC_TIMER_PERIODIC,
+    LAPIC_TIMER_TSC_DEADLINE,
+};
+
+enum lapic_timer_mode lapic_parse_timer_reg(void) {
+    // Figure 11-8. Local Vector Table (LVT)
+    switch (((lapic_regs.timer >> 17) & 0x3)) {
+        case 0:
+            return LAPIC_TIMER_ONESHOT;
+        case 1:
+            return LAPIC_TIMER_PERIODIC;
+        case 2:
+            // not advertised in cpuid, unreachable!
+            assert(false);
+            return LAPIC_TIMER_TSC_DEADLINE;
+        default:
+            LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", lapic_regs.timer);
+            assert(false);
+    }
+}
+
 uint64_t tsc_now_scaled(void)
 {
     return rdtsc() / lapic_dcr_to_divider();
@@ -314,8 +337,8 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_TIMER:
             lapic_regs.timer = vctx_raw[decoded_mem_ins.target_reg];
-            // @billn only supports peridoic mode for now
-            assert(((lapic_regs.timer >> 17) & 0x3) == 1);
+            // @billn make sure the guest isn't using teh TSC deadline mode, which isn't implemented right now
+            assert(((lapic_regs.timer >> 17) & 0x3) != 2);
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_THERMAL:
@@ -324,21 +347,16 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // lapic_regs.esr = 0;
             break;
         case REG_LAPIC_INIT_CNT:
-            // @billn handle case when the guest turns off the timer by writing 0
             // Figure 11-8. Local Vector Table (LVT)
             lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
             if (vctx_raw[decoded_mem_ins.target_reg] > 0) {
-
                 if (lapic_regs.timer & BIT(16)) {
                     // LOG_VMM("LAPIC timer started while irq MASKED\n");
                 } else {
                     // LOG_VMM("LAPIC timer started while irq UNMASKED, mode 0x%x\n", (lapic_regs.timer >> 17) % 0x3);
-
-                    // @billn only supports peridoic mode for now
-                    assert(((lapic_regs.timer >> 17) & 0x3) == 1);
+                    // LOG_VMM("setting timeout for %lu ns\n", delay_ns);
 
                     uint64_t delay_ns = ticks_to_ns(native_tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
-                    // LOG_VMM("setting timeout for %lu ns\n", delay_ns);
                     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
                 }
                 lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
@@ -502,7 +520,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 bool handle_lapic_timer_nftn(size_t vcpu_id)
 {
     // restart timeout if periodic
-    if (((lapic_regs.timer >> 17) & 0x3) == 1 && lapic_regs.init_count > 0) {
+    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && lapic_regs.init_count > 0) {
         lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
         // LOG_VMM("restarting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
         // sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
