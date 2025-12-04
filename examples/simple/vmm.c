@@ -172,8 +172,10 @@ void notified(microkit_channel ch)
     case TIMER_DRV_CH_FOR_PIT:
         pit_handle_timer_ntfn();
         break;
-    case TIMER_DRV_CH_FOR_HPET:
-        hpet_handle_timer_ntfn();
+    case TIMER_DRV_CH_FOR_HPET_CH0:
+    case TIMER_DRV_CH_FOR_HPET_CH1:
+    case TIMER_DRV_CH_FOR_HPET_CH2:
+        hpet_handle_timer_ntfn(ch);
         break;
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);

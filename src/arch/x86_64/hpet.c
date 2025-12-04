@@ -85,7 +85,7 @@ static struct hpet_regs hpet_regs = {
 
 static uint32_t time_now_32(void)
 {
-    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET) & 0xffffffff;
+    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET_CH0) & 0xffffffff;
 }
 
 static uint32_t main_counter_value(void)
@@ -143,21 +143,29 @@ static bool timer_n_irq_edge_triggered(int n)
     return (hpet_regs.comparators[n].config & Tn_INT_TYPE_CNF) == 0;
 }
 
-void hpet_handle_timer_ntfn(void)
+void hpet_handle_timer_ntfn(microkit_channel ch)
 {
-    // sus, handle timer 1 and 2 as well.
-    int ioapic_pin = get_timer_n_ioapic_pin(0);
+    bool maintenance = false;
 
-    // don't check for error, as the pin may be masked in the I/O APIC in early boot.
-    inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
+    if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
+        int ioapic_pin = get_timer_n_ioapic_pin(0);
+        inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
 
-    if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
-        uint32_t main_counter_val = main_counter_value();
-        hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
-        if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
-            uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
-            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET, delay_ns);
+        if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
+            uint32_t main_counter_val = main_counter_value();
+            hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+            if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
+                uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
+                sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
+            }
         }
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
+        int ioapic_pin = get_timer_n_ioapic_pin(2);
+        inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
+
+        assert(!timer_n_in_periodic_mode(2));
+    } else {
+        assert(false);
     }
 }
 
@@ -176,7 +184,18 @@ bool hpet_maintenance(void)
             uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
             LOG_VMM("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
             LOG_VMM("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0), get_timer_n_ioapic_pin(0));
-            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET, delay_ns);
+            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
+        }
+    }
+
+    if (timer_n_can_interrupt(2)) {
+        uint32_t main_counter_val = main_counter_value();
+        hpet_regs.comparators[2].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+        if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
+            uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
+            LOG_VMM("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
+            LOG_VMM("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2), get_timer_n_ioapic_pin(2));
+            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH2, delay_ns);
         }
     }
 
@@ -252,6 +271,16 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+        } else if (offset == timer_n_comparator_mmio_off(2)) {
+            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].current_comparator & 0xffffffff;
+            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
+                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].current_comparator;
+            } else {
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                return false;
+            }
+
         } else {
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%x\n", offset);
             return false;
@@ -317,12 +346,16 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == timer_n_comparator_mmio_off(0)) {
-            assert(decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH);
-
             // @billn todo, the sematic is different for one shot
             assert(timer_n_in_periodic_mode(0));
 
             hpet_regs.comparators[0].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
+
+        } else if (offset == timer_n_comparator_mmio_off(2)) {
+            // @billn todo, implement periodic for this comparator
+            assert(!timer_n_in_periodic_mode(2));
+
+            hpet_regs.comparators[2].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
 
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
