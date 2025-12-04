@@ -46,7 +46,7 @@ else ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	COPIED_KERNEL := sel4_32b.elf
 	QEMU := qemu-system-x86_64
 	QEMU_ARCH_ARGS := -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(COPIED_KERNEL) -initrd $(IMAGE_FILE)
-	INITRD ?= $(SYSTEM_DIR)/dummy_initrd
+	INITRD ?= $(SYSTEM_DIR)/rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
 endif

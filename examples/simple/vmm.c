@@ -113,7 +113,8 @@ void init(void)
         return;
     }
 #elif defined(CONFIG_ARCH_X86_64)
-    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, 0, 0,
+    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
                             GUEST_CMDLINE, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;

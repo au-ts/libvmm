@@ -180,6 +180,11 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
 
     LOG_VMM("Linux boot protocol %d.%d\n", protocol_version_major, protocol_version_minor);
 
+    // @billn hack, assumes guest ram starts from 0
+    uint64_t initrd_gpa = ram_size - 0x2000000;
+    LOG_VMM("Ramdisk GPA 0x%x, size 0x%x\n", initrd_gpa, initrd_size);
+    memcpy((void *)ram_start + initrd_gpa, (void *) initrd_src, initrd_size);
+
     uint16_t kernel_version_offset = setup_header.kernel_version;
     if (kernel_version_offset != 0) {
         char *kernel_version = (char *)(kernel + kernel_version_offset + 0x200);
@@ -191,8 +196,8 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
      */
     setup_header.vid_mode = SETUP_HDR_VGA_MODE_NORMAL;
     setup_header.type_of_loader = SETUP_HDR_TYPE_OF_LOADER;
-    setup_header.ramdisk_image = 0; // @billn for now
-    setup_header.ramdisk_size = 0; // @billn for now
+    setup_header.ramdisk_image = initrd_gpa;
+    setup_header.ramdisk_size = initrd_size; // @billn for now
     setup_header.cmd_line_ptr = CMDLINE_GPA;
     assert(strlen(cmdline) <= setup_header.cmdline_size);
     strcpy((char *)(ram_start + CMDLINE_GPA), cmdline);
