@@ -74,13 +74,13 @@ struct hpet_regs {
 static uint32_t hpet_counter_offset = 0;
 
 static struct hpet_regs hpet_regs = {
-    // 32-bit main counter, 2 comparators (both periodic capable), legacy IRQ routing capable, and
+    // 32-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
     // tick period = 1ns, same as sDDF timer interface.
     .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP
                              | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)),
     .comparators[0] = { .config = Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10, if no legacy
-    .comparators[1] = { .config = Tn_PER_INT_CAP | BIT(43) }, // ioapic pin 11, if no legacy
-    .comparators[2] = { .config = Tn_PER_INT_CAP | BIT(44) }, // ioapic pin 12, if no legacy
+    .comparators[1] = { .config = BIT(43) }, // ioapic pin 11, if no legacy
+    .comparators[2] = { .config = BIT(44) }, // ioapic pin 12, if no legacy
 };
 
 static uint32_t time_now_32(void)
@@ -121,7 +121,7 @@ static uint8_t get_timer_n_ioapic_pin(int n)
         } else if (n == 1) {
             return 8;
         } else {
-            assert(false);
+            return hpet_regs.comparators[n].config >> 32;
         }
     } else {
         return hpet_regs.comparators[n].config >> 32;
