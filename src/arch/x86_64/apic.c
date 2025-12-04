@@ -23,7 +23,11 @@
 #define REG_LAPIC_ID 0x20
 #define REG_LAPIC_REV 0x30
 #define REG_LAPIC_TPR 0x80
+#define REG_LAPIC_APR 0x90
+#define REG_LAPIC_PPR 0xa0
 #define REG_LAPIC_EOI 0xb0
+#define REG_LAPIC_LDR 0xd0
+#define REG_LAPIC_DFR 0xe0
 #define REG_LAPIC_SVR 0xf0
 // @billn make this less hardcodey
 #define REG_LAPIC_ISR_0 0x100
@@ -197,6 +201,18 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_TPR:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tpr;
+            break;
+        case REG_LAPIC_APR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.apr;
+            break;
+        case REG_LAPIC_PPR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.ppr;
+            break;
+        case REG_LAPIC_DFR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.dfr;
+            break;
+        case REG_LAPIC_LDR:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.ldr;
             break;
         case REG_LAPIC_SVR:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.svr;

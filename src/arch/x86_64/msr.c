@@ -34,6 +34,10 @@
 #define MSR_PKG_C4_RESIDENCY (0x3f9)
 #define MSR_PKG_C6_RESIDENCY (0x3fa)
 
+// @billn seems to be some sort of fencing instruction control
+// https://gruss.cc/files/msrtemplating.pdf
+#define MSR_UNKNOWN1 (0xc0011029)
+
 #define IA32_APIC_BASE (0x1b)
 #define IA32_FEATURE_CONTROL (0x3a)
 #define MISC_FEATURE_ENABLES (0x140)
@@ -82,6 +86,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx) {
     case MSR_PKG_C6_RESIDENCY:
     case MISC_FEATURE_ENABLES:
     case MSR_PLATFORM_INFO:
+    case MSR_UNKNOWN1:
         break;
     case IA32_APIC_BASE:
         // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)

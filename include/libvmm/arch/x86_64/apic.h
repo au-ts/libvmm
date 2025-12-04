@@ -23,6 +23,10 @@ struct lapic_regs {
     uint32_t revision;
     uint32_t svr;
     uint32_t tpr;
+    uint32_t apr;
+    uint32_t ppr;
+    uint32_t dfr;
+    uint32_t ldr;
     // These two are actually 256-bit register
     uint32_t isr[LAPIC_NUM_ISR_IRR_32B];
     uint32_t irr[LAPIC_NUM_ISR_IRR_32B];

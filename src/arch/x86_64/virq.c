@@ -35,6 +35,9 @@ bool virq_controller_init(uint64_t tsc_hz)
     lapic_regs.lint0 = 0x10000; // reset value
     lapic_regs.lint1 = 0x10000; // reset value
 
+    // Figure 11-14. Destination Format Register (DFR)
+    lapic_regs.dfr = 0xffffffff; // reset value
+
     for (int i = 0; i < LAPIC_NUM_ISR_IRR_32B; i++) {
         lapic_regs.isr[i] = 0;
         lapic_regs.irr[i] = 0;
