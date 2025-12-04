@@ -17,7 +17,7 @@
 struct lapic_regs {
     // @billn make a container struct?
     // Not a LAPIC register, just bookkeeping
-    uint32_t native_tsc_when_timer_starts;
+    uint32_t native_scaled_tsc_when_timer_starts;
 
     uint32_t id;
     uint32_t revision;

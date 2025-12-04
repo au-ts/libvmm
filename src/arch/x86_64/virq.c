@@ -11,12 +11,12 @@
 
 extern struct lapic_regs lapic_regs;
 extern struct ioapic_regs ioapic_regs;
-extern uint64_t lapic_timer_hz;
+extern uint64_t native_tsc_hz;
 
 bool virq_controller_init(uint64_t tsc_hz)
 {
     LOG_VMM("initialising LAPIC\n");
-    lapic_timer_hz = tsc_hz;
+    native_tsc_hz = tsc_hz;
 
     lapic_regs.id = 0;
     // Figure 11-7. Local APIC Version Register

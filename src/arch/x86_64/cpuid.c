@@ -9,6 +9,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 
+extern uint64_t native_tsc_hz;
+
 // Table 3-11. More on Feature Information Returned in the EDX Register
 #define CPUID_01_EDX_FPU (1 << 0)
 #define CPUID_01_EDX_TSC (1 << 4)
@@ -98,7 +100,11 @@ bool emulate_cpuid(seL4_VCPUContext *vctx) {
             // vctx->ebx = 1000;
             // vctx->ecx = 1000;
 
-            cpuid(0x16, 0, &vctx->eax, &vctx->ebx, &vctx->ecx, &vctx->edx);
+            // cpuid(0x16, 0, &vctx->eax, &vctx->ebx, &vctx->ecx, &vctx->edx);
+
+            vctx->eax = native_tsc_hz / 1000000;
+            vctx->ebx = native_tsc_hz / 1000000;
+            vctx->ecx = native_tsc_hz / 1000000;
             break;
         case 0x80000000:
             vctx->eax = 1;

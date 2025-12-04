@@ -134,7 +134,7 @@ void init(void)
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
     // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
 
-    LOG_VMM("Detecting TSC frequency...\n");
+    LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
     tsc_pre = rdtsc();
 #endif
