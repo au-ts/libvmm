@@ -126,17 +126,14 @@ static uint8_t get_timer_n_ioapic_pin(int n)
             return 2;
         } else if (n == 1) {
             return 8;
-        } else {
-            return hpet_regs.comparators[n].config >> 32;
         }
-    } else {
-        return hpet_regs.comparators[n].config >> 32;
     }
+    return (hpet_regs.comparators[n].config >> 9) & 0x1f; // Tn_INT_ROUTE_CNF
 }
 
 static bool timer_n_can_interrupt(int n)
 {
-    return hpet_regs.general_config & ENABLE_CNF && hpet_regs.comparators[n].config & Tn_INT_ENB_CNF;
+    return (hpet_regs.general_config & ENABLE_CNF) && (hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
 }
 
 static bool timer_n_in_periodic_mode(int n)
@@ -198,7 +195,6 @@ bool hpet_maintenance(void)
 
     if (timer_n_can_interrupt(2)) {
         uint32_t main_counter_val = main_counter_value();
-        hpet_regs.comparators[2].current_comparator = main_counter_val + hpet_regs.comparators[2].comparator_increment;
         if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
@@ -364,7 +360,9 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             // @billn todo, implement periodic for this comparator
             assert(!timer_n_in_periodic_mode(2));
 
-            hpet_regs.comparators[2].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
+            hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+            hpet_regs.comparators[2].comparator_increment = 0;
+
 
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
