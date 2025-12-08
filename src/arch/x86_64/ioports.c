@@ -7,26 +7,32 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
+#include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pit.h>
+#include <libvmm/arch/x86_64/pci.h>
 
-// intel manual
-// [1] Table 28-5. Exit Qualification for I/O Instructions
+int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
+    switch (access_width) {
+        case IOPORT_BYTE_ACCESS_QUAL:
+            return 1;
+        case IOPORT_WORD_ACCESS_QUAL:
+            return 2;
+        case IOPORT_DWORD_ACCESS_QUAL:
+            return 4;
+        default:
+            return 0;
+    }
+}
 
-// [1]
-typedef enum ioport_access_width_qualification {
-    IOPORT_BYTE_ACCESS_QUAL = 0,
-    IOPORT_WORD_ACCESS_QUAL = 1, // 2-byte
-    IOPORT_DWORD_ACCESS_QUAL = 3, // 4-byte
-} ioport_access_width_qualification_t;
 
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
-    assert(!is_string);
+    assert(!is_string); // unsupported right now
     uint64_t is_immediate = f_qualification & BIT(6);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
-    ioport_access_width_qualification_t access_width = f_qualification & 0x7;
+    ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 
     bool success = false;
 
@@ -35,14 +41,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = 0;
     }
 
-    if (port_addr >= 0xCF8 && port_addr < 0xCF8 + 4) {
-        success = true;
-    } else if (port_addr >= 0xCFC && port_addr < 0xCFC + 4) {
-        if (is_read) {
-            // invalid read to simulate no device on pci bus
-            vctx->eax = 0xffffffff;
-        }
-        success = true;
+    if (is_pci_config_space_access_mech_1(port_addr)) {
+        return emulate_pci_config_space_access_mech_1(vctx, port_addr, is_read, access_width);
     } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
         if (is_read) {
             // invalid read to simulate no device on pci bus

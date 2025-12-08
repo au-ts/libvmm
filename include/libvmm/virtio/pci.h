@@ -182,7 +182,7 @@ struct pci_config_space {
 
     // Capability list
     uint8_t cap_data[192];
-};
+} __attribute__((packed));
 
 struct pci_memory_resource {
     uintptr_t vm_addr;
