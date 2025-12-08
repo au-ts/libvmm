@@ -198,7 +198,7 @@ bool hpet_maintenance(void)
 
     if (timer_n_can_interrupt(2)) {
         uint32_t main_counter_val = main_counter_value();
-        hpet_regs.comparators[2].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+        hpet_regs.comparators[2].current_comparator = main_counter_val + hpet_regs.comparators[2].comparator_increment;
         if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
