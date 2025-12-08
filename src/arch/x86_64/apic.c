@@ -154,20 +154,21 @@ enum lapic_timer_mode {
     LAPIC_TIMER_TSC_DEADLINE,
 };
 
-enum lapic_timer_mode lapic_parse_timer_reg(void) {
+enum lapic_timer_mode lapic_parse_timer_reg(void)
+{
     // Figure 11-8. Local Vector Table (LVT)
     switch (((lapic_regs.timer >> 17) & 0x3)) {
-        case 0:
-            return LAPIC_TIMER_ONESHOT;
-        case 1:
-            return LAPIC_TIMER_PERIODIC;
-        case 2:
+    case 0:
+        return LAPIC_TIMER_ONESHOT;
+    case 1:
+        return LAPIC_TIMER_PERIODIC;
+    case 2:
             // not advertised in cpuid, unreachable!
-            assert(false);
-            return LAPIC_TIMER_TSC_DEADLINE;
-        default:
-            LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", lapic_regs.timer);
-            assert(false);
+        assert(false);
+        return LAPIC_TIMER_TSC_DEADLINE;
+    default:
+        LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", lapic_regs.timer);
+        assert(false);
     }
 }
 
@@ -280,7 +281,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             } else {
                 uint64_t tsc_tick_now_scaled = tsc_now_scaled();
                 uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - lapic_regs.native_scaled_tsc_when_timer_starts;
-    
+
                 uint64_t remaining = 0;
                 if (elapsed_scaled_tsc_tick < lapic_regs.init_count) {
                     remaining = lapic_regs.init_count - elapsed_scaled_tsc_tick;
@@ -288,7 +289,6 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 vctx_raw[decoded_mem_ins.target_reg] = remaining;
                 // LOG_VMM("LAPIC current count %u\n", remaining);
             }
-
 
             break;
         case REG_LAPIC_ESR:
@@ -569,7 +569,6 @@ bool inject_ioapic_irq(size_t vcpu_id, int pin)
 
     // check if the irq is masked
     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
-        // LOG_VMM("pin %u is masked\n", pin);
         return false;
     }
 

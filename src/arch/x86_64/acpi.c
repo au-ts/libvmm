@@ -23,7 +23,8 @@
  *     [2a] "3.2.4 The ACPI 2.0 HPET Description Table (HPET)"
  */
 
-static uint8_t acpi_table_sum(char *table, int size) {
+static uint8_t acpi_table_sum(char *table, int size)
+{
     uint8_t sum = 0;
     for (int i = 0; i < size; i++) {
         sum += (unsigned char)table[i];
@@ -31,11 +32,13 @@ static uint8_t acpi_table_sum(char *table, int size) {
     return sum;
 }
 
-static bool acpi_checksum_ok(char *table, int size) {
+static bool acpi_checksum_ok(char *table, int size)
+{
     return acpi_table_sum(table, size) == 0;
 }
 
-static uint8_t acpi_compute_checksum(char *table, int size) {
+static uint8_t acpi_compute_checksum(char *table, int size)
+{
     return 0x100 - acpi_table_sum(table, size);
 }
 
@@ -62,7 +65,7 @@ struct xsdp {
     uint64_t xsdt_gpa;
     uint8_t ext_checksum;
     uint8_t reserved[3];
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /* [1b] All system description tables begin with the following structure */
 #define DST_HDR_SIG_LEN 4
@@ -78,7 +81,7 @@ struct dst_header {
     uint32_t oem_revision;
     uint32_t creator_id;
     uint32_t creator_revision;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
@@ -88,7 +91,7 @@ struct xsdt {
     struct dst_header h;
     /* A list of guest physical addresses to other ACPI tables. */
     uint64_t tables[XSDT_ENTRIES];
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 #define MADT_ENTRY_TYPE_LAPIC 0x0
 #define MADT_ENTRY_TYPE_IOAPIC 0x1
@@ -103,7 +106,7 @@ struct madt_irq_controller {
     uint8_t type;
     /* Note that the length includes this MADT IRQ controller header. */
     uint8_t length;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 #define MADT_LAPIC_FLAGS (1 << 0) | (1 << 1)
 
@@ -112,7 +115,7 @@ struct madt_lapic {
     uint8_t acpi_processor_id;
     uint8_t apic_id;
     uint32_t flags;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 struct madt_ioapic {
     struct madt_irq_controller entry;
@@ -121,7 +124,7 @@ struct madt_ioapic {
     uint8_t res;
     uint32_t address;
     uint32_t global_system_irq_base;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 struct madt_ioapic_source_override {
     struct madt_irq_controller entry;
@@ -129,7 +132,7 @@ struct madt_ioapic_source_override {
     uint8_t source;
     uint32_t gsi;
     uint16_t flags;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
 // TODO: when creating MADT, get the user to pass the address of APIC that is definitely
 // outside of RAM, or determine it ourselves.
@@ -146,17 +149,19 @@ struct madt {
     struct dst_header h;
     uint32_t apic_addr;
     uint32_t flags;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
-static void madt_add_entry(struct madt *madt, char *dest, void *entry) {
+static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
+{
     struct madt_irq_controller *madt_entry = (struct madt_irq_controller *)entry;
 
     madt->h.length += madt_entry->length;
 
-    memcpy(dest, entry, madt_entry->length);
+    memcpy((void *)dest, entry, madt_entry->length);
 }
 
-static void madt_build(struct madt *madt) {
+static void madt_build(struct madt *madt)
+{
     memcpy(madt->h.signature, "APIC", 4);
     madt->h.revision = MADT_REVISION;
     // TODO: not very elegant, maybe do something better.
@@ -190,27 +195,38 @@ static void madt_build(struct madt *madt) {
         .global_system_irq_base = 0,
     };
 
-    // Hook the HPET in legacy replacement mode to I/O APIC pin 2
-    struct madt_ioapic_source_override ioapic_override = {
-        .entry = {
-            .type = 2,
-            .length = 10
-        },
+    // Connect ISA IRQ 0 from the legacy Programmable Interval Timer (PIT)
+    // to I/O APIC pin 2, which is where the HPET in legacy replacement code is connected.
+    struct madt_ioapic_source_override ioapic_hpet_override = {
+        .entry = { .type = 2, .length = 10 },
         .bus = 0,
         .source = 0,
         .gsi = 2,
         .flags = 0,
     };
 
+    // // Connect ISA IRQ 4 from serial port COM1
+    // // to I/O APIC pin 10.
+    // struct madt_ioapic_source_override ioapic_com1_override = {
+    //     .entry = { .type = 2, .length = 10 },
+    //     .bus = 0,
+    //     .source = 4,
+    //     .gsi = 10,
+    //     .flags = 0,
+    // };
+
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
     madt->flags = MADT_FLAGS;
     // madt->flags = 0;
 
-    char *madt_end = (char *)madt + sizeof(struct madt);
-
-    madt_add_entry(madt, madt_end, &lapic);
-    madt_add_entry(madt, madt_end + sizeof(struct madt_lapic), &ioapic);
-    madt_add_entry(madt, madt_end + sizeof(struct madt_lapic) + sizeof(struct madt_ioapic), &ioapic_override);
+    uintptr_t watermark = (uintptr_t)madt + sizeof(struct madt);
+    madt_add_entry(madt, watermark, &lapic);
+    watermark += sizeof(struct madt_lapic);
+    madt_add_entry(madt, watermark, &ioapic);
+    watermark += sizeof(struct madt_ioapic);
+    madt_add_entry(madt, watermark, &ioapic_hpet_override);
+    // watermark += sizeof(struct madt_ioapic_source_override);
+    // madt_add_entry(madt, watermark, &ioapic_com1_override);
 
     // Finished building, now do the checksum.
     madt->h.checksum = acpi_compute_checksum((char *)madt, madt->h.length);
@@ -227,8 +243,7 @@ static void madt_build(struct madt *madt) {
 
 #define HPET_GPA 0xfed00000
 
-struct address_structure
-{
+struct address_structure {
     uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port
     uint8_t register_bit_width;
     uint8_t register_bit_offset;
@@ -243,9 +258,10 @@ struct hpet {
     uint8_t hpet_number;
     uint16_t minimum_clk_tick;
     uint8_t page_protection;
-} __attribute__ ((packed));
+} __attribute__((packed));
 
-static void hpet_build(struct hpet *hpet) {
+static void hpet_build(struct hpet *hpet)
+{
     memcpy(hpet->h.signature, HPET_SIGNATURE, 4);
     hpet->h.length = sizeof(struct hpet);
     hpet->h.revision = HPET_REVISION;
@@ -364,7 +380,8 @@ static void hpet_build(struct hpet *hpet) {
 //     assert(acpi_sdt_header_check(&fadt->h));
 // }
 
-static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs) {
+static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs)
+{
     memcpy(xsdt->h.signature, "XSDT", 4);
 
     /* length is the size of the header and the memory footprint of pointers to other tables. */
@@ -395,21 +412,23 @@ static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_tab
 
 uint64_t acpi_top;
 
-uint64_t acpi_allocate_gpa(size_t length) {
+uint64_t acpi_allocate_gpa(size_t length)
+{
     assert(length);
     acpi_top -= length;
 
     return acpi_top;
 }
 
-uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa) {
+uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
+{
     acpi_top = ram_top;
     // Step 1: create the Root System Description Pointer structure.
 
     // We want to place everything at "ram_top", do that we can carve out a chunk
     // at the end and mark it as "ACPI" memory in the E820 table.
     uint64_t xsdp_gpa = acpi_allocate_gpa(sizeof(struct xsdp));
-    struct xsdp *xsdp = (struct xsdp *) (guest_ram_vaddr + xsdp_gpa);
+    struct xsdp *xsdp = (struct xsdp *)(guest_ram_vaddr + xsdp_gpa);
     memset(xsdp, 0, sizeof(struct xsdp));
 
     // memcpy as we do not want to null-termiante
@@ -441,7 +460,7 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     hpet_build(hpet);
     assert(hpet->h.length <= 0x1000);
 
-    struct xsdt *xsdt = (struct xsdt *) (guest_ram_vaddr + xsdp->xsdt_gpa);
+    struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
     uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa };

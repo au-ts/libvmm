@@ -48,10 +48,10 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 
 scp /Volumes/scratch/vmm_x86/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
 scp /Volumes/scratch/vmm_x86/sel4_32b.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32b.elf && \
-ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32b.elf -initrd /opt/billn/scratch/loader.img \
+ssh -X billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
                         -serial mon:stdio \
                         -m size=2G \
-                        -nographic -d guest_errors"
+                        -d guest_errors"
 
 
 # mq.sh run -s skylake -c dafgsdhtvtv -f /Users/dreamliner787-9/TS/microkit-capdl-dev/release/microkit-sdk-2.0.1-dev/board/x86_64_generic_vtx/debug/elf/sel4.elf -f /Volumes/scratch/vmm_x86/loader.img

@@ -43,7 +43,7 @@ else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	KERNEL = $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)/elf/sel4.elf
-	COPIED_KERNEL := sel4_32b.elf
+	COPIED_KERNEL := sel4_32.elf
 	QEMU := qemu-system-x86_64
 	QEMU_ARCH_ARGS := -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(COPIED_KERNEL) -initrd $(IMAGE_FILE)
 	INITRD ?= $(SYSTEM_DIR)/rootfs.cpio.gz
@@ -85,10 +85,6 @@ all: loader.img
 $(IMAGES): libvmm.a libsddf_util_debug.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
-ifeq ($(ARCH),x86_64)
-	$(OBJCOPY) -O elf32-i386 $(KERNEL) $(COPIED_KERNEL)
-endif
-
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 ${LINUX}:

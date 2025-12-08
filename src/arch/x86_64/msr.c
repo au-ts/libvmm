@@ -56,7 +56,8 @@
 // #define MSR_SHADOW_GS_BASE  0xc0000102 /* SwapGS GS shadow */
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
-bool emulate_rdmsr(seL4_VCPUContext *vctx) {
+bool emulate_rdmsr(seL4_VCPUContext *vctx)
+{
     uint64_t result = 0;
 
     switch (vctx->ecx) {
@@ -107,7 +108,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx) {
     return true;
 }
 
-bool emulate_wrmsr(seL4_VCPUContext *vctx) {
+bool emulate_wrmsr(seL4_VCPUContext *vctx)
+{
 
     switch (vctx->ecx) {
     case MSR_EFER:
@@ -129,4 +131,3 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx) {
 
     return true;
 }
-

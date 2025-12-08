@@ -147,7 +147,8 @@ static char *exit_reason_strs[NUM_EXIT_REASONS] = {
     "XSETBV",
 };
 
-char *fault_to_string(int exit_reason) {
+char *fault_to_string(int exit_reason)
+{
     assert(exit_reason < NUM_EXIT_REASONS);
     return exit_reason_strs[exit_reason];
 }
@@ -166,15 +167,18 @@ char *fault_to_string(int exit_reason) {
 #define EPT_VIOLATION_READ (1 << 0)
 #define EPT_VIOLATION_WRITE (1 << 1)
 
-bool ept_fault_is_read(seL4_Word qualification) {
+bool ept_fault_is_read(seL4_Word qualification)
+{
     return qualification & EPT_VIOLATION_READ;
 }
 
-bool ept_fault_is_write(seL4_Word qualification) {
+bool ept_fault_is_write(seL4_Word qualification)
+{
     return qualification & EPT_VIOLATION_WRITE;
 }
 
-bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins) {
+bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins)
+{
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
@@ -189,7 +193,8 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
     return false;
 }
 
-bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
+bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
+{
     bool success = false;
     decoded_instruction_ret_t decoded_ins;
 
@@ -216,29 +221,29 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip) {
     vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
 
     switch (f_reason) {
-        case CPUID:
-            success = emulate_cpuid(&vctx);
-            break;
-        case RDMSR:
-            success = emulate_rdmsr(&vctx);
-            break;
-        case WRMSR:
-            success = emulate_wrmsr(&vctx);
-            break;
-        case EPT_VIOLATION:
-            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
-            assert(decoded_ins.type == INSTRUCTION_MEMORY);
-            success = emulate_vmfault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
-            break;
-        case IO:
-            success = emulate_ioports(&vctx, qualification);
-            break;
-        case INTERRUPT_WINDOW:
-            lapic_maintenance();
-            success = true;
-            break;
-        default:
-            LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
+    case CPUID:
+        success = emulate_cpuid(&vctx);
+        break;
+    case RDMSR:
+        success = emulate_rdmsr(&vctx);
+        break;
+    case WRMSR:
+        success = emulate_wrmsr(&vctx);
+        break;
+    case EPT_VIOLATION:
+        decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+        assert(decoded_ins.type == INSTRUCTION_MEMORY);
+        success = emulate_vmfault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
+        break;
+    case IO:
+        success = emulate_ioports(&vctx, qualification);
+        break;
+    case INTERRUPT_WINDOW:
+        lapic_maintenance();
+        success = true;
+        break;
+    default:
+        LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
 
     *new_rip = rip;

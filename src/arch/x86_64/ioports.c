@@ -19,7 +19,8 @@ typedef enum ioport_access_width_qualification {
     IOPORT_DWORD_ACCESS_QUAL = 3, // 4-byte
 } ioport_access_width_qualification_t;
 
-bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
+bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
+{
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
     assert(!is_string);
@@ -48,7 +49,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification) {
             vctx->eax = 0xffffffff;
         }
         success = true;
-    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1 || port_addr == 0x4d0) {
+    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1
+               || port_addr == 0x4d0) {
         // PIC1/2 access
         if (is_read) {
             // invalid read

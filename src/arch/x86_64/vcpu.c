@@ -26,7 +26,8 @@
 
 // }
 
-void vcpu_print_regs(size_t vcpu_id) {
+void vcpu_print_regs(size_t vcpu_id)
+{
     seL4_Word cppc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
     seL4_Word irq_info = microkit_mr_get(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR);
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
@@ -92,4 +93,3 @@ void vcpu_print_regs(size_t vcpu_id) {
     // }
     // printf("\n");
 }
-
