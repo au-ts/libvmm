@@ -269,6 +269,12 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
         .size = acpi_start_gpa,
         .type = E820_RAM,
     };
+    // // PCI ECAM
+    // e820_table[3] = (struct boot_e820_entry) {
+    //     .addr = 0xe0000000,
+    //     .size = 0x10000000,
+    //     .type = E820_RESERVED,
+    // };
 
     /* Build GDT */
     uint64_t *gdt = (uint64_t *)(ram_start + GDT_GPA);

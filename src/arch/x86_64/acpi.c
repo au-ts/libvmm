@@ -85,7 +85,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 3
+#define XSDT_ENTRIES 2
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -306,7 +306,7 @@ struct mcfg {
 
 static void mcfg_build(struct mcfg *mcfg) {
     memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
-    mcfg->h.length = sizeof(struct hpet);
+    mcfg->h.length = sizeof(struct mcfg);
     mcfg->h.revision = MCFG_REVISION;
     memcpy(mcfg->h.oem_id, ACPI_OEMID, 6);
     memcpy(mcfg->h.oem_table_id, ACPI_OEMID, 6);
@@ -499,16 +499,15 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     hpet_build(hpet);
     assert(hpet->h.length <= 0x1000);
 
-    // @billn todo really need some sort of memory range allocator
-    uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
-    struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
-    mcfg_build(mcfg);
-    assert(mcfg->h.length <= 0x1000);
+    // uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
+    // struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
+    // mcfg_build(mcfg);
+    // assert(mcfg->h.length <= 0x1000);
 
     struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, mcfg_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);
