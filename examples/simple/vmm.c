@@ -57,7 +57,7 @@
 #define SERIAL_IRQ 58
 #elif defined(BOARD_x86_64_generic_vtx)
 // @billn revisit
-#define SERIAL_IRQ 0
+#define SERIAL_IRQ 1235678
 #else
 #error Need to define serial interrupt
 #endif
@@ -145,6 +145,13 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
     case SERIAL_IRQ_CH: {
+#if defined(BOARD_x86_64_generic_vtx)
+        // @billn revisit
+        // LOG_VMM("uartirq\n");
+        // inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 4);
+        break;
+#endif
+
         bool success = virq_inject(SERIAL_IRQ);
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);

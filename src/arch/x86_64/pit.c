@@ -58,7 +58,7 @@ bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
     //         LOG_VMM("PIT ch0 mode2 reload value 0x%x\n", global_pit.ch0_reload);
     //         double tick_us = global_pit.ch0_reload * PIT_TICK_TIME_US;
     //         uint64_t tick_ns = (uint64_t) (tick_us * NS_IN_US);
-            
+
     //         sddf_timer_set_timeout(TIMER_DRV_CH_FOR_PIT, tick_ns * 10);
     //     } else {
     //         LOG_VMM_ERR("Invalid PIT state\n");
@@ -114,7 +114,8 @@ bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
 
 // @billn revisit whether it is correct to do it like this, looks sus af
 extern struct lapic_regs lapic_regs;
-void pit_handle_timer_ntfn(void) {
+void pit_handle_timer_ntfn(void)
+{
     // assert(global_pit.state == CH0_MODE2_TICKING);
     // double tick_us = global_pit.ch0_reload * PIT_TICK_TIME_US;
     // uint64_t tick_ns = (uint64_t) (tick_us * NS_IN_US);

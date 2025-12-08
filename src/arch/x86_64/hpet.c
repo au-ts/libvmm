@@ -153,7 +153,8 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
         if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
             uint32_t main_counter_val = main_counter_value();
-            hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+            hpet_regs.comparators[0].current_comparator = main_counter_val
+                                                        + hpet_regs.comparators[0].comparator_increment;
             if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
                 uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
@@ -175,15 +176,16 @@ bool hpet_maintenance(void)
     assert(timer_n_irq_edge_triggered(0));
     assert(!timer_n_can_interrupt(1));
     assert(!timer_n_can_interrupt(2));
-    
+
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
     if (timer_n_can_interrupt(0)) {
         uint32_t main_counter_val = main_counter_value();
         hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
         if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
-            LOG_VMM("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
-            LOG_VMM("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0), get_timer_n_ioapic_pin(0));
+            LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
+            LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0),
+                     get_timer_n_ioapic_pin(0));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
         }
     }
@@ -193,8 +195,9 @@ bool hpet_maintenance(void)
         hpet_regs.comparators[2].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
         if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
-            LOG_VMM("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
-            LOG_VMM("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2), get_timer_n_ioapic_pin(2));
+            LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
+            LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2),
+                     get_timer_n_ioapic_pin(2));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH2, delay_ns);
         }
     }
@@ -301,7 +304,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
-            if (!(old_config & ENABLE_CNF )&& hpet_regs.general_config & ENABLE_CNF) {
+            if (!(old_config & ENABLE_CNF) && hpet_regs.general_config & ENABLE_CNF) {
                 reset_main_counter();
             }
 

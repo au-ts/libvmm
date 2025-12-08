@@ -16,10 +16,9 @@
         </virtual_machine>
 
         <ioport id="10" addr="0x3f8" size="8" />
-        <!-- <ioport id="11" addr="0x40" size="4" /> -->
-        <!-- pci passthrough hack
-        <ioport id="12" addr="0xcf8" size="4" />
-        <ioport id="13" addr="0xcfc" size="4" /> -->
+
+        <!-- serial port com1 irq -->
+        <irq pin="4" vector="41" id="1" ioapic="0" />
     </protection_domain>
 
     <protection_domain name="timer_driver" priority="254">
