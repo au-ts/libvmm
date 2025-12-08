@@ -85,7 +85,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 2
+#define XSDT_ENTRIES 3
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -143,7 +143,7 @@ struct madt_ioapic_source_override {
 #define MADT_LOCAL_APIC_ADDR 0xFFFE0000
 
 #define MADT_REVISION 5
-#define MADT_FLAGS BIT(0) // PCAT_COMPAT, no 8259 present
+#define MADT_FLAGS BIT(0) // PCAT_COMPAT, dual 8259 present as a direct mapping to I/O APIC 0
 
 struct madt {
     struct dst_header h;
@@ -244,7 +244,7 @@ static void madt_build(struct madt *madt)
 #define HPET_GPA 0xfed00000
 
 struct address_structure {
-    uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port
+    uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port, 2 - PCI config space
     uint8_t register_bit_width;
     uint8_t register_bit_offset;
     uint8_t reserved;
@@ -283,6 +283,45 @@ static void hpet_build(struct hpet *hpet)
     hpet->h.checksum = acpi_compute_checksum((char *)hpet, hpet->h.length);
     assert(acpi_checksum_ok((char *)hpet, hpet->h.length));
 }
+
+/* PCI Express Memory-mapped Configuration Space base address description table */
+#define MCFG_SIGNATURE "MCFG"
+#define MCFG_REVISION 1
+#define MCFG_NUM_CONFIG_SPACES 1
+
+#define ECAM_GPA 0xe0000000
+
+struct pcie_config_space_addr_structure {
+    uint64_t base_address;
+    uint16_t pci_segment_group;
+    uint8_t start_bus;
+    uint8_t end_bus;
+    uint32_t reserved;
+};
+
+struct mcfg {
+    struct dst_header h;
+    struct pcie_config_space_addr_structure config_spaces[MCFG_NUM_CONFIG_SPACES];
+};
+
+static void mcfg_build(struct mcfg *mcfg) {
+    memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
+    mcfg->h.length = sizeof(struct hpet);
+    mcfg->h.revision = MCFG_REVISION;
+    memcpy(mcfg->h.oem_id, ACPI_OEMID, 6);
+    memcpy(mcfg->h.oem_table_id, ACPI_OEMID, 6);
+    mcfg->h.creator_id = 1;
+    mcfg->h.creator_revision = 1;
+
+    mcfg->config_spaces[0].base_address = ECAM_GPA;
+    mcfg->config_spaces[0].pci_segment_group = 0;
+    mcfg->config_spaces[0].start_bus = 0;
+    mcfg->config_spaces[0].end_bus = 0;
+
+    mcfg->h.checksum = acpi_compute_checksum((char *)mcfg, mcfg->h.length);
+    assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
+}
+
 
 // typedef struct {
 //     uint8_t AddressSpace;
@@ -460,10 +499,16 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     hpet_build(hpet);
     assert(hpet->h.length <= 0x1000);
 
+    // @billn todo really need some sort of memory range allocator
+    uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
+    struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
+    mcfg_build(mcfg);
+    assert(mcfg->h.length <= 0x1000);
+
     struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, mcfg_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);

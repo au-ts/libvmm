@@ -1,3 +1,9 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
 #include <microkit.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
