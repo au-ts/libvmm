@@ -18,3 +18,8 @@
 bool is_pci_config_space_access_mech_1(uint16_t port_addr);
 bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
                                             ioport_access_width_t access_width);
+
+bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
+                                uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
+                                uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
+                                uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr);
