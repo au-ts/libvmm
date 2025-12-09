@@ -15,10 +15,18 @@
             <map mr="guest_ram" vaddr="0x0" perms="rwx" />
         </virtual_machine>
 
-        <ioport id="10" addr="0x3f8" size="8" />
+        <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />
+        <ioport id="1" addr="0x1f0" size="8" setvar_id="primary_ata_cmd_pio_id" setvar_addr="primary_ata_cmd_pio_addr" />
+        <ioport id="2" addr="0x3f6" size="1" setvar_id="primary_ata_ctrl_pio_id" setvar_addr="primary_ata_ctrl_pio_addr" />
+        <ioport id="3" addr="0x170" size="8" setvar_id="second_ata_cmd_pio_id" setvar_addr="second_ata_cmd_pio_addr" />
+        <ioport id="4" addr="0x376" size="1" setvar_id="second_ata_ctrl_pio_id" setvar_addr="second_ata_ctrl_pio_addr" />
 
         <!-- serial port com1 irq -->
-        <!-- <irq pin="4" vector="41" id="1" ioapic="0" /> -->
+        <irq pin="4" vector="41" id="0" ioapic="0" />
+        <!-- primary ATA irq -->
+        <irq pin="14" vector="42" id="1" ioapic="0" />
+        <!-- secondary ATA irq -->
+        <irq pin="15" vector="43" id="2" ioapic="0" />
     </protection_domain>
 
     <protection_domain name="timer_driver" priority="254">

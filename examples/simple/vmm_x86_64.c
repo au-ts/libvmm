@@ -15,8 +15,29 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <sddf/timer/client.h>
+
+uint64_t com1_ioport_id;
+uint64_t com1_ioport_addr;
+uint64_t com1_ioport_size = 8;
+
+uint64_t primary_ata_cmd_pio_id;
+uint64_t primary_ata_cmd_pio_addr;
+
+uint64_t primary_ata_ctrl_pio_id;
+uint64_t primary_ata_ctrl_pio_addr;
+
+uint64_t second_ata_cmd_pio_id;
+uint64_t second_ata_cmd_pio_addr;
+
+uint64_t second_ata_ctrl_pio_id;
+uint64_t second_ata_ctrl_pio_addr;
+
+#define COM1_IRQ_CH 0
+#define PRIM_ATA_IRQ_CH 1
+#define SECD_ATA_IRQ_CH 2
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -54,8 +75,11 @@ void init(void)
         return;
     }
 
-    /* Pass through COM1 serial port */
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
+    /* Pass through COM1 serial port and disk controller */
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
+    passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
+                               primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
+                               second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -65,6 +89,15 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
+    case COM1_IRQ_CH:
+        LOG_VMM("com1 irq\n");
+        break;
+    case PRIM_ATA_IRQ_CH:
+        LOG_VMM("prim ata irq\n");
+        break;
+    case SECD_ATA_IRQ_CH:
+        LOG_VMM("secd ata irq\n");
+        break;
     case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
             tsc_post = rdtsc();
