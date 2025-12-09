@@ -10,6 +10,19 @@
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/pci.h>
+#include <libvmm/arch/x86_64/instruction.h>
+
+extern uint64_t primary_ata_cmd_pio_id;
+extern uint64_t primary_ata_cmd_pio_addr;
+
+extern uint64_t primary_ata_ctrl_pio_id;
+extern uint64_t primary_ata_ctrl_pio_addr;
+
+extern uint64_t second_ata_cmd_pio_id;
+extern uint64_t second_ata_cmd_pio_addr;
+
+extern uint64_t second_ata_ctrl_pio_id;
+extern uint64_t second_ata_ctrl_pio_addr;
 
 int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
     switch (access_width) {
@@ -24,6 +37,53 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
     }
 }
 
+// int ata_controller_access_pio_ch(uint16_t port_addr) {
+//     if (port_addr >= primary_ata_cmd_pio_addr && port_addr < primary_ata_cmd_pio_addr + 8) {
+//         return primary_ata_cmd_pio_id;
+//     }
+//     if (port_addr >= primary_ata_ctrl_pio_addr && port_addr < primary_ata_ctrl_pio_addr + 1) {
+//         return primary_ata_ctrl_pio_id;
+//     }
+//     if (port_addr >= second_ata_cmd_pio_addr && port_addr < second_ata_cmd_pio_addr + 8) {
+//         return second_ata_cmd_pio_id;
+//     }
+//     if (port_addr >= second_ata_ctrl_pio_addr && port_addr < second_ata_ctrl_pio_addr + 1) {
+//         return second_ata_ctrl_pio_id;
+//     }
+//     return -1;
+// }
+
+// bool emulate_port_access(seL4_VCPUContext *vctx, uint16_t port_addr, int port_id, uint64_t is_read, ioport_access_width_t access_width) {
+//     uint64_t *vctx_raw = (uint64_t *) vctx;
+
+//     if (is_read) {
+//         switch (access_width) {
+//             case IOPORT_BYTE_ACCESS_QUAL:
+//                 vctx_raw[RAX_IDX] = microkit_x86_ioport_read_8(port_id, port_addr);
+//                 break;
+//             case IOPORT_WORD_ACCESS_QUAL:
+//                 vctx_raw[RAX_IDX] = microkit_x86_ioport_read_16(port_id, port_addr);
+//                 break;
+//             case IOPORT_DWORD_ACCESS_QUAL:
+//                 vctx_raw[RAX_IDX] = microkit_x86_ioport_read_32(port_id, port_addr);
+//                 break;
+//         }
+//     } else {
+//         switch (access_width) {
+//             case IOPORT_BYTE_ACCESS_QUAL:
+//                 microkit_x86_ioport_write_8(port_id, port_addr, vctx_raw[RAX_IDX]);
+//                 break;
+//             case IOPORT_WORD_ACCESS_QUAL:
+//                 microkit_x86_ioport_write_16(port_id, port_addr, vctx_raw[RAX_IDX]);
+//                 break;
+//             case IOPORT_DWORD_ACCESS_QUAL:
+//                 microkit_x86_ioport_write_32(port_id, port_addr, vctx_raw[RAX_IDX]);
+//                 break;
+//         }
+//     }
+
+//     return true;
+// }
 
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
@@ -43,6 +103,10 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 
     if (is_pci_config_space_access_mech_1(port_addr)) {
         return emulate_pci_config_space_access_mech_1(vctx, port_addr, is_read, access_width);
+
+    // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
+    //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
+
     } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
         if (is_read) {
             // invalid read to simulate no device on pci bus
