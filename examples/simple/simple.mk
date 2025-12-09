@@ -18,17 +18,16 @@ SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
-IMAGES := vmm.elf
-ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
-IMAGES += timer_driver.elf
-endif
-
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 	ARCH_FLAGS := -target aarch64-none-elf -mstrict-align
+	VMM_NAME := vmm_aarch64
+	IMAGES = $(VMM_NAME).elf
 else ifeq ($(ARCH),x86_64)
 	LINUX ?= $(SYSTEM_DIR)/bzImage
 	ARCH_FLAGS := -target x86_64-unknown-elf
+	VMM_NAME := vmm_x86_64
+	IMAGES = $(VMM_NAME).elf timer_driver.elf
 else
 $(error Unsupported ARCH given)
 endif
@@ -42,10 +41,10 @@ else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
 else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
 else ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
-	KERNEL = $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)/elf/sel4.elf
-	COPIED_KERNEL := sel4_32.elf
+	KERNEL = sel4.elf
+	KERNEL32 := sel4_32.elf
 	QEMU := qemu-system-x86_64
-	QEMU_ARCH_ARGS := -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(COPIED_KERNEL) -initrd $(IMAGE_FILE)
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
 	INITRD ?= $(SYSTEM_DIR)/rootfs.cpio.gz
 else
 $(error Unsupported MICROKIT_BOARD given)
@@ -75,7 +74,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-vmm.elf: vmm.o images.o
+$(VMM_NAME).elf: vmm.o images.o
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
@@ -105,7 +104,7 @@ vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 vm.dtb: vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
+vmm.o: $(EXAMPLE_DIR)/$(VMM_NAME).c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),x86_64)

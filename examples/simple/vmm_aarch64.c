@@ -10,18 +10,8 @@
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/util/util.h>
-
-#if defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
-#elif defined(CONFIG_ARCH_X86_64)
-#include <libvmm/arch/x86_64/linux.h>
-#include <libvmm/arch/x86_64/fault.h>
-#include <libvmm/arch/x86_64/apic.h>
-#include <libvmm/arch/x86_64/hpet.h>
-#include <libvmm/arch/x86_64/pit.h>
-#include <sddf/timer/client.h>
-#endif
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -39,10 +29,8 @@
 #elif defined(BOARD_maaxboard)
 #define GUEST_DTB_VADDR 0x4f000000
 #define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
-#elif defined(BOARD_x86_64_generic_vtx)
-#define GUEST_CMDLINE "nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 #else
-#error Need to define guest kernel image address and DTB address on ARM or command line arguments on x86
+#error Need to define guest kernel image address and DTB address
 #endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
@@ -55,9 +43,6 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
-#elif defined(BOARD_x86_64_generic_vtx)
-// @billn revisit
-#define SERIAL_IRQ 1235678
 #else
 #error Need to define serial interrupt
 #endif
@@ -74,10 +59,6 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-bool tsc_calibrating = true;
-linux_x86_setup_ret_t linux_setup;
-uint64_t tsc_pre, tsc_post;
-
 static void serial_ack(size_t vcpu_id, int irq, void *cookie)
 {
     /*
@@ -93,98 +74,38 @@ void init(void)
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-
-#if defined(CONFIG_ARCH_AARCH64)
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
                                              (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
                                              (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
-
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
-
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init();
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-#elif defined(CONFIG_ARCH_X86_64)
-    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                            GUEST_CMDLINE, &linux_setup)) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
-#else
-#error unsupported architecture
-#endif
-
-    bool success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
+    success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
     /* Just in case there is already an interrupt available to handle, we ack it here. */
-    // @billn revisit
-    // microkit_irq_ack(SERIAL_IRQ_CH);
-
-#ifdef CONFIG_ARCH_X86_64
-    // @billn revisit
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
-    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 11, 0x40, 4);
-    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 12, 0xcf8, 4);
-    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 13, 0xcfc, 4);
-
-    LOG_VMM("Measuring TSC frequency...\n");
-    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
-    tsc_pre = rdtsc();
-#endif
+    microkit_irq_ack(SERIAL_IRQ_CH);
+    /* Finally start the guest */
+    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR, NULL);
 }
 
 void notified(microkit_channel ch)
 {
     switch (ch) {
     case SERIAL_IRQ_CH: {
-#if defined(BOARD_x86_64_generic_vtx)
-        // @billn revisit
-        // LOG_VMM("uartirq\n");
-        // inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 4);
-        break;
-#endif
-
         bool success = virq_inject(SERIAL_IRQ);
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
         }
         break;
     }
-    case TIMER_DRV_CH_FOR_LAPIC: {
-        if (tsc_calibrating) {
-            tsc_post = rdtsc();
-            uint64_t tsc_hz = tsc_post - tsc_pre;
-            LOG_VMM("TSC frequency is %lu Hz\n", tsc_hz);
-            tsc_calibrating = false;
-
-            /* Initialise the virtual GIC driver */
-            bool success = virq_controller_init(tsc_hz);
-            if (!success) {
-                LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
-                return;
-            }
-            guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
-        } else {
-            assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));
-        }
-        break;
-    }
-    case TIMER_DRV_CH_FOR_PIT:
-        pit_handle_timer_ntfn();
-        break;
-    case TIMER_DRV_CH_FOR_HPET_CH0:
-    case TIMER_DRV_CH_FOR_HPET_CH1:
-    case TIMER_DRV_CH_FOR_HPET_CH2:
-        hpet_handle_timer_ntfn(ch);
-        break;
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
@@ -197,7 +118,6 @@ void notified(microkit_channel ch)
  */
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
 {
-#if defined(CONFIG_ARCH_AARCH64)
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
@@ -205,7 +125,6 @@ seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo
         *reply_msginfo = microkit_msginfo_new(0, 0);
         return seL4_True;
     }
-#endif
 
     return seL4_False;
 }
