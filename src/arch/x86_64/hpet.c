@@ -183,7 +183,10 @@ bool hpet_maintenance(void)
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
     if (timer_n_can_interrupt(0)) {
         uint32_t main_counter_val = main_counter_value();
-        hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+
+        if (timer_n_in_periodic_mode(0)) {
+            hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+        }
         if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
@@ -351,10 +354,12 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == timer_n_comparator_mmio_off(0)) {
-            // @billn todo, the sematic is different for one shot
-            assert(timer_n_in_periodic_mode(0));
-
-            hpet_regs.comparators[0].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
+            if (timer_n_in_periodic_mode(0)) {
+                hpet_regs.comparators[0].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
+            } else {
+                hpet_regs.comparators[0].comparator_increment = 0;
+                hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+            }
 
         } else if (offset == timer_n_comparator_mmio_off(2)) {
             // @billn todo, implement periodic for this comparator
