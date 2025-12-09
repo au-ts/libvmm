@@ -1,0 +1,118 @@
+/*
+ * Copyright 2023, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <microkit.h>
+#include <libvmm/guest.h>
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+
+#include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/pit.h>
+#include <sddf/timer/client.h>
+
+/*
+ * As this is just an example, for simplicity we just make the size of the
+ * guest's "RAM" the same for all platforms. For just booting Linux with a
+ * simple user-space, 0x10000000 bytes (256MB) is plenty.
+ */
+#define GUEST_RAM_SIZE 0x10000000
+
+#define GUEST_CMDLINE "nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+
+/* Data for the guest's kernel image. */
+extern char _guest_kernel_image[];
+extern char _guest_kernel_image_end[];
+/* Data for the initial RAM disk to be passed to the kernel. */
+extern char _guest_initrd_image[];
+extern char _guest_initrd_image_end[];
+/* Microkit will set this variable to the start of the guest RAM memory region. */
+uintptr_t guest_ram_vaddr;
+
+bool tsc_calibrating = true;
+linux_x86_setup_ret_t linux_setup;
+uint64_t tsc_pre, tsc_post;
+
+void init(void)
+{
+    /* Initialise the VMM, the VCPU(s), and start the guest */
+    LOG_VMM("starting \"%s\"\n", microkit_name);
+    /* Place all the binaries in the right locations before starting the guest */
+    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
+
+    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size,
+                            (uintptr_t)_guest_initrd_image, initrd_size, GUEST_CMDLINE, &linux_setup)) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        return;
+    }
+
+    /* Pass through COM1 serial port */
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 10, 0x3f8, 8);
+
+    LOG_VMM("Measuring TSC frequency...\n");
+    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
+    tsc_pre = rdtsc();
+}
+
+void notified(microkit_channel ch)
+{
+    switch (ch) {
+    case TIMER_DRV_CH_FOR_LAPIC: {
+        if (tsc_calibrating) {
+            tsc_post = rdtsc();
+            uint64_t tsc_hz = tsc_post - tsc_pre;
+            LOG_VMM("TSC frequency is %lu Hz\n", tsc_hz);
+            tsc_calibrating = false;
+
+            /* Initialise the virtual GIC driver */
+            bool success = virq_controller_init(tsc_hz);
+            if (!success) {
+                LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+                return;
+            }
+            guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
+        } else {
+            assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));
+        }
+        break;
+    }
+    case TIMER_DRV_CH_FOR_PIT:
+        pit_handle_timer_ntfn();
+        break;
+    case TIMER_DRV_CH_FOR_HPET_CH0:
+    case TIMER_DRV_CH_FOR_HPET_CH1:
+    case TIMER_DRV_CH_FOR_HPET_CH2:
+        hpet_handle_timer_ntfn(ch);
+        break;
+    default:
+        printf("Unexpected channel, ch: 0x%lx\n", ch);
+    }
+}
+
+/*
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
+ * the VMM to handle.
+ */
+// seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
+// {
+// #if defined(CONFIG_ARCH_AARCH64)
+//     bool success = fault_handle(child, msginfo);
+//     if (success) {
+//         /* Now that we have handled the fault successfully, we reply to it so
+//          * that the guest can resume execution. */
+//         *reply_msginfo = microkit_msginfo_new(0, 0);
+//         return seL4_True;
+//     }
+// #endif
+
+//     return seL4_False;
+// }
