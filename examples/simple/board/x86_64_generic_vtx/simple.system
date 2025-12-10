@@ -21,6 +21,9 @@
         <ioport id="3" addr="0x170" size="8" setvar_id="second_ata_cmd_pio_id" setvar_addr="second_ata_cmd_pio_addr" />
         <ioport id="4" addr="0x376" size="1" setvar_id="second_ata_ctrl_pio_id" setvar_addr="second_ata_ctrl_pio_addr" />
 
+        <ioport id="5" addr="0xcf8" size="4" setvar_id="pci_conf_addr_pio_id" setvar_addr="pci_conf_addr_pio_addr" />
+        <ioport id="6" addr="0xcfc" size="4" setvar_id="pci_conf_data_pio_id" setvar_addr="pci_conf_data_pio_addr" />
+
         <!-- serial port com1 irq -->
         <irq pin="4" vector="41" id="0" ioapic="0" />
         <!-- primary ATA irq -->
