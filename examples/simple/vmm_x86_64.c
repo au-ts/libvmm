@@ -52,7 +52,7 @@ uint64_t pci_conf_data_pio_addr;
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#define GUEST_CMDLINE "libata.dma=0 nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
