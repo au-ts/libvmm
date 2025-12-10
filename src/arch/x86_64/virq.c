@@ -15,6 +15,7 @@ extern struct ioapic_regs ioapic_regs;
 
 bool virq_controller_init()
 {
+    LOG_VMM("initialising IRQ book-keeping structures\n");
     memset(&lapic_regs, 0, sizeof(struct lapic_regs));
     memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
 
@@ -51,15 +52,5 @@ bool virq_controller_init()
         ioapic_regs.ioredtbl[i] |= BIT(16);
     }
 
-    return true;
-}
-
-bool virq_inject(int irq)
-{
-    return true;
-}
-
-bool virq_register(size_t vcpu_id, size_t irq, virq_ack_fn_t ack_fn, void *ack_data)
-{
     return true;
 }

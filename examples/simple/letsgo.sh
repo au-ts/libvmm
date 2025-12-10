@@ -44,16 +44,17 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 #   -serial mon:stdio --nographic -d guest_errors
 
 # scp board/x86_64_generic_vtx/bzImage billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/bzImage && \
-# ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu Nehalem,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/bzImage -serial mon:stdio --nographic -d guest_errors -append 'nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8 apic=debug'"
+# ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/bzImage \
+# -serial mon:stdio --nographic -d guest_errors  -trace ide_* -append 'nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8'"
 
 scp /Volumes/scratch/vmm_x86/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
-scp /Volumes/scratch/vmm_x86/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32.elf && \
 ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
                         -serial mon:stdio \
                         -m size=2G \
                         -nographic \
                         -d guest_errors \
                         -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso"
+    
 
 
 # qemu-system-x86_64 -cpu qemu64,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave -kernel /Users/dreamliner787-9/TS/libvmm/examples/simple/board/x86_64_generic_vtx/bzImage -initrd /Users/dreamliner787-9/TS/libvmm/examples/simple/board/x86_64_generic_vtx/rootfs.cpio.gz \

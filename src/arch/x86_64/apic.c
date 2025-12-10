@@ -347,6 +347,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 lapic_regs.isr[6] = 0;
                 lapic_regs.isr[7] = 0;
 
+                if (lapic_regs.last_injected_vector == 33) {
+                    // @billn ugly hack, need proper passthrough irq handling
+                    microkit_irq_ack(2);
+                }
+
                 int next_irq_vector = get_next_queued_irq_vector();
                 if (next_irq_vector != -1) {
                     inject_lapic_irq(GUEST_BOOT_VCPU_ID, next_irq_vector);
@@ -522,6 +527,8 @@ void lapic_maintenance(void)
     microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vm_entry_interruption);
     // Clear interrupt window exiting bit if set.
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
+
+    lapic_regs.last_injected_vector = vector;
 }
 
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
