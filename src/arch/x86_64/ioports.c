@@ -107,6 +107,9 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
     //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
 
+    } else if (port_addr >= 0x400 && port_addr < 0x406) {
+        success = true;
+
     } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
         if (is_read) {
             // invalid read to simulate no device on pci bus
