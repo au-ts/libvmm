@@ -12,15 +12,13 @@
 
 extern struct lapic_regs lapic_regs;
 extern struct ioapic_regs ioapic_regs;
-extern uint64_t native_tsc_hz;
 
-bool virq_controller_init(uint64_t tsc_hz)
+bool virq_controller_init()
 {
     memset(&lapic_regs, 0, sizeof(struct lapic_regs));
     memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
 
     LOG_VMM("initialising LAPIC\n");
-    native_tsc_hz = tsc_hz;
 
     // Figure 11-7. Local APIC Version Register
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."

@@ -14,6 +14,12 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/virtio/pci.h>
 
+extern uint64_t pci_conf_addr_pio_id;
+extern uint64_t pci_conf_addr_pio_addr;
+
+extern uint64_t pci_conf_data_pio_id;
+extern uint64_t pci_conf_data_pio_addr;
+
 /* Uncomment this to enable debug logging */
 // #define DEBUG_PCI
 
@@ -39,7 +45,7 @@ static struct pci_bus pci_bus_state = {
                     .vendor_id = 0x8086,
                     .class_code = 0x6,
                     .subclass = 1,
-                    .header_type = 0, },
+                    .header_type = 0x80, }, // bit 7 multifunction
     .ide_controller_enable = false,
     .ide_controller = {
         .device_id = 0x7010, .vendor_id = 0x8086, .class_code = 1, .subclass = 1, .header_type = 0, .prog_if = 0, .bar[0] = 1, .bar[1] = 1, .bar[2] = 1, .bar[3] = 1, .command = 1
@@ -103,7 +109,7 @@ static bool is_isa_bridge_access(void)
 static bool is_ide_controller_access(void)
 {
     return pci_host_bridge_addr_reg_enable() && pci_host_bridge_addr_reg_bus() == 0
-        && pci_host_bridge_addr_reg_dev() == 2 && pci_host_bridge_addr_reg_func() == 0;
+        && pci_host_bridge_addr_reg_dev() == 1 && pci_host_bridge_addr_reg_func() == 1;
 }
 
 bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
@@ -122,6 +128,23 @@ bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_a
 
     if (!is_read) {
         memcpy(&config_bytes[pci_host_bridge_addr_reg_offset() + port_offset], &vctx_raw[RAX_IDX], bytes_to_copy);
+
+        // uint32_t addr = pci_compute_port_address(pci_host_bridge_addr_reg_bus(), pci_host_bridge_addr_reg_dev(),
+        //                                          pci_host_bridge_addr_reg_func(), pci_host_bridge_addr_reg_offset());
+        // microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+
+        // switch (access_width) {
+        // case IOPORT_BYTE_ACCESS_QUAL:
+        //     microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+        //     break;
+        // case IOPORT_WORD_ACCESS_QUAL:
+        //     microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+        //     break;
+        // case IOPORT_DWORD_ACCESS_QUAL:
+        //     microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+        //     break;
+        // }
+
     } else {
         memcpy(&vctx_raw[RAX_IDX], &config_bytes[pci_host_bridge_addr_reg_offset() + port_offset], bytes_to_copy);
     }
@@ -162,32 +185,22 @@ bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t por
         if (!pci_host_bridge_addr_reg_enable()) {
             pci_host_bridge_invalid_read(vctx);
         } else {
+            // if (!is_read) {
+            //     int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
+            //     LOG_VMM("writing reg 0x%x, val 0x%x, to %d:%d.%d\n", pci_host_bridge_addr_reg_offset() + port_offset,
+            //             vctx->eax, pci_host_bridge_addr_reg_bus(), pci_host_bridge_addr_reg_dev(),
+            //             pci_host_bridge_addr_reg_func());
+            // }
+
             // @billn probably not scalable in-terms of code readability
             if (is_host_bridge_access()) {
-                // if (!is_read) {
-                //     LOG_VMM("write host bridge, offset 0x%x, val 0x%x\n",
-                //             pci_host_bridge_addr_reg_offset() + port_addr - PCI_CONFIG_DATA_START_PORT,
-                //             vctx_raw[RAX_IDX]);
-                // }
                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
                                                               &pci_bus_state.host_bridge);
             } else if (is_isa_bridge_access()) {
-                // if (!is_read) {
-                //     LOG_VMM("write isa bridge, offset 0x%x, val 0x%x\n",
-                //             pci_host_bridge_addr_reg_offset() + port_addr - PCI_CONFIG_DATA_START_PORT,
-                //             vctx_raw[RAX_IDX]);
-                // }
-
                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
                                                               &pci_bus_state.isa_bridge);
 
             } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
-                // if (!is_read) {
-                //     LOG_VMM("write ide, offset 0x%x, val 0x%x\n",
-                //             pci_host_bridge_addr_reg_offset() + port_addr - PCI_CONFIG_DATA_START_PORT,
-                //             vctx_raw[RAX_IDX]);
-                // }
-
                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
                                                               &pci_bus_state.ide_controller);
 
@@ -202,6 +215,64 @@ bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t por
     }
 
     return success;
+}
+
+/* Utility functions to access the host PCI bus */
+uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
+{
+    uint32_t lbus = (uint32_t)bus;
+    uint32_t ldev = (uint32_t)dev;
+    uint32_t lfunc = (uint32_t)func;
+
+    // Bit 31     | Bits 30-24 | Bits 23-16 | Bits 15-11    | Bits 10-8       | Bits 7-0
+    // Enable Bit | Reserved   | Bus Number | Device Number | Function Number | Register Offset
+
+    /* Write enable bit */
+    uint32_t addr = BIT(31);
+
+    /* Shift in the PCI device address and register offset. */
+    addr = addr | (lbus << 16) | (ldev << 11) | (lfunc << 8) | (off & 0xFC);
+
+    return addr;
+}
+
+uint32_t pci_read_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+
+    /* Write the address into the "select" port, then the data will be available at the "data" port. */
+    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+    return microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr);
+}
+
+void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t data)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+    microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
+}
+
+bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
+{
+    int candidate_bus = 0;
+    int candidate_dev = 0;
+    int candidate_func = 0;
+
+    for (; candidate_dev < 32; candidate_dev++) {
+        for (; candidate_func < 8; candidate_func++) {
+            uint32_t reg2 = pci_read_32(candidate_bus, candidate_dev, candidate_func, 0x8);
+            uint8_t candidate_class = (reg2 >> 24) & 0xff;
+            uint8_t candidate_subclass = (reg2 >> 16) & 0xff;
+
+            if (reg2 != 0xffffffff && candidate_class == class && candidate_subclass == subclass) {
+                *bus = candidate_bus;
+                *dev = candidate_dev;
+                *func = candidate_func;
+                return true;
+            }
+        }
+        candidate_func = 0;
+    }
 }
 
 bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
@@ -220,6 +291,24 @@ bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primar
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr, 1);
 
     pci_bus_state.ide_controller_enable = true;
+
+    // Scan the host's PCI bus for the actual IDE controller and enable it.
+    uint8_t bus, dev, func;
+    assert(find_pci_device(1, 1, &bus, &dev, &func));
+    LOG_VMM("found host IDE controller @ PCI %d:%d.%d\n", bus, dev, func);
+
+    uint32_t reg1 = pci_read_32(bus, dev, func, 0x4);
+
+    LOG_VMM("reg1 0x%x\n", reg1);
+
+    reg1 |= 1;
+    pci_write_32(bus, dev, func, 0x4, reg1);
+
+    // @billn sus
+    pci_bus_state.ide_controller.cap_data[0] = 0;
+    pci_bus_state.ide_controller.cap_data[1] = 0xc0;
+    pci_bus_state.ide_controller.cap_data[2] = 3;
+    pci_bus_state.ide_controller.cap_data[3] = 0xe3;
 
     return true;
 }

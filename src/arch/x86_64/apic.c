@@ -75,7 +75,7 @@
 struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 struct ioapic_regs ioapic_regs;
-uint64_t native_tsc_hz;
+extern uint64_t native_tsc_hz;
 
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
@@ -523,7 +523,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     int irr_idx = vector % 32;
     if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
         // already pending, drop.
-        return true;
+        return false;
     }
 
     // Mark as pending for injection, there will be 2 scenarios that play out:
@@ -554,7 +554,7 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
     if (!(lapic_regs.timer & BIT(16))) {
         uint8_t vector = lapic_regs.timer & 0xff;
         if (!inject_lapic_irq(vcpu_id, vector)) {
-            LOG_VMM_ERR("failed to inject LAPIC timer IRQ vector 0x%x\n", vector);
+            // LOG_VMM_ERR("failed to inject LAPIC timer IRQ vector 0x%x\n", vector);
             return false;
         }
     }

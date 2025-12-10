@@ -35,6 +35,12 @@ uint64_t second_ata_cmd_pio_addr;
 uint64_t second_ata_ctrl_pio_id;
 uint64_t second_ata_ctrl_pio_addr;
 
+uint64_t pci_conf_addr_pio_id;
+uint64_t pci_conf_addr_pio_addr;
+
+uint64_t pci_conf_data_pio_id;
+uint64_t pci_conf_data_pio_addr;
+
 #define COM1_IRQ_CH 0
 #define PRIM_ATA_IRQ_CH 1
 #define SECD_ATA_IRQ_CH 2
@@ -46,7 +52,7 @@ uint64_t second_ata_ctrl_pio_addr;
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#define GUEST_CMDLINE "nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "libata.dma=0 nokaslr earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -59,7 +65,7 @@ uintptr_t guest_ram_vaddr;
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
-uint64_t tsc_pre, tsc_post;
+uint64_t tsc_pre, tsc_post, native_tsc_hz;
 
 void init(void)
 {
@@ -90,30 +96,34 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
     case COM1_IRQ_CH:
-        LOG_VMM("com1 irq\n");
+        // LOG_VMM("com1 irq\n");
         break;
     case PRIM_ATA_IRQ_CH:
-        LOG_VMM("prim ata irq\n");
+        if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 14)) {
+            LOG_VMM_ERR("could not inject primary ATA IRQ\n");
+        }
         break;
     case SECD_ATA_IRQ_CH:
-        LOG_VMM("secd ata irq\n");
+        if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 15)) {
+            LOG_VMM_ERR("could not inject secondary ATA IRQ\n");
+        }
         break;
     case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
             tsc_post = rdtsc();
-            uint64_t tsc_hz = tsc_post - tsc_pre;
-            LOG_VMM("TSC frequency is %lu Hz\n", tsc_hz);
+            native_tsc_hz = tsc_post - tsc_pre;
+            LOG_VMM("TSC frequency is %lu Hz\n", native_tsc_hz);
             tsc_calibrating = false;
 
             /* Initialise the virtual GIC driver */
-            bool success = virq_controller_init(tsc_hz);
+            bool success = virq_controller_init();
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
                 return;
             }
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
         } else {
-            assert(handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID));
+            handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
         }
         break;
     }
