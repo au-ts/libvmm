@@ -13,11 +13,14 @@
 #define TIMER_DRV_CH_FOR_LAPIC 11
 
 #define LAPIC_NUM_ISR_IRR_32B 8
+#define MIN_VECTOR 32
+#define MAX_VECTOR (LAPIC_NUM_ISR_IRR_32B * 32)
 
 struct lapic_regs {
     // @billn make a container struct?
     // Not a LAPIC register, just bookkeeping
     uint32_t native_scaled_tsc_when_timer_starts;
+    uint8_t last_injected_vector;
 
     uint32_t id;
     uint32_t revision;

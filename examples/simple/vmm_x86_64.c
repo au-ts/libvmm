@@ -97,6 +97,10 @@ void notified(microkit_channel ch)
     switch (ch) {
     case COM1_IRQ_CH:
         // LOG_VMM("com1 irq\n");
+        // if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 4)) {
+        //     // LOG_VMM_ERR("could not inject serial IRQ\n");
+        // }
+        // microkit_irq_ack(COM1_IRQ_CH);
         break;
     case PRIM_ATA_IRQ_CH:
         if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 14)) {
@@ -104,6 +108,7 @@ void notified(microkit_channel ch)
         }
         break;
     case SECD_ATA_IRQ_CH:
+        // LOG_VMM("secondary ATA IRQ received\n");
         if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 15)) {
             LOG_VMM_ERR("could not inject secondary ATA IRQ\n");
         }
@@ -118,7 +123,7 @@ void notified(microkit_channel ch)
             /* Initialise the virtual GIC driver */
             bool success = virq_controller_init();
             if (!success) {
-                LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+                LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
             }
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
