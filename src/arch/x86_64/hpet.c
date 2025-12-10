@@ -152,7 +152,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
     if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
         int ioapic_pin = get_timer_n_ioapic_pin(0);
-        inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
+        inject_ioapic_irq(0, ioapic_pin);
 
         if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
             uint32_t main_counter_val = main_counter_value();
@@ -165,7 +165,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         }
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
         int ioapic_pin = get_timer_n_ioapic_pin(2);
-        inject_ioapic_irq(GUEST_BOOT_VCPU_ID, ioapic_pin);
+        inject_ioapic_irq(0, ioapic_pin);
 
         assert(!timer_n_in_periodic_mode(2));
     } else {
