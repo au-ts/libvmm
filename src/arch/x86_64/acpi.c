@@ -88,7 +88,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 3
+#define XSDT_ENTRIES 4
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -300,12 +300,12 @@ struct pcie_config_space_addr_structure {
     uint8_t start_bus;
     uint8_t end_bus;
     uint32_t reserved;
-};
+} __attribute__((packed));;
 
 struct mcfg {
     struct dst_header h;
     struct pcie_config_space_addr_structure config_spaces[MCFG_NUM_CONFIG_SPACES];
-};
+} __attribute__((packed));;
 
 static void mcfg_build(struct mcfg *mcfg) {
     memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
@@ -325,102 +325,103 @@ static void mcfg_build(struct mcfg *mcfg) {
     assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
 }
 
+struct FADT {
+    struct   dst_header h;
+    uint32_t FirmwareCtrl;
+    uint32_t Dsdt;
 
-// typedef struct {
-//     uint8_t AddressSpace;
-//     uint8_t BitWidth;
-//     uint8_t BitOffset;
-//     uint8_t AccessSize;
-//     uint64_t Address;
-// } GenericAddressStructure;
+    // field used in ACPI 1.0; no longer in use, for compatibility only
+    uint8_t  Reserved;
 
-// struct FADT {
-//     struct   ACPISDTHeader h;
-//     uint32_t FirmwareCtrl;
-//     uint32_t Dsdt;
+    uint8_t  PreferredPowerManagementProfile;
+    uint16_t SCI_Interrupt;
+    uint32_t SMI_CommandPort;
+    uint8_t  AcpiEnable;
+    uint8_t  AcpiDisable;
+    uint8_t  S4BIOS_REQ;
+    uint8_t  PSTATE_Control;
+    uint32_t PM1aEventBlock;
+    uint32_t PM1bEventBlock;
+    uint32_t PM1aControlBlock;
+    uint32_t PM1bControlBlock;
+    uint32_t PM2ControlBlock;
+    uint32_t PMTimerBlock;
+    uint32_t GPE0Block;
+    uint32_t GPE1Block;
+    uint8_t  PM1EventLength;
+    uint8_t  PM1ControlLength;
+    uint8_t  PM2ControlLength;
+    uint8_t  PMTimerLength;
+    uint8_t  GPE0Length;
+    uint8_t  GPE1Length;
+    uint8_t  GPE1Base;
+    uint8_t  CStateControl;
+    uint16_t WorstC2Latency;
+    uint16_t WorstC3Latency;
+    uint16_t FlushSize;
+    uint16_t FlushStride;
+    uint8_t  DutyOffset;
+    uint8_t  DutyWidth;
+    uint8_t  DayAlarm;
+    uint8_t  MonthAlarm;
+    uint8_t  Century;
 
-//     // field used in ACPI 1.0; no longer in use, for compatibility only
-//     uint8_t  Reserved;
+    // reserved in ACPI 1.0; used since ACPI 2.0+
+    uint16_t BootArchitectureFlags;
 
-//     uint8_t  PreferredPowerManagementProfile;
-//     uint16_t SCI_Interrupt;
-//     uint32_t SMI_CommandPort;
-//     uint8_t  AcpiEnable;
-//     uint8_t  AcpiDisable;
-//     uint8_t  S4BIOS_REQ;
-//     uint8_t  PSTATE_Control;
-//     uint32_t PM1aEventBlock;
-//     uint32_t PM1bEventBlock;
-//     uint32_t PM1aControlBlock;
-//     uint32_t PM1bControlBlock;
-//     uint32_t PM2ControlBlock;
-//     uint32_t PMTimerBlock;
-//     uint32_t GPE0Block;
-//     uint32_t GPE1Block;
-//     uint8_t  PM1EventLength;
-//     uint8_t  PM1ControlLength;
-//     uint8_t  PM2ControlLength;
-//     uint8_t  PMTimerLength;
-//     uint8_t  GPE0Length;
-//     uint8_t  GPE1Length;
-//     uint8_t  GPE1Base;
-//     uint8_t  CStateControl;
-//     uint16_t WorstC2Latency;
-//     uint16_t WorstC3Latency;
-//     uint16_t FlushSize;
-//     uint16_t FlushStride;
-//     uint8_t  DutyOffset;
-//     uint8_t  DutyWidth;
-//     uint8_t  DayAlarm;
-//     uint8_t  MonthAlarm;
-//     uint8_t  Century;
+    uint8_t  Reserved2;
+    uint32_t Flags;
 
-//     // reserved in ACPI 1.0; used since ACPI 2.0+
-//     uint16_t BootArchitectureFlags;
+    struct address_structure ResetReg;
 
-//     uint8_t  Reserved2;
-//     uint32_t Flags;
+    uint8_t  ResetValue;
+    uint8_t  Reserved3[3];
 
-//     // 12 byte structure; see below for details
-//     GenericAddressStructure ResetReg;
+    // 64bit pointers - Available on ACPI 2.0+
+    uint64_t                X_FirmwareControl;
+    uint64_t                X_Dsdt;
 
-//     uint8_t  ResetValue;
-//     uint8_t  Reserved3[3];
+    struct address_structure X_PM1aEventBlock;
+    struct address_structure X_PM1bEventBlock;
+    struct address_structure X_PM1aControlBlock;
+    struct address_structure X_PM1bControlBlock;
+    struct address_structure X_PM2ControlBlock;
+    struct address_structure X_PMTimerBlock;
+    struct address_structure X_GPE0Block;
+    struct address_structure X_GPE1Block;
+} __attribute__((packed));;
 
-//     // 64bit pointers - Available on ACPI 2.0+
-//     uint64_t                X_FirmwareControl;
-//     uint64_t                X_Dsdt;
+static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
+    /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
+     * hence the inconsistency. */
+    memcpy(fadt->h.signature, "FACP", 4);
+    LOG_VMM(
+        "what the fuck\n"
+    );
+    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
 
-//     GenericAddressStructure X_PM1aEventBlock;
-//     GenericAddressStructure X_PM1bEventBlock;
-//     GenericAddressStructure X_PM1aControlBlock;
-//     GenericAddressStructure X_PM1bControlBlock;
-//     GenericAddressStructure X_PM2ControlBlock;
-//     GenericAddressStructure X_PMTimerBlock;
-//     GenericAddressStructure X_GPE0Block;
-//     GenericAddressStructure X_GPE1Block;
-// };
+    fadt->h.length = sizeof(struct FADT);
+    fadt->h.revision = 6;
 
-// static void fadt_build(struct FADT *fadt, uint64_t xsdt_gpa) {
-//     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
-//      * hence the inconsistency. */
-//     memcpy(fadt->h.Signature, "FACP", 4);
+    memcpy(fadt->h.oem_id, ACPI_OEMID, 6);
+    memcpy(fadt->h.oem_table_id, ACPI_OEMID, 6);
+    fadt->h.oem_revision = 1;
 
-//     fadt->h.Length = sizeof(struct FADT);
-//     fadt->h.Revision = 6;
+    fadt->h.creator_id = 1;
+    fadt->h.creator_revision = 1;
 
-//     memcpy(fadt->h.OEMID, XSDT_OEMID, 6);
-//     memcpy(fadt->h.OEMTableID, XSDT_OEMID, 6);
-//     fadt->h.OEMRevision = 1;
+    /* Fill out data fields of FADT */
+    fadt->Dsdt = dsdt_gpa;
+    fadt->X_Dsdt = dsdt_gpa;
+    fadt->Flags = 3; // WBINVD works @billn double check
 
-//     fadt->h.CreatorID = 1;
-//     fadt->h.CreatorRevision = 1;
+    fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
+    assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
 
-//     /* Fill out data fields of FADT */
+    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
 
-//     fadt->h.Checksum = acpi_sdt_header_checksum(&fadt->h);
-//     assert(acpi_sdt_header_check(&fadt->h));
-// }
+    return fadt->h.length;
+}
 
 static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs)
 {
@@ -511,6 +512,13 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     // should use the package guest image script
     memcpy((void *) (guest_ram_vaddr + dsdt_gpa), simple_dsdt_aml_code, sizeof(simple_dsdt_aml_code));
 
+    uint64_t fadt_gpa = acpi_allocate_gpa(0x1000);
+    struct FADT *fadt = (struct FADT *)(guest_ram_vaddr + fadt_gpa);
+    fadt_build(fadt, dsdt_gpa);
+    assert(fadt->h.length <= 0x1000);
+
+    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
+
     // uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
     // struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
     // mcfg_build(mcfg);
@@ -519,7 +527,7 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, dsdt_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, dsdt_gpa, fadt_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);
