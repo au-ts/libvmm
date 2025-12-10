@@ -43,6 +43,7 @@ struct lapic_regs {
 };
 
 #define IOAPIC_LAST_INDIRECT_INDEX 0x17
+#define IOAPIC_NUM_PINS (IOAPIC_LAST_INDIRECT_INDEX + 1)
 
 struct ioapic_regs {
     uint32_t selected_reg;
@@ -50,7 +51,7 @@ struct ioapic_regs {
     uint32_t ioapicid;
     uint32_t ioapicver;
     uint32_t ioapicarb;
-    uint64_t ioredtbl[IOAPIC_LAST_INDIRECT_INDEX + 1];
+    uint64_t ioredtbl[IOAPIC_NUM_PINS];
 };
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);

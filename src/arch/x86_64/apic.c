@@ -9,6 +9,7 @@
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>
@@ -76,6 +77,7 @@ extern struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
+extern struct ioapic_virq_handle virq_passthrough_map[MAX_PASSTHROUGH_IRQ];
 
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
@@ -114,7 +116,8 @@ static int get_next_queued_irq_vector(void)
     return -1;
 }
 
-static void debug_print_lapic_pending_irqs(void) {
+static void debug_print_lapic_pending_irqs(void)
+{
     for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
@@ -161,6 +164,12 @@ int lapic_dcr_to_divider(void)
         LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", lapic_regs.dcr);
         assert(false);
     }
+}
+
+uint8_t ioapic_pin_to_vector(int ioapic, int pin)
+{
+    assert(ioapic == 0);
+    return ioapic_regs.ioredtbl[pin] & 0xff;
 }
 
 enum lapic_timer_mode {
@@ -347,9 +356,15 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 lapic_regs.isr[6] = 0;
                 lapic_regs.isr[7] = 0;
 
-                if (lapic_regs.last_injected_vector == 33) {
-                    // @billn ugly hack, need proper passthrough irq handling
-                    microkit_irq_ack(2);
+                // if it is a passed through I/O APIC IRQ, run the ack function
+                for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
+                    if (virq_passthrough_map[i].valid) {
+                        uint8_t candidate_vector = ioapic_pin_to_vector(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin);
+                        if (candidate_vector == lapic_regs.last_injected_vector) {
+                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin, (void *) i);
+                            break;
+                        }
+                    }
                 }
 
                 int next_irq_vector = get_next_queued_irq_vector();
@@ -590,15 +605,11 @@ bool inject_ioapic_irq(int ioapic, int pin)
         return false;
     }
 
-    // read what vector the guest want the PIT irq0 to be delivered to.
-    // page 13 of the ioapic spec pdf
-    uint8_t cpu_vector = ioapic_regs.ioredtbl[pin] & 0xff;
-
     // check if the irq is masked
     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
         return false;
     }
 
     // @billn need to read cpu id from redirection register
-    return inject_lapic_irq(0, cpu_vector);
+    return inject_lapic_irq(0, ioapic_pin_to_vector(ioapic, pin));
 }
