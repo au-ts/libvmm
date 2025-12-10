@@ -104,15 +104,24 @@ static int get_next_queued_irq_vector(void)
 {
     // scan IRRs for *a* pending interrupt
     // do it "right-to-left" as the higer vector is higher prio (generally)
-    int vector = -1;
-    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0 && vector == -1; i--) {
-        for (int j = 31; j >= 0 && vector == -1; j--) {
+    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
-                vector = i * 32 + j;
+                return i * 32 + j;
             }
         }
     }
-    return vector;
+    return -1;
+}
+
+static void debug_print_lapic_pending_irqs(void) {
+    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
+            if (lapic_regs.irr[i] & BIT(j)) {
+                LOG_VMM("irq vector %d is pending\n", i * 32 + j);
+            }
+        }
+    }
 }
 
 bool vcpu_can_take_irq(size_t vcpu_id)
@@ -519,14 +528,16 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
-    int irr_n = vector / 32;
-    int irr_idx = vector % 32;
-    if (lapic_regs.irr[irr_n] & BIT(irr_idx)) {
-        // already pending, drop.
+    if (vector < 32) {
+        LOG_VMM_ERR("IRQ Vector %d is archtecturally reserved! Will not inject.\n", vector);
         return false;
     }
 
-    // Mark as pending for injection, there will be 2 scenarios that play out:
+    int irr_n = vector / 32;
+    int irr_idx = vector % 32;
+
+    // Mark as pending for injection, there may be 3 scenarios that play out:
+    // 1. IRQ already pending, in that case the 2 IRQs get collapsed into 1
     // 1. immediately if the vCPU can take it and LAPIC have no in service IRQ, @billn the second part is a bit sus
     // 2. at some point in the future when the vCPU re-enable IRQs
     lapic_regs.irr[irr_n] |= BIT(irr_idx);
