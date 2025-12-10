@@ -40,7 +40,6 @@ struct lapic_regs {
 };
 
 #define IOAPIC_LAST_INDIRECT_INDEX 0x17
-#define IOAPIC0_BASE_VECTOR 0x20
 
 struct ioapic_regs {
     uint32_t selected_reg;

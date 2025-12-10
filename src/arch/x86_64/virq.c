@@ -42,8 +42,6 @@ bool virq_controller_init()
     ioapic_regs.ioapicver = 0x11 | (IOAPIC_LAST_INDIRECT_INDEX << 16);
     // Wire up all the IRQs
     for (int i = 0; i <= IOAPIC_LAST_INDIRECT_INDEX; i++) {
-        // Set vector
-        ioapic_regs.ioredtbl[i] = IOAPIC0_BASE_VECTOR + i;
         // fixed intr deivery, all zero
         // destination mode, physical mode to apic 0, all zero
         // delivery status, all zero
