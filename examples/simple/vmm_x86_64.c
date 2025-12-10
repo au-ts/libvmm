@@ -8,8 +8,8 @@
 #include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/guest.h>
-#include <libvmm/virq.h>
 #include <libvmm/util/util.h>
+#include <sddf/timer/client.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -17,7 +17,7 @@
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
-#include <sddf/timer/client.h>
+#include <libvmm/arch/x86_64/virq.h>
 
 uint64_t com1_ioport_id;
 uint64_t com1_ioport_addr;
@@ -65,7 +65,7 @@ uintptr_t guest_ram_vaddr;
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
-uint64_t tsc_pre, tsc_post, native_tsc_hz;
+uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
 void init(void)
 {
@@ -103,25 +103,25 @@ void notified(microkit_channel ch)
         // microkit_irq_ack(COM1_IRQ_CH);
         break;
     case PRIM_ATA_IRQ_CH:
-        if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 14)) {
+        if (!inject_ioapic_irq(0, 14)) {
             LOG_VMM_ERR("could not inject primary ATA IRQ\n");
         }
         break;
     case SECD_ATA_IRQ_CH:
         // LOG_VMM("secondary ATA IRQ received\n");
-        if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 15)) {
+        if (!inject_ioapic_irq(0, 15)) {
             LOG_VMM_ERR("could not inject secondary ATA IRQ\n");
         }
         break;
     case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
             tsc_post = rdtsc();
-            native_tsc_hz = tsc_post - tsc_pre;
-            LOG_VMM("TSC frequency is %lu Hz\n", native_tsc_hz);
+            measured_tsc_hz = tsc_post - tsc_pre;
+            LOG_VMM("TSC frequency is %lu Hz\n", measured_tsc_hz);
             tsc_calibrating = false;
 
             /* Initialise the virtual GIC driver */
-            bool success = virq_controller_init();
+            bool success = virq_controller_init(measured_tsc_hz);
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;

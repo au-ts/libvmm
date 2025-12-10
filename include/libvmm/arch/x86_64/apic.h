@@ -57,9 +57,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
 
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
-bool inject_ioapic_irq(size_t vcpu_id, int pin);
+bool inject_ioapic_irq(int ioapic, int pin);
 
 bool handle_lapic_timer_nftn(size_t vcpu_id);
 void lapic_maintenance(void);
-
-// bool inject_ioapic_irq(size_t vcpu_id, int pin);

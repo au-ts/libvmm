@@ -3,18 +3,31 @@
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
-#include <libvmm/arch/x86_64/apic.h>
-#include <libvmm/arch/x86_64/linux.h>
-#include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 #include <sddf/util/custom_libc/string.h>
+#include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/virq.h>
+#include <libvmm/arch/x86_64/linux.h>
 
-extern struct lapic_regs lapic_regs;
-extern struct ioapic_regs ioapic_regs;
+struct ioapic_virq_handle {
+    int ioapic;
+    int pin;
+    virq_ioapic_ack_fn_t ack_fn;
+    void *ack_data;
+};
 
-bool virq_controller_init()
+/* Maps Microkit channel numbers with registered vIRQ */
+int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};
+
+struct lapic_regs lapic_regs;
+struct ioapic_regs ioapic_regs;
+uint64_t tsc_hz;
+
+bool virq_controller_init(uint64_t native_tsc_hz)
 {
+    tsc_hz = native_tsc_hz;
+
     LOG_VMM("initialising IRQ book-keeping structures\n");
     memset(&lapic_regs, 0, sizeof(struct lapic_regs));
     memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
@@ -53,4 +66,12 @@ bool virq_controller_init()
     }
 
     return true;
+}
+
+bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_ch) {
+
+}
+
+bool virq_ioapic_handle_passthrough(microkit_channel irq_ch) {
+
 }

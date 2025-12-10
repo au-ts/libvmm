@@ -72,10 +72,10 @@
 #define REG_IOAPIC_IOREDTBL_FIRST_OFF 0x10
 #define REG_IOAPIC_IOREDTBL_LAST_OFF 0x40
 
-struct lapic_regs lapic_regs;
+extern struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
-struct ioapic_regs ioapic_regs;
-extern uint64_t native_tsc_hz;
+extern struct ioapic_regs ioapic_regs;
+extern uint64_t tsc_hz;
 
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
@@ -392,7 +392,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                     // LOG_VMM("LAPIC timer started while irq UNMASKED, mode 0x%x\n", (lapic_regs.timer >> 17) % 0x3);
                     // LOG_VMM("setting timeout for %lu ns\n", delay_ns);
 
-                    uint64_t delay_ns = ticks_to_ns(native_tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
+                    uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
                     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
                 }
                 lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
@@ -564,7 +564,7 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
         lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
         // LOG_VMM("restarting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
         // sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
-        uint64_t delay_ns = ticks_to_ns(native_tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
+        uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
         sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
     }
 
@@ -580,8 +580,11 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
     return true;
 }
 
-bool inject_ioapic_irq(size_t vcpu_id, int pin)
+bool inject_ioapic_irq(int ioapic, int pin)
 {
+    // only 1 chip right now
+    assert(ioapic == 0);
+
     if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
         LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
         return false;
@@ -596,5 +599,6 @@ bool inject_ioapic_irq(size_t vcpu_id, int pin)
         return false;
     }
 
-    return inject_lapic_irq(vcpu_id, cpu_vector);
+    // @billn need to read cpu id from redirection register
+    return inject_lapic_irq(0, cpu_vector);
 }
