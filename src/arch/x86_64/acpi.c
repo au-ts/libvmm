@@ -395,10 +395,6 @@ static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
     memcpy(fadt->h.signature, "FACP", 4);
-    LOG_VMM(
-        "what the fuck\n"
-    );
-    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
 
     fadt->h.length = sizeof(struct FADT);
     fadt->h.revision = 6;
@@ -413,12 +409,15 @@ static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     /* Fill out data fields of FADT */
     fadt->Dsdt = dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
-    fadt->Flags = 3; // WBINVD works @billn double check
+    // fadt->Flags = BIT(20); // hw reduced acpi
+
+    fadt->PM1aEventBlock = 0x400;
+    fadt->PM1EventLength = 0x4;
+    fadt->PM1aControlBlock = 0x404;
+    fadt->PM1ControlLength = 0x2;
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
-
-    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
 
     return fadt->h.length;
 }
@@ -516,8 +515,6 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     struct FADT *fadt = (struct FADT *)(guest_ram_vaddr + fadt_gpa);
     fadt_build(fadt, dsdt_gpa);
     assert(fadt->h.length <= 0x1000);
-
-    LOG_VMM("bruh %c%c%c%c\n", ((char *) fadt)[0], ((char *) fadt)[1], ((char *) fadt)[2], ((char *) fadt)[3]);
 
     // uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
     // struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
