@@ -81,7 +81,7 @@ void init(void)
         return;
     }
 
-    /* Pass through COM1 serial port and disk controller */
+    /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
     passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
@@ -95,24 +95,6 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
-    case COM1_IRQ_CH:
-        // LOG_VMM("com1 irq\n");
-        // if (!inject_ioapic_irq(GUEST_BOOT_VCPU_ID, 4)) {
-        //     // LOG_VMM_ERR("could not inject serial IRQ\n");
-        // }
-        // microkit_irq_ack(COM1_IRQ_CH);
-        break;
-    case PRIM_ATA_IRQ_CH:
-        if (!inject_ioapic_irq(0, 14)) {
-            LOG_VMM_ERR("could not inject primary ATA IRQ\n");
-        }
-        break;
-    case SECD_ATA_IRQ_CH:
-        // LOG_VMM("secondary ATA IRQ received\n");
-        if (!inject_ioapic_irq(0, 15)) {
-            LOG_VMM_ERR("could not inject secondary ATA IRQ\n");
-        }
-        break;
     case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
             tsc_post = rdtsc();
@@ -126,6 +108,14 @@ void notified(microkit_channel ch)
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
             }
+
+            /* Pass through IDE disk controller IRQs */
+            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
+            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+
+            /* Pass through serial IRQs */
+            assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
+
             guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
         } else {
             handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
@@ -141,7 +131,8 @@ void notified(microkit_channel ch)
         hpet_handle_timer_ntfn(ch);
         break;
     default:
-        printf("Unexpected channel, ch: 0x%lx\n", ch);
+        // printf("Unexpected channel, ch: 0x%lx\n", ch);
+        virq_ioapic_handle_passthrough(ch);
     }
 }
 
