@@ -36,7 +36,8 @@ struct lapic_regs {
     uint32_t dcr;
     uint32_t init_count;
     uint32_t timer;
-    uint32_t icr;
+    uint32_t icr_low;
+    uint32_t icr_high;
     uint32_t lint0;
     uint32_t lint1;
     // uint32_t esr;

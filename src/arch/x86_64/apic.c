@@ -54,7 +54,8 @@
 #define REG_LAPIC_IRR_6 0x260
 #define REG_LAPIC_IRR_7 0x270
 #define REG_LAPIC_ESR 0x280
-#define REG_LAPIC_ICR 0x300
+#define REG_LAPIC_ICR_LOW 0x300
+#define REG_LAPIC_ICR_HIGH 0x310
 #define REG_LAPIC_TIMER 0x320
 #define REG_LAPIC_THERMAL 0x330
 #define REG_LAPIC_PERF_MON_CNTER 0x340
@@ -319,8 +320,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_PERF_MON_CNTER:
             vctx_raw[decoded_mem_ins.target_reg] = 0;
             break;
-        case REG_LAPIC_ICR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr;
+        case REG_LAPIC_ICR_LOW:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr_low;
+            break;
+        case REG_LAPIC_ICR_HIGH:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr_high;
             break;
         case REG_LAPIC_LVT_LINT0:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.lint0;
@@ -359,9 +363,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 // if it is a passed through I/O APIC IRQ, run the ack function
                 for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
                     if (virq_passthrough_map[i].valid) {
-                        uint8_t candidate_vector = ioapic_pin_to_vector(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin);
+                        uint8_t candidate_vector = ioapic_pin_to_vector(virq_passthrough_map[i].ioapic,
+                                                                        virq_passthrough_map[i].pin);
                         if (candidate_vector == lapic_regs.last_injected_vector) {
-                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin, (void *) i);
+                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
+                                                           (void *)i);
                             break;
                         }
                     }
@@ -383,8 +389,12 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_LVT_LINT1:
             lapic_regs.lint1 = vctx_raw[decoded_mem_ins.target_reg];
             break;
-        case REG_LAPIC_ICR:
-            lapic_regs.icr = vctx_raw[decoded_mem_ins.target_reg];
+        // @billn handle IPI, "Figure 11-12. Interrupt Command Register (ICR)"
+        case REG_LAPIC_ICR_LOW:
+            lapic_regs.icr_low = vctx_raw[decoded_mem_ins.target_reg];
+            break;
+        case REG_LAPIC_ICR_HIGH:
+            lapic_regs.icr_high = vctx_raw[decoded_mem_ins.target_reg];
             break;
         case REG_LAPIC_TIMER:
             lapic_regs.timer = vctx_raw[decoded_mem_ins.target_reg];
@@ -483,7 +493,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                                         / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
 
-                // LOG_VMM("writing indirect register 0x%x\n", redirection_reg_idx);
+                uint64_t old_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
 
                 if (is_high) {
                     uint64_t new_high = vctx_raw[decoded_mem_ins.target_reg] << 32;
@@ -495,7 +505,20 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                     ioapic_regs.ioredtbl[redirection_reg_idx] = new_low | high;
                 }
 
-                // LOG_VMM("written value for redirection %d is %lx\n", redirection_reg_idx, ioapic_regs.ioredtbl[redirection_reg_idx]);
+                uint64_t new_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
+
+                // If an I/O APIC IRQ pin goes from masked to unmasked and there are passed through
+                // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
+                // in the virtual I/O APIC, the real IRQ doesn't get stuck in waiting for ACK.
+                if ((old_reg & BIT(16)) && !(new_reg & BIT(16))) {
+                    for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
+                        if (virq_passthrough_map[i].pin == redirection_reg_idx) {
+                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
+                                                           (void *)i);
+                            break;
+                        }
+                    }
+                }
 
             } else {
                 LOG_VMM_ERR("Writing unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);

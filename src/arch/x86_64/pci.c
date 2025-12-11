@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/virtio/pci.h>
 
 extern uint64_t pci_conf_addr_pio_id;
@@ -294,7 +295,9 @@ bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t por
         } else {
             uint32_t value = vctx_raw[RAX_IDX];
             if (value >> 31) {
-                assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
+                // @billn revisit
+                // vcpu_print_regs(0);
+                // assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
                 pci_bus_state.address_reg = value;
 
                 LOG_PCI("selecting bus %d, device %d, func %d, reg_offset 0x%x\n", pci_host_bridge_addr_reg_bus(),

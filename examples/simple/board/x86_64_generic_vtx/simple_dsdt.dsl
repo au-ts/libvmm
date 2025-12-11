@@ -16,8 +16,23 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Name (_CRS, ResourceTemplate ()
             {
                 IO (Decode16, 0x03F8, 0x03F8, 0x00, 0x08)
-                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ) { 4 }
+                IRQNoFlags () { 4 }
             })
+        }
+
+        Device (PCI0)
+        {
+            // PCI root bridge
+            Name (_HID, EisaId ("PNP0A03"))
+            // Compatible with PCIe root
+            Name (_CID, EisaId ("PNP0A08"))
+            Name (_UID, One)
+            // PCI segment and base bus number 0
+            Name (_SEG, Zero)
+            Name (_BBN, Zero)
+
+            // @billn add I/O Port ranges that the host bridge decodes,
+            // so that we can get rid of "pci=nocrs" in cmdline
         }
     }
 }

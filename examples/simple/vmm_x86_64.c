@@ -52,7 +52,7 @@ uint64_t pci_conf_data_pio_addr;
  */
 #define GUEST_RAM_SIZE 0x10000000
 
-#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "pci=nocrs earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -86,6 +86,10 @@ void init(void)
     passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
+
+    microkit_irq_ack(COM1_IRQ_CH);
+    microkit_irq_ack(PRIM_ATA_IRQ_CH);
+    microkit_irq_ack(SECD_ATA_IRQ_CH);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);

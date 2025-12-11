@@ -88,7 +88,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 4
+#define XSDT_ENTRIES 3
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -394,6 +394,8 @@ struct FADT {
 static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
+    memset(fadt, 0, sizeof(struct FADT));
+
     memcpy(fadt->h.signature, "FACP", 4);
 
     fadt->h.length = sizeof(struct FADT);
@@ -407,16 +409,16 @@ static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     fadt->h.creator_revision = 1;
 
     /* Fill out data fields of FADT */
-    fadt->Dsdt = dsdt_gpa;
+    fadt->Dsdt = (uint32_t) dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
-    // fadt->Flags = BIT(20); // hw reduced acpi
+    fadt->Flags = 0;
 
     fadt->PM1aEventBlock = 0x400;
     fadt->PM1EventLength = 0x4;
     fadt->PM1aControlBlock = 0x404;
     fadt->PM1ControlLength = 0x2;
 
-    fadt->SCI_Interrupt = 9;
+    fadt->SCI_Interrupt = 9; // @billn sus
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
@@ -526,7 +528,7 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, uint64_t ram_top, uint64_t *a
     struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, dsdt_gpa, fadt_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, fadt_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);
