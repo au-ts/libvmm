@@ -8,8 +8,13 @@
  * What even is this file?
  *
  * The purpose of this file is to include binaries that the VMM needs to setup,
- * such as the Linux kernel image, the DTB, and the initial RAM disk. What
- * happens is that the assembler includes the binary data in an ELF section
+ * such as the:
+ * - Linux kernel image,
+ * - Device Tree Blob,
+ * - Initial RAM disk,
+ * - UEFI firmware.
+ *
+ * What happens is that the assembler includes the binary data in an ELF section
  * that we specify. We can then have global variables that essentially point to
  * where the data has been included.
  *
@@ -42,4 +47,12 @@ _guest_dtb_image_end:
 _guest_initrd_image:
 .incbin GUEST_INITRD_IMAGE_PATH
 _guest_initrd_image_end:
+#endif
+
+#if defined(GUEST_FIRMWARE_IMAGE_PATH)
+.section .guest_firmware_image, "aw", @progbits
+.global _guest_firmware_image, _guest_firmware_image_end
+_guest_firmware_image:
+.incbin GUEST_FIRMWARE_IMAGE_PATH
+_guest_firmware_image_end:
 #endif
