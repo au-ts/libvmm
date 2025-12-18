@@ -349,7 +349,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // LOG_VMM("lapic EOI\n");
 
             // @billn sus: improve this to allow multiple IRQs in service and also check the TPR
-            // there can only be 1 interrupt in service at any given time.
+            // @billn sus: there can only be 1 interrupt in service at any given time.
             if (n_irq_in_service() == 1) {
                 lapic_regs.isr[0] = 0;
                 lapic_regs.isr[1] = 0;
@@ -389,9 +389,21 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         case REG_LAPIC_LVT_LINT1:
             lapic_regs.lint1 = vctx_raw[decoded_mem_ins.target_reg];
             break;
-        // @billn handle IPI, "Figure 11-12. Interrupt Command Register (ICR)"
         case REG_LAPIC_ICR_LOW:
+            // Figure 11-12. Interrupt Command Register (ICR)
+            // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
             lapic_regs.icr_low = vctx_raw[decoded_mem_ins.target_reg];
+
+            uint64_t icr = lapic_regs.icr_low | (((uint64_t) lapic_regs.icr_high) << 32);
+
+            // @billn sus, handle other types of IPIs
+            if (((icr >> 8) & 0x7 )== 0) {
+                // fixed mode
+                uint8_t vector = icr & 0xff;
+                inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
+            }
+
+            // LOG_VMM("icr 0x%lx\n", icr);
             break;
         case REG_LAPIC_ICR_HIGH:
             lapic_regs.icr_high = vctx_raw[decoded_mem_ins.target_reg];
