@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/virq.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 
 // @billn sus, use package asm script
 #include "board/x86_64_generic_vtx/simple_dsdt.hex"
@@ -84,6 +85,8 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+
+    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
 
     /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
