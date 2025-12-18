@@ -42,6 +42,8 @@ void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit) {
 
     // @billn explain
     // @billn todo add other important bits
+
+    // prevent the guest from turning of VMX mode
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, 1 << 13);
     // @billn todo add other registers with mask
 
