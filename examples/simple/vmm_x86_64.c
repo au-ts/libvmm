@@ -113,7 +113,7 @@ void notified(microkit_channel ch)
             LOG_VMM("TSC frequency is %lu Hz\n", measured_tsc_hz);
             tsc_calibrating = false;
 
-            /* Initialise the virtual GIC driver */
+            /* Initialise the virtual APIC */
             bool success = virq_controller_init(measured_tsc_hz);
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
