@@ -100,7 +100,7 @@ struct xsdt {
 #define MADT_ENTRY_IOAPIC_LENGTH 0xc
 
 // TODO: do not hard-code this address
-#define IOAPIC_ADDRESS 0x11000000
+#define IOAPIC_ADDRESS 0xFEC00000
 
 struct madt_irq_controller {
     uint8_t type;
@@ -140,7 +140,7 @@ struct madt_ioapic_source_override {
 // @billn dedup
 // This just matches the x86 CPU default physical address from
 // See bit 9 of 'Table 1-20. More on Feature Information Returned in the EDX Register'.
-#define MADT_LOCAL_APIC_ADDR 0xFFFE0000
+#define MADT_LOCAL_APIC_ADDR 0xFEE00000
 
 #define MADT_REVISION 5
 #define MADT_FLAGS BIT(0) // PCAT_COMPAT, dual 8259 present as a direct mapping to I/O APIC 0

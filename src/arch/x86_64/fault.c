@@ -154,10 +154,10 @@ char *fault_to_string(int exit_reason)
 }
 
 // @billn dedup
-#define LAPIC_BASE 0xFFFE0000
+#define LAPIC_BASE 0xFEE00000
 #define LAPIC_SIZE 0x1000
 
-#define IOAPIC_BASE 0x11000000
+#define IOAPIC_BASE 0xFEC00000
 #define IOAPIC_SIZE 0x1000
 
 #define HPET_BASE 0xfed00000

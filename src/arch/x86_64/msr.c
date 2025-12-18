@@ -93,7 +93,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
         // @billn todo expose #define for dedup
         //                          enable    is boot cpu
-        result = 0xFFFE0000 | BIT(11) | BIT(8);
+        result = 0xFEE00000 | BIT(11) | BIT(8);
         break;
     case IA32_FEATURE_CONTROL:
         result = 1; // locked
