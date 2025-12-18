@@ -44,7 +44,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
             // Values from:
             // https://en.wikichip.org/wiki/intel/cpuid
-            // Using value for "Haswell (Client)" Microarch and "HSW-U" Core
 
             // OEM processor: bit 12 and 13 zero
         uint32_t model_id = 0xe << 4; // skylake client
