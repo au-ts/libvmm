@@ -49,6 +49,7 @@
  */
 #define RFLAGS_DEFAULT BIT(1)
 
+void vcpu_set_up_reset_state(void);
 void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
 
 void vcpu_print_regs(size_t vcpu_id);
