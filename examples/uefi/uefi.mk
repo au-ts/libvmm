@@ -10,7 +10,7 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
+SYSTEM_FILE := $(SYSTEM_DIR)/uefi.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
@@ -19,9 +19,9 @@ SDDF_CUSTOM_LIBC := 1
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
 ifeq ($(ARCH),x86_64)
-	FIRM_PATH ?= $(SYSTEM_DIR)/OVMF.fd
+	FIRM ?= $(SYSTEM_DIR)/OVMF.fd
 	ARCH_FLAGS := -target x86_64-unknown-elf
-	IMAGES = $(VMM_NAME).elf timer_driver.elf
+	IMAGES = vmm_x86_64.elf timer_driver.elf
 else
 $(error Unsupported ARCH given)
 endif
@@ -77,7 +77,7 @@ vmm.o: $(EXAMPLE_DIR)/vmm_x86_64.c $(CHECK_FLAGS_BOARD_MD5)
 
 images.o: $(LIBVMM)/tools/package_guest_images.S $(FIRM)
 	$(CC) -c -g3 -x assembler-with-cpp \
-					-GUEST_FIRMWARE_IMAGE_PATH=\"$(FIRM)\" \
+					-DGUEST_FIRMWARE_IMAGE_PATH=\"$(FIRM)\" \
 					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
