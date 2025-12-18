@@ -161,8 +161,6 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
     decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
 
-    // @billn scan for rex byte to detect 64-bit r/w, at this point all APIC accesses are 32-bit so this isnt an issue
-
     bool opcode_valid = false;
     int parsed_byte = 0;
     bool rex_w = false; // 64-bit operand size
