@@ -17,7 +17,7 @@
 
 // [2]
 struct setup_header {
-    uint8_t  setup_sects;
+    uint8_t setup_sects;
     uint16_t root_flags;
     uint32_t syssize;
     uint16_t ram_size;
@@ -30,21 +30,21 @@ struct setup_header {
     uint32_t realmode_swtch;
     uint16_t start_sys_seg;
     uint16_t kernel_version;
-    uint8_t  type_of_loader;
-    uint8_t  loadflags;
+    uint8_t type_of_loader;
+    uint8_t loadflags;
     uint16_t setup_move_size;
     uint32_t code32_start;
     uint32_t ramdisk_image;
     uint32_t ramdisk_size;
     uint32_t bootsect_kludge;
     uint16_t heap_end_ptr;
-    uint8_t  ext_loader_ver;
-    uint8_t  ext_loader_type;
+    uint8_t ext_loader_ver;
+    uint8_t ext_loader_type;
     uint32_t cmd_line_ptr;
     uint32_t initrd_addr_max;
     uint32_t kernel_alignment;
-    uint8_t  relocatable_kernel;
-    uint8_t  min_alignment;
+    uint8_t relocatable_kernel;
+    uint8_t min_alignment;
     uint16_t xloadflags;
     uint32_t cmdline_size;
     uint32_t hardware_subarch;
@@ -60,9 +60,9 @@ struct setup_header {
 
 // [4] The E820 memory region entry of the boot protocol ABI:
 struct boot_e820_entry {
-	uint64_t addr;
-	uint64_t size;
-	uint32_t type;
+    uint64_t addr;
+    uint64_t size;
+    uint32_t type;
 } __attribute__((packed));
 
 typedef struct linux_setup_ret {
@@ -73,11 +73,6 @@ typedef struct linux_setup_ret {
     uint64_t gdt_limit;
 } linux_x86_setup_ret_t;
 
-bool linux_setup_images(uintptr_t ram_start,
-                        size_t ram_size,
-                        uintptr_t kernel,
-                        size_t kernel_size,
-                        uintptr_t initrd_src,
-                        size_t initrd_size,
-                        char *cmdline,
-                        linux_x86_setup_ret_t *ret);
+bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, size_t kernel_size,
+                        uintptr_t initrd_src, size_t initrd_size, void *dsdt_blob, uint64_t dsdt_blob_size,
+                        char *cmdline, linux_x86_setup_ret_t *ret);
