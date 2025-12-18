@@ -13,6 +13,6 @@
 #define GUEST_NUM_VCPUS 1
 #endif
 
-bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *linux_x86_setup);
+bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);

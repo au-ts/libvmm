@@ -17,7 +17,7 @@
 #include <sel4/arch/vmenter.h>
 #endif
 
-bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *linux_x86_setup)
+bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 {
     /*
      * Set the TCB registers to what the virtual machine expects to be started with.
@@ -31,8 +31,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd, void *lin
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
 #elif defined(CONFIG_ARCH_X86_64)
-    assert(linux_x86_setup);
-    linux_x86_setup_ret_t *linux_setup = (linux_x86_setup_ret_t *) linux_x86_setup;
 #else
 #error "Unsupported guest architecture"
 #endif

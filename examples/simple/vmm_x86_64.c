@@ -127,7 +127,7 @@ void notified(microkit_channel ch)
             /* Pass through serial IRQs */
             assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
 
-            guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
+            guest_start(linux_setup.kernel_entry_gpa, 0, 0);
         } else {
             handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
         }
