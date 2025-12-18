@@ -20,6 +20,8 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 
+#include <sddf/util/custom_libc/string.h>
+
 // @billn sus, use package asm script
 #include "board/x86_64_generic_vtx/simple_dsdt.hex"
 
@@ -49,13 +51,6 @@ uint64_t pci_conf_data_pio_addr;
 #define PRIM_ATA_IRQ_CH 1
 #define SECD_ATA_IRQ_CH 2
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
-#define GUEST_RAM_SIZE 0x10000000
-
 // #define GUEST_CMDLINE "pci=nocrs earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's UEFI firmware image. */
@@ -64,19 +59,21 @@ extern char _guest_firmware_image_end[];
 
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+uint64_t guest_ram_size;
 uintptr_t guest_firmware_vaddr;
+uint64_t guest_firmware_size;
 
 bool tsc_calibrating = true;
-linux_x86_setup_ret_t linux_setup;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
 void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
-    /* Place all the binaries in the right locations before starting the guest */
 
-    
+    /* Place the UEFI firmware at the reset vector. Assumes that (GPA of guest_firmware) + guest_firmware_size == 0x1_0000_0000 */
+    size_t firmware_image_size = _guest_firmware_image_end - _guest_firmware_image;
+    memcpy((void *) (guest_firmware_vaddr + (guest_firmware_size - firmware_image_size)), _guest_firmware_image, firmware_image_size);
 
     vcpu_set_up_reset_state();
 
@@ -119,7 +116,7 @@ void notified(microkit_channel ch)
             /* Pass through serial IRQs */
             assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
 
-            guest_start(linux_setup.kernel_entry_gpa, 0, 0, &linux_setup);
+            guest_start(0xfff0, 0, 0);
         } else {
             handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
         }
