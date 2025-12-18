@@ -19,6 +19,9 @@
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/virq.h>
 
+// @billn sus, use package asm script
+#include "board/x86_64_generic_vtx/simple_dsdt.hex"
+
 uint64_t com1_ioport_id;
 uint64_t com1_ioport_addr;
 uint64_t com1_ioport_size = 8;
@@ -76,7 +79,8 @@ void init(void)
 
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size,
-                            (uintptr_t)_guest_initrd_image, initrd_size, GUEST_CMDLINE, &linux_setup)) {
+                            (uintptr_t)_guest_initrd_image, initrd_size, simple_dsdt_aml_code,
+                            sizeof(simple_dsdt_aml_code), GUEST_CMDLINE, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
