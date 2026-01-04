@@ -15,6 +15,10 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
+// @billn there seems to be a big problem with this code. If the host CPU load is high, the fault
+// and IRQ injection latency will also be high. Which will cause the timer value to skew and linux
+// will complain that TSC isn't stable. I don't know if this is a problem with the code or just how it is...
+
 // https://wiki.osdev.org/APIC
 
 /* Uncomment this to enable debug logging */
@@ -574,7 +578,7 @@ void lapic_maintenance(void)
     uint32_t vm_entry_interruption = (uint32_t)vector;
     vm_entry_interruption |= BIT(31); // valid bit
 
-    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vm_entry_interruption);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, vm_entry_interruption);
     // Clear interrupt window exiting bit if set.
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
 
