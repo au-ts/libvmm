@@ -29,6 +29,9 @@
 
 // Caller must vmenter with EIP 0xFFF0 
 void vcpu_set_up_reset_state(void) {
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, VMCS_SPC_DEFAULT | BIT(7)); // unrestricted guest
+
     // Table 10-1. IA-32 and Intel® 64 Processor States Following Power-up, Reset, or INIT
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0x2);
