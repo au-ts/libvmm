@@ -26,6 +26,7 @@ static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_M
                                                 OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
 extern uint64_t guest_ram_vaddr;
+extern uint64_t guest_firmware_vaddr;
 
 /* Convert guest physical address to the VMM's virtual memory. */
 void *gpa_to_vaddr(uint64_t gpa)
@@ -93,72 +94,89 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
 
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len)
 {
-    seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
+    uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
+    memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
 
-    seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
-    seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
-    seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
-    seL4_Word pml4_pte = pml4[pml4_idx];
-    if (!pte_present(pml4_pte)) {
-        LOG_VMM_ERR("PML4 PTE not present when decoding instruction at 0x%lx\n", rip);
-        assert(false);
-    }
-
-    seL4_Word pdpt_gpa = pte_to_gpa(pml4_pte);
-    uint64_t *pdpt = gpa_to_vaddr(pdpt_gpa);
-    seL4_Word pdpt_idx = (rip >> (12 + (9 * 2))) & 0x1ff;
-    uint64_t pdpt_pte = pdpt[pdpt_idx];
-    if (!pte_present(pdpt_pte)) {
-        LOG_VMM_ERR("PDPT PTE not present when decoding instruction at 0x%lx\n", rip);
-        assert(false);
-    }
-
-    seL4_Word pd_gpa = pte_to_gpa(pdpt_pte);
-    uint64_t *pd = gpa_to_vaddr(pd_gpa);
-    seL4_Word pd_idx = (rip >> (12 + (9 * 1))) & 0x1ff;
-    seL4_Word pd_pte = pd[pd_idx];
-    if (!pte_present(pd_pte)) {
-        LOG_VMM_ERR("PD PTE not present when decoding instruction at 0x%lx\n", rip);
-        assert(false);
-    }
-
-    uint64_t *page;
-    if (pt_page_size(pd_pte) && pte_present(pd_pte)) {
-        // 2MiB page
-        seL4_Word page_gpa = pte_to_gpa(pd_pte) | (rip & 0x1fffff);
-        page = gpa_to_vaddr(page_gpa);
-
-        // @billn todo
-        // instruction that crosses a page boundary is unimplemented, bail...
-        assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x200000));
-    } else {
-        // 4k page
-        seL4_Word pt_gpa = pte_to_gpa(pd_pte);
-        uint64_t *pt = gpa_to_vaddr(pt_gpa);
-        seL4_Word pt_idx = (rip >> (12)) & 0x1ff;
-        seL4_Word pt_pte = pt[pt_idx];
-        if (!pte_present(pt_pte)) {
-            LOG_VMM_ERR("PT PTE not present when decoding instruction at 0x%lx\n", rip);
+    // check if paging is on
+    if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR0) & BIT(31)) {
+        seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
+    
+        seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
+        seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
+        seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
+        seL4_Word pml4_pte = pml4[pml4_idx];
+        if (!pte_present(pml4_pte)) {
+            LOG_VMM_ERR("PML4 PTE not present when decoding instruction at 0x%lx\n", rip);
             assert(false);
         }
-
-        seL4_Word page_gpa = pte_to_gpa(pt_pte) | (rip & 0xfff);
-        page = gpa_to_vaddr(page_gpa);
-
-        // @billn todo
-        // instruction that crosses a page boundary is unimplemented, bail...
-        assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x1000));
+    
+        seL4_Word pdpt_gpa = pte_to_gpa(pml4_pte);
+        uint64_t *pdpt = gpa_to_vaddr(pdpt_gpa);
+        seL4_Word pdpt_idx = (rip >> (12 + (9 * 2))) & 0x1ff;
+        uint64_t pdpt_pte = pdpt[pdpt_idx];
+        if (!pte_present(pdpt_pte)) {
+            LOG_VMM_ERR("PDPT PTE not present when decoding instruction at 0x%lx\n", rip);
+            assert(false);
+        }
+    
+        seL4_Word pd_gpa = pte_to_gpa(pdpt_pte);
+        uint64_t *pd = gpa_to_vaddr(pd_gpa);
+        seL4_Word pd_idx = (rip >> (12 + (9 * 1))) & 0x1ff;
+        seL4_Word pd_pte = pd[pd_idx];
+        if (!pte_present(pd_pte)) {
+            LOG_VMM_ERR("PD PTE not present when decoding instruction at 0x%lx\n", rip);
+            assert(false);
+        }
+    
+        uint64_t *page;
+        if (pt_page_size(pd_pte) && pte_present(pd_pte)) {
+            // 2MiB page
+            seL4_Word page_gpa = pte_to_gpa(pd_pte) | (rip & 0x1fffff);
+            page = gpa_to_vaddr(page_gpa);
+    
+            // @billn todo
+            // instruction that crosses a page boundary is unimplemented, bail...
+            assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x200000));
+        } else {
+            // 4k page
+            seL4_Word pt_gpa = pte_to_gpa(pd_pte);
+            uint64_t *pt = gpa_to_vaddr(pt_gpa);
+            seL4_Word pt_idx = (rip >> (12)) & 0x1ff;
+            seL4_Word pt_pte = pt[pt_idx];
+            if (!pte_present(pt_pte)) {
+                LOG_VMM_ERR("PT PTE not present when decoding instruction at 0x%lx\n", rip);
+                assert(false);
+            }
+    
+            seL4_Word page_gpa = pte_to_gpa(pt_pte) | (rip & 0xfff);
+            page = gpa_to_vaddr(page_gpa);
+    
+            // @billn todo
+            // instruction that crosses a page boundary is unimplemented, bail...
+            assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x1000));
+        }
+    
+        
+        assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
+        memcpy(instruction_buf, (uint8_t *)page, instruction_len);
+    } else {
+        // paging is off
+        LOG_VMM_ERR("TODO\n");
+        assert(false);
+        // // @billn ugly hack, check if it is in the firmware region
+        // uint64_t firmware_region_base_gpa = 0xffa00000;
+        // if (rip < firmware_region_base_gpa) {
+        //     LOG_VMM("uh oh\n");
+        //     vcpu_print_regs(0);
+        //     assert(false);
+        // }
+        // uint64_t region_off = rip - guest_firmware_vaddr;
+        // memcpy(instruction_buf, (void *)(guest_firmware_vaddr + region_off), instruction_len);
     }
-
+    
     // @billn I really think something more "industrial grade" should be used for a job like this.
     // Such as https://github.com/zyantific/zydis which is no-malloc and no-libc, but it uses cmake...yuck
     // But then we introduce a dependency...
-
-    assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
-    uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
-    memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
-    memcpy(instruction_buf, (uint8_t *)page, instruction_len);
-
     decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
 
     bool opcode_valid = false;
