@@ -49,7 +49,7 @@ void vcpu_set_up_reset_state(void) {
     // Table 25-2. Format of Access Rights
     // 27.3.1.2 Checks on Guest Segment Registers
     //                                                                          type | S | P
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 11 | BIT(4) | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_BASE, 0);
@@ -60,22 +60,22 @@ void vcpu_set_up_reset_state(void) {
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_LIMIT, 0xffff);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 1 | BIT(4) | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_LIMIT, 0xffff);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 1 | BIT(4) | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_LIMIT, 0xffff);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, 1 | BIT(4) | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_LIMIT, 0xffff);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 1 | BIT(4) | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
 
     seL4_VCPUContext vctx;
     memset(&vctx, 0, sizeof(seL4_VCPUContext));
@@ -96,7 +96,7 @@ void vcpu_set_up_reset_state(void) {
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_SELECTOR, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_LIMIT, 0);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 11 | BIT(7));
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 3 | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, 0);
 }
@@ -187,6 +187,8 @@ void vcpu_print_regs(size_t vcpu_id)
     seL4_Word r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
     seL4_Word r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
 
+    seL4_Word efer = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
+
     LOG_VMM("dumping VCPU (ID 0x%lx) registers:\n", vcpu_id);
     LOG_VMM("    vm primary processor control = 0x%lx\n", cppc);
     LOG_VMM("    vm enter irq = 0x%lx\n", irq_info);
@@ -198,6 +200,7 @@ void vcpu_print_regs(size_t vcpu_id)
     LOG_VMM("    interruptability = 0x%lx\n", interruptability);
     LOG_VMM("    cr0 = 0x%lx\n", microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR0));
     LOG_VMM("    cr3 = 0x%lx\n", cr3);
+    LOG_VMM("    efer = 0x%lx\n", efer);
     LOG_VMM("=========================\n");
     LOG_VMM("    rip = 0x%lx\n", rip);
     LOG_VMM("    rsp = 0x%lx\n", rsp);
