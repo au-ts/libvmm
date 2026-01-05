@@ -88,6 +88,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case MISC_FEATURE_ENABLES:
     case MSR_PLATFORM_INFO:
     case MSR_UNKNOWN1:
+    case 0xc0010131: // @billn AMD SEV
         break;
     case IA32_APIC_BASE:
         // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
