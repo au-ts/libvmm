@@ -91,6 +91,8 @@ bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev
         }
         candidate_func = 0;
     }
+
+    return false;
 }
 
 

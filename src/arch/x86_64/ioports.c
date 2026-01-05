@@ -90,7 +90,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
     assert(!is_string); // unsupported right now
-    uint64_t is_immediate = f_qualification & BIT(6);
+    // uint64_t is_immediate = f_qualification & BIT(6);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 

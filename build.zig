@@ -46,6 +46,11 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/msr.c",
     "src/arch/x86_64/acpi.c",
     "src/arch/x86_64/apic.c",
+    "src/arch/x86_64/hpet.c",
+    "src/arch/x86_64/instruction.c",
+    "src/arch/x86_64/pci.c",
+    "src/arch/x86_64/pit.c",
+    "src/arch/x86_64/ioports.c",
 };
 
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
