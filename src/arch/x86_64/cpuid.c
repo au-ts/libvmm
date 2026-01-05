@@ -37,7 +37,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0x49656e69;
         vctx->ecx = 0x6c65746e;
         break;
-    case 0x1:
+    case 0x1: {
             // Encoding from:
             // https://en.wikipedia.org/wiki/CPUID
             // "EAX=1: Processor Info and Feature Bits"
@@ -59,6 +59,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = 0;
         vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU;
         break;
+    }
     case 0x6:
             // vctx->eax = BIT(2); // ARAT. APIC-Timer-always-running feature is supported if set.
         vctx->eax = 0;

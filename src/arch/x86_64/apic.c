@@ -169,6 +169,8 @@ int lapic_dcr_to_divider(void)
         LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", lapic_regs.dcr);
         assert(false);
     }
+
+    return -1;
 }
 
 uint8_t ioapic_pin_to_vector(int ioapic, int pin)
@@ -199,6 +201,8 @@ enum lapic_timer_mode lapic_parse_timer_reg(void)
         LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", lapic_regs.timer);
         assert(false);
     }
+
+    return -1;
 }
 
 uint64_t tsc_now_scaled(void)
@@ -371,7 +375,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                                                                         virq_passthrough_map[i].pin);
                         if (candidate_vector == lapic_regs.last_injected_vector) {
                             virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
-                                                           (void *)i);
+                                                           (void *)(uint64_t)i);
                             break;
                         }
                     }
@@ -530,7 +534,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                     for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
                         if (virq_passthrough_map[i].pin == redirection_reg_idx) {
                             virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
-                                                           (void *)i);
+                                                           (void *)(uint64_t)i);
                             break;
                         }
                     }

@@ -148,7 +148,7 @@ static bool timer_n_irq_edge_triggered(int n)
 
 void hpet_handle_timer_ntfn(microkit_channel ch)
 {
-    bool maintenance = false;
+    // bool maintenance = false;
 
     if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
         int ioapic_pin = get_timer_n_ioapic_pin(0);

@@ -115,8 +115,14 @@ pub fn build(b: *std.Build) !void {
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
+    const sddf_dep = b.dependency("sddf", .{
+        .target = target,
+        .optimize = optimize,
+        .microkit_board_dir = microkit_board_dir,
+    });
+
     const exe = b.addExecutable(.{
-        .name = "vmm.elf",
+        .name = b.fmt("vmm_{s}.elf", .{ @tagName(target.result.cpu.arch) }),
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
@@ -162,7 +168,7 @@ pub fn build(b: *std.Build) !void {
     exe.linkLibrary(libvmm);
 
     exe.addCSourceFiles(.{
-        .files = &.{"vmm.c"},
+        .files = &.{ b.fmt("vmm_{s}.c", .{ @tagName(target.result.cpu.arch) }) },
         .flags = &.{
             "-Wall",
             "-Werror",
@@ -215,6 +221,11 @@ pub fn build(b: *std.Build) !void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
+    var timer_driver: ?*std.Build.Step.InstallArtifact = null;
+    if (target.result.cpu.arch == .x86_64) {
+        timer_driver = b.addInstallArtifact(sddf_dep.artifact("driver_timer_hpet.elf"), .{ .dest_sub_path = "timer_driver.elf" });
+    }
+
     const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = std.Build.Step.Run.create(b, "run microkit tool");
@@ -237,6 +248,9 @@ pub fn build(b: *std.Build) !void {
     // Add the "microkit" step, and make it the default step when we execute `zig build`
     const microkit_step = b.step("microkit", "Compile and build the final bootable image");
     microkit_step.dependOn(&microkit_tool_cmd.step);
+    if (timer_driver) |timer| {
+        microkit_step.dependOn(&timer.step);
+    }
     b.default_step = microkit_step;
 
     // This is setting up a `qemu` command for running the system using QEMU,

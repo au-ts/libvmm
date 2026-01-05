@@ -100,7 +100,7 @@ bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_
     virq_passthrough_map[irq_ch].ioapic = ioapic;
     virq_passthrough_map[irq_ch].pin = pin;
     virq_passthrough_map[irq_ch].ack_fn = virq_ioapic_passthrough_ack;
-    virq_passthrough_map[irq_ch].ack_data = (void *)irq_ch;
+    virq_passthrough_map[irq_ch].ack_data = (void *)(uint64_t)irq_ch;
 
     return true;
 }

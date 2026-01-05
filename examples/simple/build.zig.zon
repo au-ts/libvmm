@@ -6,6 +6,9 @@
         .libvmm = .{
             .path = "../../"
         },
+        .sddf = .{
+            .path = "../../dep/sddf",
+        },
         .linux = .{
             .url = "https://trustworthy.systems/Downloads/libvmm/images/85000f3f42a882e4476e57003d53f2bbec8262b0-linux.tar.gz",
             .hash = "linux-0.0.0-AAAAAACKHwKLhs9sy_2Ma-_f1lh-vvTVxNfPElIDod2h",
