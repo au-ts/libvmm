@@ -31,7 +31,13 @@ extern uint64_t guest_firmware_vaddr;
 /* Convert guest physical address to the VMM's virtual memory. */
 void *gpa_to_vaddr(uint64_t gpa)
 {
-    return (void *)(guest_ram_vaddr + gpa);
+    // @billn ugly hack
+    uint64_t firmware_region_base_gpa = 0xffa00000;
+    if (gpa < firmware_region_base_gpa) {
+        return (void *)(guest_ram_vaddr + gpa);
+    } else {
+        return (void *)(guest_firmware_vaddr + (gpa - firmware_region_base_gpa));
+    }
 }
 
 seL4_Word pte_to_gpa(seL4_Word pte)
@@ -99,8 +105,6 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
     // check if paging is on
     if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR0) & BIT(31)) {
-        seL4_Word cr4 = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR4);
-    
         seL4_Word pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
         seL4_Word *pml4 = gpa_to_vaddr(pml4_gpa);
         seL4_Word pml4_idx = (rip >> (12 + (9 * 3))) & 0x1ff;
@@ -109,7 +113,7 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
             LOG_VMM_ERR("PML4 PTE not present when decoding instruction at 0x%lx\n", rip);
             assert(false);
         }
-    
+
         seL4_Word pdpt_gpa = pte_to_gpa(pml4_pte);
         uint64_t *pdpt = gpa_to_vaddr(pdpt_gpa);
         seL4_Word pdpt_idx = (rip >> (12 + (9 * 2))) & 0x1ff;
@@ -156,12 +160,12 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
             assert(rip + X86_MAX_INSTRUCTION_LENGTH <= ROUND_UP(rip, 0x1000));
         }
     
-        
         assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
         memcpy(instruction_buf, (uint8_t *)page, instruction_len);
     } else {
         // paging is off
-        LOG_VMM_ERR("TODO\n");
+        LOG_VMM_ERR("TODO instruction decoding with no paging, rip = 0x%lx\n", rip);
+        vcpu_print_regs(0);
         assert(false);
         // // @billn ugly hack, check if it is in the firmware region
         // uint64_t firmware_region_base_gpa = 0xffa00000;
