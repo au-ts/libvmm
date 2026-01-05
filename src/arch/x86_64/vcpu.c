@@ -27,7 +27,7 @@
 
 // }
 
-// Caller must vmenter with EIP 0xFFF0 
+// Caller must vmenter with IP 0xFFF0 
 void vcpu_set_up_reset_state(void) {
     // prevent the guest from turning of VMX mode
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, 1 << 13);
