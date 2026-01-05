@@ -15,6 +15,7 @@ ISO_STAGING_DIR=$BUILD_DIR/iso
 
 rm -rfd $BUILD_DIR && \
 
+scp billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/edk2/Build/OvmfX64/DEBUG_GCC/FV/OVMF.fd /Users/dreamliner787-9/TS/libvmm/examples/uefi/board/x86_64_generic_vtx/OVMF.fd && \
 make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROKIT_SDK && \
 
 # mkdir -p $ISO_STAGING_DIR/boot/ && \
