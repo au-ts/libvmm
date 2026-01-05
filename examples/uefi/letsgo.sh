@@ -37,6 +37,31 @@ cd -
 
 
 
+# how to reproduce OVMF.fd, only works on linux, doesnt compile on mac :(
+# sudo apt install build-essential uuid-dev iasl git  nasm  python-is-python3
+# $ git clone https://github.com/tianocore/edk2
+# $ cd edk2/
+# $ git submodule update --init
+
+# add to edk2/OvmfPkg/OvmfPkgX64.dsc if you want debug print to com1 serial port
+# [PcdsFixedAtBuild]
+# gEfiMdeModulePkgTokenSpaceGuid.PcdSerialRegisterBase | 0x3F8
+# gEfiMdeModulePkgTokenSpaceGuid.PcdSerialBaudRate     | 115200
+# gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio      | FALSE
+
+# $ make -C BaseTools
+# $ ./OvmfPkg/build.sh -a X64 -b DEBUG -p OvmfPkg/OvmfPkgX64.dsc -D DEBUG_ON_SERIAL_PORT
+# $ ls -hl /opt/billn/edk2/Build/OvmfX64/DEBUG_GCC/FV/
+
+
+# qemu-system-x86_64 \
+#   -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
+#   -m size=2G \
+#   -drive if=pflash,format=raw,file=Build/OvmfX64/DEBUG_GCC/FV/OVMF.fd \
+#   -serial mon:stdio \
+#   -nographic
+
+
 
 
 # scp /Volumes/scratch/vmm_x86_uefi/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
