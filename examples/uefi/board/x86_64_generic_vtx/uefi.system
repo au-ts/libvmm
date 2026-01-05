@@ -8,7 +8,7 @@
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
     <memory_region name="guest_firmware" size="0x600000" page_size="0x200_000" />
 
-    <protection_domain name="VMM" priority="0" stack_size="0x2000">
+    <protection_domain name="vmm_uefi" priority="0" stack_size="0x2000">
         <program_image path="vmm_x86_64.elf" />
         <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
         <map mr="guest_firmware" vaddr="0x90000000" perms="rw" setvar_vaddr="guest_firmware_vaddr" setvar_size="guest_firmware_size"/>
@@ -45,22 +45,22 @@
 
     <channel>
         <end pd="timer_driver" id="1" />
-        <end pd="VMM" id="10" notify="false" pp="true" />
+        <end pd="vmm_uefi" id="10" notify="false" pp="true" />
     </channel>
     <channel>
         <end pd="timer_driver" id="2" />
-        <end pd="VMM" id="11" notify="false" pp="true" />
+        <end pd="vmm_uefi" id="11" notify="false" pp="true" />
     </channel>
     <channel>
         <end pd="timer_driver" id="3" />
-        <end pd="VMM" id="12" notify="false" pp="true" />
+        <end pd="vmm_uefi" id="12" notify="false" pp="true" />
     </channel>
     <channel>
         <end pd="timer_driver" id="4" />
-        <end pd="VMM" id="13" notify="false" pp="true" />
+        <end pd="vmm_uefi" id="13" notify="false" pp="true" />
     </channel>
     <channel>
         <end pd="timer_driver" id="5" />
-        <end pd="VMM" id="14" notify="false" pp="true" />
+        <end pd="vmm_uefi" id="14" notify="false" pp="true" />
     </channel>
 </system>
