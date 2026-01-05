@@ -103,6 +103,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = 0;
         vctx->edx = (1 << 11) | (1 << 29); // SYSCALL/SYSRET + Intel® 64
         break;
+    case 0x8000001f:
+        break;
     default:
         LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);
         return false;
