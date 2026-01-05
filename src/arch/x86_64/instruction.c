@@ -96,6 +96,8 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
         LOG_VMM_ERR("unknown register idx: 0x%x, reg: 0x%x, REX.R: %d\n", idx, reg, rex_r);
         assert(false);
     }
+
+    return -1;
 }
 
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len)
@@ -187,8 +189,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     int parsed_byte = 0;
     bool rex_w = false; // 64-bit operand size
     bool rex_r = false; // 4-bit operand, rather than 3-bit
-    bool rex_x = false; // 4-bit SIB.index
-    bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
+    // bool rex_x = false; // 4-bit SIB.index
+    // bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
 
     // scan for REX byte, which is always 0b0100WRXB
     if (instruction_buf[0] >> 4 == 4) {
@@ -197,8 +199,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
         rex_w = (rex_byte & BIT(3)) != 0;
         rex_r = (rex_byte & BIT(2)) != 0;
-        rex_x = (rex_byte & BIT(1)) != 0;
-        rex_b = (rex_byte & BIT(0)) != 0;
+        // rex_x = (rex_byte & BIT(1)) != 0;
+        // rex_b = (rex_byte & BIT(0)) != 0;
     }
 
     // match the opcode against a list of known opcodes that we provide decoding logic for.

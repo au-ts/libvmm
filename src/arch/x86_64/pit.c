@@ -34,7 +34,7 @@ struct pit {
     uint16_t ch0_reload;
 };
 
-static struct pit global_pit = { .state = RESET };
+// static struct pit global_pit = { .state = RESET };
 
 bool emulate_pit(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
 {
