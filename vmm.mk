@@ -40,7 +40,8 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/ioports.c \
 			   src/arch/x86_64/pit.c \
 			   src/arch/x86_64/hpet.c \
-			   src/arch/x86_64/pci.c
+			   src/arch/x86_64/pci.c \
+			   src/arch/x86_64/qemu_fw_cfg.c
 
 # VIRTIO MMIO depends on sddf
 ifeq ($(strip $(SDDF)),)

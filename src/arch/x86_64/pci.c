@@ -106,44 +106,17 @@ bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev
 #define LOG_PCI(...) do{}while(0)
 #endif
 
-struct pci_device_address {
-    uint8_t dev;
-    uint8_t bus;
-    uint8_t func;
-};
-
-// function 3 of isa bridge
-// https://www.intel.com/Assets/PDF/datasheet/290562.pdf
-#define PMBA_OFFSET 0x40
-#define PMREGMISC_OFFSET 0x80
-
-struct isa_bridge_power_mgmt_regs {
-    uint32_t pmba;
-    uint8_t pmregmisc;
-};
-
-struct pci_bus {
-    uint32_t address_reg;
-
-    struct pci_config_space host_bridge;
-    struct pci_config_space isa_bridge;
-    struct isa_bridge_power_mgmt_regs isa_bridge_power_mgmt_regs;
-
-    bool ide_controller_enable;
-    struct pci_device_address native_ide_con_addr;
-};
-
 #define INTEL_82441_DEVICE_ID  0x1237
 
 // TODO: use actual macros rather than hard-coded values
-static struct pci_bus pci_bus_state = {
+struct pci_bus pci_bus_state = {
     .host_bridge = { .device_id = INTEL_82441_DEVICE_ID, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0 },
     .isa_bridge = { .device_id = 0x7000,
                     .vendor_id = 0x8086,
                     .class_code = 0x6,
                     .subclass = 1,
                     .header_type = 0x80, // bit 7 multifunction
-                }, 
+                },
     .ide_controller_enable = false,
 };
 
@@ -221,16 +194,20 @@ bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_
         switch (pci_host_bridge_addr_reg_offset()) {
             case PMREGMISC_OFFSET:
                 vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc;
+                break;
             case PMBA_OFFSET:
                 vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmba;
+                break;
         }
     } else {
         switch (pci_host_bridge_addr_reg_offset()) {
             case PMREGMISC_OFFSET:
                 pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc = vctx_raw[RAX_IDX];
+                break;
             case PMBA_OFFSET:
                 pci_bus_state.isa_bridge_power_mgmt_regs.pmba = vctx_raw[RAX_IDX];
-                // LOG_VMM("pmba is 0x%lx\n", pci_bus_state.isa_bridge_power_mgmt_regs.pmba);
+                LOG_VMM("pmba is 0x%lx\n", pci_bus_state.isa_bridge_power_mgmt_regs.pmba);
+                break;
         }
     }
 
