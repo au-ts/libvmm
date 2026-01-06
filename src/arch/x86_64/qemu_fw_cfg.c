@@ -28,14 +28,21 @@ struct FWCfgFile {
     uint16_t reserved;
     /* fw_cfg item name, NUL-terminated ascii */
     char name[56];
+}  __attribute__((packed));
+
+/* Structure of FW_CFG_FILE_DIR */
+#define NUM_FW_CFG_FILES 1
+struct fw_cfg_file_dir {
+    uint32_t num_files; // Big endian!
+    struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
 };
 
-/* Currently selected port to control. */
-uint16_t port_sel;
+uint16_t selector;
+// TODO: maybe find a better way of state tracking.
+size_t selected_data_idx = 0;
 
 const char *fw_cfg_signature = "QEMU";
-// TODO: maybe find a better way of state tracking.
-size_t sig_idx = 0;
+const struct fw_cfg_file_dir fw_cfg_file_dir;
 
 // static bool emulate_qemu_fw_cfg_signature(seL4_VCPUContext *vctx, bool is_read) {
 //     if (is_read) {
@@ -72,7 +79,9 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
         if (!is_read) {
             assert(!is_string);
             assert(!is_rep);
-            port_sel = vctx->eax;
+            selector = vctx->eax;
+            selected_data_idx = 0;
+
             // LOG_VMM("fw cfg port_sel is 0x%x\n", port_sel);
         } else {
             /* FW_CFG_PORT_SEL is write-only register. */
@@ -83,11 +92,10 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
         assert(access_width == IOPORT_BYTE_ACCESS_QUAL);
 
         if (is_read && is_string) {
-            switch (port_sel) {
+            switch (selector) {
             case FW_CFG_SIGNATURE:
-                assert(sig_idx < strlen(fw_cfg_signature));
-                // LOG_VMM("data: %c\n", fw_cfg_signature[sig_idx]);
-                sig_idx += emulate_ioport_string_read(vctx, fw_cfg_signature, strlen(fw_cfg_signature), is_rep, access_width);
+                assert(selected_data_idx < strlen(fw_cfg_signature));
+                selected_data_idx += emulate_ioport_string_read(vctx, fw_cfg_signature, strlen(fw_cfg_signature), is_rep, access_width);
                 break;
             case FW_CFG_ID: {
                 uint32_t id = FW_CFG_ID_TRADITIONAL;
@@ -95,7 +103,7 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
                 break;
             }
             default:
-                LOG_VMM_ERR("unknown fw cfg selector for port data string: 0x%x\n", port_sel);
+                LOG_VMM_ERR("unknown fw cfg selector for port data string: 0x%x\n", selector);
                 return false;
             }
         } else if (is_read && !is_string) {
