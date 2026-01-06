@@ -15,6 +15,7 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/qemu_fw_cfg.h>
+#include <libvmm/arch/x86_64/cmos.h>
 
 extern uint64_t primary_ata_cmd_pio_id;
 extern uint64_t primary_ata_cmd_pio_addr;
@@ -169,18 +170,10 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
             vctx->eax = 0xffffffff;
         }
         success = true;
-    } else if (port_addr == 0x70) {
+    } else if (port_addr == 0x70 || port_addr == 0x71) {
+        // cmos
         assert(!is_string);
-        // cmos select
-        assert(!is_read);
-        success = true;
-    } else if (port_addr == 0x71) {
-        assert(!is_string);
-        // cmos data
-        // @billn i feel like we should do this properly
-        // assert(is_read);
-        vctx->eax = 0;
-        success = true;
+        success = emulate_cmos_access(vctx, port_addr, is_read, access_width);
     } else if (port_addr == 0x80) {
         assert(!is_string);
         // io port access delay, no-op
