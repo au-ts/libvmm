@@ -133,8 +133,11 @@ struct pci_bus {
     struct pci_device_address native_ide_con_addr;
 };
 
+#define INTEL_82441_DEVICE_ID  0x1237
+
+// TODO: use actual macros rather than hard-coded values
 static struct pci_bus pci_bus_state = {
-    .host_bridge = { .device_id = 0x1237, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0 },
+    .host_bridge = { .device_id = INTEL_82441_DEVICE_ID, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0 },
     .isa_bridge = { .device_id = 0x7000,
                     .vendor_id = 0x8086,
                     .class_code = 0x6,
