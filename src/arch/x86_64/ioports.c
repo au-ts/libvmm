@@ -8,10 +8,12 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/qemu_fw_cfg.h>
 
 extern uint64_t primary_ata_cmd_pio_id;
@@ -94,10 +96,41 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
 
 #define ACPI_PMT_FREQUENCY (3579545)
 
+void emulate_ioport_string(seL4_VCPUContext *vctx, char *data, size_t len, ioport_access_width_t access_width) {
+    // TODO: handle
+    assert(len == 1);
+    assert(len != 0);
+    uint64_t dest_gpa;
+    int _bytes_to_page_boundary;
+    assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &_bytes_to_page_boundary));
+    char *dest = gpa_to_vaddr(dest_gpa);
+    // TODO: handle out of bounds.
+    // TODO: handle len greater than one
+    LOG_VMM("string data: %d\n", data[0]);
+    dest[0] = data[0];
+
+    // "After the byte, word, or doubleword is transfer from the I/O
+    // port to the memory location, the DI/EDI/RDI register is incremented
+    // or decremented automatically according to the setting of the DF flag
+    // in the EFLAGS register. (If the DF flag is 0, the (E)DI register is incremented;
+    // if the DF flag is 1, the (E)DI register is decremented.) The (E)DI register is
+    // incremented or decremented by 1 for byte operations, by 2 for word operations,
+    // or by 4 for doubleword operations."
+
+    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
+    if (eflags & BIT(10)) {
+        vctx->edi -= ioports_access_width_to_bytes(access_width);
+    } else {
+        vctx->edi += ioports_access_width_to_bytes(access_width);
+    }
+}
+
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
+    uint64_t is_rep = f_qualification & BIT(5);
+    assert(!is_rep);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 

@@ -16,6 +16,20 @@
 #define FW_CFG_ID           0x0001
 #define FW_CFG_FILE_DIR     0x0019
 
+#define FW_CFG_ID_TRADITIONAL BIT(0)
+#define FW_CFG_ID_DMA BIT(1)
+
+/* an individual file entry, 64 bytes total */
+struct FWCfgFile {
+    /* size of referenced fw_cfg item, big-endian */
+    uint32_t size;
+    /* selector key of fw_cfg item, big-endian */
+    uint16_t select;
+    uint16_t reserved;
+    /* fw_cfg item name, NUL-terminated ascii */
+    char name[56];
+};
+
 /* Currently selected port to control. */
 uint16_t port_sel;
 
@@ -39,9 +53,20 @@ size_t sig_idx = 0;
 //     }
 // }
 
-// static bool emulate_qemu_fw_cfg_
+static bool emulate_qemu_fw_cfg_id(seL4_VCPUContext *vctx, bool is_read) {
+    if (!is_read) {
+        return false;
+    }
+
+    vctx->eax = FW_CFG_ID_TRADITIONAL;
+
+    return true;
+}
+
+// bool qemu_fw_cfg_add()
 
 bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, ioport_access_width_t access_width) {
+    LOG_VMM("port_addr: 0x%x\n", port_addr);
     switch (port_addr) {
     case FW_CFG_PORT_SEL:
         if (!is_read) {
@@ -59,31 +84,17 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
             switch (port_sel) {
             case FW_CFG_SIGNATURE:
                 assert(sig_idx < strlen(fw_cfg_signature));
-
-                uint64_t dest_gpa;
-                int _bytes_to_page_boundary;
-                assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &_bytes_to_page_boundary));
-                char *dest = gpa_to_vaddr(dest_gpa);
-                dest[0] = fw_cfg_signature[sig_idx];
+                LOG_VMM("data: %c\n", fw_cfg_signature[sig_idx]);
+                emulate_ioport_string(vctx, &fw_cfg_signature[sig_idx], 1, access_width);
                 sig_idx++;
-
-                // "After the byte, word, or doubleword is transfer from the I/O
-                // port to the memory location, the DI/EDI/RDI register is incremented
-                // or decremented automatically according to the setting of the DF flag
-                // in the EFLAGS register. (If the DF flag is 0, the (E)DI register is incremented;
-                // if the DF flag is 1, the (E)DI register is decremented.) The (E)DI register is
-                // incremented or decremented by 1 for byte operations, by 2 for word operations,
-                // or by 4 for doubleword operations."
-
-                uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
-                if (eflags & BIT(10)) {
-                    vctx->edi -= ioports_access_width_to_bytes(access_width);
-                } else {
-                    vctx->edi += ioports_access_width_to_bytes(access_width);
-                }
-
                 break;
+            case FW_CFG_ID: {
+                char id_str[1] = { FW_CFG_ID_TRADITIONAL };
+                emulate_ioport_string(vctx, id_str, 1, access_width);
+                break;
+            }
             default:
+                LOG_VMM_ERR("unknown fw cfg selector for port data string: 0x%x\n", port_sel);
                 return false;
             }
         } else if (is_read && !is_string) {
@@ -93,6 +104,10 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
             /* FW_CFG_PORT_DATA is read-only. */
             return false;
         }
+        break;
+    default:
+        LOG_VMM_ERR("unknown fw cfg IO port 0x%x\n", port_addr);
+        return false;
     }
 
     return true;
