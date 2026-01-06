@@ -145,6 +145,9 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
     if (!opcode_valid) {
         LOG_VMM_ERR("uh-oh can't decode instruction, bail\n");
+        for (int i = 0; i < instruction_len; i++) {
+            LOG_VMM_ERR("ins byte 0x%x\n", instruction_buf[i]);
+        }
         vcpu_print_regs(0);
         assert(opcode_valid);
     }

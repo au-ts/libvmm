@@ -86,7 +86,7 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remainin
             return 0;
         }
 
-        uint64_t page_gpa = pte_to_gpa(pd_pte);
+        uint64_t page_gpa = pte_to_gpa(pt_pte);
         uint64_t page_offset = (gva & 0xfff);
         *gpa = page_gpa + page_offset;
         *bytes_remaining = 0x1000 - page_offset;
