@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
@@ -15,9 +16,12 @@
 #define FW_CFG_SIGNATURE    0x0000
 #define FW_CFG_ID           0x0001
 #define FW_CFG_FILE_DIR     0x0019
+#define FW_CFG_FILE_FIRST   0x0020
 
 #define FW_CFG_ID_TRADITIONAL BIT(0)
 #define FW_CFG_ID_DMA BIT(1)
+
+#define E820_FWCFG_FILE "etc/e820"
 
 /* an individual file entry, 64 bytes total */
 struct FWCfgFile {
@@ -42,7 +46,14 @@ uint16_t selector;
 size_t selected_data_idx = 0;
 
 const char *fw_cfg_signature = "QEMU";
-const struct fw_cfg_file_dir fw_cfg_file_dir;
+struct fw_cfg_file_dir fw_cfg_file_dir = {
+    .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
+    .file_entries[0] = {
+        .name = E820_FWCFG_FILE,
+        .size = __builtin_bswap32(420), // @billn revisit.
+        .select = __builtin_bswap16(FW_CFG_FILE_FIRST),
+    }
+};
 
 // static bool emulate_qemu_fw_cfg_signature(seL4_VCPUContext *vctx, bool is_read) {
 //     if (is_read) {
@@ -99,7 +110,11 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
                 break;
             case FW_CFG_ID: {
                 uint32_t id = FW_CFG_ID_TRADITIONAL;
-                emulate_ioport_string_read(vctx, (char *) &id, sizeof(uint32_t), is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, (char *) &id, sizeof(uint32_t), is_rep, access_width);
+                break;
+            }
+            case FW_CFG_FILE_DIR: {
+                selected_data_idx += emulate_ioport_string_read(vctx, (char *) &fw_cfg_file_dir, sizeof(fw_cfg_file_dir), is_rep, access_width);
                 break;
             }
             default:
