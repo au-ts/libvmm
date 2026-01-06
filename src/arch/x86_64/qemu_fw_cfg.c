@@ -154,7 +154,7 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
                 struct fw_cfg_e820_map fw_cfg_e820_map = {
                     .entries[0] = {
                         .addr = 0,
-                        .size = 0,
+                        .size = guest_ram_size,
                         .type = E820_RAM,
                     }
                 };
