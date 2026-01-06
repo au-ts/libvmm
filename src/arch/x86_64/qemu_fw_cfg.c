@@ -115,6 +115,7 @@ static bool emulate_qemu_fw_cfg_id(seL4_VCPUContext *vctx, bool is_read) {
 
 // bool qemu_fw_cfg_add()
 
+// @billn revisit buffer overflows
 bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width) {
     // LOG_VMM("port_addr: 0x%x\n", port_addr);
     switch (port_addr) {
