@@ -96,33 +96,35 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
 
 #define ACPI_PMT_FREQUENCY (3579545)
 
-void emulate_ioport_string(seL4_VCPUContext *vctx, char *data, size_t len, ioport_access_width_t access_width) {
-    // TODO: handle
-    assert(len == 1);
-    assert(len != 0);
-    uint64_t dest_gpa;
-    int _bytes_to_page_boundary;
-    assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &_bytes_to_page_boundary));
-    char *dest = gpa_to_vaddr(dest_gpa);
-    // TODO: handle out of bounds.
-    // TODO: handle len greater than one
-    LOG_VMM("string data: %d\n", data[0]);
-    dest[0] = data[0];
-
-    // "After the byte, word, or doubleword is transfer from the I/O
-    // port to the memory location, the DI/EDI/RDI register is incremented
-    // or decremented automatically according to the setting of the DF flag
-    // in the EFLAGS register. (If the DF flag is 0, the (E)DI register is incremented;
-    // if the DF flag is 1, the (E)DI register is decremented.) The (E)DI register is
-    // incremented or decremented by 1 for byte operations, by 2 for word operations,
-    // or by 4 for doubleword operations."
-
+int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep, ioport_access_width_t access_width) {
+    int data_index = 0;
+    int max_iterations = 1;
     uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
-    if (eflags & BIT(10)) {
-        vctx->edi -= ioports_access_width_to_bytes(access_width);
-    } else {
-        vctx->edi += ioports_access_width_to_bytes(access_width);
+
+    if (is_rep) {
+        max_iterations = vctx->ecx;
     }
+
+    int iteration = 0;
+    for (; iteration < max_iterations && data_index < data_len; iteration++) {
+        uint64_t dest_gpa;
+        int bytes_to_page_boundary;
+        assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &bytes_to_page_boundary));
+        char *dest = gpa_to_vaddr(dest_gpa);
+
+        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
+
+        memcpy(dest, &data[data_index], ioports_access_width_to_bytes(access_width));
+
+        if (eflags & BIT(10)) {
+            vctx->edi -= ioports_access_width_to_bytes(access_width);
+        } else {
+            vctx->edi += ioports_access_width_to_bytes(access_width);
+        }
+        data_index += ioports_access_width_to_bytes(access_width);
+    }
+
+    return ioports_access_width_to_bytes(access_width) * data_index;
 }
 
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
@@ -130,7 +132,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
     uint64_t is_rep = f_qualification & BIT(5);
-    assert(!is_rep);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 
@@ -221,7 +222,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
         success = true;
     } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514) {
-        success = emulate_qemu_fw_cfg(vctx, port_addr, is_read, is_string, access_width);
+        success = emulate_qemu_fw_cfg(vctx, port_addr, is_read, is_string, is_rep, access_width);
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }

@@ -21,5 +21,7 @@ typedef enum ioport_access_width_qualification {
 
 int ioports_access_width_to_bytes(ioport_access_width_t access_width);
 
-void emulate_ioport_string(seL4_VCPUContext *vctx, char *data, size_t len, ioport_access_width_t access_width);
+// returns how many bytes were written to guest ram.
+int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep, ioport_access_width_t access_width);
+
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification);
