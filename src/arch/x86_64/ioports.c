@@ -7,10 +7,12 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
+#include <sddf/timer/client.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/qemu_fw_cfg.h>
 
 extern uint64_t primary_ata_cmd_pio_id;
 extern uint64_t primary_ata_cmd_pio_addr;
@@ -23,6 +25,11 @@ extern uint64_t second_ata_cmd_pio_addr;
 
 extern uint64_t second_ata_ctrl_pio_id;
 extern uint64_t second_ata_ctrl_pio_addr;
+
+extern struct pci_bus pci_bus_state;
+
+// TODO: hack
+#define TIMER_DRV_CH_FOR_LAPIC 11
 
 int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
     switch (access_width) {
@@ -84,6 +91,8 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
 
 //     return true;
 // }
+
+#define ACPI_PMT_FREQUENCY (3579545)
 
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
@@ -160,7 +169,15 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr == 0x64) {
         // PS2 controller
         success = true;
-
+    } else if (port_addr == pci_bus_state.isa_bridge_power_mgmt_regs.pmba + 0x8) {
+        // Handle ACPI Power Management Timer
+        // 7.2.4 of 82371AB PCI-TO-ISA / IDE XCELERATOR (PIIX4)
+        // TODO: maybe handle PCI reset case
+        uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
+        vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
+        success = true;
+    } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514) {
+        success = emulate_qemu_fw_cfg(vctx, is_read, port_addr);
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }

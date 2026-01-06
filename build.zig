@@ -51,6 +51,7 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/pci.c",
     "src/arch/x86_64/pit.c",
     "src/arch/x86_64/ioports.c",
+    "src/arch/x86_64/qemu_fw_cfg.c",
 };
 
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
