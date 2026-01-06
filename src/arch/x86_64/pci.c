@@ -110,11 +110,22 @@ struct pci_device_address {
     uint8_t func;
 };
 
+// function 3 of isa bridge
+// https://www.intel.com/Assets/PDF/datasheet/290562.pdf
+#define PMBA_OFFSET 0x40
+#define PMREGMISC_OFFSET 0x80
+
+struct isa_bridge_power_mgmt_regs {
+    uint32_t pmba;
+    uint8_t pmregmisc;
+};
+
 struct pci_bus {
     uint32_t address_reg;
 
     struct pci_config_space host_bridge;
     struct pci_config_space isa_bridge;
+    struct isa_bridge_power_mgmt_regs isa_bridge_power_mgmt_regs;
 
     bool ide_controller_enable;
     struct pci_device_address native_ide_con_addr;
@@ -126,7 +137,8 @@ static struct pci_bus pci_bus_state = {
                     .vendor_id = 0x8086,
                     .class_code = 0x6,
                     .subclass = 1,
-                    .header_type = 0x80, }, // bit 7 multifunction
+                    .header_type = 0x80, // bit 7 multifunction
+                }, 
     .ide_controller_enable = false,
 };
 
@@ -184,10 +196,40 @@ static bool is_isa_bridge_access(void)
         && pci_host_bridge_addr_reg_dev() == 1 && pci_host_bridge_addr_reg_func() == 0;
 }
 
+static bool is_isa_power_mgmt_access(void)
+{
+    return pci_host_bridge_addr_reg_enable() && pci_host_bridge_addr_reg_bus() == 0
+        && pci_host_bridge_addr_reg_dev() == 1 && pci_host_bridge_addr_reg_func() == 3;
+}
+
 static bool is_ide_controller_access(void)
 {
     return pci_host_bridge_addr_reg_enable() && pci_host_bridge_addr_reg_bus() == 0
         && pci_host_bridge_addr_reg_dev() == 1 && pci_host_bridge_addr_reg_func() == 1;
+}
+
+bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_access_width_t access_width) {
+    // LOG_VMM("emulate_isa_power_mgmt_access is_read %d, offset 0x%x\n", is_read, pci_host_bridge_addr_reg_offset());
+
+    uint64_t *vctx_raw = (uint64_t *)vctx;
+    if (is_read) {
+        switch (pci_host_bridge_addr_reg_offset()) {
+            case PMREGMISC_OFFSET:
+                vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc;
+            case PMBA_OFFSET:
+                vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmba;
+        }
+    } else {
+        switch (pci_host_bridge_addr_reg_offset()) {
+            case PMREGMISC_OFFSET:
+                pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc = vctx_raw[RAX_IDX];
+            case PMBA_OFFSET:
+                pci_bus_state.isa_bridge_power_mgmt_regs.pmba = vctx_raw[RAX_IDX];
+                // LOG_VMM("pmba is 0x%lx\n", pci_bus_state.isa_bridge_power_mgmt_regs.pmba);
+        }
+    }
+
+    return true;
 }
 
 bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
@@ -318,6 +360,9 @@ bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t por
             } else if (is_isa_bridge_access()) {
                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
                                                               &pci_bus_state.isa_bridge);
+
+            } else if (is_isa_power_mgmt_access()) {
+                success = emulate_isa_power_mgmt_access(vctx, is_read, access_width);
 
             } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
                 success = native_pci_config_space_access_pio(vctx, port_addr, is_read, access_width);

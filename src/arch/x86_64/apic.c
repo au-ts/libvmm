@@ -636,7 +636,7 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
 
 bool inject_ioapic_irq(int ioapic, int pin)
 {
-    // only 1 chip right now
+    // only 1 chip right now, which is a direct map to the dual 8259
     assert(ioapic == 0);
 
     if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
