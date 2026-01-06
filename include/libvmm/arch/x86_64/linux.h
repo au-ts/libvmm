@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <libvmm/arch/x86_64/e820.h>
 
 // Documents referenced.
 // 1. https://www.kernel.org/doc/html/v6.1/x86/boot.html
@@ -56,13 +57,6 @@ struct setup_header {
     uint32_t init_size;
     uint32_t handover_offset;
     uint32_t kernel_info_offset;
-} __attribute__((packed));
-
-// [4] The E820 memory region entry of the boot protocol ABI:
-struct boot_e820_entry {
-    uint64_t addr;
-    uint64_t size;
-    uint32_t type;
 } __attribute__((packed));
 
 typedef struct linux_setup_ret {

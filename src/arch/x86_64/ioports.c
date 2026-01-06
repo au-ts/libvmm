@@ -223,6 +223,15 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514) {
         success = emulate_qemu_fw_cfg(vctx, port_addr, is_read, is_string, is_rep, access_width);
+    } else if (port_addr >= 0xAF00 || port_addr <= 0xaf00 + 12) {
+        /* See https://www.qemu.org/docs/master/specs/acpi_cpu_hotplug.html for details.
+         * Basically we want to emulate QEMU_CPUHP_R_CMD_DATA2 so that the guest does not try to
+         * use modern CPU hot plugging functionality which invovles more emulation.
+         */
+        if (port_addr == 0xAF00) {
+            vctx->eax = 0x1;
+        }
+        success = true;
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }

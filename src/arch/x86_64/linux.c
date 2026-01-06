@@ -32,14 +32,6 @@
 /* [5] */
 #define XLF_KERNEL_64 BIT(0) // Kernel have 64-bits entry
 
-/* [3] */
-#define E820_RAM        1
-#define E820_RESERVED   2
-#define E820_ACPI       3
-#define E820_NVS        4
-#define E820_UNUSABLE   5
-#define E820_PMEM       7
-
 #define E820_MAX_ENTRIES_ZEROPAGE 128
 
 /* We do not have an assigned ID in the table of loader IDs, so we do 0xff. */
