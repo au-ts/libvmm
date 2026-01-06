@@ -65,13 +65,15 @@ static bool emulate_qemu_fw_cfg_id(seL4_VCPUContext *vctx, bool is_read) {
 
 // bool qemu_fw_cfg_add()
 
-bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, ioport_access_width_t access_width) {
-    LOG_VMM("port_addr: 0x%x\n", port_addr);
+bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width) {
+    // LOG_VMM("port_addr: 0x%x\n", port_addr);
     switch (port_addr) {
     case FW_CFG_PORT_SEL:
         if (!is_read) {
+            assert(!is_string);
+            assert(!is_rep);
             port_sel = vctx->eax;
-            LOG_VMM("fw cfg port_sel is 0x%x\n", port_sel);
+            // LOG_VMM("fw cfg port_sel is 0x%x\n", port_sel);
         } else {
             /* FW_CFG_PORT_SEL is write-only register. */
             return false;
@@ -84,13 +86,12 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
             switch (port_sel) {
             case FW_CFG_SIGNATURE:
                 assert(sig_idx < strlen(fw_cfg_signature));
-                LOG_VMM("data: %c\n", fw_cfg_signature[sig_idx]);
-                emulate_ioport_string(vctx, &fw_cfg_signature[sig_idx], 1, access_width);
-                sig_idx++;
+                // LOG_VMM("data: %c\n", fw_cfg_signature[sig_idx]);
+                sig_idx += emulate_ioport_string_read(vctx, fw_cfg_signature, strlen(fw_cfg_signature), is_rep, access_width);
                 break;
             case FW_CFG_ID: {
-                char id_str[1] = { FW_CFG_ID_TRADITIONAL };
-                emulate_ioport_string(vctx, id_str, 1, access_width);
+                uint32_t id = FW_CFG_ID_TRADITIONAL;
+                emulate_ioport_string_read(vctx, (char *) &id, sizeof(uint32_t), is_rep, access_width);
                 break;
             }
             default:
