@@ -206,7 +206,6 @@ bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_
                 break;
             case PMBA_OFFSET:
                 pci_bus_state.isa_bridge_power_mgmt_regs.pmba = vctx_raw[RAX_IDX];
-                LOG_VMM("pmba is 0x%lx\n", pci_bus_state.isa_bridge_power_mgmt_regs.pmba);
                 break;
         }
     }
