@@ -69,7 +69,6 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remainin
         return false;
     }
 
-    uint64_t *page;
     if (pt_page_size(pd_pte) && pte_present(pd_pte)) {
         // 2MiB page
         uint64_t page_gpa = pte_to_gpa(pd_pte);
