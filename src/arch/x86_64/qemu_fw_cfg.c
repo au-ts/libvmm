@@ -37,9 +37,9 @@ static bool emulate_qemu_fw_cfg_signature(seL4_VCPUContext *vctx, bool is_read) 
     }
 }
 
-static bool emulate_qemu_fw_cfg_
+// static bool emulate_qemu_fw_cfg_
 
-bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, bool is_read, uint16_t port_addr) {
+bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, ioport_access_width_t access_width) {
     switch (port_addr) {
     case FW_CFG_PORT_SEL:
         if (!is_read) {
