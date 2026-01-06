@@ -98,8 +98,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
-    assert(!is_string); // unsupported right now
-    // uint64_t is_immediate = f_qualification & BIT(6);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 
@@ -111,15 +109,18 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     }
 
     if (is_pci_config_space_access_mech_1(port_addr)) {
+        assert(!is_string);
         return emulate_pci_config_space_access_mech_1(vctx, port_addr, is_read, access_width);
 
     // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
     //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
 
     } else if (port_addr >= 0x400 && port_addr < 0x406) {
+        assert(!is_string);
         success = true;
 
     } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
+        assert(!is_string);
         if (is_read) {
             // invalid read to simulate no device on pci bus
             vctx->eax = 0xffffffff;
@@ -127,6 +128,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1
                || port_addr == 0x4d0) {
+        assert(!is_string);
         // PIC1/2 access
         if (is_read) {
             // invalid read
@@ -134,42 +136,51 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         }
         success = true;
     } else if (port_addr == 0x70) {
+        assert(!is_string);
         // cmos select
         assert(!is_read);
         success = true;
     } else if (port_addr == 0x71) {
+        assert(!is_string);
         // cmos data
         // @billn i feel like we should do this properly
         // assert(is_read);
         vctx->eax = 0;
         success = true;
     } else if (port_addr == 0x80) {
+        assert(!is_string);
         // io port access delay, no-op
         if (!is_read) {
             success = true;
         }
     } else if (port_addr == 0x61) {
+        assert(!is_string);
         // some sort of PS2 controller?
         success = true;
     // } else if (port_addr >= 0x40 && port_addr <= 0x43) {
     //     return emulate_pit(vctx, port_addr, is_read);
 
     } else if (port_addr == 0x87) {
+        assert(!is_string);
         // dma controller
         success = true;
 
     } else if (port_addr == 0x2f9) {
+        assert(!is_string);
         // parallel port
         success = true;
 
     } else if (port_addr == 0x3e9 || port_addr == 0x2e9) {
+        assert(!is_string);
         // some sort of serial device
         success = true;
 
     } else if (port_addr == 0x64) {
+        assert(!is_string);
         // PS2 controller
         success = true;
     } else if (port_addr == pci_bus_state.isa_bridge_power_mgmt_regs.pmba + 0x8) {
+        assert(!is_string);
         // Handle ACPI Power Management Timer
         // 7.2.4 of 82371AB PCI-TO-ISA / IDE XCELERATOR (PIIX4)
         // TODO: maybe handle PCI reset case
@@ -177,7 +188,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
         success = true;
     } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514) {
-        success = emulate_qemu_fw_cfg(vctx, is_read, port_addr);
+        success = emulate_qemu_fw_cfg(vctx, port_addr, is_read, is_string, access_width);
     } else {
         LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
     }
