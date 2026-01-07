@@ -92,7 +92,7 @@ struct BiosLinkerLoaderEntry {
         /* padding */
         char pad[124];
     };
-} QEMU_PACKED;
+} __attribute__((packed));
 typedef struct BiosLinkerLoaderEntry BiosLinkerLoaderEntry;
 
 enum {

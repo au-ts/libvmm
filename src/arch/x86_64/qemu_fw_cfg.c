@@ -79,7 +79,7 @@ uint16_t selector;
 // TODO: maybe find a better way of state tracking.
 size_t selected_data_idx = 0;
 
-const char *fw_cfg_signature = "QEMU";
+#define FW_CFG_SIGNATURE_STR "QEMU"
 struct fw_cfg_file_dir fw_cfg_file_dir = {
     .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
     .file_entries[0] = {
@@ -140,8 +140,8 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
         if (is_read && is_string) {
             switch (selector) {
             case FW_CFG_SIGNATURE:
-                assert(selected_data_idx < strlen(fw_cfg_signature));
-                selected_data_idx += emulate_ioport_string_read(vctx, fw_cfg_signature, strlen(fw_cfg_signature), is_rep, access_width);
+                assert(selected_data_idx < strlen(FW_CFG_SIGNATURE_STR));
+                selected_data_idx += emulate_ioport_string_read(vctx, FW_CFG_SIGNATURE_STR, strlen(FW_CFG_SIGNATURE_STR), is_rep, access_width);
                 break;
             case FW_CFG_ID: {
                 uint32_t id = FW_CFG_ID_TRADITIONAL;
