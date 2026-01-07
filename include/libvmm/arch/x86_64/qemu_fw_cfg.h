@@ -87,10 +87,10 @@ struct fw_cfg_blobs {
     struct fw_cfg_file_dir fw_cfg_file_dir;
     // "etc/e820"
     struct fw_cfg_e820_map fw_cfg_e820_map;
-    // "etc/acpi/tables"
-    struct fw_cfg_acpi_tables fw_acpi_tables;
     // "etc/acpi/rsdp"
     struct xsdp fw_xsdp;
+    // "etc/acpi/tables"
+    struct fw_cfg_acpi_tables fw_acpi_tables;
     // "etc/table-loader"
     struct BiosLinkerLoaderEntry fw_table_loader[NUM_BIOS_LINKER_LOADER_CMD];
 };
