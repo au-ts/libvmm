@@ -9,7 +9,7 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 
 extern uint64_t guest_ram_vaddr;
-extern uint64_t guest_firmware_vaddr;
+extern uint64_t guest_flash_vaddr;
 
 static uint64_t pte_to_gpa(uint64_t pte)
 {
@@ -34,7 +34,7 @@ void *gpa_to_vaddr(uint64_t gpa)
     if (gpa < firmware_region_base_gpa) {
         return (void *)(guest_ram_vaddr + gpa);
     } else {
-        return (void *)(guest_firmware_vaddr + (gpa - firmware_region_base_gpa));
+        return (void *)(guest_flash_vaddr + (gpa - firmware_region_base_gpa));
     }
 }
 
