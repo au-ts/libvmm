@@ -237,10 +237,27 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
             com2_scratch = vctx->eax;
         }
         success = true;
-    } else if (port_addr >= 0x2f8 && port_addr <= 0x2ff) {
+    } else if (port_addr == 0x2fd) {
+        if (is_read) {
+            vctx->eax = BIT(5) | BIT(6);
+        } else {
+            assert(false);
+        }
+        success = true;
+    } else if (port_addr == 0x2fb) {
+        if (is_read) {
+            // FIFO enabled
+            vctx->eax = BIT(7);
+        } else {
+            assert(false);
+        }
         success = true;
     } else {
-        LOG_VMM_ERR("unhandled io port 0x%x\n", port_addr);
+        if (is_read) {
+           LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
+        } else {
+           LOG_VMM_ERR("unhandled io port write 0x%x\n", port_addr);
+        }
     }
 
     return success;
