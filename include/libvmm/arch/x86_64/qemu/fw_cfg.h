@@ -44,6 +44,7 @@
 #define FW_CFG_ACPI_TABLES  0x21
 #define FW_CFG_ACPI_RSDP    0x22
 #define FW_CFG_TABLE_LOADER 0x23
+#define FW_CFG_FRAMEBUFFER  0x24
 
 /* an individual file entry, 64 bytes total */
 struct FWCfgFile {
@@ -57,7 +58,7 @@ struct FWCfgFile {
 }  __attribute__((packed));
 
 /* Structure of FW_CFG_FILE_DIR */
-#define NUM_FW_CFG_FILES 4
+#define NUM_FW_CFG_FILES 5
 struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
@@ -83,6 +84,7 @@ struct fw_cfg_acpi_tables {
 #define ACPI_BUILD_TABLE_FILE "etc/acpi/tables"
 #define ACPI_BUILD_RSDP_FILE "etc/acpi/rsdp"
 #define ACPI_BUILD_LOADER_FILE "etc/table-loader"
+#define FRAMEBFUFER_FWCFG_FILE "etc/ramfb"
 
 // Useful data that will be served to the guest firmware via the fw cfg interface.
 struct fw_cfg_blobs {
