@@ -45,7 +45,8 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/cmos.c \
 			   src/arch/x86_64/qemu_fw_cfg.c \
 			   src/arch/x86_64/e820.c \
-			   src/arch/x86_64/uefi.c
+			   src/arch/x86_64/uefi.c \
+			   src/arch/x86_64/qemu/bios_linker_loader.c
 
 # VIRTIO MMIO depends on sddf
 ifeq ($(strip $(SDDF)),)
@@ -99,7 +100,7 @@ directories:
 ifeq ($(ARCH),aarch64)
 	mkdir -p libvmm/arch/aarch64/vgic/
 else ifeq ($(ARCH),x86_64)
-	mkdir -p libvmm/arch/x86_64
+	mkdir -p libvmm/arch/x86_64/qemu/
 endif
 	mkdir -p libvmm/util
 	mkdir -p libvmm/virtio
