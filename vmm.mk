@@ -44,7 +44,8 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/util.c \
 			   src/arch/x86_64/cmos.c \
 			   src/arch/x86_64/qemu_fw_cfg.c \
-			   src/arch/x86_64/e820.c
+			   src/arch/x86_64/e820.c \
+			   src/arch/x86_64/uefi.c
 
 # VIRTIO MMIO depends on sddf
 ifeq ($(strip $(SDDF)),)
