@@ -8,6 +8,9 @@
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
     <memory_region name="guest_flash" size="0x600000" page_size="0x200_000" />
 
+    <memory_region name="fb" size="0x200_000" phys_addr="0x7_000_000" />
+    <memory_region name="fw_cfg_dma_cmd" size="0x1000" phys_addr="0x6_000_000" />
+
     <protection_domain name="vmm_uefi" priority="0" stack_size="0x2000">
         <program_image path="vmm_x86_64.elf" />
         <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
@@ -20,6 +23,11 @@
             <map mr="guest_flash" vaddr="0xffa00000" perms="rwx" />
         </virtual_machine>
 
+        <map mr="fb" vaddr="0xa0000000" perms="rw" setvar_vaddr="fb_vaddr" />
+        <map mr="fw_cfg_dma_cmd" vaddr="0xb0000000" perms="rw" setvar_vaddr="fw_cfg_dma_cmd_vaddr" />
+        <!-- <setvar region_paddr="fb" symbol="fb_paddr" /> -->
+        <!-- <setvar region_paddr="fw_cfg_dma_cmd" symbol="fw_cfg_dma_cmd_paddr" /> -->
+
         <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />
         <ioport id="1" addr="0x1f0" size="8" setvar_id="primary_ata_cmd_pio_id" setvar_addr="primary_ata_cmd_pio_addr" />
         <ioport id="2" addr="0x3f6" size="1" setvar_id="primary_ata_ctrl_pio_id" setvar_addr="primary_ata_ctrl_pio_addr" />
@@ -28,6 +36,9 @@
 
         <ioport id="5" addr="0xcf8" size="4" setvar_id="pci_conf_addr_pio_id" setvar_addr="pci_conf_addr_pio_addr" />
         <ioport id="6" addr="0xcfc" size="4" setvar_id="pci_conf_data_pio_id" setvar_addr="pci_conf_data_pio_addr" />
+
+        <ioport id="10" addr="0x510" size="8" setvar_id="qemu_fw_cfg_port_addr_sel" />
+        <ioport id="11" addr="0x518" size="4" setvar_id="qemu_fw_cfg_port_addr_dma" />
 
         <!-- serial port com1 irq -->
         <irq pin="4" vector="41" id="0" ioapic="0" />
