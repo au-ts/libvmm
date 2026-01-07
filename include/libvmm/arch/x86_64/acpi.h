@@ -127,6 +127,13 @@ struct madt {
     struct dst_header h;
     uint32_t apic_addr;
     uint32_t flags;
+
+    // @billn doing it this way make it hard for user code to add more entries,
+    // but for now it make things way easier as we can just do sizeof(struct madt) as it
+    // is statically sized.
+    struct madt_lapic lapic_entry;
+    struct madt_ioapic ioapic_0_entry;
+    struct madt_ioapic_source_override hpet_source_override_entry;
 } __attribute__((packed));
 
 ////////////////////////////////////////
@@ -250,10 +257,7 @@ struct FADT {
 
 ////////////////////////////////////////
 
-// Note that the MADT is variable-sized depends on how many entries it have! Caller
-// must ensure sufficient memory
 size_t madt_build(struct madt *madt);
-
 size_t hpet_build(struct hpet *hpet);
 size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa);
 size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs);

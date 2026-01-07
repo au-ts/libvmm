@@ -215,7 +215,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
         success = true;
     } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514) {
-        success = emulate_qemu_fw_cfg(vctx, port_addr, is_read, is_string, is_rep, access_width);
+        success = emulate_qemu_fw_cfg_access(vctx, port_addr, is_read, is_string, is_rep, access_width);
     } else if (port_addr >= 0xAF00 || port_addr <= 0xaf00 + 12) {
         /* See https://www.qemu.org/docs/master/specs/acpi_cpu_hotplug.html for details.
          * Basically we want to emulate QEMU_CPUHP_R_CMD_DATA2 so that the guest does not try to
