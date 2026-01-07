@@ -31,6 +31,8 @@ export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF := $(abspath ../../dep/sddf)
 export LIBVMM := $(abspath ../../)
 
+export ISO := $(abspath $(ISO))
+
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
 
