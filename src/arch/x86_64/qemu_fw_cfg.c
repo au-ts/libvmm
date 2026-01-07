@@ -14,80 +14,17 @@
 #define FW_CFG_PORT_DATA    0x511
 #define FW_CFG_PORT_DMA     0x514
 
-/* selector key values for "well-known" fw_cfg entries */
-#define FW_CFG_SIGNATURE        0x00
-#define FW_CFG_ID               0x01
-#define FW_CFG_UUID             0x02
-#define FW_CFG_RAM_SIZE         0x03
-#define FW_CFG_NOGRAPHIC        0x04
-#define FW_CFG_NB_CPUS          0x05
-#define FW_CFG_MACHINE_ID       0x06
-#define FW_CFG_KERNEL_ADDR      0x07
-#define FW_CFG_KERNEL_SIZE      0x08
-#define FW_CFG_KERNEL_CMDLINE   0x09
-#define FW_CFG_INITRD_ADDR      0x0a
-#define FW_CFG_INITRD_SIZE      0x0b
-#define FW_CFG_BOOT_DEVICE      0x0c
-#define FW_CFG_NUMA             0x0d
-#define FW_CFG_BOOT_MENU        0x0e
-#define FW_CFG_MAX_CPUS         0x0f
-#define FW_CFG_KERNEL_ENTRY     0x10
-#define FW_CFG_KERNEL_DATA      0x11
-#define FW_CFG_INITRD_DATA      0x12
-#define FW_CFG_CMDLINE_ADDR     0x13
-#define FW_CFG_CMDLINE_SIZE     0x14
-#define FW_CFG_CMDLINE_DATA     0x15
-#define FW_CFG_SETUP_ADDR       0x16
-#define FW_CFG_SETUP_SIZE       0x17
-#define FW_CFG_SETUP_DATA       0x18
-#define FW_CFG_FILE_DIR         0x19
-
-#define FW_CFG_E820        0x20
-
 #define FW_CFG_ID_TRADITIONAL BIT(0)
 #define FW_CFG_ID_DMA BIT(1)
 
-#define E820_FWCFG_FILE "etc/e820"
-
-#define ACPI_BUILD_TABLE_FILE "etc/acpi/tables"
-#define ACPI_BUILD_RSDP_FILE "etc/acpi/rsdp"
-#define ACPI_BUILD_TPMLOG_FILE "etc/tpm/log"
-#define ACPI_BUILD_LOADER_FILE "etc/table-loader"
+#define FW_CFG_SIGNATURE_STR "QEMU"
 
 // This will be populated by uefi_setup_images()
 struct fw_cfg_blobs fw_cfg_blobs;
 
-/* an individual file entry, 64 bytes total */
-struct FWCfgFile {
-    /* size of referenced fw_cfg item, big-endian */
-    uint32_t size;
-    /* selector key of fw_cfg item, big-endian */
-    uint16_t select;
-    uint16_t reserved;
-    /* fw_cfg item name, NUL-terminated ascii */
-    char name[56];
-}  __attribute__((packed));
-
-/* Structure of FW_CFG_FILE_DIR */
-#define NUM_FW_CFG_FILES 1
-struct fw_cfg_file_dir {
-    uint32_t num_files; // Big endian!
-    struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
-};
-
 uint16_t selector;
 // TODO: maybe find a better way of state tracking.
 size_t selected_data_idx = 0;
-
-#define FW_CFG_SIGNATURE_STR "QEMU"
-struct fw_cfg_file_dir fw_cfg_file_dir = {
-    .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
-    .file_entries[0] = {
-        .name = E820_FWCFG_FILE,
-        .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
-        .select = __builtin_bswap16(FW_CFG_E820),
-    }
-};
 
 // static bool emulate_qemu_fw_cfg_signature(seL4_VCPUContext *vctx, bool is_read) {
 //     if (is_read) {
@@ -149,7 +86,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                 break;
             }
             case FW_CFG_FILE_DIR: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_file_dir)[selected_data_idx], sizeof(fw_cfg_file_dir) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_cfg_file_dir)[selected_data_idx], sizeof(fw_cfg_blobs.fw_cfg_file_dir) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_E820: {
