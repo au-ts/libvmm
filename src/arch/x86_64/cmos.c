@@ -14,7 +14,7 @@
 // https://www.ti.com/lit/ds/symlink/bq3285.pdf?ts=1767742813264&ref_url=https%253A%252F%252Fwww.google.com%252F
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_CMOS
+// #define DEBUG_CMOS
 
 #if defined(DEBUG_CMOS)
 #define LOG_CMOS(...) do{ printf("%s|CMOS: ", microkit_name); printf(__VA_ARGS__); }while(0)
