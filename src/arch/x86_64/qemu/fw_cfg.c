@@ -178,6 +178,12 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     // TODO: revisit
                     uint16_t nb_cpus = 1;
                     memcpy(dma_vaddr, (char *) &nb_cpus, length);
+                } else if (selector == FW_CFG_ACPI_TABLES) {
+                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_acpi_tables)[selected_data_idx], length);
+                } else if (selector == FW_CFG_ACPI_RSDP) {
+                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_xsdp)[selected_data_idx], length);
+                } else if (selector == FW_CFG_TABLE_LOADER) {
+                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_table_loader)[selected_data_idx], length);
                 } else {
                     LOG_VMM_ERR("unknown fw cfg DMA for selector 0x%x\n", selector);
                     return false;
