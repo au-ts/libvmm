@@ -14,7 +14,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/vmcs.h>
-#include <libvmm/arch/x86_64/qemu_fw_cfg.h>
+#include <libvmm/arch/x86_64/qemu/fw_cfg.h>
 #include <libvmm/arch/x86_64/cmos.h>
 
 extern uint64_t primary_ata_cmd_pio_id;
