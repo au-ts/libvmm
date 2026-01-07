@@ -46,14 +46,14 @@ static uint8_t acpi_compute_checksum(char *table, int size)
 // TODO: when creating MADT, get the user to pass the address of APIC that is definitely
 // outside of RAM, or determine it ourselves.
 
-static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
-{
-    struct madt_irq_controller *madt_entry = (struct madt_irq_controller *)entry;
+// static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
+// {
+//     struct madt_irq_controller *madt_entry = (struct madt_irq_controller *)entry;
 
-    madt->h.length += madt_entry->length;
+//     madt->h.length += madt_entry->length;
 
-    memcpy((void *)dest, entry, madt_entry->length);
-}
+//     memcpy((void *)dest, entry, madt_entry->length);
+// }
 
 size_t madt_build(struct madt *madt)
 {
@@ -69,7 +69,7 @@ size_t madt_build(struct madt *madt)
     madt->h.creator_id = 1;
     madt->h.creator_revision = 1;
 
-    struct madt_lapic lapic = {
+    madt->lapic_entry = (struct madt_lapic) {
         .entry = {
             .type = MADT_ENTRY_TYPE_LAPIC,
             .length = MADT_ENTRY_LAPIC_LENGTH,
@@ -79,7 +79,7 @@ size_t madt_build(struct madt *madt)
         .flags = MADT_LAPIC_FLAGS,
     };
 
-    struct madt_ioapic ioapic = {
+    madt->ioapic_0_entry = (struct madt_ioapic) {
         .entry = {
             .type = MADT_ENTRY_TYPE_IOAPIC,
             .length = MADT_ENTRY_IOAPIC_LENGTH,
@@ -92,7 +92,7 @@ size_t madt_build(struct madt *madt)
 
     // Connect ISA IRQ 0 from the legacy Programmable Interval Timer (PIT)
     // to I/O APIC pin 2, which is where the HPET in legacy replacement code is connected.
-    struct madt_ioapic_source_override ioapic_hpet_override = {
+    madt->hpet_source_override_entry = (struct madt_ioapic_source_override) {
         .entry = { .type = 2, .length = 10 },
         .bus = 0,
         .source = 0,
@@ -100,26 +100,15 @@ size_t madt_build(struct madt *madt)
         .flags = 0,
     };
 
-    // // Connect ISA IRQ 4 from serial port COM1
-    // // to I/O APIC pin 10.
-    // struct madt_ioapic_source_override ioapic_com1_override = {
-    //     .entry = { .type = 2, .length = 10 },
-    //     .bus = 0,
-    //     .source = 4,
-    //     .gsi = 10,
-    //     .flags = 0,
-    // };
-
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
     madt->flags = MADT_FLAGS;
-    // madt->flags = 0;
 
-    uintptr_t watermark = (uintptr_t)madt + sizeof(struct madt);
-    madt_add_entry(madt, watermark, &lapic);
-    watermark += sizeof(struct madt_lapic);
-    madt_add_entry(madt, watermark, &ioapic);
-    watermark += sizeof(struct madt_ioapic);
-    madt_add_entry(madt, watermark, &ioapic_hpet_override);
+    // uintptr_t watermark = (uintptr_t)madt + sizeof(struct madt);
+    // madt_add_entry(madt, watermark, &lapic);
+    // watermark += sizeof(struct madt_lapic);
+    // madt_add_entry(madt, watermark, &ioapic);
+    // watermark += sizeof(struct madt_ioapic);
+    // madt_add_entry(madt, watermark, &ioapic_hpet_override);
     // watermark += sizeof(struct madt_ioapic_source_override);
     // madt_add_entry(madt, watermark, &ioapic_com1_override);
 
@@ -156,7 +145,8 @@ size_t hpet_build(struct hpet *hpet)
     return sizeof(struct hpet);
 }
 
-static void mcfg_build(struct mcfg *mcfg) {
+static void mcfg_build(struct mcfg *mcfg)
+{
     memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
     mcfg->h.length = sizeof(struct mcfg);
     mcfg->h.revision = MCFG_REVISION;
@@ -174,7 +164,8 @@ static void mcfg_build(struct mcfg *mcfg) {
     assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
 }
 
-size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
+size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
+{
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
     memset(fadt, 0, sizeof(struct FADT));
@@ -192,7 +183,7 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     fadt->h.creator_revision = 1;
 
     /* Fill out data fields of FADT */
-    fadt->Dsdt = (uint32_t) dsdt_gpa;
+    fadt->Dsdt = (uint32_t)dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
     fadt->Flags = 0;
 
@@ -239,7 +230,8 @@ size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs
     return xsdt->h.length;
 }
 
-size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa) {
+size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
+{
     memset(xsdp, 0, sizeof(struct xsdp));
 
     // memcpy as we do not want to null-termiante
@@ -268,7 +260,8 @@ uint64_t acpi_allocate_gpa(size_t length)
     return acpi_top;
 }
 
-uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top, uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
+uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top,
+                        uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
 {
     acpi_top = ram_top;
     // Step 1: create the Root System Description Pointer structure.
@@ -281,17 +274,16 @@ uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     // All the other tables "grow down" from the XSDP, here we pre-allocate the XSDT
     // so that we can compute the XSDP checksum.
     uint64_t xsdt_gpa = acpi_allocate_gpa(sizeof(struct xsdt));
-
     xsdp_build(xsdp, xsdt_gpa);
 
     // TODO: hack
-    uint64_t madt_gpa = acpi_allocate_gpa(0x1000);
+    uint64_t madt_gpa = acpi_allocate_gpa(sizeof(struct madt));
     struct madt *madt = (struct madt *)(guest_ram_vaddr + madt_gpa);
     madt_build(madt);
     assert(madt->h.length <= 0x1000);
 
     // @billn todo really need some sort of memory range allocator
-    uint64_t hpet_gpa = acpi_allocate_gpa(0x1000);
+    uint64_t hpet_gpa = acpi_allocate_gpa(sizeof(struct hpet));
     struct hpet *hpet = (struct hpet *)(guest_ram_vaddr + hpet_gpa);
     hpet_build(hpet);
     assert(hpet->h.length <= 0x1000);
@@ -302,9 +294,9 @@ uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     // It is in a binary format from the ASL compiler, which just needs to be copied to guest RAM.
     assert(dsdt_blob_size < 0x1000);
     uint64_t dsdt_gpa = acpi_allocate_gpa(0x1000);
-    memcpy((void *) (guest_ram_vaddr + dsdt_gpa), dsdt_blob, dsdt_blob_size);
+    memcpy((void *)(guest_ram_vaddr + dsdt_gpa), dsdt_blob, dsdt_blob_size);
 
-    uint64_t fadt_gpa = acpi_allocate_gpa(0x1000);
+    uint64_t fadt_gpa = acpi_allocate_gpa(sizeof(struct FADT));
     struct FADT *fadt = (struct FADT *)(guest_ram_vaddr + fadt_gpa);
     fadt_build(fadt, dsdt_gpa);
     assert(fadt->h.length <= 0x1000);

@@ -54,7 +54,8 @@
 #define ACPI_BUILD_TPMLOG_FILE "etc/tpm/log"
 #define ACPI_BUILD_LOADER_FILE "etc/table-loader"
 
-extern uint64_t guest_ram_size;
+// This will be populated by uefi_setup_images()
+struct fw_cfg_blobs fw_cfg_blobs;
 
 /* an individual file entry, 64 bytes total */
 struct FWCfgFile {
@@ -72,10 +73,6 @@ struct FWCfgFile {
 struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
-};
-
-struct fw_cfg_e820_map {
-    struct boot_e820_entry entries[1];
 };
 
 uint16_t selector;
@@ -121,7 +118,7 @@ static bool emulate_qemu_fw_cfg_id(seL4_VCPUContext *vctx, bool is_read) {
 // bool qemu_fw_cfg_add()
 
 // @billn revisit buffer overflows
-bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width) {
+bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width) {
     // LOG_VMM("port_addr: 0x%x\n", port_addr);
     switch (port_addr) {
     case FW_CFG_PORT_SEL:
@@ -156,16 +153,7 @@ bool emulate_qemu_fw_cfg(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
                 break;
             }
             case FW_CFG_E820: {
-                // TODO: bad, being constructed on each call
-                struct fw_cfg_e820_map fw_cfg_e820_map = {
-                    .entries[0] = {
-                        .addr = 0,
-                        .size = guest_ram_size,
-                        .type = E820_RAM,
-                    }
-                };
-
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_e820_map)[selected_data_idx], sizeof(fw_cfg_e820_map) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_cfg_e820_map)[selected_data_idx], sizeof(fw_cfg_blobs.fw_cfg_e820_map) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_BOOT_MENU: {

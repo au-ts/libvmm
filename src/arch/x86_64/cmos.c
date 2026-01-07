@@ -71,8 +71,8 @@ bool emulate_cmos_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_rea
                 case STATUS_REG_A:
                     cmos_regs.status_registers[0] = vctx->eax;
 
-                    uint8_t freq_select = cmos_regs.status_registers[0] & 0xf;
-                    uint8_t oscillator_ctl = (cmos_regs.status_registers[0] >> 4) & 0x7;
+                    // uint8_t freq_select = cmos_regs.status_registers[0] & 0xf;
+                    // uint8_t oscillator_ctl = (cmos_regs.status_registers[0] >> 4) & 0x7;
 
                     break;
                 case STATUS_REG_B:
