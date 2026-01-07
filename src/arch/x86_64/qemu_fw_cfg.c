@@ -104,6 +104,18 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                 selected_data_idx += emulate_ioport_string_read(vctx, (char *) &nb_cpus, sizeof(uint16_t), is_rep, access_width);
                 break;
             }
+            case FW_CFG_ACPI_TABLES: {
+                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_acpi_tables)[selected_data_idx], sizeof(fw_cfg_blobs.fw_acpi_tables) - selected_data_idx, is_rep, access_width);
+                break;
+            }
+            case FW_CFG_ACPI_RSDP: {
+                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_xsdp)[selected_data_idx], sizeof(fw_cfg_blobs.fw_xsdp) - selected_data_idx, is_rep, access_width);
+                break;
+            }
+            case FW_CFG_TABLE_LOADER: {
+                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_table_loader)[selected_data_idx], sizeof(fw_cfg_blobs.fw_table_loader) - selected_data_idx, is_rep, access_width);
+                break;
+            }
             default:
                 LOG_VMM_ERR("unknown fw cfg selector for port data string: 0x%x\n", selector);
                 return false;

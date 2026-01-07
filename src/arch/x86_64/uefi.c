@@ -50,8 +50,19 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     // 2. Patch all the required GPAs.
     // 3. Recompute all table checksums
     int num_cmd = 0;
+    bios_linker_loader_alloc(ACPI_BUILD_RSDP_FILE, 1, true, &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+    bios_linker_loader_alloc(ACPI_BUILD_TABLE_FILE, 1, false, &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
 
+    // Connect the XSDP to the XSDT, then compute XSDP checksum
     
+
+    // Connect the FADT, HPET and MADT to XSDT, then checksum the XSDT
+
+    // Connect the DSDT to FADT, then checksum the FADT
+
+    // Checksum the rest: HPET, MADT, XSDT
 
     // Finish by populating File Dir with everything we built
     fw_cfg_blobs.fw_cfg_file_dir =
@@ -60,7 +71,23 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
                                        .name = E820_FWCFG_FILE,
                                        .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
                                        .select = __builtin_bswap16(FW_CFG_E820),
-                                   } };
+                                   },
+                                    .file_entries[1] = {
+                                       .name = ACPI_BUILD_TABLE_FILE,
+                                       .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
+                                       .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
+                                   },
+                                    .file_entries[2] = {
+                                       .name = ACPI_BUILD_RSDP_FILE,
+                                       .size = __builtin_bswap32(sizeof(struct xsdp)),
+                                       .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
+                                   },
+                                    .file_entries[3] = {
+                                       .name = ACPI_BUILD_LOADER_FILE,
+                                       .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
+                                       .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
+                                   },
+                                 };
 
     return true;
 }
