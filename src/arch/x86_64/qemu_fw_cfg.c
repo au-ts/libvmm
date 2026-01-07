@@ -49,6 +49,13 @@
 
 #define E820_FWCFG_FILE "etc/e820"
 
+#define ACPI_BUILD_TABLE_FILE "etc/acpi/tables"
+#define ACPI_BUILD_RSDP_FILE "etc/acpi/rsdp"
+#define ACPI_BUILD_TPMLOG_FILE "etc/tpm/log"
+#define ACPI_BUILD_LOADER_FILE "etc/table-loader"
+
+extern uint64_t guest_ram_size;
+
 /* an individual file entry, 64 bytes total */
 struct FWCfgFile {
     /* size of referenced fw_cfg item, big-endian */
@@ -66,8 +73,6 @@ struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
 };
-
-extern uint64_t guest_ram_size;
 
 struct fw_cfg_e820_map {
     struct boot_e820_entry entries[1];

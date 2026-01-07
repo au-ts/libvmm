@@ -66,7 +66,12 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
-uintptr_t guest_firmware_vaddr; // unused
+
+// @billn unused, but have to leave it here otherwise linker complains, revisit
+uint64_t guest_ram_size;
+uintptr_t guest_flash_vaddr;
+uint64_t guest_flash_size;
+
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
