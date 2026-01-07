@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <sddf/util/util.h>
 
 #define PAGE_SIZE_4K 0x1000
@@ -42,114 +43,8 @@ static uint8_t acpi_compute_checksum(char *table, int size)
     return 0x100 - acpi_table_sum(table, size);
 }
 
-/* XSDP (Root System Description Pointer) -> XSDT (Extended System Description Table)
- *                                                               |
- *                                                               v
- *                                                    other ACPI tables
- */
-
-/* [1a] */
-#define XSDP_SIGNATURE "RSD PTR "
-#define XSDP_SIG_LEN 8
-#define XSDP_OEM_ID_LEN 6
-#define XSDP_REVISION 2
-#define XSDP_ALIGN 16
-struct xsdp {
-    char signature[XSDP_SIG_LEN];
-    uint8_t checksum;
-    char oem_id[XSDP_OEM_ID_LEN];
-    uint8_t revision;
-    uint32_t _deprecated;
-
-    uint32_t length;
-    uint64_t xsdt_gpa;
-    uint8_t ext_checksum;
-    uint8_t reserved[3];
-} __attribute__((packed));
-
-/* [1b] All system description tables begin with the following structure */
-#define DST_HDR_SIG_LEN 4
-#define DST_HDR_OEM_ID_LEN 6
-#define DST_HDR_OEM_TABLE_ID_LEN 8
-struct dst_header {
-    char signature[DST_HDR_SIG_LEN];
-    uint32_t length;
-    uint8_t revision;
-    uint8_t checksum;
-    char oem_id[DST_HDR_OEM_ID_LEN];
-    char oem_table_id[DST_HDR_OEM_TABLE_ID_LEN];
-    uint32_t oem_revision;
-    uint32_t creator_id;
-    uint32_t creator_revision;
-} __attribute__((packed));
-
-/* [1c] Root System Description Table */
-#define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 3
-// #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
-struct xsdt {
-    struct dst_header h;
-    /* A list of guest physical addresses to other ACPI tables. */
-    uint64_t tables[XSDT_ENTRIES];
-} __attribute__((packed));
-
-#define MADT_ENTRY_TYPE_LAPIC 0x0
-#define MADT_ENTRY_TYPE_IOAPIC 0x1
-
-#define MADT_ENTRY_LAPIC_LENGTH 0x8
-#define MADT_ENTRY_IOAPIC_LENGTH 0xc
-
-// TODO: do not hard-code this address
-#define IOAPIC_ADDRESS 0xFEC00000
-
-struct madt_irq_controller {
-    uint8_t type;
-    /* Note that the length includes this MADT IRQ controller header. */
-    uint8_t length;
-} __attribute__((packed));
-
-#define MADT_LAPIC_FLAGS (1 << 0) | (1 << 1)
-
-struct madt_lapic {
-    struct madt_irq_controller entry;
-    uint8_t acpi_processor_id;
-    uint8_t apic_id;
-    uint32_t flags;
-} __attribute__((packed));
-
-struct madt_ioapic {
-    struct madt_irq_controller entry;
-    uint8_t id;
-    /* Reserved */
-    uint8_t res;
-    uint32_t address;
-    uint32_t global_system_irq_base;
-} __attribute__((packed));
-
-struct madt_ioapic_source_override {
-    struct madt_irq_controller entry;
-    uint8_t bus;
-    uint8_t source;
-    uint32_t gsi;
-    uint16_t flags;
-} __attribute__((packed));
-
 // TODO: when creating MADT, get the user to pass the address of APIC that is definitely
 // outside of RAM, or determine it ourselves.
-
-// @billn dedup
-// This just matches the x86 CPU default physical address from
-// See bit 9 of 'Table 1-20. More on Feature Information Returned in the EDX Register'.
-#define MADT_LOCAL_APIC_ADDR 0xFEE00000
-
-#define MADT_REVISION 5
-#define MADT_FLAGS BIT(0) // PCAT_COMPAT, dual 8259 present as a direct mapping to I/O APIC 0
-
-struct madt {
-    struct dst_header h;
-    uint32_t apic_addr;
-    uint32_t flags;
-} __attribute__((packed));
 
 static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
 {
@@ -160,7 +55,7 @@ static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
     memcpy((void *)dest, entry, madt_entry->length);
 }
 
-static void madt_build(struct madt *madt)
+size_t madt_build(struct madt *madt)
 {
     memcpy(madt->h.signature, "APIC", 4);
     madt->h.revision = MADT_REVISION;
@@ -231,36 +126,11 @@ static void madt_build(struct madt *madt)
     // Finished building, now do the checksum.
     madt->h.checksum = acpi_compute_checksum((char *)madt, madt->h.length);
     assert(acpi_checksum_ok((char *)madt, madt->h.length));
+
+    return madt->h.length;
 }
 
-/* [2a] HPET Description Table */
-#define HPET_SIGNATURE "HPET"
-#define HPET_REVISION 0x1
-
-#define HPET_LEGACY_IRQ_CAPABLE BIT(15)
-#define HPET_NUM_COMPARATORS_VALUE 3
-#define HPET_NUM_COMPARATORS_SHIFT 8
-
-#define HPET_GPA 0xfed00000
-
-struct address_structure {
-    uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port, 2 - PCI config space
-    uint8_t register_bit_width;
-    uint8_t register_bit_offset;
-    uint8_t reserved;
-    uint64_t address;
-} __attribute__((packed));
-
-struct hpet {
-    struct dst_header h;
-    uint32_t evt_timer_block_id;
-    struct address_structure address_desc;
-    uint8_t hpet_number;
-    uint16_t minimum_clk_tick;
-    uint8_t page_protection;
-} __attribute__((packed));
-
-static void hpet_build(struct hpet *hpet)
+size_t hpet_build(struct hpet *hpet)
 {
     memcpy(hpet->h.signature, HPET_SIGNATURE, 4);
     hpet->h.length = sizeof(struct hpet);
@@ -282,27 +152,9 @@ static void hpet_build(struct hpet *hpet)
 
     hpet->h.checksum = acpi_compute_checksum((char *)hpet, hpet->h.length);
     assert(acpi_checksum_ok((char *)hpet, hpet->h.length));
+
+    return sizeof(struct hpet);
 }
-
-/* PCI Express Memory-mapped Configuration Space base address description table */
-#define MCFG_SIGNATURE "MCFG"
-#define MCFG_REVISION 1
-#define MCFG_NUM_CONFIG_SPACES 1
-
-#define ECAM_GPA 0xe0000000
-
-struct pcie_config_space_addr_structure {
-    uint64_t base_address;
-    uint16_t pci_segment_group;
-    uint8_t start_bus;
-    uint8_t end_bus;
-    uint32_t reserved;
-} __attribute__((packed));;
-
-struct mcfg {
-    struct dst_header h;
-    struct pcie_config_space_addr_structure config_spaces[MCFG_NUM_CONFIG_SPACES];
-} __attribute__((packed));;
 
 static void mcfg_build(struct mcfg *mcfg) {
     memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
@@ -322,73 +174,7 @@ static void mcfg_build(struct mcfg *mcfg) {
     assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
 }
 
-struct FADT {
-    struct   dst_header h;
-    uint32_t FirmwareCtrl;
-    uint32_t Dsdt;
-
-    // field used in ACPI 1.0; no longer in use, for compatibility only
-    uint8_t  Reserved;
-
-    uint8_t  PreferredPowerManagementProfile;
-    uint16_t SCI_Interrupt;
-    uint32_t SMI_CommandPort;
-    uint8_t  AcpiEnable;
-    uint8_t  AcpiDisable;
-    uint8_t  S4BIOS_REQ;
-    uint8_t  PSTATE_Control;
-    uint32_t PM1aEventBlock;
-    uint32_t PM1bEventBlock;
-    uint32_t PM1aControlBlock;
-    uint32_t PM1bControlBlock;
-    uint32_t PM2ControlBlock;
-    uint32_t PMTimerBlock;
-    uint32_t GPE0Block;
-    uint32_t GPE1Block;
-    uint8_t  PM1EventLength;
-    uint8_t  PM1ControlLength;
-    uint8_t  PM2ControlLength;
-    uint8_t  PMTimerLength;
-    uint8_t  GPE0Length;
-    uint8_t  GPE1Length;
-    uint8_t  GPE1Base;
-    uint8_t  CStateControl;
-    uint16_t WorstC2Latency;
-    uint16_t WorstC3Latency;
-    uint16_t FlushSize;
-    uint16_t FlushStride;
-    uint8_t  DutyOffset;
-    uint8_t  DutyWidth;
-    uint8_t  DayAlarm;
-    uint8_t  MonthAlarm;
-    uint8_t  Century;
-
-    // reserved in ACPI 1.0; used since ACPI 2.0+
-    uint16_t BootArchitectureFlags;
-
-    uint8_t  Reserved2;
-    uint32_t Flags;
-
-    struct address_structure ResetReg;
-
-    uint8_t  ResetValue;
-    uint8_t  Reserved3[3];
-
-    // 64bit pointers - Available on ACPI 2.0+
-    uint64_t                X_FirmwareControl;
-    uint64_t                X_Dsdt;
-
-    struct address_structure X_PM1aEventBlock;
-    struct address_structure X_PM1bEventBlock;
-    struct address_structure X_PM1aControlBlock;
-    struct address_structure X_PM1bControlBlock;
-    struct address_structure X_PM2ControlBlock;
-    struct address_structure X_PMTimerBlock;
-    struct address_structure X_GPE0Block;
-    struct address_structure X_GPE1Block;
-} __attribute__((packed));;
-
-static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
+size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
     memset(fadt, 0, sizeof(struct FADT));
@@ -423,7 +209,7 @@ static size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa) {
     return fadt->h.length;
 }
 
-static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs)
+size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs)
 {
     memcpy(xsdt->h.signature, "XSDT", 4);
 
@@ -453,6 +239,25 @@ static size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_tab
     return xsdt->h.length;
 }
 
+size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa) {
+    memset(xsdp, 0, sizeof(struct xsdp));
+
+    // memcpy as we do not want to null-termiante
+    memcpy(xsdp->signature, XSDP_SIGNATURE, strlen(XSDP_SIGNATURE));
+    memcpy(xsdp->oem_id, ACPI_OEMID, strlen(ACPI_OEMID));
+    xsdp->revision = XSDP_REVISION;
+    xsdp->length = sizeof(struct xsdp);
+
+    xsdp->xsdt_gpa = xsdt_gpa;
+
+    xsdp->checksum = acpi_compute_checksum((char *)xsdp, offsetof(struct xsdp, length));
+    assert(acpi_checksum_ok((char *)xsdp, offsetof(struct xsdp, length)));
+    xsdp->ext_checksum = acpi_compute_checksum((char *)xsdp, sizeof(struct xsdp));
+    assert(acpi_checksum_ok((char *)xsdp, sizeof(struct xsdp)));
+
+    return sizeof(struct xsdp);
+}
+
 uint64_t acpi_top;
 
 uint64_t acpi_allocate_gpa(size_t length)
@@ -463,7 +268,7 @@ uint64_t acpi_allocate_gpa(size_t length)
     return acpi_top;
 }
 
-uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top, uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
+uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top, uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
 {
     acpi_top = ram_top;
     // Step 1: create the Root System Description Pointer structure.
@@ -472,24 +277,12 @@ uint64_t acpi_rsdp_init(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     // at the end and mark it as "ACPI" memory in the E820 table.
     uint64_t xsdp_gpa = acpi_allocate_gpa(sizeof(struct xsdp));
     struct xsdp *xsdp = (struct xsdp *)(guest_ram_vaddr + xsdp_gpa);
-    memset(xsdp, 0, sizeof(struct xsdp));
-
-    // memcpy as we do not want to null-termiante
-    memcpy(xsdp->signature, XSDP_SIGNATURE, strlen(XSDP_SIGNATURE));
-    memcpy(xsdp->oem_id, ACPI_OEMID, strlen(ACPI_OEMID));
-    xsdp->revision = XSDP_REVISION;
-    xsdp->length = sizeof(struct xsdp);
 
     // All the other tables "grow down" from the XSDP, here we pre-allocate the XSDT
     // so that we can compute the XSDP checksum.
-    // uint64_t apci_tables_gpa_watermark = xsdp_gpa;
-    // apci_tables_gpa_watermark -= sizeof(struct xsdt);
-    xsdp->xsdt_gpa = acpi_allocate_gpa(sizeof(struct xsdt));
+    uint64_t xsdt_gpa = acpi_allocate_gpa(sizeof(struct xsdt));
 
-    xsdp->checksum = acpi_compute_checksum((char *)xsdp, offsetof(struct xsdp, length));
-    assert(acpi_checksum_ok((char *)xsdp, offsetof(struct xsdp, length)));
-    xsdp->ext_checksum = acpi_compute_checksum((char *)xsdp, sizeof(struct xsdp));
-    assert(acpi_checksum_ok((char *)xsdp, sizeof(struct xsdp)));
+    xsdp_build(xsdp, xsdt_gpa);
 
     // TODO: hack
     uint64_t madt_gpa = acpi_allocate_gpa(0x1000);

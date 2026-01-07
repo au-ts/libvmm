@@ -234,7 +234,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     /* Now create the ACPI tables and get the RSDP. */
     uint64_t acpi_start_gpa, acpi_end_gpa;
     /* Pass pt_objs_start_gpa as "ram_top" so that the ACPI tables live straight below the initial paging objects. */
-    uint64_t acpi_rsdp_gpa = acpi_rsdp_init(ram_start, dsdt_blob, dsdt_blob_size, pt_objs_start_gpa, &acpi_start_gpa,
+    uint64_t acpi_rsdp_gpa = acpi_build_all(ram_start, dsdt_blob, dsdt_blob_size, pt_objs_start_gpa, &acpi_start_gpa,
                                             &acpi_end_gpa);
     LOG_VMM("ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa, acpi_end_gpa);
 
