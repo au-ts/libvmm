@@ -91,8 +91,8 @@ qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
 	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-m size=2G \
-			-nographic
+			-m size=2G -nographic -device ramfb \
+			-cdrom $(ISO)
 
 clean::
 	$(RM) -f *.elf .depend* $
