@@ -55,7 +55,8 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/qemu_fw_cfg.c",
     "src/arch/x86_64/e820.c",
     "src/arch/x86_64/cmos.c",
-    "src/arch/x86_64/uefi.c"
+    "src/arch/x86_64/uefi.c",
+    "src/arch/x86_64/qemu/bios_linker_loader.c"
 };
 
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
