@@ -2,7 +2,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
-#include <libvmm/arch/x86_64/qemu_fw_cfg.h>
+#include <libvmm/arch/x86_64/qemu/fw_cfg.h>
+#include <libvmm/arch/x86_64/qemu/ramfb.h>
 #include <libvmm/arch/x86_64/e820.h>
 
 // TODO: handle this
@@ -30,18 +31,6 @@ uint64_t fb_paddr = 0x7000000;
 
 // This will be populated by uefi_setup_images()
 struct fw_cfg_blobs fw_cfg_blobs;
-
-#define E820_FWCFG_FILE "etc/e820"
-#define FRAMEBUFFER_FWCFG_FILE "etc/ramfb"
-
-struct QemuRamFBCfg {
-    uint64_t address;   /**< The address of the framebuffer. */
-    uint32_t fourcc;    /**< The four character code representing the pixel format (use FORMAT_ defines). */
-    uint32_t flags;     /**< Flags for framebuffer configuration. */
-    uint32_t width;     /**< The width of the framebuffer in pixels. */
-    uint32_t height;    /**< The height of the framebuffer in pixels. */
-    uint32_t stride;    /**< The stride (number of bytes per row) of the framebuffer (width * bytes_per_pixel). */
-} __attribute__((packed));
 
 // fw_cfg DMA commands
 typedef enum fw_cfg_ctl_t {
@@ -209,7 +198,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     // We need to take this config and apply it to the real QEMU config.
                     // 1. Find the real QEMU ramfb
                     struct FWCfgFile ramfb_file;
-                    bool found = fw_cfg_find_file(&ramfb_file, "etc/ramfb");
+                    bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
                     // 2. Select it with the real QEMU fw-cfg
                     fw_cfg_select(__builtin_bswap16(ramfb_file.select));
                     // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write.
@@ -313,7 +302,7 @@ static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name) {
         fw_cfg_read_buf((char *)&file, sizeof(struct FWCfgFile));
 
         LOG_VMM("RAMFB: file %s, file.select: 0x%x\n", file.name, __builtin_bswap16(file.select));
-        if (!memcmp(name, file.name, strlen("etc/ramfb"))) {
+        if (!memcmp(name, file.name, strlen(FRAMEBFUFER_FWCFG_FILE))) {
             LOG_VMM("RAMFB: found %s, file.select: 0x%x\n", file.name, __builtin_bswap16(file.select));
             file.size = file.size;
             file.select = file.select;

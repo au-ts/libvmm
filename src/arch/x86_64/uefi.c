@@ -7,7 +7,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/uefi.h>
-#include <libvmm/arch/x86_64/qemu_fw_cfg.h>
+#include <libvmm/arch/x86_64/qemu/fw_cfg.h>
+#include <libvmm/arch/x86_64/qemu/ramfb.h>
 #include <libvmm/arch/x86_64/e820.h>
 #include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
@@ -67,27 +68,34 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     // Finish by populating File Dir with everything we built
     fw_cfg_blobs.fw_cfg_file_dir =
         (struct fw_cfg_file_dir) { .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
-                                   .file_entries[0] = {
+                                   .file_entries = {
+                                    {
                                        .name = E820_FWCFG_FILE,
                                        .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
                                        .select = __builtin_bswap16(FW_CFG_E820),
-                                   },
-                                    .file_entries[1] = {
+                                    },
+                                    {
+                                       .name = FRAMEBFUFER_FWCFG_FILE,
+                                       .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
+                                       .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
+                                    },
+                                    {
                                        .name = ACPI_BUILD_TABLE_FILE,
                                        .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
                                        .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
-                                   },
-                                    .file_entries[2] = {
+                                    },
+                                    {
                                        .name = ACPI_BUILD_RSDP_FILE,
                                        .size = __builtin_bswap32(sizeof(struct xsdp)),
                                        .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
-                                   },
-                                    .file_entries[3] = {
+                                    },
+                                    {
                                        .name = ACPI_BUILD_LOADER_FILE,
                                        .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
                                        .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
-                                   },
-                                 };
+                                    }
+                                }
+                                };
 
     return true;
 }
