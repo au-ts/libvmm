@@ -205,6 +205,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     // 1. Find the real QEMU ramfb
                     struct FWCfgFile ramfb_file;
                     bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
+                    assert(found);
                     // 2. Select it with the real QEMU fw-cfg
                     fw_cfg_select(__builtin_bswap16(ramfb_file.select));
                     // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write.
@@ -285,7 +286,6 @@ static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name) {
 
     printf("signature: '%s'\n", signature_buf);
 
-    LOG_VMM("selecting ID\n",);
     fw_cfg_select(FW_CFG_ID);
 
     uint32_t id = fw_cfg_read_u32();
@@ -319,33 +319,4 @@ static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name) {
     }
 
     return false;
-}
-
-#define FORMAT_RGB888 875710290 /**< 24 bits, red=8, green=8, blue=8 */
-#define FORMAT_XRGB8888 875713112 /**< 32 bits, alpha (transparency)=8, red=8, green=8, blue=8 */
-#define FORMAT_RGB565 909199186 /**< 16 bits, red=5, green=6, blue=5 */
-
-void qemu_ramfb_make_cfg(struct QemuRamFBCfg *cfg, uint64_t fb_address, uint32_t fb_width, uint32_t fb_height) {
-    cfg->address = __builtin_bswap64(fb_address);
-    cfg->fourcc = __builtin_bswap32(FORMAT_XRGB8888);
-    cfg->width = __builtin_bswap32(fb_width);
-    cfg->height = __builtin_bswap32(fb_height);
-    cfg->flags = __builtin_bswap32(0);
-    cfg->stride = __builtin_bswap32(fb_width * sizeof(uint32_t));
-}
-
-void qemu_ramfb_configure() {
-    // Find ramfb handle.
-    struct FWCfgFile ramfb_file;
-    bool found = fw_cfg_find_file(&ramfb_file, "etc/ramfb");
-    assert(found);
-
-    // Configure ramfb.
-    LOG_VMM("ramfb found (select: 0x%x)\n", ramfb_file.select);
-
-    struct QemuRamFBCfg *cfg = (struct QemuRamFBCfg *)fb_vaddr;
-    // qemu_ramfb_make_cfg(cfg, fb_paddr + 0x1000, 640, 640);
-    fw_cfg_select(__builtin_bswap16(ramfb_file.select));
-
-    fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
 }
