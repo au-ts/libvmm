@@ -81,6 +81,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x12:
     case 0x14:
     case 0x15:
+    case 0x21:
+    case 0x40000000 ... 0x4fffffff:
     case 0x8000001f:
         vctx->eax = 0;
         vctx->ebx = 0;
