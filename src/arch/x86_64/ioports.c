@@ -184,6 +184,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         assert(!is_string);
         // some sort of PS2 controller?
         success = true;
+        assert(false);
     } else if (port_addr >= 0x40 && port_addr <= 0x43) {
         return emulate_pit_access(vctx, port_addr, is_read);
 
@@ -206,6 +207,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         assert(!is_string);
         // PS2 controller
         success = true;
+        assert(false);
     } else if (port_addr == pci_bus_state.isa_bridge_power_mgmt_regs.pmba + 0x8) {
         assert(!is_string);
         // Handle ACPI Power Management Timer

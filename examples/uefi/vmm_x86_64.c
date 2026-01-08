@@ -25,6 +25,10 @@
 // @billn sus, use package asm script
 #include "board/x86_64_generic_vtx/simple_dsdt.hex"
 
+uint64_t ps2_controller_id;
+uint64_t ps2_controller_addr;
+uint64_t ps2_controller_size = 5;
+
 uint64_t com1_ioport_id;
 uint64_t com1_ioport_addr;
 uint64_t com1_ioport_size = 8;
@@ -81,6 +85,7 @@ void init(void)
 
     /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
     passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
