@@ -58,6 +58,7 @@
 #define REG_LAPIC_IRR_6 0x260
 #define REG_LAPIC_IRR_7 0x270
 #define REG_LAPIC_ESR 0x280
+#define REG_LAPIC_CMCI 0x2f0
 #define REG_LAPIC_ICR_LOW 0x300
 #define REG_LAPIC_ICR_HIGH 0x310
 #define REG_LAPIC_TIMER 0x320
@@ -303,6 +304,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.timer;
             break;
         case REG_LAPIC_LVT_ERR:
+        case REG_LAPIC_CMCI:
         case REG_LAPIC_THERMAL:
             break;
         case REG_LAPIC_INIT_CNT:
