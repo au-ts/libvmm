@@ -140,7 +140,7 @@ void bios_linker_loader_alloc(const char *file_name, uint32_t alloc_align, bool 
  *              firmware's executed ADD_POINTER command
  * @ret: returns this command's entry
  */
-void bios_linker_loader_add_pointer(const char *dest_file_name, char *dest_file_blob, uint32_t dest_file_blob_size,
+void bios_linker_loader_add_pointer(const char *dest_file_name, void *dest_file_blob, uint32_t dest_file_blob_size,
                                     uint32_t dst_patched_offset, uint8_t dst_patched_size, const char *src_file_name,
                                     uint32_t src_offset, struct BiosLinkerLoaderEntry *ret);
 
@@ -161,6 +161,6 @@ void bios_linker_loader_add_pointer(const char *dest_file_name, char *dest_file_
  *                   relative to the start of file blob
  * @ret: returns this command's entry
  */
-void bios_linker_loader_add_checksum(const char *file_name, char *file_blob, uint32_t file_blob_size,
+void bios_linker_loader_add_checksum(const char *file_name, void *file_blob, uint32_t file_blob_size,
                                      uint32_t start_offset, uint32_t size, uint32_t checksum_offset,
                                      struct BiosLinkerLoaderEntry *ret);
