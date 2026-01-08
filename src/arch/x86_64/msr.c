@@ -20,6 +20,7 @@
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
+#define IA32_MCG_CAP (0x179)
 
 #define MSR_RAPL_POWER_UNIT  (0x606)
 #define MSR_PKG_ENERGY_STATUS (0x611)
@@ -75,6 +76,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case IA32_CORE_CAPABILITIES:
     case IA32_MISC_ENABLE:
     case IA32_BIOS_SIGN_ID:
+    case IA32_MCG_CAP:
     case MSR_TEST_CTRL:
     case MSR_RAPL_POWER_UNIT:
     case MSR_PKG_ENERGY_STATUS:

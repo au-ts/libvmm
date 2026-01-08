@@ -12,11 +12,16 @@
 extern uint64_t tsc_hz;
 
 // Table 3-11. More on Feature Information Returned in the EDX Register
-#define CPUID_01_EDX_FPU (1 << 0)
-#define CPUID_01_EDX_TSC (1 << 4)
-#define CPUID_01_EDX_MSR (1 << 5)
-#define CPUID_01_EDX_PAE (1 << 6)
-#define CPUID_01_EDX_APIC (1 << 9)
+#define CPUID_01_EDX_FPU BIT(0)
+#define CPUID_01_EDX_TSC BIT(4)
+#define CPUID_01_EDX_MSR BIT(5)
+#define CPUID_01_EDX_PAE BIT(6)
+#define CPUID_01_EDX_APIC BIT(9)
+
+#define CPUID_01_EDX_SSE1 BIT(25)
+#define CPUID_01_EDX_SSE2 BIT(26)
+
+#define CPUID_01_ECX_XSAVE BIT(26)
 
 static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
@@ -56,8 +61,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
             /* Table 1-20. */
         vctx->ebx = 0;
             // vctx->ecx = BIT(24); // TSC deadline supported
-        vctx->ecx = 0;
-        vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU;
+        vctx->ecx = CPUID_01_ECX_XSAVE;
+        vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2;
         break;
     }
     case 0x6:
