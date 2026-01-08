@@ -40,6 +40,8 @@
         <ioport id="10" addr="0x510" size="8" setvar_id="qemu_fw_cfg_port_addr_sel" />
         <ioport id="11" addr="0x518" size="4" setvar_id="qemu_fw_cfg_port_addr_dma" />
 
+        <ioport id="12" addr="0x60" size="5" setvar_id="ps2_controller_id" setvar_addr="ps2_controller_addr" />
+
         <!-- serial port com1 irq -->
         <irq pin="4" vector="41" id="0" ioapic="0" />
         <!-- primary ATA irq -->
