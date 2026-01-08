@@ -55,12 +55,13 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 # $ ls -hl /opt/billn/edk2/Build/OvmfX64/DEBUG_GCC/FV/
 
 
-# qemu-system-x86_64 \
+# ssh -X billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 \
 #   -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
 #   -m size=2G \
-#   -drive if=pflash,format=raw,file=Build/OvmfX64/DEBUG_GCC/FV/OVMF.fd \
+#   -drive if=pflash,format=raw,file=/opt/billn/edk2/Build/OvmfX64/DEBUG_GCC/FV/OVMF.fd \
 #   -serial mon:stdio \
-#   -nographic
+#   -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso \
+#   -device ramfb"
 
 
 
@@ -70,8 +71,5 @@ ssh -X billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu
                         -serial mon:stdio \
                         -m size=2G \
                         -d guest_errors \
-                        -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso" \
-                        -device ramfb
-    
-
-
+                        -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso \
+                        -device ramfb"
