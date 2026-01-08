@@ -40,7 +40,7 @@ void bios_linker_loader_alloc(const char *file_name, uint32_t alloc_align, bool 
     ret->alloc.zone = alloc_fseg ? BIOS_LINKER_LOADER_ALLOC_ZONE_FSEG : BIOS_LINKER_LOADER_ALLOC_ZONE_HIGH;
 }
 
-void bios_linker_loader_add_pointer(const char *dest_file_name, char *dest_file_blob, uint32_t dest_file_blob_size,
+void bios_linker_loader_add_pointer(const char *dest_file_name, void *dest_file_blob, uint32_t dest_file_blob_size,
                                     uint32_t dst_patched_offset, uint8_t dst_patched_size, const char *src_file_name,
                                     uint32_t src_offset, struct BiosLinkerLoaderEntry *ret)
 {
@@ -61,7 +61,7 @@ void bios_linker_loader_add_pointer(const char *dest_file_name, char *dest_file_
     memcpy(dest_file_blob + dst_patched_offset, &src_offset, dst_patched_size);
 }
 
-void bios_linker_loader_add_checksum(const char *file_name, char *file_blob, uint32_t file_blob_size,
+void bios_linker_loader_add_checksum(const char *file_name, void *file_blob, uint32_t file_blob_size,
                                      uint32_t start_offset, uint32_t size, uint32_t checksum_offset,
                                      struct BiosLinkerLoaderEntry *ret)
 {
@@ -71,7 +71,7 @@ void bios_linker_loader_add_checksum(const char *file_name, char *file_blob, uin
     assert(checksum_offset >= start_offset);
     assert(checksum_offset + 1 <= start_offset + size);
 
-    *(file_blob + checksum_offset) = 0;
+    *((char *) file_blob + checksum_offset) = 0;
     memset(ret, 0, sizeof(struct BiosLinkerLoaderEntry));
     strcpy(ret->cksum.file, file_name);
     ret->command = BIOS_LINKER_LOADER_COMMAND_ADD_CHECKSUM;

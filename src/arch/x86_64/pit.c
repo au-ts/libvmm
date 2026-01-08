@@ -41,7 +41,7 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
     return true;
 
     switch (port_addr) {
-    case CH0_PORT:
+    case CH0_PORT: {
         uint8_t val = vctx->eax & 0xff;
         if (global_pit.state == CH0_MODE2_WAITING_RELOAD_VALUE_LOW) {
             global_pit.ch0_reload = val;
@@ -64,8 +64,8 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
             LOG_VMM_ERR("Invalid PIT state\n");
         }
         break;
-
-    case CMD_PORT:
+    }
+    case CMD_PORT: {
         uint8_t cmd = vctx->eax & 0xff;
         uint8_t is_read_back = ((cmd >> 6) & 0x3) == 0x3;
         if (is_read_back) {
@@ -78,7 +78,7 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
             return false;
         } else {
             uint8_t channel_select = (vctx->eax >> 6) & 0x3;
-            uint8_t access_mode = (vctx->eax >> 4) & 0x3;
+            // uint8_t access_mode = (vctx->eax >> 4) & 0x3;
             uint8_t operating_mode = (vctx->eax >> 1) & 0x7;
             uint8_t is_binary = !(vctx->eax & 0x1);
 
@@ -103,7 +103,7 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
                 }
             }
         }
-
+    }
     default:
         LOG_VMM_ERR("unhandled pit io port 0x%x\n", port_addr);
         return false;
