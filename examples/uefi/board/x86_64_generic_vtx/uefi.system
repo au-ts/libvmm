@@ -76,4 +76,8 @@
         <end pd="timer_driver" id="5" />
         <end pd="vmm_uefi" id="14" notify="false" pp="true" />
     </channel>
+    <channel>
+        <end pd="timer_driver" id="6" />
+        <end pd="vmm_uefi" id="15" notify="false" pp="true" />
+    </channel>
 </system>
