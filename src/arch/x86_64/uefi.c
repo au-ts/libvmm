@@ -46,6 +46,8 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     }
     memcpy(&fw_cfg_blobs.fw_acpi_tables.dsdt, dsdt_blob, dsdt_blob_size);
 
+    // @billn this is not pretty...
+
     // Now build the list of table loader commands, which:
     // 1. Load all the tables into memory.
     // 2. Patch all the required GPAs.
@@ -63,17 +65,62 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     num_cmd += 1;
 
     bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
-                                    sizeof(struct xsdp),
+                                    offsetof(struct xsdp, length),
                                     (uint64_t)&fw_cfg_blobs.fw_xsdp.checksum - (uint64_t)&fw_cfg_blobs.fw_xsdp,
                                     &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
-    // Connect the FADT, HPET and MADT to XSDT, then checksum the XSDT
+    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
+                                    sizeof(struct xsdp),
+                                    (uint64_t)&fw_cfg_blobs.fw_xsdp.ext_checksum - (uint64_t)&fw_cfg_blobs.fw_xsdp,
+                                    &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
 
     // Connect the DSDT to FADT, then checksum the FADT
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.X_Dsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
+        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.dsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
 
-    // Checksum the rest: HPET, MADT, XSDT
+    bios_linker_loader_add_checksum(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct FADT),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.h.checksum - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
 
+    // Connect the FADT, HPET and MADT to XSDT, then checksum the XSDT
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[0] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
+        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[1] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
+        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.hpet - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[2] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
+        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.madt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    bios_linker_loader_add_checksum(
+        ACPI_BUILD_TABLE_FILE, &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct xsdt),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.h.checksum - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    assert(num_cmd < NUM_BIOS_LINKER_LOADER_CMD);
     // Finish by populating File Dir with everything we built
     fw_cfg_blobs.fw_cfg_file_dir = (struct fw_cfg_file_dir) {
         .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
