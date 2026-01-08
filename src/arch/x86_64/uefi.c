@@ -57,7 +57,16 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     num_cmd += 1;
 
     // Connect the XSDP to the XSDT, then compute XSDP checksum
-    
+    bios_linker_loader_add_pointer(ACPI_BUILD_RSDP_FILE, &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp),
+                                   (uint64_t)&fw_cfg_blobs.fw_xsdp.xsdt_gpa - (uint64_t)&fw_cfg_blobs.fw_xsdp,
+                                   sizeof(uint64_t), ACPI_BUILD_TABLE_FILE, 0, &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
+                                    sizeof(struct xsdp),
+                                    (uint64_t)&fw_cfg_blobs.fw_xsdp.checksum - (uint64_t)&fw_cfg_blobs.fw_xsdp,
+                                    &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
 
     // Connect the FADT, HPET and MADT to XSDT, then checksum the XSDT
 
@@ -66,36 +75,34 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     // Checksum the rest: HPET, MADT, XSDT
 
     // Finish by populating File Dir with everything we built
-    fw_cfg_blobs.fw_cfg_file_dir =
-        (struct fw_cfg_file_dir) { .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
-                                   .file_entries = {
-                                    {
-                                       .name = E820_FWCFG_FILE,
-                                       .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
-                                       .select = __builtin_bswap16(FW_CFG_E820),
-                                    },
-                                    {
-                                       .name = FRAMEBFUFER_FWCFG_FILE,
-                                       .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
-                                       .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
-                                    },
-                                    {
-                                       .name = ACPI_BUILD_TABLE_FILE,
-                                       .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
-                                       .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
-                                    },
-                                    {
-                                       .name = ACPI_BUILD_RSDP_FILE,
-                                       .size = __builtin_bswap32(sizeof(struct xsdp)),
-                                       .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
-                                    },
-                                    {
-                                       .name = ACPI_BUILD_LOADER_FILE,
-                                       .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
-                                       .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
-                                    }
-                                }
-                                };
+    fw_cfg_blobs.fw_cfg_file_dir = (struct fw_cfg_file_dir) {
+        .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
+        .file_entries = { {
+                              .name = E820_FWCFG_FILE,
+                              .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
+                              .select = __builtin_bswap16(FW_CFG_E820),
+                          },
+                          {
+                              .name = FRAMEBFUFER_FWCFG_FILE,
+                              .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
+                              .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
+                          },
+                          {
+                              .name = ACPI_BUILD_TABLE_FILE,
+                              .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
+                              .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
+                          },
+                          {
+                              .name = ACPI_BUILD_RSDP_FILE,
+                              .size = __builtin_bswap32(sizeof(struct xsdp)),
+                              .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
+                          },
+                          {
+                              .name = ACPI_BUILD_LOADER_FILE,
+                              .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
+                              .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
+                          } }
+    };
 
     return true;
 }
