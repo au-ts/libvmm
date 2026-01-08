@@ -10,7 +10,7 @@
 // If the DMA interface is available, then reading the DMA Address Register returns 0x51454d5520434647 (QEMU CFG in big-endian format).
 
 // TODO: sort out and rename
-uint64_t fb_vaddr = 0xb0000000;
+uint64_t fb_vaddr;
 uint64_t fb_paddr = 0x7000000;
 
 /* See references:
@@ -265,7 +265,7 @@ static uint32_t fw_cfg_read_u32() {
 }
 
 uint64_t fw_cfg_dma_cmd_paddr = 0x6000000;
-uint64_t fw_cfg_dma_cmd_vaddr = 0xc0000000;
+uint64_t fw_cfg_dma_cmd_vaddr;
 
 static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address) {
     FWCfgDmaAccess *cmd = (FWCfgDmaAccess *)fw_cfg_dma_cmd_vaddr;
