@@ -237,7 +237,29 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
             com2_scratch = vctx->eax;
         }
         success = true;
+
+    } else if (port_addr == 0x2f8) {
+        // com2 FIFO
+        assert(!is_read);
+        // LOG_VMM("com2 out: %c\n", vctx->eax);
+        microkit_dbg_putc(vctx->eax);
+        success = true;
+
+    } else if (port_addr == 0x2fc) {
+        // Modem Control Register
+        success = true;
+
+    } else if (port_addr == 0x2fa) {
+        if (is_read) {
+            // Interrupt Identification Register
+            vctx->eax = 0;
+        } else {
+            // First In First Out Control Register
+            LOG_VMM("com2 FIFO write %x\n", vctx->eax);
+        }
+        success = true;
     } else if (port_addr == 0x2fd) {
+        // Line Status Register
         if (is_read) {
             vctx->eax = BIT(5) | BIT(6);
         } else {
@@ -249,9 +271,14 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         if (is_read) {
             vctx->eax = BIT(7);
         } else {
-            assert(false);
+            LOG_VMM("com2 LCR write %x\n", vctx->eax);
         }
         success = true;
+
+    } else if (port_addr == 0x2fe) {
+        // Modem Status Register
+        success = true;
+
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
         success = true;
