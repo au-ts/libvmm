@@ -185,7 +185,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                 } else if (selector == FW_CFG_TABLE_LOADER) {
                     memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_table_loader)[selected_data_idx], length);
                 } else {
-                    LOG_VMM_ERR("unknown fw cfg DMA for selector 0x%x\n", selector);
+                    LOG_VMM_ERR("unknown fw cfg DMA read for selector 0x%x\n", selector);
                     return false;
                 }
                 selected_data_idx += length;
@@ -194,7 +194,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                 break;
             }
             case fw_ctl_write: {
-                LOG_VMM("fw cfg DMA write (item 0x%x)\n", selector);
+                LOG_VMM("=============== fw cfg DMA write (item 0x%x)\n", selector);
                 if (selector == FW_CFG_FRAMEBUFFER) {
                     struct QemuRamFBCfg *guest_ramfb_cfg = (struct QemuRamFBCfg *)dma_vaddr;
                     assert(length == sizeof(struct QemuRamFBCfg));
@@ -214,6 +214,9 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     // 4. Check that the DMA write with QEMU succeeded.
                     FWCfgDmaAccess *cmd = (FWCfgDmaAccess *)fb_vaddr;
                     assert(!cmd->control);
+                } else {
+                    LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
+                    return false;
                 }
                 /* To indicate to guest that the DMA command was successful. */
                 selected_data_idx += length;

@@ -252,6 +252,9 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
             assert(false);
         }
         success = true;
+    } else if (port_addr == 0xb004) {
+        vctx->eax = 0;
+        success = true;
     } else {
         if (is_read) {
            LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
