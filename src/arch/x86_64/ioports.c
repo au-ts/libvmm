@@ -245,8 +245,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         }
         success = true;
     } else if (port_addr == 0x2fb) {
+        // Line Control Register
         if (is_read) {
-            // FIFO enabled
             vctx->eax = BIT(7);
         } else {
             assert(false);
