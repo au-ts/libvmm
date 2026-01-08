@@ -205,6 +205,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
 
     } else if (port_addr == 0x64) {
+        LOG_VMM("accessing io port 0x%x\n", port_addr);
         assert(!is_string);
         // PS2 controller
         success = true;
@@ -243,6 +244,27 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
+        success = true;
+    } else if (port_addr == 0x4e || port_addr == 0x4f || port_addr == 0x2e || port_addr == 0x2f || (port_addr >= 0xc80 && port_addr <= 0xc84)
+              || (port_addr >= 0x1c80 && port_addr <= 0x1c84)
+              || (port_addr >= 0x2c80 && port_addr <= 0x2c84)
+              || (port_addr >= 0x3c80 && port_addr <= 0x3c84)
+              || (port_addr >= 0x4c80 && port_addr <= 0x4c84)
+              || (port_addr >= 0x5c80 && port_addr <= 0x5c84)
+              || (port_addr >= 0x6c80 && port_addr <= 0x6c84)
+              || (port_addr >= 0x7c80 && port_addr <= 0x7c84)
+              || (port_addr >= 0x8c80 && port_addr <= 0x8c84)
+              || (port_addr >= 0x9c80 && port_addr <= 0x9c84)
+              || (port_addr >= 0xac80 && port_addr <= 0xac84)
+              || (port_addr >= 0xbc80 && port_addr <= 0xbc84)
+              || (port_addr >= 0xcc80 && port_addr <= 0xcc84)
+              || (port_addr >= 0xdc80 && port_addr <= 0xdc84)
+              || (port_addr >= 0xec80 && port_addr <= 0xec84)
+              || (port_addr >= 0xfc80 && port_addr <= 0xfc84)) {
+        if (is_read) {
+            vctx->eax = 0;
+        }
+        LOG_VMM("accessing io port 0x%x\n", port_addr);
         success = true;
     } else {
         if (is_read) {
