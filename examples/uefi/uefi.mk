@@ -30,7 +30,7 @@ ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	KERNEL = sel4.elf
 	KERNEL32 := sel4_32.elf
 	QEMU := qemu-system-x86_64
-	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
 	TIMER_DRIVER_DIR := hpet
 else
 $(error Unsupported MICROKIT_BOARD given)

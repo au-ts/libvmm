@@ -163,6 +163,11 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
             }
         }
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
+        int ioapic_pin = get_timer_n_ioapic_pin(1);
+        inject_ioapic_irq(0, ioapic_pin);
+
+        assert(!timer_n_in_periodic_mode(1));
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
         int ioapic_pin = get_timer_n_ioapic_pin(2);
         inject_ioapic_irq(0, ioapic_pin);
@@ -176,9 +181,9 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 bool hpet_maintenance(void)
 {
     // @billn sus
-    assert(timer_n_irq_edge_triggered(0));
-    assert(!timer_n_can_interrupt(1));
-    assert(!timer_n_can_interrupt(2));
+    // assert(timer_n_irq_edge_triggered(0));
+    // assert(!timer_n_can_interrupt(1));
+    // assert(!timer_n_can_interrupt(2));
 
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
     if (timer_n_can_interrupt(0)) {
@@ -193,6 +198,17 @@ bool hpet_maintenance(void)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0),
                      get_timer_n_ioapic_pin(0));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
+        }
+    }
+
+    if (timer_n_can_interrupt(1)) {
+        uint32_t main_counter_val = main_counter_value();
+        if (main_counter_val < hpet_regs.comparators[1].current_comparator) {
+            uint64_t delay_ns = hpet_regs.comparators[1].current_comparator - main_counter_val;
+            LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(1));
+            LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(1),
+                     get_timer_n_ioapic_pin(1));
+            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH1, delay_ns);
         }
     }
 
@@ -360,15 +376,18 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 hpet_regs.comparators[0].comparator_increment = 0;
                 hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
             }
+        } else if (offset == timer_n_comparator_mmio_off(1)) {
+            // @billn todo, implement periodic for this comparator
+            assert(!timer_n_in_periodic_mode(1));
 
+            hpet_regs.comparators[1].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+            hpet_regs.comparators[1].comparator_increment = 0;
         } else if (offset == timer_n_comparator_mmio_off(2)) {
             // @billn todo, implement periodic for this comparator
             assert(!timer_n_in_periodic_mode(2));
 
             hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
             hpet_regs.comparators[2].comparator_increment = 0;
-
-
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
             return false;
