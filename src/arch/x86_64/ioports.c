@@ -270,7 +270,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         if (is_read) {
            LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
         } else {
-           LOG_VMM_ERR("unhandled io port write 0x%x\n", port_addr);
+           LOG_VMM_ERR("unhandled io port write 0x%x (value: 0x%lx)\n", port_addr, vctx->eax);
         }
     }
 
