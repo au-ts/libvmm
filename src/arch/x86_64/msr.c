@@ -11,8 +11,11 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 
+#include <x86intrin.h>
+
 // Table 2-2. IA-32 Architectural MSRs
 
+#define IA32_TIME_STAMP_COUNTER (0x10)
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
@@ -65,6 +68,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
         break;
     }
+    case IA32_TIME_STAMP_COUNTER:
+        result = __rdtsc();
+        break;
     case IA32_PLATFORM_ID:
     case IA32_CORE_CAPABILITIES:
     case IA32_MISC_ENABLE:
@@ -111,13 +117,13 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 
 bool emulate_wrmsr(seL4_VCPUContext *vctx)
 {
-
     switch (vctx->ecx) {
     case MSR_EFER:
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, vctx->eax);
         break;
     case IA32_BIOS_SIGN_ID:
     case MISC_FEATURE_ENABLES:
+    case IA32_MISC_ENABLE:
         return true;
     case MSR_TEST_CTRL:
     case MSR_STAR:
