@@ -208,12 +208,14 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     assert(found);
                     // 2. Select it with the real QEMU fw-cfg
                     fw_cfg_select(__builtin_bswap16(ramfb_file.select));
-                    // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write.
+                    // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
+                    //    with the physical address rather than guest physical.
+                    uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
+                    guest_ramfb_cfg->address = __builtin_bswap64(0x8000000 + ramfb_dma_gpa);
+                    LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n", ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
                     memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
+
                     fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
-                    // 4. Check that the DMA write with QEMU succeeded.
-                    FWCfgDmaAccess *cmd = (FWCfgDmaAccess *)fb_vaddr;
-                    assert(!cmd->control);
                 } else {
                     LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
                     return false;
@@ -276,6 +278,7 @@ static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address
     microkit_x86_ioport_write_32(qemu_fw_cfg_port_addr_dma, FW_CFG_PORT_DMA + 4, __builtin_bswap32(fw_cfg_dma_cmd_paddr));
 
     LOG_VMM("dma control after write: 0x%x\n", __builtin_bswap32(cmd->control));
+    assert(!__builtin_bswap32(cmd->control));
 }
 
 /* Code for actually accessing the QEMU fw cfg, rather than emulating it. */
