@@ -38,8 +38,6 @@ static struct pit global_pit = { .state = RESET };
 
 bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read)
 {
-    return true;
-
     switch (port_addr) {
     case CH0_PORT: {
         uint8_t val = vctx->eax & 0xff;
@@ -65,6 +63,8 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
         }
         break;
     }
+    case CH2_PORT:
+        break;
     case CMD_PORT: {
         uint8_t cmd = vctx->eax & 0xff;
         uint8_t is_read_back = ((cmd >> 6) & 0x3) == 0x3;
@@ -103,6 +103,7 @@ bool emulate_pit_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read
                 }
             }
         }
+        break;
     }
     default:
         LOG_VMM_ERR("unhandled pit io port 0x%x\n", port_addr);
