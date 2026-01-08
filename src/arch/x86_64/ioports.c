@@ -16,6 +16,7 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/qemu/fw_cfg.h>
 #include <libvmm/arch/x86_64/cmos.h>
+#include <libvmm/arch/x86_64/com.h>
 
 extern uint64_t primary_ata_cmd_pio_id;
 extern uint64_t primary_ata_cmd_pio_addr;
@@ -231,56 +232,15 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         // TODO: handle properly, I don't understand why UEFI is touching A20 gate register
         assert(!is_string);
         success = true;
-    } else if (port_addr == 0x2ff) {
-        static uint8_t com2_scratch;
-        if (is_read) {
-            vctx->eax = com2_scratch;
-        } else {
-            com2_scratch = vctx->eax;
-        }
+    } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
+        emulate_com(vctx, 1, port_addr - 0x2f8, is_read);
         success = true;
-
-    } else if (port_addr == 0x2f8) {
-        // com2 FIFO
-        assert(!is_read);
-        // LOG_VMM("com2 out: %c\n", vctx->eax);
-        microkit_dbg_putc(vctx->eax);
+    } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
+        emulate_com(vctx, 2, port_addr - 0x3e8, is_read);
         success = true;
-
-    } else if (port_addr == 0x2fc) {
-        // Modem Control Register
+    } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
+        emulate_com(vctx, 3, port_addr - 0x2ef, is_read);
         success = true;
-
-    } else if (port_addr == 0x2fa) {
-        if (is_read) {
-            // Interrupt Identification Register
-            vctx->eax = 0;
-        } else {
-            // First In First Out Control Register
-            LOG_VMM("com2 FIFO write %x\n", vctx->eax);
-        }
-        success = true;
-    } else if (port_addr == 0x2fd) {
-        // Line Status Register
-        if (is_read) {
-            vctx->eax = BIT(5) | BIT(6);
-        } else {
-            assert(false);
-        }
-        success = true;
-    } else if (port_addr == 0x2fb) {
-        // Line Control Register
-        if (is_read) {
-            vctx->eax = BIT(7);
-        } else {
-            LOG_VMM("com2 LCR write %x\n", vctx->eax);
-        }
-        success = true;
-
-    } else if (port_addr == 0x2fe) {
-        // Modem Status Register
-        success = true;
-
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
         success = true;
