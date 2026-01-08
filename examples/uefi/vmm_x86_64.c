@@ -81,7 +81,6 @@ void init(void)
 
     /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com2_ioport_id, com2_ioport_addr, com2_ioport_size);
     passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
