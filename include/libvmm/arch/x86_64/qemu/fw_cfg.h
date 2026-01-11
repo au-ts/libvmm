@@ -62,12 +62,12 @@ struct FWCfgFile {
 struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
-};
+} __attribute__((packed));
 
 #define NUM_FW_E820_ENTRIES 1
 struct fw_cfg_e820_map {
     struct boot_e820_entry entries[NUM_FW_E820_ENTRIES];
-};
+} __attribute__((packed));
 
 #define DSDT_MAX_SIZE 512
 struct fw_cfg_acpi_tables {
