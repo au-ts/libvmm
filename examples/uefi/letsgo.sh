@@ -71,5 +71,5 @@ ssh -XC billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cp
                         -serial mon:stdio \
                         -m size=2G \
                         -d guest_errors \
-                        -cdrom /opt/billn/ubuntu-24.04.3-desktop-amd64.iso \
+                        -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso \
                         -device ramfb -vga none"
