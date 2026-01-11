@@ -67,9 +67,9 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 
 scp /Volumes/scratch/vmm_x86_uefi/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32.elf && \
 scp /Volumes/scratch/vmm_x86_uefi/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
-ssh -X -C billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
+ssh -XC billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
                         -serial mon:stdio \
                         -m size=2G \
                         -d guest_errors \
-                        -cdrom /opt/billn/latest-nixos-minimal-x86_64-linux.iso \
+                        -cdrom /opt/billn/ubuntu-24.04.3-desktop-amd64.iso \
                         -device ramfb -vga none"

@@ -27,6 +27,7 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].addr = 0;
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].size = ram_size;
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].type = E820_RAM;
+    LOG_VMM("uefi_setup_images(): guest RAM GPA 0x0..0x%lx\n", ram_size);
 
     // Then the ACPI XSDP table
     // The GPA of the XSDT will be filled in by a table loader command later
