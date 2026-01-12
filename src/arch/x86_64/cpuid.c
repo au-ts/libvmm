@@ -17,11 +17,24 @@ extern uint64_t tsc_hz;
 #define CPUID_01_EDX_MSR BIT(5)
 #define CPUID_01_EDX_PAE BIT(6)
 #define CPUID_01_EDX_APIC BIT(9)
-
 #define CPUID_01_EDX_SSE1 BIT(25)
 #define CPUID_01_EDX_SSE2 BIT(26)
 
+#define CPUID_01_ECX_SSE3 BIT(0)
+#define CPUID_01_ECX_SSSE3 BIT(9)
+#define CPUID_01_ECX_FMA BIT(12)
+#define CPUID_01_ECX_CMPXCHG16B BIT(13)
+#define CPUID_01_ECX_SSE4_1 BIT(19)
+#define CPUID_01_ECX_SSE4_2 BIT(20)
+#define CPUID_01_ECX_MOVBE BIT(22)
+#define CPUID_01_ECX_POPCNT BIT(23)
 #define CPUID_01_ECX_XSAVE BIT(26)
+#define CPUID_01_ECX_OSXSAVE BIT(27)
+#define CPUID_01_ECX_AVX BIT(28)
+#define CPUID_01_ECX_F16C BIT(29)
+
+#define CPUID_07_EBX_FSGSBASE BIT(0)
+
 
 static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
@@ -32,6 +45,11 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
     // @billn todo revisit likely need to turn on some important features.
     // 3-218 Vol. 2A
+
+    vctx->eax = 0;
+    vctx->ebx = 0;
+    vctx->ecx = 0;
+    vctx->edx = 0;
 
     switch (vctx->eax) {
     case 0x0:
@@ -61,26 +79,22 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
             /* Table 1-20. */
         vctx->ebx = 0;
             // vctx->ecx = BIT(24); // TSC deadline supported
-        vctx->ecx = CPUID_01_ECX_XSAVE | BIT(0) | BIT(9) | BIT(13) | BIT(19) | BIT(20) | BIT(23) | BIT(27) | BIT(28) | BIT(12) | BIT(29) | BIT(22);
-        vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2;
+        vctx->ecx = CPUID_01_ECX_SSE3 | CPUID_01_ECX_SSSE3 | CPUID_01_ECX_XSAVE | CPUID_01_ECX_CMPXCHG16B
+                  | CPUID_01_ECX_SSE4_1 | CPUID_01_ECX_SSE4_2 | CPUID_01_ECX_POPCNT | CPUID_01_ECX_OSXSAVE
+                  | CPUID_01_ECX_AVX | CPUID_01_ECX_FMA | CPUID_01_ECX_F16C | CPUID_01_ECX_MOVBE;
+        vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU
+                  | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2;
         break;
     }
-    case 0x6:
-            // vctx->eax = BIT(2); // ARAT. APIC-Timer-always-running feature is supported if set.
-        vctx->eax = 0;
-        vctx->ebx = 0;
-        vctx->ecx = 0;
-        vctx->edx = 0;
-        break;
     case 0x2:
     case 0x3:
     case 0x4:
     case 0x5:
+    case 0x6:
     case 0x7:
-        vctx->eax = 0;
-        vctx->ebx = BIT(3) | BIT(5) | BIT(8);
-        vctx->ecx = 0;
-        vctx->edx = 0;
+        if (vctx->ecx == 0) {
+            vctx->ebx = BIT(3) | BIT(5) | BIT(8);
+        }
         break;
     case 0x9:
     case 0xa:
@@ -105,10 +119,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x21:
     case 0x40000000 ... 0x4fffffff:
     case 0x8000001f:
-        vctx->eax = 0;
-        vctx->ebx = 0;
-        vctx->ecx = 0;
-        vctx->edx = 0;
         break;
     case 0x16:
             // Table 3-8. Information Returned by CPUID Instruction (Contd.)
