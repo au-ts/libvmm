@@ -11,9 +11,11 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/msr.h>
+#include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/instruction.h>
@@ -188,6 +190,8 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
         return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
         return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_mem_ins);
+    } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
+        return emulate_pci_config_space_access_ecam(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
     }
 
     return false;

@@ -244,7 +244,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
 
     /* Fill out real RAM, ACPI reclaimable region and initial paging objects range. */
     uint8_t *e820_entries = (uint8_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_E820_ENTRIES_OFFSET);
-    *e820_entries = 3;
+    *e820_entries = 4;
     struct boot_e820_entry *e820_table = (struct boot_e820_entry *)(ram_start + ZERO_PAGE_GPA
                                                                     + ZERO_PAGE_E820_TABLE_OFFSET);
     assert(*e820_entries <= E820_MAX_ENTRIES_ZEROPAGE);
@@ -263,12 +263,11 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
         .size = acpi_start_gpa,
         .type = E820_RAM,
     };
-    // // PCI ECAM
-    // e820_table[3] = (struct boot_e820_entry) {
-    //     .addr = 0xe0000000,
-    //     .size = 0x10000000,
-    //     .type = E820_RESERVED,
-    // };
+    e820_table[3] = (struct boot_e820_entry) {
+        .addr = ECAM_GPA,
+        .size = ECAM_SIZE,
+        .type = E820_RESERVED,
+    };
 
     /* Build GDT */
     uint64_t *gdt = (uint64_t *)(ram_start + GDT_GPA);
