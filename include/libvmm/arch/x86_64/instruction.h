@@ -60,3 +60,5 @@ typedef struct decoded_instruction_ret {
 } decoded_instruction_ret_t;
 
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len);
+
+int mem_access_width_to_bytes(memory_access_width_t access_width);

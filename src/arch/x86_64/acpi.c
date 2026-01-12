@@ -301,15 +301,15 @@ uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     fadt_build(fadt, dsdt_gpa);
     assert(fadt->h.length <= 0x1000);
 
-    // uint64_t mcfg_gpa = acpi_allocate_gpa(0x1000);
-    // struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
-    // mcfg_build(mcfg);
-    // assert(mcfg->h.length <= 0x1000);
+    uint64_t mcfg_gpa = acpi_allocate_gpa(sizeof(struct mcfg));
+    struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
+    mcfg_build(mcfg);
+    assert(mcfg->h.length <= 0x1000);
 
     struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
 
     memset(xsdt, 0, sizeof(struct xsdt));
-    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, fadt_gpa };
+    uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, fadt_gpa, mcfg_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
     *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);

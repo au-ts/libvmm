@@ -64,7 +64,7 @@ struct dst_header {
 
 /* [1c] Root System Description Table */
 #define XSDT_SIGNATURE "XSDT"
-#define XSDT_ENTRIES 3
+#define XSDT_ENTRIES 4
 // #define XSDT_MAX_ENTRIES 16 // arbitrary, can be increased easily by editing this number
 struct xsdt {
     struct dst_header h;
@@ -173,6 +173,7 @@ struct hpet {
 #define MCFG_NUM_CONFIG_SPACES 1
 
 #define ECAM_GPA 0xe0000000
+#define ECAM_SIZE 0x100000
 
 struct pcie_config_space_addr_structure {
     uint64_t base_address;
@@ -184,6 +185,7 @@ struct pcie_config_space_addr_structure {
 
 struct mcfg {
     struct dst_header h;
+    uint8_t reserved[8];
     struct pcie_config_space_addr_structure config_spaces[MCFG_NUM_CONFIG_SPACES];
 } __attribute__((packed));;
 

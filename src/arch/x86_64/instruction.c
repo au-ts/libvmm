@@ -26,6 +26,21 @@
 static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM,
                                                 OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
+int mem_access_width_to_bytes(memory_access_width_t access_width) {
+    switch (access_width) {
+        case BYTE_ACCESS_WIDTH:
+            return 1;
+        case WORD_ACCESS_WIDTH:
+            return 2;
+        case DWORD_ACCESS_WIDTH:
+            return 4;
+        case QWORD_ACCESS_WIDTH:
+            return 8;
+        default:
+            return 0;
+    }
+}
+
 static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
 {
     // the REX.R prefix will expand the register index to be 4-bits wide
