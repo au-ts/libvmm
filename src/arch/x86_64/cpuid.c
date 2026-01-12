@@ -16,7 +16,11 @@ extern uint64_t tsc_hz;
 #define CPUID_01_EDX_TSC BIT(4)
 #define CPUID_01_EDX_MSR BIT(5)
 #define CPUID_01_EDX_PAE BIT(6)
+#define CPUID_01_EDX_CX8 BIT(8)
 #define CPUID_01_EDX_APIC BIT(9)
+#define CPUID_01_EDX_CMOV BIT(15)
+#define CPUID_01_EDX_MMX BIT(23)
+#define CPUID_01_EDX_FXSR BIT(24)
 #define CPUID_01_EDX_SSE1 BIT(25)
 #define CPUID_01_EDX_SSE2 BIT(26)
 
@@ -36,6 +40,20 @@ extern uint64_t tsc_hz;
 #define CPUID_07_00_EBX_BMI1 BIT(3)
 #define CPUID_07_00_EBX_AVX2 BIT(5)
 #define CPUID_07_00_EBX_BMI2 BIT(8)
+
+// TODO: do this instead
+// #define CPUID_01_BASELINE_EDX (CPUID_01_EDX_CMOV |
+//                                CPUID_01_EDX_CX8 |
+//                                CPUID_01_EDX_FPU |
+//                                CPUID_01_EDX_FXSR |
+//                                CPUID_01_EDX_MMX |
+//                                CPUID_01_EDX_SSE1 |
+//                                CPUID_01_EDX_SSE2)
+
+// #define CPUID_01_X86_64_V2_EDX (CPUID_01_ECX_CMPXCHG16B |
+//                                 CPUID_01_ECX_LAHF_SAHF |
+
+//                                 )
 
 static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
@@ -79,7 +97,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
                   | CPUID_01_ECX_SSE4_1 | CPUID_01_ECX_SSE4_2 | CPUID_01_ECX_POPCNT | CPUID_01_ECX_OSXSAVE
                   | CPUID_01_ECX_AVX | CPUID_01_ECX_FMA | CPUID_01_ECX_F16C | CPUID_01_ECX_MOVBE;
         vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU
-                  | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2;
+                  | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2 | CPUID_01_EDX_CMOV | CPUID_01_EDX_CX8 | CPUID_01_EDX_FXSR | CPUID_01_EDX_MMX;
         break;
     }
     case 0x2:
@@ -161,7 +179,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x80000001:
         vctx->eax = 0;
         vctx->ecx = BIT(0) | BIT(5); // LAHF/SAHF in long mode (LAHF_LM) + LZCNT
-        vctx->edx = (1 << 11) | (1 << 29); // SYSCALL/SYSRET + Intel® 64
+        vctx->edx = BIT(1) | BIT(29); // SYSCALL/SYSRET + Intel® 64
         break;
     default:
         LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);
