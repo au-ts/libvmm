@@ -266,6 +266,9 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         }
         LOG_VMM("accessing io port 0x%x\n", port_addr);
         success = true;
+    } else if (port_addr == 0x3BE) {
+        // parallel port
+        success = true;
     } else {
         if (is_read) {
            LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
