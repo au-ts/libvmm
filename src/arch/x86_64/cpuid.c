@@ -119,7 +119,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0xb:
     case 0xd: {
         uint32_t ecx = vctx->ecx;
-        cpuid(0xd, vctx->ecx, &vctx->eax, &vctx->ebx, &vctx->ecx, &vctx->edx);
+        cpuid(0xd, vctx->ecx, (uint32_t *) &vctx->eax, (uint32_t *) &vctx->ebx, (uint32_t *) &vctx->ecx, (uint32_t *) &vctx->edx);
         if (ecx == 0) {
             // TODO: this is a complete hack because we know seL4 will set the XCR
             // to 0x3.
@@ -128,21 +128,18 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         if (ecx == 1) {
 #if !defined(CONFIG_XSAVE_XSAVEC)
             if (vctx->eax & BIT(1)) {
-                uint32_t eax = vctx->eax;
                 vctx->eax &= ~BIT(1);
                 // LOG_VMM("XSAVEC is available in CPU but not available in seL4, disabling for guest\n");
             }
 #endif
 #if !defined(CONFIG_XSAVE_XSAVEOPT)
             if (vctx->eax & BIT(0)) {
-                uint32_t eax = vctx->eax;
                 vctx->eax &= ~BIT(0);
                 // LOG_VMM("XSAVEOPT is available in CPU but not available in seL4, disabling for guest\n");
             }
 #endif
 #if !defined(CONFIG_XSAVE_XSAVES)
             if (vctx->eax & BIT(3)) {
-                uint32_t eax = vctx->eax;
                 vctx->eax &= ~BIT(3);
                 // LOG_VMM("XSAVES is available in CPU but not available in seL4, disabling for guest\n");
             }
