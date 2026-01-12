@@ -17,6 +17,7 @@
 
 #define IA32_TIME_STAMP_COUNTER (0x10)
 #define IA32_PLATFORM_ID (0x17)
+#define IA32_SPEC_CTRL (0x48)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
@@ -97,6 +98,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case MISC_FEATURE_ENABLES:
     case MSR_PLATFORM_INFO:
     case MSR_UNKNOWN1:
+    case IA32_SPEC_CTRL:
     case 0xc0010131: // @billn AMD SEV
         break;
     case IA32_APIC_BASE:
@@ -130,6 +132,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case MISC_FEATURE_ENABLES:
     case IA32_MISC_ENABLE:
     case IA32_XSS:
+    case IA32_SPEC_CTRL:
         return true;
     case MSR_TEST_CTRL:
     case MSR_STAR:
