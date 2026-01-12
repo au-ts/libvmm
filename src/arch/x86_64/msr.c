@@ -21,6 +21,7 @@
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
 #define IA32_MCG_CAP (0x179)
+#define IA32_XSS (0xda0)
 
 #define MSR_RAPL_POWER_UNIT  (0x606)
 #define MSR_PKG_ENERGY_STATUS (0x611)
@@ -128,6 +129,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_BIOS_SIGN_ID:
     case MISC_FEATURE_ENABLES:
     case IA32_MISC_ENABLE:
+    case IA32_XSS:
         return true;
     case MSR_TEST_CTRL:
     case MSR_STAR:

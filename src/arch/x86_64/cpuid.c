@@ -85,9 +85,18 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x9:
     case 0xa:
     case 0xb:
-    case 0xd:
+    case 0xd: {
+        uint32_t ecx = vctx->ecx;
         cpuid(0xd, vctx->ecx, &vctx->eax, &vctx->ebx, &vctx->ecx, &vctx->edx);
+#if !defined(CONFIG_XSAVE_XSAVEC)
+        if (ecx == 1 && vctx->eax & BIT(1)) {
+            uint32_t eax = vctx->eax;
+            vctx->eax &= ~BIT(1);
+            LOG_VMM("XSAVEC is available in CPU but not available in seL4, disabling for guest (0x%x -> 0x%x)\n", eax, vctx->eax);
+        }
+#endif
         break;
+    }
     case 0xf:
     case 0x10:
     case 0x12:
