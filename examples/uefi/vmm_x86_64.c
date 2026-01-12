@@ -58,6 +58,8 @@ uint64_t pci_conf_data_pio_addr;
 #define COM1_IRQ_CH 0
 #define PRIM_ATA_IRQ_CH 1
 #define SECD_ATA_IRQ_CH 2
+#define FIRST_PS2_IRQ_CH 3
+#define SECOND_PS2_IRQ_CH 4
 
 /* Data for the guest's UEFI firmware image. */
 extern char _guest_firmware_image[];
@@ -122,6 +124,10 @@ void notified(microkit_channel ch)
 
             /* Pass through serial IRQs */
             assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
+
+            /* Pass through PS2 IRQs */
+            assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
+            assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
 
             guest_start(0xfff0, 0, 0);
         } else {
