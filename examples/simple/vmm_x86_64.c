@@ -49,13 +49,6 @@ uint64_t pci_conf_data_pio_addr;
 #define PRIM_ATA_IRQ_CH 1
 #define SECD_ATA_IRQ_CH 2
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
-#define GUEST_RAM_SIZE 0x10000000
-
 #define GUEST_CMDLINE "pci=nocrs earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
