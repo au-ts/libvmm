@@ -18,6 +18,7 @@
 #define IA32_TIME_STAMP_COUNTER (0x10)
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_SPEC_CTRL (0x48)
+#define IA32_MKTME_KEYID_PARTITIONING (0x87)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
@@ -62,6 +63,7 @@
 // #define MSR_SHADOW_GS_BASE  0xc0000102 /* SwapGS GS shadow */
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
+
 bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
     uint64_t result = 0;
@@ -77,6 +79,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case IA32_PLATFORM_ID:
     case IA32_CORE_CAPABILITIES:
     case IA32_MISC_ENABLE:
+    case IA32_MKTME_KEYID_PARTITIONING:
     case IA32_BIOS_SIGN_ID:
     case IA32_MCG_CAP:
     case MSR_TEST_CTRL:
