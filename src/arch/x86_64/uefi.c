@@ -37,6 +37,7 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     madt_build(&fw_cfg_blobs.fw_acpi_tables.madt);
     hpet_build(&fw_cfg_blobs.fw_acpi_tables.hpet);
     fadt_build(&fw_cfg_blobs.fw_acpi_tables.fadt, 0);
+    mcfg_build(&fw_cfg_blobs.fw_acpi_tables.mcfg);
     uint64_t dummy_gpas[XSDT_ENTRIES] = { 0 };
     xsdt_build(&fw_cfg_blobs.fw_acpi_tables.xsdt, dummy_gpas, XSDT_ENTRIES);
 
@@ -92,7 +93,7 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
-    // Connect the FADT, HPET and MADT to XSDT, then checksum the XSDT
+    // Connect the FADT, HPET, MADT, MCFG to XSDT, then checksum the XSDT
     bios_linker_loader_add_pointer(
         ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[0] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
@@ -111,6 +112,13 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
         ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[2] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
         ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.madt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[3] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
+        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.mcfg - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 

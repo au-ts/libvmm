@@ -145,7 +145,7 @@ size_t hpet_build(struct hpet *hpet)
     return sizeof(struct hpet);
 }
 
-static void mcfg_build(struct mcfg *mcfg)
+size_t mcfg_build(struct mcfg *mcfg)
 {
     memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
     mcfg->h.length = sizeof(struct mcfg);
@@ -162,6 +162,8 @@ static void mcfg_build(struct mcfg *mcfg)
 
     mcfg->h.checksum = acpi_compute_checksum((char *)mcfg, mcfg->h.length);
     assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
+
+    return sizeof(struct mcfg);
 }
 
 size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)

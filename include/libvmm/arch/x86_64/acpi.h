@@ -263,6 +263,7 @@ size_t madt_build(struct madt *madt);
 size_t hpet_build(struct hpet *hpet);
 size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa);
 size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs);
+size_t mcfg_build(struct mcfg *mcfg);
 size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa);
 
 // Create all the ACPI tables from guest's ram_top.

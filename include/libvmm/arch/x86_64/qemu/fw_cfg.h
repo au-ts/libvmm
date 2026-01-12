@@ -76,6 +76,7 @@ struct fw_cfg_acpi_tables {
     struct FADT fadt;
     struct hpet hpet;
     struct madt madt;
+    struct mcfg mcfg;
     char dsdt[DSDT_MAX_SIZE];
 } __attribute__((packed));
 
