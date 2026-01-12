@@ -157,6 +157,14 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = BIT(0) | BIT(5); // LAHF/SAHF in long mode (LAHF_LM) + LZCNT
         vctx->edx = BIT(1) | BIT(29); // SYSCALL/SYSRET + Intel® 64
         break;
+
+    // these two are cache topology
+    case 0x80000006:
+    case 0x80000008:
+        cpuid(vctx->eax, vctx->ecx, (uint32_t *) &vctx->eax, (uint32_t *) &vctx->ebx, (uint32_t *) &vctx->ecx, (uint32_t *) &vctx->edx);
+        break;
+    
+    // @billn todo double check if these are needed
     case 0x2:
     case 0x3:
     case 0x4:
@@ -186,7 +194,14 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x1f:
     case 0x21:
     case 0x40000000 ... 0x4fffffff:
-    case 0x8000001f:
+    case 0x80000002:
+    case 0x80000003:
+    case 0x80000004:
+    case 0x80000005:
+    case 0x80000007:
+    // some AMD specific stuff beyond 0x80000009 inclusive
+    case 0x80000009 ... 0x8000001f:
+    case 0x80000026:
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = 0;
