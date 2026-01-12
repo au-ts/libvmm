@@ -99,6 +99,14 @@ void vcpu_set_up_reset_state(void) {
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 11 | BIT(7));
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, 0);
+
+    // Table 25-16. Definitions of VM-Entry Controls
+    // load EFER on entry
+    uint64_t entry_controls = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
+    // allow vmenter with in non 64 bit mode and load VMCS EFER on entry
+    entry_controls &= ~(1 << 9);
+    entry_controls |= BIT(15);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, entry_controls);
 }
 
 void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit) {
