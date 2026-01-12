@@ -5,15 +5,17 @@
 -->
 <system>
     <memory_region name="hpet_regs" size="0x1000" phys_addr="0xfed00000" />
-    <memory_region name="guest_ram" size="0x40_000_000" page_size="0x200_000" phys_addr="0x8_000_000" />
+    <memory_region name="guest_ram" size="0x80_000_000" page_size="0x200_000" phys_addr="0x8_000_000" />
     <memory_region name="guest_flash" size="0x600000" page_size="0x200_000" />
+
+    <memory_region name="scratch" size="0x200000" page_size="0x200_000" />
 
     <memory_region name="fb" size="0x200_000" phys_addr="0x7_000_000" />
     <memory_region name="fw_cfg_dma_cmd" size="0x1000" phys_addr="0x6_000_000" />
 
     <protection_domain name="vmm_uefi" priority="0" stack_size="0x2000">
         <program_image path="vmm_x86_64.elf" />
-        <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
         <map mr="guest_flash" vaddr="0xc0000000" perms="rw" setvar_vaddr="guest_flash_vaddr" setvar_size="guest_flash_size"/>
         <virtual_machine name="uefi">
             <vcpu id="0" />
@@ -21,6 +23,8 @@
 
             <!-- Firmware lives at the top of 4GiB -->
             <map mr="guest_flash" vaddr="0xffa00000" perms="rwx" />
+
+            <map mr="scratch" vaddr="0xfe000000" perms="rwx" />
         </virtual_machine>
 
         <map mr="fb" vaddr="0x100000000" perms="rw" setvar_vaddr="fb_vaddr" />

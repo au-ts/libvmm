@@ -35,16 +35,17 @@ extern struct pci_bus pci_bus_state;
 // TODO: hack
 #define TIMER_DRV_CH_FOR_LAPIC 11
 
-int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
+int ioports_access_width_to_bytes(ioport_access_width_t access_width)
+{
     switch (access_width) {
-        case IOPORT_BYTE_ACCESS_QUAL:
-            return 1;
-        case IOPORT_WORD_ACCESS_QUAL:
-            return 2;
-        case IOPORT_DWORD_ACCESS_QUAL:
-            return 4;
-        default:
-            return 0;
+    case IOPORT_BYTE_ACCESS_QUAL:
+        return 1;
+    case IOPORT_WORD_ACCESS_QUAL:
+        return 2;
+    case IOPORT_DWORD_ACCESS_QUAL:
+        return 4;
+    default:
+        return 0;
     }
 }
 
@@ -98,7 +99,9 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width) {
 
 #define ACPI_PMT_FREQUENCY (3579545)
 
-int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep, ioport_access_width_t access_width) {
+int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep,
+                               ioport_access_width_t access_width)
+{
     int data_index = 0;
     int max_iterations = 1;
     uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
@@ -148,8 +151,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         assert(!is_string);
         return emulate_pci_config_space_access_mech_1(vctx, port_addr, is_read, access_width);
 
-    // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
-    //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
+        // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
+        //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
 
     } else if (port_addr >= 0x400 && port_addr < 0x406) {
         assert(!is_string);
@@ -245,35 +248,33 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
         success = true;
-    } else if (port_addr == 0x4e || port_addr == 0x4f || port_addr == 0x2e || port_addr == 0x2f || (port_addr >= 0xc80 && port_addr <= 0xc84)
-              || (port_addr >= 0x1c80 && port_addr <= 0x1c84)
-              || (port_addr >= 0x2c80 && port_addr <= 0x2c84)
-              || (port_addr >= 0x3c80 && port_addr <= 0x3c84)
-              || (port_addr >= 0x4c80 && port_addr <= 0x4c84)
-              || (port_addr >= 0x5c80 && port_addr <= 0x5c84)
-              || (port_addr >= 0x6c80 && port_addr <= 0x6c84)
-              || (port_addr >= 0x7c80 && port_addr <= 0x7c84)
-              || (port_addr >= 0x8c80 && port_addr <= 0x8c84)
-              || (port_addr >= 0x9c80 && port_addr <= 0x9c84)
-              || (port_addr >= 0xac80 && port_addr <= 0xac84)
-              || (port_addr >= 0xbc80 && port_addr <= 0xbc84)
-              || (port_addr >= 0xcc80 && port_addr <= 0xcc84)
-              || (port_addr >= 0xdc80 && port_addr <= 0xdc84)
-              || (port_addr >= 0xec80 && port_addr <= 0xec84)
-              || (port_addr >= 0xfc80 && port_addr <= 0xfc84)) {
+    } else if (port_addr == 0x4e || port_addr == 0x4f || port_addr == 0x2e || port_addr == 0x2f
+               || (port_addr >= 0xc80 && port_addr <= 0xc84) || (port_addr >= 0x1c80 && port_addr <= 0x1c84)
+               || (port_addr >= 0x2c80 && port_addr <= 0x2c84) || (port_addr >= 0x3c80 && port_addr <= 0x3c84)
+               || (port_addr >= 0x4c80 && port_addr <= 0x4c84) || (port_addr >= 0x5c80 && port_addr <= 0x5c84)
+               || (port_addr >= 0x6c80 && port_addr <= 0x6c84) || (port_addr >= 0x7c80 && port_addr <= 0x7c84)
+               || (port_addr >= 0x8c80 && port_addr <= 0x8c84) || (port_addr >= 0x9c80 && port_addr <= 0x9c84)
+               || (port_addr >= 0xac80 && port_addr <= 0xac84) || (port_addr >= 0xbc80 && port_addr <= 0xbc84)
+               || (port_addr >= 0xcc80 && port_addr <= 0xcc84) || (port_addr >= 0xdc80 && port_addr <= 0xdc84)
+               || (port_addr >= 0xec80 && port_addr <= 0xec84) || (port_addr >= 0xfc80 && port_addr <= 0xfc84)) {
         if (is_read) {
             vctx->eax = 0;
         }
         LOG_VMM("accessing io port 0x%x\n", port_addr);
         success = true;
-    } else if (port_addr == 0x3BE) {
-        // parallel port
+    } else if (port_addr == 0x3BE || port_addr == 0x7BE || port_addr == 0x3BD || port_addr == 0x3BC
+               || port_addr == 0x37A || port_addr == 0x77A || port_addr == 0x379 || port_addr == 0x378
+               || port_addr == 0x27A || port_addr == 0x67a || port_addr == 0x279 || port_addr == 0x278) {
+        // parallel/printer port
+        if (is_read) {
+            vctx->eax = 0;
+        }
         success = true;
     } else {
         if (is_read) {
-           LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
+            LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
         } else {
-           LOG_VMM_ERR("unhandled io port write 0x%x (value: 0x%lx)\n", port_addr, vctx->eax);
+            LOG_VMM_ERR("unhandled io port write 0x%x (value: 0x%lx)\n", port_addr, vctx->eax);
         }
     }
 
