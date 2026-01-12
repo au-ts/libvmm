@@ -46,11 +46,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     // @billn todo revisit likely need to turn on some important features.
     // 3-218 Vol. 2A
 
-    vctx->eax = 0;
-    vctx->ebx = 0;
-    vctx->ecx = 0;
-    vctx->edx = 0;
-
     switch (vctx->eax) {
     case 0x0:
             // 3-240 Vol. 2A
@@ -94,6 +89,11 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x7:
         if (vctx->ecx == 0) {
             vctx->ebx = BIT(3) | BIT(5) | BIT(8);
+        } else {
+            vctx->eax = 0;
+            vctx->ebx = 0;
+            vctx->ecx = 0;
+            vctx->edx = 0;
         }
         break;
     case 0x9:
@@ -119,6 +119,10 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x21:
     case 0x40000000 ... 0x4fffffff:
     case 0x8000001f:
+        vctx->eax = 0;
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
         break;
     case 0x16:
             // Table 3-8. Information Returned by CPUID Instruction (Contd.)
