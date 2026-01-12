@@ -242,6 +242,9 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         lapic_maintenance();
         success = true;
         break;
+    case XSETBV:
+        success = true;
+        break;
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
