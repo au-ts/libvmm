@@ -9,6 +9,7 @@
 #include <sddf/util/util.h>
 // TODO: need pci_config_space from virtio pci.h, should probably extract into common header
 #include <libvmm/virtio/pci.h>
+#include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/ioports.h>
 
 #define PCI_CONFIG_ADDRESS_START_PORT 0xCF8
@@ -34,7 +35,9 @@ struct isa_bridge_power_mgmt_regs {
 };
 
 struct pci_bus {
-    uint32_t address_reg;
+    uint32_t selected_pio_addr_reg;
+
+    
 
     struct pci_config_space host_bridge;
     struct pci_config_space isa_bridge;
@@ -47,6 +50,9 @@ struct pci_bus {
 bool is_pci_config_space_access_mech_1(uint16_t port_addr);
 bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
                                             ioport_access_width_t access_width);
+
+bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
+                                          memory_instruction_data_t decoded_mem_ins);
 
 bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
                                 uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
