@@ -176,6 +176,14 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x14:
     case 0x15:
     case 0x17:
+    case 0x18:
+    case 0x19:
+    case 0x1a:
+    case 0x1b:
+    case 0x1c:
+    case 0x1d:
+    case 0x1e:
+    case 0x1f:
     case 0x21:
     case 0x40000000 ... 0x4fffffff:
     case 0x8000001f:
