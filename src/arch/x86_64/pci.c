@@ -97,7 +97,7 @@ bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev
 }
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_PCI_PIO
+// #define DEBUG_PCI_PIO
 
 #if defined(DEBUG_PCI_PIO)
 #define LOG_PCI_PIO(...) do{ printf("%s|PCI PIO: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -105,7 +105,7 @@ bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev
 #define LOG_PCI_PIO(...) do{}while(0)
 #endif
 
-#define DEBUG_PCI_ECAM
+// #define DEBUG_PCI_ECAM
 
 #if defined(DEBUG_PCI_ECAM)
 #define LOG_PCI_ECAM(...) do{ printf("%s|PCI ECAM: ", microkit_name); printf(__VA_ARGS__); }while(0)
