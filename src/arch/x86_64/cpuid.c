@@ -33,8 +33,9 @@ extern uint64_t tsc_hz;
 #define CPUID_01_ECX_AVX BIT(28)
 #define CPUID_01_ECX_F16C BIT(29)
 
-#define CPUID_07_EBX_FSGSBASE BIT(0)
-
+#define CPUID_07_00_EBX_BMI1 BIT(3)
+#define CPUID_07_00_EBX_AVX2 BIT(5)
+#define CPUID_07_00_EBX_BMI2 BIT(8)
 
 static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
 {
@@ -87,13 +88,12 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x5:
     case 0x6:
     case 0x7:
+        vctx->eax = 0;
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
         if (vctx->ecx == 0) {
-            vctx->ebx = BIT(3) | BIT(5) | BIT(8);
-        } else {
-            vctx->eax = 0;
-            vctx->ebx = 0;
-            vctx->ecx = 0;
-            vctx->edx = 0;
+            vctx->ebx = CPUID_07_00_EBX_BMI1 | CPUID_07_00_EBX_AVX2 | CPUID_07_00_EBX_BMI2;
         }
         break;
     case 0x9:
@@ -139,7 +139,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         break;
     case 0x80000001:
         vctx->eax = 0;
-        vctx->ecx = BIT(0) | BIT(5); // LAHF/SAHF in long mode (LAHF_LM)
+        vctx->ecx = BIT(0) | BIT(5); // LAHF/SAHF in long mode (LAHF_LM) + LZCNT
         vctx->edx = (1 << 11) | (1 << 29); // SYSCALL/SYSRET + Intel® 64
         break;
     default:
