@@ -106,7 +106,21 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         if (ecx == 1 && vctx->eax & BIT(1)) {
             uint32_t eax = vctx->eax;
             vctx->eax &= ~BIT(1);
-            LOG_VMM("XSAVEC is available in CPU but not available in seL4, disabling for guest (0x%x -> 0x%x)\n", eax, vctx->eax);
+            LOG_VMM("XSAVEC is available in CPU but not available in seL4, disabling for guest\n");
+        }
+#endif
+#if !defined(CONFIG_XSAVE_XSAVEOPT)
+        if (ecx == 1 && vctx->eax & BIT(0)) {
+            uint32_t eax = vctx->eax;
+            vctx->eax &= ~BIT(0);
+            LOG_VMM("XSAVEOPT is available in CPU but not available in seL4, disabling for guest\n");
+        }
+#endif
+#if !defined(CONFIG_XSAVE_XSAVES)
+        if (ecx == 1 && vctx->eax & BIT(3)) {
+            uint32_t eax = vctx->eax;
+            vctx->eax &= ~BIT(3);
+            LOG_VMM("XSAVES is available in CPU but not available in seL4, disabling for guest\n");
         }
 #endif
         break;
