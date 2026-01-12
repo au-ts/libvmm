@@ -100,11 +100,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
                   | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2 | CPUID_01_EDX_CMOV | CPUID_01_EDX_CX8 | CPUID_01_EDX_FXSR | CPUID_01_EDX_MMX;
         break;
     }
-    case 0x2:
-    case 0x3:
-    case 0x4:
-    case 0x5:
-    case 0x6:
     case 0x7:
         vctx->eax = 0;
         vctx->ebx = 0;
@@ -114,9 +109,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
             vctx->ebx = CPUID_07_00_EBX_BMI1 | CPUID_07_00_EBX_BMI2;
         }
         break;
-    case 0x9:
-    case 0xa:
-    case 0xb:
     case 0xd: {
         uint32_t ecx = vctx->ecx;
         cpuid(0xd, vctx->ecx, (uint32_t *) &vctx->eax, (uint32_t *) &vctx->ebx, (uint32_t *) &vctx->ecx, (uint32_t *) &vctx->edx);
@@ -147,19 +139,6 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         }
         break;
     }
-    case 0xf:
-    case 0x10:
-    case 0x12:
-    case 0x14:
-    case 0x15:
-    case 0x21:
-    case 0x40000000 ... 0x4fffffff:
-    case 0x8000001f:
-        vctx->eax = 0;
-        vctx->ebx = 0;
-        vctx->ecx = 0;
-        vctx->edx = 0;
-        break;
     case 0x16:
             // Table 3-8. Information Returned by CPUID Instruction (Contd.)
             // page "3-232 Vol. 2A"
@@ -177,6 +156,33 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = 0;
         vctx->ecx = BIT(0) | BIT(5); // LAHF/SAHF in long mode (LAHF_LM) + LZCNT
         vctx->edx = BIT(1) | BIT(29); // SYSCALL/SYSRET + Intel® 64
+        break;
+    case 0x2:
+    case 0x3:
+    case 0x4:
+    case 0x5:
+    case 0x6:
+    case 0x8:
+    case 0x9:
+    case 0xa:
+    case 0xb:
+    case 0xc:
+    case 0xe:
+    case 0xf:
+    case 0x10:
+    case 0x11:
+    case 0x12:
+    case 0x13:
+    case 0x14:
+    case 0x15:
+    case 0x17:
+    case 0x21:
+    case 0x40000000 ... 0x4fffffff:
+    case 0x8000001f:
+        vctx->eax = 0;
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
         break;
     default:
         LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);

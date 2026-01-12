@@ -33,6 +33,36 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
 
             // @billn add I/O Port ranges that the host bridge decodes,
             // so that we can get rid of "pci=nocrs" in cmdline
+
+            Name (_CRS, ResourceTemplate ()
+            {
+                // Bus numbers this root bridge owns
+                WordBusNumber (ResourceProducer, MinFixed, MaxFixed, PosDecode,
+                    0x0000,         // Granularity
+                    0x0000,         // Min
+                    0x00FF,         // Max
+                    0x0000,         // Translation
+                    0x0100          // Length
+                )
+
+                // I/O port window(s) forwarded to PCI below this root bridge.
+                // Precisely host bridge actually decodes.
+                WordIO (ResourceProducer, MinFixed, MaxFixed, PosDecode, EntireRange,
+                    0x0000,         // Granularity
+                    0x0000,         // Min
+                    0x0CF7,         // Max
+                    0x0000,         // Translation
+                    0x0CF8          // Length
+                )
+
+                WordIO (ResourceProducer, MinFixed, MaxFixed, PosDecode, EntireRange,
+                    0x0000,         // Granularity
+                    0x0D00,         // Min
+                    0xFFFF,         // Max
+                    0x0000,         // Translation
+                    0xF300          // Length  (0xFFFF - 0x0D00 + 1)
+                )
+            })
         }
     }
 }
