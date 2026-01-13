@@ -20,6 +20,7 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             })
         }
 
+        // https://github.com/pebble/qemu/blob/master/hw/i386/acpi-dsdt-isa.dsl
         Device(KBD) {
             Name(_HID, EisaId("PNP0303"))
             Method(_STA, 0, NotSerialized) {
