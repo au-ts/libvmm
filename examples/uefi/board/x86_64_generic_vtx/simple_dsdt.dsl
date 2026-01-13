@@ -20,6 +20,28 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             })
         }
 
+        Device(KBD) {
+            Name(_HID, EisaId("PNP0303"))
+            Method(_STA, 0, NotSerialized) {
+                Return (0x0f)
+            }
+            Name(_CRS, ResourceTemplate() {
+                IO(Decode16, 0x0060, 0x0060, 0x01, 0x01)
+                IO(Decode16, 0x0064, 0x0064, 0x01, 0x01)
+                IRQNoFlags() { 1 }
+            })
+        }
+
+        Device(MOU) {
+            Name(_HID, EisaId("PNP0F13"))
+            Method(_STA, 0, NotSerialized) {
+                Return (0x0f)
+            }
+            Name(_CRS, ResourceTemplate() {
+                IRQNoFlags() { 12 }
+            })
+        }
+
         Device (PCI0)
         {
             // PCI root bridge
