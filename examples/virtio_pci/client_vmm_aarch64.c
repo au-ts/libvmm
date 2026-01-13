@@ -63,17 +63,17 @@ uintptr_t pci_memory_resource;
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
-    assert(blk_config_check_magic(&blk_config));
+    // assert(blk_config_check_magic(&blk_config));
     assert(vmm_config_check_magic(&vmm_config));
-    assert(net_config_check_magic(&net_config));
+    // assert(net_config_check_magic(&net_config));
 
-    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
-                   blk_config.virt.num_buffers);
-    /* Want to print out configuration information, so wait until the config is ready. */
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    // blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
+    //                blk_config.virt.num_buffers);
+    // /* Want to print out configuration information, so wait until the config is ready. */
+    // blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
 
-    /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
+    // /* Busy wait until blk device is ready */
+    // while (!blk_storage_is_ready(storage_info));
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -109,21 +109,21 @@ void init(void)
     success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id);
     assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
-                                  storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
-    assert(success);
+    // success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
+    //                               storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
+    // assert(success);
 
-    /* Initialise virtIO net device */
-    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
-                   net_config.rx.num_buffers);
-    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
-                   net_config.tx.num_buffers);
-    net_buffers_init(&net_tx_queue, 0);
+    // /* Initialise virtIO net device */
+    // net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+    //                net_config.rx.num_buffers);
+    // net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+    //                net_config.tx.num_buffers);
+    // net_buffers_init(&net_tx_queue, 0);
 
-    success = virtio_pci_net_init(&virtio_net, 2, 50, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                  net_config.mac_addr);
-    assert(success);
+    // success = virtio_pci_net_init(&virtio_net, 2, 50, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+    //                               (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+    //                               net_config.mac_addr);
+    // assert(success);
 
     /* Finally start the guest */
     guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
