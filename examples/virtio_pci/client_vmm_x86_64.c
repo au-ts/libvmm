@@ -15,6 +15,8 @@
 #include <sddf/timer/config.h>
 #include <sddf/serial/config.h>
 #include <sddf/network/config.h>
+#include <sddf/serial/queue.h>
+
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -30,36 +32,16 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
+/* Virtio Console */
+serial_queue_handle_t serial_rx_queue;
+serial_queue_handle_t serial_tx_queue;
+
+#define COM1_PIO_ID 0
+
 // @billn sus, use package asm script
 #include "client_vm/x86_64/simple_dsdt.hex"
 
-uint64_t com1_ioport_id;
-uint64_t com1_ioport_addr;
-uint64_t com1_ioport_size = 8;
-
-uint64_t primary_ata_cmd_pio_id;
-uint64_t primary_ata_cmd_pio_addr;
-
-uint64_t primary_ata_ctrl_pio_id;
-uint64_t primary_ata_ctrl_pio_addr;
-
-uint64_t second_ata_cmd_pio_id;
-uint64_t second_ata_cmd_pio_addr;
-
-uint64_t second_ata_ctrl_pio_id;
-uint64_t second_ata_ctrl_pio_addr;
-
-uint64_t pci_conf_addr_pio_id;
-uint64_t pci_conf_addr_pio_addr;
-
-uint64_t pci_conf_data_pio_id;
-uint64_t pci_conf_data_pio_addr;
-
-#define COM1_IRQ_CH 0
-#define PRIM_ATA_IRQ_CH 1
-#define SECD_ATA_IRQ_CH 2
-
-#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=hvc0 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -68,7 +50,7 @@ extern char _guest_kernel_image_end[];
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
-uintptr_t guest_ram_vaddr;
+uintptr_t guest_ram_vaddr = 0x20000000;
 
 // @billn unused, but have to leave it here otherwise linker complains, revisit
 uint64_t guest_ram_size;
@@ -82,11 +64,18 @@ uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
 void init(void)
 {
+    assert(serial_config_check_magic(&serial_config));
+
+    serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
+                      serial_config.rx.data.vaddr);
+    serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
+                      serial_config.tx.data.vaddr);
+
+
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size,
                             (uintptr_t)_guest_initrd_image, initrd_size, simple_dsdt_aml_code,
@@ -96,16 +85,6 @@ void init(void)
     }
 
     vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
-
-    /* Pass through COM1 serial port and IDE disk controller */
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
-    passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
-                               primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
-                               second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
-
-    microkit_irq_ack(COM1_IRQ_CH);
-    microkit_irq_ack(PRIM_ATA_IRQ_CH);
-    microkit_irq_ack(SECD_ATA_IRQ_CH);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -128,13 +107,6 @@ void notified(microkit_channel ch)
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
             }
-
-            /* Pass through IDE disk controller IRQs */
-            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
-            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
-
-            /* Pass through serial IRQs */
-            assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
 
             guest_start(linux_setup.kernel_entry_gpa, 0, 0);
         } else {

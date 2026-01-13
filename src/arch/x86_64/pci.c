@@ -16,85 +16,85 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/virtio/pci.h>
 
-extern uint64_t pci_conf_addr_pio_id;
-extern uint64_t pci_conf_addr_pio_addr;
+// extern uint64_t pci_conf_addr_pio_id;
+// extern uint64_t pci_conf_addr_pio_addr;
 
-extern uint64_t pci_conf_data_pio_id;
-extern uint64_t pci_conf_data_pio_addr;
+// extern uint64_t pci_conf_data_pio_id;
+// extern uint64_t pci_conf_data_pio_addr;
 
-/* Utility functions to access the host PCI bus */
-uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
-{
-    uint32_t lbus = (uint32_t)bus;
-    uint32_t ldev = (uint32_t)dev;
-    uint32_t lfunc = (uint32_t)func;
+// /* Utility functions to access the host PCI bus */
+// uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
+// {
+//     uint32_t lbus = (uint32_t)bus;
+//     uint32_t ldev = (uint32_t)dev;
+//     uint32_t lfunc = (uint32_t)func;
 
-    // Bit 31     | Bits 30-24 | Bits 23-16 | Bits 15-11    | Bits 10-8       | Bits 7-0
-    // Enable Bit | Reserved   | Bus Number | Device Number | Function Number | Register Offset
+//     // Bit 31     | Bits 30-24 | Bits 23-16 | Bits 15-11    | Bits 10-8       | Bits 7-0
+//     // Enable Bit | Reserved   | Bus Number | Device Number | Function Number | Register Offset
 
-    /* Write enable bit */
-    uint32_t addr = BIT(31);
+//     /* Write enable bit */
+//     uint32_t addr = BIT(31);
 
-    /* Shift in the PCI device address and register offset. */
-    addr = addr | (lbus << 16) | (ldev << 11) | (lfunc << 8) | (off & 0xFC);
+//     /* Shift in the PCI device address and register offset. */
+//     addr = addr | (lbus << 16) | (ldev << 11) | (lfunc << 8) | (off & 0xFC);
 
-    return addr;
-}
+//     return addr;
+// }
 
-uint32_t pci_read_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
-{
-    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+// uint32_t pci_read_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
+// {
+//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
 
-    /* Write the address into the "select" port, then the data will be available at the "data" port. */
-    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-    return microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr);
-}
+//     /* Write the address into the "select" port, then the data will be available at the "data" port. */
+//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     return microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr);
+// }
 
-void pci_write_8(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint8_t data)
-{
-    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-    microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-}
+// void pci_write_8(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint8_t data)
+// {
+//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
+// }
 
-void pci_write_16(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint16_t data)
-{
-    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-    microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-}
+// void pci_write_16(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint16_t data)
+// {
+//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
+// }
 
-void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t data)
-{
-    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-    microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-    microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-}
+// void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t data)
+// {
+//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
+// }
 
-bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
-{
-    int candidate_bus = 0;
-    int candidate_dev = 0;
-    int candidate_func = 0;
+// bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
+// {
+//     int candidate_bus = 0;
+//     int candidate_dev = 0;
+//     int candidate_func = 0;
 
-    for (; candidate_dev < 32; candidate_dev++) {
-        for (; candidate_func < 8; candidate_func++) {
-            uint32_t reg2 = pci_read_32(candidate_bus, candidate_dev, candidate_func, 0x8);
-            uint8_t candidate_class = (reg2 >> 24) & 0xff;
-            uint8_t candidate_subclass = (reg2 >> 16) & 0xff;
+//     for (; candidate_dev < 32; candidate_dev++) {
+//         for (; candidate_func < 8; candidate_func++) {
+//             uint32_t reg2 = pci_read_32(candidate_bus, candidate_dev, candidate_func, 0x8);
+//             uint8_t candidate_class = (reg2 >> 24) & 0xff;
+//             uint8_t candidate_subclass = (reg2 >> 16) & 0xff;
 
-            if (reg2 != 0xffffffff && candidate_class == class && candidate_subclass == subclass) {
-                *bus = candidate_bus;
-                *dev = candidate_dev;
-                *func = candidate_func;
-                return true;
-            }
-        }
-        candidate_func = 0;
-    }
+//             if (reg2 != 0xffffffff && candidate_class == class && candidate_subclass == subclass) {
+//                 *bus = candidate_bus;
+//                 *dev = candidate_dev;
+//                 *func = candidate_func;
+//                 return true;
+//             }
+//         }
+//         candidate_func = 0;
+//     }
 
-    return false;
-}
+//     return false;
+// }
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_PCI_PIO
@@ -124,7 +124,7 @@ struct pci_bus pci_bus_state = {
                     .subclass = 1,
                     .header_type = 0x80, // bit 7 multifunction
                 },
-    .ide_controller_enable = false,
+    // .ide_controller_enable = false,
 };
 
 static bool pci_host_bridge_pio_addr_reg_enable(void)
@@ -187,11 +187,11 @@ static bool is_isa_power_mgmt_access(void)
         && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 3;
 }
 
-static bool is_ide_controller_access(void)
-{
-    return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
-        && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 1;
-}
+// static bool is_ide_controller_access(void)
+// {
+//     return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
+//         && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 1;
+// }
 
 bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_access_width_t access_width)
 {
@@ -262,68 +262,68 @@ bool emulate_pci_config_space_access_mmio(seL4_VCPUContext *vctx, uint16_t reg_o
     return success;
 }
 
-bool native_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
-                                        ioport_access_width_t access_width)
-{
-    bool success = true;
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
+// bool native_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
+//                                         ioport_access_width_t access_width)
+// {
+//     bool success = true;
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
 
-    // caller must catch!
-    assert(pci_host_bridge_pio_addr_reg_enable());
+//     // caller must catch!
+//     assert(pci_host_bridge_pio_addr_reg_enable());
 
-    int bytes_to_copy = ioports_access_width_to_bytes(access_width);
-    assert(bytes_to_copy);
+//     int bytes_to_copy = ioports_access_width_to_bytes(access_width);
+//     assert(bytes_to_copy);
 
-    if (!is_read) {
-        uint32_t addr = pci_compute_port_address(
-            pci_bus_state.native_ide_con_addr.bus, pci_bus_state.native_ide_con_addr.dev,
-            pci_bus_state.native_ide_con_addr.func, pci_host_bridge_pio_addr_reg_offset());
-        microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     if (!is_read) {
+//         uint32_t addr = pci_compute_port_address(
+//             pci_bus_state.native_ide_con_addr.bus, pci_bus_state.native_ide_con_addr.dev,
+//             pci_bus_state.native_ide_con_addr.func, pci_host_bridge_pio_addr_reg_offset());
+//         microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
 
-        switch (access_width) {
-        case IOPORT_BYTE_ACCESS_QUAL:
-            microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
-            break;
-        case IOPORT_WORD_ACCESS_QUAL:
-            microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
-            break;
-        case IOPORT_DWORD_ACCESS_QUAL:
-            microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
-            break;
-        }
+//         switch (access_width) {
+//         case IOPORT_BYTE_ACCESS_QUAL:
+//             microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+//             break;
+//         case IOPORT_WORD_ACCESS_QUAL:
+//             microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+//             break;
+//         case IOPORT_DWORD_ACCESS_QUAL:
+//             microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset, vctx_raw[RAX_IDX]);
+//             break;
+//         }
 
-    } else {
-        uint32_t addr = pci_compute_port_address(
-            pci_bus_state.native_ide_con_addr.bus, pci_bus_state.native_ide_con_addr.dev,
-            pci_bus_state.native_ide_con_addr.func, pci_host_bridge_pio_addr_reg_offset());
-        microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
+//     } else {
+//         uint32_t addr = pci_compute_port_address(
+//             pci_bus_state.native_ide_con_addr.bus, pci_bus_state.native_ide_con_addr.dev,
+//             pci_bus_state.native_ide_con_addr.func, pci_host_bridge_pio_addr_reg_offset());
+//         microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
 
-        switch (access_width) {
-        case IOPORT_BYTE_ACCESS_QUAL:
-            vctx_raw[RAX_IDX] = microkit_x86_ioport_read_8(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
-            break;
-        case IOPORT_WORD_ACCESS_QUAL:
-            vctx_raw[RAX_IDX] = microkit_x86_ioport_read_16(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
-            break;
-        case IOPORT_DWORD_ACCESS_QUAL:
-            vctx_raw[RAX_IDX] = microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
-            break;
-        }
+//         switch (access_width) {
+//         case IOPORT_BYTE_ACCESS_QUAL:
+//             vctx_raw[RAX_IDX] = microkit_x86_ioport_read_8(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
+//             break;
+//         case IOPORT_WORD_ACCESS_QUAL:
+//             vctx_raw[RAX_IDX] = microkit_x86_ioport_read_16(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
+//             break;
+//         case IOPORT_DWORD_ACCESS_QUAL:
+//             vctx_raw[RAX_IDX] = microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr + port_offset);
+//             break;
+//         }
 
-        // @billn hack ide
-        if (pci_host_bridge_pio_addr_reg_offset() == 0x4) {
-            // disable bus master
-            vctx_raw[RAX_IDX] &= ~BIT(2);
-        }
-        if (pci_host_bridge_pio_addr_reg_offset() == 0x20) {
-            // BAR4 = 0, no dma for ide
-            vctx_raw[RAX_IDX] = 0;
-        }
-    }
+//         // @billn hack ide
+//         if (pci_host_bridge_pio_addr_reg_offset() == 0x4) {
+//             // disable bus master
+//             vctx_raw[RAX_IDX] &= ~BIT(2);
+//         }
+//         if (pci_host_bridge_pio_addr_reg_offset() == 0x20) {
+//             // BAR4 = 0, no dma for ide
+//             vctx_raw[RAX_IDX] = 0;
+//         }
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
 bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
                                             ioport_access_width_t access_width)
@@ -372,8 +372,9 @@ bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t por
             } else if (is_isa_power_mgmt_access()) {
                 success = emulate_isa_power_mgmt_access(vctx, is_read, access_width);
 
-            } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
-                success = native_pci_config_space_access_pio(vctx, port_addr, is_read, access_width);
+            // } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
+            //     success = native_pci_config_space_access_pio(vctx, port_addr, is_read, access_width);
+
             } else {
                 if (is_read) {
                     pci_host_bridge_invalid_read(vctx);
@@ -420,28 +421,28 @@ bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offse
     return success;
 }
 
-bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
-                                uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
-                                uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
-                                uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr)
-{
-    assert(primary_ata_cmd_pio_addr == 0x1f0);
-    assert(primary_ata_ctrl_pio_addr == 0x3f6);
-    assert(second_ata_cmd_pio_addr == 0x170);
-    assert(second_ata_ctrl_pio_addr == 0x376);
+// bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
+//                                 uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
+//                                 uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
+//                                 uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr)
+// {
+//     assert(primary_ata_cmd_pio_addr == 0x1f0);
+//     assert(primary_ata_ctrl_pio_addr == 0x3f6);
+//     assert(second_ata_cmd_pio_addr == 0x170);
+//     assert(second_ata_ctrl_pio_addr == 0x376);
 
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, 8);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_ctrl_pio_id, primary_ata_ctrl_pio_addr, 1);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_cmd_pio_id, second_ata_cmd_pio_addr, 8);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr, 1);
+//     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, 8);
+//     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_ctrl_pio_id, primary_ata_ctrl_pio_addr, 1);
+//     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_cmd_pio_id, second_ata_cmd_pio_addr, 8);
+//     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr, 1);
 
-    pci_bus_state.ide_controller_enable = true;
+//     pci_bus_state.ide_controller_enable = true;
 
-    // Find where the IDE controller lives on the host's PCI bus.
-    assert(find_pci_device(1, 1, &pci_bus_state.native_ide_con_addr.bus, &pci_bus_state.native_ide_con_addr.dev,
-                           &pci_bus_state.native_ide_con_addr.func));
-    LOG_VMM("found host IDE controller @ PCI %d:%d.%d\n", pci_bus_state.native_ide_con_addr.bus,
-            pci_bus_state.native_ide_con_addr.dev, pci_bus_state.native_ide_con_addr.func);
+//     // Find where the IDE controller lives on the host's PCI bus.
+//     assert(find_pci_device(1, 1, &pci_bus_state.native_ide_con_addr.bus, &pci_bus_state.native_ide_con_addr.dev,
+//                            &pci_bus_state.native_ide_con_addr.func));
+//     LOG_VMM("found host IDE controller @ PCI %d:%d.%d\n", pci_bus_state.native_ide_con_addr.bus,
+//             pci_bus_state.native_ide_con_addr.dev, pci_bus_state.native_ide_con_addr.func);
 
-    return true;
-}
+//     return true;
+// }
