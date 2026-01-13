@@ -92,12 +92,6 @@ void init(void)
                                primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
 
-    microkit_irq_ack(COM1_IRQ_CH);
-    microkit_irq_ack(PRIM_ATA_IRQ_CH);
-    microkit_irq_ack(SECD_ATA_IRQ_CH);
-    microkit_irq_ack(FIRST_PS2_IRQ_CH);
-    microkit_irq_ack(SECOND_PS2_IRQ_CH);
-
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
     tsc_pre = rdtsc();
@@ -119,6 +113,12 @@ void notified(microkit_channel ch)
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
             }
+
+            microkit_irq_ack(COM1_IRQ_CH);
+            microkit_irq_ack(PRIM_ATA_IRQ_CH);
+            microkit_irq_ack(SECD_ATA_IRQ_CH);
+            microkit_irq_ack(FIRST_PS2_IRQ_CH);
+            microkit_irq_ack(SECOND_PS2_IRQ_CH);
 
             /* Pass through IDE disk controller IRQs */
             assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
