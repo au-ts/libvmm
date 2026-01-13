@@ -95,7 +95,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
             // vctx->ecx = BIT(24); // TSC deadline supported
         vctx->ecx = CPUID_01_ECX_SSE3 | CPUID_01_ECX_SSSE3 | CPUID_01_ECX_XSAVE | CPUID_01_ECX_CMPXCHG16B
                   | CPUID_01_ECX_SSE4_1 | CPUID_01_ECX_SSE4_2 | CPUID_01_ECX_POPCNT | CPUID_01_ECX_OSXSAVE
-                  | CPUID_01_ECX_FMA | CPUID_01_ECX_F16C | CPUID_01_ECX_MOVBE;
+                  | CPUID_01_ECX_F16C | CPUID_01_ECX_MOVBE;
         vctx->edx = CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_APIC | CPUID_01_EDX_FPU
                   | CPUID_01_EDX_SSE1 | CPUID_01_EDX_SSE2 | CPUID_01_EDX_CMOV | CPUID_01_EDX_CX8 | CPUID_01_EDX_FXSR | CPUID_01_EDX_MMX;
         break;
