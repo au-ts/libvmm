@@ -40,26 +40,22 @@
 
     <channel>
         <end pd="timer_driver" id="1" />
-        <end pd="VMM" id="10" notify="false" pp="true" />
-    </channel>
-    <channel>
-        <end pd="timer_driver" id="2" />
         <end pd="VMM" id="11" notify="false" pp="true" />
     </channel>
     <channel>
-        <end pd="timer_driver" id="3" />
+        <end pd="timer_driver" id="2" />
         <end pd="VMM" id="12" notify="false" pp="true" />
     </channel>
     <channel>
-        <end pd="timer_driver" id="4" />
+        <end pd="timer_driver" id="3" />
         <end pd="VMM" id="13" notify="false" pp="true" />
     </channel>
     <channel>
-        <end pd="timer_driver" id="5" />
+        <end pd="timer_driver" id="4" />
         <end pd="VMM" id="14" notify="false" pp="true" />
     </channel>
     <channel>
-        <end pd="timer_driver" id="6" />
+        <end pd="timer_driver" id="5" />
         <end pd="VMM" id="15" notify="false" pp="true" />
     </channel>
 </system>
