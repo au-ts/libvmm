@@ -236,6 +236,9 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         // TODO: handle properly, I don't understand why UEFI is touching A20 gate register
         assert(!is_string);
         success = true;
+    } else if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
+        emulate_com(vctx, 0, port_addr - 0x3f8, is_read);
+        success = true;
     } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
         emulate_com(vctx, 1, port_addr - 0x2f8, is_read);
         success = true;
