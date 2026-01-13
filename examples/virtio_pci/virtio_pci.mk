@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-QEMU := qemu-system-aarch64
 PYTHON ?= python3
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
@@ -43,6 +42,7 @@ ifeq ($(ARCH),aarch64)
 	VMM_NAME := client_vmm_aarch64
 	IMAGES = $(VMM_NAME).elf
 
+        QEMU := qemu-system-aarch64
 	QEMU_ARCH_ARGS := -machine virt,virtualization=on,secure=off \
 					  -cpu cortex-a53 \
 					  -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
@@ -60,10 +60,12 @@ else ifeq ($(ARCH),x86_64)
 	KERNEL = sel4.elf
 	KERNEL32 := sel4_32.elf
 
+        QEMU := qemu-system-x86_64
+
 	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
 					  -kernel $(KERNEL32) -initrd $(IMAGE_FILE) \
-					  -device virtio-blk-pci-device,drive=drive0,id=virtblk0,num-queues=1 \
-					  -device virtio-net-pci-device,netdev=netdev0 \
+					  -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1 \
+					  -device virtio-net-pci,netdev=netdev0 \
 
 else
 $(error Unsupported ARCH given)
@@ -218,7 +220,7 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
-	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
+	# [ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
 	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=2G \
 							  -nographic \
