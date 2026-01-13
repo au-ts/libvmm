@@ -27,11 +27,22 @@ ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
 	export TIMER_DRIVER := arm
-	export BLK_DRIVER := virtio
-	export ETH_DRIVER := virtio
+	export BLK_DRIVER := virtio/mmio
+	export ETH_DRIVER := virtio/mmio
 	export CPU := cortex-a53
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
 	QEMU := qemu-system-aarch64
+
+	export BLK_NUM_PART = 1
+	export BLK_SIZE = 512
+	# 16MiB of disk space
+	export BLK_MEM ?= 16777216
+else ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+	export UART_DRIVER := pc99
+	export TIMER_DRIVER := hpet
+	export BLK_DRIVER := virtio/pci
+	export ETH_DRIVER := virtio/pci
+	QEMU := qemu-system-x86_64
 
 	export BLK_NUM_PART = 1
 	export BLK_SIZE = 512
@@ -46,10 +57,6 @@ PARTITION :=
 ifdef PARTITION
 export PARTITION_ARG := --partition $(PARTITION)
 endif
-
-# All platforms use the same Linux and initrd images.
-export LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-export INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
 BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})
