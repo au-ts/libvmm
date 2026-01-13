@@ -95,6 +95,8 @@ void init(void)
     microkit_irq_ack(COM1_IRQ_CH);
     microkit_irq_ack(PRIM_ATA_IRQ_CH);
     microkit_irq_ack(SECD_ATA_IRQ_CH);
+    microkit_irq_ack(FIRST_PS2_IRQ_CH);
+    microkit_irq_ack(SECOND_PS2_IRQ_CH);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
