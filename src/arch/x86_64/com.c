@@ -22,7 +22,7 @@ void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_
             vctx->eax = 0;
         } else {
             // LOG_VMM("com2 out: %c\n", vctx->eax);
-            // microkit_dbg_putc(vctx->eax);
+            microkit_dbg_putc(vctx->eax);
         }
         break;
     }
