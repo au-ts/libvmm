@@ -117,5 +117,7 @@ bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
         return false;
     }
 
-    return inject_ioapic_irq(virq_passthrough_map[irq_ch].ioapic, virq_passthrough_map[irq_ch].pin);
+    bool success = inject_ioapic_irq(virq_passthrough_map[irq_ch].ioapic, virq_passthrough_map[irq_ch].pin);
+
+    return success;
 }
