@@ -205,6 +205,8 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t offset, size_t qu
         uint8_t dev = pci_pio_addr_reg_dev();
         uint8_t func = pci_pio_addr_reg_func();
 
+        // LOG_VMM("PCI PIO accessing bus %d, dev %d, func %d\n", bus, dev, func);
+        
         uint32_t ecam_off = (bus << 20) | ((dev & 0x1f) << 15) | ((func & 0x7) << 12);
         struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base + ecam_off);
 
