@@ -234,9 +234,14 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     /* Now create the ACPI tables and get the RSDP. */
     uint64_t acpi_start_gpa, acpi_end_gpa;
     /* Pass pt_objs_start_gpa as "ram_top" so that the ACPI tables live straight below the initial paging objects. */
-    uint64_t acpi_rsdp_gpa = acpi_build_all(ram_start, dsdt_blob, dsdt_blob_size, pt_objs_start_gpa, &acpi_start_gpa,
+
+    // When the size of the DSDT crosses 255 bytes, it seens like the initial paging objects are overwritten, so we hack
+    // by leaving a page of room, TODO investigate.
+    uint64_t acpi_rsdp_gpa = acpi_build_all(ram_start, dsdt_blob, dsdt_blob_size, pt_objs_start_gpa - 0x1000, &acpi_start_gpa,
                                             &acpi_end_gpa);
     LOG_VMM("ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa, acpi_end_gpa);
+
+    assert(acpi_end_gpa < pt_objs_start_gpa);
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
     uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);

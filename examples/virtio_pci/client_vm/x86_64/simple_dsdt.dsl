@@ -62,7 +62,29 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     0x0000,         // Translation
                     0xF300          // Length  (0xFFFF - 0x0D00 + 1)
                 )
+
+                // Prefetchable MMIO window
+                QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
+                    0x0000000000000000, // Granularity
+                    0x20100000, // Min
+                    0x2fffffff, // Max
+                    0x0000000000000000, // Translation
+                    0xFF00000  // Length
+                )
             })
+        }
+    }
+
+    Scope(\_SB) {
+        Scope(PCI0) {
+            // PCI Routing Table
+            Method(_PRT, 0) {
+                Return (Package() {
+                    // Virtio console:
+                    // Device 0x3, function 0, INTA -> GSI 15
+                    Package() { 0x00030000, 0, 0, 15 },
+                })
+            }
         }
     }
 }

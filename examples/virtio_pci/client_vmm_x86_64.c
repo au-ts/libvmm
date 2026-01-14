@@ -16,7 +16,7 @@
 #include <sddf/serial/config.h>
 #include <sddf/network/config.h>
 #include <sddf/serial/queue.h>
-
+#include <libvmm/virtio/console.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -36,6 +36,14 @@ __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
+static struct virtio_console_device virtio_console;
+
+// Device slot of the virtio console device on bus 0.
+// Host bridge = 0, ISA bridge = 1 so we must avoid these.
+// Then on Intel, the integrated graphics is conventionally on slot 2 as well...
+// Make sure these two matches what is written in DSDT
+#define VIRTIO_CONSOLE_PCI_DEVICE_SLOT 3
+#define VIRTIO_CONSOLE_PCI_IOAPIC_PIN 15
 
 #define COM1_PIO_ID 0
 
@@ -74,7 +82,6 @@ void init(void)
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
@@ -97,6 +104,9 @@ void init(void)
     assert(virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000));
 
     assert(pci_x86_init());
+
+    assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
+                                   &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);

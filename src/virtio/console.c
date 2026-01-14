@@ -12,6 +12,10 @@
 #include <libvmm/virtio/console.h>
 #include <sddf/serial/queue.h>
 
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/apic.h>
+#endif
+
 /* Uncomment this to enable debug logging */
 // #define DEBUG_CONSOLE
 
@@ -163,7 +167,13 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
         dev->regs.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(dev->virq);
+
+        bool success;
+#if defined(CONFIG_ARCH_AARCH64)
+        success = virq_inject(dev->virq);
+#elif defined(CONFIG_ARCH_X86_64)
+        success = inject_ioapic_irq(0, dev->virq);
+#endif
         assert(success);
 
         microkit_notify(console->tx_ch);
@@ -208,7 +218,13 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
         console->virtio_device.regs.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(console->virtio_device.virq);
+
+        bool success;
+#if defined(CONFIG_ARCH_AARCH64)
+        success = virq_inject(console->virtio_device.virq);
+#elif defined(CONFIG_ARCH_X86_64)
+        success = inject_ioapic_irq(0, console->virtio_device.virq);
+#endif
         assert(success);
 
         return success;
@@ -245,6 +261,7 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
     return dev;
 }
 
+#if defined(CONFIG_ARCH_AARCH64)
 bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
                               size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
@@ -252,6 +269,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t r
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
+#endif
 
 bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
                              serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
