@@ -5,8 +5,10 @@
 -->
 <system>
     <memory_region name="hpet_regs" size="0x1000" phys_addr="0xfed00000" />
+
     <memory_region name="guest_ram" size="0xa0_000_000" page_size="0x200_000" phys_addr="0x8_000_000" />
     <memory_region name="guest_flash" size="0x600000" page_size="0x200_000" />
+    <memory_region name="guest_ecam" size="0x100000" />
 
     <memory_region name="scratch" size="0x200000" page_size="0x200_000" />
 
@@ -17,6 +19,7 @@
         <program_image path="vmm_x86_64.elf" />
         <map mr="guest_ram" vaddr="0x1000_0000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
         <map mr="guest_flash" vaddr="0xf000_0000" perms="rw" setvar_vaddr="guest_flash_vaddr" setvar_size="guest_flash_size"/>
+        <map mr="guest_ecam" vaddr="0xa00_0000" perms="rw" setvar_vaddr="guest_ecam_vaddr" setvar_size="guest_ecam_size" />
         <virtual_machine name="uefi">
             <vcpu id="0" />
             <map mr="guest_ram" vaddr="0x0" perms="rwx" />
@@ -33,13 +36,13 @@
         <!-- <setvar region_paddr="fw_cfg_dma_cmd" symbol="fw_cfg_dma_cmd_paddr" /> -->
 
         <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />
-        <ioport id="1" addr="0x1f0" size="8" setvar_id="primary_ata_cmd_pio_id" setvar_addr="primary_ata_cmd_pio_addr" />
+        <!-- <ioport id="1" addr="0x1f0" size="8" setvar_id="primary_ata_cmd_pio_id" setvar_addr="primary_ata_cmd_pio_addr" />
         <ioport id="2" addr="0x3f6" size="1" setvar_id="primary_ata_ctrl_pio_id" setvar_addr="primary_ata_ctrl_pio_addr" />
         <ioport id="3" addr="0x170" size="8" setvar_id="second_ata_cmd_pio_id" setvar_addr="second_ata_cmd_pio_addr" />
         <ioport id="4" addr="0x376" size="1" setvar_id="second_ata_ctrl_pio_id" setvar_addr="second_ata_ctrl_pio_addr" />
 
         <ioport id="5" addr="0xcf8" size="4" setvar_id="pci_conf_addr_pio_id" setvar_addr="pci_conf_addr_pio_addr" />
-        <ioport id="6" addr="0xcfc" size="4" setvar_id="pci_conf_data_pio_id" setvar_addr="pci_conf_data_pio_addr" />
+        <ioport id="6" addr="0xcfc" size="4" setvar_id="pci_conf_data_pio_id" setvar_addr="pci_conf_data_pio_addr" /> -->
 
         <ioport id="10" addr="0x510" size="8" setvar_id="qemu_fw_cfg_port_addr_sel" />
         <ioport id="11" addr="0x518" size="4" setvar_id="qemu_fw_cfg_port_addr_dma" />
@@ -47,11 +50,11 @@
         <ioport id="12" addr="0x60" size="5" setvar_id="ps2_controller_id" setvar_addr="ps2_controller_addr" />
 
         <!-- serial port com1 irq -->
-        <irq pin="4" vector="41" id="0" ioapic="0" />
+        <!-- <irq pin="4" vector="41" id="0" ioapic="0" /> -->
         <!-- primary ATA irq -->
-        <irq pin="14" vector="42" id="1" ioapic="0" />
+        <!-- <irq pin="14" vector="42" id="1" ioapic="0" /> -->
         <!-- secondary ATA irq -->
-        <irq pin="15" vector="43" id="2" ioapic="0" />
+        <!-- <irq pin="15" vector="43" id="2" ioapic="0" /> -->
 
         <!-- first PS/2 irq -->
         <irq pin="1" vector="44" id="3" ioapic="0" />

@@ -4,13 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#pragma once
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <microkit.h>
-
-#ifndef MAX_PASSTHROUGH_IRQ
-#define MAX_PASSTHROUGH_IRQ MICROKIT_MAX_CHANNELS
-#endif
 
 typedef void (*virq_ioapic_ack_fn_t)(int ioapic, int pin, void *cookie);
 
@@ -19,15 +17,17 @@ typedef void (*virq_ioapic_ack_fn_t)(int ioapic, int pin, void *cookie);
  */
 bool virq_controller_init(uint64_t native_tsc_hz);
 
+bool virq_ioapic_register(int ioapic, int pin, virq_ioapic_ack_fn_t ack_fn, void *ack_data);
+
 bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_ch);
 bool virq_ioapic_handle_passthrough(microkit_channel irq_ch);
 
 
 // @billn sus
+#define IOAPIC_IRQ_HANDLE_NO_CH (-1)
 struct ioapic_virq_handle {
     bool valid;
-    int ioapic;
-    int pin;
+    int ch;
     virq_ioapic_ack_fn_t ack_fn;
     void *ack_data;
 };

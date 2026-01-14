@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sel4/sel4.h>
+#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
 #define TIMER_DRV_CH_FOR_LAPIC 11
@@ -53,6 +54,8 @@ struct ioapic_regs {
     uint32_t ioapicver;
     uint32_t ioapicarb;
     uint64_t ioredtbl[IOAPIC_NUM_PINS];
+
+    struct ioapic_virq_handle virq_passthrough_map[IOAPIC_NUM_PINS];
 };
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);

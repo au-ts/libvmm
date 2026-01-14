@@ -9,11 +9,13 @@
 #include <microkit.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+#include <libvmm/virtio/pci.h>
 #include <sddf/timer/client.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
@@ -27,27 +29,27 @@ uint64_t com1_ioport_id;
 uint64_t com1_ioport_addr;
 uint64_t com1_ioport_size = 8;
 
-uint64_t primary_ata_cmd_pio_id;
-uint64_t primary_ata_cmd_pio_addr;
+// uint64_t primary_ata_cmd_pio_id;
+// uint64_t primary_ata_cmd_pio_addr;
 
-uint64_t primary_ata_ctrl_pio_id;
-uint64_t primary_ata_ctrl_pio_addr;
+// uint64_t primary_ata_ctrl_pio_id;
+// uint64_t primary_ata_ctrl_pio_addr;
 
-uint64_t second_ata_cmd_pio_id;
-uint64_t second_ata_cmd_pio_addr;
+// uint64_t second_ata_cmd_pio_id;
+// uint64_t second_ata_cmd_pio_addr;
 
-uint64_t second_ata_ctrl_pio_id;
-uint64_t second_ata_ctrl_pio_addr;
+// uint64_t second_ata_ctrl_pio_id;
+// uint64_t second_ata_ctrl_pio_addr;
 
-uint64_t pci_conf_addr_pio_id;
-uint64_t pci_conf_addr_pio_addr;
+// uint64_t pci_conf_addr_pio_id;
+// uint64_t pci_conf_addr_pio_addr;
 
-uint64_t pci_conf_data_pio_id;
-uint64_t pci_conf_data_pio_addr;
+// uint64_t pci_conf_data_pio_id;
+// uint64_t pci_conf_data_pio_addr;
 
 #define COM1_IRQ_CH 0
-#define PRIM_ATA_IRQ_CH 1
-#define SECD_ATA_IRQ_CH 2
+// #define PRIM_ATA_IRQ_CH 1
+// #define SECD_ATA_IRQ_CH 2
 
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
@@ -59,9 +61,12 @@ extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+uint64_t guest_ram_size;
+
+uintptr_t guest_ecam_vaddr;
+uint64_t guest_ecam_size;
 
 // @billn unused, but have to leave it here otherwise linker complains, revisit
-uint64_t guest_ram_size;
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
 
@@ -76,9 +81,9 @@ void init(void)
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    if (!linux_setup_images(guest_ram_vaddr, 0x10000000, (uintptr_t)_guest_kernel_image, kernel_size,
+
+    if (!linux_setup_images(guest_ram_vaddr, guest_ram_size, (uintptr_t)_guest_kernel_image, kernel_size,
                             (uintptr_t)_guest_initrd_image, initrd_size, simple_dsdt_aml_code,
                             sizeof(simple_dsdt_aml_code), GUEST_CMDLINE, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
@@ -87,6 +92,14 @@ void init(void)
 
     vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
 
+    // Set up the PCI bus
+    // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
+    assert(guest_ecam_size == ECAM_SIZE);
+
+    assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
+
+    assert(pci_x86_init());
+
     /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
     // passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
@@ -94,8 +107,8 @@ void init(void)
     //                            second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
 
     microkit_irq_ack(COM1_IRQ_CH);
-    microkit_irq_ack(PRIM_ATA_IRQ_CH);
-    microkit_irq_ack(SECD_ATA_IRQ_CH);
+    // microkit_irq_ack(PRIM_ATA_IRQ_CH);
+    // microkit_irq_ack(SECD_ATA_IRQ_CH);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -119,9 +132,9 @@ void notified(microkit_channel ch)
                 return;
             }
 
-            /* Pass through IDE disk controller IRQs */
-            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
-            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+            // /* Pass through IDE disk controller IRQs */
+            // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
+            // assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
 
             /* Pass through serial IRQs */
             assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));

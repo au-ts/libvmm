@@ -14,6 +14,7 @@
 #include <libvmm/arch/x86_64/uefi.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
@@ -70,6 +71,8 @@ uintptr_t guest_ram_vaddr;
 uint64_t guest_ram_size;
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
+uintptr_t guest_ecam_vaddr;
+uint64_t guest_ecam_size;
 
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
@@ -85,12 +88,20 @@ void init(void)
 
     vcpu_set_up_reset_state();
 
+    // Set up the PCI bus
+    // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
+    assert(guest_ecam_size == ECAM_SIZE);
+
+    assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
+
+    assert(pci_x86_init());
+
     /* Pass through COM1 serial port and IDE disk controller */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
-    passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
-                               primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
-                               second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
+    // passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
+    //                            primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
+    //                            second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -120,9 +131,9 @@ void notified(microkit_channel ch)
             microkit_irq_ack(FIRST_PS2_IRQ_CH);
             microkit_irq_ack(SECOND_PS2_IRQ_CH);
 
-            /* Pass through IDE disk controller IRQs */
-            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
-            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+            // /* Pass through IDE disk controller IRQs */
+            // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
+            // assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
 
             /* Pass through serial IRQs */
             assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));

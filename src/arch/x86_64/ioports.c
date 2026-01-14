@@ -14,6 +14,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/qemu/fw_cfg.h>
 #include <libvmm/arch/x86_64/cmos.h>
 #include <libvmm/arch/x86_64/com.h>
@@ -147,14 +148,14 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = 0;
     }
 
-    if (is_pci_config_space_access_mech_1(port_addr)) {
-        assert(!is_string);
-        return emulate_pci_config_space_access_mech_1(vctx, port_addr, is_read, access_width);
+    // if (is_pci_config_space_access_mech_1(port_addr)) {
+    //     assert(!is_string);
+    //     return pci_x86_emulate_pio_access(vctx, port_addr, is_read, access_width);
 
-        // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
-        //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
+    //     // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
+    //     //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
 
-    } else if (port_addr >= 0x400 && port_addr < 0x406) {
+    if (port_addr >= 0x400 && port_addr < 0x406) {
         assert(!is_string);
         success = true;
 
@@ -213,8 +214,8 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         // PS2 controller
         success = true;
         assert(false);
-    } else if (port_addr == pci_bus_state.isa_bridge_power_mgmt_regs.pmba + 0x8) {
-        assert(!is_string);
+    } else if (port_addr == 0xb008) {
+        // assert(!is_string);
         // Handle ACPI Power Management Timer
         // 7.2.4 of 82371AB PCI-TO-ISA / IDE XCELERATOR (PIIX4)
         // TODO: maybe handle PCI reset case
