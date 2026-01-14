@@ -179,7 +179,49 @@ bool ept_fault_is_write(seL4_Word qualification)
     return qualification & EPT_VIOLATION_WRITE;
 }
 
-bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins)
+struct ept_exception_handler {
+    uintptr_t base;
+    uintptr_t end;
+    ept_exception_callback_t callback;
+    void *cookie;
+};
+#define MAX_EPT_EXCEPTION_HANDLERS 16
+static struct ept_exception_handler registered_ept_exception_handlers[MAX_EPT_EXCEPTION_HANDLERS];
+static size_t ept_exception_handler_index = 0;
+
+bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie)
+{
+    if (ept_exception_handler_index == MAX_EPT_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of EPT exception handlers registered");
+        return false;
+    }
+
+    if (size == 0) {
+        LOG_VMM_ERR("registered EPT exception handler with size 0\n");
+        return false;
+    }
+
+    for (int i = 0; i < ept_exception_handler_index; i++) {
+        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+        if (!(base >= curr->end || base + size <= curr->base)) {
+            LOG_VMM_ERR("EPT exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+                        base + size, curr->base, curr->end);
+            return false;
+        }
+    }
+
+    registered_ept_exception_handlers[ept_exception_handler_index] = (struct ept_exception_handler) {
+        .base = base,
+        .end = base + size,
+        .callback = callback,
+        .cookie = cookie,
+    };
+    ept_exception_handler_index += 1;
+
+    return true;
+}
+
+static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins)
 {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
@@ -190,11 +232,103 @@ bool emulate_vmfault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_ins
         return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
         return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_mem_ins);
-    } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
-        return emulate_pci_config_space_access_ecam(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
+    // } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
+    //     return pci_x86_emulate_ecam_access(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
+    } else {
+        for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
+            uintptr_t base = registered_ept_exception_handlers[i].base;
+            uintptr_t end = registered_ept_exception_handlers[i].end;
+            ept_exception_callback_t callback = registered_ept_exception_handlers[i].callback;
+            void *cookie = registered_ept_exception_handlers[i].cookie;
+            if (addr >= base && addr < end) {
+                bool success = callback(0, addr - base, qualification, decoded_mem_ins, vctx, cookie);
+                if (!success) {
+                    LOG_VMM_ERR("registered EPT exception handler for region [0x%lx..0x%lx) at address "
+                                "0x%lx failed\n",
+                                base, end, addr);
+                }
+
+                return success;
+            }
+        }
     }
 
+    // LOG_VMM("done\n");
+
     return false;
+}
+
+struct pio_exception_handler {
+    uint16_t base;
+    uint16_t end;
+    pio_exception_callback_t callback;
+    void *cookie;
+};
+#define MAX_PIO_EXCEPTION_HANDLERS 16
+static struct pio_exception_handler registered_pio_exception_handlers[MAX_PIO_EXCEPTION_HANDLERS];
+static size_t pio_exception_handler_index = 0;
+
+bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exception_callback_t callback, void *cookie)
+{
+    if (pio_exception_handler_index == MAX_PIO_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of PIO exception handlers registered");
+        return false;
+    }
+
+    if (size == 0) {
+        LOG_VMM_ERR("registered PIO exception handler with size 0\n");
+        return false;
+    }
+
+    uint64_t size_64 = (uint64_t)base + (uint64_t)size;
+    if (size_64 > 0xffff) {
+        LOG_VMM_ERR("base + size = 0x%lx exceed uint16_t max\n", size_64);
+        return false;
+    }
+
+    for (int i = 0; i < pio_exception_handler_index; i++) {
+        struct pio_exception_handler *curr = &registered_pio_exception_handlers[i];
+        if (!(base >= curr->end || base + size <= curr->base)) {
+            LOG_VMM_ERR("PIO exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+                        base + size, curr->base, curr->end);
+            return false;
+        }
+    }
+
+    registered_pio_exception_handlers[pio_exception_handler_index] = (struct pio_exception_handler) {
+        .base = base,
+        .end = base + size,
+        .callback = callback,
+        .cookie = cookie,
+    };
+    pio_exception_handler_index += 1;
+
+    return true;
+}
+
+static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
+{
+    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+
+    for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
+        uint16_t base = registered_pio_exception_handlers[i].base;
+        uint16_t end = registered_pio_exception_handlers[i].end;
+        pio_exception_callback_t callback = registered_pio_exception_handlers[i].callback;
+        void *cookie = registered_pio_exception_handlers[i].cookie;
+        if (port_addr >= base && port_addr < end) {
+            bool success = callback(0, port_addr - base, qualification, vctx, cookie);
+            if (!success) {
+                LOG_VMM_ERR("registered PIO exception handler for region [0x%lx..0x%lx) at address "
+                            "0x%lx failed\n",
+                            base, end, port_addr);
+            }
+
+            return success;
+        }
+    }
+
+    return emulate_ioports(vctx, qualification);
 }
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
@@ -237,10 +371,10 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     case EPT_VIOLATION:
         decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
         assert(decoded_ins.type == INSTRUCTION_MEMORY);
-        success = emulate_vmfault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
+        success = handle_ept_fault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
         break;
     case IO:
-        success = emulate_ioports(&vctx, qualification);
+        success = handle_pio_fault(&vctx, qualification);
         break;
     case INTERRUPT_WINDOW:
         lapic_maintenance();

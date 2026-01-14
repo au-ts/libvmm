@@ -304,8 +304,8 @@ struct virtio_pci_common_cfg {
     uint16_t admin_queue_num;           /* read-only for driver */
 };
 
-typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
-                                                   seL4_UserContext *regs);
+// typedef bool (*virtio_pci_cfg_exception_handler_t)(virtio_device_t *dev, size_t vcpu_id, size_t offset, size_t fsr,
+//                                                    seL4_UserContext *regs);
 
 bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint32_t ecam_size);
 /*
@@ -314,7 +314,8 @@ bool virtio_pci_ecam_init(uintptr_t ecam_base_vm, uintptr_t ecam_base_vmm, uint3
  * Assumes the virtio_device_t *dev struct passed has been populated
  * and virtual IRQ associated with the device has been registered.
  */
-bool virtio_pci_register_device(virtio_device_t *dev, int virq);
+bool pci_register_virtio_device(virtio_device_t *dev, int virq);
+bool pci_ecam_add_device(uint8_t bus, uint8_t dev, uint8_t func, struct pci_config_space *config_space);
 
 bool virtio_pci_alloc_dev_cfg_space(virtio_device_t *dev, uint8_t dev_slot);
 bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, uint32_t size);

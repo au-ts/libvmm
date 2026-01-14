@@ -83,7 +83,6 @@ extern struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
-extern struct ioapic_virq_handle virq_passthrough_map[MAX_PASSTHROUGH_IRQ];
 
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
@@ -371,13 +370,14 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 lapic_regs.isr[7] = 0;
 
                 // if it is a passed through I/O APIC IRQ, run the ack function
-                for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
-                    if (virq_passthrough_map[i].valid) {
-                        uint8_t candidate_vector = ioapic_pin_to_vector(virq_passthrough_map[i].ioapic,
-                                                                        virq_passthrough_map[i].pin);
+                for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
+                    if (ioapic_regs.virq_passthrough_map[i].valid) {
+                        uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
                         if (candidate_vector == lapic_regs.last_injected_vector) {
-                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
-                                                           (void *)(uint64_t)i);
+                            if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
+                                ioapic_regs.virq_passthrough_map[i].ack_fn(
+                                    0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                            }
                             break;
                         }
                     }
@@ -404,10 +404,10 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
             lapic_regs.icr_low = vctx_raw[decoded_mem_ins.target_reg];
 
-            uint64_t icr = lapic_regs.icr_low | (((uint64_t) lapic_regs.icr_high) << 32);
+            uint64_t icr = lapic_regs.icr_low | (((uint64_t)lapic_regs.icr_high) << 32);
 
             // @billn sus, handle other types of IPIs
-            if (((icr >> 8) & 0x7 )== 0) {
+            if (((icr >> 8) & 0x7) == 0) {
                 // fixed mode
                 uint8_t vector = icr & 0xff;
                 inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
@@ -533,10 +533,12 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
                 // in the virtual I/O APIC, the real IRQ doesn't get stuck in waiting for ACK.
                 if ((old_reg & BIT(16)) && !(new_reg & BIT(16))) {
-                    for (int i = 0; i < MAX_PASSTHROUGH_IRQ; i++) {
-                        if (virq_passthrough_map[i].pin == redirection_reg_idx) {
-                            virq_passthrough_map[i].ack_fn(virq_passthrough_map[i].ioapic, virq_passthrough_map[i].pin,
-                                                           (void *)(uint64_t)i);
+                    for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
+                        if (i == redirection_reg_idx) {
+                            if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
+                                ioapic_regs.virq_passthrough_map[i].ack_fn(
+                                    0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                            }
                             break;
                         }
                     }

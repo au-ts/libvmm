@@ -115,77 +115,42 @@
 
 #define INTEL_82441_DEVICE_ID  0x1237
 
-// TODO: use actual macros rather than hard-coded values
-struct pci_bus pci_bus_state = {
-    .host_bridge = { .device_id = INTEL_82441_DEVICE_ID, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0 },
-    .isa_bridge = { .device_id = 0x7000,
-                    .vendor_id = 0x8086,
-                    .class_code = 0x6,
-                    .subclass = 1,
-                    .header_type = 0x80, // bit 7 multifunction
-                },
-    // .ide_controller_enable = false,
-};
+// struct pci_x86_state {
+//     uint32_t selected_pio_addr_reg;
+// };
 
-static bool pci_host_bridge_pio_addr_reg_enable(void)
-{
-    return !!(pci_bus_state.selected_pio_addr_reg >> 31);
-}
+// static struct pci_x86_state pci_x86_state;
 
-static uint8_t pci_host_bridge_pio_addr_reg_bus(void)
-{
-    return (pci_bus_state.selected_pio_addr_reg >> 16) & 0x7f;
-}
 
-static uint8_t pci_host_bridge_pio_addr_reg_dev(void)
-{
-    return (pci_bus_state.selected_pio_addr_reg >> 11) & 0x1f;
-}
 
-static uint8_t pci_host_bridge_pio_addr_reg_func(void)
-{
-    return (pci_bus_state.selected_pio_addr_reg >> 8) & 0x7;
-}
+// bool is_pci_config_space_access_mech_1(uint16_t port_addr)
+// {
+//     if (port_addr >= PCI_CONFIG_ADDRESS_START_PORT && port_addr < PCI_CONFIG_ADDRESS_END_PORT) {
+//         return true;
+//     }
+//     if (port_addr >= PCI_CONFIG_DATA_START_PORT && port_addr < PCI_CONFIG_DATA_END_PORT) {
+//         return true;
+//     }
+//     return false;
+// }
 
-static uint8_t pci_host_bridge_pio_addr_reg_offset(void)
-{
-    return pci_bus_state.selected_pio_addr_reg & 0xff;
-}
+// static bool is_host_bridge_access(void)
+// {
+//     return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
+//         && pci_host_bridge_pio_addr_reg_dev() == 0 && pci_host_bridge_pio_addr_reg_func() == 0;
+// }
 
-static void pci_host_bridge_invalid_read(seL4_VCPUContext *vctx)
-{
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    vctx_raw[RAX_IDX] = 0xffffffff;
-}
+// static bool is_isa_bridge_access(void)
+// {
+//     return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
+//         && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 0;
+// }
 
-bool is_pci_config_space_access_mech_1(uint16_t port_addr)
-{
-    if (port_addr >= PCI_CONFIG_ADDRESS_START_PORT && port_addr < PCI_CONFIG_ADDRESS_END_PORT) {
-        return true;
-    }
-    if (port_addr >= PCI_CONFIG_DATA_START_PORT && port_addr < PCI_CONFIG_DATA_END_PORT) {
-        return true;
-    }
-    return false;
-}
-
-static bool is_host_bridge_access(void)
-{
-    return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
-        && pci_host_bridge_pio_addr_reg_dev() == 0 && pci_host_bridge_pio_addr_reg_func() == 0;
-}
-
-static bool is_isa_bridge_access(void)
-{
-    return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
-        && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 0;
-}
-
-static bool is_isa_power_mgmt_access(void)
-{
-    return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
-        && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 3;
-}
+// static bool is_isa_power_mgmt_access(void)
+// {
+//     return pci_host_bridge_pio_addr_reg_enable() && pci_host_bridge_pio_addr_reg_bus() == 0
+//         && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 3;
+// }
 
 // static bool is_ide_controller_access(void)
 // {
@@ -193,74 +158,74 @@ static bool is_isa_power_mgmt_access(void)
 //         && pci_host_bridge_pio_addr_reg_dev() == 1 && pci_host_bridge_pio_addr_reg_func() == 1;
 // }
 
-bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_access_width_t access_width)
-{
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    if (is_read) {
-        switch (pci_host_bridge_pio_addr_reg_offset()) {
-        case PMREGMISC_OFFSET:
-            vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc;
-            break;
-        case PMBA_OFFSET:
-            vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmba;
-            break;
-        }
-    } else {
-        switch (pci_host_bridge_pio_addr_reg_offset()) {
-        case PMREGMISC_OFFSET:
-            pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc = vctx_raw[RAX_IDX];
-            break;
-        case PMBA_OFFSET:
-            pci_bus_state.isa_bridge_power_mgmt_regs.pmba = vctx_raw[RAX_IDX];
-            break;
-        }
-    }
+// bool emulate_isa_power_mgmt_access(seL4_VCPUContext *vctx, bool is_read, ioport_access_width_t access_width)
+// {
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     if (is_read) {
+//         switch (pci_host_bridge_pio_addr_reg_offset()) {
+//         case PMREGMISC_OFFSET:
+//             vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc;
+//             break;
+//         case PMBA_OFFSET:
+//             vctx_raw[RAX_IDX] = pci_bus_state.isa_bridge_power_mgmt_regs.pmba;
+//             break;
+//         }
+//     } else {
+//         switch (pci_host_bridge_pio_addr_reg_offset()) {
+//         case PMREGMISC_OFFSET:
+//             pci_bus_state.isa_bridge_power_mgmt_regs.pmregmisc = vctx_raw[RAX_IDX];
+//             break;
+//         case PMBA_OFFSET:
+//             pci_bus_state.isa_bridge_power_mgmt_regs.pmba = vctx_raw[RAX_IDX];
+//             break;
+//         }
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
-bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
-                                         ioport_access_width_t access_width, struct pci_config_space *config_space)
-{
-    bool success = true;
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    uint8_t *config_bytes = (uint8_t *)config_space;
-    int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
+// bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
+//                                          ioport_access_width_t access_width, struct pci_config_space *config_space)
+// {
+//     bool success = true;
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     uint8_t *config_bytes = (uint8_t *)config_space;
+//     int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
 
-    // caller must catch!
-    assert(pci_host_bridge_pio_addr_reg_enable());
+//     // caller must catch!
+//     assert(pci_host_bridge_pio_addr_reg_enable());
 
-    int bytes_to_copy = ioports_access_width_to_bytes(access_width);
-    assert(bytes_to_copy);
+//     int bytes_to_copy = ioports_access_width_to_bytes(access_width);
+//     assert(bytes_to_copy);
 
-    if (!is_read) {
-        memcpy(&config_bytes[pci_host_bridge_pio_addr_reg_offset() + port_offset], &vctx_raw[RAX_IDX], bytes_to_copy);
-    } else {
-        memcpy(&vctx_raw[RAX_IDX], &config_bytes[pci_host_bridge_pio_addr_reg_offset() + port_offset], bytes_to_copy);
-    }
+//     if (!is_read) {
+//         memcpy(&config_bytes[pci_host_bridge_pio_addr_reg_offset() + port_offset], &vctx_raw[RAX_IDX], bytes_to_copy);
+//     } else {
+//         memcpy(&vctx_raw[RAX_IDX], &config_bytes[pci_host_bridge_pio_addr_reg_offset() + port_offset], bytes_to_copy);
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
-bool emulate_pci_config_space_access_mmio(seL4_VCPUContext *vctx, uint16_t reg_off, uint64_t qualification,
-                                          memory_instruction_data_t decoded_mem_ins,
-                                          struct pci_config_space *config_space)
-{
-    bool success = true;
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    uint8_t *config_bytes = (uint8_t *)config_space;
+// bool emulate_pci_config_space_access_mmio(seL4_VCPUContext *vctx, uint16_t reg_off, uint64_t qualification,
+//                                           memory_instruction_data_t decoded_mem_ins,
+//                                           struct pci_config_space *config_space)
+// {
+//     bool success = true;
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     uint8_t *config_bytes = (uint8_t *)config_space;
 
-    int bytes_to_copy = mem_access_width_to_bytes(decoded_mem_ins.access_width);
-    assert(bytes_to_copy);
+//     int bytes_to_copy = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+//     assert(bytes_to_copy);
 
-    if (ept_fault_is_write(qualification)) {
-        memcpy(&config_bytes[reg_off], &vctx_raw[decoded_mem_ins.target_reg], bytes_to_copy);
-    } else {
-        memcpy(&vctx_raw[decoded_mem_ins.target_reg], &config_bytes[reg_off], bytes_to_copy);
-    }
+//     if (ept_fault_is_write(qualification)) {
+//         memcpy(&config_bytes[reg_off], &vctx_raw[decoded_mem_ins.target_reg], bytes_to_copy);
+//     } else {
+//         memcpy(&vctx_raw[decoded_mem_ins.target_reg], &config_bytes[reg_off], bytes_to_copy);
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
 // bool native_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
 //                                         ioport_access_width_t access_width)
@@ -325,101 +290,102 @@ bool emulate_pci_config_space_access_mmio(seL4_VCPUContext *vctx, uint16_t reg_o
 //     return success;
 // }
 
-bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
-                                            ioport_access_width_t access_width)
-{
-    uint64_t *vctx_raw = (uint64_t *)vctx;
+// bool emulate_pci_config_space_access_mech_1(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
+//                                             ioport_access_width_t access_width)
+// {
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
 
-    // if (is_read) {
-    //     LOG_PCI("handling PCI config space mech #1 read at I/O 0x%lx\n", port_addr);
-    // } else {
-    //     LOG_PCI("handling PCI config space mech #1 write at I/O 0x%lx, val 0x%lx\n", port_addr, vctx_raw[RAX_IDX]);
-    // }
+//     // if (is_read) {
+//     //     LOG_PCI("handling PCI config space mech #1 read at I/O 0x%lx\n", port_addr);
+//     // } else {
+//     //     LOG_PCI("handling PCI config space mech #1 write at I/O 0x%lx, val 0x%lx\n", port_addr, vctx_raw[RAX_IDX]);
+//     // }
 
-    bool success = true;
+//     bool success = true;
 
-    if (port_addr >= PCI_CONFIG_ADDRESS_START_PORT && port_addr < PCI_CONFIG_ADDRESS_END_PORT) {
-        if (is_read) {
-            assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
-            vctx_raw[RAX_IDX] = pci_bus_state.selected_pio_addr_reg;
-        } else {
-            uint32_t value = vctx_raw[RAX_IDX];
-            if (value >> 31) {
-                // @billn revisit
-                // vcpu_print_regs(0);
-                // assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
-                pci_bus_state.selected_pio_addr_reg = value;
+//     if (port_addr >= PCI_CONFIG_ADDRESS_START_PORT && port_addr < PCI_CONFIG_ADDRESS_END_PORT) {
+//         if (is_read) {
+//             assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
+//             vctx_raw[RAX_IDX] = pci_bus_state.selected_pio_addr_reg;
+//         } else {
+//             uint32_t value = vctx_raw[RAX_IDX];
+//             if (value >> 31) {
+//                 // @billn revisit
+//                 // vcpu_print_regs(0);
+//                 // assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
+//                 pci_bus_state.selected_pio_addr_reg = value;
 
-                LOG_PCI_PIO("selecting bus %d, device %d, func %d, reg_offset 0x%x\n",
-                            pci_host_bridge_pio_addr_reg_bus(), pci_host_bridge_pio_addr_reg_dev(),
-                            pci_host_bridge_pio_addr_reg_func(), pci_host_bridge_pio_addr_reg_offset());
-            }
-        }
+//                 LOG_PCI_PIO("selecting bus %d, device %d, func %d, reg_offset 0x%x\n",
+//                             pci_host_bridge_pio_addr_reg_bus(), pci_host_bridge_pio_addr_reg_dev(),
+//                             pci_host_bridge_pio_addr_reg_func(), pci_host_bridge_pio_addr_reg_offset());
+//             }
+//         }
 
-    } else if (port_addr >= PCI_CONFIG_DATA_START_PORT && port_addr < PCI_CONFIG_DATA_END_PORT) {
-        if (!pci_host_bridge_pio_addr_reg_enable()) {
-            pci_host_bridge_invalid_read(vctx);
-        } else {
+//     } else if (port_addr >= PCI_CONFIG_DATA_START_PORT && port_addr < PCI_CONFIG_DATA_END_PORT) {
+//         if (!pci_host_bridge_pio_addr_reg_enable()) {
+//             pci_host_bridge_invalid_read(vctx);
+//         } else {
 
-            // @billn probably not scalable in-terms of code readability
-            if (is_host_bridge_access()) {
-                success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
-                                                              &pci_bus_state.host_bridge);
-            } else if (is_isa_bridge_access()) {
-                success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
-                                                              &pci_bus_state.isa_bridge);
+//             // @billn probably not scalable in-terms of code readability
+//             if (is_host_bridge_access()) {
+//                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
+//                                                               &pci_bus_state.host_bridge);
+//             } else if (is_isa_bridge_access()) {
+//                 success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width,
+//                                                               &pci_bus_state.isa_bridge);
 
-            } else if (is_isa_power_mgmt_access()) {
-                success = emulate_isa_power_mgmt_access(vctx, is_read, access_width);
+//             } else if (is_isa_power_mgmt_access()) {
+//                 success = emulate_isa_power_mgmt_access(vctx, is_read, access_width);
 
-            // } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
-            //     success = native_pci_config_space_access_pio(vctx, port_addr, is_read, access_width);
+//                 // } else if (pci_bus_state.ide_controller_enable && is_ide_controller_access()) {
+//                 //     success = native_pci_config_space_access_pio(vctx, port_addr, is_read, access_width);
 
-            } else {
-                if (is_read) {
-                    pci_host_bridge_invalid_read(vctx);
-                }
-            }
-        }
-    } else {
-        success = false;
-    }
+//             } else {
+//                 if (is_read) {
+//                     pci_host_bridge_invalid_read(vctx);
+//                 }
+//             }
+//         }
+//     } else {
+//         success = false;
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
-bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                                          memory_instruction_data_t decoded_mem_ins)
-{
-    uint8_t bus = (offset >> 20) & 0xff;
-    uint8_t dev = (offset >> 15) & 0x1f;
-    uint8_t func = (offset >> 12) & 0x7;
-    uint16_t reg_off = (offset >> 2) & 0x3ff;
-    int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+// bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
+//                                           memory_instruction_data_t decoded_mem_ins)
+// {
+//     uint8_t bus = (offset >> 20) & 0xff;
+//     uint8_t dev = (offset >> 15) & 0x1f;
+//     uint8_t func = (offset >> 12) & 0x7;
+//     uint16_t reg_off = (offset >> 2) & 0x3ff;
+//     int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
 
-    bool success = true;
+//     bool success = true;
 
-    uint64_t *vctx_raw = (uint64_t *)vctx;
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
 
-    if (ept_fault_is_read(qualification)) {
-        LOG_PCI_ECAM("Reading via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d\n", bus, dev, func,
-                     reg_off, access_width_bytes);
+//     if (ept_fault_is_read(qualification)) {
+//         LOG_PCI_ECAM("Reading via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d\n", bus, dev, func,
+//                      reg_off, access_width_bytes);
 
-        // @billn fix hardcodey
-        if (bus == 0 && dev == 0 && func == 0) {
-            return emulate_pci_config_space_access_mmio(vctx, reg_off, qualification, decoded_mem_ins, &pci_bus_state.host_bridge);
-        } else {
-            vctx_raw[decoded_mem_ins.target_reg] = ~0;
-        }
-    } else {
-        LOG_PCI_ECAM("Writing via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d = value 0x%lx\n", bus,
-                     dev, func, reg_off, access_width_bytes, vctx_raw[decoded_mem_ins.target_reg]);
+//         // @billn fix hardcodey
+//         if (bus == 0 && dev == 0 && func == 0) {
+//             return emulate_pci_config_space_access_mmio(vctx, reg_off, qualification, decoded_mem_ins,
+//                                                         &pci_bus_state.host_bridge);
+//         } else {
+//             vctx_raw[decoded_mem_ins.target_reg] = ~0;
+//         }
+//     } else {
+//         LOG_PCI_ECAM("Writing via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d = value 0x%lx\n", bus,
+//                      dev, func, reg_off, access_width_bytes, vctx_raw[decoded_mem_ins.target_reg]);
 
-        success = false;
-    }
+//         success = false;
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
 // bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
 //                                 uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
@@ -445,4 +411,117 @@ bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offse
 //             pci_bus_state.native_ide_con_addr.dev, pci_bus_state.native_ide_con_addr.func);
 
 //     return true;
+// }
+
+// extern struct virtio_pci_ecam global_pci_ecam;
+
+bool pci_x86_init(void)
+{
+    // @billn todo check that the ECAM was initialised
+
+    struct pci_config_space host_bridge = (struct pci_config_space) {
+        .device_id = INTEL_82441_DEVICE_ID, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0
+    };
+
+    struct pci_config_space isa_bridge = (struct pci_config_space) {
+        .device_id = 0x7000,
+        .vendor_id = 0x8086,
+        .class_code = 0x6,
+        .subclass = 1,
+        .header_type = 0x80, // bit 7 multifunction
+    };
+
+    assert(pci_ecam_add_device(0, 0, 0, &host_bridge));
+    assert(pci_ecam_add_device(0, 1, 0, &isa_bridge));
+    // Power management function
+    assert(pci_ecam_add_device(0, 1, 3, &isa_bridge));
+
+    return true;
+}
+
+// bool pci_x86_emulate_pio_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
+//                                 ioport_access_width_t access_width)
+// {
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+
+//     if (is_read) {
+//         LOG_PCI_PIO("handling PCI config space mech #1 read at I/O 0x%lx\n", port_addr);
+//     } else {
+//         LOG_PCI_PIO("handling PCI config space mech #1 write at I/O 0x%lx, val 0x%lx\n", port_addr, vctx_raw[RAX_IDX]);
+//     }
+
+//     bool success = true;
+
+//     if (port_addr >= PCI_CONFIG_ADDRESS_START_PORT && port_addr < PCI_CONFIG_ADDRESS_END_PORT) {
+//         if (is_read) {
+//             assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
+//             vctx_raw[RAX_IDX] = pci_x86_state.selected_pio_addr_reg;
+//         } else {
+//             uint32_t value = vctx_raw[RAX_IDX];
+//             if (value >> 31) {
+//                 // @billn revisit
+//                 // vcpu_print_regs(0);
+//                 // assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
+//                 pci_x86_state.selected_pio_addr_reg = value;
+
+//                 LOG_PCI_PIO("selecting bus %d, device %d, func %d, reg_offset 0x%x\n",
+//                             pci_host_bridge_pio_addr_reg_bus(), pci_host_bridge_pio_addr_reg_dev(),
+//                             pci_host_bridge_pio_addr_reg_func(), pci_host_bridge_pio_addr_reg_offset());
+//             }
+//         }
+
+//     } else if (port_addr >= PCI_CONFIG_DATA_START_PORT && port_addr < PCI_CONFIG_DATA_END_PORT) {
+//         if (!pci_host_bridge_pio_addr_reg_enable()) {
+//             pci_host_bridge_invalid_pio_read(vctx);
+//         } else if (pci_host_bridge_pio_addr_reg_bus() > 0) {
+//             // the real backing ECAM only have enough space for 1 bus
+//             pci_host_bridge_invalid_pio_read(vctx);
+//         } else {
+//             // @Billn hack
+//             uint8_t bus = pci_host_bridge_pio_addr_reg_bus();
+//             uint8_t dev = pci_host_bridge_pio_addr_reg_dev();
+//             uint8_t func = pci_host_bridge_pio_addr_reg_func();
+
+//             uint32_t ecam_off = (bus << 20) | ((dev & 0x1f) << 15) | ((func & 0x7) << 12);
+//             struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base + ecam_off);
+
+//             LOG_VMM("global_pci_ecam.vmm_base = 0x%lx, ecam_off = 0x%lx\n", global_pci_ecam.vmm_base, ecam_off);
+
+//             success = emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width, config_space);
+//         }
+//     } else {
+//         LOG_VMM_ERR("pci_x86_emulate_pio_access() called with unknown PIO addr 0x%x\n", port_addr);
+//         success = false;
+//     }
+
+//     return success;
+// }
+
+// // @billn hack, needs to be in pci.c unify with ARM
+// bool pci_x86_emulate_ecam_access(seL4_VCPUContext *vctx, uint32_t offset, uint64_t qualification,
+//                                  memory_instruction_data_t decoded_mem_ins)
+// {
+//     uint8_t bus = (offset >> 20) & 0xff;
+//     int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+//     uint8_t *bytes = (uint8_t *) (global_pci_ecam.vmm_base + offset);
+
+//     bool success = true;
+
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+
+//     if (ept_fault_is_read(qualification)) {
+//         if (bus > 0) {
+//             vctx_raw[decoded_mem_ins.target_reg] = ~0ull;
+//         } else {
+//             LOG_PCI_ECAM("Reading via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d\n", bus, dev, func,
+//                          reg_off, access_width_bytes);
+//             memcpy(&vctx_raw[decoded_mem_ins.target_reg], bytes, access_width_bytes);
+//         }
+//     } else {
+//         LOG_PCI_ECAM("Writing via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d = value 0x%lx\n", bus,
+//                      dev, func, reg_off, access_width_bytes, vctx_raw[decoded_mem_ins.target_reg]);
+//         memcpy(bytes, &vctx_raw[decoded_mem_ins.target_reg], access_width_bytes);
+//     }
+
+//     return success;
 // }
