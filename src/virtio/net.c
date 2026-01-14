@@ -424,5 +424,5 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, s
 
     virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
 
-    return virtio_pci_register_device(dev, virq);
+    return pci_register_virtio_device(dev, virq);
 }

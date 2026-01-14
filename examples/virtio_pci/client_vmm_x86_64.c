@@ -21,6 +21,7 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
@@ -57,6 +58,8 @@ uint64_t guest_ram_size;
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
 
+uintptr_t guest_ecam_vaddr = 0x100000;
+uint64_t guest_ecam_size = 0x100000;
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
@@ -85,6 +88,15 @@ void init(void)
     }
 
     vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
+
+    // Set up the PCI bus
+    // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
+    assert(guest_ecam_size == ECAM_SIZE);
+
+    assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
+    assert(virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000));
+
+    assert(pci_x86_init());
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
