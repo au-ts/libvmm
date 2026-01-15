@@ -85,6 +85,7 @@ uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
+    assert(net_config_check_magic(&net_config));
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
