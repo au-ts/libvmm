@@ -14,6 +14,7 @@
 #include <sddf/network/queue.h>
 
 #if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/util.h>
 #endif
 
@@ -145,7 +146,12 @@ static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t
 static bool virtio_net_respond(struct virtio_device *dev)
 {
     dev->regs.InterruptStatus = BIT_LOW(0);
-    bool success = virq_inject(dev->virq);
+        bool success;
+#if defined(CONFIG_ARCH_AARCH64)
+    success = virq_inject(dev->virq);
+#elif defined(CONFIG_ARCH_X86_64)
+    success = inject_ioapic_irq(0, dev->virq);
+#endif
     assert(success);
 
     return success;
@@ -403,6 +409,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
     return dev;
 }
 
+#ifndef CONFIG_ARCH_X86_64
 bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
                           net_queue_handle_t *rx, net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
                           microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
@@ -411,6 +418,7 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_ba
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
+#endif
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, size_t virq, net_queue_handle_t *rx,
                          net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch,
