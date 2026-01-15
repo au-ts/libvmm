@@ -516,6 +516,12 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
         if (data == 0x1) {
             dev->vqs[dev->regs.QueueSel].ready = true;
             // the virtq is already in ram so we don't need to do any initiation
+
+            // The guest writes GPA into these registers, we must translate it into VMM virtual address
+            // @billn currently doesnt work on aarch64 as it lacks this util function
+            dev->vqs[dev->regs.QueueSel].virtq.avail = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.avail);
+            dev->vqs[dev->regs.QueueSel].virtq.used = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.used);
+            dev->vqs[dev->regs.QueueSel].virtq.desc = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.desc);
         }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
