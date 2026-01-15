@@ -126,28 +126,58 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     # # Net subsystem
     # net_node = dtb.node(board.net)
     # assert net_node is not None
-    # # guest_net_node = client_dtb.node(board.guest_net)
-    # # assert guest_net_node is not None
+    # guest_net_node = client_dtb.node(board.guest_net)
+    # assert guest_net_node is not None
 
-    # eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
-    #                               priority=101, budget=100, period=400)
-    # net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
-    # net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
-    # net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
-    # client0_net_copier = ProtectionDomain(
-    #     "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+    net_node = None
 
-    # pds = [
-    #     eth_driver,
-    #     net_virt_rx,
-    #     net_virt_tx,
-    #     client0_net_copier,
-    # ]
-    # for pd in pds:
-    #     sdf.add_pd(pd)
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+                                  priority=254, budget=100, period=400)
+    net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
+    net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
+    net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
+    client0_net_copier = ProtectionDomain(
+        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
 
-    # # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
-    # net_system.add_client_with_copier(vmm_client0, client0_net_copier)
+    if board.arch == SystemDescription.Arch.X86_64:
+        hw_net_rings = SystemDescription.MemoryRegion(
+            sdf, "hw_net_rings", 0x10000, paddr=0x7A000000
+        )
+        sdf.add_mr(hw_net_rings)
+        hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
+        eth_driver.add_map(hw_net_rings_map)
+
+        virtio_net_regs = SystemDescription.MemoryRegion(
+            sdf, "virtio_net_regs", 0x4000, paddr=0xFE000000
+        )
+        sdf.add_mr(virtio_net_regs)
+        virtio_net_regs_map = SystemDescription.Map(
+            virtio_net_regs, 0x6000_0000, "rw", cached=False
+        )
+        eth_driver.add_map(virtio_net_regs_map)
+
+        virtio_net_irq = SystemDescription.IrqIoapic(
+            ioapic_id=0, pin=11, vector=1, id=16
+        )
+        eth_driver.add_irq(virtio_net_irq)
+
+        pci_config_address_port = SystemDescription.IoPort(0xCF8, 4, 1)
+        eth_driver.add_ioport(pci_config_address_port)
+
+        pci_config_data_port = SystemDescription.IoPort(0xCFC, 4, 2)
+        eth_driver.add_ioport(pci_config_data_port)
+
+    pds = [
+        eth_driver,
+        net_virt_rx,
+        net_virt_tx,
+        client0_net_copier,
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
+
+    # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    net_system.add_client_with_copier(vmm_client0, client0_net_copier)
 
 
 
@@ -224,8 +254,8 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     assert serial_system.serialise_config(output_dir)
     # assert blk_system.connect()
     # assert blk_system.serialise_config(output_dir)
-    # assert net_system.connect()
-    # assert net_system.serialise_config(output_dir)
+    assert net_system.connect()
+    assert net_system.serialise_config(output_dir)
     assert client0.connect()
     assert client0.serialise_config(output_dir)
 

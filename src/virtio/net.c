@@ -69,7 +69,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
         break;
     default:
         LOG_NET_ERR("Bad DeviceFeaturesSel 0x%x\n", dev->regs.DeviceFeaturesSel);
-        return false;
+        return true;
     }
     return true;
 }
@@ -93,7 +93,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
 
     default:
         LOG_NET_ERR("Bad DriverFeaturesSel 0x%x\n", dev->regs.DriverFeaturesSel);
-        success = false;
+        success = true;
     }
     if (success) {
         dev->features_happy = 1;
