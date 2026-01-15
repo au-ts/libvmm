@@ -67,7 +67,7 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
         break;
     default:
         LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
-        return false;
+        return true;
     }
 
     return true;
@@ -92,7 +92,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
         break;
     default:
         LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
-        return false;
+        return true;
     }
 
     if (success) {
@@ -120,11 +120,14 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     LOG_CONSOLE("operation: handle transmit\n");
     // @ivanv: we need to check the pre-conditions before doing anything. e.g check
     // TX_QUEUE is ready?
+
     assert(dev->num_vqs > TX_QUEUE);
     struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
     struct virtio_console_device *console = device_state(dev);
 
     /* Transmit all available descriptors possible */
+    LOG_VMM("vq->virtq.avail = 0x%lx\n", vq->virtq.avail);
+
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
     while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(console->txq, console->txq->queue->head)) {
