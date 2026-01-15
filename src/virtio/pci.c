@@ -771,10 +771,10 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
     uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + config_space_ecam_off + reg_off);
     memcpy(data, bytes, access_width_bytes);
 
-    LOG_VMM("read reg_off 0x%x on dev id 0x%x\n", reg_off, config_space->device_id);
-    for (int i = 0; i < 4; i++) {
-        LOG_VMM("data 0x%x\n", ((uint8_t *)data)[i]);
-    }
+    // LOG_VMM("read reg_off 0x%x on dev id 0x%x\n", reg_off, config_space->device_id);
+    // for (int i = 0; i < 4; i++) {
+    //     LOG_VMM("data 0x%x\n", ((uint8_t *)data)[i]);
+    // }
 
     return true;
 }
