@@ -13,9 +13,9 @@
 
 #define TIMER_DRV_CH_FOR_LAPIC 11
 
-#define LAPIC_NUM_ISR_IRR_32B 8
+#define LAPIC_NUM_ISR_IRR_TMR_32B 8
 #define MIN_VECTOR 32
-#define MAX_VECTOR (LAPIC_NUM_ISR_IRR_32B * 32)
+#define MAX_VECTOR (LAPIC_NUM_ISR_IRR_TMR_32B * 32)
 
 struct lapic_regs {
     // @billn make a container struct?
@@ -32,8 +32,9 @@ struct lapic_regs {
     uint32_t dfr;
     uint32_t ldr;
     // These two are actually 256-bit register
-    uint32_t isr[LAPIC_NUM_ISR_IRR_32B];
-    uint32_t irr[LAPIC_NUM_ISR_IRR_32B];
+    uint32_t isr[LAPIC_NUM_ISR_IRR_TMR_32B];
+    uint32_t irr[LAPIC_NUM_ISR_IRR_TMR_32B];
+    uint32_t tmr[LAPIC_NUM_ISR_IRR_TMR_32B];
     uint32_t dcr;
     uint32_t init_count;
     uint32_t timer;
