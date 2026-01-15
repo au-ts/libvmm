@@ -77,7 +77,7 @@ BOARDS: List[Board] = [
 
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=100)
+    vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=1)
     vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
@@ -132,7 +132,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     net_node = None
 
     eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
-                                  priority=254, budget=100, period=400)
+                                  priority=254)
     net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
     net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
@@ -157,7 +157,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         eth_driver.add_map(virtio_net_regs_map)
 
         virtio_net_irq = SystemDescription.IrqIoapic(
-            ioapic_id=0, pin=11, vector=1, id=16
+            ioapic_id=0, pin=11, vector=44, id=16
         )
         eth_driver.add_irq(virtio_net_irq)
 
