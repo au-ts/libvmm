@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #endif
 #include <string.h>
@@ -462,7 +463,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         success = dev->funs->get_device_features(dev, data);
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
-        *data = dev->num_vqs << 16;
+        *data = dev->num_vqs;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_STATUS, VIRTIO_PCI_COMMON_CFG_GENERATION):
         *data = dev->regs.Status;
@@ -478,7 +479,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_OFF, VIRTIO_PCI_COMMON_Q_DESC_LO):
         // proper way?
-        *data = 1 << 16;
+        *data = 1;
         break;
     default:
         LOG_PCI_ERR("read operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
