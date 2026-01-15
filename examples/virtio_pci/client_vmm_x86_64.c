@@ -17,6 +17,7 @@
 #include <sddf/network/config.h>
 #include <sddf/serial/queue.h>
 #include <libvmm/virtio/console.h>
+#include <libvmm/virtio/net.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -38,6 +39,11 @@ serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
 static struct virtio_console_device virtio_console;
 
+/* Virtio Net */
+net_queue_handle_t net_rx_queue;
+net_queue_handle_t net_tx_queue;
+static struct virtio_net_device virtio_net;
+
 // Device slot of the virtio console device on bus 0.
 // Host bridge = 0, ISA bridge = 1 so we must avoid these.
 // Then on Intel, the integrated graphics is conventionally on slot 2 as well...
@@ -45,12 +51,15 @@ static struct virtio_console_device virtio_console;
 #define VIRTIO_CONSOLE_PCI_DEVICE_SLOT 3
 #define VIRTIO_CONSOLE_PCI_IOAPIC_PIN 15
 
+#define VIRTIO_NET_PCI_DEVICE_SLOT 4
+#define VIRTIO_NET_PCI_IOAPIC_PIN 14
+
 #define COM1_PIO_ID 0
 
 // @billn sus, use package asm script
 #include "client_vm/x86_64/simple_dsdt.hex"
 
-#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=hvc0 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "initcall_debug earlyprintk=serial,0x3f8,115200 debug console=hvc0 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -108,6 +117,18 @@ void init(void)
     assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
                                    &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
 
+    // /* Initialise virtIO net device */
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
+
+    bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                  net_config.mac_addr);
+    assert(success);
+
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
     tsc_pre = rdtsc();
@@ -117,6 +138,12 @@ void notified(microkit_channel ch)
 {
     if (ch == serial_config.rx.id) {
         virtio_console_handle_rx(&virtio_console);
+        return;
+    } else if (ch == net_config.rx.id) {
+        virtio_net_handle_rx(&virtio_net);
+        return;
+    } else if (ch == net_config.tx.id || ch == serial_config.tx.id) {
+        // Nothing to do.
         return;
     }
 

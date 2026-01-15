@@ -83,6 +83,9 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     // Virtio console:
                     // Device 0x3, function 0, INTA -> GSI 15
                     Package() { 0x00030000, 0, 0, 15 },
+                    // Virtio net:
+                    // Device 0x4, function 0, INTA -> GSI 14
+                    Package() { 0x00040000, 0, 0, 14 },
                 })
             }
         }
