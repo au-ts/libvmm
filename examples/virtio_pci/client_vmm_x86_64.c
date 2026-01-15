@@ -58,7 +58,7 @@ extern char _guest_kernel_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
-/* Microkit will set this variable to the start of the guest RAM memory region. */
+
 uintptr_t guest_ram_vaddr = 0x20000000;
 
 // @billn unused, but have to leave it here otherwise linker complains, revisit
@@ -101,7 +101,7 @@ void init(void)
     assert(guest_ecam_size == ECAM_SIZE);
 
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
-    assert(virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000));
+    assert(virtio_pci_register_memory_resource(0x40000000, 0x40000000, 0x10000));
 
     assert(pci_x86_init());
 
@@ -129,6 +129,8 @@ void notified(microkit_channel ch)
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
             }
+
+            assert(virq_ioapic_register_passthrough(0, 4, 0));
 
             guest_start(linux_setup.kernel_entry_gpa, 0, 0);
         } else {

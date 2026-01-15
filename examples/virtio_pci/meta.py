@@ -85,7 +85,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     if board.arch == SystemDescription.Arch.X86_64:
         guest_ram_mr = MemoryRegion(sdf, name="guest_ram", size=0x1000_0000)
         sdf.add_mr(guest_ram_mr)
-        vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x2000_0000, perms="rw"))
+        vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x20000000, perms="rw"))
         vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
     # Serial subsystem
@@ -218,7 +218,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
     memory_resource = MemoryRegion(sdf, name="memory_resource", size=0x10000)
     sdf.add_mr(memory_resource)
-    vmm_client0.add_map(Map(memory_resource, vaddr=0x1000_0000, perms="rw"))
+    vmm_client0.add_map(Map(memory_resource, vaddr=0x4000_0000, perms="rw"))
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
