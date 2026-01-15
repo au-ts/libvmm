@@ -18,7 +18,7 @@
 #endif
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_CONSOLE
+// #define DEBUG_CONSOLE
 
 #if defined(DEBUG_CONSOLE)
 #define LOG_CONSOLE(...) do{ printf("VIRTIO(CONSOLE): "); printf(__VA_ARGS__); }while(0)
@@ -127,8 +127,6 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     struct virtio_console_device *console = device_state(dev);
 
     /* Transmit all available descriptors possible */
-    LOG_VMM("vq->virtq.avail = 0x%lx\n", vq->virtq.avail);
-
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
     while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(console->txq, console->txq->queue->head)) {
