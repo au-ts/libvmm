@@ -110,7 +110,7 @@ void init(void)
     assert(guest_ecam_size == ECAM_SIZE);
 
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
-    assert(virtio_pci_register_memory_resource(0x40000000, 0x40000000, 0x10000));
+    assert(virtio_pci_register_memory_resource(0x40000000, 0x40000000, 0x80000));
 
     assert(pci_x86_init());
 
