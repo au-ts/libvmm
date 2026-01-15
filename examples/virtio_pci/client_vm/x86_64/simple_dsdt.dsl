@@ -40,9 +40,9 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 WordBusNumber (ResourceProducer, MinFixed, MaxFixed, PosDecode,
                     0x0000,         // Granularity
                     0x0000,         // Min
-                    0x00FF,         // Max
+                    0x0000,         // Max
                     0x0000,         // Translation
-                    0x0100          // Length
+                    0x0001          // Length
                 )
 
                 // I/O port window(s) forwarded to PCI below this root bridge.
@@ -66,10 +66,10 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 // Prefetchable MMIO window
                 QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
                     0x0000000000000000, // Granularity
-                    0x20100000, // Min
-                    0x2fffffff, // Max
+                    0x40000000, // Min
+                    0x4000ffff, // Max
                     0x0000000000000000, // Translation
-                    0xFF00000  // Length
+                    0x10000  // Length
                 )
             })
         }
