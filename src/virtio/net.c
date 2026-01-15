@@ -13,6 +13,10 @@
 #include <libvmm/virtio/net.h>
 #include <sddf/network/queue.h>
 
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/util.h>
+#endif
+
 /* Uncomment this to enable debug logging */
 // #define DEBUG_NET
 
@@ -182,7 +186,7 @@ static void handle_tx_msg(struct virtio_device *dev,
         /* Truncate packets that are large than BUF_SIZE */
         uint32_t writing = MIN(dest_remaining, desc->len - skipping);
 
-        memcpy(dest_buf + written, (void *)desc->addr + skipping, writing);
+        memcpy(dest_buf + written, gpa_to_vaddr(desc->addr) + skipping, writing);
 
         skip_remaining -= skipping;
         written += writing;
@@ -265,7 +269,7 @@ static uint32_t copy_rx(struct virtq *virtq,
     do {
         uint32_t copying = MIN(size - copied, virtq->desc[*curr_desc_head].len - *desc_copied);
 
-        memcpy((void *)virtq->desc[*curr_desc_head].addr + *desc_copied, buf + copied, copying);
+        memcpy(gpa_to_vaddr(virtq->desc[*curr_desc_head].addr) + *desc_copied, buf + copied, copying);
 
         copied += copying;
         *desc_copied += copying;
