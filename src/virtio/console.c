@@ -14,6 +14,7 @@
 
 #if defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/util.h>
 #endif
 
 /* Uncomment this to enable debug logging */
@@ -148,8 +149,9 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
                     transferred = true;
                 }
 
+                void *desc_vmm_addr = gpa_to_vaddr(desc.addr);
                 memcpy(console->txq->data_region + (console->txq->queue->tail % console->txq->capacity),
-                       (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
+                       (char *)(desc_vmm_addr + (desc.len - bytes_remain)), to_transfer);
 
                 serial_update_shared_tail(console->txq, console->txq->queue->tail + to_transfer);
                 bytes_remain -= to_transfer;
@@ -206,7 +208,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
         uint32_t bytes_written = 0;
         char c;
         while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
-            *(char *)(desc.addr + bytes_written) = c;
+            *(char *)(gpa_to_vaddr(desc.addr) + bytes_written) = c;
             bytes_written++;
         }
 
