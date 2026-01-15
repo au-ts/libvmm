@@ -287,7 +287,7 @@ bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev
     bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
     assert(success);
 
-    virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
+    assert(virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE));
 
     return pci_register_virtio_device(dev, virq);
 }
