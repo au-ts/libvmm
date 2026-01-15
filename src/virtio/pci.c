@@ -24,7 +24,13 @@
 
 // @billn this should be moved to src/pci.c
 // @billn I don't like how some functions are general PCI stuff but prefixed with virtio
-// @billn figure out how to unify ARM and X86 fault handling,
+// @billn I don't like how all of this is very virtio centric, need to make it generic to non
+// virtio devices that we may have in the future such as passthrough GPUs or whatever.
+
+static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t *data,
+                                         int access_width_bytes);
+static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
+                                          int access_width_bytes);
 
 #define LOG_PCI_INFO(...) do{ printf("%s|VIRTIO(PCI) INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_PCI_ERR(...) do{ printf("%s|VIRTIO(PCI) ERROR: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -75,28 +81,28 @@ static void pci_invalid_pio_read(seL4_VCPUContext *vctx)
     vctx_raw[RAX_IDX] = ~0ull;
 }
 
-bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
-                                         ioport_access_width_t access_width, struct pci_config_space *config_space)
-{
-    bool success = true;
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    uint8_t *config_bytes = (uint8_t *)config_space;
-    int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
+// bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
+//                                          ioport_access_width_t access_width, struct pci_config_space *config_space)
+// {
+//     bool success = true;
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     uint8_t *config_bytes = (uint8_t *)config_space;
+//     int port_offset = port_addr - PCI_CONFIG_DATA_START_PORT;
 
-    // caller must catch!
-    assert(pci_pio_addr_reg_enable());
+//     // caller must catch!
+//     assert(pci_pio_addr_reg_enable());
 
-    int bytes_to_copy = ioports_access_width_to_bytes(access_width);
-    assert(bytes_to_copy);
+//     int bytes_to_copy = ioports_access_width_to_bytes(access_width);
+//     assert(bytes_to_copy);
 
-    if (!is_read) {
-        memcpy(&config_bytes[pci_pio_addr_reg_offset() + port_offset], &vctx_raw[RAX_IDX], bytes_to_copy);
-    } else {
-        memcpy(&vctx_raw[RAX_IDX], &config_bytes[pci_pio_addr_reg_offset() + port_offset], bytes_to_copy);
-    }
+//     if (!is_read) {
+//         memcpy(&config_bytes[pci_pio_addr_reg_offset() + port_offset], &vctx_raw[RAX_IDX], bytes_to_copy);
+//     } else {
+//         memcpy(&vctx_raw[RAX_IDX], &config_bytes[pci_pio_addr_reg_offset() + port_offset], bytes_to_copy);
+//     }
 
-    return success;
-}
+//     return success;
+// }
 
 // bool pci_x86_emulate_pio_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
 //                                 ioport_access_width_t access_width)
@@ -156,8 +162,8 @@ bool emulate_pci_config_space_access_pio(seL4_VCPUContext *vctx, uint16_t port_a
 //     return success;
 // }
 
-static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t offset, size_t qualification, seL4_VCPUContext *vctx,
-                                        void *cookie)
+static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
+                                        seL4_VCPUContext *vctx, void *cookie)
 {
     uint64_t is_read = qualification & BIT(3);
     uint16_t port_addr = (qualification >> 16) & 0xffff;
@@ -187,9 +193,10 @@ static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t offset, size_t 
     return true;
 }
 
-static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t offset, size_t qualification, seL4_VCPUContext *vctx,
-                                      void *cookie)
+static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
+                                      seL4_VCPUContext *vctx, void *cookie)
 {
+    // @billn make helpers
     uint64_t is_read = qualification & BIT(3);
     uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
@@ -200,19 +207,20 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t offset, size_t qu
         // the real backing ECAM only have enough space for 1 bus
         pci_invalid_pio_read(vctx);
     } else {
-        // @Billn hack
+        // LOG_VMM("PCI PIO accessing bus %d, dev %d, func %d\n", bus, dev, func);
+
         uint8_t bus = pci_pio_addr_reg_bus();
         uint8_t dev = pci_pio_addr_reg_dev();
         uint8_t func = pci_pio_addr_reg_func();
+        uint8_t reg_off = pci_pio_addr_reg_offset() + port_offset;
 
-        // LOG_VMM("PCI PIO accessing bus %d, dev %d, func %d\n", bus, dev, func);
-        
-        uint32_t ecam_off = (bus << 20) | ((dev & 0x1f) << 15) | ((func & 0x7) << 12);
-        struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base + ecam_off);
-
-        // LOG_VMM("global_pci_ecam.vmm_base = 0x%lx, ecam_off = 0x%lx\n", global_pci_ecam.vmm_base, ecam_off);
-
-        return emulate_pci_config_space_access_pio(vctx, port_addr, is_read, access_width, config_space);
+        if (is_read) {
+            return pci_config_space_read_access(bus, dev, func, reg_off, &(vctx->eax),
+                                                ioports_access_width_to_bytes(access_width));
+        } else {
+            return pci_config_space_write_access(bus, dev, func, reg_off, vctx->eax,
+                                                 ioports_access_width_to_bytes(access_width));
+        }
     }
 }
 
@@ -752,12 +760,37 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
     return success;
 }
 
-static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t offset, uint32_t data)
+static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t *data,
+                                         int access_width_bytes)
 {
-    struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
+    uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
 
-    switch (offset) {
+    struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
+                                                                        + config_space_ecam_off);
+
+    uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + config_space_ecam_off + reg_off);
+    memcpy(data, bytes, access_width_bytes);
+
+    LOG_VMM("read reg_off 0x%x on dev id 0x%x\n", reg_off, config_space->device_id);
+    for (int i = 0; i < 4; i++) {
+        LOG_VMM("data 0x%x\n", ((uint8_t *)data)[i]);
+    }
+
+    return true;
+}
+
+static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
+                                          int access_width_bytes)
+{
+    uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
+    struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
+                                                                        + config_space_ecam_off);
+
+    // @billn do we need default case???
+
+    switch (reg_off) {
     case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
+        // Device will respond to MMIO access and is DMA capable.
         config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
         break;
     }
@@ -766,7 +799,16 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t offset, ui
         break;
     }
     case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
-        uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) % 0x4;
+
+        uint32_t dev_table_idx = ((bus * VIRTIO_PCI_DEVS_PER_BUS) + dev & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + (func & 7);
+        virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
+
+        // @billn hack for Host and ISA bridges on x86, they dont have a *dev, see Note 3 on top
+        if (!dev) {
+            break;
+        }
+
+        uint8_t dev_bar_id = (reg_off - PCI_CFG_OFFSET_BAR1) % 0x4;
         uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
 
         // Memory negotiation process:
@@ -799,75 +841,104 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t offset, ui
 static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
     // LOG_VMM("handling virtio exam fault offset 0x%x\n", offset);
-    uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
-                               * VIRTIO_PCI_FUNCS_PER_DEV
-                           + ((offset >> 12) & 7);
-    virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
+    // uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
+    //                            * VIRTIO_PCI_FUNCS_PER_DEV
+    //                        + ((offset >> 12) & 7);
+    // virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
 
+    uint8_t bus = (offset >> 20) & 0xff;
+    uint8_t dev = (offset >> 15) & 0x1f;
+    uint8_t func = (offset >> 12) & 0x7;
+    uint16_t reg_off = offset & 0xfff;
+
+    // LOG_VMM("handling virtio exam fault bus 0x%x dev 0x%x func 0x%x reg_off 0x%x\n", bus, dev, func, reg_off);
+
+    // @billn @ivanv we don't understand why this worked for non 32-bit aligned access. E.g. register offset 0x6
     if (fault_is_read(fsr)) {
         uint32_t mask = fault_get_data_mask(offset, fsr);
-        uint32_t data = ~0ull;
-        if (dev) {
-            uint32_t *reg = (uint32_t *)virtio_pci_find_dev_cfg_space(dev);
-            data = reg[(offset & 0xFF) / 4];
+        uint32_t data;
+        bool success = pci_config_space_read_access(bus, dev, func, (reg_off / 4) * 4, &data, 4);
+        if (success) {
+            fault_emulate_write(regs, offset, fsr, data & mask);
         }
-        fault_emulate_write(regs, offset, fsr, data & mask);
-        return true;
+        if ((offset & 0xFF) % 4) {
+            LOG_VMM("unaligned pci reg off 0x%x, read val masked 0x%x, read val 0x%x\n", (offset & 0xFF), data & mask,
+                    data);
+        }
+        return success;
     } else {
-        return handle_virtio_ecam_reg_write(dev, offset & 0xFF, fault_get_data(regs, fsr));
+        return pci_config_space_write_access(bus, dev, func, reg_off, fault_get_data(regs, fsr), 4);
     }
+
+    // if (fault_is_read(fsr)) {
+    //     uint32_t mask = fault_get_data_mask(offset, fsr);
+    //     uint32_t data = ~0ull;
+    //     if (dev) {
+    //         uint32_t *reg = (uint32_t *)virtio_pci_find_dev_cfg_space(dev);
+    //         data = reg[(offset & 0xFF) / 4];
+    //     }
+    //     fault_emulate_write(regs, offset, fsr, data & mask);
+    //     return true;
+    // } else {
+    //     return handle_virtio_ecam_reg_write(dev, offset & 0xFF, fault_get_data(regs, fsr));
+    // }
 }
 #elif defined(CONFIG_ARCH_X86_64)
 
-// @billn a hack for the host and ISA bridge
-static bool handle_ecam_access_unchecked(size_t vcpu_id, size_t offset, size_t qualification,
-                                         memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx,
-                                         void *cookie)
-{
-    assert(((offset >> 20) & 0xff) == 0);
-    assert((((offset >> 15) & 0x1f) == 0) || (((offset >> 15) & 0x1f) == 1));
+// // @billn a hack for the host and ISA bridge
+// static bool handle_ecam_access_unchecked(size_t vcpu_id, size_t offset, size_t qualification,
+//                                          memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx,
+//                                          void *cookie)
+// {
+//     assert(((offset >> 20) & 0xff) == 0);
+//     assert((((offset >> 15) & 0x1f) == 0) || (((offset >> 15) & 0x1f) == 1));
 
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
-    uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + offset);
-    if (ept_fault_is_read(qualification)) {
-        // LOG_PCI_ECAM("Reading via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d\n", bus, dev, func,
-        //              reg_off, access_width_bytes);
-        memcpy(&vctx_raw[decoded_mem_ins.target_reg], bytes, access_width_bytes);
+//     uint64_t *vctx_raw = (uint64_t *)vctx;
+//     int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+//     uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + offset);
+//     if (ept_fault_is_read(qualification)) {
+//         // LOG_PCI_ECAM("Reading via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d\n", bus, dev, func,
+//         //              reg_off, access_width_bytes);
+//         memcpy(&vctx_raw[decoded_mem_ins.target_reg], bytes, access_width_bytes);
 
-    } else {
-        // LOG_PCI_ECAM("Writing via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d = value 0x%lx\n", bus,
-        //              dev, func, reg_off, access_width_bytes, vctx_raw[decoded_mem_ins.target_reg]);
-        memcpy(bytes, &vctx_raw[decoded_mem_ins.target_reg], access_width_bytes);
-    }
+//     } else {
+//         // LOG_PCI_ECAM("Writing via ECAM: bus %d, device %d, func %d, reg_offset 0x%x, width %d = value 0x%lx\n", bus,
+//         //              dev, func, reg_off, access_width_bytes, vctx_raw[decoded_mem_ins.target_reg]);
+//         memcpy(bytes, &vctx_raw[decoded_mem_ins.target_reg], access_width_bytes);
+//     }
 
-    return true;
-}
+//     return true;
+// }
 
 static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualification,
                                    memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx, void *cookie)
 {
-    uint8_t bus = offset >> 20;
-    uint8_t dev_id = (offset >> 15) & 0x1f;
+    // uint8_t bus = offset >> 20;
+    // uint8_t dev_id = (offset >> 15) & 0x1f;
 
-    // @billn hack
-    if (bus == 0 && (dev_id == 0 || dev_id == 1)) {
-        return handle_ecam_access_unchecked(vcpu_id, offset, qualification, decoded_mem_ins, vctx, cookie);
-    }
+    // // @billn hack
+    // if (bus == 0 && (dev_id == 0 || dev_id == 1)) {
+    //     return handle_ecam_access_unchecked(vcpu_id, offset, qualification, decoded_mem_ins, vctx, cookie);
+    // }
 
-    uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
-                               * VIRTIO_PCI_FUNCS_PER_DEV
-                           + ((offset >> 12) & 7);
-    virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
+    // uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
+    //                            * VIRTIO_PCI_FUNCS_PER_DEV
+    //                        + ((offset >> 12) & 7);
+    // virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
     uint64_t *vctx_raw = (uint64_t *)vctx;
+    int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+
+    uint8_t bus = (offset >> 20) & 0xff;
+    uint8_t dev = (offset >> 15) & 0x1f;
+    uint8_t func = (offset >> 12) & 0x7;
+    uint16_t reg_off = offset & 0xfff;
 
     if (ept_fault_is_read(qualification)) {
-        int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
-        uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + offset);
-        memcpy(&vctx_raw[decoded_mem_ins.target_reg], bytes, access_width_bytes);
-        return true;
+        return pci_config_space_read_access(bus, dev, func, reg_off, &vctx_raw[decoded_mem_ins.target_reg],
+                                            access_width_bytes);
     } else {
-        return handle_virtio_ecam_reg_write(dev, offset & 0xFF, vctx_raw[decoded_mem_ins.target_reg]);
+        return pci_config_space_write_access(bus, dev, func, reg_off, vctx_raw[decoded_mem_ins.target_reg],
+                                             access_width_bytes);
     }
 }
 
@@ -995,6 +1066,10 @@ bool pci_register_virtio_device(virtio_device_t *dev, int virq)
 
 bool pci_ecam_add_device(uint8_t bus, uint8_t dev, uint8_t func, struct pci_config_space *config_space)
 {
+    if (!global_pci_ecam.vmm_base) {
+        LOG_VMM_ERR("PCI is not initialised\n");
+    }
+
     uint32_t offset = pci_geo_addr_to_ecam_offset(bus, dev, func);
     struct pci_config_space *config_space_dest = (struct pci_config_space *)(global_pci_ecam.vmm_base + offset);
     memcpy(config_space_dest, config_space, sizeof(struct pci_config_space));
