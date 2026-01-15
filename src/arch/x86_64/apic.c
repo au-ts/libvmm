@@ -49,6 +49,14 @@
 #define REG_LAPIC_ISR_5 0x150
 #define REG_LAPIC_ISR_6 0x160
 #define REG_LAPIC_ISR_7 0x170
+#define REG_LAPIC_TMR_0 0x180
+#define REG_LAPIC_TMR_1 0x190
+#define REG_LAPIC_TMR_2 0x1A0
+#define REG_LAPIC_TMR_3 0x1B0
+#define REG_LAPIC_TMR_4 0x1C0
+#define REG_LAPIC_TMR_5 0x1D0
+#define REG_LAPIC_TMR_6 0x1E0
+#define REG_LAPIC_TMR_7 0x1F0
 #define REG_LAPIC_IRR_0 0x200
 #define REG_LAPIC_IRR_1 0x210
 #define REG_LAPIC_IRR_2 0x220
@@ -94,7 +102,7 @@ static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 static int n_irq_in_service(void)
 {
     int n = 0;
-    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.isr[i] & BIT(j)) {
                 n += 1;
@@ -111,7 +119,7 @@ static int get_next_queued_irq_vector(void)
 {
     // scan IRRs for *a* pending interrupt
     // do it "right-to-left" as the higer vector is higher prio (generally)
-    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
                 return i * 32 + j;
@@ -123,7 +131,7 @@ static int get_next_queued_irq_vector(void)
 
 static void debug_print_lapic_pending_irqs(void)
 {
-    for (int i = LAPIC_NUM_ISR_IRR_32B - 1; i >= 0; i--) {
+    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
                 LOG_VMM("irq vector %d is pending\n", i * 32 + j);
@@ -298,6 +306,30 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_ISR_7:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[7];
+            break;
+        case REG_LAPIC_TMR_0:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[0];
+            break;
+        case REG_LAPIC_TMR_1:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[1];
+            break;
+        case REG_LAPIC_TMR_2:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[2];
+            break;
+        case REG_LAPIC_TMR_3:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[3];
+            break;
+        case REG_LAPIC_TMR_4:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[4];
+            break;
+        case REG_LAPIC_TMR_5:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[5];
+            break;
+        case REG_LAPIC_TMR_6:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[6];
+            break;
+        case REG_LAPIC_TMR_7:
+            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[7];
             break;
         case REG_LAPIC_TIMER:
             vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.timer;
