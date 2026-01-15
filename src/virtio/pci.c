@@ -1038,6 +1038,7 @@ bool pci_register_virtio_device(virtio_device_t *dev, int virq)
 
     // Always use dev's first interrupt pin specified in interrupt-map
     config_space->interrupt_pin = 0x1;
+    config_space->interrupt_line = virq;
 
     bool success = true;
     config_space->cap_ptr = 0x40;
