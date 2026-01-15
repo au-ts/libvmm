@@ -216,7 +216,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     sdf.add_mr(config_space)
     vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
 
-    memory_resource = MemoryRegion(sdf, name="memory_resource", size=0x10000)
+    memory_resource = MemoryRegion(sdf, name="memory_resource", size=0x80000)
     sdf.add_mr(memory_resource)
     vmm_client0.add_map(Map(memory_resource, vaddr=0x4000_0000, perms="rw"))
 

@@ -67,9 +67,9 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
                     0x0000000000000000, // Granularity
                     0x40000000, // Min
-                    0x4000ffff, // Max
+                    0x4007ffff, // Max
                     0x0000000000000000, // Translation
-                    0x10000  // Length
+                    0x80000  // Length
                 )
             })
         }
