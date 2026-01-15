@@ -699,30 +699,30 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qu
     switch (cap->cfg_type) {
     case VIRTIO_PCI_CAP_COMMON_CFG:
         if (is_read) {
-            success = virtio_pci_common_reg_read(dev, vcpu_id, offset, &data);
+            success = virtio_pci_common_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
         } else {
-            success = virtio_pci_common_reg_write(dev, vcpu_id, offset, data);
+            success = virtio_pci_common_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_DEVICE_CFG:
         if (is_read) {
-            success = virtio_pci_device_reg_read(dev, vcpu_id, offset, &data);
+            success = virtio_pci_device_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
         } else {
-            success = virtio_pci_device_reg_write(dev, vcpu_id, offset, data);
+            success = virtio_pci_device_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_NOTIFY_CFG:
         if (is_read) {
-            success = virtio_pci_notify_reg_read(dev, vcpu_id, offset, &data);
+            success = virtio_pci_notify_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
         } else {
-            success = virtio_pci_notify_reg_write(dev, vcpu_id, offset, data);
+            success = virtio_pci_notify_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_ISR_CFG:
         if (is_read) {
-            success = virtio_pci_isr_reg_read(dev, vcpu_id, offset, &data);
+            success = virtio_pci_isr_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
         } else {
-            success = virtio_pci_isr_reg_write(dev, vcpu_id, offset, data);
+            success = virtio_pci_isr_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     default:

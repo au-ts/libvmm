@@ -59,7 +59,7 @@ static struct virtio_net_device virtio_net;
 // @billn sus, use package asm script
 #include "client_vm/x86_64/simple_dsdt.hex"
 
-#define GUEST_CMDLINE "initcall_debug earlyprintk=serial,0x3f8,115200 debug console=hvc0 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=hvc0 earlycon=serial,0x3f8,115200 loglevel=8"
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
