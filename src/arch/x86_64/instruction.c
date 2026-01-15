@@ -109,19 +109,26 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     int parsed_byte = 0;
     bool rex_w = false; // 64-bit operand size
     bool rex_r = false; // 4-bit operand, rather than 3-bit
-    // bool rex_x = false; // 4-bit SIB.index
-    // bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
-
+    bool rex_x = false; // 4-bit SIB.index
+    bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
+    bool opd_size_override = false;
     // scan for REX byte, which is always 0b0100WRXB
-    if (instruction_buf[0] >> 4 == 4) {
+    if (instruction_buf[parsed_byte] >> 4 == 4) {
         uint8_t rex_byte = instruction_buf[parsed_byte];
         parsed_byte += 1;
 
         rex_w = (rex_byte & BIT(3)) != 0;
         rex_r = (rex_byte & BIT(2)) != 0;
-        // rex_x = (rex_byte & BIT(1)) != 0;
-        // rex_b = (rex_byte & BIT(0)) != 0;
+        rex_x = (rex_byte & BIT(1)) != 0;
+        rex_b = (rex_byte & BIT(0)) != 0;
+    } else if (instruction_buf[parsed_byte] == 0x66) {
+        // scan for the "operand-size override" prefix, which switch the operand size
+        // from 32 to 16 bits, though the REX prefix have more precendence
+        opd_size_override = true;
+        parsed_byte += 1;
     }
+
+    
 
     // match the opcode against a list of known opcodes that we provide decoding logic for.
     for (int i = 0; i < NUM_MOV_OPCODES; i++) {
@@ -147,8 +154,11 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
                     break;
                 case OPCODE_MOV_WORD_TO_MEM:
                 case OPCODE_MOV_WORD_FROM_MEM:
-                    // @billn revisit 16-byte access decoding
-                    ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
+                    if (opd_size_override) {
+                        ret.decoded.memory_instruction.access_width = WORD_ACCESS_WIDTH;
+                    } else {
+                        ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
+                    }
                     break;
                 }
             }
