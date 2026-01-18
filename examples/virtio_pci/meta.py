@@ -177,7 +177,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         sdf.add_pd(pd)
 
     # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
-    net_system.add_client_with_copier(vmm_client0, client0_net_copier)
+    net_system.add_client_with_copier(vmm_client0, client0_net_copier, mac_addr="52:54:01:00:00:10")
 
 
 
