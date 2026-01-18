@@ -148,7 +148,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         eth_driver.add_map(hw_net_rings_map)
 
         virtio_net_regs = SystemDescription.MemoryRegion(
-            sdf, "virtio_net_regs", 0x4000, paddr=0xFE000000
+            sdf, "virtio_net_regs", 0x4000, paddr=0xfebf8000
         )
         sdf.add_mr(virtio_net_regs)
         virtio_net_regs_map = SystemDescription.Map(
@@ -157,7 +157,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         eth_driver.add_map(virtio_net_regs_map)
 
         virtio_net_irq = SystemDescription.IrqIoapic(
-            ioapic_id=0, pin=11, vector=44, id=16
+            ioapic_id=0, pin=10, vector=44, id=16
         )
         eth_driver.add_irq(virtio_net_irq)
 

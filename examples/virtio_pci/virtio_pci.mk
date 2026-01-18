@@ -63,9 +63,9 @@ else ifeq ($(ARCH),x86_64)
         QEMU := qemu-system-x86_64
 
 	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
-					  -kernel $(KERNEL32) -initrd $(IMAGE_FILE) \
-					  -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1 \
-					  -device virtio-net-pci,netdev=netdev0 \
+					  -kernel $(KERNEL32) -initrd $(IMAGE_FILE) -vga none \
+					  -device virtio-net-pci,netdev=netdev0,addr=0x2.0 \
+					  -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1,addr=0x3.0
 
 else
 $(error Unsupported ARCH given)
