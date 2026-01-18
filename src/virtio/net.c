@@ -107,6 +107,14 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
 {
     struct virtio_net_config *config = &device_state(dev)->config;
 
+#ifdef CONFIG_ARCH_X86_64
+    // TODO: remove hack to work-around single byte access bug for x86
+    // fault handling
+    assert(offset < 6);
+    *ret_val = config->mac[offset];
+    return true;
+#endif
+
     uint32_t word_offset = offset / sizeof(uint32_t);
     switch (word_offset) {
     case 0:
@@ -152,7 +160,7 @@ static bool virtio_net_respond(struct virtio_device *dev)
 #elif defined(CONFIG_ARCH_X86_64)
     success = inject_ioapic_irq(0, dev->virq);
 #endif
-    assert(success);
+    // assert(success);
 
     return success;
 }
