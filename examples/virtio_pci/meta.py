@@ -74,6 +74,34 @@ BOARDS: List[Board] = [
     ),
 ]
 
+def x86_virtio_net(eth_driver):
+    hw_net_rings = SystemDescription.MemoryRegion(
+        sdf, "hw_net_rings", 0x10000, paddr=0x7A000000
+    )
+    sdf.add_mr(hw_net_rings)
+    hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
+    eth_driver.add_map(hw_net_rings_map)
+
+    virtio_net_regs = SystemDescription.MemoryRegion(
+        sdf, "virtio_net_regs", 0x4000, paddr=0xfebf8000
+    )
+    sdf.add_mr(virtio_net_regs)
+    virtio_net_regs_map = SystemDescription.Map(
+        virtio_net_regs, 0x6000_0000, "rw", cached=False
+    )
+    eth_driver.add_map(virtio_net_regs_map)
+
+    virtio_net_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0, pin=10, vector=44, id=16
+    )
+    eth_driver.add_irq(virtio_net_irq)
+
+    pci_config_address_port = SystemDescription.IoPort(0xCF8, 4, 1)
+    eth_driver.add_ioport(pci_config_address_port)
+
+    pci_config_data_port = SystemDescription.IoPort(0xCFC, 4, 2)
+    eth_driver.add_ioport(pci_config_data_port)
+
 
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
@@ -140,32 +168,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
 
     if board.arch == SystemDescription.Arch.X86_64:
-        hw_net_rings = SystemDescription.MemoryRegion(
-            sdf, "hw_net_rings", 0x10000, paddr=0x7A000000
-        )
-        sdf.add_mr(hw_net_rings)
-        hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
-        eth_driver.add_map(hw_net_rings_map)
-
-        virtio_net_regs = SystemDescription.MemoryRegion(
-            sdf, "virtio_net_regs", 0x4000, paddr=0xfebf8000
-        )
-        sdf.add_mr(virtio_net_regs)
-        virtio_net_regs_map = SystemDescription.Map(
-            virtio_net_regs, 0x6000_0000, "rw", cached=False
-        )
-        eth_driver.add_map(virtio_net_regs_map)
-
-        virtio_net_irq = SystemDescription.IrqIoapic(
-            ioapic_id=0, pin=10, vector=44, id=16
-        )
-        eth_driver.add_irq(virtio_net_irq)
-
-        pci_config_address_port = SystemDescription.IoPort(0xCF8, 4, 1)
-        eth_driver.add_ioport(pci_config_address_port)
-
-        pci_config_data_port = SystemDescription.IoPort(0xCFC, 4, 2)
-        eth_driver.add_ioport(pci_config_data_port)
+        x86_virtio_net(eth_driver)
 
     pds = [
         eth_driver,
