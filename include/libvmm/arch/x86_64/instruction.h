@@ -40,6 +40,7 @@ typedef enum memory_access_width {
 typedef struct memory_instruction_data {
     // We don't store the memory access direction as the CPU would
     // tell us via the fault qualification.
+    bool zero_extend;
     register_idx_t target_reg;
     memory_access_width_t access_width;
 } memory_instruction_data_t;
