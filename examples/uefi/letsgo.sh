@@ -16,7 +16,7 @@ ISO_STAGING_DIR=$BUILD_DIR/iso
 rm -rfd $BUILD_DIR && \
 
 scp billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/edk2/Build/OvmfX64/DEBUG_GCC/FV/OVMF.fd /Users/dreamliner787-9/TS/libvmm/examples/uefi/board/x86_64_generic_vtx/OVMF.fd && \
-make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROKIT_SDK && \
+make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROKIT_SDK qemu
 
 # mkdir -p $ISO_STAGING_DIR/boot/ && \
 # mkdir -p $ISO_STAGING_DIR/EFI/BOOT && \
@@ -65,11 +65,11 @@ make MICROKIT_BOARD=x86_64_generic_vtx BUILD_DIR=$BUILD_DIR MICROKIT_SDK=$MICROK
 
 
 
-scp /Volumes/scratch/vmm_x86_uefi/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32.elf && \
-scp /Volumes/scratch/vmm_x86_uefi/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
-ssh -XC billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
-                        -serial mon:stdio \
-                        -m size=4G \
-                        -d guest_errors \
-                        -cdrom /opt/billn/ubuntu-24.04.3-desktop-amd64.iso \
-                        -device ramfb -vga none"
+# scp /Volumes/scratch/vmm_x86_uefi/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/sel4_32.elf && \
+# scp /Volumes/scratch/vmm_x86_uefi/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:/opt/billn/scratch/loader.img && \
+# ssh -XC billn@dwarrowdelf.keg.cse.unsw.edu.au "qemu-system-x86_64 -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel /opt/billn/scratch/sel4_32.elf -initrd /opt/billn/scratch/loader.img \
+#                         -serial mon:stdio \
+#                         -m size=4G \
+#                         -d guest_errors \
+#                         -cdrom /opt/billn/ubuntu-24.04.3-desktop-amd64.iso \
+#                         -device ramfb -vga none"

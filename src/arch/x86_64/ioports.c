@@ -193,7 +193,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr >= 0x40 && port_addr <= 0x43) {
         return emulate_pit_access(vctx, port_addr, is_read);
 
-    } else if (port_addr == 0x87) {
+    } else if (port_addr == 0x87 || (port_addr >= 0 && port_addr <= 0x1f)) {
         assert(!is_string);
         // dma controller
         success = true;

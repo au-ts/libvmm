@@ -242,8 +242,8 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
 
 // TODO: should be able to make these microkit_ioport type but it looks like Microkit does not
 // allow non-word sized setvars...
-uint64_t qemu_fw_cfg_port_addr_sel;
-uint64_t qemu_fw_cfg_port_addr_dma;
+uint64_t qemu_fw_cfg_port_addr_sel = 20;
+uint64_t qemu_fw_cfg_port_addr_dma = 21;
 
 static void fw_cfg_select(uint16_t port) {
     microkit_x86_ioport_write_16(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_SEL, port);
