@@ -96,12 +96,6 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_irq(virtio_net_irq)
 
-    pci_config_address_port = SystemDescription.IoPort(0xCF8, 4, 1)
-    eth_driver.add_ioport(pci_config_address_port)
-
-    pci_config_data_port = SystemDescription.IoPort(0xCFC, 4, 2)
-    eth_driver.add_ioport(pci_config_data_port)
-
 
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
