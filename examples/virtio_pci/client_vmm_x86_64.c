@@ -167,6 +167,9 @@ void notified(microkit_channel ch)
     } else if (ch == net_config.tx.id || ch == serial_config.tx.id) {
         // Nothing to do.
         return;
+    } else if (ch == blk_config.virt.id) {
+        virtio_blk_handle_resp(&virtio_blk);
+        return;
     }
 
     switch (ch) {
