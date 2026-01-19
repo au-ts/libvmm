@@ -189,7 +189,7 @@ static inline void virtio_blk_set_req_fail(struct virtio_device *dev, uint16_t d
         curr_desc = virtq->desc[curr_desc].next;
     }
     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_WRITE);
-    *(uint8_t *)(virtq->desc[curr_desc].addr + virtq->desc[curr_desc].len - 1) = VIRTIO_BLK_S_IOERR;
+    *(uint8_t *)(gpa_to_vaddr(virtq->desc[curr_desc].addr) + virtq->desc[curr_desc].len - 1) = VIRTIO_BLK_S_IOERR;
 }
 
 static inline void virtio_blk_set_req_success(struct virtio_device *dev, uint16_t desc)
@@ -201,7 +201,7 @@ static inline void virtio_blk_set_req_success(struct virtio_device *dev, uint16_
         curr_desc = virtq->desc[curr_desc].next;
     }
     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_WRITE);
-    *(uint8_t *)(virtq->desc[curr_desc].addr + virtq->desc[curr_desc].len - 1) = VIRTIO_BLK_S_OK;
+    *(uint8_t *)(gpa_to_vaddr(virtq->desc[curr_desc].addr) + virtq->desc[curr_desc].len - 1) = VIRTIO_BLK_S_OK;
 }
 
 static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_count)
@@ -283,7 +283,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
              */
             assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
             if (header_bytes_read + virtq->desc[curr_desc].len > sizeof(struct virtio_blk_outhdr)) {
-                void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                 void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 memcpy(dst_addr, src_addr, copy_sz);
@@ -293,7 +293,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                  * current one */
                 break;
             } else {
-                void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                 void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = virtq->desc[curr_desc].len;
                 memcpy(dst_addr, src_addr, copy_sz);
@@ -489,14 +489,14 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                     assert(body_bytes_read + virtq->desc[curr_desc].len <= body_size_bytes);
                     assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
                     if (curr_desc_bytes_read != 0) {
-                        void *src_addr = (void *)virtq->desc[curr_desc].addr + curr_desc_bytes_read;
+                        void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr) + curr_desc_bytes_read;
                         void *dst_addr = (void *)sddf_data + body_bytes_read;
                         uint32_t copy_sz = virtq->desc[curr_desc].len - curr_desc_bytes_read;
                         memcpy(dst_addr, src_addr, copy_sz);
                         body_bytes_read += virtq->desc[curr_desc].len - curr_desc_bytes_read;
                         curr_desc_bytes_read = 0;
                     } else {
-                        void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                        void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                         void *dst_addr = (void *)sddf_data + body_bytes_read;
                         uint32_t copy_sz = virtq->desc[curr_desc].len;
                         memcpy(dst_addr, src_addr, copy_sz);
@@ -620,7 +620,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
              * only */
             assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
             if (header_bytes_read + virtq->desc[curr_desc].len > sizeof(struct virtio_blk_outhdr)) {
-                void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                 void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 memcpy(dst_addr, src_addr, copy_sz);
@@ -630,7 +630,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                  * current one */
                 break;
             } else {
-                void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                 void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = virtq->desc[curr_desc].len;
                 memcpy(dst_addr, src_addr, copy_sz);
@@ -655,7 +655,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                 for (; body_bytes_read < reqbk->virtio_body_size_bytes; curr_desc = virtq->desc[curr_desc].next) {
                     if (body_bytes_read + virtq->desc[curr_desc].len > reqbk->virtio_body_size_bytes) {
                         void *src_addr = (void *)reqbk->sddf_data + body_bytes_read;
-                        void *dst_addr = (void *)virtq->desc[curr_desc].addr;
+                        void *dst_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                         uint32_t copy_sz = reqbk->virtio_body_size_bytes - body_bytes_read;
                         memcpy(dst_addr, src_addr, copy_sz);
                         body_bytes_read += reqbk->virtio_body_size_bytes - body_bytes_read;
@@ -666,7 +666,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         break;
                     } else {
                         void *src_addr = (void *)reqbk->sddf_data + body_bytes_read;
-                        void *dst_addr = (void *)virtq->desc[curr_desc].addr;
+                        void *dst_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                         uint32_t copy_sz = virtq->desc[curr_desc].len;
                         memcpy(dst_addr, src_addr, copy_sz);
 
@@ -697,14 +697,14 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                         assert(body_bytes_read + virtq->desc[curr_desc].len <= reqbk->virtio_body_size_bytes);
                         assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
                         if (curr_desc_bytes_read != 0) {
-                            void *src_addr = (void *)virtq->desc[curr_desc].addr + curr_desc_bytes_read;
+                            void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr )+ curr_desc_bytes_read;
                             void *dst_addr = (void *)reqbk->sddf_data + body_bytes_read;
                             uint32_t copy_sz = virtq->desc[curr_desc].len - curr_desc_bytes_read;
                             memcpy(dst_addr, src_addr, copy_sz);
                             body_bytes_read += virtq->desc[curr_desc].len - curr_desc_bytes_read;
                             curr_desc_bytes_read = 0;
                         } else {
-                            void *src_addr = (void *)virtq->desc[curr_desc].addr;
+                            void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
                             void *dst_addr = (void *)reqbk->sddf_data + body_bytes_read;
                             uint32_t copy_sz = virtq->desc[curr_desc].len;
                             memcpy(dst_addr, src_addr, copy_sz);
