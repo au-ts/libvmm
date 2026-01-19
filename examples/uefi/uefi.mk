@@ -131,14 +131,11 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
-	scp /Volumes/scratch/vmm_x86_uefi/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:loader.img && \
-	scp /Volumes/scratch/vmm_x86_uefi/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:sel4_32.elf && \
-	scp /Volumes/scratch/vmm_x86_uefi/blk_storage billn@dwarrowdelf.keg.cse.unsw.edu.au:blk_storage && \
-	ssh -XC billn@dwarrowdelf.keg.cse.unsw.edu.au "$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
+	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=4G \
 							  -device ramfb -vga none \
 							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235"
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 
 clean::
