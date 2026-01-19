@@ -16,6 +16,21 @@ ifeq ($(strip $(MICROKIT_BOARD)),)
 $(error MICROKIT_BOARD must be specified)
 endif
 
+ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+	export UART_DRIVER := pc99
+	export TIMER_DRIVER := hpet
+	export BLK_DRIVER := virtio/pci
+	export ETH_DRIVER := virtio/pci
+	export QEMU := qemu-system-x86_64
+
+	export BLK_NUM_PART = 1
+	export BLK_SIZE = 512
+	# 16MiB of disk space
+	export BLK_MEM ?= 16777216
+else
+$(error Unsupported MICROKIT_BOARD given)
+endif
+
 export BUILD_DIR := $(abspath $(BUILD_DIR))
 export EXAMPLE_DIR := $(abspath .)
 
@@ -35,6 +50,12 @@ export ISO := $(abspath $(ISO))
 
 IMAGE_FILE := $(BUILD_DIR)/loader.img
 REPORT_FILE := $(BUILD_DIR)/report.txt
+
+# Allow to user to specify a custom partition
+PARTITION :=
+ifdef PARTITION
+export PARTITION_ARG := --partition $(PARTITION)
+endif
 
 all: $(IMAGE_FILE)
 

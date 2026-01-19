@@ -63,9 +63,9 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 WordBusNumber (ResourceProducer, MinFixed, MaxFixed, PosDecode,
                     0x0000,         // Granularity
                     0x0000,         // Min
-                    0x00FF,         // Max
+                    0x0000,         // Max
                     0x0000,         // Translation
-                    0x0100          // Length
+                    0x0001          // Length
                 )
 
                 // I/O port window(s) forwarded to PCI below this root bridge.
@@ -85,7 +85,35 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     0x0000,         // Translation
                     0xF300          // Length  (0xFFFF - 0x0D00 + 1)
                 )
+
+                // Prefetchable MMIO window
+                QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
+                    0x0000000000000000, // Granularity
+                    0xF0000000, // Min
+                    0xF007ffff, // Max
+                    0x0000000000000000, // Translation
+                    0x80000  // Length
+                )
             })
+        }
+    }
+
+    Scope(\_SB) {
+        Scope(PCI0) {
+            // PCI Routing Table
+            Method(_PRT, 0) {
+                Return (Package() {
+                    // Virtio console:
+                    // Device 0x3, function 0, INTA -> GSI 15
+                    Package() { 0x00030000, 0, 0, 15 },
+                    // Virtio net:
+                    // Device 0x4, function 0, INTA -> GSI 14
+                    Package() { 0x00040000, 0, 0, 14 },
+                    // Virtio blk:
+                    // Device 0x5, function 0, INTA -> GSI 13
+                    Package() { 0x00050000, 0, 0, 13 },
+                })
+            }
         }
     }
 }
