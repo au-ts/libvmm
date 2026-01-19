@@ -131,6 +131,14 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     ps2_second_irq = SystemDescription.IrqIoapic(0, 12, 33, id=4)
     vmm_client0.add_irq(ps2_second_irq)
 
+    fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
+    vmm_client0.add_map(Map(fb_mr, vaddr=0x1_0000_0000, perms="rw"))
+    sdf.add_mr(fb_mr)
+
+    fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=0x600_0000)
+    vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0x1_1000_0000, perms="rw"))
+    sdf.add_mr(fw_cfg_dma_cmd_mr)
+
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
     serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
