@@ -8,8 +8,17 @@
 #include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/guest.h>
+#include <libvmm/config.h>
 #include <libvmm/util/util.h>
 #include <sddf/timer/client.h>
+#include <sddf/blk/config.h>
+#include <sddf/timer/config.h>
+#include <sddf/serial/config.h>
+#include <sddf/network/config.h>
+#include <sddf/serial/queue.h>
+#include <libvmm/virtio/console.h>
+#include <libvmm/virtio/net.h>
+#include <libvmm/virtio/block.h>
 
 #include <libvmm/arch/x86_64/uefi.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -23,42 +32,46 @@
 
 #include <sddf/util/custom_libc/string.h>
 
+/* Virtio Console */
+serial_queue_handle_t serial_rx_queue;
+serial_queue_handle_t serial_tx_queue;
+static struct virtio_console_device virtio_console;
+
+/* Virtio Net */
+net_queue_handle_t net_rx_queue;
+net_queue_handle_t net_tx_queue;
+static struct virtio_net_device virtio_net;
+
+/* Virtio Block */
+static blk_queue_handle_t blk_queue;
+static struct virtio_blk_device virtio_blk;
+
+// Device slot of the virtio console device on bus 0.
+// Host bridge = 0, ISA bridge = 1 so we must avoid these.
+// Then on Intel, the integrated graphics is conventionally on slot 2 as well...
+// Make sure these two matches what is written in DSDT
+#define VIRTIO_CONSOLE_PCI_DEVICE_SLOT 3
+#define VIRTIO_CONSOLE_PCI_IOAPIC_PIN 15
+
+#define VIRTIO_NET_PCI_DEVICE_SLOT 4
+#define VIRTIO_NET_PCI_IOAPIC_PIN 14
+
+#define VIRTIO_BLK_PCI_DEVICE_SLOT 5
+#define VIRTIO_BLK_PCI_IOAPIC_PIN 13
+
 // @billn sus, use package asm script
 #include "board/x86_64_generic_vtx/simple_dsdt.hex"
 
-uint64_t ps2_controller_id;
-uint64_t ps2_controller_addr;
+__attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
+__attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
+__attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
+__attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
+
+
+uint64_t ps2_controller_id = 22;
+uint64_t ps2_controller_addr = 0x60;
 uint64_t ps2_controller_size = 5;
 
-uint64_t com1_ioport_id;
-uint64_t com1_ioport_addr;
-uint64_t com1_ioport_size = 8;
-
-uint64_t com2_ioport_id;
-uint64_t com2_ioport_addr;
-uint64_t com2_ioport_size = 8;
-
-uint64_t primary_ata_cmd_pio_id;
-uint64_t primary_ata_cmd_pio_addr;
-
-uint64_t primary_ata_ctrl_pio_id;
-uint64_t primary_ata_ctrl_pio_addr;
-
-uint64_t second_ata_cmd_pio_id;
-uint64_t second_ata_cmd_pio_addr;
-
-uint64_t second_ata_ctrl_pio_id;
-uint64_t second_ata_ctrl_pio_addr;
-
-uint64_t pci_conf_addr_pio_id;
-uint64_t pci_conf_addr_pio_addr;
-
-uint64_t pci_conf_data_pio_id;
-uint64_t pci_conf_data_pio_addr;
-
-#define COM1_IRQ_CH 0
-#define PRIM_ATA_IRQ_CH 1
-#define SECD_ATA_IRQ_CH 2
 #define FIRST_PS2_IRQ_CH 3
 #define SECOND_PS2_IRQ_CH 4
 
@@ -66,19 +79,33 @@ uint64_t pci_conf_data_pio_addr;
 extern char _guest_firmware_image[];
 extern char _guest_firmware_image_end[];
 
-/* Microkit will set this variable to the start of the guest RAM memory region. */
-uintptr_t guest_ram_vaddr;
-uint64_t guest_ram_size;
-uintptr_t guest_flash_vaddr;
-uint64_t guest_flash_size;
-uintptr_t guest_ecam_vaddr;
-uint64_t guest_ecam_size;
+uintptr_t guest_ram_vaddr = 0x30000000;
+uint64_t guest_ram_size = 0x80000000; // 2 GiB
+uintptr_t guest_flash_vaddr = 0x2000000;
+uint64_t guest_flash_size = 0x600000;
+uintptr_t guest_ecam_vaddr = 0x8000000;
+uint64_t guest_ecam_size = 0x100000;
 
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
 void init(void)
 {
+    assert(serial_config_check_magic(&serial_config));
+    assert(net_config_check_magic(&net_config));
+    assert(blk_config_check_magic(&blk_config));
+
+    serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
+                      serial_config.rx.data.vaddr);
+    serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
+                      serial_config.tx.data.vaddr);
+
+    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
+                   blk_config.virt.num_buffers);
+    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    /* Busy wait until blk device is ready */
+    while (!blk_storage_is_ready(storage_info));
+
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
 
@@ -91,17 +118,29 @@ void init(void)
     // Set up the PCI bus
     // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
     assert(guest_ecam_size == ECAM_SIZE);
-
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
-
+    assert(virtio_pci_register_memory_resource(0xF0000000, 0x1000000, 0x80000));
     assert(pci_x86_init());
 
-    /* Pass through COM1 serial port and IDE disk controller */
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
-    // passthrough_ide_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
-    //                            primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
-    //                            second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr);
+    assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
+                                   &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
+
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
+
+    bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
+                                       &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                       (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                       net_config.mac_addr);
+    assert(success);
+
+    success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+                                  (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
+                                  blk_config.virt.num_buffers, blk_config.virt.id);
+    assert(success);
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -125,18 +164,8 @@ void notified(microkit_channel ch)
                 return;
             }
 
-            microkit_irq_ack(COM1_IRQ_CH);
-            microkit_irq_ack(PRIM_ATA_IRQ_CH);
-            microkit_irq_ack(SECD_ATA_IRQ_CH);
             microkit_irq_ack(FIRST_PS2_IRQ_CH);
             microkit_irq_ack(SECOND_PS2_IRQ_CH);
-
-            // /* Pass through IDE disk controller IRQs */
-            // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
-            // assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
-
-            /* Pass through serial IRQs */
-            assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
 
             /* Pass through PS2 IRQs */
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
@@ -157,7 +186,6 @@ void notified(microkit_channel ch)
         hpet_handle_timer_ntfn(ch);
         break;
     default:
-        // printf("Unexpected channel, ch: 0x%lx\n", ch);
         virq_ioapic_handle_passthrough(ch);
     }
 }
