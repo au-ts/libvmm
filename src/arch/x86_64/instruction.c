@@ -26,18 +26,22 @@
 static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM,
                                                 OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
-int mem_access_width_to_bytes(memory_access_width_t access_width) {
+static uint8_t opcode_movzx_byte_from_mem[2] = { 0x0f, 0xb6 };
+static uint8_t opcode_movzx_word_from_mem[2] = { 0x0f, 0xb7 };
+
+int mem_access_width_to_bytes(memory_access_width_t access_width)
+{
     switch (access_width) {
-        case BYTE_ACCESS_WIDTH:
-            return 1;
-        case WORD_ACCESS_WIDTH:
-            return 2;
-        case DWORD_ACCESS_WIDTH:
-            return 4;
-        case QWORD_ACCESS_WIDTH:
-            return 8;
-        default:
-            return 0;
+    case BYTE_ACCESS_WIDTH:
+        return 1;
+    case WORD_ACCESS_WIDTH:
+        return 2;
+    case DWORD_ACCESS_WIDTH:
+        return 4;
+    case QWORD_ACCESS_WIDTH:
+        return 8;
+    default:
+        return 0;
     }
 }
 
@@ -99,7 +103,7 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
 
     assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
     memcpy(instruction_buf, gpa_to_vaddr(rip_gpa), instruction_len);
-    
+
     // @billn I really think something more "industrial grade" should be used for a job like this.
     // Such as https://github.com/zyantific/zydis which is no-malloc and no-libc, but it uses cmake...yuck
     // But then we introduce a dependency...
@@ -128,11 +132,9 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
         parsed_byte += 1;
     }
 
-    
-
     // match the opcode against a list of known opcodes that we provide decoding logic for.
+    // An opcode can be multi-bytes, first match for 1 byte opcode
     for (int i = 0; i < NUM_MOV_OPCODES; i++) {
-        // An opcode can be multi-bytes, but `mov`s are only 1-byte
         if (instruction_buf[parsed_byte] == mov_opcodes[i]) {
             opcode_valid = true;
             uint8_t opcode = instruction_buf[parsed_byte];
@@ -160,11 +162,39 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
                         ret.decoded.memory_instruction.access_width = DWORD_ACCESS_WIDTH;
                     }
                     break;
+                default:
+                    LOG_VMM_ERR("internal bug: unhandled 1 byte mov opcode 0x%x\n", opcode);
+                    assert(false);
+                    break;
                 }
             }
+            ret.decoded.memory_instruction.zero_extend = false;
             ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
 
             break;
+        }
+    }
+
+    // no match, now try the 2 bytes movzx opcodes
+    if (instruction_len - parsed_byte >= 3) {
+        if (instruction_buf[parsed_byte] == opcode_movzx_byte_from_mem[0]
+            && instruction_buf[parsed_byte + 1] == opcode_movzx_byte_from_mem[1]) {
+            opcode_valid = true;
+            uint8_t modrm = instruction_buf[parsed_byte + 2];
+            uint8_t reg = (modrm >> 3) & 0x7;
+            ret.type = INSTRUCTION_MEMORY;
+            ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
+            ret.decoded.memory_instruction.zero_extend = true;
+            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
+        } else if (instruction_buf[parsed_byte] == opcode_movzx_word_from_mem[0]
+                   && instruction_buf[parsed_byte + 1] == opcode_movzx_word_from_mem[1]) {
+            opcode_valid = true;
+            uint8_t modrm = instruction_buf[parsed_byte + 2];
+            uint8_t reg = (modrm >> 3) & 0x7;
+            ret.type = INSTRUCTION_MEMORY;
+            ret.decoded.memory_instruction.access_width = WORD_ACCESS_WIDTH;
+            ret.decoded.memory_instruction.zero_extend = true;
+            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
         }
     }
 
