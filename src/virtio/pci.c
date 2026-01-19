@@ -520,9 +520,9 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 
             // The guest writes GPA into these registers, we must translate it into VMM virtual address
             // @billn currently doesnt work on aarch64 as it lacks this util function
-            dev->vqs[dev->regs.QueueSel].virtq.avail = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.avail);
-            dev->vqs[dev->regs.QueueSel].virtq.used = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.used);
-            dev->vqs[dev->regs.QueueSel].virtq.desc = gpa_to_vaddr((uint64_t) dev->vqs[dev->regs.QueueSel].virtq.desc);
+            dev->vqs[dev->regs.QueueSel].virtq.avail = gpa_to_vaddr((uint64_t)dev->vqs[dev->regs.QueueSel].virtq.avail);
+            dev->vqs[dev->regs.QueueSel].virtq.used = gpa_to_vaddr((uint64_t)dev->vqs[dev->regs.QueueSel].virtq.used);
+            dev->vqs[dev->regs.QueueSel].virtq.desc = gpa_to_vaddr((uint64_t)dev->vqs[dev->regs.QueueSel].virtq.desc);
         }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_DESC_LO, VIRTIO_PCI_COMMON_Q_DESC_HI):
@@ -772,18 +772,9 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
                                          int access_width_bytes)
 {
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
-
-    struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
-                                                                        + config_space_ecam_off);
-
     uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + config_space_ecam_off + reg_off);
+    *data = 0;
     memcpy(data, bytes, access_width_bytes);
-
-    // LOG_VMM("read reg_off 0x%x on dev id 0x%x\n", reg_off, config_space->device_id);
-    // for (int i = 0; i < 4; i++) {
-    //     LOG_VMM("data 0x%x\n", ((uint8_t *)data)[i]);
-    // }
-
     return true;
 }
 
@@ -793,8 +784,6 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
     struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
                                                                         + config_space_ecam_off);
-
-    // @billn do we need default case???
 
     switch (reg_off) {
     case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
@@ -840,6 +829,10 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
             }
         }
         break;
+    }
+    default: {
+        uint8_t *bytes = (uint8_t *)((uintptr_t) config_space + reg_off);
+        memcpy(bytes, &data, access_width_bytes);
     }
     }
     return true;
@@ -935,6 +928,7 @@ static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualifi
     // virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
     uint64_t *vctx_raw = (uint64_t *)vctx;
     int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
+    assert(access_width_bytes <= 4);
 
     uint8_t bus = (offset >> 20) & 0xff;
     uint8_t dev = (offset >> 15) & 0x1f;
