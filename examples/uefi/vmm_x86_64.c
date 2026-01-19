@@ -67,7 +67,6 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
-
 uint64_t ps2_controller_id = 22;
 uint64_t ps2_controller_addr = 0x60;
 uint64_t ps2_controller_size = 5;
@@ -115,12 +114,14 @@ void init(void)
 
     vcpu_set_up_reset_state();
 
-    // Set up the PCI bus
-    // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
+        // Set up the PCI bus
+        // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
     assert(guest_ecam_size == ECAM_SIZE);
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
     assert(virtio_pci_register_memory_resource(0xF0000000, 0x1000000, 0x80000));
     assert(pci_x86_init());
+
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
 
     assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
                                    &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
@@ -149,6 +150,20 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+    if (ch == serial_config.rx.id) {
+        virtio_console_handle_rx(&virtio_console);
+        return;
+    } else if (ch == net_config.rx.id) {
+        virtio_net_handle_rx(&virtio_net);
+        return;
+    } else if (ch == net_config.tx.id || ch == serial_config.tx.id) {
+        // Nothing to do.
+        return;
+    } else if (ch == blk_config.virt.id) {
+        virtio_blk_handle_resp(&virtio_blk);
+        return;
+    }
+
     switch (ch) {
     case TIMER_DRV_CH_FOR_LAPIC: {
         if (tsc_calibrating) {
