@@ -62,7 +62,7 @@ BOARDS: List[Board] = [
     Board(
         name="x86_64_generic_vtx",
         arch=SystemDescription.Arch.X86_64,
-        paddr_top=0x7FFDF000,
+        paddr_top=0x70000000,
         serial=None,
         guest_serial=None,
         timer=None,
@@ -76,7 +76,7 @@ BOARDS: List[Board] = [
 
 def x86_virtio_net(eth_driver):
     hw_net_rings = SystemDescription.MemoryRegion(
-        sdf, "hw_net_rings", 0x10000, paddr=0x7A000000
+        sdf, "hw_net_rings", 0x10000, paddr=0x000070000000
     )
     sdf.add_mr(hw_net_rings)
     hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
@@ -96,6 +96,36 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_irq(virtio_net_irq)
 
+def x86_virtio_blk(blk_driver):
+    blk_requests_mr = SystemDescription.MemoryRegion(
+        sdf, "virtio_blk_requests", 65536, paddr=0x000071000000
+    )
+    sdf.add_mr(blk_requests_mr)
+    blk_requests_map = SystemDescription.Map(blk_requests_mr, 0x20200000, "rw")
+    blk_driver.add_map(blk_requests_map)
+
+    blk_virtio_metadata_mr = SystemDescription.MemoryRegion(
+        sdf, "virtio_blk_metadata", 65536, paddr=0x000072000000
+    )
+    sdf.add_mr(blk_virtio_metadata_mr)
+    blk_virtio_metadata_map = SystemDescription.Map(
+        blk_virtio_metadata_mr, 0x20210000, "rw"
+    )
+    blk_driver.add_map(blk_virtio_metadata_map)
+
+    virtio_blk_regs = SystemDescription.MemoryRegion(
+        sdf, "virtio_blk_regs", 0x4000, paddr=0xfebfc000
+    )
+    sdf.add_mr(virtio_blk_regs)
+    virtio_blk_regs_map = SystemDescription.Map(
+        virtio_blk_regs, 0x6000_0000, "rw", cached=False
+    )
+    blk_driver.add_map(virtio_blk_regs_map)
+
+    virtio_blk_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0, pin=11, vector=45, id=17
+    )
+    blk_driver.add_irq(virtio_blk_irq)
 
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
@@ -179,24 +209,30 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
 
     # # Block subsystem
-    # blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
-    # blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
 
     # blk_node = dtb.node(board.blk)
     # assert blk_node is not None
     # # guest_blk_node = client_dtb.node(board.guest_blk)
     # # assert guest_blk_node is not None
+    blk_node = None
 
-    # blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
-    # partition = int(args.partition) if args.partition else board.partition
-    # # client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    # blk_system.add_client(vmm_client0, partition=partition)
-    # pds = [
-    #     blk_driver,
-    #     blk_virt
-    # ]
-    # for pd in pds:
-    #     sdf.add_pd(pd)
+    blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
+    blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
+
+    blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
+    partition = int(args.partition) if args.partition else board.partition
+    # client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    blk_system.add_client(vmm_client0, partition=partition)
+
+    if board.arch == SystemDescription.Arch.X86_64:
+        x86_virtio_blk(blk_driver)
+
+    pds = [
+        blk_driver,
+        blk_virt
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
 
     # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
     if board.name == "maaxboard":
@@ -249,8 +285,8 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
-    # assert blk_system.connect()
-    # assert blk_system.serialise_config(output_dir)
+    assert blk_system.connect()
+    assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
     assert net_system.serialise_config(output_dir)
     assert client0.connect()

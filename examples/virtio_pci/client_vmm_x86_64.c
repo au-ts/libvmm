@@ -18,6 +18,7 @@
 #include <sddf/serial/queue.h>
 #include <libvmm/virtio/console.h>
 #include <libvmm/virtio/net.h>
+#include <libvmm/virtio/block.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -44,6 +45,10 @@ net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
 static struct virtio_net_device virtio_net;
 
+/* Virtio Block */
+static blk_queue_handle_t blk_queue;
+static struct virtio_blk_device virtio_blk;
+
 // Device slot of the virtio console device on bus 0.
 // Host bridge = 0, ISA bridge = 1 so we must avoid these.
 // Then on Intel, the integrated graphics is conventionally on slot 2 as well...
@@ -53,6 +58,9 @@ static struct virtio_net_device virtio_net;
 
 #define VIRTIO_NET_PCI_DEVICE_SLOT 4
 #define VIRTIO_NET_PCI_IOAPIC_PIN 14
+
+#define VIRTIO_BLK_PCI_DEVICE_SLOT 5
+#define VIRTIO_BLK_PCI_IOAPIC_PIN 13
 
 #define COM1_PIO_ID 0
 
@@ -86,11 +94,18 @@ void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
     assert(net_config_check_magic(&net_config));
+    assert(blk_config_check_magic(&blk_config));
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
+
+    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
+                   blk_config.virt.num_buffers);
+    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    /* Busy wait until blk device is ready */
+    while (!blk_storage_is_ready(storage_info));
 
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -125,9 +140,15 @@ void init(void)
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
 
-    bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                  net_config.mac_addr);
+    bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
+                                       &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                       (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                       net_config.mac_addr);
+    assert(success);
+
+    success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+                                  (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
+                                  blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
 
     LOG_VMM("Measuring TSC frequency...\n");

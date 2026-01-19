@@ -18,6 +18,11 @@
 #include <sddf/util/fsmalloc.h>
 #include <sddf/util/ialloc.h>
 
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/util.h>
+#endif
+
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
 /* Uncomment this to enable debug logging */
@@ -76,7 +81,7 @@ static inline bool virtio_blk_mmio_get_device_features(struct virtio_device *dev
         break;
     default:
         LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
-        return false;
+        return true;
     }
 
     return true;
@@ -106,9 +111,8 @@ static inline bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
-                      dev->regs.DriverFeaturesSel);
-        return false;
+        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
+        return true;
     }
 
     if (success) {
@@ -149,7 +153,7 @@ static inline bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, 
 static inline void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t desc)
 {
     struct virtq *virtq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].virtq;
-    struct virtq_used_elem used_elem = {desc, 0};
+    struct virtq_used_elem used_elem = { desc, 0 };
 
     virtq->used->ring[virtq->used->idx % virtq->num] = used_elem;
     virtq->used->idx++;
@@ -157,7 +161,13 @@ static inline void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t de
 
 static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
 {
-    return virq_inject(dev->virq);
+    bool success;
+#if defined(CONFIG_ARCH_AARCH64)
+    success = virq_inject(dev->virq);
+#elif defined(CONFIG_ARCH_X86_64)
+    success = inject_ioapic_irq(0, dev->virq);
+#endif
+    return success;
 }
 
 static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
@@ -875,6 +885,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     return dev;
 }
 
+#ifndef CONFIG_ARCH_X86_64
 bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
                           uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
                           blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
@@ -884,6 +895,7 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_ba
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
+#endif
 
 bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, size_t virq, uintptr_t data_region,
                          size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,

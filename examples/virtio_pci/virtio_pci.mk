@@ -141,10 +141,10 @@ ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
 	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
 endif
-# 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
-# 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
-# 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-# 	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
+	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
+	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM.data client_vmm.elf
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
@@ -224,12 +224,15 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 
 qemu: $(IMAGE_FILE) blk_storage
 	# [ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
-	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
+	scp /Volumes/scratch/vmm_vio_x86/loader.img billn@dwarrowdelf.keg.cse.unsw.edu.au:loader.img && \
+	scp /Volumes/scratch/vmm_vio_x86/sel4_32.elf billn@dwarrowdelf.keg.cse.unsw.edu.au:sel4_32.elf && \
+	scp /Volumes/scratch/vmm_vio_x86/blk_storage billn@dwarrowdelf.keg.cse.unsw.edu.au:blk_storage && \
+	ssh billn@dwarrowdelf.keg.cse.unsw.edu.au "$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=2G \
 							  -nographic \
 							  -global virtio-mmio.force-legacy=false \
 							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235"
 
 clean::
 	$(RM) -f *.elf .depend* $
