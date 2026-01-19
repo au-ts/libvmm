@@ -211,7 +211,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                     // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
                     //    with the physical address rather than guest physical.
                     uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
-                    guest_ramfb_cfg->address = __builtin_bswap64(0x8000000 + ramfb_dma_gpa);
+                    guest_ramfb_cfg->address = __builtin_bswap64(0x20000000 + ramfb_dma_gpa);
                     LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n", ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
                     memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
 
