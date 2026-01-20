@@ -471,7 +471,7 @@ static bool handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg
         break;
 
     case VIRTIO_CONFIG_S_FAILED:
-        LOG_PCI_INFO("received FAILED status from driver, giving up this device.\n");
+        LOG_PCI_INFO("received FAILED status from driver, giving up on this device (ID 0x%x).\n", dev->regs.DeviceID);
         break;
 
     default:
