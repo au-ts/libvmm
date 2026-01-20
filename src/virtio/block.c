@@ -54,13 +54,13 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
     return (struct virtio_blk_device *)dev->device_data;
 }
 
-static inline void virtio_blk_mmio_reset(struct virtio_device *dev)
+static inline void virtio_blk_reset(struct virtio_device *dev)
 {
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = false;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
 }
 
-static inline bool virtio_blk_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
+static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     if (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_BLOCK_ERR("driver somehow wants to read device features after FEATURES_OK\n");
@@ -87,7 +87,7 @@ static inline bool virtio_blk_mmio_get_device_features(struct virtio_device *dev
     return true;
 }
 
-static inline bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
+static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     /* According to virtio initialisation protocol,
        this should check what device features were set, and return the subset of
@@ -124,7 +124,7 @@ static inline bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev
     return success;
 }
 
-static inline bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
+static inline bool virtio_blk_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     struct virtio_blk_device *state = device_state(dev);
 
@@ -139,7 +139,7 @@ static inline bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, 
     return true;
 }
 
-static inline bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
+static inline bool virtio_blk_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
     struct virtio_blk_device *state = device_state(dev);
 
@@ -565,22 +565,22 @@ stop_processing:
     return !has_dropped;
 }
 
-static bool virtio_blk_mmio_queue_notify(struct virtio_device *dev)
+static bool virtio_blk_queue_notify(struct virtio_device *dev)
 {
     int nums_consumed = 0;
-    LOG_BLOCK("virtio_blk_mmio_queue_notify calling handle_client_requests\n");
+    LOG_BLOCK("virtio_blk_queue_notify calling handle_client_requests\n");
     bool consumption_status = handle_client_requests(dev, &nums_consumed);
 
     bool virq_inject_success = true;
     if (!consumption_status) {
-        LOG_BLOCK("virtio_blk_mmio_queue_notify dropped requests\n");
+        LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
         virtio_blk_set_interrupt_status(dev, true, false);
         virq_inject_success = virtio_blk_virq_inject(dev);
     }
 
     struct virtio_blk_device *state = device_state(dev);
     if (nums_consumed && !blk_queue_plugged_req(&state->queue_h)) {
-        LOG_BLOCK("virtio_blk_mmio_queue_notify notified virt\n");
+        LOG_BLOCK("virtio_blk_queue_notify notified virt\n");
         microkit_notify(state->server_ch);
     }
 
@@ -844,12 +844,12 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
 }
 
 static virtio_device_funs_t functions = {
-    .device_reset = virtio_blk_mmio_reset,
-    .get_device_features = virtio_blk_mmio_get_device_features,
-    .set_driver_features = virtio_blk_mmio_set_driver_features,
-    .get_device_config = virtio_blk_mmio_get_device_config,
-    .set_device_config = virtio_blk_mmio_set_device_config,
-    .queue_notify = virtio_blk_mmio_queue_notify,
+    .device_reset = virtio_blk_reset,
+    .get_device_features = virtio_blk_get_device_features,
+    .set_driver_features = virtio_blk_set_driver_features,
+    .get_device_config = virtio_blk_get_device_config,
+    .set_device_config = virtio_blk_set_device_config,
+    .queue_notify = virtio_blk_queue_notify,
 };
 
 static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, size_t virq, uintptr_t data_region,

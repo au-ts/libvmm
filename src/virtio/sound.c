@@ -34,7 +34,7 @@ static inline struct virtio_snd_device *device_state(struct virtio_device *dev)
     return (struct virtio_snd_device *)dev->device_data;
 }
 
-static void virtio_snd_mmio_reset(struct virtio_device *dev)
+static void virtio_snd_reset(struct virtio_device *dev)
 {
     LOG_SOUND("Resetting virtIO sound device\n");
 
@@ -44,7 +44,7 @@ static void virtio_snd_mmio_reset(struct virtio_device *dev)
     }
 }
 
-static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint32_t *features)
+static bool virtio_snd_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     switch (dev->regs.DeviceFeaturesSel) {
     case 0:
@@ -62,7 +62,7 @@ static bool virtio_snd_mmio_get_device_features(struct virtio_device *dev, uint3
     return true;
 }
 
-static bool virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint32_t features)
+static bool virtio_snd_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     bool success = false;
     switch (dev->regs.DriverFeaturesSel) {
@@ -86,7 +86,7 @@ static bool virtio_snd_mmio_set_driver_features(struct virtio_device *dev, uint3
     return success;
 }
 
-static bool virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
+static bool virtio_snd_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     struct virtio_snd_device *state = device_state(dev);
     uintptr_t config_base_addr = (uintptr_t)&state->config;
@@ -96,7 +96,7 @@ static bool virtio_snd_mmio_get_device_config(struct virtio_device *dev, uint32_
     return true;
 }
 
-static bool virtio_snd_mmio_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
+static bool virtio_snd_set_device_config(struct virtio_device *dev, uint32_t offset, uint32_t val)
 {
     LOG_SOUND_ERR("Not allowed to change sound config.");
     return false;
@@ -637,7 +637,7 @@ static void handle_virtq(struct virtio_device *dev,
     vq->last_idx = idx;
 }
 
-static bool virtio_snd_mmio_queue_notify(struct virtio_device *dev)
+static bool virtio_snd_queue_notify(struct virtio_device *dev)
 {
     struct virtio_snd_device *state = device_state(dev);
 
@@ -662,12 +662,12 @@ static bool virtio_snd_mmio_queue_notify(struct virtio_device *dev)
 }
 
 static virtio_device_funs_t functions = {
-    .device_reset = virtio_snd_mmio_reset,
-    .get_device_features = virtio_snd_mmio_get_device_features,
-    .set_driver_features = virtio_snd_mmio_set_driver_features,
-    .get_device_config = virtio_snd_mmio_get_device_config,
-    .set_device_config = virtio_snd_mmio_set_device_config,
-    .queue_notify = virtio_snd_mmio_queue_notify,
+    .device_reset = virtio_snd_reset,
+    .get_device_features = virtio_snd_get_device_features,
+    .set_driver_features = virtio_snd_set_driver_features,
+    .get_device_config = virtio_snd_get_device_config,
+    .set_device_config = virtio_snd_set_device_config,
+    .queue_notify = virtio_snd_queue_notify,
 };
 
 bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
