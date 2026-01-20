@@ -189,6 +189,20 @@ struct ept_exception_handler {
 static struct ept_exception_handler registered_ept_exception_handlers[MAX_EPT_EXCEPTION_HANDLERS];
 static size_t ept_exception_handler_index = 0;
 
+bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base) {
+    for (int i = 0; i < ept_exception_handler_index; i++) {
+        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+        if (curr->base == base) {
+            curr->base = new_base;
+            return true;
+        }
+    }
+
+    LOG_VMM("failed to update EPT exception handler, none exists for base 0x%lx\n", base);
+
+    return false;
+}
+
 bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie)
 {
     if (ept_exception_handler_index == MAX_EPT_EXCEPTION_HANDLERS - 1) {

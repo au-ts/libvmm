@@ -23,6 +23,8 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip);
 typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,
                                          memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx,
                                          void *cookie);
+
+bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base);
 bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie);
 
 typedef bool (*pio_exception_callback_t)(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
