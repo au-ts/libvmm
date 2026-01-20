@@ -93,7 +93,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
         break;
     default:
         LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
-        return true;
+        success = true;
     }
 
     if (success) {

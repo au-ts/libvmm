@@ -97,7 +97,11 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     }
     if (success) {
         dev->features_happy = 1;
+    } else{
+        LOG_NET_ERR("failed to set driver features with DriverFeaturesSel 0x%x, features: 0x%x\n", dev->regs.DriverFeaturesSel, features);
     }
+
+    LOG_VMM("returning from net set driver features\n");
     return success;
 }
 
@@ -397,7 +401,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET + 0x40;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;
@@ -435,7 +439,7 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, s
     struct virtio_device *dev = virtio_net_init(net_dev, virq, rx, tx, rx_data, tx_data, rx_ch, tx_ch, mac);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
-    dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID + 0x40;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
 

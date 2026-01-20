@@ -112,11 +112,13 @@ static inline bool virtio_blk_mmio_set_driver_features(struct virtio_device *dev
         break;
     default:
         LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
-        return true;
+        success = true;
     }
 
     if (success) {
         dev->features_happy = 1;
+    } else {
+        LOG_VMM("set dev features not happy\n");
     }
 
     return success;
@@ -855,7 +857,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
                                              blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK + 0x40;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
@@ -905,7 +907,7 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, s
                                                 queue_capacity, server_ch);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
-    dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID + 0x40;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
 

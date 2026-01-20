@@ -11,7 +11,7 @@
 #include <libvmm/util/util.h>
 
 /* PCI REVISION */
-#define VIRTIO_PCI_REVISION 0
+#define VIRTIO_PCI_REVISION 1
 
 /* Common configuration */
 #define VIRTIO_PCI_CAP_COMMON_CFG 1
