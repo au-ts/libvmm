@@ -14,7 +14,6 @@
 #define VIRTIO_MMIO_DEV_MAGIC               0x74726976 // "virt"
 #define VIRTIO_MMIO_DEV_VERSION             0x2
 #define VIRTIO_MMIO_DEV_VERSION_LEGACY      0x1
-#define VIRTIO_MMIO_DEV_VERSION_LEGACY      0x1
 #define VIRTIO_MMIO_DEV_VENDOR_ID           0x344c6573 // "seL4"
 
 #define REG_VIRTIO_MMIO_MAGIC_VALUE         0x000
