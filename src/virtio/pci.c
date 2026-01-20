@@ -818,15 +818,17 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
 
         uint32_t dev_table_idx = ((bus * VIRTIO_PCI_DEVS_PER_BUS) + dev & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + (func & 7);
-        virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
+        virtio_device_t *dev_handle = virtio_pci_dev_table[dev_table_idx];
 
         // @billn hack for Host and ISA bridges on x86, they dont have a *dev, see Note 3 on top
-        if (!dev) {
+        if (!dev_handle) {
             break;
         }
 
+        // LOG_VMM("%d:%d.%d BAR negotiation write 0x%lx\n", bus, dev, func, data);
+
         uint8_t dev_bar_id = (reg_off - PCI_CFG_OFFSET_BAR1) % 0x4;
-        uint32_t global_bar_id = dev->transport.pci.mem_bar_ids[dev_bar_id];
+        uint32_t global_bar_id = dev_handle->transport.pci.mem_bar_ids[dev_bar_id];
 
         // Memory negotiation process:
         //     1. The driver writes all 1s to the BAR register.
