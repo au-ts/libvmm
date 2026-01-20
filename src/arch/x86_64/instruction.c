@@ -116,20 +116,25 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     bool rex_x = false; // 4-bit SIB.index
     bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
     bool opd_size_override = false;
-    // scan for REX byte, which is always 0b0100WRXB
-    if (instruction_buf[parsed_byte] >> 4 == 4) {
-        uint8_t rex_byte = instruction_buf[parsed_byte];
-        parsed_byte += 1;
 
-        rex_w = (rex_byte & BIT(3)) != 0;
-        rex_r = (rex_byte & BIT(2)) != 0;
-        rex_x = (rex_byte & BIT(1)) != 0;
-        rex_b = (rex_byte & BIT(0)) != 0;
-    } else if (instruction_buf[parsed_byte] == 0x66) {
+    for (int i = 0; i < instruction_len; i++) {
+        // scan for REX byte, which is always 0b0100WRXB
+        if (instruction_buf[parsed_byte] >> 4 == 4) {
+            uint8_t rex_byte = instruction_buf[parsed_byte];
+            parsed_byte += 1;
+    
+            rex_w = (rex_byte & BIT(3)) != 0;
+            rex_r = (rex_byte & BIT(2)) != 0;
+            rex_x = (rex_byte & BIT(1)) != 0;
+            rex_b = (rex_byte & BIT(0)) != 0;
+        }
+        
         // scan for the "operand-size override" prefix, which switch the operand size
         // from 32 to 16 bits, though the REX prefix have more precendence
-        opd_size_override = true;
-        parsed_byte += 1;
+        if (instruction_buf[parsed_byte] == 0x66) {
+            opd_size_override = true;
+            parsed_byte += 1;
+        }
     }
 
     // match the opcode against a list of known opcodes that we provide decoding logic for.
