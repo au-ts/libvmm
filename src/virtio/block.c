@@ -26,7 +26,7 @@
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_BLOCK
+// #define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...)             \
@@ -857,7 +857,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
                                              blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK + 0x40;
+    dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
@@ -907,7 +907,7 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, s
                                                 queue_capacity, server_ch);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
-    dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID + 0x40;
+    dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
 
