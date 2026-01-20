@@ -785,16 +785,9 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
                                                                         + config_space_ecam_off);
 
+    // @billn should we allow unchecked writes to all registers??
+
     switch (reg_off) {
-    case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
-        // Device will respond to MMIO access and is DMA capable.
-        config_space->command = data & (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
-        break;
-    }
-    case REG_RANGE(PCI_CFG_OFFSET_STATUS, PCI_CFG_OFFSET_BAR1): {
-        config_space->status = data;
-        break;
-    }
     case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
 
         uint32_t dev_table_idx = ((bus * VIRTIO_PCI_DEVS_PER_BUS) + dev & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + (func & 7);
@@ -1030,7 +1023,7 @@ bool pci_register_virtio_device(virtio_device_t *dev, int virq)
 
     config_space->vendor_id = dev->transport.pci.vendor_id;
     config_space->device_id = dev->transport.pci.device_id;
-    config_space->command = (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
+    config_space->command = (PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
     config_space->status = PCI_STATUS_CAP_LIST;
     config_space->revision_id = VIRTIO_PCI_REVISION;
     config_space->subclass = PCI_SUB_CLASS(dev->transport.pci.device_class);
