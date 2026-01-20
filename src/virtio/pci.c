@@ -274,10 +274,8 @@ static uintptr_t pci_allocate_bar_memory(virtio_device_t *dev, uint8_t dev_bar_i
     return allocated_offset;
 }
 
-static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint8_t cfg_type, uint8_t bar,
-                                      uint8_t next_ptr)
+static bool pci_add_virtio_capability(virtio_device_t *dev, struct virtio_pci_cap *cap, uint8_t offset, uint8_t cfg_type, uint8_t bar)
 {
-    uintptr_t new_cap_addr = (uintptr_t)virtio_pci_find_dev_cfg_space(dev) + offset;
     uint8_t len; // length of the new cap
     uint32_t size = 0; // size of the structure on the BAR, in bytes
 
@@ -294,7 +292,7 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
         len = sizeof(struct virtio_pci_notify_cap);
         assert(offset + len < VIRTIO_PCI_FUNC_CFG_SPACE_SIZE);
         size = 0x1000;
-        struct virtio_pci_notify_cap *notify = (struct virtio_pci_notify_cap *)new_cap_addr;
+        struct virtio_pci_notify_cap *notify = (struct virtio_pci_notify_cap *)cap;
         notify->notify_off_multiplier = VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
         break;
     case VIRTIO_PCI_CAP_PCI_CFG:
@@ -309,16 +307,28 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, uint8_t offset, uint
 
     uint32_t bar_offset = pci_allocate_bar_memory(dev, bar, size);
 
-    struct virtio_pci_cap *new_cap = (struct virtio_pci_cap *)new_cap_addr;
-    new_cap->cap_id = PCI_CAP_ID_VNDR;
-    new_cap->next_ptr = next_ptr;
-    new_cap->cap_len = len;
-    new_cap->cfg_type = cfg_type;
-    new_cap->bar = bar;
-    new_cap->offset = bar_offset;
-    new_cap->length = size;
+    cap->cap_id = PCI_CAP_ID_VNDR;
+    cap->cap_len = len;
+    cap->cfg_type = cfg_type;
+    cap->bar = bar;
+    cap->offset = bar_offset;
+    cap->length = size;
 
     return true;
+}
+
+static void pci_dump_capabilities(struct pci_config_space *config_space) {
+    LOG_VMM("=========== Dumping all PCI capabilities\n");
+    LOG_VMM("first cap offset 0x%x\n", config_space->cap_ptr);
+
+    struct virtio_pci_cap *curr_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + config_space->cap_ptr);
+    while (curr_cap->cap_id == PCI_CAP_ID_VNDR) {
+        LOG_VMM("dumping cap: 0x%p\n", curr_cap);
+        LOG_VMM("type: %d\n", curr_cap->cfg_type);
+        LOG_VMM("next: 0x%x\n", curr_cap->next_ptr);
+        curr_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + curr_cap->next_ptr);
+    }
+    LOG_VMM("=========== finished dumping all PCI capabilities\n");
 }
 
 static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg_type, uint8_t bar)
@@ -327,26 +337,43 @@ static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
     assert(config_space->cap_ptr + 2 < VIRTIO_PCI_FUNC_CFG_SPACE_SIZE);
 
-    uint8_t *last_cap = (uint8_t *)config_space + config_space->cap_ptr;
-    uint8_t offset = config_space->cap_ptr + last_cap[2];
     bool success = true;
 
+    struct virtio_pci_cap *new_cap = NULL;
+    uint8_t new_cap_offset = 0;
+    if (config_space->cap_ptr == 0) {
+        config_space->cap_ptr = 0x40;
+        new_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + config_space->cap_ptr);
+        new_cap_offset = config_space->cap_ptr;
+    } else {
+        struct virtio_pci_cap *curr_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + config_space->cap_ptr);
+        assert(config_space->cap_ptr == 0x40);
+
+        while (curr_cap->next_ptr) {
+            curr_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + curr_cap->next_ptr);
+        }
+
+        assert(curr_cap->next_ptr == 0);
+
+        uint8_t new_cap_offset = ((uintptr_t)curr_cap - (uintptr_t)config_space) + curr_cap->cap_len;
+        new_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + new_cap_offset);
+        curr_cap->next_ptr = new_cap_offset;
+    }
+    
     switch (cap_id) {
-    case PCI_CAP_ID_VNDR:
-        success = pci_add_virtio_capability(dev, offset, cfg_type, bar, config_space->cap_ptr);
+        case PCI_CAP_ID_VNDR:
+        success = pci_add_virtio_capability(dev, new_cap, new_cap_offset, cfg_type, bar);
         break;
-    default:
+        default:
         success = false;
         LOG_PCI_ERR("Unimplementeed capability ID: 0x%x\n", cap_id);
     }
-
+    
     if (!success) {
         LOG_PCI_ERR("Failed to add capability: ID (0x%x), type (0x%x), bar (0x%x)\n", cap_id, cfg_type, bar);
         return false;
     }
 
-    // Update cap_ptr in config space
-    config_space->cap_ptr = offset;
     return true;
 }
 
@@ -824,7 +851,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
         break;
     }
     default: {
-        uint8_t *bytes = (uint8_t *)((uintptr_t) config_space + reg_off);
+        uint8_t *bytes = (uint8_t *)((uintptr_t)config_space + reg_off);
         memcpy(bytes, &data, access_width_bytes);
     }
     }
@@ -1036,7 +1063,7 @@ bool pci_register_virtio_device(virtio_device_t *dev, int virq)
     config_space->interrupt_line = virq;
 
     bool success = true;
-    config_space->cap_ptr = 0x40;
+    config_space->cap_ptr = 0;
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_COMMON_CFG, 0);
     assert(success);
     success = pci_add_capability(dev, PCI_CAP_ID_VNDR, VIRTIO_PCI_CAP_ISR_CFG, 0);
