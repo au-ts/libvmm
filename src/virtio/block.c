@@ -26,7 +26,7 @@
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
 /* Uncomment this to enable debug logging */
-/* #define DEBUG_BLOCK */
+#define DEBUG_BLOCK
 
 #if defined(DEBUG_BLOCK)
 #define LOG_BLOCK(...)             \
@@ -130,9 +130,9 @@ static inline bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
     memcpy((char *)ret_val, (char *)(config_base_addr + offset), 4);
 
-    LOG_BLOCK("get device config with base_addr 0x%x and field_address 0x%x has "
+    LOG_BLOCK("get device config with base_addr 0x%x and offset 0x%x has "
               "value %d\n",
-              config_base_addr, config_field_addr, *ret_val);
+              config_base_addr, offset, *ret_val);
 
     return true;
 }
@@ -143,9 +143,9 @@ static inline bool virtio_blk_mmio_set_device_config(struct virtio_device *dev, 
 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
     memcpy((char *)(config_base_addr + offset), (char *)&val, 4);
-    LOG_BLOCK("set device config with base_addr 0x%x and field_address 0x%x with "
+    LOG_BLOCK("set device config with base_addr 0x%x and offset 0x%x with "
               "value %d\n",
-              config_base_addr, config_field_addr, val);
+              config_base_addr, offset, val);
 
     return true;
 }
