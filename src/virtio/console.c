@@ -249,7 +249,7 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
                                                  serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_CONSOLE;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
     dev->funs = &functions;
     dev->vqs = console->vqs;
@@ -280,7 +280,7 @@ bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev
     struct virtio_device *dev = virtio_console_init(console, virq, rxq, txq, tx_ch);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
-    dev->transport.pci.device_id = VIRTIO_PCI_CONSOLE_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_CONSOLE;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_COMMUNICATION_OTHER;
 
