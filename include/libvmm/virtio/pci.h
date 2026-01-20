@@ -138,13 +138,11 @@
 #define VIRTIO_PCI_FUNC_CFG_SPACE_SIZE          0x100
 #define VIRTIO_PCI_MAX_MEM_BARS                 0x10
 
-#define VIRTIO_PCI_VENDOR_ID            0x1AF4
-#define VIRTIO_PCI_NET_DEV_ID           0x1000
-#define VIRTIO_PCI_BLK_DEV_ID           0x1001
-#define VIRTIO_PCI_CONSOLE_DEV_ID       0x1003
-#define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
-#define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
-#define VIRTIO_PCI_QUEUE_SIZE           0x100
+#define VIRTIO_PCI_VENDOR_ID             0x1AF4
+#define VIRTIO_PCI_MODERN_BASE_DEVICE_ID 0x1040 // "non-transitional"
+#define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER  0x2
+#define VIRTIO_PCI_QUEUE_NUM_MAX         0x2
+#define VIRTIO_PCI_QUEUE_SIZE            0x100
 
 // Type 0 headers for endpoints
 struct pci_config_space {

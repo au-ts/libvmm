@@ -224,7 +224,7 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 
 qemu: $(IMAGE_FILE) blk_storage
 	# [ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
-	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio --trace "virtio_*" \
+	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=3G \
 							  -nographic \
 							  -global virtio-mmio.force-legacy=false \
