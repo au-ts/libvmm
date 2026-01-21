@@ -56,8 +56,16 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
 
 static inline void virtio_blk_reset(struct virtio_device *dev)
 {
+    LOG_VMM("block device reset!\n");
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = false;
     dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
+    for (int i = 0; i < dev->num_vqs; i++) {
+        dev->vqs[i].virtq.avail = 0;
+        dev->vqs[i].virtq.used = 0;
+        dev->vqs[i].virtq.desc = 0;
+    }
+    assert(blk_queue_empty_req(&device_state(dev)->queue_h));
+    assert(blk_queue_empty_resp(&device_state(dev)->queue_h));
 }
 
 static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -255,12 +263,17 @@ bool request_is_write(reqbk_t *req)
 
 static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_consumed)
 {
+    
     int err = 0;
     /* If multiqueue feature bit negotiated, should read which queue from
-       dev->QueueNotify, but for now we just assume it's the one and only default
-       queue */
+    dev->QueueNotify, but for now we just assume it's the one and only default
+    queue */
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ];
     struct virtq *virtq = &vq->virtq;
+    if (!(vq->ready)) {
+        LOG_VMM_ERR("handle_client_requests() called when vq is NOT ready\n");
+        return true;
+    }
 
     struct virtio_blk_device *state = device_state(dev);
 
@@ -557,6 +570,16 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
 
             err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
             nums_consumed += 1;
+            break;
+        }
+        case VIRTIO_BLK_T_GET_ID: {
+            char *dst_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
+            strcpy(dst_addr, "libvmm");
+            dst_addr[6] = 0;
+            nums_consumed += 1;
+            virtio_blk_set_req_success(dev, curr_desc);
+            virtio_blk_used_buffer(dev, curr_desc);
+            has_dropped = true;
             break;
         }
         default: {
