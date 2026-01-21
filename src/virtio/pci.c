@@ -820,9 +820,9 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
         uint32_t dev_table_idx = ((bus * VIRTIO_PCI_DEVS_PER_BUS) + dev & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + (func & 7);
         virtio_device_t *dev_handle = virtio_pci_dev_table[dev_table_idx];
 
-        // @billn hack for Host and ISA bridges on x86, they dont have a *dev, see Note 3 on top
+        // hack for the host bridge, it doesnt have a dev_handle
         if (!dev_handle) {
-            break;
+            return true;
         }
 
         // LOG_VMM("%d:%d.%d BAR negotiation write 0x%lx\n", bus, dev, func, data);
