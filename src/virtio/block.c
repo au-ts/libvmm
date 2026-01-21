@@ -104,7 +104,8 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
-        success = (features == device_features);
+        LOG_VMM("device_features = 0x%x, features = 0x%x\n", device_features, features);
+        success = device_features == features;
         break;
     /* features bits 32 to 63 */
     case 1:
@@ -214,7 +215,10 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t
     /* A sanity check that all the maths checks out. <=2 because we have negotiated
        with the driver to only send 1 4k segment at any given time. And 2 because such segment
        can sit between 2 sDDF block transfer window. */
-    assert(sddf_count <= 2);
+    if (sddf_count > 2) {
+        LOG_BLOCK_ERR("sddf_count %d > 2\n", sddf_count);
+        return false;
+    }
 
     if (ialloc_full(&state->ialloc)) {
         LOG_BLOCK("Request bookkeeping array is full\n");

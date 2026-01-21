@@ -137,12 +137,15 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
 
     // Finally populate hardware info, which describe various useful properties of our virtual PCI Host Bridge
     memset(&fw_cfg_blobs.fw_hw_info, 0, sizeof(struct hw_info_pci_host_bridge));
-    fw_cfg_blobs.fw_hw_info =
-        (struct hw_info_pci_host_bridge) { .header = { .type = HwInfoTypeHostBridge,
-                                                       .size = sizeof(struct hw_info_pci_host_bridge) },
-                                           .body = {            // matches DSDT
-                                                     .MemStart = 0xC0000000,
-                                                     .MemSize = 0x80000 } };
+    fw_cfg_blobs.fw_hw_info = (struct hw_info_pci_host_bridge) { .header = { .type = HwInfoTypeHostBridge,
+                                                                             .size = sizeof(struct host_bridge_info) },
+                                                                 .body = {
+                                                                    .Flags.Bits.CombineMemPMem = 1,
+                                                                    .IoStart = 0,
+                                                                    .IoSize = 0x4000,
+                                                                     .MemStart = 0xD0000000,
+                                                                     .MemSize = 0x200000,
+                                                                 } };
 
     // Finish by populating File Dir with everything we built
     fw_cfg_blobs.fw_cfg_file_dir =
