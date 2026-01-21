@@ -168,6 +168,33 @@ struct hw_info_pci_host_bridge {
     struct host_bridge_info body;
 };
 
+// MdePkg/Include/Protocol/PciRootBridgeIo.h
+/** @file
+  PCI Root Bridge I/O protocol as defined in the UEFI 2.0 specification.
+
+  PCI Root Bridge I/O protocol is used by PCI Bus Driver to perform PCI Memory, PCI I/O,
+  and PCI Configuration cycles on a PCI Root Bridge. It also provides services to perform
+  defferent types of bus mastering DMA.
+
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+#define EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO    0x0001
+#define EFI_PCI_ATTRIBUTE_ISA_IO                0x0002
+#define EFI_PCI_ATTRIBUTE_VGA_PALETTE_IO        0x0004
+#define EFI_PCI_ATTRIBUTE_VGA_MEMORY            0x0008
+#define EFI_PCI_ATTRIBUTE_VGA_IO                0x0010
+#define EFI_PCI_ATTRIBUTE_IDE_PRIMARY_IO        0x0020
+#define EFI_PCI_ATTRIBUTE_IDE_SECONDARY_IO      0x0040
+#define EFI_PCI_ATTRIBUTE_MEMORY_WRITE_COMBINE  0x0080
+#define EFI_PCI_ATTRIBUTE_MEMORY_CACHED         0x0800
+#define EFI_PCI_ATTRIBUTE_MEMORY_DISABLE        0x1000
+#define EFI_PCI_ATTRIBUTE_DUAL_ADDRESS_CYCLE    0x8000
+#define EFI_PCI_ATTRIBUTE_ISA_IO_16             0x10000
+#define EFI_PCI_ATTRIBUTE_VGA_PALETTE_IO_16     0x20000
+#define EFI_PCI_ATTRIBUTE_VGA_IO_16             0x40000
+
 #define NUM_BIOS_LINKER_LOADER_CMD 16
 #define E820_FWCFG_FILE "etc/e820"
 #define ACPI_BUILD_TABLE_FILE "etc/acpi/tables"

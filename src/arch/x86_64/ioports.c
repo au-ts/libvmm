@@ -185,11 +185,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         if (!is_read) {
             success = true;
         }
-    } else if (port_addr == 0x61) {
-        assert(!is_string);
-        // some sort of PS2 controller?
-        success = true;
-        assert(false);
+
     } else if (port_addr >= 0x40 && port_addr <= 0x43) {
         return emulate_pit_access(vctx, port_addr, is_read);
 
@@ -208,12 +204,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         // some sort of serial device
         success = true;
 
-    } else if (port_addr == 0x64) {
-        LOG_VMM("accessing io port 0x%x\n", port_addr);
+    } else if (port_addr >= 0x60 && port_addr <= 0x64) {
         assert(!is_string);
         // PS2 controller
         success = true;
-        assert(false);
+
     } else if (port_addr == 0xb008) {
         // assert(!is_string);
         // Handle ACPI Power Management Timer

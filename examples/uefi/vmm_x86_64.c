@@ -67,9 +67,13 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
-uint64_t ps2_controller_id = 22;
-uint64_t ps2_controller_addr = 0x60;
-uint64_t ps2_controller_size = 5;
+uint64_t ps2_data_port_id = 22;
+uint64_t ps2_data_port_addr = 0x60;
+uint64_t ps2_data_port_size = 1;
+
+uint64_t ps2_sts_cmd_port_id = 23;
+uint64_t ps2_sts_cmd_port_addr = 0x64;
+uint64_t ps2_sts_cmd_port_size = 1;
 
 #define FIRST_PS2_IRQ_CH 3
 #define SECOND_PS2_IRQ_CH 4
@@ -121,24 +125,25 @@ void init(void)
     assert(virtio_pci_register_memory_resource(0xD0000000, 0x1000000, 0x200000));
     assert(pci_x86_init());
 
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr, ps2_sts_cmd_port_size);
 
-    assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
-                                   &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
+    // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
+    //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
 
-    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
-                   net_config.rx.num_buffers);
-    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
-                   net_config.tx.num_buffers);
-    net_buffers_init(&net_tx_queue, 0);
+    // net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+    //                net_config.rx.num_buffers);
+    // net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+    //                net_config.tx.num_buffers);
+    // net_buffers_init(&net_tx_queue, 0);
 
-    bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
-                                       &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                       (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                       net_config.mac_addr);
-    assert(success);
+    // bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
+    //                                    &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+    //                                    (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+    //                                    net_config.mac_addr);
+    // assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+    bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
                                   (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
                                   blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
@@ -186,6 +191,7 @@ void notified(microkit_channel ch)
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
 
+            /* Start vCPU in *real* mode with paging off */
             guest_start(0xfff0, 0, 0);
         } else {
             handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
