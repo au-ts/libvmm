@@ -25,6 +25,7 @@
 #endif
 
 #define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#define LOG_VMM_DBG(...) do{ printf("%s(%s:%d)|INFO: ", microkit_name, __FUNCTION__, __LINE__); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", microkit_name); printf(__VA_ARGS__); }while(0)
 
 static void assert_fail(
