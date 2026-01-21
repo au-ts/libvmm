@@ -118,7 +118,7 @@ void init(void)
         // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
     assert(guest_ecam_size == ECAM_SIZE);
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
-    assert(virtio_pci_register_memory_resource(0xF0000000, 0x1000000, 0x80000));
+    assert(virtio_pci_register_memory_resource(0xD0000000, 0x1000000, 0x200000));
     assert(pci_x86_init());
 
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
