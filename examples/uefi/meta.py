@@ -122,8 +122,11 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     qemu_fw_cfg_dma_port = SystemDescription.IoPort(0x518, 4, 21)
     vmm_client0.add_ioport(qemu_fw_cfg_dma_port)
 
-    ps2_port = SystemDescription.IoPort(0x60, 5, 22)
-    vmm_client0.add_ioport(ps2_port)
+    ps2_data_port = SystemDescription.IoPort(0x60, 1, 22)
+    vmm_client0.add_ioport(ps2_data_port)
+
+    ps2_sts_cmd_port = SystemDescription.IoPort(0x64, 1, 23)
+    vmm_client0.add_ioport(ps2_sts_cmd_port)
 
     ps2_first_irq = SystemDescription.IrqIoapic(0, 1, 32, id=3)
     vmm_client0.add_irq(ps2_first_irq)
