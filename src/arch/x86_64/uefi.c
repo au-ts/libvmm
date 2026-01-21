@@ -61,18 +61,18 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     num_cmd += 1;
 
     // Connect the XSDP to the XSDT, then compute XSDP checksum
-    bios_linker_loader_add_pointer(ACPI_BUILD_RSDP_FILE, (void *) &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp),
+    bios_linker_loader_add_pointer(ACPI_BUILD_RSDP_FILE, (void *)&fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp),
                                    (uint64_t)&fw_cfg_blobs.fw_xsdp.xsdt_gpa - (uint64_t)&fw_cfg_blobs.fw_xsdp,
                                    sizeof(uint64_t), ACPI_BUILD_TABLE_FILE, 0, &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
-    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, (void *) &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
+    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, (void *)&fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
                                     offsetof(struct xsdp, length),
                                     (uint64_t)&fw_cfg_blobs.fw_xsdp.checksum - (uint64_t)&fw_cfg_blobs.fw_xsdp,
                                     &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
-    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, (void *) &fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
+    bios_linker_loader_add_checksum(ACPI_BUILD_RSDP_FILE, (void *)&fw_cfg_blobs.fw_xsdp, sizeof(struct xsdp), 0,
                                     sizeof(struct xsdp),
                                     (uint64_t)&fw_cfg_blobs.fw_xsdp.ext_checksum - (uint64_t)&fw_cfg_blobs.fw_xsdp,
                                     &fw_cfg_blobs.fw_table_loader[num_cmd]);
@@ -80,14 +80,14 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
 
     // Connect the DSDT to FADT, then checksum the FADT
     bios_linker_loader_add_pointer(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.X_Dsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
         ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.dsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     bios_linker_loader_add_checksum(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct FADT),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.h.checksum - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
@@ -95,70 +95,90 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
 
     // Connect the FADT, HPET, MADT, MCFG to XSDT, then checksum the XSDT
     bios_linker_loader_add_pointer(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
-        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[0] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
-        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[0] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        sizeof(uint64_t), ACPI_BUILD_TABLE_FILE,
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     bios_linker_loader_add_pointer(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
-        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[1] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
-        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.hpet - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[1] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        sizeof(uint64_t), ACPI_BUILD_TABLE_FILE,
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.hpet - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     bios_linker_loader_add_pointer(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
-        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[2] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
-        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.madt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[2] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        sizeof(uint64_t), ACPI_BUILD_TABLE_FILE,
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.madt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     bios_linker_loader_add_pointer(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
-        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[3] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),
-        ACPI_BUILD_TABLE_FILE, (uint64_t)&fw_cfg_blobs.fw_acpi_tables.mcfg - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.tables[3] - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        sizeof(uint64_t), ACPI_BUILD_TABLE_FILE,
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.mcfg - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     bios_linker_loader_add_checksum(
-        ACPI_BUILD_TABLE_FILE, (void *) &fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct xsdt),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.xsdt.h.checksum - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
         &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
     assert(num_cmd < NUM_BIOS_LINKER_LOADER_CMD);
+
+    // Finally populate hardware info, which describe various useful properties of our virtual PCI Host Bridge
+    memset(&fw_cfg_blobs.fw_hw_info, 0, sizeof(struct hw_info_pci_host_bridge));
+    fw_cfg_blobs.fw_hw_info =
+        (struct hw_info_pci_host_bridge) { .header = { .type = HwInfoTypeHostBridge,
+                                                       .size = sizeof(struct hw_info_pci_host_bridge) },
+                                           .body = {            // matches DSDT
+                                                     .MemStart = 0xC0000000,
+                                                     .MemSize = 0x80000 } };
+
     // Finish by populating File Dir with everything we built
-    fw_cfg_blobs.fw_cfg_file_dir = (struct fw_cfg_file_dir) {
-        .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
-        .file_entries = { {
-                              .name = E820_FWCFG_FILE,
-                              .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
-                              .select = __builtin_bswap16(FW_CFG_E820),
-                          },
-                          {
-                              .name = FRAMEBFUFER_FWCFG_FILE,
-                              .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
-                              .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
-                          },
-                          {
-                              .name = ACPI_BUILD_TABLE_FILE,
-                              .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
-                              .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
-                          },
-                          {
-                              .name = ACPI_BUILD_RSDP_FILE,
-                              .size = __builtin_bswap32(sizeof(struct xsdp)),
-                              .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
-                          },
-                          {
-                              .name = ACPI_BUILD_LOADER_FILE,
-                              .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
-                              .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
-                          } }
-    };
+    fw_cfg_blobs.fw_cfg_file_dir =
+        (struct fw_cfg_file_dir) { .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
+                                   .file_entries = {
+                                       {
+                                           .name = E820_FWCFG_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
+                                           .select = __builtin_bswap16(FW_CFG_E820),
+                                       },
+                                       {
+                                           .name = FRAMEBFUFER_FWCFG_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
+                                           .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
+                                       },
+                                       {
+                                           .name = ACPI_BUILD_TABLE_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
+                                           .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
+                                       },
+                                       {
+                                           .name = ACPI_BUILD_RSDP_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct xsdp)),
+                                           .select = __builtin_bswap16(FW_CFG_ACPI_RSDP),
+                                       },
+                                       {
+                                           .name = ACPI_BUILD_LOADER_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct BiosLinkerLoaderEntry) * num_cmd),
+                                           .select = __builtin_bswap16(FW_CFG_TABLE_LOADER),
+                                       },
+                                       {
+                                           .name = HW_INFO_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct hw_info_pci_host_bridge)),
+                                           .select = __builtin_bswap16(FW_CFG_HW_INFO),
+                                       },
+                                   } };
 
     return true;
 }
