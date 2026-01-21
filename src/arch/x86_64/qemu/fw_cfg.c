@@ -61,7 +61,9 @@ static void fw_cfg_select(uint16_t port);
 static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name);
 
 // @billn revisit buffer overflows
-bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width) {
+bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep,
+                                ioport_access_width_t access_width)
+{
     LOG_VMM("fw cfg access on port 0x%x\n", port_addr);
     switch (port_addr) {
     case FW_CFG_PORT_SEL:
@@ -85,42 +87,63 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
             switch (selector) {
             case FW_CFG_SIGNATURE:
                 assert(selected_data_idx < strlen(FW_CFG_SIGNATURE_STR));
-                selected_data_idx += emulate_ioport_string_read(vctx, FW_CFG_SIGNATURE_STR, strlen(FW_CFG_SIGNATURE_STR), is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, FW_CFG_SIGNATURE_STR,
+                                                                strlen(FW_CFG_SIGNATURE_STR), is_rep, access_width);
                 break;
             case FW_CFG_ID: {
                 uint32_t id = FW_CFG_DEFAULT_ID;
-                selected_data_idx += emulate_ioport_string_read(vctx, (char *) &id, sizeof(uint32_t), is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, (char *)&id, sizeof(uint32_t), is_rep,
+                                                                access_width);
                 break;
             }
             case FW_CFG_FILE_DIR: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_cfg_file_dir)[selected_data_idx], sizeof(fw_cfg_blobs.fw_cfg_file_dir) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_cfg_file_dir)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_cfg_file_dir) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_E820: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_cfg_e820_map)[selected_data_idx], sizeof(fw_cfg_blobs.fw_cfg_e820_map) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_cfg_e820_map)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_cfg_e820_map) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_BOOT_MENU: {
                 uint16_t boot_menu = 0;
-                selected_data_idx += emulate_ioport_string_read(vctx, (char *) &boot_menu, sizeof(uint16_t), is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, (char *)&boot_menu, sizeof(uint16_t), is_rep,
+                                                                access_width);
                 break;
             }
             case FW_CFG_NB_CPUS: {
                 // TODO: revisit
                 uint16_t nb_cpus = 1;
-                selected_data_idx += emulate_ioport_string_read(vctx, (char *) &nb_cpus, sizeof(uint16_t), is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(vctx, (char *)&nb_cpus, sizeof(uint16_t), is_rep,
+                                                                access_width);
                 break;
             }
             case FW_CFG_ACPI_TABLES: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_acpi_tables)[selected_data_idx], sizeof(fw_cfg_blobs.fw_acpi_tables) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_acpi_tables)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_acpi_tables) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_ACPI_RSDP: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_xsdp)[selected_data_idx], sizeof(fw_cfg_blobs.fw_xsdp) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_xsdp)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_xsdp) - selected_data_idx, is_rep, access_width);
                 break;
             }
             case FW_CFG_TABLE_LOADER: {
-                selected_data_idx += emulate_ioport_string_read(vctx, &((char *) &fw_cfg_blobs.fw_table_loader)[selected_data_idx], sizeof(fw_cfg_blobs.fw_table_loader) - selected_data_idx, is_rep, access_width);
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_table_loader)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_table_loader) - selected_data_idx, is_rep, access_width);
+                break;
+            }
+            case FW_CFG_HW_INFO: {
+                LOG_VMM("accessing hw info\n");
+                selected_data_idx += emulate_ioport_string_read(
+                    vctx, &((char *)&fw_cfg_blobs.fw_hw_info)[selected_data_idx],
+                    sizeof(fw_cfg_blobs.fw_hw_info) - selected_data_idx, is_rep, access_width);
                 break;
             }
             default:
@@ -155,79 +178,83 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
         void *dma_vaddr = gpa_to_vaddr(dma_gpa);
         LOG_VMM("DMA with data at GPA 0x%lx, length: 0x%lx, control: 0x%lx\n", dma_gpa, length, control);
         switch (control) {
-            case fw_ctl_read: {
-                LOG_VMM("fw cfg DMA read (item 0x%x)\n", selector);
-                if (selector == FW_CFG_FILE_DIR) {
-                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_cfg_file_dir)[selected_data_idx], length);
-                } else if (selector == FW_CFG_SIGNATURE) {
-                    // TODO: should take into account selected_data_idx?
-                    assert(length <= strlen(FW_CFG_SIGNATURE_STR));
-                    memcpy(dma_vaddr, FW_CFG_SIGNATURE_STR, length);
-                } else if (selector == FW_CFG_ID) {
-                    assert(length <= sizeof(uint32_t));
-                    uint32_t id = FW_CFG_DEFAULT_ID;
-                    memcpy(dma_vaddr, (char *)&id, length);
-                } else if (selector == FW_CFG_E820) {
-                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_cfg_e820_map)[selected_data_idx], length);
-                } else if (selector == FW_CFG_BOOT_MENU) {
-                    assert(length <= sizeof(uint16_t));
-                    uint16_t boot_menu = 0;
-                    memcpy(dma_vaddr, (char *) &boot_menu, length);
-                } else if (selector == FW_CFG_NB_CPUS) {
-                    assert(length <= sizeof(uint16_t));
-                    // TODO: revisit
-                    uint16_t nb_cpus = 1;
-                    memcpy(dma_vaddr, (char *) &nb_cpus, length);
-                } else if (selector == FW_CFG_ACPI_TABLES) {
-                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_acpi_tables)[selected_data_idx], length);
-                } else if (selector == FW_CFG_ACPI_RSDP) {
-                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_xsdp)[selected_data_idx], length);
-                } else if (selector == FW_CFG_TABLE_LOADER) {
-                    memcpy(dma_vaddr, &((char *) &fw_cfg_blobs.fw_table_loader)[selected_data_idx], length);
-                } else {
-                    LOG_VMM_ERR("unknown fw cfg DMA read for selector 0x%x\n", selector);
-                    return false;
-                }
-                selected_data_idx += length;
-                /* To indicate to guest that the DMA command was successful. */
-                cmd->control = 0;
-                break;
-            }
-            case fw_ctl_write: {
-                LOG_VMM("=============== fw cfg DMA write (item 0x%x)\n", selector);
-                if (selector == FW_CFG_FRAMEBUFFER) {
-                    struct QemuRamFBCfg *guest_ramfb_cfg = (struct QemuRamFBCfg *)dma_vaddr;
-                    assert(length == sizeof(struct QemuRamFBCfg));
-                    LOG_VMM("RAM FB cfg DMA, width: %d, height: %d\n",
-                            __builtin_bswap32(guest_ramfb_cfg->width), __builtin_bswap32(guest_ramfb_cfg->height));
-
-                    // We need to take this config and apply it to the real QEMU config.
-                    // 1. Find the real QEMU ramfb
-                    struct FWCfgFile ramfb_file;
-                    bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
-                    assert(found);
-                    // 2. Select it with the real QEMU fw-cfg
-                    fw_cfg_select(__builtin_bswap16(ramfb_file.select));
-                    // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
-                    //    with the physical address rather than guest physical.
-                    uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
-                    guest_ramfb_cfg->address = __builtin_bswap64(0x20000000 + ramfb_dma_gpa);
-                    LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n", ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
-                    memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
-
-                    fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
-                } else {
-                    LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
-                    return false;
-                }
-                /* To indicate to guest that the DMA command was successful. */
-                selected_data_idx += length;
-                cmd->control = 0;
-                break;
-            }
-            default:
-                LOG_VMM_ERR("unknown fw cfg DMA control field 0x%x (item 0x%x)\n", control, selector);
+        case fw_ctl_read: {
+            LOG_VMM("fw cfg DMA read (item 0x%x)\n", selector);
+            if (selector == FW_CFG_FILE_DIR) {
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_cfg_file_dir)[selected_data_idx], length);
+            } else if (selector == FW_CFG_SIGNATURE) {
+                // TODO: should take into account selected_data_idx?
+                assert(length <= strlen(FW_CFG_SIGNATURE_STR));
+                memcpy(dma_vaddr, FW_CFG_SIGNATURE_STR, length);
+            } else if (selector == FW_CFG_ID) {
+                assert(length <= sizeof(uint32_t));
+                uint32_t id = FW_CFG_DEFAULT_ID;
+                memcpy(dma_vaddr, (char *)&id, length);
+            } else if (selector == FW_CFG_E820) {
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_cfg_e820_map)[selected_data_idx], length);
+            } else if (selector == FW_CFG_BOOT_MENU) {
+                assert(length <= sizeof(uint16_t));
+                uint16_t boot_menu = 0;
+                memcpy(dma_vaddr, (char *)&boot_menu, length);
+            } else if (selector == FW_CFG_NB_CPUS) {
+                assert(length <= sizeof(uint16_t));
+                // TODO: revisit
+                uint16_t nb_cpus = 1;
+                memcpy(dma_vaddr, (char *)&nb_cpus, length);
+            } else if (selector == FW_CFG_ACPI_TABLES) {
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_acpi_tables)[selected_data_idx], length);
+            } else if (selector == FW_CFG_ACPI_RSDP) {
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_xsdp)[selected_data_idx], length);
+            } else if (selector == FW_CFG_TABLE_LOADER) {
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_table_loader)[selected_data_idx], length);
+            } else if (selector == FW_CFG_HW_INFO) {
+                LOG_VMM("accessing hw info via dma\n");
+                memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_hw_info)[selected_data_idx], length);
+            } else {
+                LOG_VMM_ERR("unknown fw cfg DMA read for selector 0x%x\n", selector);
                 return false;
+            }
+            selected_data_idx += length;
+            /* To indicate to guest that the DMA command was successful. */
+            cmd->control = 0;
+            break;
+        }
+        case fw_ctl_write: {
+            LOG_VMM("=============== fw cfg DMA write (item 0x%x)\n", selector);
+            if (selector == FW_CFG_FRAMEBUFFER) {
+                struct QemuRamFBCfg *guest_ramfb_cfg = (struct QemuRamFBCfg *)dma_vaddr;
+                assert(length == sizeof(struct QemuRamFBCfg));
+                LOG_VMM("RAM FB cfg DMA, width: %d, height: %d\n", __builtin_bswap32(guest_ramfb_cfg->width),
+                        __builtin_bswap32(guest_ramfb_cfg->height));
+
+                // We need to take this config and apply it to the real QEMU config.
+                // 1. Find the real QEMU ramfb
+                struct FWCfgFile ramfb_file;
+                bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
+                assert(found);
+                // 2. Select it with the real QEMU fw-cfg
+                fw_cfg_select(__builtin_bswap16(ramfb_file.select));
+                // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
+                //    with the physical address rather than guest physical.
+                uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
+                guest_ramfb_cfg->address = __builtin_bswap64(0x20000000 + ramfb_dma_gpa);
+                LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n",
+                        ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
+                memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
+
+                fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
+            } else {
+                LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
+                return false;
+            }
+            /* To indicate to guest that the DMA command was successful. */
+            selected_data_idx += length;
+            cmd->control = 0;
+            break;
+        }
+        default:
+            LOG_VMM_ERR("unknown fw cfg DMA control field 0x%x (item 0x%x)\n", control, selector);
+            return false;
         }
 
         break;
@@ -245,17 +272,20 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
 uint64_t qemu_fw_cfg_port_addr_sel = 20;
 uint64_t qemu_fw_cfg_port_addr_dma = 21;
 
-static void fw_cfg_select(uint16_t port) {
+static void fw_cfg_select(uint16_t port)
+{
     microkit_x86_ioport_write_16(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_SEL, port);
 }
 
-static void fw_cfg_read_buf(char *buf, int length) {
+static void fw_cfg_read_buf(char *buf, int length)
+{
     for (int i = 0; i < length; i++) {
         buf[i] = microkit_x86_ioport_read_8(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_DATA);
     }
 }
 
-static uint32_t fw_cfg_read_u32() {
+static uint32_t fw_cfg_read_u32()
+{
     uint32_t a = microkit_x86_ioport_read_8(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_DATA);
     uint32_t b = microkit_x86_ioport_read_8(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_DATA);
     uint32_t c = microkit_x86_ioport_read_8(qemu_fw_cfg_port_addr_sel, FW_CFG_PORT_DATA);
@@ -267,7 +297,8 @@ static uint32_t fw_cfg_read_u32() {
 uint64_t fw_cfg_dma_cmd_paddr = 0x6000000;
 uint64_t fw_cfg_dma_cmd_vaddr = 0x110000000;
 
-static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address) {
+static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address)
+{
     FWCfgDmaAccess *cmd = (FWCfgDmaAccess *)fw_cfg_dma_cmd_vaddr;
     cmd->control = __builtin_bswap32(control);
     cmd->length = __builtin_bswap32(length);
@@ -275,14 +306,16 @@ static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address
     LOG_VMM("dma control before write: 0x%x\n", __builtin_bswap32(cmd->control));
 
     assert(fw_cfg_dma_cmd_paddr < (2ULL << 32) - 1);
-    microkit_x86_ioport_write_32(qemu_fw_cfg_port_addr_dma, FW_CFG_PORT_DMA + 4, __builtin_bswap32(fw_cfg_dma_cmd_paddr));
+    microkit_x86_ioport_write_32(qemu_fw_cfg_port_addr_dma, FW_CFG_PORT_DMA + 4,
+                                 __builtin_bswap32(fw_cfg_dma_cmd_paddr));
 
     LOG_VMM("dma control after write: 0x%x\n", __builtin_bswap32(cmd->control));
     assert(!__builtin_bswap32(cmd->control));
 }
 
 /* Code for actually accessing the QEMU fw cfg, rather than emulating it. */
-static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name) {
+static bool fw_cfg_find_file(struct FWCfgFile *out, const char *name)
+{
     LOG_VMM("selecting signature\n");
     fw_cfg_select(FW_CFG_SIGNATURE);
 

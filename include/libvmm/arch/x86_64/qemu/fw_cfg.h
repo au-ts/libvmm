@@ -45,6 +45,7 @@
 #define FW_CFG_ACPI_RSDP    0x22
 #define FW_CFG_TABLE_LOADER 0x23
 #define FW_CFG_FRAMEBUFFER  0x24
+#define FW_CFG_HW_INFO      0x25
 
 /* an individual file entry, 64 bytes total */
 struct FWCfgFile {
@@ -58,7 +59,7 @@ struct FWCfgFile {
 }  __attribute__((packed));
 
 /* Structure of FW_CFG_FILE_DIR */
-#define NUM_FW_CFG_FILES 5
+#define NUM_FW_CFG_FILES 6
 struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
@@ -80,12 +81,100 @@ struct fw_cfg_acpi_tables {
     char dsdt[DSDT_MAX_SIZE];
 } __attribute__((packed));
 
+/**@file
+  Hardware info library with types and accessors to parse information about
+  PCI host bridges.
+
+  Copyright 2021 - 2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+**/
+// OvmfPkg/Library/HardwareInfoLib/HardwareInfoTypesLib.h
+typedef enum {
+    HwInfoTypeUndefined = 0,
+    HwInfoTypeHostBridge = 1,
+    HwInfoTypeQemuUefiVars = 2,
+    HwInfoTypeSvsmVirtioMmio = 0x1000,
+};
+
+struct hw_info_header {
+    uint64_t type;
+    uint64_t size;
+} __attribute__((packed));
+
+// OvmfPkg/Library/HardwareInfoLib/HardwareInfoPciHostBridgeLib.h
+struct host_bridge_info {
+  // Feature tracking, initially 0
+  uint64_t    Version;
+
+  // Host bridge enabled attributes (EFI_PCI_ATTRIBUTE_*)
+  uint64_t    Attributes;
+
+  union {
+    uint32_t    Uint32;
+    struct {
+      uint32_t    DmaAbove4G            : 1;
+      uint32_t    NoExtendedConfigSpace : 1;
+      uint32_t    CombineMemPMem        : 1;
+      uint32_t    Reserved              : 29;
+    } Bits;
+  } Flags;
+
+  // Bus number range
+  uint8_t     BusNrStart;
+  uint8_t     BusNrLast;
+
+  uint8_t     Padding[2];
+
+  //
+  // IO aperture
+  //
+  uint64_t    IoStart;
+  uint64_t    IoSize;
+
+  //
+  // 32-bit MMIO aperture
+  //
+  uint64_t    MemStart;
+  uint64_t    MemSize;
+
+  //
+  // 32-bit prefetchable MMIO aperture
+  //
+  uint64_t    PMemStart;
+  uint64_t    PMemSize;
+
+  //
+  // 64-bit MMIO aperture
+  //
+  uint64_t    MemAbove4GStart;
+  uint64_t    MemAbove4GSize;
+
+  //
+  // 64-bit prefetchable MMIO aperture
+  //
+  uint64_t    PMemAbove4GStart;
+  uint64_t    PMemAbove4GSize;
+
+  //
+  // MMIO accessible PCIe config space (ECAM)
+  //
+  uint64_t    PcieConfigStart;
+  uint64_t    PcieConfigSize;
+} __attribute__((packed));
+
+struct hw_info_pci_host_bridge {
+    struct hw_info_header header;
+    struct host_bridge_info body;
+};
+
 #define NUM_BIOS_LINKER_LOADER_CMD 16
 #define E820_FWCFG_FILE "etc/e820"
 #define ACPI_BUILD_TABLE_FILE "etc/acpi/tables"
 #define ACPI_BUILD_RSDP_FILE "etc/acpi/rsdp"
 #define ACPI_BUILD_LOADER_FILE "etc/table-loader"
 #define FRAMEBFUFER_FWCFG_FILE "etc/ramfb"
+#define HW_INFO_FILE "etc/hardware-info"
 
 // Useful data that will be served to the guest firmware via the fw cfg interface.
 struct fw_cfg_blobs {
@@ -99,6 +188,8 @@ struct fw_cfg_blobs {
     struct fw_cfg_acpi_tables fw_acpi_tables;
     // "etc/table-loader"
     struct BiosLinkerLoaderEntry fw_table_loader[NUM_BIOS_LINKER_LOADER_CMD];
+    // "etc/hardware-info"
+    struct hw_info_pci_host_bridge fw_hw_info;
 };
 
 bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read, bool is_string, bool is_rep, ioport_access_width_t access_width);
