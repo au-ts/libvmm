@@ -15,6 +15,9 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
+// @billn the TPR register must be properly implemeted, as I've seen a concrete example of a guest using it
+// to temporarily masl the APIC timer interrupts: https://github.com/tianocore/edk2/blob/dddb45306affe61328d126ab2cac8de3da909ebc/MdeModulePkg/Bus/Pci/PciBusDxe/PciEnumeratorSupport.c#L890
+
 // @billn there seems to be a big problem with this code. If the host CPU load is high, the fault
 // and IRQ injection latency will also be high. Which will cause the timer value to skew and linux
 // will complain that TSC isn't stable. I don't know if this is a problem with the code or just how it is...
