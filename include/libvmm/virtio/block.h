@@ -139,7 +139,7 @@ struct virtio_blk_outhdr {
 #define SDDF_BLK_DEFAULT_HANDLE 0
 // TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
-#define SDDF_MAX_DATA_CELLS 128
+#define SDDF_MAX_DATA_CELLS 1024
 /* Maximum sddf queue capacity */
 #define SDDF_MAX_QUEUE_CAPACITY 128
 

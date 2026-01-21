@@ -221,17 +221,17 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t
     // }
 
     if (ialloc_full(&state->ialloc)) {
-        LOG_BLOCK("Request bookkeeping array is full\n");
+        LOG_VMM_ERR("Request bookkeeping array is full\n");
         return false;
     }
 
     if (blk_queue_full_req(&state->queue_h)) {
-        LOG_BLOCK("Request queue is full\n");
+        LOG_VMM_ERR("Request queue is full\n");
         return false;
     }
 
     if (fsmalloc_full(&state->fsmalloc, sddf_count)) {
-        LOG_BLOCK("Data region is full\n");
+        LOG_VMM_ERR("Data region is full, trying to allocate %d sddf transfer windows,\n", sddf_count);
         return false;
     }
 
@@ -568,6 +568,9 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             break;
         }
         }
+
+        last_handled_avail_idx++;
+        break;
     }
 
 stop_processing:
@@ -888,14 +891,14 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
                               ? (data_region_size / BLK_TRANSFER_SIZE)
                               : SDDF_MAX_DATA_CELLS;
 
-    assert(num_sddf_cells == queue_capacity);
+    // assert(num_sddf_cells == queue_capacity);
 
     virtio_blk_config_init(blk_dev);
 
     fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE, num_sddf_cells, &blk_dev->fsmalloc_avail_bitarr,
                   blk_dev->fsmalloc_avail_bitarr_words, roundup_bits2words64(num_sddf_cells));
 
-    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, num_sddf_cells);
+    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, queue_capacity);
 
     return dev;
 }
