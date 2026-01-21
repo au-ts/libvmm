@@ -521,6 +521,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 {
     bool success = true;
 
+    // LOG_VMM("accessing device 0x%x, offset 0x%x, data 0x%x, q select 0x%x\n", dev->regs.DeviceID, offset, data, dev->regs.QueueSel);
+
     switch (offset) {
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
         dev->regs.DeviceFeaturesSel = data;
@@ -560,7 +562,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
@@ -573,7 +575,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_DESC_HI\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
@@ -586,7 +588,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_AVAIL_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
@@ -599,7 +601,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_AVAIL_HI\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
@@ -612,7 +614,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_USED_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
@@ -625,7 +627,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
+                        "given when accessing VIRTIO_PCI_COMMON_Q_USED_HI\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
