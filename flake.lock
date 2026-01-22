@@ -137,17 +137,17 @@
         "zig-overlay": "zig-overlay"
       },
       "locked": {
-        "lastModified": 1756169414,
-        "narHash": "sha256-T1DgEDLftXC83ezvrvG8kPmId2y/t8XO0A0iH2yMIXM=",
+        "lastModified": 1768272537,
+        "narHash": "sha256-SgZoGYozTTo2/5AvX811/6SwGRRaKaOJ7vVvrhEn4hs=",
         "owner": "au-ts",
         "repo": "microkit_sdf_gen",
-        "rev": "f6de7ae15d4c830deebd8f24af7aa51b705b2c53",
+        "rev": "a502660f3a9cfa5b602254cc472ae340b6fa4cc7",
         "type": "github"
       },
       "original": {
         "owner": "au-ts",
-        "ref": "0.26.0",
         "repo": "microkit_sdf_gen",
+        "rev": "a502660f3a9cfa5b602254cc472ae340b6fa4cc7",
         "type": "github"
       }
     },
