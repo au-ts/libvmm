@@ -295,7 +295,8 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, struct virtio_pci_ca
         assert(offset + len < VIRTIO_PCI_FUNC_CFG_SPACE_SIZE);
         size = 0x1000;
         struct virtio_pci_notify_cap *notify = (struct virtio_pci_notify_cap *)cap;
-        notify->notify_off_multiplier = VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
+        // "For example, if notifier_off_multiplier is 0, the device uses the same Queue Notify address for all queues."
+        notify->notify_off_multiplier = 0;
         break;
     case VIRTIO_PCI_CAP_PCI_CFG:
         len = sizeof(struct virtio_pci_cfg_cap);
@@ -509,7 +510,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_NOTIF_OFF, VIRTIO_PCI_COMMON_Q_DESC_LO):
         // proper way?
-        *data = 1;
+        *data = 0;
         break;
     default:
         LOG_PCI_ERR("read operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
@@ -542,6 +543,8 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
         dev->regs.QueueSel = data;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
+        LOG_VMM("pci virtio vq size reconfigure 0x%x\n", data);
+        assert(data == VIRTIO_PCI_QUEUE_SIZE);
         // what if different size configured?
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
@@ -662,7 +665,7 @@ static bool virtio_pci_notify_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
 static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, size_t offset, uint32_t data)
 {
     dev->regs.QueueNotify = data;
-    dev->regs.QueueSel = offset / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
+    dev->regs.QueueSel = data;
     bool success = dev->funs->queue_notify(dev);
     return success;
 }
