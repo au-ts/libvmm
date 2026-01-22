@@ -113,8 +113,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     int parsed_byte = 0;
     bool rex_w = false; // 64-bit operand size
     bool rex_r = false; // 4-bit operand, rather than 3-bit
-    bool rex_x = false; // 4-bit SIB.index
-    bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
+    // bool rex_x = false; // 4-bit SIB.index
+    // bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
     bool opd_size_override = false;
 
     for (int i = 0; i < instruction_len; i++) {
@@ -125,8 +125,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     
             rex_w = (rex_byte & BIT(3)) != 0;
             rex_r = (rex_byte & BIT(2)) != 0;
-            rex_x = (rex_byte & BIT(1)) != 0;
-            rex_b = (rex_byte & BIT(0)) != 0;
+            // rex_x = (rex_byte & BIT(1)) != 0;
+            // rex_b = (rex_byte & BIT(0)) != 0;
         }
         
         // scan for the "operand-size override" prefix, which switch the operand size
