@@ -323,7 +323,8 @@ bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exce
 static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
 {
     uint16_t port_addr = (qualification >> 16) & 0xffff;
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+    // TODO: pass access width to the callbacks?
+    // ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
 
     for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
         uint16_t base = registered_pio_exception_handlers[i].base;
