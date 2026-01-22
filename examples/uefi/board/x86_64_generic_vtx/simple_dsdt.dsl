@@ -9,6 +9,40 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
 {
     Scope (\_SB)
     {
+        Device (COM1)
+        {
+            Name (_HID, EisaId ("PNP0501"))
+            Name (_UID, One)
+            Name (_CRS, ResourceTemplate ()
+            {
+                IO (Decode16, 0x03F8, 0x03F8, 0x00, 0x08)
+                IRQNoFlags () { 4 }
+            })
+        }
+
+        // https://github.com/pebble/qemu/blob/master/hw/i386/acpi-dsdt-isa.dsl
+        Device(KBD) {
+            Name(_HID, EisaId("PNP0303"))
+            Method(_STA, 0, NotSerialized) {
+                Return (0x0f)
+            }
+            Name(_CRS, ResourceTemplate() {
+                IO(Decode16, 0x0060, 0x0060, 0x01, 0x01)
+                IO(Decode16, 0x0064, 0x0064, 0x01, 0x01)
+                IRQNoFlags() { 1 }
+            })
+        }
+
+        Device(MOU) {
+            Name(_HID, EisaId("PNP0F13"))
+            Method(_STA, 0, NotSerialized) {
+                Return (0x0f)
+            }
+            Name(_CRS, ResourceTemplate() {
+                IRQNoFlags() { 12 }
+            })
+        }
+
         Device (PCI0)
         {
             // PCI root bridge
@@ -81,53 +115,5 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 })
             }
         }
-    }
-
-    Scope(\_SB.PCI0) {
-
-        External(ISA, DeviceObj)
-
-        Device(ISA) {
-            Name(_ADR, 0x00010000)
-
-
-        }
-    }
-
-    Scope(\_SB.PCI0.ISA) {
-        Device (COM1)
-        {
-            Name (_HID, EisaId ("PNP0501"))
-            Name (_UID, One)
-            Name (_CRS, ResourceTemplate ()
-            {
-                IO (Decode16, 0x03F8, 0x03F8, 0x00, 0x08)
-                IRQNoFlags () { 4 }
-            })
-        }
-
-        // https://github.com/pebble/qemu/blob/master/hw/i386/acpi-dsdt-isa.dsl
-        Device(KBD) {
-            Name(_HID, EisaId("PNP0303"))
-            Method(_STA, 0, NotSerialized) {
-                Return (0x0f)
-            }
-            Name(_CRS, ResourceTemplate() {
-                IO(Decode16, 0x0060, 0x0060, 0x01, 0x01)
-                IO(Decode16, 0x0064, 0x0064, 0x01, 0x01)
-                IRQNoFlags() { 1 }
-            })
-        }
-
-        Device(MOU) {
-            Name(_HID, EisaId("PNP0F13"))
-            Method(_STA, 0, NotSerialized) {
-                Return (0x0f)
-            }
-            Name(_CRS, ResourceTemplate() {
-                IRQNoFlags() { 12 }
-            })
-        }
-
     }
 }
