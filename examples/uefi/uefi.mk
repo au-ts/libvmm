@@ -134,7 +134,7 @@ qemu: $(IMAGE_FILE) blk_storage
 	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=3G \
 							  -device ramfb -vga none \
-							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 
