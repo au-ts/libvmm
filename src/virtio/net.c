@@ -68,6 +68,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
+        *features = 0;
         LOG_NET_ERR("Bad DeviceFeaturesSel 0x%x\n", dev->regs.DeviceFeaturesSel);
         return true;
     }
