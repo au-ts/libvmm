@@ -562,7 +562,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             LOG_BLOCK("Request type is VIRTIO_BLK_T_FLUSH\n");
             if (!sddf_make_req_check(state, 0)) {
                 virtio_blk_set_req_fail(dev, curr_desc);
-                virtio_blk_used_buffer(dev, curr_desc);
+                virtio_blk_used_buffer(dev, desc_head);
                 nums_consumed += 1;
                 break;
             }
