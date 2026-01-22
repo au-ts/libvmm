@@ -70,7 +70,7 @@ static inline void virtio_blk_reset(struct virtio_device *dev)
     dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
 
-    memset(device_state(dev)->reqsbk, 0, sizeof(sizeof(device_state(dev)->reqsbk)));
+    memset(device_state(dev)->reqsbk, 0, sizeof((device_state(dev)->reqsbk)));
 }
 
 static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -268,7 +268,7 @@ bool request_is_write(reqbk_t *req)
 
 static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_consumed)
 {
-    
+    assert(dev->regs.QueueSel == VIRTIO_BLK_DEFAULT_VIRTQ);
     int err = 0;
     /* If multiqueue feature bit negotiated, should read which queue from
     dev->QueueNotify, but for now we just assume it's the one and only default
@@ -578,7 +578,12 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             break;
         }
         case VIRTIO_BLK_T_GET_ID: {
-            char *dst_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
+            LOG_BLOCK("Request type is VIRTIO_BLK_T_GET_ID\n");
+            LOG_BLOCK("buf len is 0x%x bytes\n", virtq->desc[curr_desc].len);
+            assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
+            uint16_t next_desc = virtq->desc[curr_desc].next;
+            assert(virtq->desc[next_desc].flags & VIRTQ_DESC_F_WRITE);
+            char *dst_addr = (void *)gpa_to_vaddr(virtq->desc[next_desc].addr);
             strcpy(dst_addr, "libvmm");
             dst_addr[6] = 0;
             nums_consumed += 1;
@@ -637,6 +642,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
     int err = 0;
     struct virtio_device *dev = &state->virtio_device;
+
+    assert(dev->regs.QueueSel == VIRTIO_BLK_DEFAULT_VIRTQ);
 
     blk_resp_status_t sddf_ret_status;
     uint16_t sddf_ret_success_count;
