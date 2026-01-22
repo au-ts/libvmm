@@ -9,6 +9,7 @@
 #include <microkit.h>
 #include <libvmm/guest.h>
 #include <libvmm/config.h>
+#include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <sddf/timer/client.h>
 #include <sddf/blk/config.h>
@@ -27,7 +28,6 @@
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
-#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
