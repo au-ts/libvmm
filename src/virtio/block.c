@@ -57,12 +57,12 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
 static inline void virtio_blk_reset(struct virtio_device *dev)
 {
     LOG_VMM("block device reset!\n");
-    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = false;
-    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].virtq.avail = 0;
         dev->vqs[i].virtq.used = 0;
         dev->vqs[i].virtq.desc = 0;
+        dev->vqs[i].last_idx = 0;
+        dev->vqs[i].ready = false;
     }
     assert(blk_queue_empty_req(&device_state(dev)->queue_h));
     assert(blk_queue_empty_resp(&device_state(dev)->queue_h));
