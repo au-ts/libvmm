@@ -69,6 +69,8 @@ static inline void virtio_blk_reset(struct virtio_device *dev)
     memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
     dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+
+    memset(device_state(dev)->reqsbk, 0, sizeof(sizeof(device_state(dev)->reqsbk)));
 }
 
 static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
