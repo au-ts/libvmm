@@ -68,9 +68,14 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
-uint64_t ps2_controller_id = 22;
-uint64_t ps2_controller_addr = 0x60;
-uint64_t ps2_controller_size = 5;
+uint64_t ps2_data_port_id = 22;
+uint64_t ps2_data_port_addr = 0x60;
+// see note in meta.py
+uint64_t ps2_data_port_size = 4;
+
+uint64_t ps2_sts_cmd_port_id = 23;
+uint64_t ps2_sts_cmd_port_addr = 0x64;
+uint64_t ps2_sts_cmd_port_size = 1;
 
 #define FIRST_PS2_IRQ_CH 3
 #define SECOND_PS2_IRQ_CH 4
@@ -122,7 +127,8 @@ void init(void)
     assert(virtio_pci_register_memory_resource(0xD0000000, 0x1000000, 0x200000));
     assert(pci_x86_init());
 
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_controller_id, ps2_controller_addr, ps2_controller_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr, ps2_sts_cmd_port_size);
 
     // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
     //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
@@ -187,6 +193,7 @@ void notified(microkit_channel ch)
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
 
+            /* Start vCPU in *real* mode with paging off */
             guest_start(0xfff0, 0, 0);
         } else {
             handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);

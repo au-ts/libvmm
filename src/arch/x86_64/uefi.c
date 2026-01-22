@@ -141,6 +141,7 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
                                                                              .size = sizeof(struct host_bridge_info) },
                                                                  .body = {
                                                                     .Flags.Bits.CombineMemPMem = 1,
+                                                                    .Attributes = EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO | EFI_PCI_ATTRIBUTE_ISA_IO | EFI_PCI_ATTRIBUTE_ISA_IO_16,
                                                                     .IoStart = 0,
                                                                     .IoSize = 0x4000,
                                                                      .MemStart = 0xD0000000,
