@@ -111,6 +111,10 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x3000_0000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
+    scratch_mr = MemoryRegion(sdf, name="guest_scratch", size=0x10000)
+    sdf.add_mr(scratch_mr)
+    vm_client0.add_map(Map(scratch_mr, vaddr=0xfe000000, perms="rwx"))
+
     guest_flash_mr = MemoryRegion(sdf, name="guest_flash", size=0x600000)
     sdf.add_mr(guest_flash_mr)
     vmm_client0.add_map(Map(guest_flash_mr, vaddr=0x200_0000, perms="rw"))
