@@ -61,7 +61,7 @@ void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_
         // Modem Status Register
         break;
     default:
-        LOG_VMM_ERR("unknown COM offset 0%lx\n", reg_offset);
+        // LOG_VMM_ERR("unknown COM offset 0%lx\n", reg_offset);
         break;
     }
 }
