@@ -580,16 +580,16 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         }
         case VIRTIO_BLK_T_GET_ID: {
             LOG_BLOCK("Request type is VIRTIO_BLK_T_GET_ID\n");
-            LOG_BLOCK("buf len is 0x%x bytes\n", virtq->desc[curr_desc].len);
             assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
             uint16_t next_desc = virtq->desc[curr_desc].next;
             assert(virtq->desc[next_desc].flags & VIRTQ_DESC_F_WRITE);
             char *dst_addr = (void *)gpa_to_vaddr(virtq->desc[next_desc].addr);
+            LOG_BLOCK("buf len is 0x%x bytes, GPA 0x%lx\n", virtq->desc[curr_desc].len, virtq->desc[next_desc].addr);
             strcpy(dst_addr, "libvmm");
             dst_addr[6] = 0;
             nums_consumed += 1;
             virtio_blk_set_req_success(dev, curr_desc);
-            virtio_blk_used_buffer(dev, curr_desc);
+            virtio_blk_used_buffer(dev, desc_head);
             has_dropped = true;
             break;
         }
