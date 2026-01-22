@@ -218,6 +218,8 @@ static void handle_tx_msg(struct virtio_device *dev,
         }
     }
 
+    LOG_VMM("sent a packet size %d\n", written);
+
     sddf_buffer.len = written;
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we check above */
@@ -237,14 +239,17 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
 {
     struct virtio_net_device *state = device_state(dev);
 
+    uint16_t queue_sel = dev->regs.QueueSel;
+    assert(queue_sel < dev->num_vqs);
+
     if (!driver_ok(dev)) {
         LOG_NET_ERR("Driver not ready\n");
         return false;
     }
-    if (dev->regs.QueueSel != VIRTIO_NET_TX_VIRTQ) {
-        LOG_NET_ERR("Invalid queue\n");
-        return false;
+    if (queue_sel == VIRTIO_NET_RX_VIRTQ && dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
+        return virtio_net_handle_rx(device_state(dev));
     }
+
     if (!dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
         LOG_NET_ERR("TX virtq not ready\n");
         return false;
