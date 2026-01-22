@@ -14,11 +14,18 @@
 
 typedef void (*virq_ack_fn_t)(size_t vcpu_id, int irq, void *cookie);
 
+#if defined(CONFIG_ARCH_ARCH)
 /*
  * Initialise the architecture-depedent virtual interrupt controller.
  * On ARM, this is the virtual Generic Interrupt Controller (vGIC).
  */
 bool virq_controller_init();
+#elif defined(CONFIG_ARCH_X86_64)
+/*
+ * Initialise the virtual LAPIC and I/O APIC.
+ */
+bool virq_controller_init(uint64_t native_tsc_hz);
+#endif
 bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data);
 
 /*

@@ -9,6 +9,7 @@
 #include <microkit.h>
 #include <libvmm/guest.h>
 #include <libvmm/config.h>
+#include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <sddf/timer/client.h>
 #include <sddf/blk/config.h>

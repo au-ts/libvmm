@@ -90,7 +90,7 @@ struct fw_cfg_acpi_tables {
 
 **/
 // OvmfPkg/Library/HardwareInfoLib/HardwareInfoTypesLib.h
-typedef enum {
+enum {
     HwInfoTypeUndefined = 0,
     HwInfoTypeHostBridge = 1,
     HwInfoTypeQemuUefiVars = 2,

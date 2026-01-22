@@ -28,7 +28,7 @@
 // @billn I don't like how all of this is very virtio centric, need to make it generic to non
 // virtio devices that we may have in the future such as passthrough GPUs or whatever.
 
-static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t *data,
+static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, seL4_Word *data,
                                          int access_width_bytes);
 static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
                                           int access_width_bytes);
@@ -199,14 +199,16 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
 {
     // @billn make helpers
     uint64_t is_read = qualification & BIT(3);
-    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
 
     if (!pci_pio_addr_reg_enable()) {
         pci_invalid_pio_read(vctx);
+        return true;
     } else if (pci_pio_addr_reg_bus() > 0) {
         // the real backing ECAM only have enough space for 1 bus
         pci_invalid_pio_read(vctx);
+        return true;
     } else {
         // LOG_VMM("PCI PIO accessing bus %d, dev %d, func %d\n", bus, dev, func);
 
@@ -797,7 +799,7 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
     return success;
 }
 
-static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t *data,
+static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, seL4_Word *data,
                                          int access_width_bytes)
 {
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
