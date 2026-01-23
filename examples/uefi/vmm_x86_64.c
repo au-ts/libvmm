@@ -100,6 +100,9 @@ void init(void)
     assert(net_config_check_magic(&net_config));
     assert(blk_config_check_magic(&blk_config));
 
+    /* Initialise the VMM, the VCPU(s), and start the guest */
+    LOG_VMM("starting \"%s\"\n", microkit_name);
+
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
@@ -111,8 +114,7 @@ void init(void)
     /* Busy wait until blk device is ready */
     while (!blk_storage_is_ready(storage_info));
 
-    /* Initialise the VMM, the VCPU(s), and start the guest */
-    LOG_VMM("starting \"%s\"\n", microkit_name);
+
 
     size_t firm_size = _guest_firmware_image_end - _guest_firmware_image;
     assert(uefi_setup_images(guest_ram_vaddr, guest_ram_size, guest_flash_vaddr, guest_flash_size,
