@@ -34,7 +34,7 @@ BOARDS: List[Board] = [
     Board(
         name="x86_64_generic_vtx",
         arch=SystemDescription.Arch.X86_64,
-        paddr_top=0xb0000000,
+        paddr_top=0x1f0000000,
         serial=None,
         guest_serial=None,
         timer=None,
@@ -55,7 +55,7 @@ def x86_virtio_net(eth_driver):
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0xfebf8000
+        sdf, "virtio_net_regs", 0x4000, paddr=0xe0000000000
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -86,7 +86,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0xfebfc000
+        sdf, "virtio_blk_regs", 0x4000, paddr=0xe0000004000
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
