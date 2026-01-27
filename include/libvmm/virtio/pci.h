@@ -133,7 +133,7 @@
 
 #define VIRTIO_PCI_BUS_NUM                      0x1
 #define VIRTIO_PCI_DEVS_PER_BUS                 (1 << 5)
-#define VIRTIO_PCI_FUNCS_PER_DEV                1         // (1 << 3)
+#define VIRTIO_PCI_FUNCS_PER_DEV                4         // (1 << 3)
 #define VIRTIO_PCI_DEV_FUNC_MAX                 (VIRTIO_PCI_BUS_NUM * VIRTIO_PCI_DEVS_PER_BUS * VIRTIO_PCI_FUNCS_PER_DEV)
 #define VIRTIO_PCI_FUNC_CFG_SPACE_SIZE          0x100
 #define VIRTIO_PCI_MAX_MEM_BARS                 0x10
