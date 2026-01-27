@@ -85,6 +85,7 @@ extern char _guest_firmware_image[];
 extern char _guest_firmware_image_end[];
 
 uintptr_t guest_ram_vaddr = 0x30000000;
+uint64_t guest_ram_gpa = 0;
 uint64_t guest_ram_size = 0xA0000000; // 2.5 GiB
 
 uintptr_t guest_high_ram_vaddr = 0x100000000;
@@ -92,7 +93,9 @@ uint64_t guest_high_ram_gpa = 0x100000000;
 uint64_t guest_high_ram_size = 0x180000000; // 6 GiB
 
 uintptr_t guest_flash_vaddr = 0x2000000;
+uint64_t guest_flash_gpa = 0xffa00000;
 uint64_t guest_flash_size = 0x600000;
+
 uintptr_t guest_ecam_vaddr = 0x8000000;
 uint64_t guest_ecam_size = 0x100000;
 
@@ -119,23 +122,23 @@ void init(void)
     /* Busy wait until blk device is ready */
     while (!blk_storage_is_ready(storage_info));
 
-
-
     size_t firm_size = _guest_firmware_image_end - _guest_firmware_image;
-    assert(uefi_setup_images(guest_ram_vaddr, guest_ram_size, guest_flash_vaddr, guest_flash_size,
+    assert(uefi_setup_images(guest_ram_vaddr, guest_ram_gpa, guest_ram_size, guest_high_ram_vaddr, guest_high_ram_gpa,
+                             guest_high_ram_size, guest_flash_vaddr, guest_flash_gpa, guest_flash_size,
                              _guest_firmware_image, firm_size, simple_dsdt_aml_code, sizeof(simple_dsdt_aml_code)));
 
     vcpu_set_up_reset_state();
 
-        // Set up the PCI bus
-        // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
+    // Set up the PCI bus
+    // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
     assert(guest_ecam_size == ECAM_SIZE);
     assert(virtio_pci_ecam_init(ECAM_GPA, guest_ecam_vaddr, guest_ecam_size));
     assert(virtio_pci_register_memory_resource(0xD0000000, 0x1000000, 0x200000));
     assert(pci_x86_init());
 
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr, ps2_sts_cmd_port_size);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr,
+                                    ps2_sts_cmd_port_size);
 
     // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
     //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
@@ -155,8 +158,8 @@ void init(void)
     }
     {
         bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
-                                      (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
-                                      blk_config.virt.num_buffers, blk_config.virt.id);
+                                           (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info,
+                                           &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
         assert(success);
     }
 
