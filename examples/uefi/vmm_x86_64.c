@@ -68,6 +68,7 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
+// PS/2 KB+M passthrough
 uint64_t ps2_data_port_id = 22;
 uint64_t ps2_data_port_addr = 0x60;
 // see note in meta.py
@@ -79,6 +80,34 @@ uint64_t ps2_sts_cmd_port_size = 1;
 
 #define FIRST_PS2_IRQ_CH 3
 #define SECOND_PS2_IRQ_CH 4
+
+// CD ROM passthrough
+uint64_t primary_ata_cmd_pio_id = 30;
+uint64_t primary_ata_cmd_pio_addr = 0x1f0;
+uint64_t primary_ata_cmd_pio_size = 8;
+
+uint64_t primary_ata_ctrl_pio_id = 31;
+uint64_t primary_ata_ctrl_pio_addr = 0x3f6;
+uint64_t primary_ata_ctrl_pio_size = 1;
+
+uint64_t second_ata_cmd_pio_id = 32;
+uint64_t second_ata_cmd_pio_addr = 0x170;
+uint64_t second_ata_cmd_pio_size = 8;
+
+uint64_t second_ata_ctrl_pio_id = 33;
+uint64_t second_ata_ctrl_pio_addr = 0x376;
+uint64_t second_ata_ctrl_pio_size = 1;
+
+uint64_t pci_conf_addr_pio_id = 34;
+uint64_t pci_conf_addr_pio_addr = 0xcf8;
+uint64_t pci_conf_addr_pio_size = 4;
+
+uint64_t pci_conf_data_pio_id = 35;
+uint64_t pci_conf_data_pio_addr = 0xcfc;
+uint64_t pci_conf_data_pio_size = 4;
+
+#define PRIM_ATA_IRQ_CH 5
+#define SECD_ATA_IRQ_CH 6
 
 /* Data for the guest's UEFI firmware image. */
 extern char _guest_firmware_image[];
@@ -201,10 +230,16 @@ void notified(microkit_channel ch)
 
             microkit_irq_ack(FIRST_PS2_IRQ_CH);
             microkit_irq_ack(SECOND_PS2_IRQ_CH);
+            microkit_irq_ack(PRIM_ATA_IRQ_CH);
+            microkit_irq_ack(SECD_ATA_IRQ_CH);
 
             /* Pass through PS2 IRQs */
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
+
+            /* Pass through ATA IRQs */
+            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
+            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
 
             /* Start vCPU in *real* mode with paging off */
             guest_start(0xfff0, 0, 0);
