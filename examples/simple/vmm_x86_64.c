@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/guest.h>
+#include <libvmm/virq.h>
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/pci.h>
 #include <sddf/timer/client.h>
@@ -19,7 +20,6 @@
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/pit.h>
-#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 
 // @billn sus, use package asm script
@@ -69,7 +69,8 @@ uint64_t guest_ecam_size;
 // @billn unused, but have to leave it here otherwise linker complains, revisit
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
-
+uintptr_t guest_high_ram_vaddr;
+uint64_t guest_high_ram_size;
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
