@@ -111,6 +111,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x3000_0000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
+    # Second guest RAM region above 4G, note that this is one-to-one mapped between GPA and VMM Vaddr
     guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_8000_0000, paddr=0x1_0000_0000)
     sdf.add_mr(guest_ram_high_mr)
     vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rw"))
@@ -131,6 +132,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     qemu_fw_cfg_dma_port = SystemDescription.IoPort(0x518, 4, 21)
     vmm_client0.add_ioport(qemu_fw_cfg_dma_port)
 
+    # PS/2 KB+M passthrough
     # @billn, the ps2 data port is only 1 byte, but GRUB seems to hang if we only pass through
     # 0x60 and return zero on 0x61, 0x62, and 0x63 in software. Need to investigate what is at
     # those addresses and change 4 to 1 below
@@ -146,6 +148,33 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     ps2_second_irq = SystemDescription.IrqIoapic(0, 12, 33, id=4)
     vmm_client0.add_irq(ps2_second_irq)
 
+    # CD-ROM passthrough
+    primary_ata_cmd_port = SystemDescription.IoPort(0x1f0, 8, 30)
+    vmm_client0.add_ioport(primary_ata_cmd_port)
+
+    primary_ata_ctrl_port = SystemDescription.IoPort(0x3f6, 1, 31)
+    vmm_client0.add_ioport(primary_ata_ctrl_port)
+
+    second_ata_cmd_port = SystemDescription.IoPort(0x170, 8, 32)
+    vmm_client0.add_ioport(second_ata_cmd_port)
+
+    second_ata_ctrl_port = SystemDescription.IoPort(0x376, 1, 33)
+    vmm_client0.add_ioport(second_ata_ctrl_port)
+
+    primary_ata_irq = SystemDescription.IrqIoapic(0, 14, 50, id=5)
+    vmm_client0.add_irq(primary_ata_irq)
+
+    second_ata_irq = SystemDescription.IrqIoapic(0, 15, 51, id=6)
+    vmm_client0.add_irq(second_ata_irq)
+
+    # PCI Host bridge access for VMM, for CD-ROM passthrough to work correctly.
+    pci_conf_addr_port = SystemDescription.IoPort(0xcf8, 4, 34)
+    vmm_client0.add_ioport(pci_conf_addr_port)
+
+    pci_conf_data_port = SystemDescription.IoPort(0xcfc, 4, 35)
+    vmm_client0.add_ioport(pci_conf_data_port)
+
+    # QEMU Framebuffer
     fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
     vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
     sdf.add_mr(fb_mr)

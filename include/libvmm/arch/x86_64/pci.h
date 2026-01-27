@@ -63,13 +63,18 @@
 // bool emulate_pci_config_space_access_ecam(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
 //                                           memory_instruction_data_t decoded_mem_ins);
 
-// bool passthrough_ide_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
-//                                 uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
-//                                 uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
-//                                 uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr);
-
-
 bool pci_x86_init(void);
+
+bool pci_x86_enable_passthrough_devices(uint64_t pci_conf_addr_pio_id, uint64_t pci_conf_addr_pio_addr,
+                                        uint64_t pci_conf_addr_pio_size, uint64_t pci_conf_data_pio_id,
+                                        uint64_t pci_conf_data_pio_addr, uint64_t pci_conf_data_pio_size);
+
+bool pci_x86_passthrough_ata_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
+                                        uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
+                                        uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
+                                        uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr,
+                                        uint16_t v_bus, uint16_t v_dev, uint16_t v_func);
+
 // bool pci_x86_emulate_pio_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
 //                                 ioport_access_width_t access_width);
 // bool pci_x86_emulate_ecam_access(seL4_VCPUContext *vctx, uint32_t offset, uint64_t qualification,
