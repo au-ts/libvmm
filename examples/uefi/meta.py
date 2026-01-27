@@ -34,7 +34,7 @@ BOARDS: List[Board] = [
     Board(
         name="x86_64_generic_vtx",
         arch=SystemDescription.Arch.X86_64,
-        paddr_top=0x1f0000000,
+        paddr_top=0x2000_0000,
         serial=None,
         guest_serial=None,
         timer=None,
@@ -106,10 +106,15 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
-    guest_ram_mr = MemoryRegion(sdf, name="guest_ram", size=0x8000_0000, paddr=0x20000000)
+    guest_ram_mr = MemoryRegion(sdf, name="guest_ram", size=0xB000_0000, paddr=0x20000000)
     sdf.add_mr(guest_ram_mr)
     vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x3000_0000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
+
+    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_8000_0000, paddr=0x1_0000_0000)
+    sdf.add_mr(guest_ram_high_mr)
+    vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rw"))
+    vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rwx"))
 
     scratch_mr = MemoryRegion(sdf, name="guest_scratch", size=0x10000)
     sdf.add_mr(scratch_mr)
@@ -142,11 +147,11 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     vmm_client0.add_irq(ps2_second_irq)
 
     fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
-    vmm_client0.add_map(Map(fb_mr, vaddr=0x1_0000_0000, perms="rw"))
+    vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
     sdf.add_mr(fb_mr)
 
     fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=0x600_0000)
-    vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0x1_1000_0000, perms="rw"))
+    vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0xD00000, perms="rw"))
     sdf.add_mr(fw_cfg_dma_cmd_mr)
 
     # Serial subsystem
