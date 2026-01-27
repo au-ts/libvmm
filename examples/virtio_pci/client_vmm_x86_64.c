@@ -54,15 +54,13 @@ static struct virtio_blk_device virtio_blk;
 // Then on Intel, the integrated graphics is conventionally on slot 2 as well...
 // Make sure these two matches what is written in DSDT
 #define VIRTIO_CONSOLE_PCI_DEVICE_SLOT 3
-#define VIRTIO_CONSOLE_PCI_IOAPIC_PIN 15
+#define VIRTIO_CONSOLE_PCI_IOAPIC_PIN 9
 
 #define VIRTIO_NET_PCI_DEVICE_SLOT 4
-#define VIRTIO_NET_PCI_IOAPIC_PIN 14
+#define VIRTIO_NET_PCI_IOAPIC_PIN 10
 
 #define VIRTIO_BLK_PCI_DEVICE_SLOT 5
-#define VIRTIO_BLK_PCI_IOAPIC_PIN 13
-
-#define COM1_PIO_ID 0
+#define VIRTIO_BLK_PCI_IOAPIC_PIN 11
 
 // @billn sus, use package asm script
 #include "client_vm/x86_64/simple_dsdt.hex"
