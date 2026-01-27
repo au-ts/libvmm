@@ -8,8 +8,10 @@
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 
-extern uint64_t guest_ram_vaddr;
-extern uint64_t guest_flash_vaddr;
+extern uintptr_t guest_ram_vaddr;
+extern uintptr_t guest_high_ram_vaddr;
+extern uint64_t guest_high_ram_size;
+extern uintptr_t guest_flash_vaddr;
 
 static uint64_t pte_to_gpa(uint64_t pte)
 {
@@ -31,10 +33,33 @@ void *gpa_to_vaddr(uint64_t gpa)
 {
     // @billn ugly hack
     uint64_t firmware_region_base_gpa = 0xffa00000;
+    uint64_t high_ram_base_gpa = 0x100000000;
     if (gpa < firmware_region_base_gpa) {
         return (void *)(guest_ram_vaddr + gpa);
-    } else {
+    } else if (gpa >= high_ram_base_gpa && gpa < high_ram_base_gpa + guest_high_ram_size) {
+        // @billn ugly one-to-one hack
+        return (void *) gpa;
+    } else if (gpa >= firmware_region_base_gpa && gpa < high_ram_base_gpa){
         return (void *)(guest_flash_vaddr + (gpa - firmware_region_base_gpa));
+    } else {
+        LOG_VMM_ERR("gpa_to_vaddr(): GPA 0x%lx not in any valid guest memory regions\n", gpa);
+        return NULL;
+    }
+}
+
+uint64_t gpa_to_pa(uint64_t gpa)
+{
+    // @billn ugly hack
+    uint64_t ram_base_gpa = 0x20000000;
+    uint64_t high_ram_base_gpa = 0x100000000;
+    if (gpa >= high_ram_base_gpa && gpa < high_ram_base_gpa + guest_high_ram_size) {
+        // @billn ugly one-to-one hack
+        return gpa;
+    } else if (gpa < high_ram_base_gpa){
+        return 0x20000000 + gpa;
+    } else {
+        LOG_VMM_ERR("gpa_to_pa(): GPA 0x%lx not in any valid guest memory regions\n", gpa);
+        return 0;
     }
 }
 

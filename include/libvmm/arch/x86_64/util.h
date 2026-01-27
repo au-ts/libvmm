@@ -9,6 +9,8 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 
+uint64_t gpa_to_pa(uint64_t gpa);
+
 // Convert guest virtual address to guest physical address, using whichever page table is currently in the guest's CR3.
 // Returns:
 // - gpa: guest physical address

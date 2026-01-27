@@ -85,7 +85,12 @@ extern char _guest_firmware_image[];
 extern char _guest_firmware_image_end[];
 
 uintptr_t guest_ram_vaddr = 0x30000000;
-uint64_t guest_ram_size = 0x80000000; // 2 GiB
+uint64_t guest_ram_size = 0xA0000000; // 2.5 GiB
+
+uintptr_t guest_high_ram_vaddr = 0x100000000;
+uint64_t guest_high_ram_gpa = 0x100000000;
+uint64_t guest_high_ram_size = 0x180000000; // 6 GiB
+
 uintptr_t guest_flash_vaddr = 0x2000000;
 uint64_t guest_flash_size = 0x600000;
 uintptr_t guest_ecam_vaddr = 0x8000000;

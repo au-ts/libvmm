@@ -132,10 +132,10 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
 	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
-							  -m size=8G \
+							  -m size=12G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
+							  -drive file=$(EXAMPLE_DIR)/disk_nixos_minimal.img,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 

@@ -13,6 +13,10 @@
 #include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
 
+extern uintptr_t guest_high_ram_vaddr;
+extern uint64_t guest_high_ram_gpa;
+extern uint64_t guest_high_ram_size;
+
 extern struct fw_cfg_blobs fw_cfg_blobs;
 
 bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_start, size_t flash_size, char *firm,
@@ -27,7 +31,13 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].addr = 0;
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].size = ram_size;
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].type = E820_RAM;
-    LOG_VMM("uefi_setup_images(): guest RAM GPA 0x0..0x%lx\n", ram_size);
+    LOG_VMM("uefi_setup_images(): guest RAM GPA low 0x0..0x%lx\n", ram_size);
+
+    fw_cfg_blobs.fw_cfg_e820_map.entries[1].addr = guest_high_ram_gpa;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[1].size = guest_high_ram_size;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[1].type = E820_RAM;
+    LOG_VMM("uefi_setup_images(): guest RAM GPA high 0x%lx..0x%lx\n", guest_high_ram_gpa,
+            guest_high_ram_gpa + guest_high_ram_size);
 
     // Then the ACPI XSDP table
     // The GPA of the XSDT will be filled in by a table loader command later
@@ -140,10 +150,12 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     fw_cfg_blobs.fw_hw_info = (struct hw_info_pci_host_bridge) { .header = { .type = HwInfoTypeHostBridge,
                                                                              .size = sizeof(struct host_bridge_info) },
                                                                  .body = {
-                                                                    .Flags.Bits.CombineMemPMem = 1,
-                                                                    .Attributes = EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO | EFI_PCI_ATTRIBUTE_ISA_IO | EFI_PCI_ATTRIBUTE_ISA_IO_16,
-                                                                    .IoStart = 0,
-                                                                    .IoSize = 0x4000,
+                                                                     .Flags.Bits.CombineMemPMem = 1,
+                                                                     .Attributes = EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO
+                                                                                 | EFI_PCI_ATTRIBUTE_ISA_IO
+                                                                                 | EFI_PCI_ATTRIBUTE_ISA_IO_16,
+                                                                     .IoStart = 0,
+                                                                     .IoSize = 0x4000,
                                                                      .MemStart = 0xD0000000,
                                                                      .MemSize = 0x200000,
                                                                  } };
