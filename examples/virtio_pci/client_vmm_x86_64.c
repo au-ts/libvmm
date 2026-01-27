@@ -82,6 +82,8 @@ uintptr_t guest_ram_vaddr = 0x20000000;
 uint64_t guest_ram_size;
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
+uintptr_t guest_high_ram_vaddr;
+uint64_t guest_high_ram_size;
 
 uintptr_t guest_ecam_vaddr = 0x100000;
 uint64_t guest_ecam_size = 0x100000;
