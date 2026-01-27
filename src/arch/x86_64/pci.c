@@ -16,106 +16,88 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/virtio/pci.h>
 
-#define PCI_CONF_ADDR_PIO_ADDR 0xcf8
-#define PCI_CONF_DATA_PIO_ADDR 0xcfc
+struct pci_x86_passthrough pci_x86_passthrough_bookkeeping = { .valid = false };
 
-struct pci_x86_passthrough {
-    bool valid;
-    uint64_t pci_conf_addr_pio_id;
-    uint64_t pci_conf_data_pio_id;
-};
-
-static struct pci_x86_passthrough pci_x86_passthrough_bookkeeping = { .valid = false };
-
-bool pci_x86_enable_passthrough_devices(uint64_t pci_conf_addr_pio_id, uint64_t pci_conf_addr_pio_addr,
-                                        uint64_t pci_conf_addr_pio_size, uint64_t pci_conf_data_pio_id,
-                                        uint64_t pci_conf_data_pio_addr, uint64_t pci_conf_data_pio_size)
+/* Utility functions to access the host PCI bus */
+uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
 {
-    assert(pci_conf_addr_pio_addr == PCI_CONF_ADDR_PIO_ADDR);
-    assert(pci_conf_addr_pio_size == 4);
-    assert(pci_conf_data_pio_addr == PCI_CONF_DATA_PIO_ADDR);
-    assert(pci_conf_data_pio_size == 4);
+    uint32_t lbus = (uint32_t)bus;
+    uint32_t ldev = (uint32_t)dev;
+    uint32_t lfunc = (uint32_t)func;
 
-    pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id = pci_conf_addr_pio_id;
-    pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id = pci_conf_data_pio_id;
-    pci_x86_passthrough_bookkeeping.valid = true;
+    // Bit 31     | Bits 30-24 | Bits 23-16 | Bits 15-11    | Bits 10-8       | Bits 7-0
+    // Enable Bit | Reserved   | Bus Number | Device Number | Function Number | Register Offset
 
-    return true;
+    /* Write enable bit */
+    uint32_t addr = BIT(31);
+
+    /* Shift in the PCI device address and register offset. */
+    addr = addr | (lbus << 16) | (ldev << 11) | (lfunc << 8) | (off & 0xFC);
+
+    return addr;
 }
 
-// /* Utility functions to access the host PCI bus */
-// uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
-// {
-//     uint32_t lbus = (uint32_t)bus;
-//     uint32_t ldev = (uint32_t)dev;
-//     uint32_t lfunc = (uint32_t)func;
+uint32_t pci_read_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
 
-//     // Bit 31     | Bits 30-24 | Bits 23-16 | Bits 15-11    | Bits 10-8       | Bits 7-0
-//     // Enable Bit | Reserved   | Bus Number | Device Number | Function Number | Register Offset
+    /* Write the address into the "select" port, then the data will be available at the "data" port. */
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+    return microkit_x86_ioport_read_32(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                       PCI_CONFIG_DATA_START_PORT);
+}
 
-//     /* Write enable bit */
-//     uint32_t addr = BIT(31);
+void pci_write_8(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint8_t data)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+    microkit_x86_ioport_write_8(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id, PCI_CONFIG_DATA_START_PORT, data);
+}
 
-//     /* Shift in the PCI device address and register offset. */
-//     addr = addr | (lbus << 16) | (ldev << 11) | (lfunc << 8) | (off & 0xFC);
+void pci_write_16(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint16_t data)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+    microkit_x86_ioport_write_16(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id, PCI_CONFIG_DATA_START_PORT,
+                                 data);
+}
 
-//     return addr;
-// }
+void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t data)
+{
+    uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id, PCI_CONFIG_DATA_START_PORT,
+                                 data);
+}
 
-// uint32_t pci_read_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
-// {
-//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
+bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
+{
+    int candidate_bus = 0;
+    int candidate_dev = 0;
+    int candidate_func = 0;
 
-//     /* Write the address into the "select" port, then the data will be available at the "data" port. */
-//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-//     return microkit_x86_ioport_read_32(pci_conf_data_pio_id, pci_conf_data_pio_addr);
-// }
+    for (; candidate_dev < 32; candidate_dev++) {
+        for (; candidate_func < 8; candidate_func++) {
+            uint32_t reg2 = pci_read_32(candidate_bus, candidate_dev, candidate_func, 0x8);
+            uint8_t candidate_class = (reg2 >> 24) & 0xff;
+            uint8_t candidate_subclass = (reg2 >> 16) & 0xff;
 
-// void pci_write_8(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint8_t data)
-// {
-//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-//     microkit_x86_ioport_write_8(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-// }
+            if (reg2 != 0xffffffff && candidate_class == class && candidate_subclass == subclass) {
+                *bus = candidate_bus;
+                *dev = candidate_dev;
+                *func = candidate_func;
+                return true;
+            }
+        }
+        candidate_func = 0;
+    }
 
-// void pci_write_16(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint16_t data)
-// {
-//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-//     microkit_x86_ioport_write_16(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-// }
-
-// void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t data)
-// {
-//     uint32_t addr = pci_compute_port_address(bus, dev, func, off);
-//     microkit_x86_ioport_write_32(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, addr);
-//     microkit_x86_ioport_write_32(pci_conf_data_pio_id, pci_conf_data_pio_addr, data);
-// }
-
-// bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
-// {
-//     int candidate_bus = 0;
-//     int candidate_dev = 0;
-//     int candidate_func = 0;
-
-//     for (; candidate_dev < 32; candidate_dev++) {
-//         for (; candidate_func < 8; candidate_func++) {
-//             uint32_t reg2 = pci_read_32(candidate_bus, candidate_dev, candidate_func, 0x8);
-//             uint8_t candidate_class = (reg2 >> 24) & 0xff;
-//             uint8_t candidate_subclass = (reg2 >> 16) & 0xff;
-
-//             if (reg2 != 0xffffffff && candidate_class == class && candidate_subclass == subclass) {
-//                 *bus = candidate_bus;
-//                 *dev = candidate_dev;
-//                 *func = candidate_func;
-//                 return true;
-//             }
-//         }
-//         candidate_func = 0;
-//     }
-
-//     return false;
-// }
+    return false;
+}
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_PCI_PIO
@@ -456,6 +438,128 @@ bool pci_x86_init(void)
     assert(pci_ecam_add_device(0, 1, 3, &isa_bridge));
 
     return true;
+}
+
+bool pci_x86_enable_passthrough_devices(uint64_t pci_conf_addr_pio_id, uint64_t pci_conf_addr_pio_addr,
+                                        uint64_t pci_conf_addr_pio_size, uint64_t pci_conf_data_pio_id,
+                                        uint64_t pci_conf_data_pio_addr, uint64_t pci_conf_data_pio_size)
+{
+    assert(pci_conf_addr_pio_addr == PCI_CONFIG_ADDRESS_START_PORT);
+    assert(pci_conf_addr_pio_size == 4);
+    assert(pci_conf_data_pio_addr == PCI_CONFIG_DATA_START_PORT);
+    assert(pci_conf_data_pio_size == 4);
+
+    pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id = pci_conf_addr_pio_id;
+    pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id = pci_conf_data_pio_id;
+
+    pci_x86_passthrough_bookkeeping.ata_passthrough = false;
+
+    pci_x86_passthrough_bookkeeping.valid = true;
+
+    return true;
+}
+
+bool pci_x86_passthrough_ata_controller(uint64_t primary_ata_cmd_pio_id, uint64_t primary_ata_cmd_pio_addr,
+                                        uint64_t primary_ata_ctrl_pio_id, uint64_t primary_ata_ctrl_pio_addr,
+                                        uint64_t second_ata_cmd_pio_id, uint64_t second_ata_cmd_pio_addr,
+                                        uint64_t second_ata_ctrl_pio_id, uint64_t second_ata_ctrl_pio_addr)
+{
+    assert(primary_ata_cmd_pio_addr == 0x1f0);
+    assert(primary_ata_ctrl_pio_addr == 0x3f6);
+    assert(second_ata_cmd_pio_addr == 0x170);
+    assert(second_ata_ctrl_pio_addr == 0x376);
+
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, 8);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, primary_ata_ctrl_pio_id, primary_ata_ctrl_pio_addr, 1);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_cmd_pio_id, second_ata_cmd_pio_addr, 8);
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr, 1);
+
+    // Find where the IDE controller lives on the host's PCI bus.
+    if (!find_pci_device(1, 1, &pci_x86_passthrough_bookkeeping.ata_bus, &pci_x86_passthrough_bookkeeping.ata_dev,
+                         &pci_x86_passthrough_bookkeeping.ata_func)) {
+        LOG_VMM("cannot find host ATA controller\n");
+    } else {
+        LOG_VMM("found host ATA controller @ PCI %d:%d.%d\n", pci_x86_passthrough_bookkeeping.ata_bus,
+                pci_x86_passthrough_bookkeeping.ata_dev, pci_x86_passthrough_bookkeeping.ata_func);
+    }
+
+    pci_x86_passthrough_bookkeeping.ata_v_bus = 0;
+    pci_x86_passthrough_bookkeeping.ata_v_dev = 1;
+    pci_x86_passthrough_bookkeeping.ata_v_func = 1;
+
+    pci_x86_passthrough_bookkeeping.ata_passthrough = true;
+
+    return true;
+}
+
+bool pci_x86_config_space_read_from_native(int access_width_bytes, uint8_t bus, uint8_t dev, uint8_t func,
+                                           uint16_t reg_offset, uint32_t *data)
+{
+    bool success = true;
+    int port_offset = reg_offset % 4;
+
+    uint32_t addr = pci_compute_port_address(bus, dev, func, reg_offset);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+
+    switch (access_width_bytes) {
+    case 1:
+        *data = microkit_x86_ioport_read_8(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                           PCI_CONFIG_DATA_START_PORT + port_offset);
+        break;
+    case 2:
+        *data = microkit_x86_ioport_read_16(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                            PCI_CONFIG_DATA_START_PORT + port_offset);
+        break;
+    case 4:
+        *data = microkit_x86_ioport_read_32(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                            PCI_CONFIG_DATA_START_PORT + port_offset);
+        break;
+    default:
+        assert(false);
+    }
+
+    // @billn hack
+    if (reg_offset == 0x4) {
+        // disable bus master
+        *data &= ~BIT(2);
+    }
+    if (reg_offset == 0x20) {
+        // BAR4 = 0, no dma
+        *data = 0;
+    }
+
+    return success;
+}
+
+bool pci_x86_config_space_write_to_native(int access_width_bytes, uint8_t bus, uint8_t dev, uint8_t func,
+                                          uint16_t reg_offset, uint32_t data)
+{
+    bool success = true;
+    int port_offset = reg_offset % 4;
+
+    uint32_t addr = pci_compute_port_address(bus, dev, func, reg_offset);
+    microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id, PCI_CONFIG_ADDRESS_START_PORT,
+                                 addr);
+
+    switch (access_width_bytes) {
+    case 1:
+        microkit_x86_ioport_write_8(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                    PCI_CONFIG_DATA_START_PORT + port_offset, data);
+        break;
+    case 2:
+        microkit_x86_ioport_write_16(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                     PCI_CONFIG_DATA_START_PORT + port_offset, data);
+        break;
+    case 4:
+        microkit_x86_ioport_write_32(pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id,
+                                     PCI_CONFIG_DATA_START_PORT + port_offset, data);
+        break;
+    default:
+        assert(false);
+    }
+
+    return success;
 }
 
 // bool pci_x86_emulate_pio_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool is_read,
