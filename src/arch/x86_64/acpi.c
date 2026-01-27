@@ -194,7 +194,7 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
     fadt->PM1aControlBlock = 0x404;
     fadt->PM1ControlLength = 0x2;
 
-    fadt->SCI_Interrupt = 9; // @billn sus
+    fadt->SCI_Interrupt = 7; // @billn sus
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
