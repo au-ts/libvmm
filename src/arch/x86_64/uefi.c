@@ -13,18 +13,18 @@
 #include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
 
-extern uintptr_t guest_high_ram_vaddr;
-extern uint64_t guest_high_ram_gpa;
-extern uint64_t guest_high_ram_size;
-
 extern struct fw_cfg_blobs fw_cfg_blobs;
 
-bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_start, size_t flash_size, char *firm,
-                       size_t firm_size, void *dsdt_blob, uint64_t dsdt_blob_size)
+bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t ram_size, uintptr_t high_ram_start_vmm,
+                       uint64_t high_ram_start_gpa, size_t high_ram_size, uintptr_t flash_start_vmm,
+                       uintptr_t flash_start_gpa, size_t flash_size, char *firm, size_t firm_size, void *dsdt_blob,
+                       uint64_t dsdt_blob_size)
 {
+    // Flash lives at the end of 4GiB
+    assert(flash_start_gpa + flash_size == 0x100000000);
+
     // Place the UEFI firmware at the reset vector.
-    // Assumes that (GPA of flash_start) + flash_size == 0x1_0000_0000!!!!!!
-    memcpy((void *)(flash_start + (flash_size - firm_size)), firm, firm_size);
+    memcpy((void *)(flash_start_vmm + (flash_size - firm_size)), firm, firm_size);
 
     // Build the various fw cfg blobs that will be needed by TianoCore OVMF
     // First thing is the E820 table.
@@ -33,11 +33,11 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
     fw_cfg_blobs.fw_cfg_e820_map.entries[0].type = E820_RAM;
     LOG_VMM("uefi_setup_images(): guest RAM GPA low 0x0..0x%lx\n", ram_size);
 
-    fw_cfg_blobs.fw_cfg_e820_map.entries[1].addr = guest_high_ram_gpa;
-    fw_cfg_blobs.fw_cfg_e820_map.entries[1].size = guest_high_ram_size;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[1].addr = high_ram_start_gpa;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[1].size = high_ram_size;
     fw_cfg_blobs.fw_cfg_e820_map.entries[1].type = E820_RAM;
-    LOG_VMM("uefi_setup_images(): guest RAM GPA high 0x%lx..0x%lx\n", guest_high_ram_gpa,
-            guest_high_ram_gpa + guest_high_ram_size);
+    LOG_VMM("uefi_setup_images(): guest RAM GPA high 0x%lx..0x%lx\n", high_ram_start_gpa,
+            high_ram_start_gpa + high_ram_size);
 
     // Then the ACPI XSDP table
     // The GPA of the XSDT will be filled in by a table loader command later
@@ -57,8 +57,6 @@ bool uefi_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t flash_sta
         return false;
     }
     memcpy(&fw_cfg_blobs.fw_acpi_tables.dsdt, dsdt_blob, dsdt_blob_size);
-
-    // @billn this is not pretty...
 
     // Now build the list of table loader commands, which:
     // 1. Load all the tables into memory.

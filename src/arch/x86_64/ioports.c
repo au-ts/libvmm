@@ -148,6 +148,14 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         vctx->eax = 0;
     }
 
+    // if (!(port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8)) {
+    //     if (is_read) {
+    //         LOG_VMM("read io port 0x%x\n", port_addr);
+    //     } else {
+    //         LOG_VMM("write io port 0x%x, val 0x%x\n", port_addr, vctx->eax);
+    //     }
+    // }
+
     // if (is_pci_config_space_access_mech_1(port_addr)) {
     //     assert(!is_string);
     //     return pci_x86_emulate_pio_access(vctx, port_addr, is_read, access_width);
@@ -188,6 +196,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 
     } else if (port_addr >= 0x40 && port_addr <= 0x43) {
         return emulate_pit_access(vctx, port_addr, is_read);
+
+    } else if (port_addr == 0x3f2) {
+        assert(!is_string);
+        // floppy disk, seems sus, when booting memtest in nixos, it will write IRQ enable to this register and hangs...
+        success = true;
 
     } else if (port_addr == 0x87 || (port_addr >= 0 && port_addr <= 0x1f)) {
         assert(!is_string);
