@@ -10,7 +10,7 @@
 // If the DMA interface is available, then reading the DMA Address Register returns 0x51454d5520434647 (QEMU CFG in big-endian format).
 
 // TODO: sort out and rename
-uint64_t fb_vaddr = 0x100000000;
+uint64_t fb_vaddr = 0x800000;
 uint64_t fb_paddr = 0x7000000;
 
 /* See references:
@@ -237,7 +237,7 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                 // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
                 //    with the physical address rather than guest physical.
                 uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
-                guest_ramfb_cfg->address = __builtin_bswap64(0x20000000 + ramfb_dma_gpa);
+                guest_ramfb_cfg->address = __builtin_bswap64(gpa_to_pa(ramfb_dma_gpa));
                 LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n",
                         ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
                 memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
@@ -295,7 +295,7 @@ static uint32_t fw_cfg_read_u32()
 }
 
 uint64_t fw_cfg_dma_cmd_paddr = 0x6000000;
-uint64_t fw_cfg_dma_cmd_vaddr = 0x110000000;
+uint64_t fw_cfg_dma_cmd_vaddr = 0xD00000;
 
 static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address)
 {
