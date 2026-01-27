@@ -16,11 +16,32 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/virtio/pci.h>
 
-// extern uint64_t pci_conf_addr_pio_id;
-// extern uint64_t pci_conf_addr_pio_addr;
+#define PCI_CONF_ADDR_PIO_ADDR 0xcf8
+#define PCI_CONF_DATA_PIO_ADDR 0xcfc
 
-// extern uint64_t pci_conf_data_pio_id;
-// extern uint64_t pci_conf_data_pio_addr;
+struct pci_x86_passthrough {
+    bool valid;
+    uint64_t pci_conf_addr_pio_id;
+    uint64_t pci_conf_data_pio_id;
+};
+
+static struct pci_x86_passthrough pci_x86_passthrough_bookkeeping = { .valid = false };
+
+bool pci_x86_enable_passthrough_devices(uint64_t pci_conf_addr_pio_id, uint64_t pci_conf_addr_pio_addr,
+                                        uint64_t pci_conf_addr_pio_size, uint64_t pci_conf_data_pio_id,
+                                        uint64_t pci_conf_data_pio_addr, uint64_t pci_conf_data_pio_size)
+{
+    assert(pci_conf_addr_pio_addr == PCI_CONF_ADDR_PIO_ADDR);
+    assert(pci_conf_addr_pio_size == 4);
+    assert(pci_conf_data_pio_addr == PCI_CONF_DATA_PIO_ADDR);
+    assert(pci_conf_data_pio_size == 4);
+
+    pci_x86_passthrough_bookkeeping.pci_conf_addr_pio_id = pci_conf_addr_pio_id;
+    pci_x86_passthrough_bookkeeping.pci_conf_data_pio_id = pci_conf_data_pio_id;
+    pci_x86_passthrough_bookkeeping.valid = true;
+
+    return true;
+}
 
 // /* Utility functions to access the host PCI bus */
 // uint32_t pci_compute_port_address(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off)
@@ -120,8 +141,6 @@
 // };
 
 // static struct pci_x86_state pci_x86_state;
-
-
 
 // bool is_pci_config_space_access_mech_1(uint16_t port_addr)
 // {
