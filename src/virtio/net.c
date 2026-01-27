@@ -41,7 +41,13 @@ static void virtio_net_reset(struct virtio_device *dev)
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
         dev->vqs[i].last_idx = 0;
+        dev->vqs[i].virtq.avail = 0;
+        dev->vqs[i].virtq.used = 0;
+        dev->vqs[i].virtq.desc = 0;
     }
+    memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
+    dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_NET;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
 }
 
 static bool driver_ok(struct virtio_device *dev)
