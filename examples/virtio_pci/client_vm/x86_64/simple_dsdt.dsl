@@ -81,14 +81,14 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Method(_PRT, 0) {
                 Return (Package() {
                     // Virtio console:
-                    // Device 0x3, function 0, INTA -> GSI 15
-                    Package() { 0x00030000, 0, 0, 15 },
+                    // Device 0x3, function 0, INTA -> GSI 9
+                    Package() { 0x00030000, 0, 0, 9 },
                     // Virtio net:
-                    // Device 0x4, function 0, INTA -> GSI 14
-                    Package() { 0x00040000, 0, 0, 14 },
+                    // Device 0x4, function 0, INTA -> GSI 10
+                    Package() { 0x00040000, 0, 0, 10 },
                     // Virtio blk:
-                    // Device 0x5, function 0, INTA -> GSI 13
-                    Package() { 0x00050000, 0, 0, 13 },
+                    // Device 0x5, function 0, INTA -> GSI 11
+                    Package() { 0x00050000, 0, 0, 11 },
                 })
             }
         }
