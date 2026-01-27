@@ -4,24 +4,28 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
- // @billn vscode hack
-// #define CONFIG_ARCH_X86_64
-
+#include <string.h>
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/virtq.h>
+
 #if defined(CONFIG_ARCH_AARCH64)
 #include <libvmm/arch/aarch64/fault.h>
+
 #elif defined(CONFIG_ARCH_X86_64)
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/ioports.h>
+
+extern struct pci_x86_passthrough pci_x86_passthrough_bookkeeping;
+
 #endif
-#include <string.h>
+
 
 // @billn this should be moved to src/pci.c
 // @billn I don't like how some functions are general PCI stuff but prefixed with virtio
@@ -805,6 +809,13 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
 static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, seL4_Word *data,
                                          int access_width_bytes)
 {
+// @billn hack cdrom passthrough
+#if defined(CONFIG_ARCH_X86_64)
+    if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
+        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, data);
+    }
+#endif
+
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
     uint8_t *bytes = (uint8_t *)(global_pci_ecam.vmm_base + config_space_ecam_off + reg_off);
     *data = 0;
@@ -815,6 +826,13 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
 static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
                                           int access_width_bytes)
 {
+// @billn hack cdrom passthrough
+#if defined(CONFIG_ARCH_X86_64)
+    if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
+        return pci_x86_config_space_write_to_native(access_width_bytes, 0, 1, 1, reg_off, data);
+    }
+#endif
+
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
     struct pci_config_space *config_space = (struct pci_config_space *)(global_pci_ecam.vmm_base
                                                                         + config_space_ecam_off);
