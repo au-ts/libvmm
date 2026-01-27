@@ -135,22 +135,25 @@ void init(void)
     // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
     //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
 
-    // net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
-    //                net_config.rx.num_buffers);
-    // net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
-    //                net_config.tx.num_buffers);
-    // net_buffers_init(&net_tx_queue, 0);
+    net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
+                   net_config.rx.num_buffers);
+    net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
+                   net_config.tx.num_buffers);
+    net_buffers_init(&net_tx_queue, 0);
 
-    // bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
-    //                                    &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-    //                                    (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-    //                                    net_config.mac_addr);
-    // assert(success);
-
-    bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
-                                  (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
-                                  blk_config.virt.num_buffers, blk_config.virt.id);
-    assert(success);
+    {
+        bool success = virtio_pci_net_init(&virtio_net, VIRTIO_NET_PCI_DEVICE_SLOT, VIRTIO_NET_PCI_IOAPIC_PIN,
+                                           &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                           (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                           net_config.mac_addr);
+        assert(success);
+    }
+    {
+        bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+                                      (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
+                                      blk_config.virt.num_buffers, blk_config.virt.id);
+        assert(success);
+    }
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
