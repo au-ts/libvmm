@@ -182,5 +182,6 @@
 
 // [2b] Secondary Processor-Based VM-Execution Controls Register
 #define VMCS_SPC_ENABLE_EPT BIT_LOW(1)
+#define VMCS_SPC_ENABLE_XSAVE BIT_LOW(20)
 
-#define VMCS_SPC_DEFAULT VMCS_SPC_ENABLE_EPT
+#define VMCS_SPC_DEFAULT (VMCS_SPC_ENABLE_EPT | VMCS_SPC_ENABLE_XSAVE)
