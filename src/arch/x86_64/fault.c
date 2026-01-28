@@ -421,6 +421,17 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         *new_rip = rip + ins_len;
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);
+        if (ins_len) {
+            uint64_t gpa;
+            int bytes_remaining;
+            assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
+            assert(bytes_remaining >= ins_len);
+            LOG_VMM("faulting instruction:\n");
+            uint8_t *ins = gpa_to_vaddr(gpa);
+            for (int i = 0; i < ins_len; i++) {
+                LOG_VMM("0x%02x\n", ins[i]);
+            }
+        }
         vcpu_print_regs(vcpu_id);
     }
 
