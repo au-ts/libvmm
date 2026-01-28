@@ -192,6 +192,28 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                            .size = __builtin_bswap32(sizeof(struct hw_info_pci_host_bridge)),
                                            .select = __builtin_bswap16(FW_CFG_HW_INFO),
                                        },
+                                       // These are empty because we want the firmware to boot from
+                                       // a bootable block based media.
+                                       {
+                                           .name = "",
+                                           .size = __builtin_bswap32(0),
+                                           .select = FW_CFG_SETUP_SIZE,
+                                       },
+                                       {
+                                           .name = "",
+                                           .size = __builtin_bswap32(0),
+                                           .select = FW_CFG_KERNEL_SIZE,
+                                       },
+                                       {
+                                           .name = "",
+                                           .size = __builtin_bswap32(0),
+                                           .select = FW_CFG_INITRD_SIZE,
+                                       },
+                                       {
+                                           .name = "",
+                                           .size = __builtin_bswap32(0),
+                                           .select = FW_CFG_CMDLINE_SIZE,
+                                       },
                                    } };
 
     return true;

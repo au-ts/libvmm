@@ -135,9 +135,8 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -m size=12G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=/home/billn/ts/libvmm/examples/uefi/blk_storage_32gb,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  -cdrom /home/billn/Downloads/nixos-graphical-25.11.4270.77ef7a29d276-x86_64-linux.iso
+							  -drive file=/home/billn/ts/libvmm/examples/uefi/win10installed_gpt_in_gpt.img,format=raw,if=none,id=drive0 \
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 
 clean::

@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <sel4/arch/vmenter.h>
 
@@ -241,14 +242,18 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, me
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
     if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
+        // No log fault here, as the local APIC timer will just fill the terminal...
         return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
+        LOG_FAULT("handling IO APIC 0x%lx\n", addr);
         return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
+        LOG_FAULT("handling HPET 0x%lx\n", addr);
         return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_mem_ins);
     // } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
     //     return pci_x86_emulate_ecam_access(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
     } else {
+        LOG_FAULT("handling other EPT 0x%lx\n", addr);
         for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
             uintptr_t base = registered_ept_exception_handlers[i].base;
             uintptr_t end = registered_ept_exception_handlers[i].end;
@@ -325,6 +330,14 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
     uint16_t port_addr = (qualification >> 16) & 0xffff;
     // TODO: pass access width to the callbacks?
     // ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+
+    if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
+    } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
+    } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
+    } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
+    } else {
+        LOG_FAULT("handling PIO 0x%lx\n", port_addr);
+    }
 
     for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
         uint16_t base = registered_pio_exception_handlers[i].base;
