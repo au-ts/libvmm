@@ -174,6 +174,13 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     pci_conf_data_port = SystemDescription.IoPort(0xcfc, 4, 35)
     vmm_client0.add_ioport(pci_conf_data_port)
 
+    # CMOS passthrough hack for windows
+    cmos_addr_port = SystemDescription.IoPort(0x70, 1, 36)
+    vmm_client0.add_ioport(cmos_addr_port)
+
+    cmos_data_port = SystemDescription.IoPort(0x71, 1, 37)
+    vmm_client0.add_ioport(cmos_data_port)
+
     # QEMU Framebuffer
     fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
     vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))

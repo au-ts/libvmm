@@ -59,7 +59,7 @@ struct FWCfgFile {
 }  __attribute__((packed));
 
 /* Structure of FW_CFG_FILE_DIR */
-#define NUM_FW_CFG_FILES 6
+#define NUM_FW_CFG_FILES 10
 struct fw_cfg_file_dir {
     uint32_t num_files; // Big endian!
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];

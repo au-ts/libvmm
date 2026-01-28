@@ -121,6 +121,26 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
                                                                 access_width);
                 break;
             }
+            case FW_CFG_SETUP_SIZE: {
+                uint8_t zero = 0;
+                emulate_ioport_string_read(vctx, (char *)&zero, sizeof(uint8_t), is_rep, access_width);
+                break;
+            }
+            case FW_CFG_KERNEL_SIZE: {
+                uint8_t zero = 0;
+                emulate_ioport_string_read(vctx, (char *)&zero, sizeof(uint8_t), is_rep, access_width);
+                break;
+            }
+            case FW_CFG_INITRD_SIZE: {
+                uint8_t zero = 0;
+                emulate_ioport_string_read(vctx, (char *)&zero, sizeof(uint8_t), is_rep, access_width);
+                break;
+            }
+            case FW_CFG_CMDLINE_SIZE: {
+                uint8_t zero = 0;
+                emulate_ioport_string_read(vctx, (char *)&zero, sizeof(uint8_t), is_rep, access_width);
+                break;
+            }
             case FW_CFG_ACPI_TABLES: {
                 selected_data_idx += emulate_ioport_string_read(
                     vctx, &((char *)&fw_cfg_blobs.fw_acpi_tables)[selected_data_idx],
@@ -210,6 +230,11 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
             } else if (selector == FW_CFG_HW_INFO) {
                 LOG_VMM("accessing hw info via dma\n");
                 memcpy(dma_vaddr, &((char *)&fw_cfg_blobs.fw_hw_info)[selected_data_idx], length);
+
+            } else if (selector == FW_CFG_SETUP_SIZE || selector == FW_CFG_KERNEL_SIZE || selector == FW_CFG_INITRD_SIZE
+                       || selector == FW_CFG_CMDLINE_SIZE) {
+                memset(dma_vaddr, 0, length);
+
             } else {
                 LOG_VMM_ERR("unknown fw cfg DMA read for selector 0x%x\n", selector);
                 return false;

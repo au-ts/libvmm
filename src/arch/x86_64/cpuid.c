@@ -8,6 +8,7 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
+#include <libvmm/arch/x86_64/util.h>
 
 extern uint64_t tsc_hz;
 
@@ -62,6 +63,8 @@ static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t 
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
+    LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);
+
     // @billn todo revisit likely need to turn on some important features.
     // 3-218 Vol. 2A
 

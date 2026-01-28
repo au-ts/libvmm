@@ -10,6 +10,7 @@
 #include <libvmm/arch/x86_64/msr.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/util.h>
 
 #include <x86intrin.h>
 
@@ -68,6 +69,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
     uint64_t result = 0;
 
+    LOG_FAULT("handling RDMSR 0x%x\n", vctx->ecx);
+
     switch (vctx->ecx) {
     case MSR_EFER: {
         result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
@@ -125,6 +128,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 
 bool emulate_wrmsr(seL4_VCPUContext *vctx)
 {
+    LOG_FAULT("handling WRMSR 0x%x\n", vctx->ecx);
+
     uint64_t value = (uint64_t) ((vctx->edx & 0xffffffff) << 32) | (uint64_t) (vctx->eax & 0xffffffff);
 
     switch (vctx->ecx) {

@@ -9,6 +9,13 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 
+// #define DEBUG_FAULT
+#if defined(DEBUG_FAULT)
+#define LOG_FAULT(...) do{ printf("%s|FAULT: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#else
+#define LOG_FAULT(...) do{}while(0)
+#endif
+
 uint64_t gpa_to_pa(uint64_t gpa);
 
 // Convert guest virtual address to guest physical address, using whichever page table is currently in the guest's CR3.
