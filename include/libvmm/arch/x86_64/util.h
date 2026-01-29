@@ -16,6 +16,9 @@
 #define LOG_FAULT(...) do{}while(0)
 #endif
 
+bool guest_paging_on(void);
+bool guest_in_64_bits(void);
+
 uint64_t gpa_to_pa(uint64_t gpa);
 
 // Convert guest virtual address to guest physical address, using whichever page table is currently in the guest's CR3.
