@@ -7,4 +7,6 @@ label: dos
 
 start=2048,size=71G
 EOF
-dd if="$2" of="$1" bs=16M conv=notrunc,sync seek=2048 status=progress
+
+# it is extremely important that bs=512 and seek=2048, as seek is in unit of `bs`.
+dd if="$2" of="$1" bs=512 conv=notrunc,sync seek=2048 status=progress
