@@ -208,6 +208,7 @@ void vcpu_print_regs(size_t vcpu_id)
     LOG_VMM("    interruptability = 0x%lx\n", interruptability);
     LOG_VMM("    cr0 = 0x%lx\n", microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR0));
     LOG_VMM("    cr3 = 0x%lx\n", cr3);
+    LOG_VMM("    cr4 = 0x%lx\n", microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4));
     LOG_VMM("    efer = 0x%lx\n", efer);
     LOG_VMM("=========================\n");
     LOG_VMM("    rip = 0x%lx\n", rip);
