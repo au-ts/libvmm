@@ -359,6 +359,8 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
     return emulate_ioports(vctx, qualification);
 }
 
+// static uint64_t prev_valid_idt_entries = 0;
+
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 {
     bool success = false;
@@ -417,19 +419,89 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 
     *new_rip = rip;
     if (success && f_reason != INTERRUPT_WINDOW) {
+        // uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+        // if (cr4 & BIT(18)) {
+        //     LOG_VMM("======== HELLO OSXSAVE IS ON!!!!\n");
+        // }
+
+        
+        // uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
+        // uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
+        // uint64_t idtr_gpa, _bytes_remaining;
+        // bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
+        // uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
+        // uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
+        // uint16_t num_present_entries = 0;
+        // for (int i = 0; i < idt_num_entries; i++) {
+        //     uint32_t entry[4];
+        //     uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+        //     entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
+        //     entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
+        //     entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
+        //     entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+
+        //     uint32_t present = (entry[1] & BIT(15));
+        //     if (present)
+        //         num_present_entries++;
+        // }
+
+        // if (num_present_entries != prev_valid_idt_entries) {
+        //     LOG_VMM("+_+_+_+_+ IDT have %d valid entries\n", num_present_entries);
+        //     LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
+        // }
+
+        // prev_valid_idt_entries = num_present_entries;
+
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);
+        LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
+        if (guest_paging_on()) {
+            uint64_t _sp_gpa, _bytes_remaining;
+            bool sp_valid = gva_to_gpa(0, microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RSP), &_sp_gpa, &_bytes_remaining);
+            LOG_VMM_ERR("stack pointer valid: %s\n", sp_valid ? "YES" : "NO");
+
+            uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
+            uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
+            uint64_t idtr_gpa;
+            bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
+            LOG_VMM_ERR("IDTR gva: 0x%lx\n", idtr_gva);
+            LOG_VMM_ERR("IDTR limit: 0x%lx\n", idtr_limit);
+            LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
+            LOG_VMM_ERR("IDTR valid: %s\n", idtr_valid ? "YES" : "NO");
+            uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
+            uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
+            LOG_VMM_ERR("IDTR num entries: %d\n", idt_num_entries);
+
+            for (int i = 0; i < idt_num_entries; i++) {
+                uint32_t entry[4];
+                uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+                entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
+                entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
+                entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
+                entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+
+                uint32_t present = (entry[1] & BIT(15));
+                LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
+            }
+        }
         if (ins_len) {
             uint64_t gpa;
             int bytes_remaining;
             assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
             assert(bytes_remaining >= ins_len);
-            LOG_VMM("faulting instruction:\n");
+            LOG_VMM_ERR("faulting instruction:\n");
             uint8_t *ins = gpa_to_vaddr(gpa);
             for (int i = 0; i < ins_len; i++) {
-                LOG_VMM("0x%02x\n", ins[i]);
+                LOG_VMM_ERR("0x%02x\n", ins[i]);
+                bytes_remaining--;
+            }
+
+            LOG_VMM_ERR("proceeding instructions:\n");
+            for (int i = 0; i < MIN(bytes_remaining, 16); i++) {
+                LOG_VMM_ERR("0x%02x\n", ins[i + ins_len]);
+                bytes_remaining--;
             }
         }
         vcpu_print_regs(vcpu_id);
