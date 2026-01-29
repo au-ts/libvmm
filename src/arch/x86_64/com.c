@@ -6,6 +6,8 @@
 static uint8_t com_scratch[4];
 
 void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_read) {
+    // LOG_VMM("com port %d, reg_offset %d, is_read %d\n", idx, reg_offset, is_read);
+
     assert(idx < sizeof(com_scratch) / sizeof(uint8_t));
     switch (reg_offset) {
     case 0x7: {
@@ -35,7 +37,7 @@ void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_
             vctx->eax = 0;
         } else {
             // First In First Out Control Register
-            LOG_VMM("com2 FIFO write %x\n", vctx->eax);
+            // LOG_VMM("FIFO write %x\n", vctx->eax);
         }
         break;
     }
@@ -53,7 +55,7 @@ void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_
         if (is_read) {
             vctx->eax = BIT(7);
         } else {
-            LOG_VMM("com2 LCR write %x\n", vctx->eax);
+            // LOG_VMM("LCR write %x\n", vctx->eax);
         }
         break;
     }
