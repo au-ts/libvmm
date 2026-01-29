@@ -29,6 +29,14 @@ static bool pt_page_size(uint64_t pte)
     return pte & BIT(7);
 }
 
+bool guest_paging_on(void) {
+    return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_CR0) & BIT(31);
+}
+
+bool guest_in_64_bits(void) {
+    return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER) & BIT(10);
+}
+
 void *gpa_to_vaddr(uint64_t gpa)
 {
     // @billn ugly hack
@@ -65,7 +73,9 @@ uint64_t gpa_to_pa(uint64_t gpa)
 
 bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remaining) {
     // Make sure that paging is on
-    assert(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR0) & BIT(31));
+    if (!guest_paging_on()) {
+        *gpa = gva;
+    }
 
     uint64_t pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
     uint64_t *pml4 = gpa_to_vaddr(pml4_gpa);
