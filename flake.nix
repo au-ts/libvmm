@@ -79,6 +79,7 @@
                 qemu
                 gnumake
                 dosfstools
+                gptfdisk
                 # for git-clang-format.
                 llvm.libclang.python
                 llvm.lld
