@@ -34,7 +34,7 @@ bool guest_paging_on(void) {
 }
 
 bool guest_in_64_bits(void) {
-    return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER) & BIT(10);
+    return guest_paging_on() && (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER) & BIT(10));
 }
 
 void *gpa_to_vaddr(uint64_t gpa)

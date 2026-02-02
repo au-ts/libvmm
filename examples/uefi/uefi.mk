@@ -41,7 +41,7 @@ ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	KERNEL = sel4.elf
 	KERNEL32 := sel4_32.elf
 	QEMU := qemu-system-x86_64
-	QEMU_ARCH_ARGS := -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme,+avx2 \
 	                  -kernel $(KERNEL32) -initrd $(IMAGE_FILE) \
 					  -device virtio-net-pci,netdev=netdev0,addr=0x2.0 \
 					  -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1,addr=0x3.0
@@ -135,8 +135,9 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -m size=12G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=/home/billn/Downloads/windbg_server/Windows10Installed_clean.guest,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
+							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
+							  -cdrom /home/billn/Downloads/nixos-graphical-25.11.4270.77ef7a29d276-x86_64-linux.iso
 
 clean::
 	$(RM) -f *.elf .depend* $

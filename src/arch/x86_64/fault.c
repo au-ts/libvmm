@@ -474,17 +474,17 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
             uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
             LOG_VMM_ERR("IDTR num entries: %d\n", idt_num_entries);
 
-            for (int i = 0; i < idt_num_entries; i++) {
-                uint32_t entry[4];
-                uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-                entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
-                entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
-                entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
-                entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+            // for (int i = 0; i < idt_num_entries; i++) {
+            //     uint32_t entry[4];
+            //     uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+            //     entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
+            //     entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
+            //     entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
+            //     entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
 
-                uint32_t present = (entry[1] & BIT(15));
-                LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
-            }
+            //     uint32_t present = (entry[1] & BIT(15));
+            //     LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
+            // }
         }
         if (ins_len) {
             uint64_t gpa;

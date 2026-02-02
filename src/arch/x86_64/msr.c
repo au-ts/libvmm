@@ -19,6 +19,8 @@
 #define IA32_TIME_STAMP_COUNTER (0x10)
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_SPEC_CTRL (0x48)
+#define IA32_PRED_CMD (0x49)
+#define IA32_PPIN_CTL (0x4e)
 #define IA32_MKTME_KEYID_PARTITIONING (0x87)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
@@ -64,7 +66,6 @@
 // #define MSR_SHADOW_GS_BASE  0xc0000102 /* SwapGS GS shadow */
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
-
 bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
     uint64_t result = 0;
@@ -105,7 +106,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case MSR_PLATFORM_INFO:
     case MSR_UNKNOWN1:
     case IA32_SPEC_CTRL:
+    case IA32_PRED_CMD:
     case 0xc0010131: // @billn AMD SEV
+    case 0x150: // cpu voltage control?
         break;
     case IA32_APIC_BASE:
         // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
@@ -114,6 +117,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         result = 0xFEE00000 | BIT(11) | BIT(8);
         break;
     case IA32_FEATURE_CONTROL:
+        result = 1; // locked
+        break;
+    case IA32_PPIN_CTL:
         result = 1; // locked
         break;
     default:
@@ -130,7 +136,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
 {
     LOG_FAULT("handling WRMSR 0x%x\n", vctx->ecx);
 
-    uint64_t value = (uint64_t) ((vctx->edx & 0xffffffff) << 32) | (uint64_t) (vctx->eax & 0xffffffff);
+    uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
 
     switch (vctx->ecx) {
     case MSR_EFER:
@@ -141,6 +147,8 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_MISC_ENABLE:
     case IA32_XSS:
     case IA32_SPEC_CTRL:
+    case IA32_PRED_CMD:
+    case 0x150: // cpu voltage control?
         return true;
     case MSR_TEST_CTRL:
     case MSR_STAR:
