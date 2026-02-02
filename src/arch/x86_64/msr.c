@@ -66,11 +66,11 @@
 // #define MSR_SHADOW_GS_BASE  0xc0000102 /* SwapGS GS shadow */
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
+static uint64_t misc_enable = 0;
+
 bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
     uint64_t result = 0;
-
-    LOG_FAULT("handling RDMSR 0x%x\n", vctx->ecx);
 
     switch (vctx->ecx) {
     case MSR_EFER: {
@@ -80,9 +80,11 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case IA32_TIME_STAMP_COUNTER:
         result = __rdtsc();
         break;
+    case IA32_MISC_ENABLE:
+        result = misc_enable;
+        break;
     case IA32_PLATFORM_ID:
     case IA32_CORE_CAPABILITIES:
-    case IA32_MISC_ENABLE:
     case IA32_MKTME_KEYID_PARTITIONING:
     case IA32_BIOS_SIGN_ID:
     case IA32_MCG_CAP:
@@ -127,6 +129,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         return false;
     }
 
+    LOG_FAULT("handling RDMSR 0x%x, result 0x%lx\n", vctx->ecx, result);
+
     vctx->eax = result & 0xffffffff;
     vctx->edx = (result >> 32) & 0xffffffff;
     return true;
@@ -134,9 +138,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 
 bool emulate_wrmsr(seL4_VCPUContext *vctx)
 {
-    LOG_FAULT("handling WRMSR 0x%x\n", vctx->ecx);
-
     uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
+
+    LOG_FAULT("handling WRMSR 0x%x, value 0x%lx\n", vctx->ecx, value);
 
     switch (vctx->ecx) {
     case MSR_EFER:
@@ -144,7 +148,6 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
         break;
     case IA32_BIOS_SIGN_ID:
     case MISC_FEATURE_ENABLES:
-    case IA32_MISC_ENABLE:
     case IA32_XSS:
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
@@ -154,7 +157,8 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case MSR_STAR:
     case MSR_LSTAR:
     case MSR_SYSCALL_MASK:
-        microkit_vcpu_x86_write_msr(GUEST_BOOT_VCPU_ID, vctx->ecx, value);
+    case IA32_MISC_ENABLE:
+        misc_enable = value;
         return true;
     default:
         LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);
