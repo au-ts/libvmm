@@ -157,6 +157,8 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case MSR_STAR:
     case MSR_LSTAR:
     case MSR_SYSCALL_MASK:
+        microkit_vcpu_x86_write_msr(GUEST_BOOT_VCPU_ID, vctx->ecx, value);
+        return true;
     case IA32_MISC_ENABLE:
         misc_enable = value;
         return true;
