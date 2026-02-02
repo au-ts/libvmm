@@ -9,7 +9,7 @@
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/cmos.h>
 
-// @billn hack
+// @billn hack, there should be a `init_cmos()` call that either pass or not pass the real CMOS
 #define CMOS_ADDR_PORT_ID 36
 #define CMOS_DATA_PORT_ID 37
 
