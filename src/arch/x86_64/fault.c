@@ -22,6 +22,9 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <sel4/arch/vmenter.h>
 
+bool fault_cond = false;
+
+
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
@@ -243,6 +246,7 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, me
 
     if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
         // No log fault here, as the local APIC timer will just fill the terminal...
+        LOG_FAULT("handling LAPIC 0x%lx\n", addr);
         return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
     } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
         LOG_FAULT("handling IO APIC 0x%lx\n", addr);
@@ -371,6 +375,14 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
 
+    if (rip > 0xfffff00000000000) {
+        LOG_VMM_ERR("vmm exit in kernel at rip 0x%lx\n", rip);
+        fault_cond = true;
+    } else {
+        fault_cond = false;
+    }
+
+
     seL4_VCPUContext vctx;
     vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
     vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
@@ -411,6 +423,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         success = true;
         break;
     case XSETBV:
+        LOG_FAULT("XSETBV\n");
         success = true;
         break;
     default:
@@ -452,6 +465,10 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 
         // prev_valid_idt_entries = num_present_entries;
 
+        // TODO hack force osxsave on so that windows doesnt #UD on xgetbv/xsetbv
+       uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+       microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
+
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
     } else if (!success) {
@@ -474,17 +491,23 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
             uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
             LOG_VMM_ERR("IDTR num entries: %d\n", idt_num_entries);
 
-            // for (int i = 0; i < idt_num_entries; i++) {
-            //     uint32_t entry[4];
-            //     uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-            //     entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
-            //     entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
-            //     entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
-            //     entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+            uint16_t idt_num_valid_entries = 0;
+            for (int i = 0; i < idt_num_entries; i++) {
+                uint32_t entry[4];
+                uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+                entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
+                entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
+                entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
+                entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
 
-            //     uint32_t present = (entry[1] & BIT(15));
-            //     LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
-            // }
+                uint32_t present = (entry[1] & BIT(15));
+                // LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
+                if (present) {
+                    idt_num_valid_entries += 1;
+                }
+            }
+
+            LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
         }
         if (ins_len) {
             uint64_t gpa;

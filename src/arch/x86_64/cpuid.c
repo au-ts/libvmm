@@ -83,6 +83,7 @@ extern uint64_t tsc_hz;
 #define CPUID_80000001_ECX_PREFETCHW BIT(8)
 
 #define CPUID_80000001_EDX_SCALL_SRET BIT(11) // SYSCALL/SYSRET support
+#define CPUID_80000001_EDX_NX BIT(20) // No execute
 #define CPUID_80000001_EDX_RDTSCP BIT(27)
 #define CPUID_80000001_EDX_LONG_MODE BIT(29)
 
@@ -279,8 +280,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = CPUID_80000001_ECX_LM_LAHF_SAHF | CPUID_80000001_ECX_LM_LZCNT | CPUID_80000001_ECX_PREFETCHW;
-        vctx->edx = 0 /* No NX support */ | 0 /* No 1GiB Page */ | 0 /* No RDTSCP */
-                  | CPUID_80000001_EDX_LONG_MODE;
+        vctx->edx = 0 /* No 1GiB Page */ | 0 /* No RDTSCP */
+                  | CPUID_80000001_EDX_LONG_MODE | CPUID_80000001_EDX_NX;
         if (guest_in_64_bits()) {
             vctx->edx |= CPUID_80000001_EDX_SCALL_SRET;
         }
