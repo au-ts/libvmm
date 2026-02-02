@@ -21,6 +21,7 @@
 #define IA32_SPEC_CTRL (0x48)
 #define IA32_PRED_CMD (0x49)
 #define IA32_PPIN_CTL (0x4e)
+#define IA32_BIOS_UPDT_TRIG (0x79)
 #define IA32_MKTME_KEYID_PARTITIONING (0x87)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
@@ -151,6 +152,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_XSS:
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
+    case IA32_BIOS_UPDT_TRIG:
     case 0x150: // cpu voltage control?
         return true;
     case MSR_TEST_CTRL:
