@@ -161,6 +161,12 @@ void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit) {
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, 0x2 | 1 << 7);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7);
+
+    // Table 25-16. Definitions of VM-Entry Controls
+    // load EFER on entry
+    uint64_t entry_controls = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
+    entry_controls |= BIT(15);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, entry_controls);
 }
 
 void vcpu_print_regs(size_t vcpu_id)

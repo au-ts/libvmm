@@ -84,6 +84,7 @@ extern uint64_t tsc_hz;
 
 #define CPUID_80000001_EDX_SCALL_SRET BIT(11) // SYSCALL/SYSRET support
 #define CPUID_80000001_EDX_NX BIT(20) // No execute
+#define CPUID_80000001_EDX_1GB_PAGE BIT(26)
 #define CPUID_80000001_EDX_RDTSCP BIT(27)
 #define CPUID_80000001_EDX_LONG_MODE BIT(29)
 
@@ -125,11 +126,11 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = 0x6c65746e;
         break;
     case 0x1: {
-        vctx->eax = 0x00050054;
+        vctx->eax = 0x00050654;
         vctx->ebx = ((CACHE_LINE_SIZE / 8) << 8) | (NUM_LOGICAL_PROCESSORS << 16);
-        vctx->ecx = CPUID_01_ECX_DTES64 | CPUID_01_ECX_DS_CPL
+        vctx->ecx = CPUID_01_ECX_DTES64 | 0 /* No qualified debug store */
                   | 0 /* No Intel Enhanced SpeedStep */ | 0 /* No Thermal Monitor 2 */ | CPUID_01_ECX_XTPR
-                  | CPUID_01_ECX_PDCM | CPUID_01_ECX_SSE3 | CPUID_01_ECX_PCLMULQDQ
+                  | 0 /* No Perfmon */ | CPUID_01_ECX_SSE3 | CPUID_01_ECX_PCLMULQDQ
                   | 0 /* No MONITOR MWAIT*/ | 0 /* No VMX*/ | CPUID_01_ECX_SSSE3 | CPUID_01_ECX_FMA
                   | CPUID_01_ECX_CMPXCHG16B
                   | 0 /* No PCID, seL4 in Microkit isn't built with it */ | CPUID_01_ECX_SSE4_1 | CPUID_01_ECX_SSE4_2
@@ -137,9 +138,9 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
                   | 0 /* No TSC deadline */ | CPUID_01_ECX_AES | CPUID_01_ECX_XSAVE | CPUID_01_ECX_OSXSAVE
                   | CPUID_01_ECX_AVX | CPUID_01_ECX_F16C | 0 /* No RDRAND */ | CPUID_01_ECX_HYP;
 
-        vctx->edx = CPUID_01_EDX_DEBUG_STORE | 0 /* No ACPI Thermal Monitor */ | CPUID_01_EDX_SELF_SNOOP
+        vctx->edx = 0 /* No Debug Store */ | 0 /* No ACPI Thermal Monitor */ | CPUID_01_EDX_SELF_SNOOP
                   | 0/* No THermal Monitor */
-                  | CPUID_01_EDX_PBE | CPUID_01_EDX_FPU | 0 /* No virtual 8086 mode */ | CPUID_01_EDX_DE
+                  | CPUID_01_EDX_PBE | CPUID_01_EDX_FPU | 0 /* No virtual 8086 mode */ | 0 /* No Debug Extension */
                   | CPUID_01_EDX_PSE | CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE
                   | 0 /* No Machine Check Exception */
                   | CPUID_01_EDX_CX8 | CPUID_01_EDX_APIC | 0 /* No MTRR */ | CPUID_01_EDX_PGE
@@ -272,16 +273,20 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = tsc_hz / 1000000;
         vctx->ebx = tsc_hz / 1000000;
         vctx->ecx = tsc_hz / 1000000;
+        vctx->edx = 0;
         break;
     case 0x80000000:
         vctx->eax = 0x80000008; // max input value for extended function cpuid information
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
         break;
     case 0x80000001:
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = CPUID_80000001_ECX_LM_LAHF_SAHF | CPUID_80000001_ECX_LM_LZCNT | CPUID_80000001_ECX_PREFETCHW;
-        vctx->edx = 0 /* No 1GiB Page */ | 0 /* No RDTSCP */
-                  | CPUID_80000001_EDX_LONG_MODE | CPUID_80000001_EDX_NX;
+        vctx->edx = 0 /* No RDTSCP */ | CPUID_80000001_EDX_NX
+                  | CPUID_80000001_EDX_LONG_MODE | CPUID_80000001_EDX_1GB_PAGE;
         if (guest_in_64_bits()) {
             vctx->edx |= CPUID_80000001_EDX_SCALL_SRET;
         }
