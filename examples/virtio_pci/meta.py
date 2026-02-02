@@ -140,6 +140,13 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x20000000, perms="rw"))
         vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
+        # CMOS passthrough
+        cmos_addr_port = SystemDescription.IoPort(0x70, 1, 36)
+        vmm_client0.add_ioport(cmos_addr_port)
+
+        cmos_data_port = SystemDescription.IoPort(0x71, 1, 37)
+        vmm_client0.add_ioport(cmos_data_port)
+
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
     serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
