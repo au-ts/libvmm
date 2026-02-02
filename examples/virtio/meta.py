@@ -1,14 +1,12 @@
 # Copyright 2025, UNSW
 # SPDX-License-Identifier: BSD-2-Clause
 import argparse
-import struct
-import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
-assert version('sdfgen').split(".")[1] == "26", "Unexpected sdfgen version"
+assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -98,7 +96,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     guest_net_node = client_dtb.node(board.guest_net)
     assert guest_net_node is not None
 
-    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver_virtio.elf",
                                   priority=101, budget=100, period=400)
     net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)

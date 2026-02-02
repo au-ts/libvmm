@@ -9,7 +9,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     zig-overlay.url = "github:mitchellh/zig-overlay";
     zig-overlay.inputs.nixpkgs.follows = "nixpkgs";
-    sdfgen.url = "github:au-ts/microkit_sdf_gen/0.26.0";
+    sdfgen.url = "github:au-ts/microkit_sdf_gen/0.28.1";
     sdfgen.inputs.nixpkgs.follows = "nixpkgs";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -19,7 +19,8 @@
 
   outputs = { nixpkgs, zig-overlay, rust-overlay, sdfgen, ... }:
     let
-      microkit-version = "2.0.1";
+      microkit-version = "2.1.0-dev.12+2d5a1a6";
+      microkit-url = "https://trustworthy.systems/Downloads/microkit/";
       microkit-platforms = {
         aarch64-darwin = "macos-aarch64";
         x86_64-darwin = "macos-x86-64";
@@ -62,14 +63,17 @@
 
               microkit-platform = microkit-platforms.${system} or (throw "Unsupported system: ${system}");
 
+
               env.MICROKIT_SDK = pkgs.fetchzip {
-                url = "https://github.com/seL4/microkit/releases/download/${microkit-version}/microkit-sdk-${microkit-version}-${microkit-platform}.tar.gz";
-                hash = {
-                  aarch64-darwin = "sha256-bFFyVBF2E3YDJ6CYbfCOID7KGREQXkIFDpTD4MzxfCE=";
-                  x86_64-darwin = "sha256-tQWrI5LRp05tLy/HIxgN+0KFJrlmOQ+dpws4Fre+6E0=";
-                  x86_64-linux = "sha256-YpgIAXWB8v4Njm/5Oo0jZpRt/t+e+rVTwFTJ8zr2Hn4=";
-                  aarch64-linux = "sha256-GwWDRJalJOpAYCP/qggFOHDh2e2J1LspWUsyjopECYA=";
-                }.${system} or (throw "Unsupported system: ${system}");
+                url = "${microkit-url}/microkit-sdk-${microkit-version}-${microkit-platform}.tar.gz";
+                hash =
+                  {
+                    aarch64-darwin = "sha256-MKtQyECOHpLQ/SQ6OTkZyRFY4ajFJsq9e0Zy/M8u9BY=";
+                    x86_64-darwin = "sha256-rFL2S5UB14j8eSRyTWisYDeab5MClkxPUPUGmkdoWgQ=";
+                    x86_64-linux = "sha256-C21EpS95KQ1Yw5KYumXqhSY4B9KOPiRY1Mt4k7n8shA=";
+                    aarch64-linux = "sha256-S2oRumOiFO9NPkOOGA1Gj8MIPlzITblrMiehJccdwoM=";
+                  }
+                  .${system} or (throw "Unsupported system: ${system}");
               };
 
               nativeBuildInputs = with pkgs; [

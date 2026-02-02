@@ -27,8 +27,8 @@ ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export UART_DRIVER := arm
 	export TIMER_DRIVER := arm
-	export BLK_DRIVER := virtio
-	export ETH_DRIVER := virtio
+	export BLK_DRIVER := virtio/mmio
+	export ETH_DRIVER := virtio/mmio
 	export CPU := cortex-a53
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
 	QEMU := qemu-system-aarch64
