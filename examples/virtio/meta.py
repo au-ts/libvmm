@@ -72,7 +72,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     guest_net_node = client_dtb.node(guest_configs[board.name].ethernet)
     assert guest_net_node is not None
 
-    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver_virtio.elf",
                                   priority=101, budget=100, period=400)
     net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
