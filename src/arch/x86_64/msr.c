@@ -44,6 +44,8 @@
 #define MSR_PKG_C2_RESIDENCY_ALT (0x3f8)
 #define MSR_PKG_C4_RESIDENCY (0x3f9)
 #define MSR_PKG_C6_RESIDENCY (0x3fa)
+// #define MSR_OS_MAILBOX_INTERFACE		0xB0
+// #define MSR_OS_MAILBOX_DATA			0xB1
 
 // @billn seems to be some sort of fencing instruction control
 // https://gruss.cc/files/msrtemplating.pdf
@@ -110,6 +112,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case MSR_UNKNOWN1:
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
+    // case MSR_OS_MAILBOX_INTERFACE:
+    // case MSR_OS_MAILBOX_DATA:
     case 0xc0010131: // @billn AMD SEV
     case 0x150: // cpu voltage control?
         break;
@@ -153,6 +157,8 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
     case IA32_BIOS_UPDT_TRIG:
+    // case MSR_OS_MAILBOX_INTERFACE:
+    // case MSR_OS_MAILBOX_DATA:
     case 0x150: // cpu voltage control?
         return true;
     case MSR_TEST_CTRL:

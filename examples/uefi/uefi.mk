@@ -129,7 +129,8 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
 	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM.data vmm_x86_64.elf
 
-# 							  -drive file=/home/billn/Downloads/julia/disk.img,format=raw,if=none,id=drive0 \
+# 							  -drive file=/home/billn/Downloads/julia/disk.img,format=raw,if=none,id=drive0
+# 							  -cdrom /home/billn/Downloads/nixos-graphical-25.11.4270.77ef7a29d276-x86_64-linux.iso
 
 
 qemu: $(IMAGE_FILE) blk_storage
@@ -140,7 +141,6 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -device ramfb -vga none \
 							  -drive file=/home/billn/Downloads/windbg_server/Windows10Installed_clean.guest,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
-
 clean::
 	$(RM) -f *.elf .depend* $
 	find . -name \*.[do] |xargs --no-run-if-empty rm
