@@ -261,6 +261,10 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
         success = true;
+    } else if (port_addr == 0x5658 || port_addr == 0x5659) {
+        // vmware backdoor
+        // https://wiki.osdev.org/VMware_tools
+        success = true;
     } else if (port_addr == 0x4e || port_addr == 0x4f || port_addr == 0x2e || port_addr == 0x2f
                || (port_addr >= 0xc80 && port_addr <= 0xc84) || (port_addr >= 0x1c80 && port_addr <= 0x1c84)
                || (port_addr >= 0x2c80 && port_addr <= 0x2c84) || (port_addr >= 0x3c80 && port_addr <= 0x3c84)
