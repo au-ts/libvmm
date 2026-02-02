@@ -269,7 +269,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     const blk_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64 => "virtio_mmio",
         .maaxboard => "mmc_imx",
     };
 
@@ -279,7 +279,7 @@ pub fn build(b: *std.Build) !void {
     };
 
     const eth_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64 => "virtio_mmio",
         .maaxboard => "imx",
     };
 
@@ -319,6 +319,17 @@ pub fn build(b: *std.Build) !void {
     });
     run_metaprogram.addFileArg(metaprogram);
     run_metaprogram.addFileInput(metaprogram);
+    // Prepending the PYTHONPATH to be able to import BOARDS from board.py
+    const sddf_meta_dir = sddf_dep.path("tools/meta").getPath3(b, null).toString(b.allocator) catch @panic("OOM");
+
+    const existing_pythonpath = std.posix.getenv("PYTHONPATH") orelse "";
+    const combined_pythonpath =
+        if (existing_pythonpath.len == 0)
+            sddf_meta_dir
+        else
+            b.fmt("{s}:{s}", .{sddf_meta_dir, existing_pythonpath});
+
+    run_metaprogram.setEnvironmentVariable("PYTHONPATH", combined_pythonpath);
     run_metaprogram.addPrefixedDirectoryArg("--sddf=", sddf_dep.path(""));
     run_metaprogram.addPrefixedDirectoryArg("--dtb=", dtb);
     run_metaprogram.addPrefixedDirectoryArg("--client-dtb=", guest_dtb);
@@ -477,8 +488,8 @@ pub fn build(b: *std.Build) !void {
         cmd.addArgs(&.{
             "-global", "virtio-mmio.force-legacy=false",
             "-drive", b.fmt("file={s},format=raw,if=none,id=drive0", .{ b.getInstallPath(.prefix, "disk") }),
-            "-device", "virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1",
-            "-device", "virtio-net-device,netdev=netdev0",
+            "-device", "virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1,bus=virtio-mmio-bus.1",
+            "-device", "virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0",
             "-netdev", "user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235",
         });
 
