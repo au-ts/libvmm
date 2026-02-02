@@ -33,6 +33,10 @@
         <!-- <irq pin="14" vector="42" id="1" ioapic="0" /> -->
         <!-- secondary ATA irq -->
         <!-- <irq pin="15" vector="43" id="2" ioapic="0" /> -->
+
+        <!-- CMOS passthrough -->
+        <ioport id="36" addr="112" size="1" />
+        <ioport id="37" addr="113" size="1" />
     </protection_domain>
 
     <protection_domain name="timer_driver" priority="254">
