@@ -126,7 +126,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = 0x6c65746e;
         break;
     case 0x1: {
-        vctx->eax = 0x00050654;
+        vctx->eax = 0x00050054;
         vctx->ebx = ((CACHE_LINE_SIZE / 8) << 8) | (NUM_LOGICAL_PROCESSORS << 16);
         vctx->ecx = CPUID_01_ECX_DTES64 | 0 /* No qualified debug store */
                   | 0 /* No Intel Enhanced SpeedStep */ | 0 /* No Thermal Monitor 2 */ | CPUID_01_ECX_XTPR
@@ -332,6 +332,22 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
               (uint32_t *)&vctx->edx);
         break;
 
+    case 0x40000000:
+        // KVM
+        vctx->eax = 0x40000001;
+        vctx->ebx = 0x4b4d564b;
+        vctx->ecx = 0x564b4d56;
+        vctx->edx = 0x4d;
+        break;
+
+    case 0x40000001:
+        // KVM
+        vctx->eax = BIT(1); // no io port access delay
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
+        break;
+
     // @billn todo double check if these are needed
     case 0x3:
     case 0x5:
@@ -357,7 +373,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x1e:
     case 0x1f:
     case 0x21:
-    case 0x40000000 ... 0x4fffffff:
+    case 0x40000002 ... 0x4fffffff:
     case 0x80000005:
     // some AMD specific stuff beyond 0x80000009 inclusive
     case 0x80000009 ... 0x8000001f:
