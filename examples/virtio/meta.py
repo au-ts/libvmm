@@ -1,14 +1,13 @@
 # Copyright 2025, UNSW
 # SPDX-License-Identifier: BSD-2-Clause
 import argparse
-import struct
-import random
 from dataclasses import dataclass
-from typing import List, Tuple
+from board import BOARDS
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
+from typing import Optional
 
-assert version('sdfgen').split(".")[1] == "26", "Unexpected sdfgen version"
+assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -16,51 +15,24 @@ MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
-
 @dataclass
-class Board:
-    name: str
-    arch: SystemDescription.Arch
-    paddr_top: int
-    serial: str
-    guest_serial: str
-    timer: str
-    blk: str
-    guest_blk: str
-    net: str
-    guest_net: str
-    partition: int
+class GuestConfig:
+    serial: Optional[str] = None
+    blk: Optional[str] = None
+    ethernet: Optional[str] = None
 
-
-BOARDS: List[Board] = [
-    Board(
-        name="qemu_virt_aarch64",
-        arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x6_0000_000,
-        serial="pl011@9000000",
-        guest_serial="virtio-console@130000",
-        timer=None,
-        blk="virtio_mmio@a003e00",
-        guest_blk="virtio-blk@150000",
-        net="virtio_mmio@a003c00",
-        guest_net="virtio-net@160000",
-        partition=0
-    ),
-    Board(
-        name="maaxboard",
-        arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x90000000,
-        serial="soc@0/bus@30800000/serial@30860000",
-        guest_serial="virtio-console@130000",
-        timer="soc@0/bus@30000000/timer@302d0000",
-        blk="soc@0/bus@30800000/mmc@30b40000",
-        guest_blk="virtio-blk@150000",
-        net="soc@0/bus@30800000/ethernet@30be0000",
-        guest_net="virtio-net@160000",
-        partition=2
-    ),
-]
-
+guest_configs: dict[str, GuestConfig] = {
+        "qemu_virt_aarch64": GuestConfig(
+            serial="virtio-console@130000",
+            blk="virtio-blk@150000",
+            ethernet="virtio-net@160000",
+        ),
+        "maaxboard": GuestConfig(
+            serial="virtio-console@130000",
+            blk="virtio-blk@150000",
+            ethernet="virtio-net@160000",
+        ),
+}
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client VM
@@ -77,7 +49,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
                                       priority=199, stack_size=0x2000)
     serial_node = dtb.node(board.serial)
     assert serial_node is not None
-    guest_serial_node = client_dtb.node(board.guest_serial)
+    guest_serial_node = client_dtb.node(guest_configs[board.name].serial)
     assert guest_serial_node is not None
 
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
@@ -93,9 +65,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         sdf.add_pd(pd)
 
     # Net subsystem
-    net_node = dtb.node(board.net)
+    net_node = dtb.node(board.ethernet)
     assert net_node is not None
-    guest_net_node = client_dtb.node(board.guest_net)
+    guest_net_node = client_dtb.node(guest_configs[board.name].ethernet)
     assert guest_net_node is not None
 
     eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
@@ -123,7 +95,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     blk_node = dtb.node(board.blk)
     assert blk_node is not None
-    guest_blk_node = client_dtb.node(board.guest_blk)
+    guest_blk_node = client_dtb.node(guest_configs[board.name].blk)
     assert guest_blk_node is not None
 
     blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)

@@ -172,9 +172,9 @@ a guest.
 ![Example of ethernet passthrough](./assets/passthrough.svg){#id .class width=300}
 
 You will see here there are multiple stages involved. When there is some event from
-the hardware, seL4 recieves an interrupt from the hardware. seL4 then delivers this
+the hardware, seL4 receives an interrupt from the hardware. seL4 then delivers this
 IRQ as a notification to the VMM. The VMM associates this notification with the IRQ
-that the virtual IRQ that the guest is expecting to recieve. The VMM then "injects"
+that the virtual IRQ that the guest is expecting to receive. The VMM then "injects"
 a virtual IRQ into the guest, emulating the behaviour of hardware interrupting the guest
 kernel if it wasn't being virtualised.
 
@@ -220,7 +220,7 @@ guest's RAM to be the same as its mapped virtual address.
 
 # virtIO
 
-virtIO is a standard interface between guests and hypervisors to faciliate the use of devices
+virtIO is a standard interface between guests and hypervisors to facilitate the use of devices
 where the guest does not have access to the underlying hardware.
 
 libvmm provides a number of virtIO devices to enable guests to interact with the outside world.
@@ -261,7 +261,7 @@ The console device makes use of the 'serial' device class in sDDF. It supports o
 None of the feature bits are implemented. The legacy interface is not supported.
 
 The console device communicates with a hardware serial device via two sDDF serial virtualisers,
-one for recieve and one for transmit.
+one for receive and one for transmit.
 
 There are plans to extend the console device implementation, you can find more details
 on [this GitHub issue](https://github.com/au-ts/libvmm/issues/27).

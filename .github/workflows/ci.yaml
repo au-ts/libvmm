@@ -10,9 +10,9 @@ on:
     branches: [ "main" ]
 
 env:
-  MICROKIT_VERSION: 2.0.1
-  MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.0.1/microkit-sdk-2.0.1
-  SDFGEN_VERSION: 0.26.0
+  MICROKIT_VERSION: 2.1.0
+  MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.1.0/microkit-sdk-2.1.0
+  SDFGEN_VERSION: 0.28.1
   ZIG_VERSION: 0.15.1
 
 jobs:
