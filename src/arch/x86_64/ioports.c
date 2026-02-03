@@ -222,15 +222,15 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         // PS2 controller
         success = true;
 
-    } else if (port_addr == 0xb008) {
-        // assert(!is_string);
-        // Handle ACPI Power Management Timer
-        // 7.2.4 of 82371AB PCI-TO-ISA / IDE XCELERATOR (PIIX4)
-        // TODO: maybe handle PCI reset case
-        assert(is_read);
-        uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
-        vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
-        success = true;
+    // } else if (port_addr == 0xb008) {
+    //     // assert(!is_string);
+    //     // Handle ACPI Power Management Timer
+    //     // 7.2.4 of 82371AB PCI-TO-ISA / IDE XCELERATOR (PIIX4)
+    //     // TODO: maybe handle PCI reset case
+    //     assert(is_read);
+    //     uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
+    //     vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
+    //     success = true;
     } else if (port_addr == 0x510 || port_addr == 0x511 || port_addr == 0x514 || port_addr == 0x518) {
         success = emulate_qemu_fw_cfg_access(vctx, port_addr, is_read, is_string, is_rep, access_width);
     } else if (port_addr >= 0xAF00 && port_addr <= 0xaf00 + 12) {
