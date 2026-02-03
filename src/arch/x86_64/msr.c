@@ -11,6 +11,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/pvclock.h>
 
 #include <x86intrin.h>
 
@@ -192,6 +193,9 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
         break;
     case IA32_PAT:
         pat = value;
+        break;
+    case MSR_KVM_SYSTEM_TIME_NEW:
+        pvclock_write_fault_handle(MSR_KVM_SYSTEM_TIME_NEW, value);
         break;
     default:
         LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);
