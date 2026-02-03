@@ -339,7 +339,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ebx = 0;
         vctx->ecx = 0;
         // @billn should validate that the host also have this, otherwise the guest clock will be off.
-        vctx->edx = BIT(8); // invariant TSC, ticks at same rate regardless of power state
+        vctx->edx = 0;
         break;
 
     case 0x80000008:
@@ -357,7 +357,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
     case 0x40000001:
         // KVM
-        vctx->eax = BIT(1); // no io port access delay, no kvm clocks available
+        vctx->eax = BIT(1) | BIT(3); // no io port access delay, KVM clock at msr 0x4b564d00 and 0x4b564d01
         vctx->ebx = 0;
         vctx->ecx = 0;
         vctx->edx = 0;
