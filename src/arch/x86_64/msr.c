@@ -29,6 +29,11 @@
 #define IA32_MCG_CAP (0x179)
 #define IA32_XSS (0xda0)
 
+#define IA32_MTRRCAP (0xfe)
+#define IA32_MTRR_DEF_TYPE (0x2ff)
+#define IA32_PAT (0x277)
+#define IA32_MCG_STATUS (0x17a)
+
 #define MSR_RAPL_POWER_UNIT  (0x606)
 #define MSR_PKG_ENERGY_STATUS (0x611)
 #define MSR_PP0_ENERGY_STATUS (0x639)
@@ -62,7 +67,7 @@
 #define MSR_EFER            0xc0000080 /* extended feature register */
 #define MSR_STAR            0xc0000081 /* legacy mode SYSCALL target */
 #define MSR_LSTAR           0xc0000082 /* long mode SYSCALL target */
-// #define MSR_CSTAR           0xc0000083 /* compat mode SYSCALL target */
+#define MSR_CSTAR           0xc0000083 /* compat mode SYSCALL target */
 #define MSR_SYSCALL_MASK    0xc0000084 /* EFLAGS mask for syscall */
 // #define MSR_FS_BASE         0xc0000100 /* 64bit FS base */
 // #define MSR_GS_BASE         0xc0000101 /* 64bit GS base */
@@ -70,6 +75,8 @@
 // #define MSR_TSC_AUX         0xc0000103 /* Auxiliary TSC */
 
 static uint64_t misc_enable = 0;
+static uint64_t mtrr_def_type = 0;
+static uint64_t pat = 0;
 
 bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
@@ -112,6 +119,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case MSR_UNKNOWN1:
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
+    case IA32_MTRRCAP:
+    case IA32_MCG_STATUS:
     // case MSR_OS_MAILBOX_INTERFACE:
     // case MSR_OS_MAILBOX_DATA:
     case 0xc0010131: // @billn AMD SEV
@@ -128,6 +137,12 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         break;
     case IA32_PPIN_CTL:
         result = 1; // locked
+        break;
+    case IA32_MTRR_DEF_TYPE:
+        result = mtrr_def_type;
+        break;
+    case IA32_PAT:
+        result = pat;
         break;
     default:
         LOG_VMM_ERR("unknown rdmsr 0x%x\n", vctx->ecx);
@@ -157,6 +172,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_SPEC_CTRL:
     case IA32_PRED_CMD:
     case IA32_BIOS_UPDT_TRIG:
+    case IA32_MCG_STATUS:
     // case MSR_OS_MAILBOX_INTERFACE:
     // case MSR_OS_MAILBOX_DATA:
     case 0x150: // cpu voltage control?
@@ -164,12 +180,19 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case MSR_TEST_CTRL:
     case MSR_STAR:
     case MSR_LSTAR:
+    case MSR_CSTAR:
     case MSR_SYSCALL_MASK:
         microkit_vcpu_x86_write_msr(GUEST_BOOT_VCPU_ID, vctx->ecx, value);
         return true;
     case IA32_MISC_ENABLE:
         misc_enable = value;
         return true;
+    case IA32_MTRR_DEF_TYPE:
+        mtrr_def_type = value;
+        break;
+    case IA32_PAT:
+        pat = value;
+        break;
     default:
         LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);
         return false;

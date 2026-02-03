@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <microkit.h>
 #include <sddf/util/util.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
@@ -57,6 +58,7 @@ extern uint64_t tsc_hz;
 #define CPUID_01_EDX_CMOV BIT(15)
 #define CPUID_01_EDX_PAT BIT(16)
 #define CPUID_01_EDX_PSE36 BIT(17) // PSE-36: Physical Address Extensions
+#define CPUID_01_EDX_CLFLUSH BIT(19)
 #define CPUID_01_EDX_DEBUG_STORE BIT(21)
 #define CPUID_01_EDX_ACPI BIT(22) // ACPI: Thermal Monitor and Software Controlled Clock Facilities
 #define CPUID_01_EDX_MMX BIT(23)
@@ -66,6 +68,8 @@ extern uint64_t tsc_hz;
 #define CPUID_01_EDX_SELF_SNOOP BIT(27)
 #define CPUID_01_EDX_TM BIT(29) // TM: Thermal Monitor
 #define CPUID_01_EDX_PBE BIT(31) // PBE: Pending Break Enable
+
+#define CPUID_01_EDX_WINDOWS_MANDATORY 0x789f3fdull
 
 #define CPUID_07_00_EBX_FSGSBASE BIT(0)
 #define CPUID_07_00_EBX_BMI1 BIT(3)
@@ -140,13 +144,24 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
         vctx->edx = 0 /* No Debug Store */ | 0 /* No ACPI Thermal Monitor */ | CPUID_01_EDX_SELF_SNOOP
                   | 0/* No THermal Monitor */
-                  | CPUID_01_EDX_PBE | CPUID_01_EDX_FPU | 0 /* No virtual 8086 mode */ | 0 /* No Debug Extension */
+                  | CPUID_01_EDX_PBE | CPUID_01_EDX_FPU | 0 /* No virtual 8086 mode */ | CPUID_01_EDX_DE
                   | CPUID_01_EDX_PSE | CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE
-                  | 0 /* No Machine Check Exception */
-                  | CPUID_01_EDX_CX8 | CPUID_01_EDX_APIC | 0 /* No MTRR */ | CPUID_01_EDX_PGE
-                  | 0 /* No Machine Check Architecture */
-                  | CPUID_01_EDX_CMOV | 0 /* No PAT */ | CPUID_01_EDX_PSE36 | CPUID_01_EDX_MMX | CPUID_01_EDX_FXSR
-                  | CPUID_01_EDX_SSE2 | CPUID_01_EDX_SSE1;
+                  | CPUID_01_EDX_MCE
+                  | CPUID_01_EDX_CX8 | CPUID_01_EDX_APIC | CPUID_01_EDX_MTRR | CPUID_01_EDX_PGE
+                  | CPUID_01_EDX_MCA
+                  | CPUID_01_EDX_CMOV | CPUID_01_EDX_PAT | CPUID_01_EDX_PSE36 | CPUID_01_EDX_MMX | CPUID_01_EDX_FXSR
+                  | CPUID_01_EDX_SSE2 | CPUID_01_EDX_SSE1 | CPUID_01_EDX_CLFLUSH;
+
+        // LOG_VMM("edx = 0x%x, mandatory = 0x%x, (vctx->edx & CPUID_01_EDX_WINDOWS_MANDATORY) = 0x%x\n", vctx->edx, CPUID_01_EDX_WINDOWS_MANDATORY, (vctx->edx & CPUID_01_EDX_WINDOWS_MANDATORY));
+
+        for (int i = 0; i < 32; i++) {
+            if (!(vctx->edx & BIT(i)) && (CPUID_01_EDX_WINDOWS_MANDATORY & BIT(i))) {
+                LOG_VMM("we are missing bit %d\n", i);
+            }
+        }
+
+        assert(((uint64_t) (vctx->edx) & CPUID_01_EDX_WINDOWS_MANDATORY) == CPUID_01_EDX_WINDOWS_MANDATORY);
+        // assert(0);
 
         break;
     }
@@ -285,8 +300,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = CPUID_80000001_ECX_LM_LAHF_SAHF | CPUID_80000001_ECX_LM_LZCNT | CPUID_80000001_ECX_PREFETCHW;
-        vctx->edx = 0 /* No RDTSCP */ | CPUID_80000001_EDX_NX
-                  | CPUID_80000001_EDX_LONG_MODE | CPUID_80000001_EDX_1GB_PAGE;
+        vctx->edx = 0 /* No RDTSCP */ | CPUID_80000001_EDX_NX | CPUID_80000001_EDX_LONG_MODE
+                  | CPUID_80000001_EDX_1GB_PAGE;
         if (guest_in_64_bits()) {
             vctx->edx |= CPUID_80000001_EDX_SCALL_SRET;
         }
@@ -342,7 +357,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
     case 0x40000001:
         // KVM
-        vctx->eax = BIT(1); // no io port access delay
+        vctx->eax = BIT(1); // no io port access delay, no kvm clocks available
         vctx->ebx = 0;
         vctx->ecx = 0;
         vctx->edx = 0;
