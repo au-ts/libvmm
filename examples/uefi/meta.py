@@ -207,7 +207,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     serial_driver.add_irq(serial_irq)
 
     serial_system = Sddf.Serial(sdf, None, serial_driver,
-                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=True)
+                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
     serial_system.add_client(vmm_client0)
 
     pds = [
