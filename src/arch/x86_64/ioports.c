@@ -163,11 +163,11 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     //     // } else if (ata_controller_access_pio_ch(port_addr) != -1) {
     //     //     return emulate_port_access(vctx, port_addr, ata_controller_access_pio_ch(port_addr), is_read, access_width);
 
-    if (port_addr >= 0x400 && port_addr < 0x406) {
-        assert(!is_string);
-        success = true;
+    // if (port_addr >= 0x400 && port_addr < 0x406) {
+    //     assert(!is_string);
+    //     success = true;
 
-    } else if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
+    if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
         assert(!is_string);
         if (is_read) {
             // invalid read to simulate no device on pci bus
@@ -277,7 +277,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         if (is_read) {
             vctx->eax = 0;
         }
-        LOG_VMM("accessing io port 0x%x\n", port_addr);
         success = true;
     } else if (port_addr == 0x3BE || port_addr == 0x7BE || port_addr == 0x3BD || port_addr == 0x3BC
                || port_addr == 0x37A || port_addr == 0x77A || port_addr == 0x379 || port_addr == 0x378

@@ -191,12 +191,12 @@ struct mcfg {
 
 ////////////////////////////////////////
 
-// #define PM1A_EVT_BLK_PIO_ADDR 0x600
-// #define PM1A_EVT_BLK_PIO_LEN 4
-// #define PM1A_CNT_BLK_PIO_ADDR 0x604
-// #define PM1A_CNT_BLK_PIO_LEN 2
-// #define PM_TMR_BLK_PIO_ADDR 0x608
-// #define PM_TMR_BLK_PIO_LEN 4
+#define PM1A_EVT_BLK_PIO_ADDR 0x600
+#define PM1A_EVT_BLK_PIO_LEN 4
+#define PM1A_CNT_BLK_PIO_ADDR 0x604
+#define PM1A_CNT_BLK_PIO_LEN 2
+#define PM_TMR_BLK_PIO_ADDR 0x608
+#define PM_TMR_BLK_PIO_LEN 4
 
 // @billn have a way to detect and warn about collision
 #define ACPI_SCI_IRQ_PIN 7
