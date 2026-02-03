@@ -52,7 +52,15 @@ static void virtio_console_reset(struct virtio_device *dev)
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
         dev->vqs[i].last_idx = 0;
+        dev->vqs[i].virtq.avail = 0;
+        dev->vqs[i].virtq.used = 0;
+        dev->vqs[i].virtq.desc = 0;
     }
+    memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
+    // TODO: we should not be doing this here, and instead be calling the init function again or something
+    // like that.
+    dev->regs.DeviceID = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
 }
 
 static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -120,11 +128,14 @@ static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t
 static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
-    // @ivanv: we need to check the pre-conditions before doing anything. e.g check
-    // TX_QUEUE is ready?
+
+    if (dev->regs.QueueSel != TX_QUEUE) {
+        return true;
+    }
 
     assert(dev->num_vqs > TX_QUEUE);
     struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
+    assert(vq->ready);
     struct virtio_console_device *console = device_state(dev);
 
     /* Transmit all available descriptors possible */
@@ -191,12 +202,15 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     LOG_CONSOLE("operation: handle rx\n");
-    assert(console->virtio_device.num_vqs > RX_QUEUE);
+
+    struct virtio_device *dev = &console->virtio_device;
+
+    assert(dev->num_vqs > RX_QUEUE);
 
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
 
-    struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+    struct virtio_queue_handler *vq = &dev->vqs[RX_QUEUE];
     if (!vq->ready) {
         /* It is common for the actual serial device to get RX before the guest
          * has initialised the console device, do nothing in this case.
@@ -228,13 +242,13 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
-        console->virtio_device.regs.InterruptStatus = BIT_LOW(0);
+        dev->regs.InterruptStatus = BIT_LOW(0);
 
         bool success;
 #if defined(CONFIG_ARCH_AARCH64)
-        success = virq_inject(console->virtio_device.virq);
+        success = virq_inject(dev->virq);
 #elif defined(CONFIG_ARCH_X86_64)
-        success = inject_ioapic_irq(0, console->virtio_device.virq);
+        success = inject_ioapic_irq(0, dev->virq);
 #endif
         assert(success);
 
