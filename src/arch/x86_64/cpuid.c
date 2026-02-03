@@ -393,14 +393,26 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     // some AMD specific stuff beyond 0x80000009 inclusive
     case 0x80000009 ... 0x8000001f:
     case 0x80000026:
+    /* Highest Xeon Phi Function Implemented */
+    case 0x20000000:
+    /* Transmeta */
+    case 0x80860000:
+    /* Highest Centaur Extended Function */
+    case 0xc0000000:
+    /* Zhaoxin Feature Information */
+    case 0xc0000006:
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = 0;
         vctx->edx = 0;
         break;
     default:
-        LOG_VMM_ERR("invalid cpuid eax value: 0x%x\n", vctx->eax);
-        return false;
+        LOG_VMM_ERR("invalid cpuid eax value: 0x%x, returning zero\n", vctx->eax);
+        vctx->eax = 0;
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
+        break;
     }
     return true;
 }
