@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
-#include <sddf/timer/client.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pit.h>
@@ -97,8 +96,6 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width)
 
 //     return true;
 // }
-
-#define ACPI_PMT_FREQUENCY (3579545)
 
 int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep,
                                ioport_access_width_t access_width)
