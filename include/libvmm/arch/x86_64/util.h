@@ -11,7 +11,7 @@
 
 extern bool fault_cond;
 
-// #define DEBUG_FAULT
+#define DEBUG_FAULT
 #if defined(DEBUG_FAULT)
 #define LOG_FAULT(...) do{ if (fault_cond) { printf("%s|FAULT: ", microkit_name); printf(__VA_ARGS__); } }while(0)
 #else
