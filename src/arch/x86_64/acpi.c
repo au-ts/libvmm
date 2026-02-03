@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <sddf/util/util.h>
+#include <sddf/timer/client.h>
 
 #define LOG_ACPI_INFO(...) do{ printf("%s|ACPI INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_ACPI_ERR(...) do{ printf("%s|ACPI ERR: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -172,6 +173,7 @@ size_t mcfg_build(struct mcfg *mcfg)
 }
 
 static uint16_t pm1_enable_reg = 0;
+static uint16_t pm1_status_reg = 0;
 
 #define TMR_EN BIT(0) /* Timer Enable */
 #define GBL_EN BIT(5) /* Global Enable */
@@ -179,7 +181,6 @@ bool acpi_pm_timer_can_irq(void)
 {
     return (pm1_enable_reg & BIT(0)) && (pm1_enable_reg & BIT(5));
 }
-
 
 bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
@@ -202,7 +203,37 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
                 assert(false);
             }
         }
+    } else if (port_offset == 0) {
+        if (is_read) {
+            vctx->eax = pm1_status_reg;
+        } else {
+            // @billn sus implement proper set to clear
+            pm1_status_reg = vctx->eax;
+        }
+    } else {
+        return false;
     }
+
+    return true;
+}
+
+#define ACPI_PMT_FREQUENCY (3579545)
+
+bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
+                               void *cookie)
+{
+    uint64_t is_read = qualification & BIT(3);
+    uint64_t is_string = qualification & BIT(4);
+    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+    int access_width_bytes = ioports_access_width_to_bytes(access_width);
+    assert(!is_string);
+    assert(access_width_bytes == 4);
+    assert(port_offset == 0);
+    assert(is_read);
+
+    uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
+    vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQUENCY);
 
     return true;
 }
@@ -238,14 +269,22 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 
     fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
     fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
-    bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
-                                                        pm1a_evt_pio_fault_handle, NULL);
+    {
+        bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
+                                                            pm1a_evt_pio_fault_handle, NULL);
+        assert(success);
+    }
 
     fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
     fadt->PM1ControlLength = PM1A_CNT_BLK_PIO_LEN;
 
     fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
     fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
+    {
+        bool success = fault_register_pio_exception_handler(PM_TMR_BLK_PIO_ADDR, PM_TMR_BLK_PIO_LEN,
+                                                            pm_timer_pio_fault_handle, NULL);
+        assert(success);
+    }
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
