@@ -56,7 +56,7 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/cmos.c",
     "src/arch/x86_64/uefi.c",
     "src/arch/x86_64/com.c",
-    "src/arch/x86_64/qemu/bios_linker_loader.c"
+    "src/arch/x86_64/qemu/bios_linker_loader.c",
     "src/arch/x86_64/qemu/fw_cfg.c",
 };
 
