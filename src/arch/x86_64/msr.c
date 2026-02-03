@@ -194,9 +194,10 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_PAT:
         pat = value;
         break;
-    case MSR_KVM_SYSTEM_TIME_NEW:
-        pvclock_write_fault_handle(MSR_KVM_SYSTEM_TIME_NEW, value);
-        break;
+    // case MSR_KVM_WALL_CLOCK_NEW:
+    // case MSR_KVM_SYSTEM_TIME_NEW:
+    //     pvclock_write_fault_handle(MSR_KVM_SYSTEM_TIME_NEW, value);
+    //     break;
     default:
         LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);
         return false;
