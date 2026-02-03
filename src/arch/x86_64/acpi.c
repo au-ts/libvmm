@@ -285,6 +285,13 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
                                                             pm_timer_pio_fault_handle, NULL);
         assert(success);
     }
+    // @billn sus, OVMF always think that its running on Xen, which places the ACPI PM timer is at 0xb008
+    // Not sure if this is it's quirk or our fault somewhwere
+    {
+        bool success = fault_register_pio_exception_handler(0xb008, PM_TMR_BLK_PIO_LEN,
+                                                            pm_timer_pio_fault_handle, NULL);
+        assert(success);
+    }
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
