@@ -173,6 +173,14 @@ size_t mcfg_build(struct mcfg *mcfg)
 
 static uint16_t pm1_enable_reg = 0;
 
+#define TMR_EN BIT(0) /* Timer Enable */
+#define GBL_EN BIT(5) /* Global Enable */
+bool acpi_pm_timer_can_irq(void)
+{
+    return (pm1_enable_reg & BIT(0)) && (pm1_enable_reg & BIT(5));
+}
+
+
 bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
@@ -189,18 +197,14 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
             vctx->eax = pm1_enable_reg;
         } else {
             pm1_enable_reg = vctx->eax;
-            LOG_ACPI_INFO("ACPI PM Timer Overflow IRQ ON!\n");
+            if (acpi_pm_timer_can_irq()) {
+                LOG_ACPI_INFO("ACPI PM Timer Overflow IRQ ON!\n");
+                assert(false);
+            }
         }
     }
 
     return true;
-}
-
-#define TMR_EN BIT(0) /* Timer Enable */
-#define GBL_EN BIT(5) /* Global Enable */
-bool acpi_pm_timer_can_irq(void)
-{
-    return (pm1_enable_reg & BIT(0) ) && (pm1_enable_reg & BIT(5));
 }
 
 size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
@@ -224,7 +228,7 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
     /* Fill out data fields of FADT */
     fadt->Dsdt = (uint32_t)dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
-    fadt->Flags = BIT(20); // hardware reduced
+    fadt->Flags = 0; // Not hardware reduced, ACPI PM timer 24-bit wide
 
     fadt->PreferredPowerManagementProfile = 0; /* Unspecified Power Profile */
 
@@ -232,16 +236,16 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 
     fadt->BootArchitectureFlags = BIT(1) /* Support PS/2 KB+M */ | BIT(3) /* MSI not supported */;
 
-    // fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
-    // fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
-    // bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
-    //                                                     pm1a_evt_pio_fault_handle, NULL);
+    fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
+    fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
+    bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
+                                                        pm1a_evt_pio_fault_handle, NULL);
 
-    // fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
-    // fadt->PM1ControlLength = PM1A_CNT_BLK_PIO_LEN;
+    fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
+    fadt->PM1ControlLength = PM1A_CNT_BLK_PIO_LEN;
 
-    // fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
-    // fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
+    fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
+    fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
