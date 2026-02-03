@@ -425,6 +425,12 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             }
 
             break;
+        case REG_LAPIC_LDR:
+            lapic_regs.dfr = vctx_raw[decoded_mem_ins.target_reg];
+            break;
+        case REG_LAPIC_DFR:
+            lapic_regs.dfr = vctx_raw[decoded_mem_ins.target_reg];
+            break;
         case REG_LAPIC_SVR:
             lapic_regs.svr = vctx_raw[decoded_mem_ins.target_reg];
             break;
