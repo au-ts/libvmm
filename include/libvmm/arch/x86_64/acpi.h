@@ -152,7 +152,7 @@ struct address_structure {
     uint8_t address_space_id;    // 0 - MMIO, 1 - I/O port, 2 - PCI config space
     uint8_t register_bit_width;
     uint8_t register_bit_offset;
-    uint8_t reserved;
+    uint8_t access_size; // 0 - undefied, 1 - byte, 2 - word, 3 - dword, 4 - qword
     uint64_t address;
 } __attribute__((packed));
 
@@ -190,6 +190,16 @@ struct mcfg {
 } __attribute__((packed));;
 
 ////////////////////////////////////////
+
+// #define PM1A_EVT_BLK_PIO_ADDR 0x600
+// #define PM1A_EVT_BLK_PIO_LEN 4
+// #define PM1A_CNT_BLK_PIO_ADDR 0x604
+// #define PM1A_CNT_BLK_PIO_LEN 2
+// #define PM_TMR_BLK_PIO_ADDR 0x608
+// #define PM_TMR_BLK_PIO_LEN 4
+
+// @billn have a way to detect and warn about collision
+#define ACPI_SCI_IRQ_PIN 7
 
 struct FADT {
     struct   dst_header h;
@@ -258,6 +268,8 @@ struct FADT {
 } __attribute__((packed));;
 
 ////////////////////////////////////////
+
+// bool acpi_pm_timer_irq_enabled(void);
 
 size_t madt_build(struct madt *madt);
 size_t hpet_build(struct hpet *hpet);

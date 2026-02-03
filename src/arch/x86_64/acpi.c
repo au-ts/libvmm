@@ -9,7 +9,12 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/acpi.h>
+#include <libvmm/arch/x86_64/ioports.h>
+#include <libvmm/arch/x86_64/fault.h>
 #include <sddf/util/util.h>
+
+#define LOG_ACPI_INFO(...) do{ printf("%s|ACPI INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#define LOG_ACPI_ERR(...) do{ printf("%s|ACPI ERR: ", microkit_name); printf(__VA_ARGS__); }while(0)
 
 #define PAGE_SIZE_4K 0x1000
 #define ACPI_OEMID "libvmm"
@@ -166,6 +171,38 @@ size_t mcfg_build(struct mcfg *mcfg)
     return sizeof(struct mcfg);
 }
 
+static uint16_t pm1_enable_reg = 0;
+
+bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
+                               void *cookie)
+{
+    uint64_t is_read = qualification & BIT(3);
+    uint64_t is_string = qualification & BIT(4);
+    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+    int access_width_bytes = ioports_access_width_to_bytes(access_width);
+    assert(!is_string);
+    assert(access_width_bytes == 2);
+
+    if (port_offset == 2) {
+        if (is_read) {
+            vctx->eax = pm1_enable_reg;
+        } else {
+            pm1_enable_reg = vctx->eax;
+            LOG_ACPI_INFO("ACPI PM Timer Overflow IRQ ON!\n");
+        }
+    }
+
+    return true;
+}
+
+#define TMR_EN BIT(0) /* Timer Enable */
+#define GBL_EN BIT(5) /* Global Enable */
+bool acpi_pm_timer_can_irq(void)
+{
+    return (pm1_enable_reg & BIT(0) ) && (pm1_enable_reg & BIT(5));
+}
+
 size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
@@ -187,14 +224,24 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
     /* Fill out data fields of FADT */
     fadt->Dsdt = (uint32_t)dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
-    fadt->Flags = 0;
+    fadt->Flags = BIT(20); // hardware reduced
 
-    fadt->PM1aEventBlock = 0x400;
-    fadt->PM1EventLength = 0x4;
-    fadt->PM1aControlBlock = 0x404;
-    fadt->PM1ControlLength = 0x2;
+    fadt->PreferredPowerManagementProfile = 0; /* Unspecified Power Profile */
 
-    fadt->SCI_Interrupt = 7; // @billn sus
+    fadt->SCI_Interrupt = ACPI_SCI_IRQ_PIN;
+
+    fadt->BootArchitectureFlags = BIT(1) /* Support PS/2 KB+M */ | BIT(3) /* MSI not supported */;
+
+    // fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
+    // fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
+    // bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
+    //                                                     pm1a_evt_pio_fault_handle, NULL);
+
+    // fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
+    // fadt->PM1ControlLength = PM1A_CNT_BLK_PIO_LEN;
+
+    // fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
+    // fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
     assert(acpi_checksum_ok((char *)fadt, fadt->h.length));
