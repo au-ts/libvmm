@@ -140,8 +140,9 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -m size=12G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=/home/billn/Downloads/julia/disk.img,format=raw,if=none,id=drive0 \
+							  -drive file=/home/billn/Downloads/windbg_server/Windows10Installed_clean.guest,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
+
 clean::
 	$(RM) -f *.elf .depend* $
 	find . -name \*.[do] |xargs --no-run-if-empty rm
