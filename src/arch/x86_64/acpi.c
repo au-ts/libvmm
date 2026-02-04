@@ -269,6 +269,11 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 
     fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
     fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
+    fadt->X_PM1aEventBlock.address_space_id = 1;
+    fadt->X_PM1aEventBlock.register_bit_width = 32;
+    fadt->X_PM1aEventBlock.register_bit_offset = 0;
+    fadt->X_PM1aEventBlock.access_size = 2;
+    fadt->X_PM1aEventBlock.address = PM1A_EVT_BLK_PIO_ADDR;
     {
         bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
                                                             pm1a_evt_pio_fault_handle, NULL);
@@ -277,9 +282,19 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 
     fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
     fadt->PM1ControlLength = PM1A_CNT_BLK_PIO_LEN;
+    fadt->X_PM1aControlBlock.address_space_id = 1;
+    fadt->X_PM1aControlBlock.register_bit_width = 16;
+    fadt->X_PM1aControlBlock.register_bit_offset = 0;
+    fadt->X_PM1aControlBlock.access_size = 2;
+    fadt->X_PM1aControlBlock.address = PM1A_CNT_BLK_PIO_ADDR;
 
     fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
     fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
+    fadt->X_PMTimerBlock.address_space_id = 1;
+    fadt->X_PMTimerBlock.register_bit_width = 32;
+    fadt->X_PMTimerBlock.register_bit_offset = 0;
+    fadt->X_PMTimerBlock.access_size = 3;
+    fadt->X_PMTimerBlock.address = PM_TMR_BLK_PIO_ADDR;
     {
         bool success = fault_register_pio_exception_handler(PM_TMR_BLK_PIO_ADDR, PM_TMR_BLK_PIO_LEN,
                                                             pm_timer_pio_fault_handle, NULL);
