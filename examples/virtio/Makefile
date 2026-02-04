@@ -26,8 +26,6 @@ else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export BLK_SIZE = 512
 	# 16MiB of disk space
 	export BLK_MEM ?= 16777216
-else
-$(error Unsupported MICROKIT_BOARD given)
 endif
 
 # Allow to user to specify a custom partition

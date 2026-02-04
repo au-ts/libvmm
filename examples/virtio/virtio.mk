@@ -21,9 +21,6 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-SYSTEM_FILE := virtio.system
-IMAGE_FILE := loader.img
-REPORT_FILE := report.txt
 CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
@@ -34,6 +31,10 @@ TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
 	maaxboard
+
+SYSTEM_FILE := virtio.system
+IMAGE_FILE := loader.img
+REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
 
@@ -72,7 +73,7 @@ include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
-	network_virt_rx.elf network_virt_tx.elf eth_driver_virtio.elf network_copy.elf
+	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -80,7 +81,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-all: loader.img
+all: ${IMAGE_FILE}
 
 -include vmm.d
 
@@ -103,8 +104,8 @@ endif
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM.data client_vmm.elf
 	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM.data client_vmm.elf
-	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver_virtio.elf
-	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver_virtio.elf
+	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
+	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
@@ -176,8 +177,8 @@ qemu: $(IMAGE_FILE) blk_storage
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
 			-drive file=blk_storage,format=raw,if=none,id=drive0 \
-			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1 \
-			-device virtio-net-device,netdev=netdev0 \
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1,bus=virtio-mmio-bus.1 \
+			-device virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0 \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 
 clean::
