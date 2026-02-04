@@ -45,14 +45,21 @@ typedef struct memory_instruction_data {
     memory_access_width_t access_width;
 } memory_instruction_data_t;
 
+typedef struct write_imm_instruction_data {
+    uint64_t value;
+    memory_access_width_t access_width;
+} write_imm_instruction_data_t;
+
 typedef union instruction_data {
     decode_fail_instruction_data_t decode_fail;
     memory_instruction_data_t memory_instruction;
+    write_imm_instruction_data_t write_imm_instruction;
 } instruction_data_t;
 
 typedef enum instruction_type {
     INSTRUCTION_DECODE_FAIL,
     INSTRUCTION_MEMORY,
+    INSTRUCTION_WRITE_IMM,
 } instruction_type_t;
 
 typedef struct decoded_instruction_ret {
@@ -62,4 +69,10 @@ typedef struct decoded_instruction_ret {
 
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len);
 
-int mem_access_width_to_bytes(memory_access_width_t access_width);
+int mem_access_width_to_bytes(decoded_instruction_ret_t decoded_ins);
+
+bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
+                        uint64_t *ret);
+
+bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
+                       uint64_t data);

@@ -12,16 +12,13 @@
 
 #include <libvmm/arch/x86_64/instruction.h>
 
-bool ept_fault_is_write(seL4_Word qualification);
-bool ept_fault_is_read(seL4_Word qualification);
-
 char *fault_to_string(int exit_reason);
 /* @billn revisit, seL4 vmexit doesnt have msginfo! */
 
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip);
 
 typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,
-                                         memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx,
+                                         decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx,
                                          void *cookie);
 
 bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base);

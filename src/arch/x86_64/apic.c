@@ -10,6 +10,7 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/virq.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>
@@ -205,7 +206,7 @@ enum lapic_timer_mode lapic_parse_timer_reg(void)
     case 1:
         return LAPIC_TIMER_PERIODIC;
     case 2:
-            // not advertised in cpuid, unreachable!
+        // not advertised in cpuid, unreachable!
         assert(false);
         return LAPIC_TIMER_TSC_DEADLINE;
     default:
@@ -222,131 +223,132 @@ uint64_t tsc_now_scaled(void)
 }
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                        memory_instruction_data_t decoded_mem_ins)
+                        decoded_instruction_ret_t decoded_ins)
 {
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-
-    assert(decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH);
-
     // TODO: support other alignments?
+    assert(mem_access_width_to_bytes(decoded_ins) == 4);
     assert(offset % 4 == 0);
+
     if (ept_fault_is_read(qualification)) {
         LOG_APIC("handling LAPIC read at offset 0x%lx\n", offset);
     } else if (ept_fault_is_write(qualification)) {
-        LOG_APIC("handling LAPIC write at offset 0x%lx, value 0x%x\n", offset, vctx_raw[decoded_mem_ins.target_reg]);
+        uint64_t data = mem_write_get_data(decoded_ins, qualification, vctx, &data);
+        LOG_APIC("handling LAPIC write at offset 0x%lx, value 0x%x\n", offset, data);
     }
 
     if (ept_fault_is_read(qualification)) {
+        uint64_t data;
         switch (offset) {
         case REG_LAPIC_ID:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.id;
+            data = lapic_regs.id;
             break;
         case REG_LAPIC_REV:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.revision;
+            data = lapic_regs.revision;
             break;
         case REG_LAPIC_TPR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tpr;
+            data = lapic_regs.tpr;
             break;
         case REG_LAPIC_APR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.apr;
+            data = lapic_regs.apr;
             break;
         case REG_LAPIC_PPR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.ppr;
+            data = lapic_regs.ppr;
             break;
         case REG_LAPIC_DFR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.dfr;
+            data = lapic_regs.dfr;
             break;
         case REG_LAPIC_LDR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.ldr;
+            data = lapic_regs.ldr;
             break;
         case REG_LAPIC_SVR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.svr;
+            data = lapic_regs.svr;
             break;
         case REG_LAPIC_IRR_0:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[0];
+            data = lapic_regs.irr[0];
             break;
         case REG_LAPIC_IRR_1:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[1];
+            data = lapic_regs.irr[1];
             break;
         case REG_LAPIC_IRR_2:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[2];
+            data = lapic_regs.irr[2];
             break;
         case REG_LAPIC_IRR_3:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[3];
+            data = lapic_regs.irr[3];
             break;
         case REG_LAPIC_IRR_4:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[4];
+            data = lapic_regs.irr[4];
             break;
         case REG_LAPIC_IRR_5:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[5];
+            data = lapic_regs.irr[5];
             break;
         case REG_LAPIC_IRR_6:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[6];
+            data = lapic_regs.irr[6];
             break;
         case REG_LAPIC_IRR_7:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.irr[7];
+            data = lapic_regs.irr[7];
             break;
         case REG_LAPIC_ISR_0:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[0];
+            data = lapic_regs.isr[0];
             break;
         case REG_LAPIC_ISR_1:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[1];
+            data = lapic_regs.isr[1];
             break;
         case REG_LAPIC_ISR_2:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[2];
+            data = lapic_regs.isr[2];
             break;
         case REG_LAPIC_ISR_3:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[3];
+            data = lapic_regs.isr[3];
             break;
         case REG_LAPIC_ISR_4:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[4];
+            data = lapic_regs.isr[4];
             break;
         case REG_LAPIC_ISR_5:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[5];
+            data = lapic_regs.isr[5];
             break;
         case REG_LAPIC_ISR_6:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[6];
+            data = lapic_regs.isr[6];
             break;
         case REG_LAPIC_ISR_7:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.isr[7];
+            data = lapic_regs.isr[7];
             break;
         case REG_LAPIC_TMR_0:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[0];
+            data = lapic_regs.tmr[0];
             break;
         case REG_LAPIC_TMR_1:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[1];
+            data = lapic_regs.tmr[1];
             break;
         case REG_LAPIC_TMR_2:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[2];
+            data = lapic_regs.tmr[2];
             break;
         case REG_LAPIC_TMR_3:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[3];
+            data = lapic_regs.tmr[3];
             break;
         case REG_LAPIC_TMR_4:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[4];
+            data = lapic_regs.tmr[4];
             break;
         case REG_LAPIC_TMR_5:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[5];
+            data = lapic_regs.tmr[5];
             break;
         case REG_LAPIC_TMR_6:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[6];
+            data = lapic_regs.tmr[6];
             break;
         case REG_LAPIC_TMR_7:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.tmr[7];
+            data = lapic_regs.tmr[7];
             break;
         case REG_LAPIC_TIMER:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.timer;
+            data = lapic_regs.timer;
             break;
         case REG_LAPIC_LVT_ERR:
         case REG_LAPIC_CMCI:
         case REG_LAPIC_THERMAL:
+            data = 0;
             break;
         case REG_LAPIC_INIT_CNT:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.init_count;
+            data = lapic_regs.init_count;
             break;
         case REG_LAPIC_CURR_CNT:
             if (lapic_regs.init_count == 0) {
-                vctx_raw[decoded_mem_ins.target_reg] = 0;
+                data = 0;
             } else {
                 uint64_t tsc_tick_now_scaled = tsc_now_scaled();
                 uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - lapic_regs.native_scaled_tsc_when_timer_starts;
@@ -355,38 +357,41 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 if (elapsed_scaled_tsc_tick < lapic_regs.init_count) {
                     remaining = lapic_regs.init_count - elapsed_scaled_tsc_tick;
                 }
-                vctx_raw[decoded_mem_ins.target_reg] = remaining;
+                data = remaining;
                 // LOG_VMM("LAPIC current count %u\n", remaining);
             }
 
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_PERF_MON_CNTER:
-            vctx_raw[decoded_mem_ins.target_reg] = 0;
+            data = 0;
             break;
         case REG_LAPIC_ICR_LOW:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr_low;
+            data = lapic_regs.icr_low;
             break;
         case REG_LAPIC_ICR_HIGH:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.icr_high;
+            data = lapic_regs.icr_high;
             break;
         case REG_LAPIC_LVT_LINT0:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.lint0;
+            data = lapic_regs.lint0;
             break;
         case REG_LAPIC_LVT_LINT1:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.lint1;
+            data = lapic_regs.lint1;
             break;
         case REG_LAPIC_DCR:
-            vctx_raw[decoded_mem_ins.target_reg] = lapic_regs.dcr;
+            data = lapic_regs.dcr;
             break;
         default:
             LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
             return false;
         }
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
     } else {
+        uint64_t data;
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
         switch (offset) {
         case REG_LAPIC_TPR:
-            lapic_regs.tpr = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.tpr = data;
             break;
         case REG_LAPIC_EOI:
             // @billn really sus, need to check what is the last in service interrupt and only clear that.
@@ -426,41 +431,47 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 
             break;
         case REG_LAPIC_LDR:
-            lapic_regs.dfr = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.dfr = data;
             break;
         case REG_LAPIC_DFR:
-            lapic_regs.dfr = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.dfr = data;
             break;
         case REG_LAPIC_SVR:
-            lapic_regs.svr = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.svr = data;
             break;
         case REG_LAPIC_LVT_LINT0:
-            lapic_regs.lint0 = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.lint0 = data;
             break;
         case REG_LAPIC_LVT_LINT1:
-            lapic_regs.lint1 = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.lint1 = data;
             break;
         case REG_LAPIC_ICR_LOW:
             // Figure 11-12. Interrupt Command Register (ICR)
             // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-            lapic_regs.icr_low = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.icr_low = data;
 
             uint64_t icr = lapic_regs.icr_low | (((uint64_t)lapic_regs.icr_high) << 32);
 
             // @billn sus, handle other types of IPIs
-            if (((icr >> 8) & 0x7) == 0) {
+            uint8_t delivery_mode = ((icr >> 8) & 0x7);
+            uint8_t destination = (icr >> 56) & 0xff;
+            if (delivery_mode == 0) {
                 // fixed mode
+                assert(destination == 0);
                 uint8_t vector = icr & 0xff;
                 inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
+            } else {
+                LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
+                            delivery_mode, destination);
             }
 
             // LOG_VMM("icr 0x%lx\n", icr);
             break;
         case REG_LAPIC_ICR_HIGH:
-            lapic_regs.icr_high = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.icr_high = data;
             break;
         case REG_LAPIC_TIMER:
-            lapic_regs.timer = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.timer = data;
             // @billn make sure the guest isn't using teh TSC deadline mode, which isn't implemented right now
             assert(((lapic_regs.timer >> 17) & 0x3) != 2);
             break;
@@ -472,8 +483,8 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_INIT_CNT:
             // Figure 11-8. Local Vector Table (LVT)
-            lapic_regs.init_count = vctx_raw[decoded_mem_ins.target_reg];
-            if (vctx_raw[decoded_mem_ins.target_reg] > 0) {
+            lapic_regs.init_count = data;
+            if (data > 0) {
                 if (lapic_regs.timer & BIT(16)) {
                     // LOG_VMM("LAPIC timer started while irq MASKED\n");
                 } else {
@@ -487,12 +498,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             }
             break;
         case REG_LAPIC_DCR:
-            lapic_regs.dcr = vctx_raw[decoded_mem_ins.target_reg];
+            lapic_regs.dcr = data;
             // LOG_VMM("REG_LAPIC_DCR = 0x%x\n", lapic_regs.dcr);
             break;
         default:
-            LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset,
-                        vctx_raw[decoded_mem_ins.target_reg]);
+            LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset, data);
             return false;
         }
     }
@@ -501,7 +511,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 }
 
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                         memory_instruction_data_t decoded_mem_ins)
+                         decoded_instruction_ret_t decoded_ins)
 {
     if (ept_fault_is_read(qualification)) {
         LOG_APIC("handling I/O APIC read at MMIO offset 0x%lx\n", offset);
@@ -509,16 +519,16 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
         LOG_APIC("handling I/O APIC write at MMIO offset 0x%lx\n", offset);
     }
 
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-
     if (ept_fault_is_read(qualification)) {
         if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
+            uint64_t data;
+
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
-                vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioapicid;
+                data = ioapic_regs.ioapicid;
             } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
-                vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioapicver;
+                data = ioapic_regs.ioapicver;
             } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICARB_REG_OFF) {
-                vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioapicarb;
+                data = ioapic_regs.ioapicarb;
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
                        && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
                 int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
@@ -528,28 +538,33 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 // LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
 
                 if (is_high) {
-                    vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
+                    data = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
                 } else {
-                    vctx_raw[decoded_mem_ins.target_reg] = ioapic_regs.ioredtbl[redirection_reg_idx] & 0xffffffff;
+                    data = ioapic_regs.ioredtbl[redirection_reg_idx] & 0xffffffff;
                 }
 
             } else {
                 LOG_VMM_ERR("Reading unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);
                 return false;
             }
+
+            assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
         } else {
             LOG_VMM_ERR("Reading unknown I/O APIC MMIO register 0x%x\n", offset);
             return false;
         }
     } else {
+        uint64_t data;
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+
         if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
-            ioapic_regs.selected_reg = vctx_raw[decoded_mem_ins.target_reg] & 0xff;
+            ioapic_regs.selected_reg = data & 0xff;
             // LOG_VMM("selecting I/O APIC register 0x%x for write\n", ioapic_regs.selected_reg);
 
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
-                LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", vctx_raw[decoded_mem_ins.target_reg]);
-                ioapic_regs.ioapicid = vctx_raw[decoded_mem_ins.target_reg];
+                LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", data);
+                ioapic_regs.ioapicid = data;
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
                        && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
                 int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
@@ -559,12 +574,12 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 uint64_t old_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
 
                 if (is_high) {
-                    uint64_t new_high = vctx_raw[decoded_mem_ins.target_reg] << 32;
+                    uint64_t new_high = data << 32;
                     uint64_t low = ioapic_regs.ioredtbl[redirection_reg_idx] & 0xffffffff;
                     ioapic_regs.ioredtbl[redirection_reg_idx] = low | new_high;
                 } else {
                     uint64_t high = (ioapic_regs.ioredtbl[redirection_reg_idx] >> 32) << 32;
-                    uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                    uint64_t new_low = data & 0xffffffff;
                     ioapic_regs.ioredtbl[redirection_reg_idx] = new_low | high;
                 }
 
@@ -619,6 +634,7 @@ void lapic_maintenance(void)
     lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
     lapic_regs.isr[irr_n] |= BIT(irr_idx);
 
+    // Make absolutely sure that the vCPU can take the interrupt
     assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_INTERRUPTABILITY) == 0);
     assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS) & BIT(9));
 

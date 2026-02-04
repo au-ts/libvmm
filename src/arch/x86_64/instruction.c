@@ -26,10 +26,14 @@
 static uint8_t mov_opcodes[NUM_MOV_OPCODES] = { OPCODE_MOV_BYTE_TO_MEM, OPCODE_MOV_WORD_TO_MEM,
                                                 OPCODE_MOV_BYTE_FROM_MEM, OPCODE_MOV_WORD_FROM_MEM };
 
+#define NUM_MOV_IMM_OPCODES 1
+#define OPCODE_MOV_IMM_WORD_TO_MEM 0xc7
+static uint8_t mov_imm_opcodes[NUM_MOV_IMM_OPCODES] = { OPCODE_MOV_IMM_WORD_TO_MEM };
+
 static uint8_t opcode_movzx_byte_from_mem[2] = { 0x0f, 0xb6 };
 static uint8_t opcode_movzx_word_from_mem[2] = { 0x0f, 0xb7 };
 
-int mem_access_width_to_bytes(memory_access_width_t access_width)
+static int access_width_decode(memory_access_width_t access_width)
 {
     switch (access_width) {
     case BYTE_ACCESS_WIDTH:
@@ -41,8 +45,70 @@ int mem_access_width_to_bytes(memory_access_width_t access_width)
     case QWORD_ACCESS_WIDTH:
         return 8;
     default:
+        LOG_VMM_ERR("access_width_decode() unknown access width %d\n", access_width);
         return 0;
     }
+}
+
+int mem_access_width_to_bytes(decoded_instruction_ret_t decoded_ins)
+{
+    int access_width_bytes;
+    switch (decoded_ins.type) {
+    case INSTRUCTION_MEMORY:
+        access_width_bytes = access_width_decode(decoded_ins.decoded.memory_instruction.access_width);
+        break;
+    case INSTRUCTION_WRITE_IMM:
+        access_width_bytes = access_width_decode(decoded_ins.decoded.write_imm_instruction.access_width);
+        break;
+    default:
+        access_width_bytes = 0;
+        LOG_VMM_ERR("mem_access_width_to_bytes() not a memory access instruction\n");
+        break;
+    }
+    return access_width_bytes;
+}
+
+bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
+                        uint64_t *ret)
+{
+    uint64_t *vctx_raw = (uint64_t *)vctx;
+    bool success = true;
+
+    switch (decoded_ins.type) {
+    case INSTRUCTION_MEMORY:
+        if (ept_fault_is_read(ept_fault_qualification)) {
+            LOG_VMM_ERR("mem_write_get_data() got a read fault\n");
+            success = false;
+        } else {
+            *ret = vctx_raw[decoded_ins.decoded.memory_instruction.target_reg];
+        }
+        break;
+    case INSTRUCTION_WRITE_IMM:
+        assert(ept_fault_is_write(ept_fault_qualification));
+        *ret = decoded_ins.decoded.write_imm_instruction.value;
+        break;
+    default:
+        LOG_VMM_ERR("mem_write_get_data() not a memory access instruction\n");
+        success = false;
+    }
+    return success;
+}
+
+bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
+                       uint64_t data)
+{    
+    if (ept_fault_is_write(ept_fault_qualification)) {
+        LOG_VMM_ERR("mem_read_set_data() got a write fault\n");
+        return false;
+    }
+    if (decoded_ins.type != INSTRUCTION_MEMORY) {
+        LOG_VMM_ERR("mem_read_set_data() not a memory access instruction\n");
+        return false;
+    }
+    
+    uint64_t *vctx_raw = (uint64_t *)vctx;
+    vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
+    return true;
 }
 
 static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
@@ -122,13 +188,13 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
         if (instruction_buf[parsed_byte] >> 4 == 4) {
             uint8_t rex_byte = instruction_buf[parsed_byte];
             parsed_byte += 1;
-    
+
             rex_w = (rex_byte & BIT(3)) != 0;
             rex_r = (rex_byte & BIT(2)) != 0;
             // rex_x = (rex_byte & BIT(1)) != 0;
             // rex_b = (rex_byte & BIT(0)) != 0;
         }
-        
+
         // scan for the "operand-size override" prefix, which switch the operand size
         // from 32 to 16 bits, though the REX prefix have more precendence
         if (instruction_buf[parsed_byte] == 0x66) {
@@ -181,7 +247,7 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     }
 
     // no match, now try the 2 bytes movzx opcodes
-    if (instruction_len - parsed_byte >= 3) {
+    if (instruction_len - parsed_byte >= 3 && !opcode_valid) {
         if (instruction_buf[parsed_byte] == opcode_movzx_byte_from_mem[0]
             && instruction_buf[parsed_byte + 1] == opcode_movzx_byte_from_mem[1]) {
             opcode_valid = true;
@@ -200,6 +266,35 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
             ret.decoded.memory_instruction.access_width = WORD_ACCESS_WIDTH;
             ret.decoded.memory_instruction.zero_extend = true;
             ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
+        }
+    }
+
+    // no match, try the mov immediate instruciton
+    for (int i = 0; i < NUM_MOV_IMM_OPCODES; i++) {
+        if (instruction_buf[parsed_byte] == mov_imm_opcodes[i]) {
+            opcode_valid = true;
+            uint8_t opcode = instruction_buf[parsed_byte];
+
+            assert(guest_in_64_bits());
+
+            ret.type = INSTRUCTION_WRITE_IMM;
+            if (rex_w) {
+                ret.decoded.write_imm_instruction.access_width = QWORD_ACCESS_WIDTH;
+            } else {
+                if (opd_size_override) {
+                    ret.decoded.write_imm_instruction.access_width = WORD_ACCESS_WIDTH;
+                } else {
+                    ret.decoded.write_imm_instruction.access_width = DWORD_ACCESS_WIDTH;
+                }
+            }
+
+            // Not going to bother with checking for mod r/m or sib bytes as the CPU already decoded them for us
+            // just skipping to the immediate
+            int immediate_bytes = mem_access_width_to_bytes(ret);
+            assert(instruction_len > immediate_bytes);
+            memcpy(&(ret.decoded.write_imm_instruction.value), &instruction_buf[instruction_len - immediate_bytes], immediate_bytes);
+
+            break;
         }
     }
 
