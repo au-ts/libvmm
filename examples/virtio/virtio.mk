@@ -21,6 +21,9 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
+SYSTEM_FILE := virtio.system
+IMAGE_FILE := loader.img
+REPORT_FILE := report.txt
 CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
@@ -31,10 +34,6 @@ TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
 	maaxboard
-
-SYSTEM_FILE := virtio.system
-IMAGE_FILE := loader.img
-REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
 
