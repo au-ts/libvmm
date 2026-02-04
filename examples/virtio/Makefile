@@ -18,20 +18,9 @@ override MICROKIT_SDK := $(abspath $(MICROKIT_SDK))
 # at build time.
 # TODO: we should probably determine this better if we have lots of supported platforms.
 ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
-	export UART_DRIVER := imx
-	export TIMER_DRIVER := imx
-	export BLK_DRIVER := mmc/imx
-	export ETH_DRIVER := imx
-	export CPU := cortex-a55
 	export GIC_DT_OVERLAY := gic_v3_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
-	export UART_DRIVER := arm
-	export TIMER_DRIVER := arm
-	export BLK_DRIVER := virtio/mmio
-	export ETH_DRIVER := virtio/mmio
-	export CPU := cortex-a53
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
-	QEMU := qemu-system-aarch64
 
 	export BLK_NUM_PART = 1
 	export BLK_SIZE = 512
@@ -55,15 +44,7 @@ BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})
 export VIRTIO_EXAMPLE := $(abspath .)
 
-export OBJCOPY := llvm-objcopy
-export TARGET := aarch64-none-elf
-export CC := clang
 export CC_USERLEVEL := zig cc
-export LD := ld.lld
-export AS := llvm-as
-export AR := llvm-ar
-export DTC := dtc
-export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF := $(abspath ../../dep/sddf)
 export LIBVMM := $(abspath ../../)
