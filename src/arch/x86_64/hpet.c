@@ -9,6 +9,7 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
@@ -227,79 +228,79 @@ bool hpet_maintenance(void)
 }
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                       memory_instruction_data_t decoded_mem_ins)
+                       decoded_instruction_ret_t decoded_ins)
 {
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-
     if (ept_fault_is_read(qualification)) {
         LOG_HPET("handling HPET read at offset 0x%lx\n", offset);
     } else if (ept_fault_is_write(qualification)) {
-        LOG_HPET("handling HPET write at offset 0x%lx, value 0x%x\n", offset, vctx_raw[decoded_mem_ins.target_reg]);
+        uint64_t data = mem_write_get_data(decoded_ins, qualification, vctx, &data);
+        LOG_HPET("handling HPET write at offset 0x%lx, value 0x%x\n", offset, data);
     }
 
     if (ept_fault_is_read(qualification)) {
+        uint64_t data;
         if (offset == GENERAL_CAP_REG_MMIO_OFF) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_capabilities & 0xffffffff;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_capabilities;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.general_capabilities & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.general_capabilities;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == GENERAL_CAP_REG_HIGH_MMIO_OFF) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_capabilities >> 32;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.general_capabilities >> 32;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == GENERAL_CONFIG_REG_MMIO_OFF) {
-            vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.general_config;
+            data = hpet_regs.general_config;
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF) {
-            vctx_raw[decoded_mem_ins.target_reg] = main_counter_value();
+            data = main_counter_value();
 
         } else if (offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            vctx_raw[decoded_mem_ins.target_reg] = 0;
+            data = 0;
 
         } else if (offset == timer_n_config_reg_mmio_off(0)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[0].config & 0xffffffff;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[0].config;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.comparators[0].config & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.comparators[0].config;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == timer_n_config_reg_mmio_off(1)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[1].config & 0xffffffff;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[1].config;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.comparators[1].config & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.comparators[1].config;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == timer_n_config_reg_mmio_off(2)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].config & 0xffffffff;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].config;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.comparators[2].config & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.comparators[2].config;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == timer_n_comparator_mmio_off(2)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].current_comparator & 0xffffffff;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                vctx_raw[decoded_mem_ins.target_reg] = hpet_regs.comparators[2].current_comparator;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.comparators[2].current_comparator & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.comparators[2].current_comparator;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
@@ -309,17 +310,20 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%x\n", offset);
             return false;
         }
-
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
     } else {
+        uint64_t data;
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+
         if (offset == GENERAL_CONFIG_REG_MMIO_OFF) {
             uint64_t old_config = hpet_regs.general_config;
 
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.general_config >> 32) << 32;
-                uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                uint64_t new_low = data & 0xffffffff;
                 hpet_regs.general_config = curr_hi | new_low;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                hpet_regs.general_config = vctx_raw[decoded_mem_ins.target_reg];
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                hpet_regs.general_config = data;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
@@ -330,40 +334,40 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            assert(vctx_raw[decoded_mem_ins.target_reg] == 0);
+            assert(data== 0);
             hpet_counter_offset = time_now_32();
 
         } else if (offset == timer_n_config_reg_mmio_off(0)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.comparators[0].config >> 32) << 32;
-                uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                uint64_t new_low = data & 0xffffffff;
                 hpet_regs.comparators[0].config = curr_hi | new_low;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                hpet_regs.comparators[0].config = vctx_raw[decoded_mem_ins.target_reg];
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                hpet_regs.comparators[0].config = data;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == timer_n_config_reg_mmio_off(1)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.comparators[1].config >> 32) << 32;
-                uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                uint64_t new_low = data & 0xffffffff;
                 hpet_regs.comparators[1].config = curr_hi | new_low;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                hpet_regs.comparators[1].config = vctx_raw[decoded_mem_ins.target_reg];
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                hpet_regs.comparators[1].config = data;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
 
         } else if (offset == timer_n_config_reg_mmio_off(2)) {
-            if (decoded_mem_ins.access_width == DWORD_ACCESS_WIDTH) {
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.comparators[2].config >> 32) << 32;
-                uint64_t new_low = vctx_raw[decoded_mem_ins.target_reg] & 0xffffffff;
+                uint64_t new_low = data & 0xffffffff;
                 hpet_regs.comparators[2].config = curr_hi | new_low;
-            } else if (decoded_mem_ins.access_width == QWORD_ACCESS_WIDTH) {
-                hpet_regs.comparators[2].config = vctx_raw[decoded_mem_ins.target_reg];
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                hpet_regs.comparators[2].config = data;
             } else {
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
@@ -371,22 +375,22 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
 
         } else if (offset == timer_n_comparator_mmio_off(0)) {
             if (timer_n_in_periodic_mode(0)) {
-                hpet_regs.comparators[0].comparator_increment = vctx_raw[decoded_mem_ins.target_reg];
+                hpet_regs.comparators[0].comparator_increment = data;
             } else {
                 hpet_regs.comparators[0].comparator_increment = 0;
-                hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+                hpet_regs.comparators[2].current_comparator = data;
             }
         } else if (offset == timer_n_comparator_mmio_off(1)) {
             // @billn todo, implement periodic for this comparator
             assert(!timer_n_in_periodic_mode(1));
 
-            hpet_regs.comparators[1].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+            hpet_regs.comparators[1].current_comparator = data;
             hpet_regs.comparators[1].comparator_increment = 0;
         } else if (offset == timer_n_comparator_mmio_off(2)) {
             // @billn todo, implement periodic for this comparator
             assert(!timer_n_in_periodic_mode(2));
 
-            hpet_regs.comparators[2].current_comparator = vctx_raw[decoded_mem_ins.target_reg];
+            hpet_regs.comparators[2].current_comparator = data;
             hpet_regs.comparators[2].comparator_increment = 0;
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);

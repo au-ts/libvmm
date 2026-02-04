@@ -17,4 +17,4 @@
 void hpet_handle_timer_ntfn(microkit_channel ch);
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                        memory_instruction_data_t decoded_mem_ins);
+                       decoded_instruction_ret_t decoded_ins);
