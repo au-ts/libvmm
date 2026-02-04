@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-QEMU := qemu-system-aarch64
 PYTHON ?= python3
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
@@ -22,27 +21,29 @@ BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
-DTS_FILE := $(SDDF)/dts/$(MICROKIT_BOARD).dts
-DTB_FILE := $(MICROKIT_BOARD).dtb
 CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
 SDDF_CUSTOM_LIBC := 1
 
+TOOLCHAIN ?= clang
+SUPPORTED_BOARDS := \
+	qemu_virt_aarch64 \
+	maaxboard
+
+include ${SDDF}/tools/make/board/common.mk
+
 CLIENT_VM_USERLEVEL_INIT := blk_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE) $(NETWORK_COMPONENTS)
 
-CFLAGS := \
-	  -mstrict-align \
-	  -ffreestanding \
-	  -g3 -O3 -Wall \
+CFLAGS += \
+	  -Wall \
 	  -Wno-unused-function \
 	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
@@ -50,23 +51,20 @@ CFLAGS := \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
 	  -I$(LIBVMM)/include \
-	  -I$(VIRTIO_EXAMPLE)/include \
-	  -MD \
-	  -MP \
-	  -target $(TARGET)
+	  -I$(VIRTIO_EXAMPLE)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
 ifeq ($(MICROKIT_BOARD), maaxboard)
-include $(TIMER_DRIVER)/timer_driver.mk
+include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
 endif
-include $(SERIAL_DRIVER)/serial_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
-include ${BLK_DRIVER}/blk_driver.mk
+include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
+include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
+include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
 include $(BLK_COMPONENTS)/blk_components.mk
-include ${ETH_DRIVER}/eth_driver.mk
 include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
@@ -88,11 +86,8 @@ all: loader.img
 
 $(IMAGES): libsddf_util_debug.a libvmm.a
 
-$(DTB_FILE): $(DTS_FILE)
-	$(DTC) -q -I dts -O dtb $< > $@
-
-$(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB_FILE) $(CLIENT_DTB)
-	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB_FILE) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+$(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
