@@ -59,8 +59,8 @@ struct ioapic_regs {
     struct ioapic_virq_handle virq_passthrough_map[IOAPIC_NUM_PINS];
 };
 
-bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
-bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins);
+bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, decoded_instruction_ret_t decoded_ins);
+bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, decoded_instruction_ret_t decoded_ins);
 
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
 bool inject_ioapic_irq(int ioapic, int pin);

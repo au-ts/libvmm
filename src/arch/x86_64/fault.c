@@ -169,20 +169,6 @@ char *fault_to_string(int exit_reason)
 #define HPET_BASE 0xfed00000
 #define HPET_SIZE 0x1000
 
-/* Table 28-7. Exit Qualification for EPT Violations */
-#define EPT_VIOLATION_READ (1 << 0)
-#define EPT_VIOLATION_WRITE (1 << 1)
-
-bool ept_fault_is_read(seL4_Word qualification)
-{
-    return qualification & EPT_VIOLATION_READ;
-}
-
-bool ept_fault_is_write(seL4_Word qualification)
-{
-    return qualification & EPT_VIOLATION_WRITE;
-}
-
 struct ept_exception_handler {
     uintptr_t base;
     uintptr_t end;
@@ -239,7 +225,7 @@ bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_excep
     return true;
 }
 
-static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, memory_instruction_data_t decoded_mem_ins)
+static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, decoded_instruction_ret_t decoded_ins)
 {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
@@ -247,13 +233,13 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, me
     if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
         // No log fault here, as the local APIC timer will just fill the terminal...
         LOG_FAULT("handling LAPIC 0x%lx\n", addr);
-        return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_mem_ins);
+        return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_ins);
     } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
         LOG_FAULT("handling IO APIC 0x%lx\n", addr);
-        return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_mem_ins);
+        return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_ins);
     } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
         LOG_FAULT("handling HPET 0x%lx\n", addr);
-        return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_mem_ins);
+        return hpet_fault_handle(vctx, addr - HPET_BASE, qualification, decoded_ins);
     // } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
     //     return pci_x86_emulate_ecam_access(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
     } else {
@@ -264,7 +250,7 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, me
             ept_exception_callback_t callback = registered_ept_exception_handlers[i].callback;
             void *cookie = registered_ept_exception_handlers[i].cookie;
             if (addr >= base && addr < end) {
-                bool success = callback(0, addr - base, qualification, decoded_mem_ins, vctx, cookie);
+                bool success = callback(0, addr - base, qualification, decoded_ins, vctx, cookie);
                 if (!success) {
                     LOG_VMM_ERR("registered EPT exception handler for region [0x%lx..0x%lx) at address "
                                 "0x%lx failed\n",
@@ -412,8 +398,11 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         break;
     case EPT_VIOLATION:
         decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
-        assert(decoded_ins.type == INSTRUCTION_MEMORY);
-        success = handle_ept_fault(&vctx, qualification, decoded_ins.decoded.memory_instruction);
+        if (decoded_ins.type == INSTRUCTION_DECODE_FAIL) {
+            success = false;
+        } else {
+            success = handle_ept_fault(&vctx, qualification, decoded_ins);
+        }
         break;
     case IO:
         success = handle_pio_fault(&vctx, qualification);

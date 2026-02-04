@@ -18,6 +18,9 @@ extern bool fault_cond;
 #define LOG_FAULT(...) do{}while(0)
 #endif
 
+bool ept_fault_is_read(seL4_Word qualification);
+bool ept_fault_is_write(seL4_Word qualification);
+
 bool guest_paging_on(void);
 bool guest_in_64_bits(void);
 

@@ -26,7 +26,6 @@ extern struct pci_x86_passthrough pci_x86_passthrough_bookkeeping;
 
 #endif
 
-
 // @billn this should be moved to src/pci.c
 // @billn I don't like how some functions are general PCI stuff but prefixed with virtio
 // @billn I don't like how all of this is very virtio centric, need to make it generic to non
@@ -280,7 +279,8 @@ static uintptr_t pci_allocate_bar_memory(virtio_device_t *dev, uint8_t dev_bar_i
     return allocated_offset;
 }
 
-static bool pci_add_virtio_capability(virtio_device_t *dev, struct virtio_pci_cap *cap, uint8_t offset, uint8_t cfg_type, uint8_t bar)
+static bool pci_add_virtio_capability(virtio_device_t *dev, struct virtio_pci_cap *cap, uint8_t offset,
+                                      uint8_t cfg_type, uint8_t bar)
 {
     uint8_t len; // length of the new cap
     uint32_t size = 0; // size of the structure on the BAR, in bytes
@@ -324,7 +324,8 @@ static bool pci_add_virtio_capability(virtio_device_t *dev, struct virtio_pci_ca
     return true;
 }
 
-static void pci_dump_capabilities(struct pci_config_space *config_space) {
+static void pci_dump_capabilities(struct pci_config_space *config_space)
+{
     LOG_VMM("=========== Dumping all PCI capabilities\n");
     LOG_VMM("first cap offset 0x%x\n", config_space->cap_ptr);
 
@@ -366,16 +367,16 @@ static bool pci_add_capability(virtio_device_t *dev, uint8_t cap_id, uint8_t cfg
         new_cap = (struct virtio_pci_cap *)((uintptr_t)config_space + new_cap_offset);
         curr_cap->next_ptr = new_cap_offset;
     }
-    
+
     switch (cap_id) {
-        case PCI_CAP_ID_VNDR:
+    case PCI_CAP_ID_VNDR:
         success = pci_add_virtio_capability(dev, new_cap, new_cap_offset, cfg_type, bar);
         break;
-        default:
+    default:
         success = false;
         LOG_PCI_ERR("Unimplementeed capability ID: 0x%x\n", cap_id);
     }
-    
+
     if (!success) {
         LOG_PCI_ERR("Failed to add capability: ID (0x%x), type (0x%x), bar (0x%x)\n", cap_id, cfg_type, bar);
         return false;
@@ -690,7 +691,7 @@ static bool virtio_pci_isr_reg_write(virtio_device_t *dev, size_t vcpu_id, size_
 static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *cookie)
 #elif defined(CONFIG_ARCH_X86_64)
 static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qualification,
-                                        memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx, void *cookie)
+                                        decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie)
 #endif
 {
     bool success = true;
@@ -727,10 +728,8 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qu
     }
 #elif defined(CONFIG_ARCH_X86_64)
     bool is_read = ept_fault_is_read(qualification);
-
-    uint64_t *vctx_raw = (uint64_t *)vctx;
     if (!is_read) {
-        data = vctx_raw[decoded_mem_ins.target_reg];
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
     }
 #endif
 
@@ -774,7 +773,7 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qu
         uint32_t mask = fault_get_data_mask(offset, fsr);
         fault_emulate_write(regs, offset, fsr, data & mask);
 #elif defined(CONFIG_ARCH_X86_64)
-        vctx_raw[decoded_mem_ins.target_reg] = data;
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
 #endif
     }
 
@@ -959,7 +958,7 @@ static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t fsr, se
 // }
 
 static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualification,
-                                   memory_instruction_data_t decoded_mem_ins, seL4_VCPUContext *vctx, void *cookie)
+                                   decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie)
 {
     // uint8_t bus = offset >> 20;
     // uint8_t dev_id = (offset >> 15) & 0x1f;
@@ -973,9 +972,8 @@ static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualifi
     //                            * VIRTIO_PCI_FUNCS_PER_DEV
     //                        + ((offset >> 12) & 7);
     // virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
-    uint64_t *vctx_raw = (uint64_t *)vctx;
-    int access_width_bytes = mem_access_width_to_bytes(decoded_mem_ins.access_width);
-    assert(access_width_bytes <= 4);
+    int access_width_bytes = mem_access_width_to_bytes(decoded_ins);
+    assert(access_width_bytes != 0 && access_width_bytes <= 4);
 
     uint8_t bus = (offset >> 20) & 0xff;
     uint8_t dev = (offset >> 15) & 0x1f;
@@ -983,11 +981,14 @@ static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualifi
     uint16_t reg_off = offset & 0xfff;
 
     if (ept_fault_is_read(qualification)) {
-        return pci_config_space_read_access(bus, dev, func, reg_off, &vctx_raw[decoded_mem_ins.target_reg],
-                                            access_width_bytes);
+        uint64_t value;
+        bool success = pci_config_space_read_access(bus, dev, func, reg_off, (uint32_t *)&value, access_width_bytes);
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, value));
+        return success;
     } else {
-        return pci_config_space_write_access(bus, dev, func, reg_off, vctx_raw[decoded_mem_ins.target_reg],
-                                             access_width_bytes);
+        uint64_t value;
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &value));
+        return pci_config_space_write_access(bus, dev, func, reg_off, (uint32_t)value, access_width_bytes);
     }
 }
 
