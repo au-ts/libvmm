@@ -564,7 +564,8 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
                 LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", data);
-                ioapic_regs.ioapicid = data;
+            } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
+                LOG_APIC("Written to I/O APIC VER register: 0x%lx\n", data);
             } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
                        && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
                 int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
