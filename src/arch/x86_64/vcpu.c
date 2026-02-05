@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/util.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/custom_libc/string.h>
 
@@ -235,4 +236,19 @@ void vcpu_print_regs(size_t vcpu_id)
     LOG_VMM("    r14 = 0x%lx\n", r14);
     LOG_VMM("    r15 = 0x%lx\n", r15);
     LOG_VMM("=========================\n");
+
+    if (guest_paging_on()) {
+        if (ins_len) {
+            uint64_t gpa;
+            int bytes_remaining;
+            assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
+            assert(bytes_remaining >= ins_len);
+            LOG_VMM_ERR("faulting instruction:\n");
+            uint8_t *ins = gpa_to_vaddr(gpa);
+            for (int i = 0; i < ins_len; i++) {
+                LOG_VMM_ERR("0x%02x\n", ins[i]);
+                bytes_remaining--;
+            }
+        }
+    }
 }
