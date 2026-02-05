@@ -20,7 +20,7 @@
 struct lapic_regs {
     // @billn make a container struct?
     // Not a LAPIC register, just bookkeeping
-    uint32_t native_scaled_tsc_when_timer_starts;
+    uint64_t native_scaled_tsc_when_timer_starts;
     uint8_t last_injected_vector;
 
     uint32_t id;
