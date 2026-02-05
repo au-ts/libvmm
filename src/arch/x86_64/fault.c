@@ -498,24 +498,24 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 
             LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
         }
-        if (ins_len) {
-            uint64_t gpa;
-            int bytes_remaining;
-            assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
-            assert(bytes_remaining >= ins_len);
-            LOG_VMM_ERR("faulting instruction:\n");
-            uint8_t *ins = gpa_to_vaddr(gpa);
-            for (int i = 0; i < ins_len; i++) {
-                LOG_VMM_ERR("0x%02x\n", ins[i]);
-                bytes_remaining--;
-            }
+        // if (ins_len) {
+        //     uint64_t gpa;
+        //     int bytes_remaining;
+        //     assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
+        //     assert(bytes_remaining >= ins_len);
+        //     LOG_VMM_ERR("faulting instruction:\n");
+        //     uint8_t *ins = gpa_to_vaddr(gpa);
+        //     for (int i = 0; i < ins_len; i++) {
+        //         LOG_VMM_ERR("0x%02x\n", ins[i]);
+        //         bytes_remaining--;
+        //     }
 
-            LOG_VMM_ERR("proceeding instructions:\n");
-            for (int i = 0; i < MIN(bytes_remaining, 16); i++) {
-                LOG_VMM_ERR("0x%02x\n", ins[i + ins_len]);
-                bytes_remaining--;
-            }
-        }
+        //     LOG_VMM_ERR("proceeding instructions:\n");
+        //     for (int i = 0; i < MIN(bytes_remaining, 16); i++) {
+        //         LOG_VMM_ERR("0x%02x\n", ins[i + ins_len]);
+        //         bytes_remaining--;
+        //     }
+        // }
         vcpu_print_regs(vcpu_id);
     }
 

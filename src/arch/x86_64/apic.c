@@ -8,6 +8,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/util.h>
@@ -229,11 +230,15 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
     assert(mem_access_width_to_bytes(decoded_ins) == 4);
     assert(offset % 4 == 0);
 
-    if (ept_fault_is_read(qualification)) {
-        LOG_APIC("handling LAPIC read at offset 0x%lx\n", offset);
-    } else if (ept_fault_is_write(qualification)) {
-        uint64_t data = mem_write_get_data(decoded_ins, qualification, vctx, &data);
-        LOG_APIC("handling LAPIC write at offset 0x%lx, value 0x%x\n", offset, data);
+    if (offset != REG_LAPIC_EOI) {
+        // Prevent floods of End of Interrupt prints
+        if (ept_fault_is_read(qualification)) {
+            LOG_APIC("handling LAPIC read at offset 0x%lx\n", offset);
+        } else if (ept_fault_is_write(qualification)) {
+            uint64_t data;
+            assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+            LOG_APIC("handling LAPIC write at offset 0x%lx, value 0x%lx\n", offset, data);
+        }
     }
 
     if (ept_fault_is_read(qualification)) {
@@ -358,7 +363,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                     remaining = lapic_regs.init_count - elapsed_scaled_tsc_tick;
                 }
                 data = remaining;
-                // LOG_VMM("LAPIC current count %u\n", remaining);
+                LOG_APIC("current count read 0x%lx\n", remaining);
             }
 
             break;
@@ -431,7 +436,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 
             break;
         case REG_LAPIC_LDR:
-            lapic_regs.dfr = data;
+            lapic_regs.ldr = data;
             break;
         case REG_LAPIC_DFR:
             lapic_regs.dfr = data;
@@ -483,17 +488,19 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             break;
         case REG_LAPIC_INIT_CNT:
             // Figure 11-8. Local Vector Table (LVT)
+
+            LOG_APIC("*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_\n");
+            // vcpu_print_regs(0);
+
             lapic_regs.init_count = data;
             if (data > 0) {
-                if (lapic_regs.timer & BIT(16)) {
-                    // LOG_VMM("LAPIC timer started while irq MASKED\n");
-                } else {
-                    // LOG_VMM("LAPIC timer started while irq UNMASKED, mode 0x%x\n", (lapic_regs.timer >> 17) % 0x3);
-                    // LOG_VMM("setting timeout for %lu ns\n", delay_ns);
+                LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
+                         !!(lapic_regs.timer & BIT(16)));
 
-                    uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
-                    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
-                }
+                uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
+                LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
+                sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
+
                 lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
             }
             break;
@@ -682,9 +689,9 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
     // restart timeout if periodic
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && lapic_regs.init_count > 0) {
         lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
-        // LOG_VMM("restarting timeout for %lu ns\n", tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
         // sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
         uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
+        LOG_APIC("restarting periodic timeout for 0x%lx ns\n", delay_ns);
         sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
     }
 
