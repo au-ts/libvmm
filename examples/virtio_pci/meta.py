@@ -1,10 +1,7 @@
 # Copyright 2025, UNSW
 # SPDX-License-Identifier: BSD-2-Clause
 import argparse
-import struct
-import random
-from dataclasses import dataclass
-from typing import List, Tuple
+from board import BOARDS
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
@@ -15,52 +12,6 @@ VirtualMachine = SystemDescription.VirtualMachine
 MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
-
-
-@dataclass
-class Board:
-    name: str
-    arch: SystemDescription.Arch
-    paddr_top: int
-    serial: str
-    guest_serial: str
-    timer: str
-    blk: str
-    guest_blk: str
-    net: str
-    guest_net: str
-    partition: int
-
-
-BOARDS: List[Board] = [
-    Board(
-        name="qemu_virt_aarch64",
-        arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x6_0000_000,
-        serial="pl011@9000000",
-        guest_serial="virtio-console@130000",
-        timer=None,
-        blk="virtio_mmio@a003e00",
-        guest_blk="virtio-blk@150000",
-        net="virtio_mmio@a003c00",
-        guest_net="virtio-net@160000",
-        partition=0
-    ),
-    Board(
-        name="maaxboard",
-        arch=SystemDescription.Arch.AARCH64,
-        paddr_top=0x90000000,
-        serial="soc@0/bus@30800000/serial@30860000",
-        guest_serial="virtio-console@130000",
-        timer="soc@0/bus@30000000/timer@302d0000",
-        blk="soc@0/bus@30800000/mmc@30b40000",
-        guest_blk="virtio-blk@150000",
-        net="soc@0/bus@30800000/ethernet@30be0000",
-        guest_net="virtio-net@160000",
-        partition=0
-    ),
-]
-
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client VM
@@ -77,12 +28,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
                                       priority=199, stack_size=0x2000)
     serial_node = dtb.node(board.serial)
     assert serial_node is not None
-    # guest_serial_node = client_dtb.node(board.guest_serial)
-    # assert guest_serial_node is not None
 
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
                                 serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
-    # client0.add_virtio_mmio_console(guest_serial_node, serial_system)
     serial_system.add_client(vmm_client0)
 
     pds = [
@@ -94,10 +42,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         sdf.add_pd(pd)
 
     # Net subsystem
-    net_node = dtb.node(board.net)
+    net_node = dtb.node(board.ethernet)
     assert net_node is not None
-    # guest_net_node = client_dtb.node(board.guest_net)
-    # assert guest_net_node is not None
 
     eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
                                   priority=101, budget=100, period=400)
@@ -116,7 +62,6 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    # client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
     net_system.add_client_with_copier(vmm_client0, client0_net_copier)
 
     # Block subsystem
@@ -125,12 +70,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     blk_node = dtb.node(board.blk)
     assert blk_node is not None
-    # guest_blk_node = client_dtb.node(board.guest_blk)
-    # assert guest_blk_node is not None
 
     blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
-    # client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
     blk_system.add_client(vmm_client0, partition=partition)
     pds = [
         blk_driver,
@@ -156,7 +98,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     ############ VIRTIO PCI ############
     config_space = MemoryRegion(sdf, name="ecam", size=0x100000)
     sdf.add_mr(config_space)
-    vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
+    vmm_client0.add_map(Map(config_space, vaddr=0x100000000, perms="rw"))
 
     memory_resource = MemoryRegion(sdf, name="memory_resource", size=0x10000)
     sdf.add_mr(memory_resource)
