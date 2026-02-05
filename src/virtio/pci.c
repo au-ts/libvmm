@@ -716,7 +716,7 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qu
     virtio_device_t *dev = global_memory_bars[i].dev;
     struct virtio_pci_cap *cap = find_pci_cap_by_offset(dev, global_memory_bars[i].idx, bar_offset);
 
-    uint32_t data;
+    uint64_t data;
 #if defined(CONFIG_ARCH_AARCH64)
     bool is_read = fault_is_read(fsr);
 
