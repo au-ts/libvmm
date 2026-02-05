@@ -55,7 +55,7 @@ def x86_virtio_net(eth_driver):
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0xe0000000000
+        sdf, "virtio_net_regs", 0x4000, paddr=0x7000000000
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -86,7 +86,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0xe0000004000
+        sdf, "virtio_blk_regs", 0x4000, paddr=0x7000004000
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
@@ -112,7 +112,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
     # Second guest RAM region above 4G, note that this is one-to-one mapped between GPA and VMM Vaddr
-    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_8000_0000, paddr=0x1_0000_0000)
+    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_5000_0000, paddr=0x1_0000_0000)
     sdf.add_mr(guest_ram_high_mr)
     vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rwx"))
