@@ -479,6 +479,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             lapic_regs.timer = data;
             // @billn make sure the guest isn't using teh TSC deadline mode, which isn't implemented right now
             assert(((lapic_regs.timer >> 17) & 0x3) != 2);
+
+            // LOG_APIC("*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_\n");
+            // vcpu_print_regs(0);
+            LOG_APIC("LAPIC timer config write 0x%lx\n", lapic_regs.timer);
+
             break;
         case REG_LAPIC_ESR:
         case REG_LAPIC_THERMAL:
@@ -667,6 +672,11 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
         return false;
     }
 
+    if (!(lapic_regs.svr & BIT(8))) {
+        // APIC software disable
+        return false;
+    }
+
     int irr_n = vector / 32;
     int irr_idx = vector % 32;
 
@@ -686,6 +696,11 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 
 bool handle_lapic_timer_nftn(size_t vcpu_id)
 {
+    if (!(lapic_regs.svr & BIT(8))) {
+        // APIC software disable
+        return true;
+    }
+
     // restart timeout if periodic
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && lapic_regs.init_count > 0) {
         lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
