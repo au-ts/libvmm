@@ -420,17 +420,27 @@ bool pci_x86_init(void)
 {
     // @billn todo check that the ECAM was initialised
 
-    struct pci_config_space host_bridge = (struct pci_config_space) {
-        .device_id = INTEL_82441_DEVICE_ID, .vendor_id = 0x8086, .class_code = 0x6, .subclass = 0, .header_type = 0
-    };
+    struct pci_config_space host_bridge;
+    memset(&host_bridge, 0, sizeof(struct pci_config_space));
 
-    struct pci_config_space isa_bridge = (struct pci_config_space) {
-        .device_id = 0x7000,
+    host_bridge = (struct pci_config_space) {
+        .device_id = INTEL_82441_DEVICE_ID,
         .vendor_id = 0x8086,
         .class_code = 0x6,
-        .subclass = 1,
-        .header_type = 0x80, // bit 7 multifunction
+        .subclass = 0,
+        .header_type = 0,
+        .command = 7 // device responds to PIO and MMIO access and DMA capable
     };
+
+    struct pci_config_space isa_bridge;
+    memset(&isa_bridge, 0, sizeof(struct pci_config_space));
+
+    isa_bridge = (struct pci_config_space) { .device_id = 0x7000,
+                                             .vendor_id = 0x8086,
+                                             .class_code = 0x6,
+                                             .subclass = 1,
+                                             .header_type = 0x80, // bit 7 multifunction
+                                             .command = 7 };
 
     assert(pci_ecam_add_device(0, 0, 0, &host_bridge));
     assert(pci_ecam_add_device(0, 1, 0, &isa_bridge));
