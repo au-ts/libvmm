@@ -9,6 +9,7 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/guest.h>
@@ -54,6 +55,7 @@
 #define NUM_TIM_CAP_VAL 2ul // last index
 #define NUM_TIM_CAP_SHIFT 8
 #define REV_ID 1ul
+#define VENDOR_ID (0x5E14ull << 16)
 
 // General Config register
 #define LEG_RT_CNF BIT(1) // legacy routing on
@@ -84,7 +86,7 @@ static struct hpet_regs hpet_regs = {
     // 32-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
     // tick period = 1ns, same as sDDF timer interface.
     .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP
-                             | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)),
+                             | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID,
     .comparators[0] = { .config = Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10, if no legacy
     .comparators[1] = { .config = BIT(43) }, // ioapic pin 11, if no legacy
     .comparators[2] = { .config = BIT(44) }, // ioapic pin 12, if no legacy
@@ -187,12 +189,17 @@ bool hpet_maintenance(void)
     // assert(!timer_n_can_interrupt(2));
 
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
+    LOG_HPET("timer 0 can irq %d, is periodic %d\n", timer_n_can_interrupt(0), timer_n_in_periodic_mode(0));
     if (timer_n_can_interrupt(0)) {
         uint32_t main_counter_val = main_counter_value();
 
         if (timer_n_in_periodic_mode(0)) {
-            hpet_regs.comparators[0].current_comparator = main_counter_val + hpet_regs.comparators[0].comparator_increment;
+            hpet_regs.comparators[0].current_comparator = main_counter_val
+                                                        + hpet_regs.comparators[0].comparator_increment;
         }
+
+        LOG_HPET("timer 0: counter < cur comp | 0x%lx < 0x%lx\n", main_counter_val, hpet_regs.comparators[0].current_comparator);
+
         if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(0));
@@ -230,12 +237,17 @@ bool hpet_maintenance(void)
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                        decoded_instruction_ret_t decoded_ins)
 {
-    if (ept_fault_is_read(qualification)) {
-        LOG_HPET("handling HPET read at offset 0x%lx\n", offset);
+    if (ept_fault_is_read(qualification) && offset != MAIN_COUNTER_VALUE_MMIO_OFF) {
+        assert(decoded_ins.type == INSTRUCTION_MEMORY);
+        LOG_HPET("handling HPET read at offset 0x%lx, acc width %d bytes, reg idx %d\n", offset,
+                 mem_access_width_to_bytes(decoded_ins), decoded_ins.decoded.memory_instruction.target_reg);
     } else if (ept_fault_is_write(qualification)) {
-        uint64_t data = mem_write_get_data(decoded_ins, qualification, vctx, &data);
+        uint64_t data;
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
         LOG_HPET("handling HPET write at offset 0x%lx, value 0x%x\n", offset, data);
     }
+
+    // vcpu_print_regs(0);
 
     if (ept_fault_is_read(qualification)) {
         uint64_t data;
@@ -296,6 +308,16 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+        } else if (offset == timer_n_comparator_mmio_off(0)) {
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = hpet_regs.comparators[0].current_comparator & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = hpet_regs.comparators[0].current_comparator;
+            } else {
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                return false;
+            }
+
         } else if (offset == timer_n_comparator_mmio_off(2)) {
             if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 data = hpet_regs.comparators[2].current_comparator & 0xffffffff;
@@ -334,7 +356,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            assert(data== 0);
+            assert(data == 0);
             hpet_counter_offset = time_now_32();
 
         } else if (offset == timer_n_config_reg_mmio_off(0)) {
@@ -378,7 +400,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 hpet_regs.comparators[0].comparator_increment = data;
             } else {
                 hpet_regs.comparators[0].comparator_increment = 0;
-                hpet_regs.comparators[2].current_comparator = data;
+                hpet_regs.comparators[0].current_comparator = data;
             }
         } else if (offset == timer_n_comparator_mmio_off(1)) {
             // @billn todo, implement periodic for this comparator
