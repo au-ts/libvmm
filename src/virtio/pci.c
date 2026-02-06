@@ -830,6 +830,14 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
         return pci_x86_config_space_write_to_native(access_width_bytes, 0, 1, 1, reg_off, data);
     }
+
+    // @billn hack, prevent corruption of host and ISA bridge config space
+    if (bus == 0 && dev == 0 && reg_off < 0x40) {
+        return true;
+    }
+    if (bus == 0 && dev == 1 && reg_off < 0x40) {
+        return true;
+    }
 #endif
 
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
