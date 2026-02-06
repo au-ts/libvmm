@@ -464,13 +464,16 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                 // fixed mode
                 assert(destination == 0);
                 uint8_t vector = icr & 0xff;
-                inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
+                if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
+                    LOG_VMM_ERR("failed to send IPI\n");
+                    return false;
+                }
             } else {
                 LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
                             delivery_mode, destination);
             }
 
-            // LOG_VMM("icr 0x%lx\n", icr);
+            LOG_VMM("icr write 0x%lx\n", icr);
             break;
         case REG_LAPIC_ICR_HIGH:
             lapic_regs.icr_high = data;
