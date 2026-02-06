@@ -181,9 +181,15 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     cmos_data_port = SystemDescription.IoPort(0x71, 1, 37)
     vmm_client0.add_ioport(cmos_data_port)
 
+    cmos_irq = SystemDescription.IrqIoapic(0, 8, 61, id=8)
+    vmm_client0.add_irq(cmos_irq)
+
     # COM2 passthrough for windbg
     com2_port = SystemDescription.IoPort(0x2f8, 8, 38)
     vmm_client0.add_ioport(com2_port)
+
+    com2_irq = SystemDescription.IrqIoapic(0, 3, 60, id=7)
+    vmm_client0.add_irq(com2_irq)
 
     # QEMU Framebuffer
     fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
