@@ -269,7 +269,7 @@ pub fn build(b: *std.Build) !void {
     }
 
     const blk_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64 => "virtio_mmio",
         .maaxboard => "mmc_imx",
     };
 
@@ -319,6 +319,17 @@ pub fn build(b: *std.Build) !void {
     });
     run_metaprogram.addFileArg(metaprogram);
     run_metaprogram.addFileInput(metaprogram);
+    // Prepending the PYTHONPATH to be able to import BOARDS from board.py
+    const sddf_meta_dir = sddf_dep.path("tools/meta").getPath3(b, null).toString(b.allocator) catch @panic("OOM");
+
+    const existing_pythonpath = std.posix.getenv("PYTHONPATH") orelse "";
+    const combined_pythonpath =
+        if (existing_pythonpath.len == 0)
+            sddf_meta_dir
+        else
+            b.fmt("{s}:{s}", .{sddf_meta_dir, existing_pythonpath});
+
+    run_metaprogram.setEnvironmentVariable("PYTHONPATH", combined_pythonpath);
     run_metaprogram.addPrefixedDirectoryArg("--sddf=", sddf_dep.path(""));
     run_metaprogram.addPrefixedDirectoryArg("--dtb=", dtb);
     run_metaprogram.addPrefixedDirectoryArg("--client-dtb=", guest_dtb);
