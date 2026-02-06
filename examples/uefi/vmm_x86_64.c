@@ -119,7 +119,7 @@ uint64_t guest_ram_size = 0xA0000000; // 2.5 GiB
 
 uintptr_t guest_high_ram_vaddr = 0x100000000;
 uint64_t guest_high_ram_gpa = 0x100000000;
-uint64_t guest_high_ram_size = 0x180000000; // 6 GiB
+uint64_t guest_high_ram_size = 0x150000000; // 6 GiB
 
 uintptr_t guest_flash_vaddr = 0x2000000;
 uint64_t guest_flash_gpa = 0xffa00000;
@@ -208,6 +208,10 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+    if (ch == 8) {
+        LOG_VMM("cmos irq why???\n");
+    }
+
     if (ch == serial_config.rx.id) {
         virtio_console_handle_rx(&virtio_console);
         return;
@@ -249,6 +253,9 @@ void notified(microkit_channel ch)
             /* Pass through ATA IRQs */
             assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+
+            /* COM2 for windbg */
+            assert(virq_ioapic_register_passthrough(0, 3, 7));
 
             /* Start vCPU in *real* mode with paging off */
             guest_start(0xfff0, 0, 0);
