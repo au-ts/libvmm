@@ -412,7 +412,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         success = true;
         break;
     case XSETBV:
-        LOG_FAULT("XSETBV\n");
+        LOG_FAULT("XSETBV, rip 0x%lx\n", rip);
         success = true;
         break;
     default:
