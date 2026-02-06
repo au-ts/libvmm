@@ -145,10 +145,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0 /* No Debug Store */ | 0 /* No ACPI Thermal Monitor */ | CPUID_01_EDX_SELF_SNOOP
                   | 0/* No THermal Monitor */
                   | CPUID_01_EDX_PBE | CPUID_01_EDX_FPU | 0 /* No virtual 8086 mode */ | CPUID_01_EDX_DE
-                  | CPUID_01_EDX_PSE | CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE
-                  | CPUID_01_EDX_MCE
-                  | CPUID_01_EDX_CX8 | CPUID_01_EDX_APIC | CPUID_01_EDX_MTRR | CPUID_01_EDX_PGE
-                  | CPUID_01_EDX_MCA
+                  | CPUID_01_EDX_PSE | CPUID_01_EDX_TSC | CPUID_01_EDX_MSR | CPUID_01_EDX_PAE | CPUID_01_EDX_MCE
+                  | CPUID_01_EDX_CX8 | CPUID_01_EDX_APIC | CPUID_01_EDX_MTRR | CPUID_01_EDX_PGE | CPUID_01_EDX_MCA
                   | CPUID_01_EDX_CMOV | CPUID_01_EDX_PAT | CPUID_01_EDX_PSE36 | CPUID_01_EDX_MMX | CPUID_01_EDX_FXSR
                   | CPUID_01_EDX_SSE2 | CPUID_01_EDX_SSE1 | CPUID_01_EDX_CLFLUSH;
 
@@ -160,7 +158,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
             }
         }
 
-        assert(((uint64_t) (vctx->edx) & CPUID_01_EDX_WINDOWS_MANDATORY) == CPUID_01_EDX_WINDOWS_MANDATORY);
+        assert(((uint64_t)(vctx->edx) & CPUID_01_EDX_WINDOWS_MANDATORY) == CPUID_01_EDX_WINDOWS_MANDATORY);
         // assert(0);
 
         break;
@@ -338,8 +336,17 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = 0;
-        // @billn should validate that the host also have this, otherwise the guest clock will be off.
         vctx->edx = 0;
+
+        {
+            uint32_t a, b, c, d;
+            cpuid(vctx->eax, 0, &a, &b, &c, &d);
+            if (d & BIT(8)) {
+                // Turn on invariant TSC if available
+                vctx->edx = BIT(8);
+            }
+        }
+
         break;
 
     case 0x80000008:
