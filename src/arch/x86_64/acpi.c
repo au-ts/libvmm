@@ -135,7 +135,8 @@ size_t hpet_build(struct hpet *hpet)
     hpet->h.creator_id = 1;
     hpet->h.creator_revision = 1;
 
-    hpet->evt_timer_block_id = HPET_LEGACY_IRQ_CAPABLE | (HPET_NUM_COMPARATORS_VALUE << HPET_NUM_COMPARATORS_SHIFT);
+    hpet->evt_timer_block_id = HPET_LEGACY_IRQ_CAPABLE | (HPET_NUM_COMPARATORS_VALUE << HPET_NUM_COMPARATORS_SHIFT)
+                             | HPET_64B_COUNTER | HPET_VENDOR_MASK;
 
     hpet->address_desc.address_space_id = 0;
     hpet->address_desc.register_bit_width = 32;
@@ -303,8 +304,8 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
     // @billn sus, OVMF always think that its running on Xen, which places the ACPI PM timer is at 0xb008
     // Not sure if this is it's quirk or our fault somewhwere
     {
-        bool success = fault_register_pio_exception_handler(0xb008, PM_TMR_BLK_PIO_LEN,
-                                                            pm_timer_pio_fault_handle, NULL);
+        bool success = fault_register_pio_exception_handler(0xb008, PM_TMR_BLK_PIO_LEN, pm_timer_pio_fault_handle,
+                                                            NULL);
         assert(success);
     }
 
