@@ -22,8 +22,10 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <sel4/arch/vmenter.h>
 
-bool fault_cond = false;
+// @billn sus
+extern struct lapic_regs lapic_regs;
 
+bool fault_cond = false;
 
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
@@ -179,7 +181,8 @@ struct ept_exception_handler {
 static struct ept_exception_handler registered_ept_exception_handlers[MAX_EPT_EXCEPTION_HANDLERS];
 static size_t ept_exception_handler_index = 0;
 
-bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base) {
+bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base)
+{
     for (int i = 0; i < ept_exception_handler_index; i++) {
         struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
         if (curr->base == base) {
@@ -351,6 +354,46 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
 
 // static uint64_t prev_valid_idt_entries = 0;
 
+uint64_t *cr_fault_reg_idx_to_vctx_ptr(int idx, seL4_VCPUContext *vctx)
+{
+    switch (idx) {
+    case 0:
+        return &vctx->eax;
+    case 1:
+        return &vctx->ecx;
+    case 2:
+        return &vctx->edx;
+    case 3:
+        return &vctx->ebx;
+        // case 4:
+        //     return stack pointer;
+    case 5:
+        return &vctx->ebp;
+    case 6:
+        return &vctx->esi;
+    case 7:
+        return &vctx->edi;
+    case 8:
+        return &vctx->r8;
+    case 9:
+        return &vctx->r9;
+    case 10:
+        return &vctx->r10;
+    case 11:
+        return &vctx->r11;
+    case 12:
+        return &vctx->r12;
+    case 13:
+        return &vctx->r13;
+    case 14:
+        return &vctx->r14;
+    case 15:
+        return &vctx->r15;
+    default:
+        return NULL;
+    }
+}
+
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 {
     bool success = false;
@@ -367,7 +410,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     } else {
         fault_cond = false;
     }
-
 
     seL4_VCPUContext vctx;
     vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
@@ -415,6 +457,26 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         LOG_VMM("XSETBV, rip 0x%lx\n", rip);
         success = true;
         break;
+    case CONTROL_REGISTER: {
+        // @billn update logs if we traps other control registers
+        // LOG_VMM("CR8 access via MOV\n");
+        uint8_t access_type = (qualification >> 4) & 3;
+        uint8_t reg_idx = (qualification >> 8) & 0xf;
+        if (access_type == 0) {
+            // LOG_VMM("write\n");
+            uint64_t data = *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx);
+            lapic_regs.tpr = (uint32_t) data;
+            success = true;
+        } else if (access_type == 1) {
+            // LOG_VMM("read\n");
+            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = lapic_regs.tpr;
+            success = true;
+        } else {
+            // LOG_VMM_ERR("the fuck\n");
+            success = false;
+        }
+        break;
+    }
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
@@ -426,7 +488,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         //     LOG_VMM("======== HELLO OSXSAVE IS ON!!!!\n");
         // }
 
-        
         // uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
         // uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
         // uint64_t idtr_gpa, _bytes_remaining;
@@ -455,8 +516,8 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         // prev_valid_idt_entries = num_present_entries;
 
         // TODO hack force osxsave on so that windows doesnt #UD on xgetbv/xsetbv
-       uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
-       microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
+        uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
 
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
@@ -484,10 +545,10 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
             for (int i = 0; i < idt_num_entries; i++) {
                 uint32_t entry[4];
                 uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-                entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
-                entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
-                entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
-                entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+                entry[0] = *((uint64_t *)gpa_to_vaddr(entry_gpa));
+                entry[1] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 4));
+                entry[2] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 8));
+                entry[3] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 12));
 
                 uint32_t present = (entry[1] & BIT(15));
                 // LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
