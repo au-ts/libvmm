@@ -266,7 +266,8 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
 
     fadt->SCI_Interrupt = ACPI_SCI_IRQ_PIN;
 
-    fadt->BootArchitectureFlags = BIT(1) /* Support PS/2 KB+M */ | BIT(3) /* MSI not supported */;
+    fadt->BootArchitectureFlags =
+        BIT(1) /* Support PS/2 KB+M */ | BIT(3) /* MSI not supported */ | BIT(2) /* No ISA VGA */;
 
     fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
     fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
