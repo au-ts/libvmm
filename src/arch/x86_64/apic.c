@@ -396,6 +396,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
         switch (offset) {
         case REG_LAPIC_TPR:
+            // LOG_VMM("TPR write via LAPIC 0x%x\n", data);
             lapic_regs.tpr = data;
             break;
         case REG_LAPIC_EOI:
