@@ -28,7 +28,6 @@ struct lapic_regs {
     uint32_t svr;
     uint32_t tpr;
     uint32_t apr;
-    uint32_t ppr;
     uint32_t dfr;
     uint32_t ldr;
     // These two are actually 256-bit register
@@ -58,6 +57,9 @@ struct ioapic_regs {
 
     struct ioapic_virq_handle virq_passthrough_map[IOAPIC_NUM_PINS];
 };
+
+uint8_t lapic_get_tpr(void);
+void lapic_set_tpr(uint8_t tpr);
 
 bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, decoded_instruction_ret_t decoded_ins);
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, decoded_instruction_ret_t decoded_ins);
