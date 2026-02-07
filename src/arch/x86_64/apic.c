@@ -17,9 +17,6 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
-// @billn the TPR register must be properly implemeted, as I've seen a concrete example of a guest using it
-// to temporarily masl the APIC timer interrupts: https://github.com/tianocore/edk2/blob/dddb45306affe61328d126ab2cac8de3da909ebc/MdeModulePkg/Bus/Pci/PciBusDxe/PciEnumeratorSupport.c#L890
-
 // @billn there seems to be a big problem with this code. If the host CPU load is high, the fault
 // and IRQ injection latency will also be high. Which will cause the timer value to skew and linux
 // will complain that TSC isn't stable. I don't know if this is a problem with the code or just how it is...
@@ -97,6 +94,8 @@ extern struct lapic_regs lapic_regs;
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
 
+void lapic_maintenance(void);
+
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
     __uint128_t tmp = (__uint128_t)ticks * (uint64_t)NS_IN_S;
@@ -120,14 +119,55 @@ static int n_irq_in_service(void)
     return n;
 }
 
+static uint8_t get_highest_vector_in_service(void)
+{
+    int n = 0;
+    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
+            if (lapic_regs.isr[i] & BIT(j)) {
+                return i * 32 + j;
+            }
+        }
+    }
+    return n;
+}
+
+static uint8_t get_ppr(void)
+{
+    uint8_t ppr;
+
+    // See Vol. 3A 12-29
+    // Figure 12-19
+    uint8_t highest_vector_in_service = get_highest_vector_in_service();
+    uint8_t highest_priority_in_service = highest_vector_in_service >> 4;
+    uint8_t task_priority_class = lapic_regs.tpr >> 4;
+    uint8_t task_priority_subclass = lapic_regs.tpr & 0xf;
+    uint8_t proc_priority_class = MAX(task_priority_class, highest_priority_in_service);
+    uint8_t proc_priority_subclass = 0;
+
+    if (task_priority_class >= highest_priority_in_service) {
+        proc_priority_subclass = task_priority_subclass;
+    }
+    ppr = proc_priority_subclass | (proc_priority_class << 4);
+    return ppr;
+}
+
 static int get_next_queued_irq_vector(void)
 {
+    uint8_t ppr = get_ppr();
+
     // scan IRRs for *a* pending interrupt
     // do it "right-to-left" as the higer vector is higher prio (generally)
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
-                return i * 32 + j;
+                uint8_t candidate_vector = i * 32 + j;
+                if (candidate_vector >= ppr) {
+                    return candidate_vector;
+                } else {
+                    // highest pending vector is lower than highest eligible priority, so do nothing
+                    return -1;
+                }
             }
         }
     }
@@ -141,6 +181,24 @@ static void debug_print_lapic_pending_irqs(void)
             if (lapic_regs.irr[i] & BIT(j)) {
                 LOG_VMM("irq vector %d is pending\n", i * 32 + j);
             }
+        }
+    }
+}
+
+uint8_t lapic_get_tpr(void)
+{
+    return lapic_regs.tpr;
+}
+
+void lapic_set_tpr(uint8_t tpr)
+{
+    uint8_t old_tpr = lapic_regs.tpr;
+    lapic_regs.tpr = tpr;
+    if (tpr != old_tpr) {
+        // LOG_VMM("TPR changed from 0x%x to 0x%x\n", old_tpr, tpr);
+        int vector = get_next_queued_irq_vector();
+        if (vector != -1) {
+            assert(inject_lapic_irq(0, vector));
         }
     }
 }
@@ -251,13 +309,13 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             data = lapic_regs.revision;
             break;
         case REG_LAPIC_TPR:
-            data = lapic_regs.tpr;
+            data = lapic_get_tpr();
             break;
         case REG_LAPIC_APR:
             data = lapic_regs.apr;
             break;
         case REG_LAPIC_PPR:
-            data = lapic_regs.ppr;
+            data = get_ppr();
             break;
         case REG_LAPIC_DFR:
             data = lapic_regs.dfr;
@@ -397,7 +455,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         switch (offset) {
         case REG_LAPIC_TPR:
             // LOG_VMM("TPR write via LAPIC 0x%x\n", data);
-            lapic_regs.tpr = data;
+            lapic_set_tpr(data);
             break;
         case REG_LAPIC_EOI:
             // @billn really sus, need to check what is the last in service interrupt and only clear that.
