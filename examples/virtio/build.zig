@@ -279,7 +279,7 @@ pub fn build(b: *std.Build) !void {
     };
 
     const eth_driver_class = switch (microkit_board_option) {
-        .qemu_virt_aarch64 => "virtio",
+        .qemu_virt_aarch64 => "virtio_mmio",
         .maaxboard => "imx",
     };
 
