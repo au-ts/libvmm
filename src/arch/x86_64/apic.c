@@ -103,33 +103,17 @@ static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
     return (uint64_t)(tmp / hz);
 }
 
-static int n_irq_in_service(void)
+static bool get_highest_vector_in_service(uint8_t *ret)
 {
-    int n = 0;
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.isr[i] & BIT(j)) {
-                n += 1;
+                *ret = i * 32 + j;
+                return true;
             }
         }
     }
-
-    // @billn sus, multiple IRQs can be in service, but this seems to work for now
-    assert(n <= 1);
-    return n;
-}
-
-static uint8_t get_highest_vector_in_service(void)
-{
-    int n = 0;
-    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
-        for (int j = 31; j >= 0; j--) {
-            if (lapic_regs.isr[i] & BIT(j)) {
-                return i * 32 + j;
-            }
-        }
-    }
-    return n;
+    return false;
 }
 
 static uint8_t get_ppr(void)
@@ -138,7 +122,8 @@ static uint8_t get_ppr(void)
 
     // See Vol. 3A 12-29
     // Figure 12-19
-    uint8_t highest_vector_in_service = get_highest_vector_in_service();
+    uint8_t highest_vector_in_service = 0;
+    get_highest_vector_in_service(&highest_vector_in_service);
     uint8_t highest_priority_in_service = highest_vector_in_service >> 4;
     uint8_t task_priority_class = lapic_regs.tpr >> 4;
     uint8_t task_priority_subclass = lapic_regs.tpr & 0xf;
@@ -162,7 +147,7 @@ static int get_next_queued_irq_vector(void)
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
                 uint8_t candidate_vector = i * 32 + j;
-                if (candidate_vector >= ppr) {
+                if (candidate_vector > ppr) {
                     return candidate_vector;
                 } else {
                     // highest pending vector is lower than highest eligible priority, so do nothing
@@ -185,24 +170,6 @@ static void debug_print_lapic_pending_irqs(void)
     }
 }
 
-uint8_t lapic_get_tpr(void)
-{
-    return lapic_regs.tpr;
-}
-
-void lapic_set_tpr(uint8_t tpr)
-{
-    uint8_t old_tpr = lapic_regs.tpr;
-    lapic_regs.tpr = tpr;
-    if (tpr != old_tpr) {
-        // LOG_VMM("TPR changed from 0x%x to 0x%x\n", old_tpr, tpr);
-        int vector = get_next_queued_irq_vector();
-        if (vector != -1) {
-            assert(inject_lapic_irq(0, vector));
-        }
-    }
-}
-
 bool vcpu_can_take_irq(size_t vcpu_id)
 {
     // Not executing anything that blocks IRQs
@@ -214,6 +181,24 @@ bool vcpu_can_take_irq(size_t vcpu_id)
         return false;
     }
     return true;
+}
+
+uint8_t lapic_get_tpr(void)
+{
+    return lapic_regs.tpr;
+}
+
+void lapic_set_tpr(uint8_t tpr)
+{
+    uint8_t old_tpr = lapic_regs.tpr;
+    lapic_regs.tpr = tpr;
+    if (tpr != old_tpr && vcpu_can_take_irq(0)) {
+        // LOG_VMM("TPR changed from 0x%x to 0x%x\n", old_tpr, tpr);
+        int vector = get_next_queued_irq_vector();
+        if (vector != -1) {
+            assert(inject_lapic_irq(0, vector));
+        }
+    }
 }
 
 int lapic_dcr_to_divider(void)
@@ -457,43 +442,37 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // LOG_VMM("TPR write via LAPIC 0x%x\n", data);
             lapic_set_tpr(data);
             break;
-        case REG_LAPIC_EOI:
-            // @billn really sus, need to check what is the last in service interrupt and only clear that.
-            // LOG_VMM("lapic EOI\n");
+        case REG_LAPIC_EOI: {
+            uint8_t done_vector;
+            if (!get_highest_vector_in_service(&done_vector)) {
+                break;
+            }
 
-            // @billn sus: improve this to allow multiple IRQs in service and also check the TPR
-            // @billn sus: there can only be 1 interrupt in service at any given time.
-            if (n_irq_in_service() == 1) {
-                lapic_regs.isr[0] = 0;
-                lapic_regs.isr[1] = 0;
-                lapic_regs.isr[2] = 0;
-                lapic_regs.isr[3] = 0;
-                lapic_regs.isr[4] = 0;
-                lapic_regs.isr[5] = 0;
-                lapic_regs.isr[6] = 0;
-                lapic_regs.isr[7] = 0;
+            // Clear it from being in service
+            int n = done_vector / 32;
+            int b = done_vector % 32;
+            lapic_regs.isr[n] &= ~BIT(b);
 
-                // if it is a passed through I/O APIC IRQ, run the ack function
-                for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-                    if (ioapic_regs.virq_passthrough_map[i].valid) {
-                        uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
-                        if (candidate_vector == lapic_regs.last_injected_vector) {
-                            if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                                ioapic_regs.virq_passthrough_map[i].ack_fn(
-                                    0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
-                            }
-                            break;
+            // if it is a passed through I/O APIC IRQ, run the ack function
+            for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
+                if (ioapic_regs.virq_passthrough_map[i].valid) {
+                    uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
+                    if (candidate_vector == done_vector) {
+                        if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
+                            ioapic_regs.virq_passthrough_map[i].ack_fn(0, i,
+                                                                       ioapic_regs.virq_passthrough_map[i].ack_data);
                         }
+                        break;
                     }
-                }
-
-                int next_irq_vector = get_next_queued_irq_vector();
-                if (next_irq_vector != -1) {
-                    inject_lapic_irq(GUEST_BOOT_VCPU_ID, next_irq_vector);
                 }
             }
 
+            int next_irq_vector = get_next_queued_irq_vector();
+            if (next_irq_vector != -1) {
+                inject_lapic_irq(GUEST_BOOT_VCPU_ID, next_irq_vector);
+            }
             break;
+        }
         case REG_LAPIC_LDR:
             lapic_regs.ldr = data;
             break;
@@ -702,6 +681,7 @@ void lapic_maintenance(void)
 
     if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
         // interrupt already in service, remains queued until guest issues EOI.
+        // @billn sus, might break level trigger
         return;
     }
 
@@ -721,8 +701,6 @@ void lapic_maintenance(void)
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, vm_entry_interruption);
     // Clear interrupt window exiting bit if set.
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-
-    lapic_regs.last_injected_vector = vector;
 }
 
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
@@ -748,7 +726,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     // 2. at some point in the future when the vCPU re-enable IRQs
     lapic_regs.irr[irr_n] |= BIT(irr_idx);
 
-    if (vcpu_can_take_irq(vcpu_id) && n_irq_in_service() == 0) {
+    if (vcpu_can_take_irq(vcpu_id)) {
         lapic_maintenance();
     } else {
         microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_EXIT_IRQ_WINDOW);
