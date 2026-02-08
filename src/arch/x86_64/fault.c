@@ -465,11 +465,13 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         if (access_type == 0) {
             // LOG_VMM("write\n");
             uint64_t data = *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx);
-            lapic_set_tpr(data);
+            lapic_set_tpr(data << 4);
             success = true;
         } else if (access_type == 1) {
             // LOG_VMM("read\n");
-            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = lapic_get_tpr();
+            uint8_t data = lapic_get_tpr();
+            data >> 4;
+            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = data;
             success = true;
         } else {
             // LOG_VMM_ERR("the fuck\n");
