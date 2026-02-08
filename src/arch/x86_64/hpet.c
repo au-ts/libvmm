@@ -241,7 +241,9 @@ uint64_t timer_n_compute_timeout_ns(int n)
 bool hpet_maintenance(void)
 {
     // @billn sus
-    // assert(timer_n_irq_edge_triggered(0));
+    assert(timer_n_irq_edge_triggered(0));
+    assert(timer_n_irq_edge_triggered(1));
+    assert(timer_n_irq_edge_triggered(2));
     // assert(!timer_n_can_interrupt(1));
     // assert(!timer_n_can_interrupt(2));
 
