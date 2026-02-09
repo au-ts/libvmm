@@ -59,7 +59,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert guest_serial_node is not None
 
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
-                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
+                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=True)
     client0.add_virtio_mmio_console(guest_serial_node, serial_system)
     client1.add_virtio_mmio_console(guest_serial_node, serial_system)
 
