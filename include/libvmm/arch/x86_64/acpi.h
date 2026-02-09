@@ -202,6 +202,8 @@ struct mcfg {
 
 // @billn have a way to detect and warn about collision
 #define ACPI_SCI_IRQ_PIN 7
+#define ACPI_PMT_FREQ_HZ 3579545
+#define ACPI_PMT_MAX_COUNT (1 << 24)
 
 struct FADT {
     struct   dst_header h;
