@@ -192,12 +192,14 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         return;
     }
 
-    if (ch == TIMER_DRV_CH_FOR_HPET_CH0 && timer_n_can_interrupt(0)) {
-        int ioapic_pin = get_timer_n_ioapic_pin(0);
-        if (!inject_ioapic_irq(0, ioapic_pin)) {
-            LOG_VMM_ERR("IRQ dropped on HPET comp 0, pin %d\n", ioapic_pin);
+    if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
+        if (timer_n_can_interrupt(0)) {
+            int ioapic_pin = get_timer_n_ioapic_pin(0);
+            if (!inject_ioapic_irq(0, ioapic_pin)) {
+                LOG_VMM_ERR("IRQ dropped on HPET comp 0, pin %d\n", ioapic_pin);
+            }
         }
-        if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
+        if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment) {
             uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
             hpet_regs.comparators[0].current_comparator = main_counter_val
                                                         + hpet_regs.comparators[0].comparator_increment;
@@ -206,17 +208,21 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
             }
         }
-    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1 && timer_n_can_interrupt(1)) {
-        int ioapic_pin = get_timer_n_ioapic_pin(1);
-        if (!inject_ioapic_irq(0, ioapic_pin)) {
-            LOG_VMM_ERR("IRQ dropped on HPET comp 1, pin %d\n", ioapic_pin);
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
+        if (timer_n_can_interrupt(1)) {
+            int ioapic_pin = get_timer_n_ioapic_pin(1);
+            if (!inject_ioapic_irq(0, ioapic_pin)) {
+                LOG_VMM_ERR("IRQ dropped on HPET comp 1, pin %d\n", ioapic_pin);
+            }
         }
 
         assert(!timer_n_in_periodic_mode(1));
-    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2 && timer_n_can_interrupt(2)) {
-        int ioapic_pin = get_timer_n_ioapic_pin(2);
-        if (!inject_ioapic_irq(0, ioapic_pin)) {
-            LOG_VMM_ERR("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
+        if (timer_n_can_interrupt(2)) {
+            int ioapic_pin = get_timer_n_ioapic_pin(2);
+            if (!inject_ioapic_irq(0, ioapic_pin)) {
+                LOG_VMM_ERR("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
+            }
         }
 
         assert(!timer_n_in_periodic_mode(2));
