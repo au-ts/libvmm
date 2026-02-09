@@ -96,7 +96,7 @@ void init(void)
         return;
     }
 
-    success = virtio_pci_ecam_init(0x10000000, 0x100000, 0x100000);
+    success = virtio_pci_ecam_init(0x10000000, 0x10000000, 0x100000);
     assert(success);
     success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
     assert(success);
