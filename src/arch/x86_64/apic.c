@@ -544,11 +544,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 
             lapic_regs.init_count = data;
             if (data > 0) {
-                LOG_VMM("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
+                LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
                         !!(lapic_regs.timer & BIT(16)));
 
                 uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
-                LOG_VMM("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
+                LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
 
                 lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
