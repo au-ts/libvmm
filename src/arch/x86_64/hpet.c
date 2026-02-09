@@ -86,15 +86,18 @@ struct hpet_regs {
 
 static uint64_t hpet_counter_offset = 0;
 
+#define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
+#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | BIT(42)) // ioapic pin 10, if no legacy
+#define TIM1_CONF_MASK (Tn_SIZE_CAP | BIT(43)) // ioapic pin 11, if no legacy
+#define TIM2_CONF_MASK (Tn_SIZE_CAP | BIT(44)) // ioapic pin 12, if no legacy
+
 static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
     // tick period = 1ns, same as sDDF timer interface.
-    .general_capabilities = (REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP
-                             | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT))
-                          | VENDOR_ID | COUNT_SIZE_CAP,
-    .comparators[0] = { .config = Tn_SIZE_CAP | Tn_PER_INT_CAP | BIT(42) }, // ioapic pin 10, if no legacy
-    .comparators[1] = { .config = Tn_SIZE_CAP | BIT(43) }, // ioapic pin 11, if no legacy
-    .comparators[2] = { .config = Tn_SIZE_CAP | BIT(44) }, // ioapic pin 12, if no legacy
+    .general_capabilities = GENERAL_CAP_MASK,
+    .comparators[0] = { .config = TIM0_CONF_MASK },
+    .comparators[1] = { .config = TIM1_CONF_MASK },
+    .comparators[2] = { .config = TIM2_CONF_MASK },
 };
 
 static uint64_t time_now_64(void)
@@ -154,9 +157,14 @@ static uint8_t get_timer_n_ioapic_pin(int n)
     return (hpet_regs.comparators[n].config >> 9) & 0x1f; // Tn_INT_ROUTE_CNF
 }
 
+static bool counter_on(void)
+{
+    return (hpet_regs.general_config & ENABLE_CNF);
+}
+
 static bool timer_n_can_interrupt(int n)
 {
-    return (hpet_regs.general_config & ENABLE_CNF) && (hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
+    return counter_on() && (hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
 }
 
 static bool timer_n_in_periodic_mode(int n)
@@ -202,9 +210,9 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
         int ioapic_pin = get_timer_n_ioapic_pin(2);
         if (!inject_ioapic_irq(0, ioapic_pin)) {
-            LOG_VMM_ERR("IRQ dropped on HPET comp 2\n");
+            LOG_VMM_ERR("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
         } else {
-            LOG_HPET("IRQ injected on HPET comp #2\n");
+            LOG_HPET("IRQ injected on HPET comp #2, pin %d\n", ioapic_pin);
         }
 
         assert(!timer_n_in_periodic_mode(2));
@@ -227,7 +235,8 @@ uint64_t timer_n_compute_timeout_ns(int n)
         // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
         delay_ns += (1ull << 32) - main_counter_val;
         delay_ns += hpet_regs.comparators[n].current_comparator;
-        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1 << 32) - main_counter_val, hpet_regs.comparators[n].current_comparator, delay_ns);
+        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1 << 32) - main_counter_val,
+                 hpet_regs.comparators[n].current_comparator, delay_ns);
         // }
         if (delay_ns > (1ull << 32)) {
             LOG_HPET("absurd!!\n");
@@ -248,8 +257,9 @@ bool hpet_maintenance(void)
     // assert(!timer_n_can_interrupt(2));
 
     // LOG_VMM("hpet maintenance, main_counter_val = %lu, comp0 = %lu\n", main_counter_val, hpet_regs.comparators[0].comparator);
-    LOG_HPET("timer 0 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(0), timer_n_in_periodic_mode(0), timer_n_forced_32(0));
-    if (timer_n_can_interrupt(0)) {
+    LOG_HPET("timer 0 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(0), timer_n_in_periodic_mode(0),
+             timer_n_forced_32(0));
+    if (counter_on()) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
 
         if (timer_n_in_periodic_mode(0)) {
@@ -273,7 +283,7 @@ bool hpet_maintenance(void)
         }
     }
 
-    if (timer_n_can_interrupt(1)) {
+    if (counter_on()) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
         if (main_counter_val < hpet_regs.comparators[1].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[1].current_comparator - main_counter_val;
@@ -284,7 +294,7 @@ bool hpet_maintenance(void)
         }
     }
 
-    if (timer_n_can_interrupt(2)) {
+    if (counter_on()) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
         if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
             uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
@@ -415,6 +425,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+            hpet_regs.general_config |= GENERAL_CAP_MASK;
+
             if (!(old_config & ENABLE_CNF) && hpet_regs.general_config & ENABLE_CNF) {
                 reset_main_counter();
             }
@@ -435,6 +447,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+            hpet_regs.comparators[0].config |= TIM0_CONF_MASK;
+
         } else if (offset == timer_n_config_reg_mmio_off(1)) {
             if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.comparators[1].config >> 32) << 32;
@@ -447,6 +461,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
+            hpet_regs.comparators[1].config |= TIM1_CONF_MASK;
+
         } else if (offset == timer_n_config_reg_mmio_off(2)) {
             if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 uint64_t curr_hi = (hpet_regs.comparators[2].config >> 32) << 32;
@@ -458,6 +474,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
                 return false;
             }
+
+            hpet_regs.comparators[2].config |= TIM2_CONF_MASK;
 
         } else if (offset == timer_n_comparator_mmio_off(0)) {
             if (timer_n_in_periodic_mode(0)) {
