@@ -404,12 +404,14 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
 
-    if (rip > 0xfffff00000000000) {
-        LOG_FAULT("vmm exit in kernel at rip 0x%lx\n", rip);
-        fault_cond = true;
-    } else {
-        fault_cond = false;
-    }
+    // if (rip > 0xfffff00000000000) {
+    //     LOG_FAULT("vmm exit in kernel at rip 0x%lx\n", rip);
+    //     fault_cond = true;
+    // } else {
+    //     fault_cond = false;
+    // }
+
+    LOG_FAULT("handling vmexit reason %s\n", fault_to_string(f_reason));
 
     seL4_VCPUContext vctx;
     vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
