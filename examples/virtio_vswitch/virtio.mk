@@ -88,6 +88,8 @@ all: ${IMAGE_FILE}
 $(IMAGES): libsddf_util_debug.a libvmm.a
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
+	cp client_vmm.elf client_vmm0.elf
+	cp client_vmm.elf client_vmm1.elf
 	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
@@ -97,19 +99,23 @@ endif
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM0.data client_vmm.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM1.data client_vmm1.elf
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM1.data client_vmm1.elf
 	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM1.data client_vmm1.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \

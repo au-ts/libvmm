@@ -36,13 +36,13 @@ guest_configs: dict[str, GuestConfig] = {
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client0 VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm.elf", priority=100)
+    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=100)
     vm_client0 = VirtualMachine("client0_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
     # Client1 VM
-    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm.elf", priority=100)
+    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=100)
     vm_client1 = VirtualMachine("client1_linux", [VirtualMachine.Vcpu(id=0)])
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
