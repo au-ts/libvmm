@@ -70,6 +70,13 @@
 #define Tn_INT_ENB_CNF BIT(2) // irq on
 #define Tn_INT_TYPE_CNF BIT(1) // irq type, 0 = edge, 1 = level
 #define Tn_TYPE_CNF BIT(3) // periodic mode on
+#define Tn_INT_ROUTE_CNF_SHIFT 9
+#define Tn_INT_ROUTE_CAP_SHIFT 32
+
+// I/O APIC routing if no legacy
+#define TIM0_IOAPIC_PIN 16
+#define TIM1_IOAPIC_PIN 17
+#define TIM2_IOAPIC_PIN 18
 
 struct comparator_regs {
     uint64_t config;
@@ -87,9 +94,9 @@ struct hpet_regs {
 static uint64_t hpet_counter_offset = 0;
 
 #define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
-#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | BIT(42)) // ioapic pin 10, if no legacy
-#define TIM1_CONF_MASK (Tn_SIZE_CAP | BIT(43)) // ioapic pin 11, if no legacy
-#define TIM2_CONF_MASK (Tn_SIZE_CAP | BIT(44)) // ioapic pin 12
+#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | (TIM0_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM1_CONF_MASK (Tn_SIZE_CAP | 17 << 9 | (TIM1_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM2_CONF_MASK (Tn_SIZE_CAP | 18 << 9 | (TIM2_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
 
 static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
@@ -185,14 +192,11 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         return;
     }
 
-    if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
+    if (ch == TIMER_DRV_CH_FOR_HPET_CH0 && timer_n_can_interrupt(0)) {
         int ioapic_pin = get_timer_n_ioapic_pin(0);
         if (!inject_ioapic_irq(0, ioapic_pin)) {
             LOG_VMM_ERR("IRQ dropped on HPET comp 0, pin %d\n", ioapic_pin);
-        } else {
-            LOG_HPET("IRQ injected on HPET comp #0, pin %d\n", ioapic_pin);
         }
-
         if (timer_n_in_periodic_mode(0) && timer_n_can_interrupt(0)) {
             uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
             hpet_regs.comparators[0].current_comparator = main_counter_val
@@ -202,26 +206,20 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
             }
         }
-    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1 && timer_n_can_interrupt(1)) {
         int ioapic_pin = get_timer_n_ioapic_pin(1);
         if (!inject_ioapic_irq(0, ioapic_pin)) {
             LOG_VMM_ERR("IRQ dropped on HPET comp 1, pin %d\n", ioapic_pin);
-        } else {
-            LOG_HPET("IRQ injected on HPET comp #1, pin %d\n", ioapic_pin);
         }
 
         assert(!timer_n_in_periodic_mode(1));
-    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
+    } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2 && timer_n_can_interrupt(2)) {
         int ioapic_pin = get_timer_n_ioapic_pin(2);
         if (!inject_ioapic_irq(0, ioapic_pin)) {
             LOG_VMM_ERR("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
-        } else {
-            LOG_HPET("IRQ injected on HPET comp #2, pin %d\n", ioapic_pin);
         }
 
         assert(!timer_n_in_periodic_mode(2));
-    } else {
-        assert(false);
     }
 }
 
