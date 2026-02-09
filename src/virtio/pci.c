@@ -303,7 +303,15 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
         dev->regs.QueueSel = data;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
-        // what if different size configured?
+        if (dev->regs.QueueSel < dev->num_vqs) {
+            struct virtq *virtq = get_current_virtq_by_handler(dev);
+            virtq->num = (unsigned int)data;
+        } else {
+            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n",
+                        dev->regs.QueueSel, dev->num_vqs);
+            success = false;
+        }
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
         if (data == 0x1) {

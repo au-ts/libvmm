@@ -26,12 +26,6 @@
 
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
 
-struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
-{
-    assert(dev->regs.QueueSel < dev->num_vqs);
-    return &dev->vqs[dev->regs.QueueSel].virtq;
-}
-
 int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
 {
     int success = 1;
