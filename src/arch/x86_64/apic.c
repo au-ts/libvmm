@@ -26,6 +26,8 @@
 /* Uncomment this to enable debug logging */
 // #define DEBUG_APIC
 
+extern bool fault_cond;
+
 #if defined(DEBUG_APIC)
 #define LOG_APIC(...) do{ printf("%s|APIC: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #else
@@ -511,7 +513,9 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                             delivery_mode, destination);
             }
 
-            LOG_VMM("icr write 0x%lx\n", icr);
+            LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, lapic_regs.tpr);
+            if (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RIP) >= 0xfffff00000000000)
+                fault_cond = true;
             break;
         case REG_LAPIC_ICR_HIGH:
             lapic_regs.icr_high = data;
@@ -540,11 +544,11 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 
             lapic_regs.init_count = data;
             if (data > 0) {
-                LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
-                         !!(lapic_regs.timer & BIT(16)));
+                LOG_VMM("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
+                        !!(lapic_regs.timer & BIT(16)));
 
                 uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
-                LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
+                LOG_VMM("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
 
                 lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
@@ -639,6 +643,9 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
 
                 uint64_t new_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
 
+                LOG_VMM("ioapic pin %d reprogram 0x%lx, masked %d\n", redirection_reg_idx, new_reg,
+                        !!(ioapic_regs.ioredtbl[redirection_reg_idx] & BIT(16)));
+
                 // If an I/O APIC IRQ pin goes from masked to unmasked and there are passed through
                 // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
                 // in the virtual I/O APIC, the real IRQ doesn't get stuck in waiting for ACK.
@@ -673,6 +680,7 @@ void lapic_maintenance(void)
     int vector = get_next_queued_irq_vector();
     if (vector == -1) {
         // no pending IRQ to inject
+        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
         return;
     }
 
@@ -682,6 +690,7 @@ void lapic_maintenance(void)
     if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
         // interrupt already in service, remains queued until guest issues EOI.
         // @billn sus, might break level trigger
+        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
         return;
     }
 
