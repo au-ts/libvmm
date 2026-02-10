@@ -173,7 +173,7 @@ void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit) {
 void vcpu_print_regs(size_t vcpu_id)
 {
     seL4_Word cppc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
-    seL4_Word irq_info = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR);
+    seL4_Word irq_info = microkit_mr_get(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR);
     seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
     seL4_Word f_qual = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
@@ -240,7 +240,7 @@ void vcpu_print_regs(size_t vcpu_id)
     if (guest_paging_on()) {
         if (ins_len) {
             uint64_t gpa;
-            int bytes_remaining;
+            uint64_t bytes_remaining;
             assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
             assert(bytes_remaining >= ins_len);
             LOG_VMM_ERR("faulting instruction:\n");

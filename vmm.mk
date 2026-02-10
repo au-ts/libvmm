@@ -47,7 +47,6 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/e820.c \
 			   src/arch/x86_64/uefi.c \
 			   src/arch/x86_64/com.c \
-			   src/arch/x86_64/pvclock.c \
 			   src/arch/x86_64/qemu/bios_linker_loader.c \
 			   src/arch/x86_64/qemu/fw_cfg.c
 
@@ -85,7 +84,7 @@ OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
 
 # Generate dependencies automatically
-CFLAGS += -MD
+CFLAGS += -MD -Wall -Werror -Wno-unused-function -fsanitize=undefined -fsanitize-trap=undefined
 
 # Force rebuid if CFLAGS changes.
 # This will pick up (among other things} changes

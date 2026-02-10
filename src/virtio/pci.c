@@ -736,28 +736,28 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t qu
     switch (cap->cfg_type) {
     case VIRTIO_PCI_CAP_COMMON_CFG:
         if (is_read) {
-            success = virtio_pci_common_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
+            success = virtio_pci_common_reg_read(dev, vcpu_id, bar_offset - cap->offset, (uint32_t *)&data);
         } else {
             success = virtio_pci_common_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_DEVICE_CFG:
         if (is_read) {
-            success = virtio_pci_device_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
+            success = virtio_pci_device_reg_read(dev, vcpu_id, bar_offset - cap->offset, (uint32_t *)&data);
         } else {
             success = virtio_pci_device_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_NOTIFY_CFG:
         if (is_read) {
-            success = virtio_pci_notify_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
+            success = virtio_pci_notify_reg_read(dev, vcpu_id, bar_offset - cap->offset, (uint32_t *)&data);
         } else {
             success = virtio_pci_notify_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
         break;
     case VIRTIO_PCI_CAP_ISR_CFG:
         if (is_read) {
-            success = virtio_pci_isr_reg_read(dev, vcpu_id, bar_offset - cap->offset, &data);
+            success = virtio_pci_isr_reg_read(dev, vcpu_id, bar_offset - cap->offset, (uint32_t *)&data);
         } else {
             success = virtio_pci_isr_reg_write(dev, vcpu_id, bar_offset - cap->offset, data);
         }
@@ -811,7 +811,7 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
 // @billn hack cdrom passthrough
 #if defined(CONFIG_ARCH_X86_64)
     if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
-        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, data);
+        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, (uint32_t *)data);
     }
 #endif
 
@@ -990,7 +990,7 @@ static bool pci_ecam_handle_access(size_t vcpu_id, size_t offset, size_t qualifi
 
     if (ept_fault_is_read(qualification)) {
         uint64_t value;
-        bool success = pci_config_space_read_access(bus, dev, func, reg_off, (uint32_t *)&value, access_width_bytes);
+        bool success = pci_config_space_read_access(bus, dev, func, reg_off, &value, access_width_bytes);
         assert(mem_read_set_data(decoded_ins, qualification, vctx, value));
         return success;
     } else {

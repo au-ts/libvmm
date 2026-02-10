@@ -79,14 +79,14 @@ uint64_t gpa_to_pa(uint64_t gpa)
         // @billn ugly one-to-one hack
         return gpa;
     } else if (gpa < high_ram_base_gpa){
-        return 0x20000000 + gpa;
+        return ram_base_gpa + gpa;
     } else {
         LOG_VMM_ERR("gpa_to_pa(): GPA 0x%lx not in any valid guest memory regions\n", gpa);
         return 0;
     }
 }
 
-bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remaining) {
+bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, uint64_t *bytes_remaining) {
     // Make sure that paging is on
     if (!guest_paging_on()) {
         *gpa = gva;
