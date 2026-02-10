@@ -558,7 +558,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             lapic_regs.init_count = data;
             if (data > 0) {
                 LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
-                        !!(lapic_regs.timer & BIT(16)));
+                         !!(lapic_regs.timer & BIT(16)));
 
                 uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
                 LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
@@ -656,8 +656,8 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
 
                 uint64_t new_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
 
-                LOG_VMM("ioapic pin %d reprogram 0x%lx, masked %d\n", redirection_reg_idx, new_reg,
-                        !!(ioapic_regs.ioredtbl[redirection_reg_idx] & BIT(16)));
+                LOG_APIC("ioapic pin %d reprogram 0x%lx, masked %d\n", redirection_reg_idx, new_reg,
+                         !!(ioapic_regs.ioredtbl[redirection_reg_idx] & BIT(16)));
 
                 // If an I/O APIC IRQ pin goes from masked to unmasked and there are passed through
                 // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
