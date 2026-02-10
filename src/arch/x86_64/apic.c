@@ -707,7 +707,7 @@ void lapic_maintenance(void)
     uint32_t vm_entry_interruption = (uint32_t)vector;
     vm_entry_interruption |= BIT(31); // valid bit
 
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_ENTRY_MR, vm_entry_interruption);
+    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vm_entry_interruption);
     // Clear interrupt window exiting bit if set.
     microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
 }

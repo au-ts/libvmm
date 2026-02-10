@@ -74,7 +74,7 @@ void pci_write_32(uint8_t bus, uint8_t dev, uint8_t func, uint8_t off, uint32_t 
                                  data);
 }
 
-bool find_pci_device(uint8_t class, uint8_t subclass, uint8_t *bus, uint8_t *dev, uint8_t *func)
+bool find_pci_device(uint8_t class, uint8_t subclass, uint16_t *bus, uint16_t *dev, uint16_t *func)
 {
     int candidate_bus = 0;
     int candidate_dev = 0;

@@ -607,7 +607,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         break;
     }
 
-stop_processing:
+// TODO: handle unused label
+// stop_processing:
     *num_reqs_consumed = nums_consumed;
 
     /* Update virtq index to the next available request to be handled */
@@ -622,11 +623,13 @@ static bool virtio_blk_queue_notify(struct virtio_device *dev)
     LOG_BLOCK("virtio_blk_queue_notify calling handle_client_requests\n");
     bool consumption_status = handle_client_requests(dev, &nums_consumed);
 
-    bool virq_inject_success = true;
+    // TODO: handle unused variable
+    // bool virq_inject_success = true;
     if (!consumption_status) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
         virtio_blk_set_interrupt_status(dev, true, false);
-        virq_inject_success = virtio_blk_virq_inject(dev);
+        // virq_inject_success = virtio_blk_virq_inject(dev);
+        virtio_blk_virq_inject(dev);
     }
 
     struct virtio_blk_device *state = device_state(dev);

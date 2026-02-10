@@ -161,7 +161,7 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
 
     uint64_t rip_gpa;
-    int bytes_remaining;
+    uint64_t bytes_remaining;
     assert(gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining));
 
     // @billn fix lazyness
@@ -273,7 +273,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     for (int i = 0; i < NUM_MOV_IMM_OPCODES; i++) {
         if (instruction_buf[parsed_byte] == mov_imm_opcodes[i]) {
             opcode_valid = true;
-            uint8_t opcode = instruction_buf[parsed_byte];
+            // TODO: handle unused variable
+            // uint8_t opcode = instruction_buf[parsed_byte];
 
             assert(guest_in_64_bits());
 

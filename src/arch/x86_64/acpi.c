@@ -188,7 +188,8 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    // TODO: handle unused variable
+    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);
@@ -223,7 +224,8 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    // TODO: handle unused variable
+    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);

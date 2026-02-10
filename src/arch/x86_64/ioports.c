@@ -111,7 +111,7 @@ int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_l
     int iteration = 0;
     for (; iteration < max_iterations && data_index < data_len; iteration++) {
         uint64_t dest_gpa;
-        int bytes_to_page_boundary;
+        uint64_t bytes_to_page_boundary;
         assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &bytes_to_page_boundary));
         char *dest = gpa_to_vaddr(dest_gpa);
 
