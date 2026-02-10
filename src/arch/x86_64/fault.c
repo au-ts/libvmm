@@ -462,17 +462,21 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     case CONTROL_REGISTER: {
         // @billn update logs if we traps other control registers
         // LOG_VMM("CR8 access via MOV\n");
+        uint8_t cr_n = (qualification & 0xf);
         uint8_t access_type = (qualification >> 4) & 3;
         uint8_t reg_idx = (qualification >> 8) & 0xf;
+
+        assert(cr_n == 8);
+
         if (access_type == 0) {
             // LOG_VMM("write\n");
             uint64_t data = *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx);
-            lapic_set_tpr(data << 4);
+            lapic_set_tpr((data & 0xf) << 4);
             success = true;
         } else if (access_type == 1) {
             // LOG_VMM("read\n");
             uint8_t data = lapic_get_tpr();
-            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = data >> 4;
+            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = (data & 0xf0) >> 4;
             success = true;
         } else {
             // LOG_VMM_ERR("the fuck\n");
