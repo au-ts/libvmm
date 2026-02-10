@@ -367,6 +367,7 @@ static bool hpet_fault_on_comparator(uint64_t offset, uint8_t *comparator)
 
 static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins)
 {
+    assert(comparator <= 2);
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         *data = hpet_regs.comparators[comparator].config & 0xffffffff;
     } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
@@ -381,6 +382,7 @@ static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, de
 
 static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins)
 {
+    assert(comparator <= 2);
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         *data = hpet_regs.comparators[comparator].current_comparator & 0xffffffff;
     } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
@@ -395,10 +397,12 @@ static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data
 
 static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins)
 {
-
+    assert(comparator <= 2);
     bool periodic_old = timer_n_in_periodic_mode(comparator);
 
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
+    // uint64_t reg_old = regs->config;
+
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         uint64_t curr_hi = (regs->config >> 32) << 32;
         uint64_t new_low = data & 0xffffffff;
@@ -409,6 +413,8 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
         LOG_VMM_ERR("Unsupported access width on HPET comparator 0x%x\n", comparator);
         return false;
     }
+
+    LOG_HPET("comp %d write %lx, old 0x%lx\n", comparator, data, reg_old);
 
     regs->config |= regs->config_mask;
 
@@ -424,6 +430,8 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
 
 static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins)
 {
+    assert(comparator <= 2);
+
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
     if (timer_n_in_periodic_mode(comparator)) {
         // TODO: only first comparator expected to be periodic.
