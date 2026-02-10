@@ -23,7 +23,7 @@
 // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_HPET
+// #define DEBUG_HPET
 
 #if defined(DEBUG_HPET)
 #define LOG_HPET(...) do{ printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -74,9 +74,9 @@
 #define Tn_INT_ROUTE_CAP_SHIFT 32
 
 // I/O APIC routing if no legacy
-#define TIM0_IOAPIC_PIN 16
-#define TIM1_IOAPIC_PIN 17
-#define TIM2_IOAPIC_PIN 18
+#define TIM0_IOAPIC_PIN 13
+#define TIM1_IOAPIC_PIN 14
+#define TIM2_IOAPIC_PIN 15
 
 struct comparator_regs {
     uint64_t config;
@@ -96,8 +96,8 @@ static uint64_t hpet_counter_offset = 0;
 
 #define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
 #define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | (TIM0_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM1_CONF_MASK (Tn_SIZE_CAP | 17 << 9 | (TIM1_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM2_CONF_MASK (Tn_SIZE_CAP | 18 << 9 | (TIM2_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM1_CONF_MASK (Tn_SIZE_CAP | (TIM1_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM2_CONF_MASK (Tn_SIZE_CAP | (TIM2_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
 
 static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
