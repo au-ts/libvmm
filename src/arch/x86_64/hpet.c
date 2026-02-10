@@ -80,6 +80,7 @@
 
 struct comparator_regs {
     uint64_t config;
+    uint64_t config_mask;
     uint64_t current_comparator;
     uint64_t comparator_increment;
 };
@@ -102,9 +103,9 @@ static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
     // tick period = 1ns, same as sDDF timer interface.
     .general_capabilities = GENERAL_CAP_MASK,
-    .comparators[0] = { .config = TIM0_CONF_MASK },
-    .comparators[1] = { .config = TIM1_CONF_MASK },
-    .comparators[2] = { .config = TIM2_CONF_MASK },
+    .comparators[0] = { .config = TIM0_CONF_MASK, .config_mask = TIM0_CONF_MASK },
+    .comparators[1] = { .config = TIM1_CONF_MASK, .config_mask = TIM1_CONF_MASK },
+    .comparators[2] = { .config = TIM2_CONF_MASK, .config_mask = TIM2_CONF_MASK },
 };
 
 static uint64_t time_now_64(void)
@@ -255,7 +256,7 @@ uint64_t timer_n_compute_timeout_ns(int n)
     return delay_ns;
 }
 
-bool hpet_maintenance(int written_reg)
+bool hpet_maintenance(uint8_t comparator)
 {
     if (!counter_on()) {
         return true;
@@ -266,7 +267,7 @@ bool hpet_maintenance(int written_reg)
     assert(timer_n_irq_edge_triggered(1));
     assert(timer_n_irq_edge_triggered(2));
 
-    if (written_reg == timer_n_comparator_mmio_off(0)) {
+    if (comparator == 0) {
 
         uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
 
@@ -297,7 +298,7 @@ bool hpet_maintenance(int written_reg)
         }
     }
 
-    if (written_reg == timer_n_comparator_mmio_off(1)) {
+    if (comparator == 1) {
         LOG_HPET("hpet_maintenance(): timer 1 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(1),
                  timer_n_in_periodic_mode(1), timer_n_forced_32(1));
         uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
@@ -310,7 +311,7 @@ bool hpet_maintenance(int written_reg)
         }
     }
 
-    if (written_reg == timer_n_comparator_mmio_off(2)) {
+    if (comparator == 2) {
         LOG_HPET("hpet_maintenance(): timer 2 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(2),
                  timer_n_in_periodic_mode(2), timer_n_forced_32(2));
         uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
@@ -324,6 +325,93 @@ bool hpet_maintenance(int written_reg)
     }
 
     return true;
+}
+
+static bool hpet_fault_on_config(uint64_t offset, uint8_t *comparator) {
+    if (offset == timer_n_config_reg_mmio_off(0)) {
+        *comparator = 0;
+    } else if (offset == timer_n_config_reg_mmio_off(1)) {
+        *comparator = 1;
+    } else if (offset == timer_n_config_reg_mmio_off(2)) {
+        *comparator = 2;
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+static bool hpet_fault_on_comparator(uint64_t offset, uint8_t *comparator) {
+    if (offset == timer_n_comparator_mmio_off(0)) {
+        *comparator = 0;
+    } else if (offset == timer_n_comparator_mmio_off(1)) {
+        *comparator = 1;
+    } else if (offset == timer_n_comparator_mmio_off(2)) {
+        *comparator = 2;
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins) {
+    if (mem_access_width_to_bytes(decoded_ins) == 4) {
+        *data = hpet_regs.comparators[comparator].config & 0xffffffff;
+    } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+        *data = hpet_regs.comparators[comparator].config;
+    } else {
+        LOG_VMM_ERR("Unsupported access width on HPET config register, comparator 0x%x\n", comparator);
+        return false;
+    }
+
+    return true;
+}
+
+static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins) {
+    if (mem_access_width_to_bytes(decoded_ins) == 4) {
+        *data = hpet_regs.comparators[comparator].current_comparator & 0xffffffff;
+    } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+        *data = hpet_regs.comparators[comparator].current_comparator;
+    } else {
+        LOG_VMM_ERR("Unsupported access width on HPET comparator register, comparator 0x%x\n", comparator);
+        return false;
+    }
+
+    return true;
+}
+
+static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins) {
+    struct comparator_regs *regs = &hpet_regs.comparators[comparator];
+    if (mem_access_width_to_bytes(decoded_ins) == 4) {
+        uint64_t curr_hi = (regs->config >> 32) << 32;
+        uint64_t new_low = data & 0xffffffff;
+        regs->config = curr_hi | new_low;
+    } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+        regs->config = data;
+    } else {
+        LOG_VMM_ERR("Unsupported access width on HPET comparator 0x%x\n", comparator);
+        return false;
+    }
+
+    regs->config |= regs->config_mask;
+
+    return true;
+}
+
+static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins) {
+    struct comparator_regs *regs = &hpet_regs.comparators[comparator];
+    if (timer_n_in_periodic_mode(comparator)) {
+        // TODO: only first comparator expected to be periodic.
+        assert(comparator == 0);
+        regs->current_comparator = 0;
+        regs->comparator_increment = data;
+    } else {
+        regs->current_comparator = data;
+        regs->comparator_increment = 0;
+    }
+
+    return hpet_maintenance(comparator);
 }
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
@@ -341,6 +429,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
 
     // vcpu_print_regs(0);
 
+    uint8_t comparator;
     if (ept_fault_is_read(qualification)) {
         uint64_t data;
         if (offset == GENERAL_CAP_REG_MMIO_OFF) {
@@ -377,66 +466,10 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
         } else if (offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
             data = main_counter_value() >> 32;
 
-        } else if (offset == timer_n_config_reg_mmio_off(0)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[0].config & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[0].config;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-        } else if (offset == timer_n_config_reg_mmio_off(1)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[1].config & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[1].config;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-        } else if (offset == timer_n_config_reg_mmio_off(2)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[2].config & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[2].config;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-        } else if (offset == timer_n_comparator_mmio_off(0)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[0].current_comparator & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[0].current_comparator;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-        } else if (offset == timer_n_comparator_mmio_off(1)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[1].current_comparator & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[1].current_comparator;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-        } else if (offset == timer_n_comparator_mmio_off(2)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                data = hpet_regs.comparators[2].current_comparator & 0xffffffff;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                data = hpet_regs.comparators[2].current_comparator;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
+        } else if (hpet_fault_on_config(offset, &comparator)) {
+            return hpet_fault_handle_config_read(comparator, &data, decoded_ins);
+        } else if (hpet_fault_on_comparator(offset, &comparator)) {
+            return hpet_fault_handle_comparator_read(comparator, &data, decoded_ins);
         } else {
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%x\n", offset);
             return false;
@@ -474,70 +507,10 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
             assert(data == 0);
             hpet_counter_offset = time_now_64();
-
-        } else if (offset == timer_n_config_reg_mmio_off(0)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                uint64_t curr_hi = (hpet_regs.comparators[0].config >> 32) << 32;
-                uint64_t new_low = data & 0xffffffff;
-                hpet_regs.comparators[0].config = curr_hi | new_low;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                hpet_regs.comparators[0].config = data;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-            hpet_regs.comparators[0].config |= TIM0_CONF_MASK;
-
-        } else if (offset == timer_n_config_reg_mmio_off(1)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                uint64_t curr_hi = (hpet_regs.comparators[1].config >> 32) << 32;
-                uint64_t new_low = data & 0xffffffff;
-                hpet_regs.comparators[1].config = curr_hi | new_low;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                hpet_regs.comparators[1].config = data;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-            hpet_regs.comparators[1].config |= TIM1_CONF_MASK;
-
-        } else if (offset == timer_n_config_reg_mmio_off(2)) {
-            if (mem_access_width_to_bytes(decoded_ins) == 4) {
-                uint64_t curr_hi = (hpet_regs.comparators[2].config >> 32) << 32;
-                uint64_t new_low = data & 0xffffffff;
-                hpet_regs.comparators[2].config = curr_hi | new_low;
-            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
-                hpet_regs.comparators[2].config = data;
-            } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
-                return false;
-            }
-
-            hpet_regs.comparators[2].config |= TIM2_CONF_MASK;
-
-        } else if (offset == timer_n_comparator_mmio_off(0)) {
-            if (timer_n_in_periodic_mode(0)) {
-                hpet_regs.comparators[0].current_comparator = 0;
-                hpet_regs.comparators[0].comparator_increment = data;
-            } else {
-                hpet_regs.comparators[0].current_comparator = data;
-                hpet_regs.comparators[0].comparator_increment = 0;
-            }
-            return hpet_maintenance(offset);
-        } else if (offset == timer_n_comparator_mmio_off(1)) {
-            assert(!timer_n_in_periodic_mode(1));
-
-            hpet_regs.comparators[1].current_comparator = data;
-            hpet_regs.comparators[1].comparator_increment = 0;
-            return hpet_maintenance(offset);
-        } else if (offset == timer_n_comparator_mmio_off(2)) {
-            assert(!timer_n_in_periodic_mode(2));
-
-            hpet_regs.comparators[2].current_comparator = data;
-            hpet_regs.comparators[2].comparator_increment = 0;
-            return hpet_maintenance(offset);
+        } else if (hpet_fault_on_config(offset, &comparator)) {
+            return hpet_fault_handle_config_write(comparator, data, decoded_ins);
+        } else if (hpet_fault_on_comparator(offset, &comparator)) {
+            return hpet_fault_handle_comparator_write(comparator, data, decoded_ins);
         } else {
             LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
             return false;
