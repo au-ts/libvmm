@@ -69,6 +69,8 @@ extern uint64_t tsc_hz;
 #define CPUID_01_EDX_TM BIT(29) // TM: Thermal Monitor
 #define CPUID_01_EDX_PBE BIT(31) // PBE: Pending Break Enable
 
+#define CPUID_06_EAX_ARAT BIT(2) // APIC-Timer-always-running
+
 #define CPUID_01_EDX_WINDOWS_MANDATORY 0x789f3fdull
 
 #define CPUID_07_00_EBX_FSGSBASE BIT(0)
@@ -354,10 +356,15 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
               (uint32_t *)&vctx->edx);
         break;
 
+    case 0x6:
+        vctx->eax = CPUID_06_EAX_ARAT;
+        vctx->ebx = 0;
+        vctx->ecx = 0;
+        vctx->edx = 0;
+        break;
     // @billn todo double check if these are needed
     case 0x3:
     case 0x5:
-    case 0x6:
     case 0x8:
     case 0x9:
     case 0xa:
