@@ -500,7 +500,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
             // @billn sus, handle other types of IPIs
             uint8_t delivery_mode = ((icr >> 8) & 0x7);
             uint8_t destination = (icr >> 56) & 0xff;
-            if (delivery_mode == 0) {
+            if (delivery_mode == 0 || delivery_mode == 5) {
                 // fixed mode
                 assert(destination == 0);
                 uint8_t vector = icr & 0xff;
@@ -716,7 +716,8 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
-    if (vector < 32) {
+    // allow vector == 0 as an INIT IPI have vector == 0.
+    if (vector < 32 && vector > 0) {
         LOG_VMM_ERR("IRQ Vector %d is archtecturally reserved! Will not inject.\n", vector);
         return false;
     }
