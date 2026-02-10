@@ -105,6 +105,19 @@ static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
     return (uint64_t)(tmp / hz);
 }
 
+static int n_irq_in_service(void)
+{
+    int n = 0;
+    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
+        for (int j = 31; j >= 0; j--) {
+            if (lapic_regs.isr[i] & BIT(j)) {
+                n += 1;
+            }
+        }
+    }
+    return n;
+}
+
 static bool get_highest_vector_in_service(uint8_t *ret)
 {
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
@@ -735,6 +748,11 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     // 1. immediately if the vCPU can take it and LAPIC have no in service IRQ, @billn the second part is a bit sus
     // 2. at some point in the future when the vCPU re-enable IRQs
     lapic_regs.irr[irr_n] |= BIT(irr_idx);
+
+    // @billn hack, something seems to be sus with nested interrupts
+    if (n_irq_in_service() != 0) {
+        return true;
+    }
 
     if (vcpu_can_take_irq(vcpu_id)) {
         lapic_maintenance();
