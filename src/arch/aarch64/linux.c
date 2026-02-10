@@ -70,9 +70,10 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     memcpy((char *)kernel_dest, (char *)kernel, kernel_size);
     // Copy the guest device tree blob into the right location
     // First check that the DTB given is actually a DTB!
-    struct dtb_header *dtb_header = (struct dtb_header *) dtb_src;
-    assert(dtb_check_magic(dtb_header));
-    if (!dtb_check_magic(dtb_header)) {
+    struct dtb_header dtb_header = {};
+    memcpy((char *)&dtb_header, (char *)dtb_src, sizeof(struct dtb_header));
+    assert(dtb_check_magic(&dtb_header));
+    if (!dtb_check_magic(&dtb_header)) {
         LOG_VMM_ERR("Given DTB does not match DTB magic.\n");
         return 0;
     }
