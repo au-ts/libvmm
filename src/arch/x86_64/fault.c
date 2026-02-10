@@ -472,8 +472,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         } else if (access_type == 1) {
             // LOG_VMM("read\n");
             uint8_t data = lapic_get_tpr();
-            data >> 4;
-            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = data;
+            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = data >> 4;
             success = true;
         } else {
             // LOG_VMM_ERR("the fuck\n");

@@ -243,7 +243,7 @@ uint64_t timer_n_compute_timeout_ns(int n)
         // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
         delay_ns += (1ull << 32) - main_counter_val;
         delay_ns += hpet_regs.comparators[n].current_comparator;
-        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1 << 32) - main_counter_val,
+        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1ULL << 32) - main_counter_val,
                  hpet_regs.comparators[n].current_comparator, delay_ns);
         // }
         if (delay_ns > (1ull << 32)) {

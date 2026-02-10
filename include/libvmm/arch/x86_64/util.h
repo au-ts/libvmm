@@ -30,7 +30,7 @@ uint64_t gpa_to_pa(uint64_t gpa);
 // Returns:
 // - gpa: guest physical address
 // - bytes_remaining: number of bytes to the page boundary. Meaning UB if you overrun (gpa + bytes_remaining)
-bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remaining);
+bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, uint64_t *bytes_remaining);
 
 // Convert guest physical address to the VMM's virtual memory address.
 void *gpa_to_vaddr(uint64_t gpa);
