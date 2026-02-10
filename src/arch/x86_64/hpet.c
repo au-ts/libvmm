@@ -365,7 +365,14 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             data = hpet_regs.general_config;
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF) {
-            data = main_counter_value() & 0xffffffff;
+            if (mem_access_width_to_bytes(decoded_ins) == 4) {
+                data = main_counter_value() & 0xffffffff;
+            } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
+                data = main_counter_value();
+            } else {
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                return false;
+            }
 
         } else if (offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
             data = main_counter_value() >> 32;
@@ -458,6 +465,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             if (!(old_config & ENABLE_CNF) && hpet_regs.general_config & ENABLE_CNF) {
                 // Restarts the timers if the main counter have been restarted
                 reset_main_counter();
+                LOG_HPET("main counter restart!\n");
                 hpet_maintenance(timer_n_comparator_mmio_off(0));
                 hpet_maintenance(timer_n_comparator_mmio_off(1));
                 hpet_maintenance(timer_n_comparator_mmio_off(2));
