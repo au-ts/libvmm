@@ -23,7 +23,7 @@
 // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_HPET
+#define DEBUG_HPET
 
 #if defined(DEBUG_HPET)
 #define LOG_HPET(...) do{ printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -185,6 +185,32 @@ static bool timer_n_irq_edge_triggered(int n)
     return (hpet_regs.comparators[n].config & Tn_INT_TYPE_CNF) == 0;
 }
 
+uint64_t timer_n_compute_timeout_ns(int n)
+{
+    uint64_t main_counter_val = counter_value_in_terms_of_timer(n);
+    uint64_t delay_ns = 0;
+
+    if (main_counter_val < hpet_regs.comparators[n].current_comparator) {
+        delay_ns = hpet_regs.comparators[n].current_comparator - main_counter_val;
+    }
+
+    // detect counter overflow in 32-bit mode, which can happen frequently as our HPET is 1GHz lol
+    if (!delay_ns && timer_n_forced_32(n)) {
+        // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
+        delay_ns += (1ull << 32) - main_counter_val;
+        delay_ns += hpet_regs.comparators[n].current_comparator;
+        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1ULL << 32) - main_counter_val,
+                 hpet_regs.comparators[n].current_comparator, delay_ns);
+        // }
+        if (delay_ns > (1ull << 32)) {
+            LOG_VMM_ERR("absurd!!\n");
+            delay_ns = 0;
+        }
+    }
+
+    return delay_ns;
+}
+
 void hpet_handle_timer_ntfn(microkit_channel ch)
 {
     // bool maintenance = false;
@@ -204,8 +230,12 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
             uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
             hpet_regs.comparators[0].current_comparator = main_counter_val
                                                         + hpet_regs.comparators[0].comparator_increment;
-            if (main_counter_val < hpet_regs.comparators[0].current_comparator) {
-                uint64_t delay_ns = hpet_regs.comparators[0].current_comparator - main_counter_val;
+            if (timer_n_forced_32(0)) {
+                hpet_regs.comparators[0].current_comparator &= 0xffffffff;
+            }
+
+            uint64_t delay_ns = timer_n_compute_timeout_ns(0);
+            if (delay_ns) {
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
             }
         }
@@ -230,32 +260,6 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
     }
 }
 
-uint64_t timer_n_compute_timeout_ns(int n)
-{
-    uint64_t main_counter_val = counter_value_in_terms_of_timer(n);
-    uint64_t delay_ns = 0;
-
-    if (main_counter_val < hpet_regs.comparators[n].current_comparator) {
-        delay_ns = hpet_regs.comparators[n].current_comparator - main_counter_val;
-    }
-
-    // detect counter overflow in 32-bit mode, which can happen frequently as our HPET is 1GHz lol
-    if (!delay_ns && timer_n_forced_32(n)) {
-        // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
-        delay_ns += (1ull << 32) - main_counter_val;
-        delay_ns += hpet_regs.comparators[n].current_comparator;
-        LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1ULL << 32) - main_counter_val,
-                 hpet_regs.comparators[n].current_comparator, delay_ns);
-        // }
-        if (delay_ns > (1ull << 32)) {
-            LOG_HPET("absurd!!\n");
-            delay_ns = 0;
-        }
-    }
-
-    return delay_ns;
-}
-
 bool hpet_maintenance(uint8_t comparator)
 {
     if (!counter_on()) {
@@ -268,17 +272,16 @@ bool hpet_maintenance(uint8_t comparator)
     assert(timer_n_irq_edge_triggered(2));
 
     if (comparator == 0) {
-
         uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
 
-        if (hpet_regs.comparators[0].comparator_increment == 0) {
+        if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment == 0) {
+            // Halted
             return true;
         }
-        if (timer_n_in_periodic_mode(0)) {
 
-            hpet_regs.comparators[0].current_comparator = main_counter_val
-                                                        + hpet_regs.comparators[0].comparator_increment;
-        }
+        // No need to update the comparator, as the guest's first write to comparator is already
+        // timestamp + time out.
+
         if (timer_n_forced_32(0)) {
             hpet_regs.comparators[0].current_comparator &= 0xffffffff;
         }
@@ -327,7 +330,8 @@ bool hpet_maintenance(uint8_t comparator)
     return true;
 }
 
-static bool hpet_fault_on_config(uint64_t offset, uint8_t *comparator) {
+static bool hpet_fault_on_config(uint64_t offset, uint8_t *comparator)
+{
     if (offset == timer_n_config_reg_mmio_off(0)) {
         *comparator = 0;
     } else if (offset == timer_n_config_reg_mmio_off(1)) {
@@ -341,7 +345,8 @@ static bool hpet_fault_on_config(uint64_t offset, uint8_t *comparator) {
     return true;
 }
 
-static bool hpet_fault_on_comparator(uint64_t offset, uint8_t *comparator) {
+static bool hpet_fault_on_comparator(uint64_t offset, uint8_t *comparator)
+{
     if (offset == timer_n_comparator_mmio_off(0)) {
         *comparator = 0;
     } else if (offset == timer_n_comparator_mmio_off(1)) {
@@ -355,7 +360,8 @@ static bool hpet_fault_on_comparator(uint64_t offset, uint8_t *comparator) {
     return true;
 }
 
-static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins) {
+static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins)
+{
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         *data = hpet_regs.comparators[comparator].config & 0xffffffff;
     } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
@@ -368,7 +374,8 @@ static bool hpet_fault_handle_config_read(uint8_t comparator, uint64_t *data, de
     return true;
 }
 
-static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins) {
+static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data, decoded_instruction_ret_t decoded_ins)
+{
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         *data = hpet_regs.comparators[comparator].current_comparator & 0xffffffff;
     } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
@@ -381,7 +388,8 @@ static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data
     return true;
 }
 
-static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins) {
+static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins)
+{
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         uint64_t curr_hi = (regs->config >> 32) << 32;
@@ -399,12 +407,13 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
     return true;
 }
 
-static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins) {
+static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins)
+{
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
     if (timer_n_in_periodic_mode(comparator)) {
         // TODO: only first comparator expected to be periodic.
         assert(comparator == 0);
-        regs->current_comparator = 0;
+        regs->current_comparator = data;
         regs->comparator_increment = data;
     } else {
         regs->current_comparator = data;
