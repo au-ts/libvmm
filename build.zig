@@ -99,7 +99,6 @@ pub fn build(b: *std.Build) !void {
                 "-Werror",
                 "-Wno-unused-function",
                 "-mstrict-align",
-                "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
             }
         });
 
@@ -131,7 +130,6 @@ pub fn build(b: *std.Build) !void {
                 "-Werror",
                 "-Wno-unused-function",
                 "-mstrict-align",
-                "-fno-sanitize=undefined", // https://github.com/au-ts/libvmm/issues/35
             }
         });
         libuio.addIncludePath(sddf.path("include"));

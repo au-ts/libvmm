@@ -15,7 +15,9 @@ Channel = SystemDescription.Channel
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=100)
+    # We build the VMM with LLVM UBSAN to detect UB which can use more than the default amount of
+    # stack space.
+    vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=100, stack_size=0x4000)
     vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
