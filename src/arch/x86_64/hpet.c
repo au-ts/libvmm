@@ -23,7 +23,7 @@
 // https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 
 /* Uncomment this to enable debug logging */
-#define DEBUG_HPET
+// #define DEBUG_HPET
 
 #if defined(DEBUG_HPET)
 #define LOG_HPET(...) do{ printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -195,6 +195,12 @@ uint64_t timer_n_compute_timeout_ns(int n)
     }
 
     // detect counter overflow in 32-bit mode, which can happen frequently as our HPET is 1GHz lol
+
+    if (!delay_ns) {
+        LOG_HPET("comparator %d may have overflown. counter = %ld, comparator = %ld, is 32b %d\n", n, main_counter_val,
+                 hpet_regs.comparators[n].current_comparator, timer_n_forced_32(n));
+    }
+
     if (!delay_ns && timer_n_forced_32(n)) {
         // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
         delay_ns += (1ull << 32) - main_counter_val;
@@ -236,6 +242,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
             uint64_t delay_ns = timer_n_compute_timeout_ns(0);
             if (delay_ns) {
+                LOG_HPET("t0 re-arm for %ld ns\n", delay_ns);
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
             }
         }
@@ -272,7 +279,7 @@ bool hpet_maintenance(uint8_t comparator)
     assert(timer_n_irq_edge_triggered(2));
 
     if (comparator == 0) {
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
+        // uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
 
         if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment == 0) {
             // Halted
@@ -304,9 +311,8 @@ bool hpet_maintenance(uint8_t comparator)
     if (comparator == 1) {
         LOG_HPET("hpet_maintenance(): timer 1 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(1),
                  timer_n_in_periodic_mode(1), timer_n_forced_32(1));
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
-        if (main_counter_val < hpet_regs.comparators[1].current_comparator) {
-            uint64_t delay_ns = hpet_regs.comparators[1].current_comparator - main_counter_val;
+        uint64_t delay_ns = timer_n_compute_timeout_ns(1);
+        if (delay_ns) {
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(1));
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(1),
                      get_timer_n_ioapic_pin(1));
@@ -317,9 +323,8 @@ bool hpet_maintenance(uint8_t comparator)
     if (comparator == 2) {
         LOG_HPET("hpet_maintenance(): timer 2 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(2),
                  timer_n_in_periodic_mode(2), timer_n_forced_32(2));
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
-        if (main_counter_val < hpet_regs.comparators[2].current_comparator) {
-            uint64_t delay_ns = hpet_regs.comparators[2].current_comparator - main_counter_val;
+        uint64_t delay_ns = timer_n_compute_timeout_ns(2);
+        if (delay_ns) {
             LOG_HPET("HPET timeout requested, delay ns = %u, is periodic %d\n", delay_ns, timer_n_in_periodic_mode(2));
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2),
                      get_timer_n_ioapic_pin(2));
@@ -390,6 +395,9 @@ static bool hpet_fault_handle_comparator_read(uint8_t comparator, uint64_t *data
 
 static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, decoded_instruction_ret_t decoded_ins)
 {
+
+    bool periodic_old = timer_n_in_periodic_mode(comparator);
+
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         uint64_t curr_hi = (regs->config >> 32) << 32;
@@ -404,6 +412,13 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
 
     regs->config |= regs->config_mask;
 
+    bool periodic_new = timer_n_in_periodic_mode(comparator);
+
+    if (periodic_old && !periodic_new) {
+        assert(comparator == 0);
+        LOG_HPET("timer 0 periodic off!\n");
+    }
+
     return true;
 }
 
@@ -413,7 +428,7 @@ static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data
     if (timer_n_in_periodic_mode(comparator)) {
         // TODO: only first comparator expected to be periodic.
         assert(comparator == 0);
-        regs->current_comparator = data;
+        regs->current_comparator = counter_value_in_terms_of_timer(0) + data;
         regs->comparator_increment = data;
     } else {
         regs->current_comparator = data;
@@ -511,6 +526,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 hpet_maintenance(timer_n_comparator_mmio_off(0));
                 hpet_maintenance(timer_n_comparator_mmio_off(1));
                 hpet_maintenance(timer_n_comparator_mmio_off(2));
+            } else if ((old_config & ENABLE_CNF) && !(hpet_regs.general_config & ENABLE_CNF)) {
+                LOG_HPET("main counter halted!\n");
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
