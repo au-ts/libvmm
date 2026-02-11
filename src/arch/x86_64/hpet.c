@@ -83,7 +83,6 @@ struct comparator_regs {
     uint64_t config_mask;
     uint64_t current_comparator;
     uint64_t comparator_increment;
-    uint64_t counter_when_timeout_prime;
 };
 
 struct hpet_regs {
@@ -207,6 +206,30 @@ uint64_t timer_n_compute_timeout_ns(int n, uint64_t main_counter_val)
     return delay_ns;
 }
 
+bool bug_check_irq_at_correct_time(int comparator, uint64_t main_counter_val)
+{
+    uint64_t expected_counter_val = hpet_regs.comparators[comparator].current_comparator;
+    uint64_t difference_ns;
+
+    if (expected_counter_val > main_counter_val) {
+        difference_ns = expected_counter_val - main_counter_val;
+        if (difference_ns > NS_IN_MS) {
+            LOG_VMM_ERR("HPET timer irq too early!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
+                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_ns, NS_IN_MS);
+            return false;
+        }
+    } else {
+        difference_ns = main_counter_val - expected_counter_val;
+        if (difference_ns > NS_IN_MS) {
+            LOG_VMM_ERR("HPET timer irq too late!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
+                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_ns, NS_IN_MS);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void hpet_handle_timer_ntfn(microkit_channel ch)
 {
     // bool maintenance = false;
@@ -217,6 +240,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
     if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
+        assert(bug_check_irq_at_correct_time(0, main_counter_val));
         if (timer_n_can_interrupt(0)) {
             int ioapic_pin = get_timer_n_ioapic_pin(0);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -237,6 +261,8 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
             }
         }
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
+        uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
+        assert(bug_check_irq_at_correct_time(1, main_counter_val));
         if (timer_n_can_interrupt(1)) {
             int ioapic_pin = get_timer_n_ioapic_pin(1);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -246,6 +272,8 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
         assert(!timer_n_in_periodic_mode(1));
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
+        uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
+        assert(bug_check_irq_at_correct_time(2, main_counter_val));
         if (timer_n_can_interrupt(2)) {
             int ioapic_pin = get_timer_n_ioapic_pin(2);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -295,7 +323,6 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0),
                      get_timer_n_ioapic_pin(0));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
-            hpet_regs.comparators[0].counter_when_timeout_prime = main_counter_val;
         }
     }
 
@@ -310,7 +337,6 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(1),
                      get_timer_n_ioapic_pin(1));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH1, delay_ns);
-            hpet_regs.comparators[1].counter_when_timeout_prime = main_counter_val;
         }
     }
 
@@ -325,7 +351,6 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2),
                      get_timer_n_ioapic_pin(2));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH2, delay_ns);
-            hpet_regs.comparators[2].counter_when_timeout_prime = main_counter_val;
         }
     }
 
