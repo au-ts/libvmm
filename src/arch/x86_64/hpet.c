@@ -44,9 +44,8 @@
 
 // General Capability register
 #define NS_IN_FS 1000000ul
-// Main counter tick period in femtosecond.
-// Make the main counter tick in 1ns, same as sDDF timer interface to keep things sane.
-#define COUNTER_CLK_PERIOD_VAL NS_IN_FS
+// Main counter tick period in femtosecond. 10MHz tick
+#define COUNTER_CLK_PERIOD_VAL (NS_IN_FS * 100)
 #define COUNTER_CLK_PERIOD_SHIFT 32
 // Legacy IRQ replacement capable (replace the old PIT)
 #define LEG_RT_CAP BIT(15)
@@ -111,7 +110,7 @@ static struct hpet_regs hpet_regs = {
 
 static uint64_t time_now_64(void)
 {
-    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET_CH0);
+    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET_CH0) / (uint64_t) 100;
 }
 
 static bool counter_on(void)
@@ -173,12 +172,12 @@ static uint8_t get_timer_n_ioapic_pin(int n)
 
 static bool timer_n_can_interrupt(int n)
 {
-    return counter_on() && (hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
+    return counter_on() && !!(hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
 }
 
 static bool timer_n_in_periodic_mode(int n)
 {
-    return hpet_regs.comparators[n].config & Tn_TYPE_CNF;
+    return !!(hpet_regs.comparators[n].config & Tn_TYPE_CNF);
 }
 
 static bool timer_n_irq_edge_triggered(int n)
@@ -193,7 +192,7 @@ uint64_t timer_n_compute_timeout_ns(int n, uint64_t main_counter_val)
     if (main_counter_val < hpet_regs.comparators[n].current_comparator) {
         delay_ns = hpet_regs.comparators[n].current_comparator - main_counter_val;
     } else if (main_counter_val > hpet_regs.comparators[n].current_comparator && timer_n_forced_32(n)) {
-        // detect counter overflow, which can happen frequently as our HPET is 1GHz lol
+        // detect counter overflow
         LOG_HPET("comparator %d have overflown. counter = %ld, comparator = %ld, is 32b %d\n", n, main_counter_val,
                  hpet_regs.comparators[n].current_comparator, timer_n_forced_32(n));
         LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1ULL << 32) - main_counter_val,
@@ -203,7 +202,7 @@ uint64_t timer_n_compute_timeout_ns(int n, uint64_t main_counter_val)
         delay_ns += hpet_regs.comparators[n].current_comparator;
     }
 
-    return delay_ns;
+    return delay_ns * 100;
 }
 
 bool bug_check_irq_at_correct_time(int comparator, uint64_t main_counter_val)
@@ -240,7 +239,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
 
     if (ch == TIMER_DRV_CH_FOR_HPET_CH0) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
-        assert(bug_check_irq_at_correct_time(0, main_counter_val));
+        bug_check_irq_at_correct_time(0, main_counter_val);
         if (timer_n_can_interrupt(0)) {
             int ioapic_pin = get_timer_n_ioapic_pin(0);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -262,7 +261,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         }
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
-        assert(bug_check_irq_at_correct_time(1, main_counter_val));
+        bug_check_irq_at_correct_time(1, main_counter_val);
         if (timer_n_can_interrupt(1)) {
             int ioapic_pin = get_timer_n_ioapic_pin(1);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -273,7 +272,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         assert(!timer_n_in_periodic_mode(1));
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH2) {
         uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
-        assert(bug_check_irq_at_correct_time(2, main_counter_val));
+        bug_check_irq_at_correct_time(2, main_counter_val);
         if (timer_n_can_interrupt(2)) {
             int ioapic_pin = get_timer_n_ioapic_pin(2);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
