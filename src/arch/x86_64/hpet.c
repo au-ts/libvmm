@@ -122,7 +122,7 @@ static bool counter_on(void)
 static uint64_t main_counter_value(void)
 {
     if (counter_on()) {
-        return time_now_64()  - hpet_counter_offset;
+        return time_now_64() - hpet_counter_offset;
     } else {
         return hpet_frozen_counter;
     }
@@ -142,7 +142,7 @@ static uint64_t counter_value_in_terms_of_timer(int n)
 {
     uint64_t counter = main_counter_value();
     if (timer_n_forced_32(n)) {
-        counter = counter & 0xffffffff;
+        counter &= 0xffffffff;
     }
     return counter;
 }
@@ -193,26 +193,15 @@ uint64_t timer_n_compute_timeout_ns(int n)
 
     if (main_counter_val < hpet_regs.comparators[n].current_comparator) {
         delay_ns = hpet_regs.comparators[n].current_comparator - main_counter_val;
-    }
-
-    // detect counter overflow in 32-bit mode, which can happen frequently as our HPET is 1GHz lol
-
-    if (!delay_ns) {
-        LOG_HPET("comparator %d may have overflown. counter = %ld, comparator = %ld, is 32b %d\n", n, main_counter_val,
+    } else if (main_counter_val > hpet_regs.comparators[n].current_comparator && timer_n_forced_32(n)) {
+        // detect counter overflow, which can happen frequently as our HPET is 1GHz lol
+        LOG_HPET("comparator %d have overflown. counter = %ld, comparator = %ld, is 32b %d\n", n, main_counter_val,
                  hpet_regs.comparators[n].current_comparator, timer_n_forced_32(n));
-    }
-
-    if (!delay_ns && timer_n_forced_32(n)) {
-        // if (main_counter_val + hpet_regs.comparators[n].current_comparator >= (1 << 32)) {
-        delay_ns += (1ull << 32) - main_counter_val;
-        delay_ns += hpet_regs.comparators[n].current_comparator;
         LOG_HPET("handling overflow, %ld + %ld = %ld\n", (1ULL << 32) - main_counter_val,
                  hpet_regs.comparators[n].current_comparator, delay_ns);
-        // }
-        if (delay_ns > (1ull << 32)) {
-            LOG_VMM_ERR("absurd!!\n");
-            delay_ns = 0;
-        }
+
+        delay_ns += (1ull << 32) - main_counter_val;
+        delay_ns += hpet_regs.comparators[n].current_comparator;
     }
 
     return delay_ns;
