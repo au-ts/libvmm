@@ -94,6 +94,12 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     case IA32_MISC_ENABLE:
         result = misc_enable;
         break;
+    case MSR_STAR:
+    case MSR_LSTAR:
+    case MSR_CSTAR:
+    case MSR_SYSCALL_MASK:
+        result = microkit_vcpu_x86_read_msr(GUEST_BOOT_VCPU_ID, vctx->ecx);
+        break;
     case IA32_PLATFORM_ID:
     case IA32_CORE_CAPABILITIES:
     case IA32_MKTME_KEYID_PARTITIONING:

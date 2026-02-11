@@ -154,7 +154,7 @@ static uint8_t get_ppr(void)
 
 static int get_next_queued_irq_vector(void)
 {
-    uint8_t ppr = get_ppr();
+    // uint8_t ppr = get_ppr();
 
     // scan IRRs for *a* pending interrupt
     // do it "right-to-left" as the higer vector is higher prio (generally)
@@ -162,7 +162,8 @@ static int get_next_queued_irq_vector(void)
         for (int j = 31; j >= 0; j--) {
             if (lapic_regs.irr[i] & BIT(j)) {
                 uint8_t candidate_vector = i * 32 + j;
-                if (candidate_vector > ppr) {
+                // @billn highly sus, revisit PPR calculation
+                if (candidate_vector >> 4 > lapic_regs.tpr >> 4) {
                     return candidate_vector;
                 } else {
                     // highest pending vector is lower than highest eligible priority, so do nothing
@@ -526,7 +527,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
                             delivery_mode, destination);
             }
 
-            LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, lapic_regs.tpr);
+            LOG_APIC("icr write 0x%lx, current TPL is 0x%x\n", icr, lapic_regs.tpr);
             if (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RIP) >= 0xfffff00000000000)
                 fault_cond = true;
             break;
@@ -706,6 +707,8 @@ void lapic_maintenance(void)
         microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
         return;
     }
+
+    // LOG_VMM("DELIVERING vec 0x%x at tpr 0x%x\n", vector, lapic_regs.tpr);
 
     // Move IRQ from pending to in-service
     lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
