@@ -70,7 +70,7 @@ struct fw_cfg_e820_map {
     struct boot_e820_entry entries[NUM_FW_E820_ENTRIES];
 } __attribute__((packed));
 
-#define DSDT_MAX_SIZE 512
+#define DSDT_MAX_SIZE 1024
 struct fw_cfg_acpi_tables {
     // very important for XSDT to be first, as we will point to this blob from "etc/acpi/rsdp"
     struct xsdt xsdt;
