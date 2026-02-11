@@ -805,6 +805,12 @@ bool inject_ioapic_irq(int ioapic, int pin)
         return false;
     }
 
+    // @billn sus
+    uint8_t delivery_mode = (ioapic_regs.ioredtbl[pin] >> 8) & 0x7;
+    assert(delivery_mode == 0);
+    uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
+    assert(!level_trigger);
+
     // @billn need to read cpu id from redirection register
     return inject_lapic_irq(0, ioapic_pin_to_vector(ioapic, pin));
 }
