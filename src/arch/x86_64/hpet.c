@@ -135,7 +135,7 @@ static void reset_main_counter(void)
 
 static bool timer_n_forced_32(int n)
 {
-    return !!(hpet_regs.comparators->config & Tn_32MODE_CNF);
+    return !!(hpet_regs.comparators->config[n] & Tn_32MODE_CNF);
 }
 
 static uint64_t counter_value_in_terms_of_timer(int n)
