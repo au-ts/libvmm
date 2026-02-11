@@ -110,7 +110,7 @@ static struct hpet_regs hpet_regs = {
 
 static uint64_t time_now_64(void)
 {
-    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET_CH0) - hpet_counter_offset;
+    return sddf_timer_time_now(TIMER_DRV_CH_FOR_HPET_CH0);
 }
 
 static bool counter_on(void)
@@ -121,7 +121,7 @@ static bool counter_on(void)
 static uint64_t main_counter_value(void)
 {
     if (counter_on()) {
-        return time_now_64();
+        return time_now_64()  - hpet_counter_offset;
     } else {
         return 0;
     }
@@ -539,8 +539,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            assert(data == 0);
-            hpet_counter_offset = time_now_64();
+            reset_main_counter();
         } else if (hpet_fault_on_config(offset, &comparator)) {
             return hpet_fault_handle_config_write(comparator, data, decoded_ins);
         } else if (hpet_fault_on_comparator(offset, &comparator)) {
