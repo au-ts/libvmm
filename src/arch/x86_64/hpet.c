@@ -101,7 +101,7 @@ static uint64_t hpet_counter_offset = 0;
 
 static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
-    // tick period = 1ns, same as sDDF timer interface.
+    // tick period = 10MHz
     .general_capabilities = GENERAL_CAP_MASK,
     .comparators[0] = { .config = TIM0_CONF_MASK, .config_mask = TIM0_CONF_MASK },
     .comparators[1] = { .config = TIM1_CONF_MASK, .config_mask = TIM1_CONF_MASK },
@@ -208,20 +208,21 @@ uint64_t timer_n_compute_timeout_ns(int n, uint64_t main_counter_val)
 bool bug_check_irq_at_correct_time(int comparator, uint64_t main_counter_val)
 {
     uint64_t expected_counter_val = hpet_regs.comparators[comparator].current_comparator;
-    uint64_t difference_ns;
+    uint64_t difference_units;
+    uint64_t tolerance_units = (NS_IN_MS / 100);
 
     if (expected_counter_val > main_counter_val) {
-        difference_ns = expected_counter_val - main_counter_val;
-        if (difference_ns > NS_IN_MS) {
+        difference_units = expected_counter_val - main_counter_val;
+        if (difference_units > difference_units) {
             LOG_VMM_ERR("HPET timer irq too early!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
-                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_ns, NS_IN_MS);
+                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_units, tolerance_units);
             return false;
         }
     } else {
-        difference_ns = main_counter_val - expected_counter_val;
-        if (difference_ns > NS_IN_MS) {
+        difference_units = main_counter_val - expected_counter_val;
+        if (difference_units > difference_units) {
             LOG_VMM_ERR("HPET timer irq too late!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
-                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_ns, NS_IN_MS);
+                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_units, tolerance_units);
             return false;
         }
     }
