@@ -135,7 +135,7 @@ static void reset_main_counter(void)
 
 static bool timer_n_forced_32(int n)
 {
-    return !!(hpet_regs.comparators->config[n] & Tn_32MODE_CNF);
+    return !!(hpet_regs.comparators[n].config & Tn_32MODE_CNF);
 }
 
 static uint64_t counter_value_in_terms_of_timer(int n)
@@ -219,7 +219,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         if (timer_n_can_interrupt(0)) {
             int ioapic_pin = get_timer_n_ioapic_pin(0);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
-                LOG_VMM_ERR("IRQ dropped on HPET comp 0, pin %d\n", ioapic_pin);
+                LOG_HPET("IRQ dropped on HPET comp 0, pin %d\n", ioapic_pin);
             }
         }
         if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment) {
@@ -240,7 +240,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         if (timer_n_can_interrupt(1)) {
             int ioapic_pin = get_timer_n_ioapic_pin(1);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
-                LOG_VMM_ERR("IRQ dropped on HPET comp 1, pin %d\n", ioapic_pin);
+                LOG_HPET("IRQ dropped on HPET comp 1, pin %d\n", ioapic_pin);
             }
         }
 
@@ -249,7 +249,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
         if (timer_n_can_interrupt(2)) {
             int ioapic_pin = get_timer_n_ioapic_pin(2);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
-                LOG_VMM_ERR("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
+                LOG_HPET("IRQ dropped on HPET comp 2, pin %d\n", ioapic_pin);
             }
         }
 
