@@ -92,6 +92,7 @@ struct hpet_regs {
     struct comparator_regs comparators[NUM_TIM_CAP_VAL + 1];
 };
 
+static uint64_t hpet_frozen_counter = 0;
 static uint64_t hpet_counter_offset = 0;
 
 #define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
@@ -123,7 +124,7 @@ static uint64_t main_counter_value(void)
     if (counter_on()) {
         return time_now_64()  - hpet_counter_offset;
     } else {
-        return 0;
+        return hpet_frozen_counter;
     }
 }
 
@@ -531,11 +532,11 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 // Restarts the timers if the main counter have been restarted
                 reset_main_counter();
                 LOG_HPET("main counter restart!\n");
-                hpet_maintenance(timer_n_comparator_mmio_off(0));
-                hpet_maintenance(timer_n_comparator_mmio_off(1));
-                hpet_maintenance(timer_n_comparator_mmio_off(2));
+                hpet_maintenance(0);
+                hpet_maintenance(1);
+                hpet_maintenance(2);
             } else if ((old_config & ENABLE_CNF) && !(hpet_regs.general_config & ENABLE_CNF)) {
-                LOG_HPET("main counter halted!\n");
+                hpet_frozen_counter = main_counter_value();
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_MMIO_OFF || offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
