@@ -526,8 +526,6 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
                 return false;
             }
 
-            hpet_regs.general_config |= GENERAL_CAP_MASK;
-
             if (!(old_config & ENABLE_CNF) && hpet_regs.general_config & ENABLE_CNF) {
                 // Restarts the timers if the main counter have been restarted
                 reset_main_counter();
