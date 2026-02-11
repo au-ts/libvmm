@@ -26,7 +26,7 @@
 // #define DEBUG_HPET
 
 #if defined(DEBUG_HPET)
-#define LOG_HPET(...) do{ printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#define LOG_HPET(...) do{ if (fault_cond) { printf("%s|HPET: ", microkit_name); printf(__VA_ARGS__); } } while(0)
 #else
 #define LOG_HPET(...) do{}while(0)
 #endif
@@ -424,16 +424,24 @@ static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data
 
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
     if (timer_n_in_periodic_mode(comparator)) {
-        // TODO: only first comparator expected to be periodic.
+        // only first comparator expected to be periodic.
         assert(comparator == 0);
-        regs->current_comparator = counter_value_in_terms_of_timer(0) + data;
-        regs->comparator_increment = data;
+
+        if (regs->config & Tn_VAL_SET_CNF) {
+            // writing expiry
+            regs->current_comparator = data;
+            regs->config &= ~Tn_VAL_SET_CNF;
+            return hpet_maintenance(comparator);
+        } else {
+            // writing the increment
+            regs->comparator_increment = data;
+            return true;
+        }
     } else {
         regs->current_comparator = data;
         regs->comparator_increment = 0;
+        return hpet_maintenance(comparator);
     }
-
-    return hpet_maintenance(comparator);
 }
 
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
