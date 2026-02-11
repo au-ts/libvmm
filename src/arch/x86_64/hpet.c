@@ -96,9 +96,9 @@ static uint64_t hpet_frozen_counter = 0;
 static uint64_t hpet_counter_offset = 0;
 
 #define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
-#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | (TIM0_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM1_CONF_MASK (Tn_SIZE_CAP | (TIM1_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM2_CONF_MASK (Tn_SIZE_CAP | (TIM2_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT) | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM1_CONF_MASK (Tn_SIZE_CAP | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM2_CONF_MASK (Tn_SIZE_CAP | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
 
 static struct hpet_regs hpet_regs = {
     // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
