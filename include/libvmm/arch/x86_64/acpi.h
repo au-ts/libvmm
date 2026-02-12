@@ -34,7 +34,7 @@ struct xsdp {
     uint8_t checksum;
     char oem_id[XSDP_OEM_ID_LEN];
     uint8_t revision;
-    uint32_t _deprecated;
+    uint32_t rsdp_gpa;
 
     uint32_t length;
     uint64_t xsdt_gpa;
@@ -183,16 +183,36 @@ struct pcie_config_space_addr_structure {
     uint8_t start_bus;
     uint8_t end_bus;
     uint32_t reserved;
-} __attribute__((packed));;
+} __attribute__((packed));
 
 struct mcfg {
     struct dst_header h;
     uint8_t reserved[8];
     struct pcie_config_space_addr_structure config_spaces[MCFG_NUM_CONFIG_SPACES];
-} __attribute__((packed));;
+} __attribute__((packed));
 
 ////////////////////////////////////////
 
+/* Firmware ACPI Control Structure (FACS) */
+#define FACS_SIGNATURE "FACS"
+
+struct facs {
+    uint32_t signature;
+    uint32_t length;
+    uint32_t hw_sig;
+    uint32_t fw_waking_vector;
+    uint32_t global_lock;
+    uint32_t flags;
+    uint64_t x_fw_waking_vector;
+    uint8_t version;
+    uint8_t _reserved1[3];
+    uint32_t ospm_flags;
+    uint8_t _reserved2[24];
+};
+
+_Static_assert(sizeof(struct facs) == 64, "facs must be 64 bytes large");
+
+////////////////////////////////////////
 #define PM1A_EVT_BLK_PIO_ADDR 0x600
 #define PM1A_EVT_BLK_PIO_LEN 4
 #define PM1A_CNT_BLK_PIO_ADDR 0x604
@@ -275,9 +295,10 @@ struct FADT {
 
 // bool acpi_pm_timer_irq_enabled(void);
 
+size_t facs_build(struct facs *facs);
 size_t madt_build(struct madt *madt);
 size_t hpet_build(struct hpet *hpet);
-size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa);
+size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa);
 size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs);
 size_t mcfg_build(struct mcfg *mcfg);
 size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa);
