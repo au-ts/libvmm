@@ -732,11 +732,11 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
-    // allow vector == 0 as an INIT IPI have vector == 0.
-    if (vector < 32 && vector > 0) {
-        LOG_VMM_ERR("IRQ Vector %d is archtecturally reserved! Will not inject.\n", vector);
-        return false;
-    }
+    // // allow vector == 0 as an INIT IPI have vector == 0.
+    // if (vector < 32 && vector > 0) {
+    //     LOG_VMM_ERR("IRQ Vector %d is archtecturally reserved! Will not inject.\n", vector);
+    //     return false;
+    // }
 
     if (!(lapic_regs.svr & BIT(8))) {
         // APIC software disable
@@ -810,7 +810,12 @@ bool inject_ioapic_irq(int ioapic, int pin)
 
     // @billn sus
     uint8_t delivery_mode = (ioapic_regs.ioredtbl[pin] >> 8) & 0x7;
-    assert(delivery_mode == 0);
+
+    // @billn sus revisit delivery mode 1 for multiple vcpu
+    if (delivery_mode != 0 && delivery_mode != 1) {
+        LOG_VMM_ERR("unknown I/O APIC delivery mode for injection on pin %d, mode 0x%x\n", pin, delivery_mode);
+        assert(false);
+    }
     // uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
     // assert(!level_trigger);
 

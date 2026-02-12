@@ -220,6 +220,10 @@ _Static_assert(sizeof(struct facs) == 64, "facs must be 64 bytes large");
 #define PM_TMR_BLK_PIO_ADDR 0x608
 #define PM_TMR_BLK_PIO_LEN 4
 
+#define SMI_CMD_PIO_ADDR 0x60c
+#define ACPI_ENABLE 0x12
+#define ACPI_DISABLE 0x13
+
 // @billn have a way to detect and warn about collision
 #define ACPI_SCI_IRQ_PIN 7
 #define ACPI_PMT_FREQ_HZ 3579545
