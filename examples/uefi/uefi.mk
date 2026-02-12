@@ -138,6 +138,10 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 # /home/billn/Downloads/Win10_22H2_English_x64v1.iso
 
 
+# hack for virtio driver installation
+# 							  -drive id=disk,file=/home/billn/Downloads/virtio-win-0.1.285.iso,format=raw,if=none \
+# 							  -device ide-hd,drive=disk,bus=ide.0 \
+
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
 	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
