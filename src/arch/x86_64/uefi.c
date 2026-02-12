@@ -46,6 +46,11 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
     // Then the rest of the ACPI tables, all GPAs will be zero
     madt_build(&fw_cfg_blobs.fw_acpi_tables.madt);
     hpet_build(&fw_cfg_blobs.fw_acpi_tables.hpet);
+
+    struct facs tmp_facs;
+    facs_build(&tmp_facs);
+    memcpy(&fw_cfg_blobs.fw_acpi_tables.facs, &tmp_facs, sizeof(struct facs));
+
     fadt_build(&fw_cfg_blobs.fw_acpi_tables.fadt, 0, 0);
     mcfg_build(&fw_cfg_blobs.fw_acpi_tables.mcfg);
     uint64_t dummy_gpas[XSDT_ENTRIES] = { 0 };
@@ -86,7 +91,15 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                     &fw_cfg_blobs.fw_table_loader[num_cmd]);
     num_cmd += 1;
 
-    // Connect the DSDT to FADT, then checksum the FADT
+    // Connect the DSDT and FACS to FADT, then checksum the FADT
+    bios_linker_loader_add_pointer(
+        ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.X_FirmwareControl - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        sizeof(uint64_t), ACPI_BUILD_TABLE_FILE,
+        (uint64_t)&fw_cfg_blobs.fw_acpi_tables.facs - (uint64_t)&fw_cfg_blobs.fw_acpi_tables,
+        &fw_cfg_blobs.fw_table_loader[num_cmd]);
+    num_cmd += 1;
+
     bios_linker_loader_add_pointer(
         ACPI_BUILD_TABLE_FILE, (void *)&fw_cfg_blobs.fw_acpi_tables, sizeof(struct fw_cfg_acpi_tables),
         (uint64_t)&fw_cfg_blobs.fw_acpi_tables.fadt.X_Dsdt - (uint64_t)&fw_cfg_blobs.fw_acpi_tables, sizeof(uint64_t),

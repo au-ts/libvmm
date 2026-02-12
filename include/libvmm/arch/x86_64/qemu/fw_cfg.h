@@ -74,6 +74,7 @@ struct fw_cfg_e820_map {
 struct fw_cfg_acpi_tables {
     // very important for XSDT to be first, as we will point to this blob from "etc/acpi/rsdp"
     struct xsdt xsdt;
+    struct facs facs;
     struct FADT fadt;
     struct hpet hpet;
     struct madt madt;
