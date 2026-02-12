@@ -274,10 +274,10 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     assert(dsdt_gpa < (1ull << 32));
     assert(facs_gpa < (1ull << 32));
 
-    fadt->Dsdt = (uint32_t)dsdt_gpa;
+    fadt->Dsdt = 0;
     fadt->X_Dsdt = dsdt_gpa;
-    fadt->FirmwareCtrl = (uint32_t)facs_gpa;
-    fadt->X_FirmwareControl = 0;
+    fadt->FirmwareCtrl = 0;
+    fadt->X_FirmwareControl = facs_gpa;
     fadt->Flags = 0; // Not hardware reduced, ACPI PM timer 24-bit wide
 
     fadt->PreferredPowerManagementProfile = 0; /* Unspecified Power Profile */
@@ -376,9 +376,9 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
 
     xsdp->xsdt_gpa = xsdt_gpa;
 
-    // @billn sus
-    assert(xsdt_gpa < (1ull << 32));
-    xsdp->rsdp_gpa = xsdt_gpa;
+    // // @billn sus
+    // assert(xsdt_gpa < (1ull << 32));
+    // xsdp->rsdp_gpa = xsdt_gpa;
 
     xsdp->checksum = acpi_compute_checksum((char *)xsdp, offsetof(struct xsdp, length));
     assert(acpi_checksum_ok((char *)xsdp, offsetof(struct xsdp, length)));
