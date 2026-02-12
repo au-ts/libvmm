@@ -174,6 +174,7 @@ size_t mcfg_build(struct mcfg *mcfg)
 }
 
 static uint16_t pm1_enable_reg = 0;
+static uint16_t pm1_control_reg = 0;
 static uint16_t pm1_status_reg = 0;
 
 #define TMR_EN BIT(0) /* Timer Enable */
@@ -181,6 +182,34 @@ static uint16_t pm1_status_reg = 0;
 bool acpi_pm_timer_can_irq(void)
 {
     return (pm1_enable_reg & BIT(0)) && (pm1_enable_reg & BIT(5));
+}
+
+bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
+                               void *cookie)
+{
+    uint64_t is_read = qualification & BIT(3);
+    uint64_t is_string = qualification & BIT(4);
+    // TODO: handle unused variable
+    // uint16_t port_addr = (qualification >> 16) & 0xffff;
+    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+    int access_width_bytes = ioports_access_width_to_bytes(access_width);
+    assert(!is_string);
+    assert(access_width_bytes == 2);
+
+    if (port_offset == 0) {
+        if (is_read) {
+            LOG_VMM("PM1 control reg read 0x%x\n", pm1_control_reg);
+            vctx->eax = pm1_control_reg;
+        } else {
+            pm1_control_reg = vctx->eax & 0xffff;
+            LOG_VMM("PM1 control reg write 0x%x\n", pm1_control_reg);
+        }
+
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
@@ -239,6 +268,32 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
     return true;
 }
 
+bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
+                              void *cookie)
+{
+    uint64_t is_read = qualification & BIT(3);
+    uint64_t is_string = qualification & BIT(4);
+    // TODO: handle unused variable
+    // uint16_t port_addr = (qualification >> 16) & 0xffff;
+    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+    int access_width_bytes = ioports_access_width_to_bytes(access_width);
+    assert(!is_string);
+    assert(access_width_bytes == 1);
+    assert(port_offset == 0);
+    assert(!is_read);
+
+    uint8_t cmd = vctx->eax & 0xff;
+    LOG_VMM("smi cmd write 0x%x\n", cmd);
+
+    if (cmd == ACPI_ENABLE) {
+        pm1_control_reg |= BIT(0);
+    } else if (cmd == ACPI_DISABLE) {
+        pm1_control_reg |= ~BIT(0);
+    }
+
+    return true;
+}
+
 size_t facs_build(struct facs *facs)
 {
     // @billn figure out if wake vector is important
@@ -287,6 +342,14 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->BootArchitectureFlags =
         BIT(1) /* Support PS/2 KB+M */ | BIT(3) /* MSI not supported */ | BIT(2) /* No ISA VGA */;
 
+    fadt->SMI_CommandPort = SMI_CMD_PIO_ADDR;
+    fadt->AcpiEnable = ACPI_ENABLE;
+    fadt->AcpiDisable = ACPI_DISABLE;
+    {
+        bool success = fault_register_pio_exception_handler(SMI_CMD_PIO_ADDR, 1, smi_cmd_pio_fault_handle, NULL);
+        assert(success);
+    }
+
     fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
     fadt->PM1EventLength = PM1A_EVT_BLK_PIO_LEN;
     fadt->X_PM1aEventBlock.address_space_id = 1;
@@ -307,6 +370,11 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->X_PM1aControlBlock.register_bit_offset = 0;
     fadt->X_PM1aControlBlock.access_size = 2;
     fadt->X_PM1aControlBlock.address = PM1A_CNT_BLK_PIO_ADDR;
+    {
+        bool success = fault_register_pio_exception_handler(PM1A_CNT_BLK_PIO_ADDR, PM1A_CNT_BLK_PIO_LEN,
+                                                            pm1a_cnt_pio_fault_handle, NULL);
+        assert(success);
+    }
 
     fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
     fadt->PMTimerLength = PM_TMR_BLK_PIO_LEN;
