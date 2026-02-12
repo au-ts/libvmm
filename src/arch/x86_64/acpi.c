@@ -239,7 +239,19 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
     return true;
 }
 
-size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
+size_t facs_build(struct facs *facs)
+{
+    // @billn figure out if wake vector is important
+
+    memset(facs, 0, sizeof(struct facs));
+    memcpy(&facs->signature, FACS_SIGNATURE, 4);
+
+    facs->length = sizeof(struct facs);
+
+    return sizeof(struct facs);
+}
+
+size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
 {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
@@ -258,8 +270,14 @@ size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa)
     fadt->h.creator_revision = 1;
 
     /* Fill out data fields of FADT */
+
+    assert(dsdt_gpa < (1ull << 32));
+    assert(facs_gpa < (1ull << 32));
+
     fadt->Dsdt = (uint32_t)dsdt_gpa;
     fadt->X_Dsdt = dsdt_gpa;
+    fadt->FirmwareCtrl = (uint32_t)facs_gpa;
+    fadt->X_FirmwareControl = 0;
     fadt->Flags = 0; // Not hardware reduced, ACPI PM timer 24-bit wide
 
     fadt->PreferredPowerManagementProfile = 0; /* Unspecified Power Profile */
@@ -358,6 +376,10 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
 
     xsdp->xsdt_gpa = xsdt_gpa;
 
+    // @billn sus
+    assert(xsdt_gpa < (1ull << 32));
+    xsdp->rsdp_gpa = xsdt_gpa;
+
     xsdp->checksum = acpi_compute_checksum((char *)xsdp, offsetof(struct xsdp, length));
     assert(acpi_checksum_ok((char *)xsdp, offsetof(struct xsdp, length)));
     xsdp->ext_checksum = acpi_compute_checksum((char *)xsdp, sizeof(struct xsdp));
@@ -412,9 +434,15 @@ uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     uint64_t dsdt_gpa = acpi_allocate_gpa(0x1000);
     memcpy((void *)(guest_ram_vaddr + dsdt_gpa), dsdt_blob, dsdt_blob_size);
 
+    uint64_t facs_gpa = acpi_allocate_gpa(0x1000);
+    facs_gpa = ROUND_UP(facs_gpa, 64);
+    assert(facs_gpa % 64 == 0);
+    struct facs *facs = (struct facs *)(guest_ram_vaddr + facs_gpa);
+    facs_build(facs);
+
     uint64_t fadt_gpa = acpi_allocate_gpa(sizeof(struct FADT));
     struct FADT *fadt = (struct FADT *)(guest_ram_vaddr + fadt_gpa);
-    fadt_build(fadt, dsdt_gpa);
+    fadt_build(fadt, dsdt_gpa, facs_gpa);
     assert(fadt->h.length <= 0x1000);
 
     uint64_t mcfg_gpa = acpi_allocate_gpa(sizeof(struct mcfg));

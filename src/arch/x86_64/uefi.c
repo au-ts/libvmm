@@ -46,7 +46,7 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
     // Then the rest of the ACPI tables, all GPAs will be zero
     madt_build(&fw_cfg_blobs.fw_acpi_tables.madt);
     hpet_build(&fw_cfg_blobs.fw_acpi_tables.hpet);
-    fadt_build(&fw_cfg_blobs.fw_acpi_tables.fadt, 0);
+    fadt_build(&fw_cfg_blobs.fw_acpi_tables.fadt, 0, 0);
     mcfg_build(&fw_cfg_blobs.fw_acpi_tables.mcfg);
     uint64_t dummy_gpas[XSDT_ENTRIES] = { 0 };
     xsdt_build(&fw_cfg_blobs.fw_acpi_tables.xsdt, dummy_gpas, XSDT_ENTRIES);
