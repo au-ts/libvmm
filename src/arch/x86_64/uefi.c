@@ -36,6 +36,11 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
     fw_cfg_blobs.fw_cfg_e820_map.entries[1].addr = high_ram_start_gpa;
     fw_cfg_blobs.fw_cfg_e820_map.entries[1].size = high_ram_size;
     fw_cfg_blobs.fw_cfg_e820_map.entries[1].type = E820_RAM;
+
+    fw_cfg_blobs.fw_cfg_e820_map.entries[2].addr = ECAM_GPA;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[2].size = ECAM_SIZE;
+    fw_cfg_blobs.fw_cfg_e820_map.entries[2].type = E820_RESERVED;
+
     LOG_VMM("uefi_setup_images(): guest RAM GPA high 0x%lx..0x%lx\n", high_ram_start_gpa,
             high_ram_start_gpa + high_ram_size);
 
