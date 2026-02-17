@@ -36,6 +36,7 @@
 
 #define PCI_CFG_OFFSET_COMMAND       0x04
 #define PCI_CFG_OFFSET_STATUS        0x06
+#define PCI_CFG_OFFSET_LATENCY_TIMER 0x0d
 #define PCI_CFG_OFFSET_BAR1          0x10
 #define PCI_CFG_OFFSET_BAR2          0x14
 #define PCI_CFG_OFFSET_BAR3          0x18
@@ -43,6 +44,8 @@
 #define PCI_CFG_OFFSET_BAR5          0x20
 #define PCI_CFG_OFFSET_BAR6          0x24
 #define PCI_CFG_OFFSET_CARDBUS       0x28
+#define PCI_CFG_OFFSET_CAP_PTR       0x34
+#define PCI_CFG_OFFSET_IRQ_LINE      0x3c
 
 // PCI Capability IDs
 #define PCI_CAP_ID_PM       0x01    // Power Management

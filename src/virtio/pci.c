@@ -847,7 +847,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     // @billn should we allow unchecked writes to all registers??
 
     switch (reg_off) {
-    case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
+    case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_CARDBUS): {
 
         uint32_t dev_table_idx = ((bus * VIRTIO_PCI_DEVS_PER_BUS) + dev & 0x1F) * VIRTIO_PCI_FUNCS_PER_DEV + (func & 7);
         virtio_device_t *dev_handle = virtio_pci_dev_table[dev_table_idx];
@@ -884,10 +884,41 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
         }
         break;
     }
-    default: {
+    case PCI_CFG_OFFSET_COMMAND: {
+        uint16_t cmd = *(uint16_t *)((uintptr_t)config_space + PCI_CFG_OFFSET_COMMAND);
+
+        // TODO: This is still incorrect as it assumes that the device does not implement
+        // I/O space. This behaviour should instead be dependent on the kind of PCI device.
+        data &= 0xfffffffe;
         uint8_t *bytes = (uint8_t *)((uintptr_t)config_space + reg_off);
         memcpy(bytes, &data, access_width_bytes);
+        break;
     }
+    case PCI_CFG_OFFSET_STATUS:
+    case PCI_CFG_OFFSET_LATENCY_TIMER:
+    case PCI_CFG_OFFSET_CAP_PTR:
+    case PCI_CFG_OFFSET_IRQ_LINE: {
+        // TODO: don't do this and handle each case
+        LOG_VMM("unchecked write into PCI config reg off 0x%lx, value: 0x%lx\n", reg_off, data);
+        uint8_t *bytes = (uint8_t *)((uintptr_t)config_space + reg_off);
+        memcpy(bytes, &data, access_width_bytes);
+        break;
+    }
+    default:
+        // TODO: redo this by checking the PCI specification for what should be a checked write, ignored
+        // write, or passed-through.
+        // Make sure to refer to the PCI sepcification sections.
+        if (reg_off >= 0x40 && reg_off < 0x100) {
+            uint8_t *bytes = (uint8_t *)((uintptr_t)config_space + reg_off);
+            memcpy(bytes, &data, access_width_bytes);
+        } else if (reg_off == 0x30) {
+            // Ignore
+            break;
+        } else {
+            // TODO: do not assert and handle this gracefully instead.
+            LOG_VMM_ERR("tried to write to PCI config offset 0x%x\n", reg_off);
+            assert(false);
+        }
     }
     return true;
 }
