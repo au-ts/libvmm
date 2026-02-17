@@ -65,7 +65,7 @@ struct fw_cfg_file_dir {
     struct FWCfgFile file_entries[NUM_FW_CFG_FILES];
 } __attribute__((packed));
 
-#define NUM_FW_E820_ENTRIES 2
+#define NUM_FW_E820_ENTRIES 3
 struct fw_cfg_e820_map {
     struct boot_e820_entry entries[NUM_FW_E820_ENTRIES];
 } __attribute__((packed));
