@@ -885,8 +885,6 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
         break;
     }
     case PCI_CFG_OFFSET_COMMAND: {
-        uint16_t cmd = *(uint16_t *)((uintptr_t)config_space + PCI_CFG_OFFSET_COMMAND);
-
         // TODO: This is still incorrect as it assumes that the device does not implement
         // I/O space. This behaviour should instead be dependent on the kind of PCI device.
         data &= 0xfffffffe;
