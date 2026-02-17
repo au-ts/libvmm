@@ -1086,7 +1086,7 @@ bool pci_register_virtio_device(virtio_device_t *dev, int virq)
 
     config_space->vendor_id = dev->transport.pci.vendor_id;
     config_space->device_id = dev->transport.pci.device_id;
-    config_space->command = (PCI_COMMAND_IO | PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
+    config_space->command = (PCI_COMMAND_MEMORY | PCI_COMMAND_MASTER);
     config_space->status = PCI_STATUS_CAP_LIST;
     config_space->revision_id = VIRTIO_PCI_REVISION;
     config_space->subclass = PCI_SUB_CLASS(dev->transport.pci.device_class);
