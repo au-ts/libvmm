@@ -1,11 +1,16 @@
 set -e
 # usage: ./iso_to_gpt_img.sh destination.img source.iso
 
-truncate -s 72G "$1"
+if ! file $2 | grep -v "QCOW"; then
+	echo "Naughty, tried to use QCOW"
+	exit 1
+fi
+
+truncate -s 66G "$1"
 sfdisk --no-reread --no-tell-kernel "$1" <<EOF
 label: dos
 
-start=2048,size=71G
+start=2048,size=65G
 EOF
 
 # it is extremely important that bs=512 and seek=2048, as seek is in unit of `bs`.
