@@ -32,7 +32,7 @@ ifeq ($(ARCH),x86_64)
 	FIRM ?= $(SYSTEM_DIR)/OVMF.fd
 	ARCH_FLAGS := -target x86_64-unknown-elf
 	IMAGES = vmm_x86_64.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
-	         network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
+	         network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf eth_driver_virtio.elf
 else
 $(error Unsupported ARCH given)
 endif
