@@ -876,12 +876,17 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
             struct pci_bar_memory_bits *bar = (struct pci_bar_memory_bits *)&config_space->bar[dev_bar_id];
             LOG_VMM("PCI BAR offset: 0x%lx, (before) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
             if (data == 0xFFFFFFFF) {
-                bar->base_address = (~(global_memory_bars[global_bar_id].size - 1)) >> 4;
+                uint32_t inverse_size = (~((uint32_t)global_memory_bars[global_bar_id].size - 1));
+                bar->base_address = inverse_size >> 4;
+                LOG_VMM("inverse_size: 0x%x\n", inverse_size);
             } else if (data != 0x0) {
                 uintptr_t allocated_addr = data & 0xFFFFFFF0; // Ignore control bits
                 bar->base_address = allocated_addr >> 4; // 16-byte aligned
                 global_memory_bars[global_bar_id].vaddr = allocated_addr - registered_pci_memory_resource.vm_addr
                                                         + registered_pci_memory_resource.vmm_addr;
+            } else {
+                bar->base_address &= 0xf;
+                LOG_VMM("writing zero to BAR offset 0x%lx\n", reg_off);
             }
             LOG_VMM("PCI BAR offset: 0x%lx, (after) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
         }
