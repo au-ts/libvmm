@@ -263,6 +263,8 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
                 return success;
             }
         }
+
+        LOG_VMM_ERR("failed to find EPT handler for address 0x%lx\n", addr);
     }
 
     // LOG_VMM("done\n");
@@ -527,7 +529,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
         *new_rip = rip + ins_len;
     } else if (!success) {
-        LOG_VMM_ERR("failed handling fault: 0x%x\n", f_reason);
+        LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
         LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
         if (guest_paging_on()) {
             uint64_t _sp_gpa, _bytes_remaining;
