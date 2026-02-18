@@ -173,7 +173,7 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                                                                  | EFI_PCI_ATTRIBUTE_ISA_IO_16,
                                                                      .IoStart = 0,
                                                                      .IoSize = 0x4000,
-                                                                     .MemStart = 0xD0000000,
+                                                                     .MemStart = 0xe0000000,
                                                                      .MemSize = 0x200000,
                                                                  } };
 
