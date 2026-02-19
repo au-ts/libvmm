@@ -175,7 +175,7 @@ struct hpet {
 #define MCFG_NUM_CONFIG_SPACES 1
 
 #define ECAM_GPA 0xd0000000
-#define ECAM_SIZE 0x100000
+#define ECAM_SIZE 0x10000000
 
 struct pcie_config_space_addr_structure {
     uint64_t base_address;
