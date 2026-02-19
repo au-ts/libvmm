@@ -131,6 +131,8 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     }
 
     if (success) {
+        // TODO: must be done for all other virtIO impls
+        dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
     } else {
         LOG_VMM("set dev features not happy\n");
