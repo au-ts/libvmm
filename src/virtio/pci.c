@@ -539,6 +539,12 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
     // LOG_VMM("accessing device 0x%x, offset 0x%x, data 0x%x, q select 0x%x\n", dev->regs.DeviceID, offset, data, dev->regs.QueueSel);
 
     switch (offset) {
+    case VIRTIO_PCI_COMMON_DEV_FEATURE:
+        LOG_PCI_ERR("ignoring write of 0x%x to PCI device_feature, read-only register\n", data);
+        break;
+    case VIRTIO_PCI_COMMON_NUM_QUEUES:
+        LOG_PCI_ERR("ignoring write of 0x%x to PCI num_queues, read-only register\n", data);
+        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE_SEL, VIRTIO_PCI_COMMON_DEV_FEATURE):
         dev->regs.DeviceFeaturesSel = data;
         break;
