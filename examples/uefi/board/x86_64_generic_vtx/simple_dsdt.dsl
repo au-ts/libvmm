@@ -109,15 +109,81 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                 Return (Package() {
                     // Virtio console:
                     // Device 0x3, function 0, INTA -> GSI 15
-                    Package() { 0x00030000, 0, 0, 15 },
+                    Package() { 0x0003ffff, 0, GSIA, 0 },
                     // Virtio net:
                     // Device 0x4, function 0, INTA -> GSI 14
-                    Package() { 0x00040000, 0, 0, 14 },
+                    Package() { 0x0004ffff, 0, GSIB, 0 },
                     // Virtio blk:
                     // Device 0x5, function 0, INTA -> GSI 13
-                    Package() { 0x00050000, 0, 0, 13 },
+                    Package() { 0x0005ffff, 0, GSIC, 0 },
                 })
             }
+        }
+
+        Device (GSIA)
+        {
+            Name (_HID, EisaId ("PNP0C0F") /* PCI Interrupt Link Device */)  // _HID: Hardware ID
+            Name (_UID, 0xf)  // _UID: Unique ID
+            Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000f,
+                }
+            })
+            Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000f,
+                }
+            })
+            Method (_DIS, 0, NotSerialized) {}  // _DIS: Disable Device
+            Method (_SRS, 1, NotSerialized) {} // _SRS: Set Resource Settings
+        }
+
+        Device (GSIB)
+        {
+            Name (_HID, EisaId ("PNP0C0F") /* PCI Interrupt Link Device */)  // _HID: Hardware ID
+            Name (_UID, 0x10)  // _UID: Unique ID
+            Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000e,
+                }
+            })
+            Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000e,
+                }
+            })
+            Method (_DIS, 0, NotSerialized) {}  // _DIS: Disable Device
+            Method (_SRS, 1, NotSerialized) {} // _SRS: Set Resource Settings
+        }
+
+        Device (GSIC)
+        {
+            Name (_HID, EisaId ("PNP0C0F") /* PCI Interrupt Link Device */)  // _HID: Hardware ID
+            Name (_UID, 0x11)  // _UID: Unique ID
+            Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000d,
+                }
+            })
+            Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                {
+                    0x000000d,
+                }
+            })
+            Method (_DIS, 0, NotSerialized) {}  // _DIS: Disable Device
+            Method (_SRS, 1, NotSerialized) {} // _SRS: Set Resource Settings
         }
     }
 
