@@ -290,7 +290,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     sdf.add_channel(pit_timer_ch)
 
     ############ VIRTIO PCI ############
-    config_space = MemoryRegion(sdf, name="ecam", size=0x100000)
+    config_space = MemoryRegion(sdf, name="ecam", size=0x10000000)
     sdf.add_mr(config_space)
     vmm_client0.add_map(Map(config_space, vaddr=0x800_0000, perms="rw"))
 
