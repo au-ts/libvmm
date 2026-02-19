@@ -175,6 +175,8 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                                                      .IoSize = 0x4000,
                                                                      .MemStart = 0xe0000000,
                                                                      .MemSize = 0x200000,
+                                                                     .PcieConfigStart = ECAM_GPA,
+                                                                     .PcieConfigSize = ECAM_SIZE,
                                                                  } };
 
     // Finish by populating File Dir with everything we built
