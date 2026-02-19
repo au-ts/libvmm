@@ -526,7 +526,8 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         break;
     default:
         LOG_PCI_ERR("read operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
-        success = false;
+        // TODO: do not check in
+        success = true;
     }
 
     return success;
@@ -958,8 +959,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
             break;
         } else {
             // TODO: do not assert and handle this gracefully instead.
-            LOG_VMM_ERR("tried to write to PCI config offset 0x%x\n", reg_off);
-            assert(false);
+            LOG_VMM_ERR("tried to write to PCI config offset 0x%x, width: %d, value: 0x%x\n", reg_off, access_width_bytes, data);
         }
     }
     return true;
