@@ -126,7 +126,7 @@ uint64_t guest_flash_gpa = 0xffa00000;
 uint64_t guest_flash_size = 0x600000;
 
 uintptr_t guest_ecam_vaddr = 0x8000000;
-uint64_t guest_ecam_size = 0x100000;
+uint64_t guest_ecam_size = 0x10000000;
 
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;

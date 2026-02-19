@@ -165,7 +165,7 @@ size_t mcfg_build(struct mcfg *mcfg)
     mcfg->config_spaces[0].base_address = ECAM_GPA;
     mcfg->config_spaces[0].pci_segment_group = 0;
     mcfg->config_spaces[0].start_bus = 0;
-    mcfg->config_spaces[0].end_bus = 0;
+    mcfg->config_spaces[0].end_bus = 0x5;
 
     mcfg->h.checksum = acpi_compute_checksum((char *)mcfg, mcfg->h.length);
     assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
