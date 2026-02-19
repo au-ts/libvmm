@@ -85,6 +85,7 @@ typedef struct virtio_device_regs {
     uint32_t VendorID;
 
     uint32_t DeviceFeaturesSel;
+    uint32_t DriverFeatures;
     uint32_t DriverFeaturesSel;
 
     uint32_t QueueSel;
