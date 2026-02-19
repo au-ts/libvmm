@@ -89,6 +89,15 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     0x0000000000000000, // Translation
                     0x600000  // Length
                 )
+
+                // Prefetchable MMIO window
+                QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
+                    0x0000000000000000, // Granularity
+                    0xe0000000, // Min
+                    0xe01fffff, // Max
+                    0x0000000000000000, // Translation
+                    0x200000  // Length
+                )
             })
         }
     }
