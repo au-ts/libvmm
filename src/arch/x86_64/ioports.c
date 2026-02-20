@@ -117,14 +117,12 @@ int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_
 
         assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
 
-        LOG_VMM("copying src[%d]: %c\n", data_index, src[data_index]);
-
         memcpy(&dest[data_index], &src[data_index], ioports_access_width_to_bytes(access_width));
 
         if (eflags & BIT(10)) {
-            vctx->edi -= ioports_access_width_to_bytes(access_width);
+            vctx->esi -= ioports_access_width_to_bytes(access_width);
         } else {
-            vctx->edi += ioports_access_width_to_bytes(access_width);
+            vctx->esi += ioports_access_width_to_bytes(access_width);
         }
         data_index += ioports_access_width_to_bytes(access_width);
     }
