@@ -117,7 +117,7 @@ int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_
 
         assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
 
-        memcpy(&dest[data_index], &src[data_index], ioports_access_width_to_bytes(access_width));
+        memcpy(&dest[data_index], src, ioports_access_width_to_bytes(access_width));
 
         if (eflags & BIT(10)) {
             vctx->esi -= ioports_access_width_to_bytes(access_width);
