@@ -1,12 +1,22 @@
-#include <libvmm/arch/x86_64/com.h>
-#include <libvmm/util/util.h>
-#include <sddf/util/util.h>
 #include <microkit.h>
+#include <sddf/util/util.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/com.h>
+#include <libvmm/arch/x86_64/ioports.h>
 
-static uint8_t com_scratch[4];
+static uint8_t com_scratch[5];
 
-void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_read) {
+void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_read, bool is_rep, bool is_string, ioport_access_width_t access_width) {
     // LOG_VMM("com port %d, reg_offset %d, is_read %d\n", idx, reg_offset, is_read);
+
+    // TODO: sort this out
+    char buf[100];
+    size_t string_bytes_written;
+    if (is_string) {
+        assert(reg_offset == 0x0 && !is_read);
+
+        string_bytes_written = emulate_ioport_string_write(vctx, buf, 100, is_rep, access_width);
+    }
 
     assert(idx < sizeof(com_scratch) / sizeof(uint8_t));
     switch (reg_offset) {
@@ -24,7 +34,13 @@ void emulate_com(seL4_VCPUContext *vctx, size_t idx, size_t reg_offset, bool is_
             vctx->eax = 0;
         } else {
             // LOG_VMM("com2 out: %c\n", vctx->eax);
-            microkit_dbg_putc(vctx->eax);
+            if (is_string) {
+                for (int i = 0; i < string_bytes_written; i++) {
+                    microkit_dbg_putc(buf[i]);
+                }
+            } else {
+                microkit_dbg_putc(vctx->eax);
+            }
         }
         break;
     }

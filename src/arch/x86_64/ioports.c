@@ -97,6 +97,41 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width)
 //     return true;
 // }
 
+int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_len, bool is_rep,
+                               ioport_access_width_t access_width)
+{
+    int data_index = 0;
+    int max_iterations = 1;
+    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
+
+    if (is_rep) {
+        max_iterations = vctx->ecx;
+    }
+
+    int iteration = 0;
+    for (; iteration < max_iterations && data_index < data_len; iteration++) {
+        uint64_t src_gpa;
+        uint64_t bytes_to_page_boundary;
+        assert(gva_to_gpa(0, vctx->edi, &src_gpa, &bytes_to_page_boundary));
+        char *src = gpa_to_vaddr(src_gpa);
+
+        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
+
+        LOG_VMM("copying src[%d]: %c\n", data_index, src[data_index]);
+
+        memcpy(&dest[data_index], &src[data_index], ioports_access_width_to_bytes(access_width));
+
+        if (eflags & BIT(10)) {
+            vctx->edi -= ioports_access_width_to_bytes(access_width);
+        } else {
+            vctx->edi += ioports_access_width_to_bytes(access_width);
+        }
+        data_index += ioports_access_width_to_bytes(access_width);
+    }
+
+    return ioports_access_width_to_bytes(access_width) * data_index;
+}
+
 int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep,
                                ioport_access_width_t access_width)
 {
@@ -244,16 +279,19 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         assert(!is_string);
         success = true;
     } else if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
-        emulate_com(vctx, 0, port_addr - 0x3f8, is_read);
+        emulate_com(vctx, 0, port_addr - 0x3f8, is_read, is_rep, is_string, access_width);
         success = true;
     } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
-        emulate_com(vctx, 1, port_addr - 0x2f8, is_read);
+        emulate_com(vctx, 1, port_addr - 0x2f8, is_read, is_rep, is_string, access_width);
         success = true;
     } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
-        emulate_com(vctx, 2, port_addr - 0x3e8, is_read);
+        emulate_com(vctx, 2, port_addr - 0x3e8, is_read, is_rep, is_string, access_width);
         success = true;
     } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
-        emulate_com(vctx, 3, port_addr - 0x2ef, is_read);
+        emulate_com(vctx, 3, port_addr - 0x2ef, is_read, is_rep, is_string, access_width);
+        success = true;
+    } else if (port_addr >= 0x2e8 && port_addr <= 0x2e8 + 8) {
+        emulate_com(vctx, 4, port_addr - 0x2e8, is_read, is_rep, is_string, access_width);
         success = true;
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
