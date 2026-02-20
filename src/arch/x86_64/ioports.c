@@ -112,7 +112,7 @@ int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_
     for (; iteration < max_iterations && data_index < data_len; iteration++) {
         uint64_t src_gpa;
         uint64_t bytes_to_page_boundary;
-        assert(gva_to_gpa(0, vctx->edi, &src_gpa, &bytes_to_page_boundary));
+        assert(gva_to_gpa(0, vctx->esi, &src_gpa, &bytes_to_page_boundary));
         char *src = gpa_to_vaddr(src_gpa);
 
         assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
