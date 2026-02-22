@@ -165,6 +165,10 @@ size_t mcfg_build(struct mcfg *mcfg)
     mcfg->config_spaces[0].base_address = ECAM_GPA;
     mcfg->config_spaces[0].pci_segment_group = 0;
     mcfg->config_spaces[0].start_bus = 0;
+    // TODO: hack as Windows source code may think that end_bus value of zero is a
+    // mistake by the BIOS and the real end_bus is assumed to be 0xff.
+    // I hard-code to 0x5 since that is the highest we need/handle right now, we should
+    // obviously fix this properly.
     mcfg->config_spaces[0].end_bus = 0x5;
 
     mcfg->h.checksum = acpi_compute_checksum((char *)mcfg, mcfg->h.length);

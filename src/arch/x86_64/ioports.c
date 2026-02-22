@@ -97,6 +97,43 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width)
 //     return true;
 // }
 
+// TODO: this function does not seem to work for Windows when it does outsb to write out a buffer
+// to one of the COM ports. I wrote a Linux program (below) to try to test our outsb functionality.
+// It found some bugs but I was not able to reproduce the weirdness that I was seeing with Windows.
+// More testing is required.
+//
+// #include <sys/io.h>
+// #include <stdint.h>
+// #include <stdio.h>
+// #include <stdlib.h>
+// #include <string.h>
+// #include <assert.h>
+
+// #define COM1 ((unsigned short int)0x3f8)
+
+// int main() {
+//     printf("init\n");
+
+//     int err = ioperm(COM1, 8, 1);
+//     assert(!err);
+
+//     printf("attempting outb\n");
+//     outb('h', COM1);
+//     printf("attempting outb\n");
+//     outb('e', COM1);
+//     outb('l', COM1);
+//     outb('l', COM1);
+//     outb('o', COM1);
+
+//     printf("attempting outsb\n");
+
+//     char *hello = "hello theresssssssssssssssssssssssssssssssssss\n";
+//     outsb(COM1, hello, strlen(hello));
+
+//     for (int i = 0; i < 10; i++)  {
+//         outsb(COM1, hello, strlen(hello));
+//     }
+// }
 int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_len, bool is_rep,
                                ioport_access_width_t access_width)
 {
