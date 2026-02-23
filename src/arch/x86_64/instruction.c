@@ -15,8 +15,6 @@
 
 // https://wiki.osdev.org/X86-64_Instruction_Encoding
 
-#define X86_MAX_INSTRUCTION_LENGTH 15
-
 // https://c9x.me/x86/html/file_module_x86_id_176.html
 #define NUM_MOV_OPCODES 4
 #define OPCODE_MOV_BYTE_TO_MEM 0x88
@@ -74,6 +72,9 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
     uint64_t *vctx_raw = (uint64_t *)vctx;
     bool success = true;
 
+    int access_width_bytes = mem_access_width_to_bytes(decoded_ins);
+    assert(access_width_bytes != 0 && access_width_bytes <= 4);
+
     switch (decoded_ins.type) {
     case INSTRUCTION_MEMORY:
         if (ept_fault_is_read(ept_fault_qualification)) {
@@ -89,14 +90,27 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
         break;
     default:
         LOG_VMM_ERR("mem_write_get_data() not a memory access instruction\n");
-        success = false;
+        return false;
     }
+
+    switch (access_width_bytes) {
+    case 1:
+        *ret &= 0xff;
+        break;
+    case 2:
+        *ret &= 0xffff;
+        break;
+    case 4:
+        *ret &= 0xffffffff;
+        break;
+    }
+
     return success;
 }
 
 bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
                        uint64_t data)
-{    
+{
     if (ept_fault_is_write(ept_fault_qualification)) {
         LOG_VMM_ERR("mem_read_set_data() got a write fault\n");
         return false;
@@ -105,7 +119,7 @@ bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_q
         LOG_VMM_ERR("mem_read_set_data() not a memory access instruction\n");
         return false;
     }
-    
+
     uint64_t *vctx_raw = (uint64_t *)vctx;
     vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
     return true;
@@ -155,6 +169,80 @@ static register_idx_t modrm_reg_to_vctx_idx(uint8_t reg, bool rex_r)
     return -1;
 }
 
+static char *vctx_idx_to_name(int vctx_idx)
+{
+    switch (vctx_idx) {
+    case RAX_IDX:
+        return "rax";
+    case RBX_IDX:
+        return "rbx";
+    case RCX_IDX:
+        return "rcx";
+    case RDX_IDX:
+        return "rdx";
+    case RSI_IDX:
+        return "rsi";
+    case RDI_IDX:
+        return "rdi";
+    case RBP_IDX:
+        return "rbp";
+    case R8_IDX:
+        return "r8";
+    case R9_IDX:
+        return "r9";
+    case R10_IDX:
+        return "r10";
+    case R11_IDX:
+        return "r11";
+    case R12_IDX:
+        return "r12";
+    case R13_IDX:
+        return "r13";
+    case R14_IDX:
+        return "r14";
+    case R15_IDX:
+        return "r15";
+    default:
+        assert(false);
+        return "";
+    }
+}
+
+void debug_print_instruction(decoded_instruction_ret_t decode_result)
+{
+    assert(decode_result.raw_len < X86_MAX_INSTRUCTION_LENGTH);
+
+    LOG_VMM("debug_print_instruction(): decoder result:\n");
+    LOG_VMM("instruction length: %d\n", decode_result.raw_len);
+    LOG_VMM("raw instruction:\n");
+    for (int i = 0; i < decode_result.raw_len; i++) {
+        LOG_VMM("0x%hhx\n", decode_result.raw[i]);
+    }
+
+    switch (decode_result.type) {
+    case INSTRUCTION_DECODE_FAIL:
+        LOG_VMM("type: failed to decode\n");
+        break;
+
+    case INSTRUCTION_WRITE_IMM:
+        LOG_VMM("type: write to memory from immediate\n");
+        LOG_VMM("immediate: 0x%lx\n", decode_result.decoded.write_imm_instruction.value);
+        LOG_VMM("access width bytes: %d\n", mem_access_width_to_bytes(decode_result));
+        break;
+
+    case INSTRUCTION_MEMORY:
+        LOG_VMM("type: memory access\n");
+        LOG_VMM("zero extend: %d\n", decode_result.decoded.memory_instruction.zero_extend);
+        LOG_VMM("target reg: %s\n", vctx_idx_to_name(decode_result.decoded.memory_instruction.target_reg));
+        LOG_VMM("access width bytes: %d\n", mem_access_width_to_bytes(decode_result));
+        break;
+
+    default:
+        LOG_VMM("type: unknown!\n");
+        break;
+    }
+}
+
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len)
 {
     uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
@@ -174,6 +262,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     // Such as https://github.com/zyantific/zydis which is no-malloc and no-libc, but it uses cmake...yuck
     // But then we introduce a dependency...
     decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
+    memcpy(&ret.raw, gpa_to_vaddr(rip_gpa), instruction_len);
+    ret.raw_len = instruction_len;
 
     bool opcode_valid = false;
     int parsed_byte = 0;
@@ -293,7 +383,8 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
             // just skipping to the immediate
             int immediate_bytes = mem_access_width_to_bytes(ret);
             assert(instruction_len > immediate_bytes);
-            memcpy(&(ret.decoded.write_imm_instruction.value), &instruction_buf[instruction_len - immediate_bytes], immediate_bytes);
+            memcpy(&(ret.decoded.write_imm_instruction.value), &instruction_buf[instruction_len - immediate_bytes],
+                   immediate_bytes);
 
             break;
         }
