@@ -62,12 +62,20 @@ typedef enum instruction_type {
     INSTRUCTION_WRITE_IMM,
 } instruction_type_t;
 
+#define X86_MAX_INSTRUCTION_LENGTH 15
+
 typedef struct decoded_instruction_ret {
+    /* For debugging purpose */
+    char raw[X86_MAX_INSTRUCTION_LENGTH];
+    int raw_len;
+
     instruction_type_t type;
     instruction_data_t decoded;
 } decoded_instruction_ret_t;
 
 decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len);
+
+void debug_print_instruction(decoded_instruction_ret_t decode_result);
 
 int mem_access_width_to_bytes(decoded_instruction_ret_t decoded_ins);
 
