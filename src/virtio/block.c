@@ -83,10 +83,10 @@ static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uin
     /* feature bits 0 to 31 */
     case 0:
         *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
+        *features |= BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
+        *features |= BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
+        *features |= BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
+        *features |= BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
         break;
     /* features bits 32 to 63 */
     case 1:
