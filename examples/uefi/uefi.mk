@@ -137,10 +137,13 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 # /home/billn/Downloads/windbg_client/win10_debugged_com2_no_recovery.guest
 # /home/billn/Downloads/Win10_22H2_English_x64v1.iso
 
-
+# 							  -drive file=/home/billn/Downloads/windbg_server/Windows10Installed_clean.guest,format=raw,if=none,id=drive0 \
 # hack for virtio driver installation
 # 							  -drive id=disk,file=/home/billn/Downloads/virtio-win-0.1.285.iso,format=raw,if=none \
 # 							  -device ide-hd,drive=disk,bus=ide.0 \
+# 							  -drive file=/home/billn/Downloads/windbg_client/win10_debugged_com2_no_recovery.guest,format=raw,if=none,id=drive0 \
+
+# 							  -serial tcp:127.0.0.1:4445
 
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
@@ -148,10 +151,10 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -m size=9G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  -cdrom /home/billn/Downloads/Win10_22H2_English_x64v1.iso \
 							  -serial tcp:127.0.0.1:4445
+
 
 clean::
 	$(RM) -f *.elf .depend* $
