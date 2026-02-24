@@ -147,6 +147,10 @@
 #define VIRTIO_PCI_QUEUE_NUM_MAX         0x2
 #define VIRTIO_PCI_QUEUE_SIZE            0x100
 
+/* Specification section 4.1.5.1.2 - MSI-X Vector Configuration */
+/* Vector value used to disable MSI for queue */
+#define VIRTIO_MSI_NO_VECTOR 0xffff
+
 // Type 0 headers for endpoints
 struct pci_config_space {
     // Device Identification
