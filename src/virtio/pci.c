@@ -504,6 +504,10 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
     case REG_RANGE(VIRTIO_PCI_COMMON_DEV_FEATURE, VIRTIO_PCI_COMMON_DRI_FEATURE_SEL):
         success = dev->funs->get_device_features(dev, data);
         break;
+    case REG_RANGE(VIRTIO_PCI_COMMON_MSIX, VIRTIO_PCI_COMMON_NUM_QUEUES):
+        /* We do not support MSIs. */
+        *data = VIRTIO_MSI_NO_VECTOR;
+        break;
     case REG_RANGE(VIRTIO_PCI_COMMON_NUM_QUEUES, VIRTIO_PCI_COMMON_DEV_STATUS):
         *data = dev->num_vqs;
         break;
