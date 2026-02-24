@@ -396,6 +396,11 @@ uint64_t *cr_fault_reg_idx_to_vctx_ptr(int idx, seL4_VCPUContext *vctx)
     }
 }
 
+uint64_t n_faults = 0;
+uint64_t n_vmexit_reasons[NUM_EXIT_REASONS] = { 0 };
+
+uint64_t n_notifieds = 0;
+
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 {
     bool success = false;
@@ -487,6 +492,20 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
+
+    n_vmexit_reasons[f_reason] += 1;
+    n_faults += 1;
+    if (n_faults % 50000 == 0) {
+        LOG_VMM("vm exit stats:\n");
+        for (int i = 0; i < NUM_EXIT_REASONS; i++) {
+            char *reason_human = fault_to_string(i);
+            uint64_t n_fault = n_vmexit_reasons[i];
+            if (reason_human[0] != 0 && n_fault) {
+                LOG_VMM("%s: %lu\n", reason_human, n_fault);
+            }
+        }
+        LOG_VMM("number of notifieds: %lu\n", n_notifieds);
+    }
 
     *new_rip = rip;
     if (success && f_reason != INTERRUPT_WINDOW) {

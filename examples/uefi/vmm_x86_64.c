@@ -206,8 +206,12 @@ void init(void)
     tsc_pre = rdtsc();
 }
 
+extern uint64_t n_notifieds;
+
 void notified(microkit_channel ch)
 {
+    n_notifieds += 1;
+
     if (ch == 8) {
         LOG_VMM("cmos irq why???\n");
     }
