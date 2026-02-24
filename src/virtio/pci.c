@@ -695,6 +695,11 @@ static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t vcpu_id, si
 static bool virtio_pci_isr_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t offset, uint32_t *data)
 {
     *data = dev->regs.InterruptStatus;
+    /*
+     * virtIO spec section 4.1.4.5.1 Device Requirements: ISR status capability
+     * "The device MUST reset ISR status to 0 on driver read."
+     */
+    dev->regs.InterruptStatus = 0;
     return true;
 }
 
