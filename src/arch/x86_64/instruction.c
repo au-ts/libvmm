@@ -73,7 +73,7 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
     bool success = true;
 
     int access_width_bytes = mem_access_width_to_bytes(decoded_ins);
-    assert(access_width_bytes != 0 && access_width_bytes <= 4);
+    assert(access_width_bytes != 0);
 
     switch (decoded_ins.type) {
     case INSTRUCTION_MEMORY:
