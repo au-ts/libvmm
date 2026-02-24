@@ -604,9 +604,6 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             break;
         }
         }
-
-        last_handled_avail_idx++;
-        break;
     }
 
 // TODO: handle unused label
@@ -891,7 +888,7 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
     This is to prevent internal fragmentation within the data region, leading to a deadlock
     where we can't handle large requests when the free cells in the data region isn't contiguous. */
     blk_dev->config.size_max = BLK_TRANSFER_SIZE;
-    blk_dev->config.seg_max = 1;
+    blk_dev->config.seg_max = 8;
 
     blk_dev->config.topology.physical_block_exp =
         3; // 2^3 = 8 logical blocks in 1 physical block (sDDF transfer window)
