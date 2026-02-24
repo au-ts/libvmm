@@ -44,7 +44,6 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/pci.c \
 			   src/arch/x86_64/util.c \
 			   src/arch/x86_64/cmos.c \
-			   src/arch/x86_64/e820.c \
 			   src/arch/x86_64/uefi.c \
 			   src/arch/x86_64/com.c \
 			   src/arch/x86_64/qemu/bios_linker_loader.c \
