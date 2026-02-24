@@ -11,8 +11,6 @@
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/util.h>
 
-// https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.cc
-
 #define CACHE_LINE_SIZE 64
 #define NUM_LOGICAL_PROCESSORS 1
 
@@ -124,14 +122,16 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
     switch (vctx->eax) {
     case 0x0:
-            // 3-240 Vol. 2A
-            // GenuineIntel
+        // 3-240 Vol. 2A
+        // Maxiumum Input Value for Basic CPUID Information.
         vctx->eax = 0x16;
+        // "GenuineIntel"
         vctx->ebx = 0x756e6547;
         vctx->edx = 0x49656e69;
         vctx->ecx = 0x6c65746e;
         break;
     case 0x1: {
+        // https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.cc
         vctx->eax = 0x00050054;
         vctx->ebx = ((CACHE_LINE_SIZE / 8) << 8) | (NUM_LOGICAL_PROCESSORS << 16);
         vctx->ecx = CPUID_01_ECX_DTES64 | 0 /* No qualified debug store */
@@ -167,6 +167,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     }
 
     case 0x2: {
+        // https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.cc
         // Cache and TLB description
         vctx->eax = 0x76036301;
         vctx->ebx = 0x00f0b5ff;
@@ -176,6 +177,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     }
 
     case 0x4: {
+        // https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.cc
         // Deterministic Cache Parameters
         switch (vctx->ecx) {
         case 0:
@@ -235,7 +237,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = vctx->ecx;
-        vctx->edx = 0; // x2apic id, weird because we don't use x2apic
+        vctx->edx = 0; // x2apic id, though we don't use x2apic
         break;
     }
 
@@ -357,7 +359,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         break;
 
     case 0x6:
-        vctx->eax = CPUID_06_EAX_ARAT;
+        vctx->eax = CPUID_06_EAX_ARAT; /* Always running APIC timer */
         vctx->ebx = 0;
         vctx->ecx = 0;
         vctx->edx = 0;
