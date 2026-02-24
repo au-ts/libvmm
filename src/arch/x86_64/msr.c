@@ -205,7 +205,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     //     pvclock_write_fault_handle(MSR_KVM_SYSTEM_TIME_NEW, value);
     //     break;
     default:
-        LOG_VMM("unknown wrmsr 0x%x\n", vctx->ecx);
+        LOG_VMM("unknown wrmsr 0x%x, value 0x%lx\n", vctx->ecx, value);
         return false;
     }
 
