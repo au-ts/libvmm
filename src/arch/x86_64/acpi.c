@@ -109,15 +109,6 @@ size_t madt_build(struct madt *madt)
     madt->apic_addr = MADT_LOCAL_APIC_ADDR;
     madt->flags = MADT_FLAGS;
 
-    // uintptr_t watermark = (uintptr_t)madt + sizeof(struct madt);
-    // madt_add_entry(madt, watermark, &lapic);
-    // watermark += sizeof(struct madt_lapic);
-    // madt_add_entry(madt, watermark, &ioapic);
-    // watermark += sizeof(struct madt_ioapic);
-    // madt_add_entry(madt, watermark, &ioapic_hpet_override);
-    // watermark += sizeof(struct madt_ioapic_source_override);
-    // madt_add_entry(madt, watermark, &ioapic_com1_override);
-
     // Finished building, now do the checksum.
     madt->h.checksum = acpi_compute_checksum((char *)madt, madt->h.length);
     assert(acpi_checksum_ok((char *)madt, madt->h.length));
