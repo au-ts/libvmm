@@ -129,15 +129,15 @@ static bool virtio_net_get_device_config(struct virtio_device *dev,
     uint32_t word_offset = offset / sizeof(uint32_t);
     switch (word_offset) {
     case 0:
-        *ret_val = config->mac[0];
-        *ret_val |= config->mac[1] << 8;
-        *ret_val |= config->mac[2] << 16;
-        *ret_val |= config->mac[3] << 24;
+        *ret_val = (uint32_t)config->mac[0];
+        *ret_val |= (uint32_t)config->mac[1] << 8;
+        *ret_val |= (uint32_t)config->mac[2] << 16;
+        *ret_val |= (uint32_t)config->mac[3] << 24;
         break;
 
     case 1:
-        *ret_val = config->mac[4];
-        *ret_val |= config->mac[5] << 8;
+        *ret_val = (uint32_t)config->mac[4];
+        *ret_val |= (uint32_t)config->mac[5] << 8;
         break;
 
     default:
