@@ -205,6 +205,9 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
     // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
 
+    uint64_t is_string = qualification & BIT(4);
+    assert(!is_string);
+
     if (!pci_pio_addr_reg_enable()) {
         pci_invalid_pio_read(vctx);
         return true;
