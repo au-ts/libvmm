@@ -177,8 +177,11 @@ static inline void virtio_blk_used_buffer(struct virtio_device *dev, uint16_t de
     virtq->used->idx++;
 }
 
+// TODO: this function is not specific to block at all but rather all virtIO devices,
+// should be made generic instead.
 static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
 {
+    assert(dev->regs.InterruptStatus);
     bool success;
 #if defined(CONFIG_ARCH_AARCH64)
     success = virq_inject(dev->virq);
@@ -188,12 +191,20 @@ static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
     return success;
 }
 
+// TODO: this function is not specific to block at all but rather all virtIO devices,
+// should be made generic instead.
 static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
 {
     /* Set the reason of the irq.
        bit 0: used buffer
        bit 1: configuration change */
-    dev->regs.InterruptStatus = used_buffer | (config_change << 1);
+    dev->regs.InterruptStatus = 0;
+    if (used_buffer) {
+        dev->regs.InterruptStatus |= 0x1;
+    }
+    if (config_change) {
+        dev->regs.InterruptStatus |= 0x2;
+    }
 }
 
 static inline void virtio_blk_set_req_fail(struct virtio_device *dev, uint16_t desc)
