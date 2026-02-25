@@ -82,6 +82,7 @@ struct ioapic_regs {
 uint32_t vapic_read_reg(int offset);
 void vapic_write_reg(int offset, uint32_t value);
 
+bool lapic_read_fault_handle(uint64_t offset);
 bool lapic_write_fault_handle(uint64_t offset);
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification, decoded_instruction_ret_t decoded_ins);
 
