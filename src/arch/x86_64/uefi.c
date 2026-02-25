@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <string.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/acpi.h>
@@ -10,7 +11,6 @@
 #include <libvmm/arch/x86_64/qemu/fw_cfg.h>
 #include <libvmm/arch/x86_64/qemu/ramfb.h>
 #include <libvmm/arch/x86_64/e820.h>
-#include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
 
 extern struct fw_cfg_blobs fw_cfg_blobs;

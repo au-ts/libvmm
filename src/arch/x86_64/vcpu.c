@@ -5,6 +5,7 @@
 
 #include <microkit.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <libvmm/vcpu.h>
 #include <libvmm/guest.h>
@@ -14,7 +15,6 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <sel4/arch/vmenter.h>
-#include <sddf/util/custom_libc/string.h>
 
 // void vcpu_reset(size_t vcpu_id) {
 

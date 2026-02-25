@@ -3,9 +3,9 @@
  * Copyright 2025, UNSW
  * SPDX-License-Identifier: BSD-2-Clause
  */
+#include <string.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
-#include <sddf/util/custom_libc/string.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/linux.h>
