@@ -219,7 +219,7 @@ typedef struct virtio_device virtio_device_t;
 
 struct pci_memory_bar {
     uintptr_t vaddr;
-    uintptr_t size;
+    uint64_t size;
     uintptr_t free_offset;
     virtio_device_t *dev;
     uint8_t idx;                  // bar index in the device
