@@ -34,55 +34,6 @@ extern bool fault_cond;
 #define LOG_APIC(...) do{}while(0)
 #endif
 
-// Table 11-1. Local APIC Register Address Map
-#define REG_LAPIC_ID 0x20
-#define REG_LAPIC_REV 0x30
-#define REG_LAPIC_TPR 0x80
-#define REG_LAPIC_APR 0x90
-#define REG_LAPIC_PPR 0xa0
-#define REG_LAPIC_EOI 0xb0
-#define REG_LAPIC_LDR 0xd0
-#define REG_LAPIC_DFR 0xe0
-#define REG_LAPIC_SVR 0xf0
-// @billn make this less hardcodey
-#define REG_LAPIC_ISR_0 0x100
-#define REG_LAPIC_ISR_1 0x110
-#define REG_LAPIC_ISR_2 0x120
-#define REG_LAPIC_ISR_3 0x130
-#define REG_LAPIC_ISR_4 0x140
-#define REG_LAPIC_ISR_5 0x150
-#define REG_LAPIC_ISR_6 0x160
-#define REG_LAPIC_ISR_7 0x170
-#define REG_LAPIC_TMR_0 0x180
-#define REG_LAPIC_TMR_1 0x190
-#define REG_LAPIC_TMR_2 0x1A0
-#define REG_LAPIC_TMR_3 0x1B0
-#define REG_LAPIC_TMR_4 0x1C0
-#define REG_LAPIC_TMR_5 0x1D0
-#define REG_LAPIC_TMR_6 0x1E0
-#define REG_LAPIC_TMR_7 0x1F0
-#define REG_LAPIC_IRR_0 0x200
-#define REG_LAPIC_IRR_1 0x210
-#define REG_LAPIC_IRR_2 0x220
-#define REG_LAPIC_IRR_3 0x230
-#define REG_LAPIC_IRR_4 0x240
-#define REG_LAPIC_IRR_5 0x250
-#define REG_LAPIC_IRR_6 0x260
-#define REG_LAPIC_IRR_7 0x270
-#define REG_LAPIC_ESR 0x280
-#define REG_LAPIC_CMCI 0x2f0
-#define REG_LAPIC_ICR_LOW 0x300
-#define REG_LAPIC_ICR_HIGH 0x310
-#define REG_LAPIC_TIMER 0x320
-#define REG_LAPIC_THERMAL 0x330
-#define REG_LAPIC_PERF_MON_CNTER 0x340
-#define REG_LAPIC_LVT_LINT0 0x350
-#define REG_LAPIC_LVT_LINT1 0x360
-#define REG_LAPIC_LVT_ERR 0x370
-#define REG_LAPIC_INIT_CNT 0x380
-#define REG_LAPIC_CURR_CNT 0x390
-#define REG_LAPIC_DCR 0x3e0
-
 #define REG_IOAPIC_IOREGSEL_MMIO_OFF 0x0
 #define REG_IOAPIC_IOWIN_MMIO_OFF 0x10
 #define REG_IOAPIC_IOAPICID_REG_OFF 0x0
@@ -91,12 +42,13 @@ extern bool fault_cond;
 #define REG_IOAPIC_IOREDTBL_FIRST_OFF 0x10
 #define REG_IOAPIC_IOREDTBL_LAST_OFF 0x40
 
-extern struct lapic_regs lapic_regs;
 // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
+extern uintptr_t vapic_vaddr;
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
 
-void lapic_maintenance(void);
+// @billn revisit for multiple vcpus
+uint64_t native_scaled_tsc_when_timer_starts;
 
 static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
 {
@@ -105,70 +57,16 @@ static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
     return (uint64_t)(tmp / hz);
 }
 
-static int n_irq_in_service(void)
+static int get_next_pending_irq_vector(void)
 {
-    int n = 0;
-    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
-        for (int j = 31; j >= 0; j--) {
-            if (lapic_regs.isr[i] & BIT(j)) {
-                n += 1;
-            }
-        }
-    }
-    return n;
-}
-
-static bool get_highest_vector_in_service(uint8_t *ret)
-{
-    for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
-        for (int j = 31; j >= 0; j--) {
-            if (lapic_regs.isr[i] & BIT(j)) {
-                *ret = i * 32 + j;
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-static uint8_t get_ppr(void)
-{
-    uint8_t ppr;
-
-    // See Vol. 3A 12-29
-    // Figure 12-19
-    uint8_t highest_vector_in_service = 0;
-    get_highest_vector_in_service(&highest_vector_in_service);
-    uint8_t highest_priority_in_service = highest_vector_in_service >> 4;
-    uint8_t task_priority_class = lapic_regs.tpr >> 4;
-    uint8_t task_priority_subclass = lapic_regs.tpr & 0xf;
-    uint8_t proc_priority_class = MAX(task_priority_class, highest_priority_in_service);
-    uint8_t proc_priority_subclass = 0;
-
-    if (task_priority_class >= highest_priority_in_service) {
-        proc_priority_subclass = task_priority_subclass;
-    }
-    ppr = proc_priority_subclass | (proc_priority_class << 4);
-    return ppr;
-}
-
-static int get_next_queued_irq_vector(void)
-{
-    // uint8_t ppr = get_ppr();
-
     // scan IRRs for *a* pending interrupt
-    // do it "right-to-left" as the higer vector is higher prio (generally)
+    // do it "right-to-left" as the higer vector is higher prio
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
-            if (lapic_regs.irr[i] & BIT(j)) {
+            int irr_reg_off = REG_LAPIC_IRR_0 + (i * 0x10);
+            if (vapic_read_reg(irr_reg_off) & BIT(j)) {
                 uint8_t candidate_vector = i * 32 + j;
-                // @billn highly sus, revisit PPR calculation
-                if (candidate_vector >> 4 > lapic_regs.tpr >> 4) {
-                    return candidate_vector;
-                } else {
-                    // highest pending vector is lower than highest eligible priority, so do nothing
-                    return -1;
-                }
+                return candidate_vector;
             }
         }
     }
@@ -179,11 +77,23 @@ static void debug_print_lapic_pending_irqs(void)
 {
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
-            if (lapic_regs.irr[i] & BIT(j)) {
+            uint32_t irr = vapic_read_reg(REG_LAPIC_IRR_0 + (i * 0x10));
+            if (irr & BIT(j)) {
                 LOG_VMM("irq vector %d is pending\n", i * 32 + j);
             }
         }
     }
+}
+
+uint32_t vapic_read_reg(int offset)
+{
+    return *((uint32_t *)(vapic_vaddr + offset));
+}
+
+void vapic_write_reg(int offset, uint32_t value)
+{
+    volatile uint32_t *reg = (uint32_t *)(vapic_vaddr + offset);
+    *reg = value;
 }
 
 bool vcpu_can_take_irq(size_t vcpu_id)
@@ -199,28 +109,10 @@ bool vcpu_can_take_irq(size_t vcpu_id)
     return true;
 }
 
-uint8_t lapic_get_tpr(void)
-{
-    return lapic_regs.tpr;
-}
-
-void lapic_set_tpr(uint8_t tpr)
-{
-    uint8_t old_tpr = lapic_regs.tpr;
-    lapic_regs.tpr = tpr;
-    if (tpr != old_tpr && vcpu_can_take_irq(0)) {
-        // LOG_VMM("TPR changed from 0x%x to 0x%x\n", old_tpr, tpr);
-        int vector = get_next_queued_irq_vector();
-        if (vector != -1) {
-            assert(inject_lapic_irq(0, vector));
-        }
-    }
-}
-
 int lapic_dcr_to_divider(void)
 {
     // Figure 11-10. Divide Configuration Register
-    switch (lapic_regs.dcr) {
+    switch (vapic_read_reg(REG_LAPIC_DCR)) {
     case 0:
         return 2;
     case 1:
@@ -238,7 +130,7 @@ int lapic_dcr_to_divider(void)
     case 11:
         return 1;
     default:
-        LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", lapic_regs.dcr);
+        LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", vapic_read_reg(REG_LAPIC_DCR));
         assert(false);
     }
 
@@ -260,7 +152,8 @@ enum lapic_timer_mode {
 enum lapic_timer_mode lapic_parse_timer_reg(void)
 {
     // Figure 11-8. Local Vector Table (LVT)
-    switch (((lapic_regs.timer >> 17) & 0x3)) {
+    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
+    switch (((timer_reg >> 17) & 0x3)) {
     case 0:
         return LAPIC_TIMER_ONESHOT;
     case 1:
@@ -270,7 +163,7 @@ enum lapic_timer_mode lapic_parse_timer_reg(void)
         assert(false);
         return LAPIC_TIMER_TSC_DEADLINE;
     default:
-        LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", lapic_regs.timer);
+        LOG_VMM_ERR("unknown LAPIC timer mode register encoding: 0x%x\n", timer_reg);
         assert(false);
     }
 
@@ -282,300 +175,67 @@ uint64_t tsc_now_scaled(void)
     return rdtsc() / lapic_dcr_to_divider();
 }
 
-bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
-                        decoded_instruction_ret_t decoded_ins)
+bool lapic_write_fault_handle(uint64_t offset)
 {
-    // TODO: support other alignments?
-    assert(mem_access_width_to_bytes(decoded_ins) == 4);
-    assert(offset % 4 == 0);
+    switch (offset) {
 
-    if (offset != REG_LAPIC_EOI) {
-        // Prevent floods of End of Interrupt prints
-        if (ept_fault_is_read(qualification)) {
-            LOG_APIC("handling LAPIC read at offset 0x%lx\n", offset);
-        } else if (ept_fault_is_write(qualification)) {
-            uint64_t data;
-            assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
-            LOG_APIC("handling LAPIC write at offset 0x%lx, value 0x%lx\n", offset, data);
+    case REG_LAPIC_SVR:
+    case REG_LAPIC_LVT_LINT0:
+    case REG_LAPIC_LVT_LINT1:
+    case REG_LAPIC_LVT_ERR:
+    case REG_LAPIC_ESR:
+    case REG_LAPIC_TIMER:
+    case REG_LAPIC_DCR:
+        break;
+
+    case REG_LAPIC_INIT_CNT: {
+        // Figure 11-8. Local Vector Table (LVT)
+        uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
+        if (init_count > 0) {
+            uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
+            (void)timer_reg;
+            LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3,
+                     !!(timer_reg & BIT(16)));
+
+            uint64_t delay_ns = ticks_to_ns(tsc_hz, init_count * lapic_dcr_to_divider());
+            LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, init_count);
+            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
+
+            native_scaled_tsc_when_timer_starts = tsc_now_scaled();
         }
+        break;
     }
 
-    if (ept_fault_is_read(qualification)) {
-        uint64_t data;
-        switch (offset) {
-        case REG_LAPIC_ID:
-            data = lapic_regs.id;
-            break;
-        case REG_LAPIC_REV:
-            data = lapic_regs.revision;
-            break;
-        case REG_LAPIC_TPR:
-            data = lapic_get_tpr();
-            break;
-        case REG_LAPIC_APR:
-            data = lapic_regs.apr;
-            break;
-        case REG_LAPIC_PPR:
-            data = get_ppr();
-            break;
-        case REG_LAPIC_DFR:
-            data = lapic_regs.dfr;
-            break;
-        case REG_LAPIC_LDR:
-            data = lapic_regs.ldr;
-            break;
-        case REG_LAPIC_SVR:
-            data = lapic_regs.svr;
-            break;
-        case REG_LAPIC_IRR_0:
-            data = lapic_regs.irr[0];
-            break;
-        case REG_LAPIC_IRR_1:
-            data = lapic_regs.irr[1];
-            break;
-        case REG_LAPIC_IRR_2:
-            data = lapic_regs.irr[2];
-            break;
-        case REG_LAPIC_IRR_3:
-            data = lapic_regs.irr[3];
-            break;
-        case REG_LAPIC_IRR_4:
-            data = lapic_regs.irr[4];
-            break;
-        case REG_LAPIC_IRR_5:
-            data = lapic_regs.irr[5];
-            break;
-        case REG_LAPIC_IRR_6:
-            data = lapic_regs.irr[6];
-            break;
-        case REG_LAPIC_IRR_7:
-            data = lapic_regs.irr[7];
-            break;
-        case REG_LAPIC_ISR_0:
-            data = lapic_regs.isr[0];
-            break;
-        case REG_LAPIC_ISR_1:
-            data = lapic_regs.isr[1];
-            break;
-        case REG_LAPIC_ISR_2:
-            data = lapic_regs.isr[2];
-            break;
-        case REG_LAPIC_ISR_3:
-            data = lapic_regs.isr[3];
-            break;
-        case REG_LAPIC_ISR_4:
-            data = lapic_regs.isr[4];
-            break;
-        case REG_LAPIC_ISR_5:
-            data = lapic_regs.isr[5];
-            break;
-        case REG_LAPIC_ISR_6:
-            data = lapic_regs.isr[6];
-            break;
-        case REG_LAPIC_ISR_7:
-            data = lapic_regs.isr[7];
-            break;
-        case REG_LAPIC_TMR_0:
-            data = lapic_regs.tmr[0];
-            break;
-        case REG_LAPIC_TMR_1:
-            data = lapic_regs.tmr[1];
-            break;
-        case REG_LAPIC_TMR_2:
-            data = lapic_regs.tmr[2];
-            break;
-        case REG_LAPIC_TMR_3:
-            data = lapic_regs.tmr[3];
-            break;
-        case REG_LAPIC_TMR_4:
-            data = lapic_regs.tmr[4];
-            break;
-        case REG_LAPIC_TMR_5:
-            data = lapic_regs.tmr[5];
-            break;
-        case REG_LAPIC_TMR_6:
-            data = lapic_regs.tmr[6];
-            break;
-        case REG_LAPIC_TMR_7:
-            data = lapic_regs.tmr[7];
-            break;
-        case REG_LAPIC_TIMER:
-            data = lapic_regs.timer;
-            break;
-        case REG_LAPIC_LVT_ERR:
-        case REG_LAPIC_CMCI:
-        case REG_LAPIC_THERMAL:
-            data = 0;
-            break;
-        case REG_LAPIC_INIT_CNT:
-            data = lapic_regs.init_count;
-            break;
-        case REG_LAPIC_CURR_CNT:
-            if (lapic_regs.init_count == 0) {
-                data = 0;
+    case REG_LAPIC_ICR_LOW: {
+        // Figure 11-12. Interrupt Command Register (ICR)
+        // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
+        uint64_t icr = vapic_read_reg(REG_LAPIC_ICR_LOW) | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
+
+        // @billn sus, handle other types of IPIs
+        uint8_t delivery_mode = ((icr >> 8) & 0x7);
+        uint8_t destination = (icr >> 56) & 0xff;
+        if (delivery_mode == 0 || delivery_mode == 5) {
+            // fixed mode
+            assert(destination == 0);
+            uint8_t vector = icr & 0xff;
+            if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
+                LOG_VMM_ERR("failed to send IPI\n");
+                return false;
             } else {
-                uint64_t tsc_tick_now_scaled = tsc_now_scaled();
-                uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - lapic_regs.native_scaled_tsc_when_timer_starts;
-
-                uint64_t remaining = 0;
-                if (elapsed_scaled_tsc_tick < lapic_regs.init_count) {
-                    remaining = lapic_regs.init_count - elapsed_scaled_tsc_tick;
-                }
-                data = remaining;
-                LOG_APIC("current count read 0x%lx\n", remaining);
+                LOG_VMM("sent ipi\n");
             }
-
-            break;
-        case REG_LAPIC_ESR:
-        case REG_LAPIC_PERF_MON_CNTER:
-            data = 0;
-            break;
-        case REG_LAPIC_ICR_LOW:
-            data = lapic_regs.icr_low;
-            break;
-        case REG_LAPIC_ICR_HIGH:
-            data = lapic_regs.icr_high;
-            break;
-        case REG_LAPIC_LVT_LINT0:
-            data = lapic_regs.lint0;
-            break;
-        case REG_LAPIC_LVT_LINT1:
-            data = lapic_regs.lint1;
-            break;
-        case REG_LAPIC_DCR:
-            data = lapic_regs.dcr;
-            break;
-        default:
-            LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
-            return false;
+        } else {
+            LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
+                        delivery_mode, destination);
         }
-        assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
-    } else {
-        uint64_t data;
-        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
-        switch (offset) {
-        case REG_LAPIC_TPR:
-            // LOG_VMM("TPR write via LAPIC 0x%x\n", data);
-            lapic_set_tpr(data);
-            break;
-        case REG_LAPIC_EOI: {
-            uint8_t done_vector;
-            if (!get_highest_vector_in_service(&done_vector)) {
-                break;
-            }
 
-            // Clear it from being in service
-            int n = done_vector / 32;
-            int b = done_vector % 32;
-            lapic_regs.isr[n] &= ~BIT(b);
+        LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
+        break;
+    }
 
-            // if it is a passed through I/O APIC IRQ, run the ack function
-            for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-                if (ioapic_regs.virq_passthrough_map[i].valid) {
-                    uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
-                    if (candidate_vector == done_vector) {
-                        if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                            ioapic_regs.virq_passthrough_map[i].ack_fn(0, i,
-                                                                       ioapic_regs.virq_passthrough_map[i].ack_data);
-                        }
-                        break;
-                    }
-                }
-            }
-
-            int next_irq_vector = get_next_queued_irq_vector();
-            if (next_irq_vector != -1) {
-                inject_lapic_irq(GUEST_BOOT_VCPU_ID, next_irq_vector);
-            }
-            break;
-        }
-        case REG_LAPIC_LDR:
-            lapic_regs.ldr = data;
-            break;
-        case REG_LAPIC_DFR:
-            lapic_regs.dfr = data;
-            break;
-        case REG_LAPIC_SVR:
-            lapic_regs.svr = data;
-            break;
-        case REG_LAPIC_LVT_LINT0:
-            lapic_regs.lint0 = data;
-            break;
-        case REG_LAPIC_LVT_LINT1:
-            lapic_regs.lint1 = data;
-            break;
-        case REG_LAPIC_ICR_LOW:
-            // Figure 11-12. Interrupt Command Register (ICR)
-            // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-            lapic_regs.icr_low = data;
-
-            uint64_t icr = lapic_regs.icr_low | (((uint64_t)lapic_regs.icr_high) << 32);
-
-            // @billn sus, handle other types of IPIs
-            uint8_t delivery_mode = ((icr >> 8) & 0x7);
-            uint8_t destination = (icr >> 56) & 0xff;
-            if (delivery_mode == 0 || delivery_mode == 5) {
-                // fixed mode
-                assert(destination == 0);
-                uint8_t vector = icr & 0xff;
-                if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
-                    LOG_VMM_ERR("failed to send IPI\n");
-                    return false;
-                }
-            } else {
-                LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
-                            delivery_mode, destination);
-            }
-
-            LOG_APIC("icr write 0x%lx, current TPL is 0x%x\n", icr, lapic_regs.tpr);
-            if (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RIP) >= 0xfffff00000000000)
-                fault_cond = true;
-            break;
-        case REG_LAPIC_ICR_HIGH:
-            lapic_regs.icr_high = data;
-            break;
-        case REG_LAPIC_TIMER:
-            lapic_regs.timer = data;
-            // @billn make sure the guest isn't using teh TSC deadline mode, which isn't implemented right now
-            assert(((lapic_regs.timer >> 17) & 0x3) != 2);
-
-            // LOG_APIC("*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_\n");
-            // vcpu_print_regs(0);
-            LOG_APIC("LAPIC timer config write 0x%lx\n", lapic_regs.timer);
-
-            break;
-        case REG_LAPIC_ESR:
-        case REG_LAPIC_THERMAL:
-        case REG_LAPIC_LVT_ERR:
-        case REG_LAPIC_PERF_MON_CNTER:
-            // lapic_regs.esr = 0;
-            break;
-        case REG_LAPIC_INIT_CNT:
-            // Figure 11-8. Local Vector Table (LVT)
-
-            LOG_APIC("*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_*_\n");
-            // vcpu_print_regs(0);
-
-            lapic_regs.init_count = data;
-            if (data > 0) {
-                LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (lapic_regs.timer >> 17) % 0x3,
-                         !!(lapic_regs.timer & BIT(16)));
-
-                uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
-                LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, lapic_regs.init_count);
-                sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
-
-                lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
-            }
-            break;
-        case REG_LAPIC_DCR:
-            lapic_regs.dcr = data;
-            // LOG_VMM("REG_LAPIC_DCR = 0x%x\n", lapic_regs.dcr);
-            break;
-        default:
-            LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x, value 0x%lx\n", offset, data);
-            return false;
-        }
+    default:
+        LOG_VMM_ERR("Writing unknown LAPIC register offset 0x%x\n", offset);
+        return false;
     }
 
     return true;
@@ -688,57 +348,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     return true;
 }
 
-// When lapic_maintenance() is called, the vCPU *must* be ready to take the interrupt.
-void lapic_maintenance(void)
-{
-    int vector = get_next_queued_irq_vector();
-    if (vector == -1) {
-        // no pending IRQ to inject
-        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-        return;
-    }
-
-    int irr_n = vector / 32;
-    int irr_idx = vector % 32;
-
-    if (lapic_regs.isr[irr_n] & BIT(irr_idx)) {
-        // interrupt already in service, remains queued until guest issues EOI.
-        // @billn sus, might break level trigger
-        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-        return;
-    }
-
-    // LOG_VMM("DELIVERING vec 0x%x at tpr 0x%x\n", vector, lapic_regs.tpr);
-
-    // Move IRQ from pending to in-service
-    lapic_regs.irr[irr_n] &= ~BIT(irr_idx);
-    lapic_regs.isr[irr_n] |= BIT(irr_idx);
-
-    // Make absolutely sure that the vCPU can take the interrupt
-    assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_INTERRUPTABILITY) == 0);
-    assert(microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS) & BIT(9));
-
-    // Tell the hardware to inject an irq on next vmenter.
-    // Table 25-17. Format of the VM-Entry Interruption-Information Field
-    uint32_t vm_entry_interruption = (uint32_t)vector;
-    vm_entry_interruption |= BIT(31); // valid bit
-
-    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vm_entry_interruption);
-    // Clear interrupt window exiting bit if set.
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-}
-
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
-    // // allow vector == 0 as an INIT IPI have vector == 0.
-    // if (vector < 32 && vector > 0) {
-    //     LOG_VMM_ERR("IRQ Vector %d is archtecturally reserved! Will not inject.\n", vector);
-    //     return false;
-    // }
-
-    if (!(lapic_regs.svr & BIT(8))) {
+    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         // APIC software disable
         return false;
     }
@@ -746,44 +360,43 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     int irr_n = vector / 32;
     int irr_idx = vector % 32;
 
-    // Mark as pending for injection, there may be 3 scenarios that play out:
-    // 1. IRQ already pending, in that case the 2 IRQs get collapsed into 1
-    // 1. immediately if the vCPU can take it and LAPIC have no in service IRQ, @billn the second part is a bit sus
-    // 2. at some point in the future when the vCPU re-enable IRQs
-    lapic_regs.irr[irr_n] |= BIT(irr_idx);
+    int irr_reg_off = REG_LAPIC_IRR_0 + (irr_n * 0x10);
+    assert(irr_reg_off <= REG_LAPIC_IRR_7);
 
-    // @billn hack, something seems to be sus with nested interrupts
-    if (n_irq_in_service() != 0) {
-        return true;
-    }
+    // Mark as pending for injection, let hardware handle the rest
+    vapic_write_reg(irr_reg_off, vapic_read_reg(irr_reg_off) | BIT(irr_idx));
 
-    if (vcpu_can_take_irq(vcpu_id)) {
-        lapic_maintenance();
-    } else {
-        microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_EXIT_IRQ_WINDOW);
-    }
+    // page 26-8 Vol. 3C "Guest interrupt status"
+    int highest_vector_pending = get_next_pending_irq_vector();
+    assert(highest_vector_pending != -1);
+    uint16_t guest_irq_status = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPT_STATUS);
+    guest_irq_status &= 0xff00;
+    guest_irq_status |= (uint8_t)highest_vector_pending;
+    microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_INTERRUPT_STATUS, guest_irq_status);
+
     return true;
 }
 
 bool handle_lapic_timer_nftn(size_t vcpu_id)
 {
-    if (!(lapic_regs.svr & BIT(8))) {
+    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         // APIC software disable
         return true;
     }
 
     // restart timeout if periodic
-    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && lapic_regs.init_count > 0) {
-        lapic_regs.native_scaled_tsc_when_timer_starts = tsc_now_scaled();
-        // sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, tsc_ticks_to_ns(lapic_timer_hz, lapic_regs.init_count));
-        uint64_t delay_ns = ticks_to_ns(tsc_hz, lapic_regs.init_count * lapic_dcr_to_divider());
+    uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
+    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
+        native_scaled_tsc_when_timer_starts = tsc_now_scaled();
+        uint64_t delay_ns = ticks_to_ns(tsc_hz, init_count * lapic_dcr_to_divider());
         LOG_APIC("restarting periodic timeout for 0x%lx ns\n", delay_ns);
         sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
     }
 
     // but only inject IRQ if it is not masked
-    if (!(lapic_regs.timer & BIT(16))) {
-        uint8_t vector = lapic_regs.timer & 0xff;
+    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
+    if (!(timer_reg & BIT(16))) {
+        uint8_t vector = timer_reg & 0xff;
         if (!inject_lapic_irq(vcpu_id, vector)) {
             // LOG_VMM_ERR("failed to inject LAPIC timer IRQ vector 0x%x\n", vector);
             return false;
@@ -819,6 +432,57 @@ bool inject_ioapic_irq(int ioapic, int pin)
     // uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
     // assert(!level_trigger);
 
+    uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
+
+    // For any passed through interrupts:
+    // When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
+    if (ioapic_regs.virq_passthrough_map[pin].valid) {
+
+        int eoi_bitmap_n = vector / 64;
+        int n_bitmap_i = vector % 64;
+        switch (eoi_bitmap_n) {
+        case 0: {
+            uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0);
+            microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0, bitmap | BIT(n_bitmap_i));
+            break;
+        }
+        case 1: {
+            uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1);
+            microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1, bitmap | BIT(n_bitmap_i));
+            break;
+        }
+        case 2: {
+            uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2);
+            microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2, bitmap | BIT(n_bitmap_i));
+            break;
+        }
+        case 3: {
+            uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3);
+            microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3, bitmap | BIT(n_bitmap_i));
+            break;
+        }
+        default:
+            LOG_VMM_ERR("bug: eoi_bitmap_n > 3\n");
+            return false;
+        }
+    }
+
     // @billn need to read cpu id from redirection register
-    return inject_lapic_irq(0, ioapic_pin_to_vector(ioapic, pin));
+    return inject_lapic_irq(0, vector);
+}
+
+bool ioapic_ack_passthrough_irq(uint8_t vector)
+{
+    for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
+        if (ioapic_regs.virq_passthrough_map[i].valid) {
+            uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
+            if (candidate_vector == vector) {
+                if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
+                    ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                }
+                return true;
+            }
+        }
+    }
+    return false;
 }
