@@ -98,67 +98,66 @@ enum exit_reasons {
 };
 
 /* [2a] */
-static char *exit_reason_strs[] = {
-    "Exception or non-maskable interrupt (NMI)",
-    "External interrupt",
-    "Triple Fault",
-    "INIT signal",
-    "Start-up IPI (SIPI)",
-    "I/O system-management interrupt (SMI)",
-    "Other SMI",
-    "Interrupt window",
-    "NMI window",
-    "Task switch",
-    "CPUID",
-    "GETSEC",
-    "HLT",
-    "INVD",
-    "INVLPG",
-    "RDPMC",
-    "RDTSC",
-    "RSM",
-    "VMCALL",
-    "VMCLEAR",
-    "VMLAUNCH",
-    "VMPTRLD",
-    "VMPTRST",
-    "VMREAD",
-    "VMRESUME",
-    "VMWRITE",
-    "VMXOFF",
-    "VMXON",
-    "Control-register accesses",
-    "MOV DR",
-    "I/O instruction",
-    "RDMSR",
-    "WRMSR",
-    "VM-entry failure due to invalid guest state",
-    "VM-entry failure due to MSR loading",
-    "",
-    "MWAIT",
-    "Monitor trap flag",
-    "",
-    "MONITOR",
-    "PAUSE",
-    "VM-entry failure due to machine-check event",
-    "",
-    "TPR below threshold",
-    "APIC access",
-    "Virtualized EOI",
-    "Access to GDTR or IDTR",
-    "Access to LDTR or TR",
-    "EPT violation",
-    "EPT misconfiguration",
-    "INVEPT",
-    "RDTSCP",
-    "VMX-preemption timer expired",
-    "INVVPID",
-    "WBINVD or WBNOINVD",
-    "XSETBV",
-    "APIC Write"
-};
+static char *exit_reason_strs[] = { "Exception or non-maskable interrupt (NMI)",
+                                    "External interrupt",
+                                    "Triple Fault",
+                                    "INIT signal",
+                                    "Start-up IPI (SIPI)",
+                                    "I/O system-management interrupt (SMI)",
+                                    "Other SMI",
+                                    "Interrupt window",
+                                    "NMI window",
+                                    "Task switch",
+                                    "CPUID",
+                                    "GETSEC",
+                                    "HLT",
+                                    "INVD",
+                                    "INVLPG",
+                                    "RDPMC",
+                                    "RDTSC",
+                                    "RSM",
+                                    "VMCALL",
+                                    "VMCLEAR",
+                                    "VMLAUNCH",
+                                    "VMPTRLD",
+                                    "VMPTRST",
+                                    "VMREAD",
+                                    "VMRESUME",
+                                    "VMWRITE",
+                                    "VMXOFF",
+                                    "VMXON",
+                                    "Control-register accesses",
+                                    "MOV DR",
+                                    "I/O instruction",
+                                    "RDMSR",
+                                    "WRMSR",
+                                    "VM-entry failure due to invalid guest state",
+                                    "VM-entry failure due to MSR loading",
+                                    "",
+                                    "MWAIT",
+                                    "Monitor trap flag",
+                                    "",
+                                    "MONITOR",
+                                    "PAUSE",
+                                    "VM-entry failure due to machine-check event",
+                                    "",
+                                    "TPR below threshold",
+                                    "APIC access",
+                                    "Virtualized EOI",
+                                    "Access to GDTR or IDTR",
+                                    "Access to LDTR or TR",
+                                    "EPT violation",
+                                    "EPT misconfiguration",
+                                    "INVEPT",
+                                    "RDTSCP",
+                                    "VMX-preemption timer expired",
+                                    "INVVPID",
+                                    "WBINVD or WBNOINVD",
+                                    "XSETBV",
+                                    "APIC Write" };
 
-_Static_assert(sizeof(exit_reason_strs) / sizeof(char *) == NUM_EXIT_REASONS, "Exit reason strings table is not correct length");
+_Static_assert(sizeof(exit_reason_strs) / sizeof(char *) == NUM_EXIT_REASONS,
+               "Exit reason strings table is not correct length");
 
 char *fault_to_string(int exit_reason)
 {
@@ -487,6 +486,24 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         // "The exit qualification is the page offset of the write access that led to the VM exit."
         uint64_t lapic_reg_offset = qualification;
         success = lapic_write_fault_handle(lapic_reg_offset);
+        break;
+    }
+    case APIC_ACCESS: {
+        uint16_t offset = qualification & 0x7ff;
+        uint8_t access_type = (qualification >> 12) & 0xf;
+
+        // only handle reads and writes due to instruciton execution
+
+        // LOG_VMM("offset 0x%x, access type %d\n", offset, access_type);
+
+        if (access_type == 0) {
+            success = lapic_read_fault_handle(offset);
+        } else if (access_type == 1) {
+            success = lapic_write_fault_handle(offset);
+        } else {
+            LOG_VMM_ERR("unsupported access type %d for apic access vm exit\n", access_type);
+            success = false;
+        }
         break;
     }
     case XSETBV:
