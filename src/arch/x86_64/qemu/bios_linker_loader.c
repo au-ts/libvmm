@@ -18,11 +18,11 @@
  * with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/qemu/bios_linker_loader.h>
-#include <sddf/util/custom_libc/string.h>
 
 // These creating functions have been modified to fit with our logic better.
 

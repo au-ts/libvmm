@@ -12,7 +12,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/pci.h>
 #include <sddf/timer/client.h>
-#include <sddf/util/custom_libc/string.h>
+#include <string.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>

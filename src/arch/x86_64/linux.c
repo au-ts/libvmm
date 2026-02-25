@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <string.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/linux.h>
-#include <sddf/util/custom_libc/string.h>
 #include <sddf/util/util.h>
 
 /* Documents referenced:
