@@ -5,10 +5,10 @@
  */
 
 #include <stdbool.h>
+#include <string.h>
 #include <libvmm/util/util.h>
 #include <libvmm/guest.h>
 #include <sddf/util/util.h>
-#include <sddf/util/custom_libc/string.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/instruction.h>

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <microkit.h>
+#include <string.h>
 #include <libvmm/guest.h>
 #include <libvmm/config.h>
 #include <libvmm/virq.h>
@@ -30,8 +31,6 @@
 #include <libvmm/arch/x86_64/pit.h>
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vcpu.h>
-
-#include <sddf/util/custom_libc/string.h>
 
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
