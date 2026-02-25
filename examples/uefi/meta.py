@@ -99,6 +99,15 @@ def x86_virtio_blk(blk_driver):
     )
     blk_driver.add_irq(virtio_blk_irq)
 
+def x86_apic(vmm, vm):
+    guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=0x1300_0000)
+    guest_apic_access_mr = MemoryRegion(sdf, name="guest_apic_access", size=0x1000, paddr=0x1300_1000)
+    sdf.add_mr(guest_vapic_mr)
+    sdf.add_mr(guest_apic_access_mr)
+
+    vmm.add_map(Map(guest_vapic_mr, vaddr=0x30_0000_0000, perms="rw"))
+    vm.add_map(Map(guest_apic_access_mr, vaddr=0xfee0_0000, perms="rw"))
+
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
     vmm_client0 = ProtectionDomain("CLIENT_VMM", "vmm_x86_64.elf", priority=1)
@@ -116,6 +125,8 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     sdf.add_mr(guest_ram_high_mr)
     vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rwx"))
+
+    x86_apic(vmm_client0, vm_client0)
 
     scratch_mr = MemoryRegion(sdf, name="guest_scratch", size=0x10000)
     sdf.add_mr(scratch_mr)

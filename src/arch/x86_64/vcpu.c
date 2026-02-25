@@ -29,7 +29,7 @@
 // }
 
 // Caller must vmenter with IP 0xFFF0
-void vcpu_set_up_reset_state(void)
+void vcpu_set_up_reset_state(uint64_t vapic_page_paddr, uint64_t apic_access_page_paddr)
 {
     // prevent the guest from turning off VMX mode
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, 1 << 13);
@@ -37,6 +37,9 @@ void vcpu_set_up_reset_state(void)
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS,
                                  VMCS_SPC_DEFAULT | BIT(7)); // unrestricted guest
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_VIRTUAL_APIC_ADDRESS, vapic_page_paddr);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_APIC_ACCESS_ADDRESS, apic_access_page_paddr);
 
     // Table 10-1. IA-32 and Intel® 64 Processor States Following Power-up, Reset, or INIT
 
@@ -132,7 +135,7 @@ void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit, u
     // that libvmm uses.
     uint64_t read_back_ppc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
     uint64_t read_back_spc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS);
-    assert((read_back_ppc & VMCS_PCC_DEFAULT )== VMCS_PCC_DEFAULT);
+    assert((read_back_ppc & VMCS_PCC_DEFAULT) == VMCS_PCC_DEFAULT);
     assert((read_back_spc & VMCS_SPC_DEFAULT) == VMCS_SPC_DEFAULT);
 
     // @billn explain
