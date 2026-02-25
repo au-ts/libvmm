@@ -87,11 +87,13 @@ static void debug_print_lapic_pending_irqs(void)
 
 uint32_t vapic_read_reg(int offset)
 {
+    assert(offset < 0x1000);
     return *((uint32_t *)(vapic_vaddr + offset));
 }
 
 void vapic_write_reg(int offset, uint32_t value)
 {
+    assert(offset < 0x1000);
     volatile uint32_t *reg = (uint32_t *)(vapic_vaddr + offset);
     *reg = value;
 }
@@ -175,14 +177,12 @@ uint64_t tsc_now_scaled(void)
     return rdtsc() / lapic_dcr_to_divider();
 }
 
-bool lapic_read_fault_handle(uint64_t offset)
+bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
 {
-    uint32_t result;
-
     switch (offset) {
     case REG_LAPIC_CURR_CNT: {
         if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
-            result = 0;
+            *result = 0;
         } else {
             uint64_t tsc_tick_now_scaled = tsc_now_scaled();
             uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - native_scaled_tsc_when_timer_starts;
@@ -191,7 +191,7 @@ bool lapic_read_fault_handle(uint64_t offset)
             if (elapsed_scaled_tsc_tick < vapic_read_reg(REG_LAPIC_INIT_CNT)) {
                 remaining = vapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_tsc_tick;
             }
-            result = remaining;
+            *result = remaining;
             LOG_APIC("current count read 0x%lx\n", remaining);
         }
         break;
@@ -201,11 +201,10 @@ bool lapic_read_fault_handle(uint64_t offset)
         return false;
     }
 
-    vapic_write_reg(offset, result);
     return true;
 }
 
-bool lapic_write_fault_handle(uint64_t offset)
+bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
 {
     switch (offset) {
 
@@ -220,11 +219,12 @@ bool lapic_write_fault_handle(uint64_t offset)
     case REG_LAPIC_LDR:
     case REG_LAPIC_THERMAL:
     case REG_LAPIC_PERF_MON_CNTER:
+        vapic_write_reg(offset, data);
         break;
 
     case REG_LAPIC_INIT_CNT: {
         // Figure 11-8. Local Vector Table (LVT)
-        uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
+        uint32_t init_count = data;
         if (init_count > 0) {
             uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
             (void)timer_reg;
@@ -243,7 +243,7 @@ bool lapic_write_fault_handle(uint64_t offset)
     case REG_LAPIC_ICR_LOW: {
         // Figure 11-12. Interrupt Command Register (ICR)
         // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-        uint64_t icr = vapic_read_reg(REG_LAPIC_ICR_LOW) | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
+        uint64_t icr = (uint64_t) data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
         // @billn sus, handle other types of IPIs
         uint8_t delivery_mode = ((icr >> 8) & 0x7);
