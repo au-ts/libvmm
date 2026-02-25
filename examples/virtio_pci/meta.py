@@ -127,6 +127,15 @@ def x86_virtio_blk(blk_driver):
     )
     blk_driver.add_irq(virtio_blk_irq)
 
+def x86_apic(vmm, vm):
+    guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=0x6000_0000)
+    guest_apic_access_mr = MemoryRegion(sdf, name="guest_apic_access", size=0x1000, paddr=0x6000_1000)
+    sdf.add_mr(guest_vapic_mr)
+    sdf.add_mr(guest_apic_access_mr)
+
+    vmm.add_map(Map(guest_vapic_mr, vaddr=0x30_0000_0000, perms="rw"))
+    vm.add_map(Map(guest_apic_access_mr, vaddr=0xfee0_0000, perms="rw"))
+
 def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
     # Client VM
     vmm_client0 = ProtectionDomain("CLIENT_VMM", "client_vmm.elf", priority=1)
@@ -139,6 +148,8 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         sdf.add_mr(guest_ram_mr)
         vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x20000000, perms="rw"))
         vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
+
+        x86_apic(vmm_client0, vm_client0)
 
         # CMOS passthrough
         cmos_addr_port = SystemDescription.IoPort(0x70, 1, 36)
@@ -282,9 +293,9 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
         sdf.add_channel(pit_timer_ch)
 
     ############ VIRTIO PCI ############
-    config_space = MemoryRegion(sdf, name="ecam", size=0x100000)
+    config_space = MemoryRegion(sdf, name="ecam", size=0x10000000)
     sdf.add_mr(config_space)
-    vmm_client0.add_map(Map(config_space, vaddr=0x100000, perms="rw"))
+    vmm_client0.add_map(Map(config_space, vaddr=0x2_0000_0000, perms="rw"))
 
     memory_resource = MemoryRegion(sdf, name="memory_resource", size=0x80000)
     sdf.add_mr(memory_resource)

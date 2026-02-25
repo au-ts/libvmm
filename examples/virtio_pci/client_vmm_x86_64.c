@@ -83,8 +83,12 @@ uint64_t guest_flash_size;
 uintptr_t guest_high_ram_vaddr;
 uint64_t guest_high_ram_size;
 
-uintptr_t guest_ecam_vaddr = 0x100000;
-uint64_t guest_ecam_size = 0x100000;
+uintptr_t guest_ecam_vaddr = 0x200000000;
+uint64_t guest_ecam_size = 0x10000000;
+
+uintptr_t guest_vapic_vaddr = 0x3000000000;
+uint64_t guest_vapic_paddr = 0x60000000;
+uint64_t guest_apic_access_paddr = 0x60001000;
 
 bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
@@ -119,7 +123,8 @@ void init(void)
         return;
     }
 
-    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
+    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit, guest_vapic_paddr,
+                          guest_apic_access_paddr);
 
     // Set up the PCI bus
     // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
@@ -181,7 +186,7 @@ void notified(microkit_channel ch)
             tsc_calibrating = false;
 
             /* Initialise the virtual APIC */
-            bool success = virq_controller_init(measured_tsc_hz);
+            bool success = virq_controller_init(measured_tsc_hz, guest_vapic_vaddr);
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
