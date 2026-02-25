@@ -485,7 +485,7 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         // 32.4.3.3 APIC-Write VM Exits
         // "The exit qualification is the page offset of the write access that led to the VM exit."
         uint64_t lapic_reg_offset = qualification;
-        success = lapic_write_fault_handle(lapic_reg_offset);
+        success = lapic_write_fault_handle(lapic_reg_offset, vapic_read_reg(lapic_reg_offset));
         break;
     }
     case APIC_ACCESS: {
@@ -497,9 +497,20 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         // LOG_VMM("offset 0x%x, access type %d\n", offset, access_type);
 
         if (access_type == 0) {
-            success = lapic_read_fault_handle(offset);
+            uint32_t data;
+            success = lapic_read_fault_handle(offset, &data);
+            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
         } else if (access_type == 1) {
-            success = lapic_write_fault_handle(offset);
+            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            // TODO: probably do not have this assert
+            assert(mem_access_width_to_bytes(decoded_ins) == 4);
+            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            // TODO: probably use wrapper for getting write value.
+            success = lapic_write_fault_handle(offset, vctx_raw[decoded_ins.decoded.memory_instruction.target_reg]);
         } else {
             LOG_VMM_ERR("unsupported access type %d for apic access vm exit\n", access_type);
             success = false;
