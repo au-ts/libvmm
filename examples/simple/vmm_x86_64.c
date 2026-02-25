@@ -12,6 +12,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/virtio/pci.h>
 #include <sddf/timer/client.h>
+#include <sddf/util/custom_libc/string.h>
 
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
@@ -66,6 +67,14 @@ uint64_t guest_ram_size;
 uintptr_t guest_ecam_vaddr;
 uint64_t guest_ecam_size;
 
+uintptr_t guest_vapic_vaddr;
+uint64_t guest_vapic_size;
+uint64_t guest_vapic_paddr;
+
+uintptr_t guest_apic_access_vaddr;
+uint64_t guest_apic_access_size;
+uint64_t guest_apic_access_paddr;
+
 // @billn unused, but have to leave it here otherwise linker complains, revisit
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
@@ -91,7 +100,12 @@ void init(void)
         return;
     }
 
-    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
+    assert(guest_vapic_size == 0x1000);
+    assert(guest_apic_access_size == 0x1000);
+    memset((void *)guest_vapic_vaddr, 0, guest_vapic_size);
+    memset((void *)guest_apic_access_vaddr, 0, guest_apic_access_size);
+    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit, guest_vapic_paddr,
+                          guest_apic_access_paddr);
 
     // Set up the PCI bus
     // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
@@ -127,7 +141,7 @@ void notified(microkit_channel ch)
             tsc_calibrating = false;
 
             /* Initialise the virtual APIC */
-            bool success = virq_controller_init(measured_tsc_hz);
+            bool success = virq_controller_init(measured_tsc_hz, guest_vapic_vaddr);
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;

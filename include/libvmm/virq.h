@@ -24,7 +24,7 @@ bool virq_controller_init();
 /*
  * Initialise the virtual LAPIC and I/O APIC.
  */
-bool virq_controller_init(uint64_t native_tsc_hz);
+bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr);
 #endif
 bool virq_register(size_t vcpu_id, size_t virq_num, virq_ack_fn_t ack_fn, void *ack_data);
 

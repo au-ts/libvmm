@@ -8,14 +8,27 @@
 
     <memory_region name="guest_ecam" size="0x10000000" />
     <memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+    <!-- This page is used by the CPU to keep the APIC state -->
+    <memory_region name="guest_vapic" size="0x1000" phys_addr="0x1000_0000" />
+    <!-- This page is used by the CPU to track memory reads and writes to the APIC -->
+    <memory_region name="guest_apic_access" size="0x1000" phys_addr="0x1000_1000" />
 
     <protection_domain name="VMM" priority="0" stack_size="0x2000">
         <program_image path="vmm_x86_64.elf" />
         <map mr="guest_ecam" vaddr="0x70000000" perms="rw" setvar_vaddr="guest_ecam_vaddr" setvar_size="guest_ecam_size" />
         <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" setvar_size="guest_ram_size" />
+
+        <map mr="guest_vapic" vaddr="0x60000000" perms="rw" setvar_vaddr="guest_vapic_vaddr" setvar_size="guest_vapic_size" />
+        <map mr="guest_apic_access" vaddr="0x60002000" perms="rw" setvar_vaddr="guest_apic_access_vaddr" setvar_size="guest_apic_access_size" />
+
+        <setvar symbol="guest_vapic_paddr" region_paddr="guest_vapic" />
+        <setvar symbol="guest_apic_access_paddr" region_paddr="guest_apic_access" />
+
         <virtual_machine name="linux">
             <vcpu id="0" />
             <map mr="guest_ram" vaddr="0x0" perms="rwx" />
+
+            <map mr="guest_apic_access" vaddr="0xfee0_0000" perms="rw" />
         </virtual_machine>
 
         <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />

@@ -82,6 +82,7 @@ enum exit_reasons {
     /* 0x2A */
     TPR_BELOW_THRESHOLD = 0x2B,
     APIC_ACCESS = 0x2C,
+    VIRTUALIZED_EOI = 0x2D,
     GDTR_OR_IDTR = 0x2E,
     LDTR_OR_TR = 0x2F,
     EPT_VIOLATION = 0x30,
@@ -92,7 +93,8 @@ enum exit_reasons {
     INVVPID = 0x35,
     WBINVD = 0x36,
     XSETBV = 0x37,
-    NUM_EXIT_REASONS = 0x38,
+    APIC_WRITE = 0x38,
+    NUM_EXIT_REASONS = 0x39,
 };
 
 /* [2a] */
@@ -159,6 +161,17 @@ char *fault_to_string(int exit_reason)
 {
     assert(exit_reason < NUM_EXIT_REASONS);
     return exit_reason_strs[exit_reason];
+}
+
+bool fault_is_trap_like(int exit_reason)
+{
+    switch (exit_reason) {
+    case APIC_WRITE:
+    case VIRTUALIZED_EOI:
+        return true;
+    default:
+        return false;
+    }
 }
 
 // @billn dedup
@@ -233,11 +246,7 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
     // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
-    if (addr >= LAPIC_BASE && addr < LAPIC_BASE + LAPIC_SIZE) {
-        // No log fault here, as the local APIC timer will just fill the terminal...
-        LOG_FAULT("handling LAPIC 0x%lx\n", addr);
-        return lapic_fault_handle(vctx, addr - LAPIC_BASE, qualification, decoded_ins);
-    } else if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
+    if (addr >= IOAPIC_BASE && addr < IOAPIC_BASE + IOAPIC_SIZE) {
         LOG_FAULT("handling IO APIC 0x%lx\n", addr);
         return ioapic_fault_handle(vctx, addr - IOAPIC_BASE, qualification, decoded_ins);
     } else if (addr >= HPET_BASE && addr < HPET_BASE + HPET_SIZE) {
@@ -458,37 +467,28 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     case IO:
         success = handle_pio_fault(&vctx, qualification);
         break;
-    case INTERRUPT_WINDOW:
-        lapic_maintenance();
-        success = true;
+    // case APIC_ACCESS:
+    case VIRTUALIZED_EOI: {
+        uint8_t eoi_vector = qualification;
+        // if we get here then the guest has ack'ed a passed through I/O APIC irq,
+        // find and run the ack function, the clear the vector from the bitmap
+        // @billn the whole clearing vector from bitmap thing could be done more efficiently, e.g.
+        // only do it when the guest reprogram the vector
+
+        success = ioapic_ack_passthrough_irq(eoi_vector);
         break;
+    }
+    case APIC_WRITE: {
+        // 32.4.3.3 APIC-Write VM Exits
+        // "The exit qualification is the page offset of the write access that led to the VM exit."
+        uint64_t lapic_reg_offset = qualification;
+        success = lapic_write_fault_handle(lapic_reg_offset);
+        break;
+    }
     case XSETBV:
         LOG_VMM("XSETBV, rip 0x%lx\n", rip);
         success = true;
         break;
-    case CONTROL_REGISTER: {
-        // @billn update logs if we traps other control registers
-        // LOG_VMM("CR8 access via MOV\n");
-        uint8_t cr_n = (qualification & 0xf);
-        uint8_t access_type = (qualification >> 4) & 3;
-        uint8_t reg_idx = (qualification >> 8) & 0xf;
-
-        assert(cr_n == 8);
-
-        if (access_type == 0) {
-            uint64_t data = *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx);
-            lapic_set_tpr((data & 0xf) << 4);
-            success = true;
-        } else if (access_type == 1) {
-            uint8_t data = lapic_get_tpr();
-            *cr_fault_reg_idx_to_vctx_ptr(reg_idx, &vctx) = (data & 0xf0) >> 4;
-            success = true;
-        } else {
-            // LOG_VMM_ERR("the fuck\n");
-            success = false;
-        }
-        break;
-    }
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
@@ -546,7 +546,10 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
 
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
-        *new_rip = rip + ins_len;
+
+        if (!fault_is_trap_like(f_reason)) {
+            *new_rip = rip + ins_len;
+        }
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
         LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");

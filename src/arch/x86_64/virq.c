@@ -10,34 +10,34 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/linux.h>
 
-struct lapic_regs lapic_regs;
+uintptr_t vapic_vaddr;
 struct ioapic_regs ioapic_regs;
 uint64_t tsc_hz;
 
-bool virq_controller_init(uint64_t native_tsc_hz)
+bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
 {
     tsc_hz = native_tsc_hz;
 
     LOG_VMM("initialising IRQ book-keeping structures\n");
-    memset(&lapic_regs, 0, sizeof(struct lapic_regs));
     memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
 
     LOG_VMM("initialising LAPIC\n");
 
+    vapic_vaddr = guest_vapic_vaddr;
+
     // Figure 11-7. Local APIC Version Register
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
-    lapic_regs.revision = 0x10 | 6 << 16;
+    vapic_write_reg(REG_LAPIC_REV, (uint32_t) 0x10 | (uint32_t) 6 << 16);
     // Figure 11-23. Spurious-Interrupt Vector Register (SVR)
-    lapic_regs.svr = 0xff; // reset value
+    vapic_write_reg(REG_LAPIC_SVR, (uint32_t) 0x10 | (uint32_t) 0xff); // reset value
     // LVT Timer Register
-    lapic_regs.timer = 0x00010000; // reset value, masked.
+    vapic_write_reg(REG_LAPIC_TIMER, 0x10000); // reset value, masked.
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
     // Figure 11-8. Local Vector Table (LVT)
-    lapic_regs.lint0 = 0x10000; // reset value
-    lapic_regs.lint1 = 0x10000; // reset value
-
+    vapic_write_reg(REG_LAPIC_LVT_LINT0, 0x10000); // reset value
+    vapic_write_reg(REG_LAPIC_LVT_LINT1, 0x10000); // reset value
     // Figure 11-14. Destination Format Register (DFR)
-    lapic_regs.dfr = 0xffffffff; // reset value
+    vapic_write_reg(REG_LAPIC_DFR, 0xffffffff); // reset value
 
     LOG_VMM("initialising I/O APIC\n");
     // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
