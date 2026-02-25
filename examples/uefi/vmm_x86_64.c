@@ -127,6 +127,10 @@ uint64_t guest_flash_size = 0x600000;
 uintptr_t guest_ecam_vaddr = 0x8000000;
 uint64_t guest_ecam_size = 0x10000000;
 
+uintptr_t guest_vapic_vaddr = 0x3000000000;
+uint64_t guest_vapic_paddr = 0x13000000;
+uint64_t guest_apic_access_paddr = 0x13001000;
+
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
@@ -155,7 +159,7 @@ void init(void)
                              guest_high_ram_size, guest_flash_vaddr, guest_flash_gpa, guest_flash_size,
                              _guest_firmware_image, firm_size, simple_dsdt_aml_code, sizeof(simple_dsdt_aml_code)));
 
-    vcpu_set_up_reset_state();
+    vcpu_set_up_reset_state(guest_vapic_paddr, guest_apic_access_paddr);
 
     // Set up the PCI bus
     // Make sure the backing MR is the same size as what we report to the guest via ACPI MCFG
@@ -238,7 +242,7 @@ void notified(microkit_channel ch)
             tsc_calibrating = false;
 
             /* Initialise the virtual APIC */
-            bool success = virq_controller_init(measured_tsc_hz);
+            bool success = virq_controller_init(measured_tsc_hz, guest_vapic_vaddr);
             if (!success) {
                 LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
                 return;
