@@ -29,7 +29,7 @@ bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
     vapic_write_reg(REG_LAPIC_REV, (uint32_t) 0x10 | (uint32_t) 6 << 16);
     // Figure 11-23. Spurious-Interrupt Vector Register (SVR)
-    vapic_write_reg(REG_LAPIC_SVR, (uint32_t) 0x10 | (uint32_t) 0xff); // reset value
+    vapic_write_reg(REG_LAPIC_SVR, (uint32_t) 0xff); // reset value
     // LVT Timer Register
     vapic_write_reg(REG_LAPIC_TIMER, 0x10000); // reset value, masked.
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
