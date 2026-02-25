@@ -98,7 +98,7 @@ enum exit_reasons {
 };
 
 /* [2a] */
-static char *exit_reason_strs[NUM_EXIT_REASONS] = {
+static char *exit_reason_strs[] = {
     "Exception or non-maskable interrupt (NMI)",
     "External interrupt",
     "Triple Fault",
@@ -155,11 +155,15 @@ static char *exit_reason_strs[NUM_EXIT_REASONS] = {
     "INVVPID",
     "WBINVD or WBNOINVD",
     "XSETBV",
+    "APIC Write"
 };
+
+_Static_assert(sizeof(exit_reason_strs) / sizeof(char *) == NUM_EXIT_REASONS, "Exit reason strings table is not correct length");
 
 char *fault_to_string(int exit_reason)
 {
     assert(exit_reason < NUM_EXIT_REASONS);
+    assert(exit_reason_strs[exit_reason] != NULL);
     return exit_reason_strs[exit_reason];
 }
 
