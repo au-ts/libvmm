@@ -52,7 +52,6 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/pit.c",
     "src/arch/x86_64/ioports.c",
     "src/arch/x86_64/util.c",
-    "src/arch/x86_64/e820.c",
     "src/arch/x86_64/cmos.c",
     "src/arch/x86_64/uefi.c",
     "src/arch/x86_64/com.c",
