@@ -175,6 +175,36 @@ uint64_t tsc_now_scaled(void)
     return rdtsc() / lapic_dcr_to_divider();
 }
 
+bool lapic_read_fault_handle(uint64_t offset)
+{
+    uint32_t result;
+
+    switch (offset) {
+    case REG_LAPIC_CURR_CNT: {
+        if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
+            result = 0;
+        } else {
+            uint64_t tsc_tick_now_scaled = tsc_now_scaled();
+            uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - native_scaled_tsc_when_timer_starts;
+
+            uint64_t remaining = 0;
+            if (elapsed_scaled_tsc_tick < vapic_read_reg(REG_LAPIC_INIT_CNT)) {
+                remaining = vapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_tsc_tick;
+            }
+            result = remaining;
+            LOG_APIC("current count read 0x%lx\n", remaining);
+        }
+        break;
+    }
+    default:
+        LOG_VMM_ERR("Reading unknown LAPIC register offset 0x%x\n", offset);
+        return false;
+    }
+
+    vapic_write_reg(offset, result);
+    return true;
+}
+
 bool lapic_write_fault_handle(uint64_t offset)
 {
     switch (offset) {
@@ -186,6 +216,10 @@ bool lapic_write_fault_handle(uint64_t offset)
     case REG_LAPIC_ESR:
     case REG_LAPIC_TIMER:
     case REG_LAPIC_DCR:
+    case REG_LAPIC_DFR:
+    case REG_LAPIC_LDR:
+    case REG_LAPIC_THERMAL:
+    case REG_LAPIC_PERF_MON_CNTER:
         break;
 
     case REG_LAPIC_INIT_CNT: {
