@@ -365,7 +365,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             /* Figure out whether the guest's read request spills over to the next 4k transfer window */
             uint32_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
             uint32_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
-            if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors) > SECTORS_IN_TRANSFER_WINDOW) {
+            if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors)
+                > SECTORS_IN_TRANSFER_WINDOW * sddf_count) {
                 sddf_count++;
             }
 
@@ -438,7 +439,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             /* Figure out whether the guest's write request spills over to the next 4k transfer window */
             uint32_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
             uint32_t sddf_count = (body_size_bytes + BLK_TRANSFER_SIZE - 1) / BLK_TRANSFER_SIZE;
-            if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors) > SECTORS_IN_TRANSFER_WINDOW) {
+            if (((virtio_req_header.sector % SECTORS_IN_TRANSFER_WINDOW) + num_sectors)
+                > SECTORS_IN_TRANSFER_WINDOW * sddf_count) {
                 sddf_count++;
             }
 
