@@ -207,6 +207,17 @@ static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bo
     }
 }
 
+static inline bool virtio_blk_respond(struct virtio_device *dev) {
+    if (dev->transport_type == VIRTIO_TRANSPORT_PCI && dev->regs.InterruptStatus) {
+        // Don't inject the IRQ if InterruptStatus is already set on PCI since reading
+        // from InterruptStatus will clear it.
+        return false;
+    }
+
+    virtio_blk_set_interrupt_status(dev, true, false);
+    return virtio_blk_virq_inject(dev);
+}
+
 static inline void virtio_blk_set_req_fail(struct virtio_device *dev, uint16_t desc)
 {
     struct virtq *virtq = &dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].virtq;
@@ -637,9 +648,10 @@ static bool virtio_blk_queue_notify(struct virtio_device *dev)
     // bool virq_inject_success = true;
     if (!consumption_status) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
-        virtio_blk_set_interrupt_status(dev, true, false);
+        // virtio_blk_set_interrupt_status(dev, true, false);
         // virq_inject_success = virtio_blk_virq_inject(dev);
-        virtio_blk_virq_inject(dev);
+        // virtio_blk_virq_inject(dev);
+        virtio_blk_respond(dev);
     }
 
     struct virtio_blk_device *state = device_state(dev);
@@ -872,8 +884,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
      */
     bool virq_inject_success = true;
     if (resp_handled && !read_write_modify_inflight && !virt_notify) {
-        virtio_blk_set_interrupt_status(dev, true, false);
-        virq_inject_success = virtio_blk_virq_inject(dev);
+        virq_inject_success = virtio_blk_respond(dev);
     }
 
     if (virt_notify) {
