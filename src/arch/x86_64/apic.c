@@ -250,7 +250,10 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
         uint8_t destination = (icr >> 56) & 0xff;
         if (delivery_mode == 0 || delivery_mode == 5) {
             // fixed mode
-            assert(destination == 0);
+            if (destination != 0) {
+                LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
+                return true;
+            }
             uint8_t vector = icr & 0xff;
             if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
                 LOG_VMM_ERR("failed to send IPI\n");
