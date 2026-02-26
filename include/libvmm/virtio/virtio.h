@@ -51,3 +51,5 @@ typedef struct virtio_device {
  * and virtual IRQ associated with the device has been registered.
  */
 bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size, size_t virq);
+
+void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change);

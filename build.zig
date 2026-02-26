@@ -8,6 +8,7 @@ const src = [_][]const u8{
     "src/guest.c",
     "src/util/util.c",
     "src/util/printf.c",
+    "src/virtio/virtio.c",
     "src/virtio/mmio.c",
     "src/virtio/pci.c",
     "src/virtio/block.c",

@@ -191,22 +191,6 @@ static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
     return success;
 }
 
-// TODO: this function is not specific to block at all but rather all virtIO devices,
-// should be made generic instead.
-static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
-{
-    /* Set the reason of the irq.
-       bit 0: used buffer
-       bit 1: configuration change */
-    dev->regs.InterruptStatus = 0;
-    if (used_buffer) {
-        dev->regs.InterruptStatus |= 0x1;
-    }
-    if (config_change) {
-        dev->regs.InterruptStatus |= 0x2;
-    }
-}
-
 static inline bool virtio_blk_respond(struct virtio_device *dev) {
     if (dev->transport_type == VIRTIO_TRANSPORT_PCI && dev->regs.InterruptStatus) {
         // Don't inject the IRQ if InterruptStatus is already set on PCI since reading
@@ -214,7 +198,7 @@ static inline bool virtio_blk_respond(struct virtio_device *dev) {
         return false;
     }
 
-    virtio_blk_set_interrupt_status(dev, true, false);
+    virtio_set_interrupt_status(dev, true, false);
     return virtio_blk_virq_inject(dev);
 }
 

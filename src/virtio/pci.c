@@ -245,7 +245,7 @@ static uint32_t pci_geo_addr_to_ecam_offset(uint8_t bus, uint8_t dev, uint8_t fu
 // // is being accessed
 // static struct pci_config_space *pci_ecam_offset_to_config_space()
 
-static struct pci_config_space *virtio_pci_find_dev_cfg_space(virtio_device_t *dev)
+struct pci_config_space *virtio_pci_find_dev_cfg_space(virtio_device_t *dev)
 {
     uint32_t dev_table_idx = dev->transport.pci.dev_table_idx;
     assert(dev_table_idx < VIRTIO_PCI_DEV_FUNC_MAX);
@@ -699,7 +699,7 @@ static bool virtio_pci_isr_reg_read(virtio_device_t *dev, size_t vcpu_id, size_t
      * virtIO spec section 4.1.4.5.1 Device Requirements: ISR status capability
      * "The device MUST reset ISR status to 0 on driver read."
      */
-    dev->regs.InterruptStatus = 0;
+    virtio_set_interrupt_status(dev, false, false);
     return true;
 }
 
