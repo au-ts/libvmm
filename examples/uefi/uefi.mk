@@ -152,8 +152,7 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -d guest_errors \
 							  -device ramfb -vga none \
 							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  -serial tcp:127.0.0.1:4445
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 
 clean::
