@@ -243,7 +243,7 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     case REG_LAPIC_ICR_LOW: {
         // Figure 11-12. Interrupt Command Register (ICR)
         // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-        uint64_t icr = (uint64_t) data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
+        uint64_t icr = (uint64_t)data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
         // @billn sus, handle other types of IPIs
         uint8_t delivery_mode = ((icr >> 8) & 0x7);
@@ -513,10 +513,49 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
             if (candidate_vector == vector) {
                 if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
                     ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+
+                    // Now clear the vector's bit in EOI exit bitmap
+                    int eoi_bitmap_n = vector / 64;
+                    int n_bitmap_i = vector % 64;
+                    switch (eoi_bitmap_n) {
+                    case 0: {
+                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
+                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_0);
+                        bitmap &= ~BIT(n_bitmap_i);
+                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0, bitmap);
+                        break;
+                    }
+                    case 1: {
+                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
+                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_1);
+                        bitmap &= ~BIT(n_bitmap_i);
+                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1, bitmap);
+                        break;
+                    }
+                    case 2: {
+                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
+                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_2);
+                        bitmap &= ~BIT(n_bitmap_i);
+                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2, bitmap);
+                        break;
+                    }
+                    case 3: {
+                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
+                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_3);
+                        bitmap &= ~BIT(n_bitmap_i);
+                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3, bitmap);
+                        break;
+                    }
+                    default:
+                        LOG_VMM_ERR("bug: eoi_bitmap_n > 3\n");
+                        return false;
+                    }
+
+                    return true;
                 }
-                return true;
             }
         }
     }
+
     return false;
 }
