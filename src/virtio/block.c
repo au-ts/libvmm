@@ -192,11 +192,11 @@ static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
 }
 
 static inline bool virtio_blk_respond(struct virtio_device *dev) {
-    if (dev->transport_type == VIRTIO_TRANSPORT_PCI && dev->regs.InterruptStatus) {
-        // Don't inject the IRQ if InterruptStatus is already set on PCI since reading
-        // from InterruptStatus will clear it.
-        return false;
-    }
+    // if (dev->transport_type == VIRTIO_TRANSPORT_PCI && dev->regs.InterruptStatus) {
+    //     // Don't inject the IRQ if InterruptStatus is already set on PCI since reading
+    //     // from InterruptStatus will clear it.
+    //     return false;
+    // }
 
     virtio_set_interrupt_status(dev, true, false);
     return virtio_blk_virq_inject(dev);
