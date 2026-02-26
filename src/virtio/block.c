@@ -191,7 +191,8 @@ static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
     return success;
 }
 
-static inline bool virtio_blk_respond(struct virtio_device *dev) {
+static inline bool virtio_blk_respond(struct virtio_device *dev)
+{
     // if (dev->transport_type == VIRTIO_TRANSPORT_PCI && dev->regs.InterruptStatus) {
     //     // Don't inject the IRQ if InterruptStatus is already set on PCI since reading
     //     // from InterruptStatus will clear it.
@@ -275,6 +276,30 @@ bool request_is_write(reqbk_t *req)
     return req->state >= STATE_WRITING_ALIGNED;
 }
 
+uint64_t calculate_desc_total_size(struct virtq *virtq, uint16_t desc_head) {
+    int sequence = 0;
+    (void) sequence;
+    uint64_t bytes = 0;
+    while (true) {
+        LOG_BLOCK("%d: addr 0x%lx, len %u, next? %d, device writable? %d, indirect? %d, next %d\n", sequence,
+                    virtq->desc[desc_head].addr, virtq->desc[desc_head].len,
+                    !!(virtq->desc[desc_head].flags & VIRTQ_DESC_F_NEXT),
+                    !!(virtq->desc[desc_head].flags & VIRTQ_DESC_F_WRITE),
+                    !!(virtq->desc[desc_head].flags & VIRTQ_DESC_F_INDIRECT), virtq->desc[desc_head].next);
+        
+        bytes += virtq->desc[desc_head].len;
+
+        if (!(virtq->desc[desc_head].flags & VIRTQ_DESC_F_NEXT)) {
+            break;
+        }
+
+        sequence++;
+        desc_head = virtq->desc[desc_head].next;
+    };
+
+    return bytes;
+}
+
 static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_consumed)
 {
     assert(dev->regs.QueueSel == VIRTIO_BLK_DEFAULT_VIRTQ);
@@ -305,6 +330,26 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         uint16_t curr_desc = desc_head;
         uint32_t curr_desc_bytes_read = 0;
 
+        LOG_BLOCK("=> descriptor chain starting at %d\n", curr_desc);
+        int sequence = 0;
+        (void) sequence;
+        int tmp_curr_desc = desc_head;
+
+        while (true) {
+            LOG_BLOCK("%d: addr 0x%lx, len %u, next? %d, device writable? %d, indirect? %d, next %d\n", sequence,
+                      virtq->desc[tmp_curr_desc].addr, virtq->desc[tmp_curr_desc].len,
+                      !!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_NEXT),
+                      !!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_WRITE),
+                      !!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_INDIRECT), virtq->desc[tmp_curr_desc].next);
+            sequence++;
+
+            if (!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_NEXT)) {
+                break;
+            }
+
+            tmp_curr_desc = virtq->desc[tmp_curr_desc].next;
+        };
+
         /* There are three parts with each block request. The header, body (which
          * contains the data) and reply. */
         uint32_t header_bytes_read = 0;
@@ -334,6 +379,8 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             }
         }
         assert(header_bytes_read == sizeof(struct virtio_blk_outhdr));
+        // Should have moved on from the header' descriptor(s) by now
+        assert(desc_head != curr_desc);
 
         LOG_BLOCK("----- Request type is 0x%x -----\n", virtio_req_header.type);
 
@@ -346,21 +393,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             uint32_t sddf_block_number = (virtio_req_header.sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
 
             /* Figure out how many bytes are in the body of the request */
-            uint32_t body_size_bytes = 0;
-            uint32_t tmp_curr_desc_bytes_read = curr_desc_bytes_read;
-            for (uint16_t tmp_curr_desc = curr_desc; virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_NEXT;
-                 tmp_curr_desc = virtq->desc[tmp_curr_desc].next) {
-                if (tmp_curr_desc_bytes_read != 0) {
-                    body_size_bytes += virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
-                    tmp_curr_desc_bytes_read = 0;
-                } else {
-                    body_size_bytes += virtq->desc[tmp_curr_desc].len;
-                }
-                if (!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_WRITE)
-                    || virtq->desc[tmp_curr_desc].len < VIRTIO_BLK_SECTOR_SIZE) {
-                    break;
-                }
-            }
+            uint32_t body_size_bytes = calculate_desc_total_size(virtq, desc_head) - sizeof(struct virtio_blk_outhdr) - 1;
 
             /* Figure out whether the guest's read request spills over to the next 4k transfer window */
             uint32_t num_sectors = body_size_bytes / VIRTIO_BLK_SECTOR_SIZE;
@@ -419,21 +452,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             LOG_BLOCK("sddf_block_number is %u\n", sddf_block_number);
 
             /* Figure out how many bytes are in the body of the request */
-            uint32_t body_size_bytes = 0;
-            uint32_t tmp_curr_desc_bytes_read = curr_desc_bytes_read;
-            for (uint16_t tmp_curr_desc = curr_desc; virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_NEXT;
-                 tmp_curr_desc = virtq->desc[tmp_curr_desc].next) {
-                if (tmp_curr_desc_bytes_read != 0) {
-                    body_size_bytes += virtq->desc[tmp_curr_desc].len - tmp_curr_desc_bytes_read;
-                    tmp_curr_desc_bytes_read = 0;
-                } else {
-                    body_size_bytes += virtq->desc[tmp_curr_desc].len;
-                }
-                if (!(virtq->desc[tmp_curr_desc].flags & VIRTQ_DESC_F_WRITE)
-                    || virtq->desc[tmp_curr_desc].len < VIRTIO_BLK_SECTOR_SIZE) {
-                    break;
-                }
-            }
+            uint32_t body_size_bytes = calculate_desc_total_size(virtq, desc_head) - sizeof(struct virtio_blk_outhdr) - 1;
             LOG_BLOCK("body_size_bytes is %u\n", body_size_bytes);
 
             /* Figure out whether the guest's write request spills over to the next 4k transfer window */
@@ -460,12 +479,12 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
              * memory, overwrite the memory on the unaligned areas, and then write the
              * entire memory back to disk.
              */
-            bool aligned = true;
-            if (body_size_bytes % BLK_TRANSFER_SIZE != 0) {
-                aligned = false;
-            } else {
-                aligned = ((virtio_req_header.sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) == 0);
-            }
+            bool aligned = false;
+            // if (body_size_bytes % BLK_TRANSFER_SIZE != 0) {
+            //     aligned = false;
+            // } else {
+            //     aligned = ((virtio_req_header.sector % (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)) == 0);
+            // }
 
             LOG_BLOCK("aligned is %d, \n", aligned);
 
@@ -613,6 +632,10 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             break;
         }
         }
+
+        // uncomment these two lines to process multiple requests at once
+        last_handled_avail_idx++;
+        break;
     }
 
 // TODO: handle unused label
@@ -704,6 +727,8 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             }
         }
         assert(header_bytes_read == sizeof(struct virtio_blk_outhdr));
+        // Should have moved on from the header' descriptor(s) by now
+        assert(reqbk->virtio_desc_head != curr_desc);
 
         bool resp_success = false;
         if (sddf_ret_status == BLK_RESP_OK) {
@@ -894,11 +919,11 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
         blk_dev->config.blk_size = storage_info->sector_size;
     }
 
-    /* Restrict the guest driver to only send 1x 4K segment per request at any given time.
+    /* Restrict the guest driver to only send 8x 4K segment per request at any given time.
     This is to prevent internal fragmentation within the data region, leading to a deadlock
     where we can't handle large requests when the free cells in the data region isn't contiguous. */
     blk_dev->config.size_max = BLK_TRANSFER_SIZE;
-    blk_dev->config.seg_max = 1;
+    blk_dev->config.seg_max = 8;
 
     blk_dev->config.topology.physical_block_exp =
         3; // 2^3 = 8 logical blocks in 1 physical block (sDDF transfer window)
