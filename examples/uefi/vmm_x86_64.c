@@ -170,9 +170,9 @@ void init(void)
 
     assert(pci_x86_enable_passthrough_devices(pci_conf_addr_pio_id, pci_conf_addr_pio_addr, pci_conf_addr_pio_size,
                                               pci_conf_data_pio_id, pci_conf_data_pio_addr, pci_conf_data_pio_size));
-    assert(pci_x86_passthrough_ata_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
-                                              primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
-                                              second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr));
+    // assert(pci_x86_passthrough_ata_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
+    //                                           primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
+    //                                           second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr));
 
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr,
@@ -257,9 +257,9 @@ void notified(microkit_channel ch)
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
 
-            /* Pass through ATA IRQs */
-            assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
-            assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+            // /* Pass through ATA IRQs */
+            // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
+            // assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
 
             /* COM2 for windbg */
             assert(virq_ioapic_register_passthrough(0, 3, 7));
