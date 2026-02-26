@@ -331,9 +331,11 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             /* We can guarantee existence of next descriptor as footer is write only
              */
             assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
+            void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
+            void *dst_addr = (void *)&virtio_req_header;
+            dst_addr += header_bytes_read;
+
             if (header_bytes_read + virtq->desc[curr_desc].len > sizeof(struct virtio_blk_outhdr)) {
-                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
-                void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 memcpy(dst_addr, src_addr, copy_sz);
                 curr_desc_bytes_read = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
@@ -342,13 +344,12 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                  * current one */
                 break;
             } else {
-                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
-                void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = virtq->desc[curr_desc].len;
                 memcpy(dst_addr, src_addr, copy_sz);
                 header_bytes_read += virtq->desc[curr_desc].len;
             }
         }
+        assert(header_bytes_read == sizeof(struct virtio_blk_outhdr));
 
         LOG_BLOCK("----- Request type is 0x%x -----\n", virtio_req_header.type);
 
@@ -698,9 +699,11 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             /* We can always guarantee existence of next descriptor as footer is write
              * only */
             assert(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT);
+            void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
+            void *dst_addr = (void *)&virtio_req_header;
+            dst_addr += header_bytes_read;
+
             if (header_bytes_read + virtq->desc[curr_desc].len > sizeof(struct virtio_blk_outhdr)) {
-                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
-                void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
                 memcpy(dst_addr, src_addr, copy_sz);
                 curr_desc_bytes_read = sizeof(struct virtio_blk_outhdr) - header_bytes_read;
@@ -709,13 +712,12 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
                  * current one */
                 break;
             } else {
-                void *src_addr = (void *)gpa_to_vaddr(virtq->desc[curr_desc].addr);
-                void *dst_addr = (void *)&virtio_req_header;
                 uint32_t copy_sz = virtq->desc[curr_desc].len;
                 memcpy(dst_addr, src_addr, copy_sz);
                 header_bytes_read += virtq->desc[curr_desc].len;
             }
         }
+        assert(header_bytes_read == sizeof(struct virtio_blk_outhdr));
 
         bool resp_success = false;
         if (sddf_ret_status == BLK_RESP_OK) {
