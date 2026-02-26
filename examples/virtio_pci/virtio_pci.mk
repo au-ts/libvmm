@@ -34,6 +34,7 @@ SYSTEM_DIR := $(VIRTIO_EXAMPLE)/client_vm/$(ARCH)
 SDDF_CUSTOM_LIBC := 1
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
@@ -179,10 +180,11 @@ ${INITRD}:
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
-	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(CLIENT_VM_USERLEVEL_INIT) $(CLIENT_VM_USERLEVEL_HOME) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
@@ -191,10 +193,10 @@ client_vm/vmm.o: $(VIRTIO_EXAMPLE)/$(VMM_NAME).c $(CHECK_FLAGS_BOARD_MD5) |vm_di
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),x86_64)
-client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD)
+client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
-					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 else
