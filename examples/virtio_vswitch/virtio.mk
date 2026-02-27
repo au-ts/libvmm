@@ -73,7 +73,7 @@ include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
-	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
+	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf network_vswitch.elf
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -116,6 +116,7 @@ endif
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
 	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm0.elf
 	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .net_vswitch_config=net_vswitch.data network_vswitch.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \

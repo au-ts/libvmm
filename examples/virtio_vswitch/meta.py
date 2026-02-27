@@ -82,32 +82,25 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
     net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
-    #client0_net_copier = ProtectionDomain(
-    #    "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
-    #client1_net_copier = ProtectionDomain(
-    #    "client1_net_copier", "network_copy.elf", priority=98, budget=20000)
-    vswitch = ProtectionDomain("vswitch", "vswitch.elf", priority=100) # TODO: prio?
+    client0_net_copier = ProtectionDomain(
+        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+    client1_net_copier = ProtectionDomain(
+        "client1_net_copier", "network_copy.elf", priority=98, budget=20000)
+    vswitch = ProtectionDomain("net_vswitch", "network_vswitch.elf", priority=97) # TODO: prio?
 
     pds = [
         eth_driver,
         net_virt_rx,
         net_virt_tx,
-        #client0_net_copier,
-        #client1_net_copier,
+        client0_net_copier,
+        client1_net_copier,
         vswitch,
     ]
     for pd in pds:
         sdf.add_pd(pd)
 
-    # TODO: add a vswitch and figure out it's priority
-    #client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
-    #client1.add_virtio_mmio_net(guest_net_node, net_system, client1_net_copier)
-
-    # TODO: for now remove copiers, either remove copying from vswitch or remove copiers whatsoever?
-    # Also, double MAC address matching by vswitch and virt's has to be addressed
-    # Look at Alex's PR with tips on how to achieve better filtering
-    client0.add_virtio_mmio_net(guest_net_node, net_system, None, vswitch=vswitch)
-    client1.add_virtio_mmio_net(guest_net_node, net_system, None, vswitch=vswitch)
+    client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=vswitch)
+    client1.add_virtio_mmio_net(guest_net_node, net_system, copier=client1_net_copier, vswitch=vswitch)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
