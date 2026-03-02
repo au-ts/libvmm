@@ -26,9 +26,8 @@
 
         <virtual_machine name="linux">
             <vcpu id="0" />
-            <map mr="guest_ram" vaddr="0x0" perms="rwx" />
-
-            <map mr="guest_apic_access" vaddr="0xfee0_0000" perms="rw" />
+            <map mr="guest_ram" vaddr="0x0" perms="rwx" cached="true" />
+            <map mr="guest_apic_access" vaddr="0xfee0_0000" perms="rw" cached="false" />
         </virtual_machine>
 
         <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />
@@ -55,7 +54,7 @@
     <protection_domain name="timer_driver" priority="254">
         <program_image path="timer_driver.elf" />
         <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
-        <irq pin="2" vector="40" id="0" ioapic="0" />
+        <irq pin="2" vector="107" id="0" ioapic="0" trigger="edge" />
     </protection_domain>
 
     <channel>
