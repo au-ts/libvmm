@@ -193,11 +193,11 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 
     if (port_offset == 0) {
         if (is_read) {
-            LOG_VMM("PM1 control reg read 0x%x\n", pm1_control_reg);
+            // LOG_VMM("PM1 control reg read 0x%x\n", pm1_control_reg);
             vctx->eax = pm1_control_reg;
         } else {
             pm1_control_reg = vctx->eax & 0xffff;
-            LOG_VMM("PM1 control reg write 0x%x\n", pm1_control_reg);
+            // LOG_VMM("PM1 control reg write 0x%x\n", pm1_control_reg);
         }
 
     } else {
@@ -278,7 +278,7 @@ bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t quali
     assert(!is_read);
 
     uint8_t cmd = vctx->eax & 0xff;
-    LOG_VMM("smi cmd write 0x%x\n", cmd);
+    // LOG_VMM("smi cmd write 0x%x\n", cmd);
 
     if (cmd == ACPI_ENABLE) {
         pm1_control_reg |= BIT(0);
