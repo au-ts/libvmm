@@ -632,10 +632,6 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             break;
         }
         }
-
-        // uncomment these two lines to process multiple requests at once
-        last_handled_avail_idx++;
-        break;
     }
 
 // TODO: handle unused label
@@ -922,7 +918,7 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
     /* Restrict the guest driver to only send 8x 4K segment per request at any given time.
     This is to prevent internal fragmentation within the data region, leading to a deadlock
     where we can't handle large requests when the free cells in the data region isn't contiguous. */
-    blk_dev->config.size_max = BLK_TRANSFER_SIZE;
+    blk_dev->config.size_max = BLK_TRANSFER_SIZE * 4;
     blk_dev->config.seg_max = 8;
 
     blk_dev->config.topology.physical_block_exp =
