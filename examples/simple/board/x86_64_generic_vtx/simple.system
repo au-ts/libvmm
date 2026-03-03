@@ -40,7 +40,7 @@
         <ioport id="6" addr="0xcfc" size="4" setvar_id="pci_conf_data_pio_id" setvar_addr="pci_conf_data_pio_addr" /> -->
 
         <!-- serial port com1 irq -->
-        <irq pin="4" vector="41" id="0" ioapic="0" />
+        <irq pin="4" vector="41" id="0" ioapic="0" trigger="edge"/>
         <!-- primary ATA irq -->
         <!-- <irq pin="14" vector="42" id="1" ioapic="0" /> -->
         <!-- secondary ATA irq -->

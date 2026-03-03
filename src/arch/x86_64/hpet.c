@@ -81,6 +81,7 @@ struct comparator_regs {
     uint64_t config;
     uint64_t config_mask;
     uint64_t current_comparator;
+    uint64_t armed_comparator;
     uint64_t comparator_increment;
 };
 
@@ -207,22 +208,23 @@ uint64_t timer_n_compute_timeout_ns(int n, uint64_t main_counter_val)
 
 bool bug_check_irq_at_correct_time(int comparator, uint64_t main_counter_val)
 {
-    uint64_t expected_counter_val = hpet_regs.comparators[comparator].current_comparator;
+    uint64_t expected_counter_val = hpet_regs.comparators[comparator].armed_comparator;
     uint64_t difference_units;
+    // Our virtual HPET is 10MHz, so allow for 1ms drift by (NS_IN_MS / 100)
     uint64_t tolerance_units = (NS_IN_MS / 100);
 
     if (expected_counter_val > main_counter_val) {
         difference_units = expected_counter_val - main_counter_val;
         if (difference_units > tolerance_units) {
             LOG_VMM_ERR("HPET timer irq too early!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
-                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_units, tolerance_units);
+                        main_counter_val, hpet_regs.comparators[comparator].armed_comparator, difference_units, tolerance_units);
             return false;
         }
     } else {
         difference_units = main_counter_val - expected_counter_val;
         if (difference_units > tolerance_units) {
             LOG_VMM_ERR("HPET timer irq too late!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
-                        main_counter_val, hpet_regs.comparators[comparator].current_comparator, difference_units, tolerance_units);
+                        main_counter_val, hpet_regs.comparators[comparator].armed_comparator, difference_units, tolerance_units);
             return false;
         }
     }
@@ -258,6 +260,7 @@ void hpet_handle_timer_ntfn(microkit_channel ch)
             if (delay_ns) {
                 LOG_HPET("t0 re-arm for %ld ns\n", delay_ns);
                 sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
+                hpet_regs.comparators[0].armed_comparator = hpet_regs.comparators[0].current_comparator;
             }
         }
     } else if (ch == TIMER_DRV_CH_FOR_HPET_CH1) {
@@ -323,6 +326,7 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(0),
                      get_timer_n_ioapic_pin(0));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH0, delay_ns);
+            hpet_regs.comparators[0].armed_comparator = hpet_regs.comparators[0].current_comparator;
         }
     }
 
@@ -337,6 +341,7 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(1),
                      get_timer_n_ioapic_pin(1));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH1, delay_ns);
+            hpet_regs.comparators[1].armed_comparator = hpet_regs.comparators[1].current_comparator;
         }
     }
 
@@ -351,6 +356,8 @@ bool hpet_maintenance(uint8_t comparator)
             LOG_HPET("... is edge triggered %u, ioapic pin %d\n", timer_n_irq_edge_triggered(2),
                      get_timer_n_ioapic_pin(2));
             sddf_timer_set_timeout(TIMER_DRV_CH_FOR_HPET_CH2, delay_ns);
+            hpet_regs.comparators[2].armed_comparator = hpet_regs.comparators[2].current_comparator;
+
         }
     }
 

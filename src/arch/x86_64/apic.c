@@ -259,14 +259,14 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
                 LOG_VMM_ERR("failed to send IPI\n");
                 return false;
             } else {
-                LOG_VMM("sent ipi\n");
+                // LOG_VMM("sent ipi\n");
             }
         } else {
             LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
                         delivery_mode, destination);
         }
 
-        LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
+        // LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
         break;
     }
 
