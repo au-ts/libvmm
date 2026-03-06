@@ -23,8 +23,11 @@ This example expects to be built with Zig 0.15.x.
 You can download Zig [here](https://ziglang.org/download/).
 
 ```sh
-zig build -Dsdk=/path/to/sdk
+zig build -Dsdk=/path/to/sdk -Dboard=<board>
 ```
+
+Where `<board>` is one of the supported platforms:
+* qemu_virt_aarch64
 
 The build system fetches the Linux kernel and initrd images on-demand from
 Trustworthy Systems' website. To override this and use your own images, you can
