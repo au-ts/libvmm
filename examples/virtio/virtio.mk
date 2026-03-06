@@ -55,7 +55,7 @@ CFLAGS += \
 	  -I$(VIRTIO_EXAMPLE)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
 
 include $(SDDF)/util/util.mk
 ifeq ($(MICROKIT_BOARD), maaxboard)
@@ -85,7 +85,7 @@ all: ${IMAGE_FILE}
 
 -include vmm.d
 
-$(IMAGES): libsddf_util_debug.a libvmm.a
+$(IMAGES): libsddf_util_debug.a
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
@@ -160,7 +160,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
