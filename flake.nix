@@ -15,9 +15,11 @@
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    systems-ci.url = "github:au-ts/systems-ci/main";
+    systems-ci.flake = false;
   };
 
-  outputs = { nixpkgs, zig-overlay, rust-overlay, sdfgen, ... }:
+  outputs = { nixpkgs, zig-overlay, rust-overlay, sdfgen, systems-ci, ... }:
     let
       microkit-version = "2.1.0-dev.12+2d5a1a6";
       microkit-url = "https://trustworthy.systems/Downloads/microkit/";
@@ -68,8 +70,13 @@
 
           pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
 
+          ts_ci = pkgs.callPackage "${systems-ci}/ts_ci/package.nix" {
+            python3Packages = pkgs.python312Packages;
+          };
+
           python = pkgs.python312.withPackages (ps: [
             pysdfgen
+            ts_ci
           ]);
         in
         {

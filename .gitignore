@@ -3,6 +3,7 @@
 
 build/
 ci_build/
+ci_logs/
 zig-out/
 .zig-cache/
 *.pdf
@@ -11,3 +12,4 @@ rust/target/
 .cache
 compile_commands.json
 *.orig
+__pycache__/

@@ -105,6 +105,7 @@
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
         "sdfgen": "sdfgen",
+        "systems-ci": "systems-ci",
         "zig-overlay": "zig-overlay_2"
       }
     },
@@ -163,6 +164,23 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems-ci": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1772674951,
+        "narHash": "sha256-IRcnUyiJaNnoZFgoVN75AzFYpCufdRoYi4YrWNkeLv0=",
+        "owner": "au-ts",
+        "repo": "systems-ci",
+        "rev": "24cdad6f3ad5d7b3dd437e9807a86cc9351103f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "au-ts",
+        "ref": "main",
+        "repo": "systems-ci",
         "type": "github"
       }
     },
