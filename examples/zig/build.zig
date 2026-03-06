@@ -3,22 +3,45 @@
 const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
+const MicrokitBoard = enum {
+    qemu_virt_aarch64,
+};
+
+const Target = struct {
+    board: MicrokitBoard,
+    zig_target: std.Target.Query,
+};
+
+const targets = [_]Target {
+    .{
+        .board = MicrokitBoard.qemu_virt_aarch64,
+        .zig_target = std.Target.Query{
+            .cpu_arch = .aarch64,
+            .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
+            .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
+            .os_tag = .freestanding,
+            .abi = .none,
+        },
+    },
+};
+
+fn findTarget(board: MicrokitBoard) std.Target.Query {
+    for (targets) |target| {
+        if (board == target.board) {
+            return target.zig_target;
+        }
+    }
+
+    std.log.err("Board '{}' is not supported\n", .{ board });
+    std.posix.exit(1);
+}
+
 const ConfigOptions = enum {
     debug,
     release,
 };
 
 pub fn build(b: *std.Build) !void {
-    // For this example we hard-code the target to AArch64 and the platform to QEMU virt AArch64
-    // since the main point of this example is to show off using libvmm in another
-    // systems programming language.
-    const target = b.resolveTargetQuery(.{
-        .cpu_arch = .aarch64,
-        .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
-        .cpu_features_add = std.Target.aarch64.featureSet(&[_]std.Target.aarch64.Feature{ .strict_align }),
-        .os_tag = .freestanding,
-        .abi = .none,
-    });
     const optimize = b.standardOptimizeOption(.{});
 
     // Getting the path to the Microkit SDK before doing anything else
@@ -27,10 +50,17 @@ pub fn build(b: *std.Build) !void {
         return error.MissingMicrokitSdk;
     };
 
-    // Hard-code the board to QEMU virt AArch64 since it's the only one the example intends to support
-    const microkit_board = "qemu_virt_aarch64";
     const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.debug;
     const microkit_config = @tagName(microkit_config_option);
+
+    // Get the Microkit SDK board we want to target
+    const microkit_board_option = b.option(MicrokitBoard, "board", "Microkit board to target") orelse {
+        std.log.err("Missing -Dboard=<board> argument", .{});
+        return error.MissingBoard;
+    };
+    const target = b.resolveTargetQuery(findTarget(microkit_board_option));
+    const microkit_board = @tagName(microkit_board_option);
+
     // Since we are relying on Zig to produce the final ELF, it needs to do the
     // linking step as well.
     const microkit_board_dir = microkit_sdk.path(b, "board").path(b, microkit_board).path(b, microkit_config);
