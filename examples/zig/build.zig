@@ -59,6 +59,12 @@ pub fn build(b: *std.Build) !void {
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
+    const sddf_dep = b.dependency("sddf", .{
+        .target = target,
+        .optimize = optimize,
+        .microkit_board_dir = microkit_board_dir,
+    });
+
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
         .root_module = b.createModule(.{
@@ -117,6 +123,7 @@ pub fn build(b: *std.Build) !void {
     exe.setLinkerScript(libmicrokit_linker_script);
 
     exe.linkLibrary(libvmm);
+    exe.linkLibrary(sddf_dep.artifact("util"));
 
     b.installArtifact(exe);
 

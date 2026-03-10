@@ -7,11 +7,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <microkit.h>
-#include <libvmm/guest.h>
-#include <libvmm/virq.h>
-#include <libvmm/util/util.h>
-#include <libvmm/arch/aarch64/linux.h>
-#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/libvmm.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
