@@ -16,3 +16,6 @@
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
+
+// Convert guest physical address to the VMM's virtual memory address.
+void *gpa_to_vaddr(uint64_t gpa);

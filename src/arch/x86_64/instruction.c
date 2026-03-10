@@ -6,6 +6,7 @@
 
 #include <stdbool.h>
 #include <string.h>
+#include <libvmm/guest.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/instruction.h>

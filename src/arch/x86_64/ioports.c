@@ -5,6 +5,7 @@
  */
 
 #include <stdbool.h>
+#include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 #include <libvmm/arch/x86_64/util.h>

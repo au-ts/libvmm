@@ -25,11 +25,13 @@ AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/tcb.c \
 		 src/arch/aarch64/vcpu.c \
 		 src/arch/aarch64/virq.c \
+		 src/arch/aarch64/guest.c \
 		 src/arch/aarch64/vgic/vgic.c \
 		 src/virtio/mmio.c \
 		 ${VGIC_FILES}
 
 X86_64_FILES = src/arch/x86_64/fault.c \
+			   src/arch/x86_64/guest.c \
 			   src/arch/x86_64/linux.c \
 			   src/arch/x86_64/vcpu.c \
 			   src/arch/x86_64/virq.c \
