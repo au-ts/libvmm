@@ -28,6 +28,7 @@ const src_aarch64_vgic_v3 = [_][]const u8{
 
 const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vgic/vgic.c",
+    "src/arch/aarch64/guest.c",
     "src/arch/aarch64/fault.c",
     "src/arch/aarch64/psci.c",
     "src/arch/aarch64/smc.c",
@@ -39,6 +40,7 @@ const src_aarch64 = [_][]const u8{
 };
 
 const src_x86_64 = [_][]const u8{
+    "src/arch/x86_64/guest.c",
     "src/arch/x86_64/linux.c",
     "src/arch/x86_64/fault.c",
     "src/arch/x86_64/vcpu.c",

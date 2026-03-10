@@ -20,17 +20,3 @@ extern bool fault_cond;
 
 bool ept_fault_is_read(seL4_Word qualification);
 bool ept_fault_is_write(seL4_Word qualification);
-
-bool guest_paging_on(void);
-bool guest_in_64_bits(void);
-
-uint64_t gpa_to_pa(uint64_t gpa);
-
-// Convert guest virtual address to guest physical address, using whichever page table is currently in the guest's CR3.
-// Returns:
-// - gpa: guest physical address
-// - bytes_remaining: number of bytes to the page boundary. Meaning UB if you overrun (gpa + bytes_remaining)
-bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, uint64_t *bytes_remaining);
-
-// Convert guest physical address to the VMM's virtual memory address.
-void *gpa_to_vaddr(uint64_t gpa);
