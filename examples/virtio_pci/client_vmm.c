@@ -6,16 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
-#include <libvmm/config.h>
-#include <libvmm/guest.h>
-#include <libvmm/virq.h>
-#include <libvmm/util/util.h>
-#include <libvmm/virtio/virtio.h>
-#include <libvmm/virtio/console.h>
-#include <libvmm/virtio/block.h>
-#include <libvmm/virtio/net.h>
-#include <libvmm/arch/aarch64/linux.h>
-#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/libvmm.h>
 #include <sddf/serial/queue.h>
 #include <sddf/serial/config.h>
 #include <sddf/blk/queue.h>

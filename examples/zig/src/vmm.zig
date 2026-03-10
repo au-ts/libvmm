@@ -4,9 +4,7 @@
 const std = @import("std");
 const c = @cImport({
     @cInclude("microkit.h");
-    @cInclude("libvmm/virq.h");
-    @cInclude("libvmm/guest.h");
-    @cInclude("libvmm/arch/aarch64/linux.h");
+    @cInclude("libvmm/libvmm.h");
 });
 
 // In this example we only have one virtual CPU

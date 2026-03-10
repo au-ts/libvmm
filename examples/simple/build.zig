@@ -104,6 +104,12 @@ pub fn build(b: *std.Build) !void {
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
+    const sddf_dep = b.dependency("sddf", .{
+        .target = target,
+        .optimize = optimize,
+        .microkit_board_dir = microkit_board_dir,
+    });
+
     const exe = b.addExecutable(.{
         .name = "vmm.elf",
         .root_module = b.createModule(.{
@@ -143,6 +149,8 @@ pub fn build(b: *std.Build) !void {
 
     // Link the libvmm library, this will automatically add the libvmm headers as well.
     exe.linkLibrary(libvmm);
+    // Link sDDF util library for libc functionality
+    exe.linkLibrary(sddf_dep.artifact("util"));
 
     exe.addCSourceFiles(.{
         .files = &.{"vmm.c"},
