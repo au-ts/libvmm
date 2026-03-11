@@ -13,6 +13,8 @@
 #include <libvmm/vcpu.h>
 #include <libvmm/virq.h>
 
+#include <libvmm/pl011.h>
+
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/block.h>
 #include <libvmm/virtio/console.h>
@@ -22,4 +24,5 @@
 #if defined(CONFIG_ARCH_ARM)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/smc.h>
 #endif

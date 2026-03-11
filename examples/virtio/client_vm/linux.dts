@@ -21,6 +21,18 @@
 		compatible = "arm,psci-0.2\0arm,psci";
 	};
 
+	pl011@9000000 {
+		interrupts = <0x00 0x01 0x04>;
+		reg = <0x00 0x9000000 0x00 0x1000>;
+		compatible = "arm,pl011", "arm,primecell";
+	};
+
+	flash@0 {
+		bank-width = <0x04>;
+		reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
+		compatible = "cfi-flash";
+	};
+
 	cpus {
 		#size-cells = <0x00>;
 		#address-cells = <0x01>;
