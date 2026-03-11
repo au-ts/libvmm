@@ -7,9 +7,10 @@ import os
 from pathlib import Path
 import sys
 
-from ts_ci import log, TestConfig, TestMetadata, run_tests
+from ts_ci import log
 
 sys.path.insert(1, Path(__file__).parents[1].as_posix())
+from ci.common import run_tests, TestConfig
 
 TESTS_DIR = Path(__file__).parent / "tests"
 TESTS_LIST = sorted(
@@ -25,12 +26,10 @@ if __name__ == "__main__":
         log.error("no tests found")
         exit(1)
 
-    matrix: list[TestConfig] = []
-    test_fn_sets: dict[str, TestMetadata] = {}
+    test_cases: list[TestConfig] = []
 
     for example in TESTS_LIST:
         mod = importlib.import_module(f"ci.tests.{example}")
-        matrix.extend(mod.TEST_MATRIX)
-        test_fn_sets[example] = mod.TEST_METADATA
+        test_cases.extend(mod.TEST_CASES)
 
-    run_tests(test_fn_sets, matrix)
+    run_tests(test_cases)
