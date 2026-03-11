@@ -3,6 +3,8 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+#pragma once
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <microkit.h>
@@ -56,7 +58,7 @@ typedef struct vmm_config {
     vmm_config_uio_region_t uios[VMM_MAX_UIOS];
 } vmm_config_t;
 
-int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id)
+static int vmm_config_irq_from_id(vmm_config_t *config, uint8_t id)
 {
     for (int i = 0; i < config->num_irqs; i++) {
         if (config->irqs[i].id == id) {

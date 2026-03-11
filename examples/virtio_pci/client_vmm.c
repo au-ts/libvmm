@@ -75,10 +75,11 @@ void init(void)
     uintptr_t kernel_pc = linux_setup_images(vmm_config.ram, (uintptr_t)_guest_kernel_image, kernel_size,
                                              (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
                                              (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
-    if (!kernel_pc) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
+    // if (!kernel_pc) {
+    //     LOG_VMM_ERR("Failed to initialise guest images\n");
+    //     return;
+    // }
+    pl011_init(0x9000000);
 
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init();

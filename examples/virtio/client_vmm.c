@@ -78,10 +78,12 @@ void init(void)
                                              vmm_config.initrd,
                                              initrd_size
                                             );
-    if (!kernel_pc) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
+    // if (!kernel_pc) {
+    //     LOG_VMM_ERR("Failed to initialise guest images\n");
+    //     return;
+    // }
+
+    pl011_init(0x9000000);
 
     /* Initialise the virtual GIC driver */
     bool success = virq_controller_init();
