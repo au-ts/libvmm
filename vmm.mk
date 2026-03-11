@@ -44,6 +44,7 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/virtio/util.c \
+		    src/pl011.c \
 		    src/guest.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
