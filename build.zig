@@ -6,6 +6,7 @@ const LazyPath = std.Build.LazyPath;
 
 const src = [_][]const u8{
     "src/guest.c",
+    "src/pl011.c",
     "src/util/util.c",
     "src/util/printf.c",
     "src/virtio/mmio.c",

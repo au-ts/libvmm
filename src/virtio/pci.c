@@ -23,8 +23,15 @@ static virtio_device_t *virtio_pci_dev_table[VIRTIO_PCI_DEV_FUNC_MAX];
 
 static struct pci_config_space *virtio_pci_find_dev_cfg_space(virtio_device_t *dev)
 {
+    LOG_VMM("enter virtio_pci_find_dev_cfg_space\n");
+    if (dev->transport_type != VIRTIO_TRANSPORT_PCI) {
+        LOG_PCI_ERR("invalid virtIO transport type\n");
+    }
+    assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
+    LOG_VMM("here0\n");
     uint32_t dev_table_idx = dev->transport.pci.dev_table_idx;
-    assert(dev_table_idx < VIRTIO_PCI_DEV_FUNC_MAX);
+    LOG_VMM("dev_table_idx: 0x%x\n", dev_table_idx);
+    assert(dev_table_idx < (uint32_t)VIRTIO_PCI_DEV_FUNC_MAX);
 
     if (virtio_pci_dev_table[dev_table_idx] == NULL) {
         return NULL;
@@ -38,6 +45,8 @@ static struct pci_config_space *virtio_pci_find_dev_cfg_space(virtio_device_t *d
     if ((offset + (1 << 15)) > global_pci_ecam.size) {
         LOG_PCI_ERR("ECAM area for 0x%4x:0x%2x:0x%2x,0x%x is invalid \n", 0, bus_id, dev_slot, func_id);
     }
+
+    LOG_VMM("cast, 0x%p\n", global_pci_ecam.vmm_base + offset);
 
     return (struct pci_config_space *)(global_pci_ecam.vmm_base + offset);
 }
@@ -533,7 +542,9 @@ static bool handle_virtio_ecam_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                                          seL4_UserContext *regs)
 {
     uint32_t data = fault_get_data(regs, fsr);
+    LOG_VMM("here1\n");
     struct pci_config_space *config_space = virtio_pci_find_dev_cfg_space(dev);
+    LOG_VMM("here2\n");
 
     switch (offset) {
     case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
@@ -579,6 +590,8 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
     uint32_t dev_table_idx = (((offset >> 20) * VIRTIO_PCI_DEVS_PER_BUS) + (offset >> 15) & 0x1F)
                                * VIRTIO_PCI_FUNCS_PER_DEV
                            + ((offset >> 12) & 7);
+    LOG_VMM("dev_table_idx: 0x%lx\n", dev_table_idx);
+    assert(dev_table_idx < VIRTIO_PCI_DEV_FUNC_MAX);
     virtio_device_t *dev = virtio_pci_dev_table[dev_table_idx];
 
     if (fault_is_read(fsr)) {
@@ -591,6 +604,7 @@ static bool virtio_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, 
         fault_emulate_write(regs, offset, fsr, data & mask);
         return true;
     } else {
+        assert(dev != NULL);
         return handle_virtio_ecam_reg_write(dev, vcpu_id, offset & 0xFF, fsr, regs);
     }
 }

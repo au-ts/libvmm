@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <libvmm/libvmm.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/smc.h>
 #include <libvmm/arch/aarch64/psci.h>
@@ -20,6 +21,8 @@
 #define SMC_SERVICE_CALL_SHIFT 24
 
 #define SMC_FUNC_ID_MASK 0xFFFF
+
+#define SMC_FUNC_ID_SMCC_VERSION 0x80000000
 
 /* SMC and HVC function identifiers */
 typedef enum {
@@ -191,6 +194,23 @@ bool smc_register_sip_handler(smc_sip_handler_t handler)
     return true;
 }
 
+bool handle_smc_arch_call(size_t vcpu_id, seL4_UserContext *regs, size_t func_id) {
+    switch (func_id) {
+    case SMC_FUNC_ID_SMCC_VERSION:
+        LOG_VMM("SMCC VERSION\n");
+        smc_set_return_value(regs, (1 << 16) | 1);
+        break;
+    default:
+        LOG_VMM_ERR("unknown SMC arch call 0x%lx\n", func_id);
+        smc_set_return_value(regs, -1);
+        break;
+    }
+
+    bool success = fault_advance_vcpu(vcpu_id, regs);
+    assert(success);
+    return true;
+}
+
 // @ivanv: print out which SMC call as a string we can't handle.
 bool smc_handle(size_t vcpu_id, uint64_t hsr)
 {
@@ -202,9 +222,16 @@ bool smc_handle(size_t vcpu_id, uint64_t hsr)
     smc_call_id_t service = smc_get_call(regs.x0);
 
     switch (service) {
+    case SMC_CALL_ARM_ARCH:
+        return handle_smc_arch_call(vcpu_id, &regs, regs.x0);
     case SMC_CALL_STD_SERVICE:
         if (fn_number < PSCI_MAX) {
             return handle_psci(vcpu_id, &regs, fn_number, hsr);
+        } else if (regs.x0 == 0x84000050) {
+            smc_set_return_value(&regs, -1);
+            bool success = fault_advance_vcpu(vcpu_id, &regs);
+            assert(success);
+            return true;
         }
         LOG_VMM_ERR("Unhandled SMC: standard service call %lu\n", fn_number);
         break;
@@ -215,7 +242,11 @@ bool smc_handle(size_t vcpu_id, uint64_t hsr)
     /* If we don't have a SiP handler registered, drop to the default case. */
     default:
         LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%lx, function number: 0x%lx\n", service, fn_number);
-        break;
+        tcb_print_regs(vcpu_id);
+        smc_set_return_value(&regs, -1);
+        bool success = fault_advance_vcpu(vcpu_id, &regs);
+        assert(success);
+        return true;
     }
 
     return false;

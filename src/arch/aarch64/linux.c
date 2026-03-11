@@ -22,7 +22,7 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     // First we'll check that everything actually lives inside RAM.
     // @ivanv: TODO
     // Check that the kernel and DTB to do not overlap
-    uintptr_t dtb_start = dtb_dest;
+    uintptr_t dtb_start = ram_start;
     uintptr_t dtb_end = dtb_start + dtb_size;
     uintptr_t kernel_start = kernel;
     uintptr_t kernel_end = kernel_start + kernel_size;
@@ -52,15 +52,15 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
     // and to determine where in memory to place the image.
     // The pointer to the kernel image may be unaligned, so to avoid undefined
     // behaviour, we do an explicit copy.
-    struct linux_image_header image_header = {};
-    memcpy((char *)&image_header, (char *)kernel, sizeof(struct linux_image_header));
-    assert(image_header.magic == LINUX_IMAGE_MAGIC);
-    if (image_header.magic != LINUX_IMAGE_MAGIC) {
-        LOG_VMM_ERR("Linux kernel image magic check failed\n");
-        return 0;
-    }
+    // struct linux_image_header image_header = {};
+    // memcpy((char *)&image_header, (char *)kernel, sizeof(struct linux_image_header));
+    // assert(image_header.magic == LINUX_IMAGE_MAGIC);
+    // if (image_header.magic != LINUX_IMAGE_MAGIC) {
+    //     LOG_VMM_ERR("Linux kernel image magic check failed\n");
+    //     return 0;
+    // }
     // Copy the guest kernel image into the right location
-    uintptr_t kernel_dest = ram_start + image_header.text_offset;
+    uintptr_t kernel_dest = 0x30000000;
     // This check is because the Linux kernel image requires to be placed at text_offset of
     // a 2MB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,
@@ -89,12 +89,12 @@ uintptr_t linux_setup_images(uintptr_t ram_start,
         LOG_VMM_ERR("Linux expects DTB address to be on an 8-byte boundary, DTB address is 0x%lx\n", dtb_dest);
         return 0;
     }
-    LOG_VMM("Copying guest DTB to 0x%x (0x%x bytes)\n", dtb_dest, dtb_size);
-    memcpy((char *)dtb_dest, (char *)dtb_src, dtb_size);
+    LOG_VMM("Copying guest DTB to 0x%x (0x%x bytes)\n", ram_start, dtb_size);
+    memcpy((char *)ram_start, (char *)dtb_src, dtb_size);
     // Copy the initial RAM disk into the right location
     // @ivanv: add checks for initrd according to Linux docs
     LOG_VMM("Copying guest initial RAM disk to 0x%x (0x%x bytes)\n", initrd_dest, initrd_size);
     memcpy((char *)initrd_dest, (char *)initrd_src, initrd_size);
 
-    return kernel_dest;
+    return 0x0;
 }

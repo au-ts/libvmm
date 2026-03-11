@@ -10,6 +10,7 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <sddf/util/util.h>
 #include <libvmm/util/printf.h>
 
 #define SEL4_USER_CONTEXT_SIZE (sizeof(seL4_UserContext) / sizeof(seL4_Word))
@@ -27,15 +28,15 @@
 #define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR: ", microkit_name); printf(__VA_ARGS__); }while(0)
 
-static void assert_fail(
-    const char  *assertion,
-    const char  *file,
-    unsigned int line,
-    const char  *function)
-{
-    printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
-    __builtin_trap();
-}
+// static void assert_fail(
+//     const char  *assertion,
+//     const char  *file,
+//     unsigned int line,
+//     const char  *function)
+// {
+//     printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
+//     __builtin_trap();
+// }
 
 #define BIT_LOW(n)  (1ul<<(n))
 #define BIT_HIGH(n) (1ul<<(n - 32 ))
@@ -50,20 +51,20 @@ static void assert_fail(
 /* Convenience function to print memory region in hex */
 void print_mem_hex(uintptr_t addr, size_t size);
 
-#ifndef assert
-#ifndef CONFIG_DEBUG_BUILD
+// #ifndef assert
+// #ifndef CONFIG_DEBUG_BUILD
 
-#define _unused(x) ((void)(x))
-#define assert(expr) _unused(expr)
+// #define _unused(x) ((void)(x))
+// #define assert(expr) _unused(expr)
 
-#else
+// #else
 
-#define assert(expr) \
-    do { \
-        if (!(expr)) { \
-            assert_fail(#expr, __FILE__, __LINE__, __FUNCTION__); \
-        } \
-    } while(0)
+// #define assert(expr) \
+//     do { \
+//         if (!(expr)) { \
+//             assert_fail(#expr, __FILE__, __LINE__, __FUNCTION__); \
+//         } \
+//     } while(0)
 
-#endif
-#endif
+// #endif
+// #endif
