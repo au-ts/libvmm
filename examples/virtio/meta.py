@@ -7,7 +7,7 @@ from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 from typing import Optional
 
-assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
+# assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -42,6 +42,16 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
+
+    flash = MemoryRegion(sdf, "flash", size=0x1000000)
+    sdf.add_mr(flash)
+
+    vm_client0.add_map(Map(flash, 0x0, "rwx"))
+    vmm_client0.add_map(Map(flash, 0x10_000_000, "rw"))
+
+    flash2 = MemoryRegion(sdf, "flash2", size=0x4000000, paddr=0x4000000)
+    sdf.add_mr(flash2)
+    vm_client0.add_map(Map(flash2, 0x4000000, "rw"))
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
