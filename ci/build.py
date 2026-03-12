@@ -12,7 +12,7 @@ import contextlib
 
 sys.path.insert(1, Path(__file__).parents[1].as_posix())
 
-from ts_ci import log, ArgparseActionList, TestConfig, matrix_product
+from ts_ci import log, ArgparseActionList, matrix_product
 from ci import common, matrix
 
 
@@ -21,7 +21,7 @@ def get_example_dir(example_name: str):
     return LIBVMM / "examples" / example_name
 
 
-def build_make(args: argparse.Namespace, test_config: TestConfig):
+def build_make(args: argparse.Namespace, test_config: common.TestConfig):
     build_dir = common.example_build_path(test_config)
     example_dir = get_example_dir(test_config.example)
 
@@ -39,7 +39,7 @@ def build_make(args: argparse.Namespace, test_config: TestConfig):
     )
 
 
-def build_zig(args: argparse.Namespace, test_config: TestConfig):
+def build_zig(args: argparse.Namespace, test_config: common.TestConfig):
     build_dir = common.example_build_path(test_config)
     example_dir = get_example_dir(test_config.example)
 
@@ -77,7 +77,7 @@ def build_zig(args: argparse.Namespace, test_config: TestConfig):
         )
 
 
-def build(args: argparse.Namespace, test_config: TestConfig):
+def build(args: argparse.Namespace, test_config: common.TestConfig):
     log.group_start(
         "building example '%s' for '%s' with microkit config '%s' and '%s'"
         % (
@@ -129,10 +129,15 @@ if __name__ == "__main__":
             continue
 
         example_matrix = matrix_product(
+            common.TestConfig,
+            test=[None],
             example=[example_name],
             board=options["boards"],
             config=options["configs"],
             build_system=options["build_systems"],
+            test_fn=[None],
+            backend_fn=[None],
+            no_output_timeout_s=[None],
         )
         for test_config in example_matrix:
             build(args, test_config)
