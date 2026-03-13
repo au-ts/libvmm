@@ -21,15 +21,7 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 IMAGES := vmm.elf
 
 LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
-	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
-else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
-	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
-else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
-	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
-else
-$(error Unsupported MICROKIT_BOARD given)
-endif
+INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 
 CFLAGS := \
 	  -mstrict-align \
