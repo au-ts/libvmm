@@ -173,8 +173,8 @@ pub fn build(b: *std.Build) !void {
     // We need to produce the DTB from the DTS before doing anything to produce guest_images
     guest_images.step.dependOn(&b.addInstallFileWithDir(dtb, .prefix, "linux.dtb").step);
 
-    const linux_image_dep = b.lazyDependency("linux", .{});
-    const initrd_image_dep = b.lazyDependency(b.fmt("{s}_initrd", .{ microkit_board }), .{});
+    const linux_image_dep = b.lazyDependency(b.fmt("linux_{t}", .{ target.result.cpu.arch }), .{});
+    const initrd_image_dep = b.lazyDependency(b.fmt("initrd_{t}", .{ target.result.cpu.arch }), .{});
 
     if (custom_linux) |c| {
         guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "linux").step);
