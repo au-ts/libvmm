@@ -165,6 +165,7 @@ def subset_test_cases(
         return all(
             [
                 (test.test in filters.tests),
+                (test.example in filters.examples),
                 (test.board in filters.boards),
                 (test.config in filters.configs),
                 (test.build_system in filters.build_systems),
@@ -181,9 +182,10 @@ def run_tests(tests: list[TestConfig]) -> None:
 
     filters = parser.add_argument_group(title="filters")
     filters.add_argument(
-        "--tests",
-        default={test.test for test in tests},
-        action=ArgparseActionList,
+        "--tests", default={test.test for test in tests}, action=ArgparseActionList
+    )
+    filters.add_argument(
+        "--examples", default={test.example for test in tests}, action=ArgparseActionList
     )
     filters.add_argument(
         "--boards", default={test.board for test in tests}, action=ArgparseActionList
