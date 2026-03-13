@@ -19,11 +19,7 @@ from ci import common, matrix
 
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
     async with asyncio.timeout(30):
-        if test_config.board == "odroidc4":
-            # FIXME
-            await wait_for_output(backend, b"odroidc2 login: ")
-        else:
-            await wait_for_output(backend, b"buildroot login: ")
+        await wait_for_output(backend, b"buildroot login: ")
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
 
