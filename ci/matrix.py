@@ -16,8 +16,7 @@ NO_OUTPUT_DEFAULT_TIMEOUT_S: int = 300
 
 def generate_example_test_cases(
     test: str,
-    example: str,
-    example_matrix: _ExampleMatrixType,
+    example_names: list[str],
     test_fn: TestFunction,
     backend_fn: BackendFunction,
     no_output_timeout_s: int,
@@ -28,39 +27,45 @@ def generate_example_test_cases(
         else:
             return s
 
-    matrix = set(
-        matrix_product(
-            TestConfig,
-            test=[test],
-            example=[example],
-            board=example_matrix["boards"],
-            config=example_matrix["configs"],
-            build_system=example_matrix["build_systems"],
-            test_fn=[test_fn],
-            backend_fn=[backend_fn],
-            no_output_timeout_s=[no_output_timeout_s],
-        )
-    )
+    examples_matrices = [EXAMPLES[ex] for ex in example_names]
 
-    for exclude in example_matrix["tests_exclude"]:
-        to_exclude = set(
+    test_cases = set()
+
+    for example in example_names:
+        example_matrix = EXAMPLES[example]
+
+        test_cases |= set(
             matrix_product(
                 TestConfig,
                 test=[test],
                 example=[example],
-                board=listify(exclude.get("board", example_matrix["boards"])),
-                config=listify(exclude.get("config", example_matrix["configs"])),
-                build_system=listify(
-                    exclude.get("build_system", example_matrix["build_systems"])
-                ),
+                board=example_matrix["boards"],
+                config=example_matrix["configs"],
+                build_system=example_matrix["build_systems"],
                 test_fn=[test_fn],
                 backend_fn=[backend_fn],
                 no_output_timeout_s=[no_output_timeout_s],
             )
         )
-        matrix -= to_exclude
 
-    return list(matrix)
+        for exclude in example_matrix["tests_exclude"]:
+            test_cases -= set(
+                matrix_product(
+                    TestConfig,
+                    test=[test],
+                    example=[example],
+                    board=listify(exclude.get("board", example_matrix["boards"])),
+                    config=listify(exclude.get("config", example_matrix["configs"])),
+                    build_system=listify(
+                        exclude.get("build_system", example_matrix["build_systems"])
+                    ),
+                    test_fn=[test_fn],
+                    backend_fn=[backend_fn],
+                    no_output_timeout_s=[no_output_timeout_s],
+                )
+            )
+
+    return list(test_cases)
 
 
 EXAMPLES: dict[str, _ExampleMatrixType] = {
@@ -100,14 +105,14 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
-    # "zig": {
-    #     "configs": ["debug", "release"],
-    #     "build_systems": ["zig"],
-    #     "boards": [
-    #         "qemu_virt_aarch64",
-    #     ],
-    #     "tests_exclude": [],
-    # },
+    "zig": {
+        "configs": ["debug", "release"],
+        "build_systems": ["zig"],
+        "boards": [
+            "qemu_virt_aarch64",
+        ],
+        "tests_exclude": [],
+    },
 }
 
 ## Type Hinting + Sanity Checks ##

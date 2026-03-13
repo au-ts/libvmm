@@ -25,25 +25,13 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
 
 
 # export
-TEST_CASES = [
-    *matrix.generate_example_test_cases(
-        "buildroot_login",
-        "rust",
-        matrix.EXAMPLES["rust"],
-        test_fn=test,
-        backend_fn=common.backend_fn,
-        no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
-    ),
-    *matrix.generate_example_test_cases(
-        "buildroot_login",
-        "simple",
-        matrix.EXAMPLES["simple"],
-        test_fn=test,
-        backend_fn=common.backend_fn,
-        no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
-    ),
-    # *matrix.generate_example_test_cases("zig", matrix.EXAMPLES["zig"]),
-]
+TEST_CASES = matrix.generate_example_test_cases(
+    "buildroot_login",
+    ["simple", "rust", "zig"],
+    test_fn=test,
+    backend_fn=common.backend_fn,
+    no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
+)
 
 if __name__ == "__main__":
     common.run_tests(TEST_CASES)
