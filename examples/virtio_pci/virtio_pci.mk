@@ -173,7 +173,7 @@ qemu: $(IMAGE_FILE) blk_storage
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
-			-drive file=blk_storage,format=raw,if=none,id=hd \
+			-drive file=../disk.img,format=raw,if=none,id=hd \
 			$(QEMU_BLK_ARGS) \
 			$(QEMU_NET_ARGS) \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
