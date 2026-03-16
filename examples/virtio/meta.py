@@ -23,14 +23,14 @@ class GuestConfig:
 
 guest_configs: dict[str, GuestConfig] = {
         "qemu_virt_aarch64": GuestConfig(
-            serial="virtio-console@130000",
-            blk="virtio-blk@150000",
-            ethernet="virtio-net@160000",
+            serial="virtio-console",
+            blk="virtio-blk",
+            ethernet="virtio-net",
         ),
         "maaxboard": GuestConfig(
-            serial="virtio-console@130000",
-            blk="virtio-blk@150000",
-            ethernet="virtio-net@160000",
+            serial="virtio-console",
+            blk="virtio-blk",
+            ethernet="virtio-net",
         ),
 }
 
@@ -47,7 +47,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     sdf.add_mr(flash)
 
     vm_client0.add_map(Map(flash, 0x0, "rwx"))
-    vmm_client0.add_map(Map(flash, 0x10_000_000, "rw"))
+    vmm_client0.add_map(Map(flash, 0x30_000_000, "rw"))
 
     flash2 = MemoryRegion(sdf, "flash2", size=0x4000000, paddr=0x4000000)
     sdf.add_mr(flash2)

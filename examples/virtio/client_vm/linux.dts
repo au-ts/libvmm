@@ -61,21 +61,21 @@
 		linux,initrd-end = <0x47f00000>;
 	};
 
-	virtio-console@130000 {
+	virtio-console {
 		compatible = "virtio,mmio";
-		reg = <0x00 0x130000 0x00 0x200>;
+		reg = <0x00 0x80000000 0x00 0x200>;
 		interrupts = <0x00 42 0x04>;
 	};
 
-	virtio-blk@150000 {
+	virtio-blk {
 		compatible = "virtio,mmio";
-		reg = <0x00 0x150000 0x00 0x200>;
+		reg = <0x00 0x80001000 0x00 0x200>;
 		interrupts = <0x00 43 0x04>;
 	};
 
-	virtio-net@160000 {
+	virtio-net {
 		compatible = "virtio,mmio";
-		reg = <0x00 0x160000 0x00 0x200>;
+		reg = <0x00 0x80002000 0x00 0x200>;
 		interrupts = <0x00 44 0x04>;
 	};
 };
