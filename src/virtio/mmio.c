@@ -13,7 +13,7 @@
 #include <libvmm/arch/aarch64/fault.h>
 
 /* Uncomment this to enable debug logging */
-// #define DEBUG_MMIO
+#define DEBUG_MMIO
 
 #if defined(DEBUG_MMIO)
 #define LOG_MMIO(...) do{ printf("%s|VIRTIO(MMIO): ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -87,7 +87,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
 
     uint32_t reg = 0;
     bool success = true;
-    LOG_MMIO("read from 0x%lx\n", offset);
+    LOG_VMM("read from 0x%lx\n", offset);
 
     switch (offset) {
     case REG_RANGE(REG_VIRTIO_MMIO_MAGIC_VALUE, REG_VIRTIO_MMIO_VERSION):

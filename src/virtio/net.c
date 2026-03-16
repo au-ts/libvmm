@@ -415,7 +415,7 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, s
     struct virtio_device *dev = virtio_net_init(net_dev, virq, rx, tx, rx_data, tx_data, rx_ch, tx_ch, mac);
 
     dev->transport_type = VIRTIO_TRANSPORT_PCI;
-    dev->transport.pci.device_id = VIRTIO_PCI_NET_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_NET;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
 
