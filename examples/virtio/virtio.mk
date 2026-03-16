@@ -115,8 +115,8 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
 		--config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-.PHONY: vm_dir
-vm_dir:
+.PHONY: client_vm
+client_vm:
 	mkdir -p client_vm
 
 ${LINUX}:
@@ -142,13 +142,13 @@ blk_storage:
 	$(SDDF)/tools/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM) GPT
 
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
-	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
+	$(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
+client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
@@ -160,7 +160,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |vm_dir
+client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
