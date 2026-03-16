@@ -62,8 +62,9 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
+        *features = 0;
         LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
-        return false;
+        return true;
     }
 
     return true;
@@ -114,8 +115,11 @@ static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t
 static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
-    // @ivanv: we need to check the pre-conditions before doing anything. e.g check
-    // TX_QUEUE is ready?
+
+    if (dev->regs.QueueSel != TX_QUEUE) {
+        return true;
+    }
+
     assert(dev->num_vqs > TX_QUEUE);
     struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
     struct virtio_console_device *console = device_state(dev);
@@ -177,12 +181,15 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     LOG_CONSOLE("operation: handle rx\n");
-    assert(console->virtio_device.num_vqs > RX_QUEUE);
+
+    struct virtio_device *dev = &console->virtio_device;
+
+    assert(dev->num_vqs > RX_QUEUE);
 
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
 
-    struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+    struct virtio_queue_handler *vq = &dev->vqs[RX_QUEUE];
     if (!vq->ready) {
         /*
          * It is valid for RX from the real device before the guest has
