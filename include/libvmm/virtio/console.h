@@ -45,7 +45,7 @@
 #define CTL_TX_QUEUE 3
 
 /* For the console device to function, we only need an RX queue and TX queue. */
-#define VIRTIO_CONSOLE_NUM_VIRTQ 2
+#define VIRTIO_CONSOLE_NUM_VIRTQ 4
 
 /* Feature bits */
 #define VIRTIO_CONSOLE_F_SIZE           0   /* Does host provide console size? */
