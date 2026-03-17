@@ -127,7 +127,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         reg = dev->regs.ConfigGeneration;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
-        success = dev->funs->get_device_config(dev, offset - REG_VIRTIO_MMIO_CONFIG, &reg);
+        success = dev->funs->get_device_config(dev, ROUND_DOWN(offset - REG_VIRTIO_MMIO_CONFIG, 4), &reg);
         break;
     default:
         LOG_VMM_ERR("unknown virtIO MMIO register read at offset 0x%x\n", offset);
@@ -276,7 +276,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
         break;
     }
     case REG_RANGE(REG_VIRTIO_MMIO_CONFIG, REG_VIRTIO_MMIO_CONFIG + 0x100):
-        success = dev->funs->set_device_config(dev, offset, data);
+        success = dev->funs->set_device_config(dev, ROUND_DOWN(offset - REG_VIRTIO_MMIO_CONFIG, 4), data);
         break;
     default:
         LOG_VMM_ERR("unknown virtIO MMIO register write at offset 0x%x\n", offset);
