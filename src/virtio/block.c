@@ -131,7 +131,7 @@ static inline bool virtio_blk_mmio_get_device_config(struct virtio_device *dev, 
     uintptr_t config_base_addr = (uintptr_t)&state->config;
     memcpy((void *)ret_val, (void *)(config_base_addr + offset), 4);
     LOG_BLOCK("get device config with base_addr 0x%x and offset 0x%x has "
-              "value %d\n",
+              "value 0x%x\n",
               config_base_addr, offset, *ret_val);
 
     return true;
