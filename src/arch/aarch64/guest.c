@@ -5,7 +5,10 @@
  */
 #include <string.h>
 #include <microkit.h>
-#include <libvmm/libvmm.h>
+#include <libvmm/vcpu.h>
+#include <libvmm/virq.h>
+#include <libvmm/guest.h>
+#include <libvmm/util/util.h>
 
 /* Global state for managing the guest. */
 guest_t guest;
