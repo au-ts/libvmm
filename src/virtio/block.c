@@ -838,13 +838,15 @@ static virtio_device_funs_t functions = {
     .queue_notify = virtio_blk_mmio_queue_notify,
 };
 
-static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, size_t virq, uintptr_t data_region,
-                                             size_t data_region_size, blk_storage_info_t *storage_info,
-                                             blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
+static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, virtio_transport_type_t type,
+                                             size_t virq, uintptr_t data_region, size_t data_region_size,
+                                             blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
+                                             uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
     dev->num_vqs = VIRTIO_BLK_NUM_VIRTQ;
@@ -877,8 +879,8 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_ba
                           uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
                           blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
 {
-    struct virtio_device *dev = virtio_blk_init(blk_dev, virq, data_region, data_region_size, storage_info, queue_h,
-                                                queue_capacity, server_ch);
+    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_MMIO, virq, data_region, data_region_size,
+                                                storage_info, queue_h, queue_capacity, server_ch);
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
@@ -887,10 +889,9 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, s
                          size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
                          uint32_t queue_capacity, int server_ch)
 {
-    struct virtio_device *dev = virtio_blk_init(blk_dev, virq, data_region, data_region_size, storage_info, queue_h,
-                                                queue_capacity, server_ch);
+    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_PCI, virq, data_region, data_region_size,
+                                                storage_info, queue_h, queue_capacity, server_ch);
 
-    dev->transport_type = VIRTIO_TRANSPORT_PCI;
     dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;

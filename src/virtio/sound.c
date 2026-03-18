@@ -683,6 +683,7 @@ bool virtio_mmio_snd_init(struct virtio_snd_device *sound_dev,
 
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_SOUND;
     dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->transport_type = VIRTIO_TRANSPORT_MMIO;
     dev->funs = &functions;
     dev->vqs = sound_dev->vqs;
     dev->num_vqs = VIRTIO_SND_NUM_VIRTQ;
