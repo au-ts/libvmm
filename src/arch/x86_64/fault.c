@@ -1,0 +1,636 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <string.h>
+#include <sddf/util/util.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/ioports.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/acpi.h>
+#include <libvmm/arch/x86_64/vcpu.h>
+#include <libvmm/arch/x86_64/cpuid.h>
+#include <libvmm/arch/x86_64/msr.h>
+#include <libvmm/arch/x86_64/pci.h>
+#include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/guest.h>
+#include <sel4/arch/vmenter.h>
+
+// @billn sus
+extern struct lapic_regs lapic_regs;
+
+bool fault_cond = false;
+
+/* Documents referenced:
+ * [1] seL4: include/arch/x86/arch/object/vcpu.h
+ * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
+ *   [2a] Location: Table C-1 "VMX BASIC EXIT REASONS", page: "Vol. 3D C-1"
+ */
+
+/* Exit reasons.
+ * From [1]
+ */
+enum exit_reasons {
+    EXCEPTION_OR_NMI = 0x00,
+    EXTERNAL_INTERRUPT = 0x01,
+    TRIPLE_FAULT = 0x02,
+    INIT_SIGNAL = 0x03,
+    SIPI = 0x04,
+    /*IO_SMI = 0x05,
+     *   OTHER_SMI = 0x06,*/
+    INTERRUPT_WINDOW = 0x07,
+    NMI_WINDOW = 0x08,
+    TASK_SWITCH = 0x09,
+    CPUID = 0x0A,
+    GETSEC = 0x0B,
+    HLT = 0x0C,
+    INVD = 0x0D,
+    INVLPG = 0x0E,
+    RDPMC = 0x0F,
+    RDTSC = 0x10,
+    RSM = 0x11,
+    VMCALL = 0x12,
+    VMCLEAR = 0x13,
+    VMLAUNCH = 0x14,
+    VMPTRLD = 0x15,
+    VMPTRST = 0x16,
+    VMREAD = 0x17,
+    VMRESUME = 0x18,
+    VMWRITE = 0x19,
+    VMXOFF = 0x1A,
+    VMXON = 0x1B,
+    CONTROL_REGISTER = 0x1C,
+    MOV_DR = 0x1D,
+    IO = 0x1E,
+    RDMSR = 0x1F,
+    WRMSR = 0x20,
+    INVALID_GUEST_STATE = 0x21,
+    MSR_LOAD_FAIL = 0x22,
+    /* 0x23 */
+    MWAIT = 0x24,
+    MONITOR_TRAP_FLAG = 0x25,
+    /* 0x26 */
+    MONITOR = 0x27,
+    PAUSE = 0x28,
+    MACHINE_CHECK = 0x29,
+    /* 0x2A */
+    TPR_BELOW_THRESHOLD = 0x2B,
+    APIC_ACCESS = 0x2C,
+    VIRTUALIZED_EOI = 0x2D,
+    GDTR_OR_IDTR = 0x2E,
+    LDTR_OR_TR = 0x2F,
+    EPT_VIOLATION = 0x30,
+    EPT_MISCONFIGURATION = 0x31,
+    INVEPT = 0x32,
+    RDTSCP = 0x33,
+    VMX_PREEMPTION_TIMER = 0x34,
+    INVVPID = 0x35,
+    WBINVD = 0x36,
+    XSETBV = 0x37,
+    APIC_WRITE = 0x38,
+    NUM_EXIT_REASONS = 0x39,
+};
+
+/* [2a] */
+static char *exit_reason_strs[] = { "Exception or non-maskable interrupt (NMI)",
+                                    "External interrupt",
+                                    "Triple Fault",
+                                    "INIT signal",
+                                    "Start-up IPI (SIPI)",
+                                    "I/O system-management interrupt (SMI)",
+                                    "Other SMI",
+                                    "Interrupt window",
+                                    "NMI window",
+                                    "Task switch",
+                                    "CPUID",
+                                    "GETSEC",
+                                    "HLT",
+                                    "INVD",
+                                    "INVLPG",
+                                    "RDPMC",
+                                    "RDTSC",
+                                    "RSM",
+                                    "VMCALL",
+                                    "VMCLEAR",
+                                    "VMLAUNCH",
+                                    "VMPTRLD",
+                                    "VMPTRST",
+                                    "VMREAD",
+                                    "VMRESUME",
+                                    "VMWRITE",
+                                    "VMXOFF",
+                                    "VMXON",
+                                    "Control-register accesses",
+                                    "MOV DR",
+                                    "I/O instruction",
+                                    "RDMSR",
+                                    "WRMSR",
+                                    "VM-entry failure due to invalid guest state",
+                                    "VM-entry failure due to MSR loading",
+                                    "",
+                                    "MWAIT",
+                                    "Monitor trap flag",
+                                    "",
+                                    "MONITOR",
+                                    "PAUSE",
+                                    "VM-entry failure due to machine-check event",
+                                    "",
+                                    "TPR below threshold",
+                                    "APIC access",
+                                    "Virtualized EOI",
+                                    "Access to GDTR or IDTR",
+                                    "Access to LDTR or TR",
+                                    "EPT violation",
+                                    "EPT misconfiguration",
+                                    "INVEPT",
+                                    "RDTSCP",
+                                    "VMX-preemption timer expired",
+                                    "INVVPID",
+                                    "WBINVD or WBNOINVD",
+                                    "XSETBV",
+                                    "APIC Write" };
+
+_Static_assert(sizeof(exit_reason_strs) / sizeof(char *) == NUM_EXIT_REASONS,
+               "Exit reason strings table is not correct length");
+
+char *fault_to_string(int exit_reason)
+{
+    assert(exit_reason < NUM_EXIT_REASONS);
+    assert(exit_reason_strs[exit_reason] != NULL);
+    return exit_reason_strs[exit_reason];
+}
+
+bool fault_is_trap_like(int exit_reason)
+{
+    switch (exit_reason) {
+    case APIC_WRITE:
+    case VIRTUALIZED_EOI:
+        return true;
+    default:
+        return false;
+    }
+}
+
+struct ept_exception_handler {
+    uintptr_t base;
+    uintptr_t end;
+    ept_exception_callback_t callback;
+    void *cookie;
+};
+#define MAX_EPT_EXCEPTION_HANDLERS 16
+static struct ept_exception_handler registered_ept_exception_handlers[MAX_EPT_EXCEPTION_HANDLERS];
+static size_t ept_exception_handler_index = 0;
+
+bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base)
+{
+    for (int i = 0; i < ept_exception_handler_index; i++) {
+        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+        if (curr->base == base) {
+            curr->base = new_base;
+            return true;
+        }
+    }
+
+    LOG_VMM("failed to update EPT exception handler, none exists for base 0x%lx\n", base);
+
+    return false;
+}
+
+bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie)
+{
+    if (ept_exception_handler_index == MAX_EPT_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of EPT exception handlers registered");
+        return false;
+    }
+
+    if (size == 0) {
+        LOG_VMM_ERR("registered EPT exception handler with size 0\n");
+        return false;
+    }
+
+    for (int i = 0; i < ept_exception_handler_index; i++) {
+        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+        if (!(base >= curr->end || base + size <= curr->base)) {
+            LOG_VMM_ERR("EPT exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+                        base + size, curr->base, curr->end);
+            return false;
+        }
+    }
+
+    registered_ept_exception_handlers[ept_exception_handler_index] = (struct ept_exception_handler) {
+        .base = base,
+        .end = base + size,
+        .callback = callback,
+        .cookie = cookie,
+    };
+    ept_exception_handler_index += 1;
+
+    return true;
+}
+
+static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, decoded_instruction_ret_t decoded_ins)
+{
+    uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+    // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
+
+    if (addr >= IOAPIC_GPA && addr < IOAPIC_GPA + IOAPIC_SIZE) {
+        LOG_FAULT("handling IO APIC 0x%lx\n", addr);
+        return ioapic_fault_handle(vctx, addr - IOAPIC_GPA, qualification, decoded_ins);
+    } else if (addr >= HPET_GPA && addr < HPET_GPA + HPET_SIZE) {
+        LOG_FAULT("handling HPET 0x%lx\n", addr);
+        return hpet_fault_handle(vctx, addr - HPET_GPA, qualification, decoded_ins);
+    // } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
+    //     return pci_x86_emulate_ecam_access(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
+    } else {
+        LOG_FAULT("handling other EPT 0x%lx\n", addr);
+        for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
+            uintptr_t base = registered_ept_exception_handlers[i].base;
+            uintptr_t end = registered_ept_exception_handlers[i].end;
+            ept_exception_callback_t callback = registered_ept_exception_handlers[i].callback;
+            void *cookie = registered_ept_exception_handlers[i].cookie;
+            if (addr >= base && addr < end) {
+                bool success = callback(0, addr - base, qualification, decoded_ins, vctx, cookie);
+                if (!success) {
+                    LOG_VMM_ERR("registered EPT exception handler for region [0x%lx..0x%lx) at address "
+                                "0x%lx failed\n",
+                                base, end, addr);
+                }
+
+                return success;
+            }
+        }
+
+        LOG_VMM_ERR("failed to find EPT handler for address 0x%lx\n", addr);
+    }
+
+    // LOG_VMM("done\n");
+
+    return false;
+}
+
+struct pio_exception_handler {
+    uint16_t base;
+    uint16_t end;
+    pio_exception_callback_t callback;
+    void *cookie;
+};
+#define MAX_PIO_EXCEPTION_HANDLERS 16
+static struct pio_exception_handler registered_pio_exception_handlers[MAX_PIO_EXCEPTION_HANDLERS];
+static size_t pio_exception_handler_index = 0;
+
+bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exception_callback_t callback, void *cookie)
+{
+    if (pio_exception_handler_index == MAX_PIO_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of PIO exception handlers registered");
+        return false;
+    }
+
+    if (size == 0) {
+        LOG_VMM_ERR("registered PIO exception handler with size 0\n");
+        return false;
+    }
+
+    uint64_t size_64 = (uint64_t)base + (uint64_t)size;
+    if (size_64 > 0xffff) {
+        LOG_VMM_ERR("base + size = 0x%lx exceed uint16_t max\n", size_64);
+        return false;
+    }
+
+    for (int i = 0; i < pio_exception_handler_index; i++) {
+        struct pio_exception_handler *curr = &registered_pio_exception_handlers[i];
+        if (!(base >= curr->end || base + size <= curr->base)) {
+            LOG_VMM_ERR("PIO exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+                        base + size, curr->base, curr->end);
+            return false;
+        }
+    }
+
+    registered_pio_exception_handlers[pio_exception_handler_index] = (struct pio_exception_handler) {
+        .base = base,
+        .end = base + size,
+        .callback = callback,
+        .cookie = cookie,
+    };
+    pio_exception_handler_index += 1;
+
+    return true;
+}
+
+static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
+{
+    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    // TODO: pass access width to the callbacks?
+    // ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
+
+    if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
+    } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
+    } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
+    } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
+    } else {
+        LOG_FAULT("handling PIO 0x%lx\n", port_addr);
+    }
+
+    for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
+        uint16_t base = registered_pio_exception_handlers[i].base;
+        uint16_t end = registered_pio_exception_handlers[i].end;
+        pio_exception_callback_t callback = registered_pio_exception_handlers[i].callback;
+        void *cookie = registered_pio_exception_handlers[i].cookie;
+        if (port_addr >= base && port_addr < end) {
+            bool success = callback(0, port_addr - base, qualification, vctx, cookie);
+            if (!success) {
+                LOG_VMM_ERR("registered PIO exception handler for region [0x%lx..0x%lx) at address "
+                            "0x%lx failed\n",
+                            base, end, port_addr);
+            }
+
+            return success;
+        }
+    }
+
+    return emulate_ioports(vctx, qualification);
+}
+
+// static uint64_t prev_valid_idt_entries = 0;
+
+uint64_t *cr_fault_reg_idx_to_vctx_ptr(int idx, seL4_VCPUContext *vctx)
+{
+    switch (idx) {
+    case 0:
+        return &vctx->eax;
+    case 1:
+        return &vctx->ecx;
+    case 2:
+        return &vctx->edx;
+    case 3:
+        return &vctx->ebx;
+        // case 4:
+        //     return stack pointer;
+    case 5:
+        return &vctx->ebp;
+    case 6:
+        return &vctx->esi;
+    case 7:
+        return &vctx->edi;
+    case 8:
+        return &vctx->r8;
+    case 9:
+        return &vctx->r9;
+    case 10:
+        return &vctx->r10;
+    case 11:
+        return &vctx->r11;
+    case 12:
+        return &vctx->r12;
+    case 13:
+        return &vctx->r13;
+    case 14:
+        return &vctx->r14;
+    case 15:
+        return &vctx->r15;
+    default:
+        return NULL;
+    }
+}
+
+uint64_t n_faults = 0;
+uint64_t n_vmexit_reasons[NUM_EXIT_REASONS] = { 0 };
+
+uint64_t n_notifieds = 0;
+
+bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
+{
+    bool success = false;
+    decoded_instruction_ret_t decoded_ins;
+
+    seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
+    seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+    seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
+    seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
+
+    // if (rip > 0xfffff00000000000) {
+    //     LOG_FAULT("vmm exit in kernel at rip 0x%lx\n", rip);
+    //     fault_cond = true;
+    // } else {
+    //     fault_cond = false;
+    // }
+
+    LOG_FAULT("handling vmexit reason %s\n", fault_to_string(f_reason));
+
+    seL4_VCPUContext vctx;
+    vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
+    vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
+    vctx.ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
+    vctx.edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
+    vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
+    vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
+    vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
+    vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
+    vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
+    vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
+    vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
+    vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
+    vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
+    vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
+    vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
+
+    switch (f_reason) {
+    case CPUID:
+        success = emulate_cpuid(&vctx);
+        break;
+    case RDMSR:
+        success = emulate_rdmsr(&vctx);
+        break;
+    case WRMSR:
+        success = emulate_wrmsr(&vctx);
+        break;
+    case EPT_VIOLATION:
+        decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+        if (decoded_ins.type == INSTRUCTION_DECODE_FAIL) {
+            success = false;
+        } else {
+            success = handle_ept_fault(&vctx, qualification, decoded_ins);
+        }
+        break;
+    case IO:
+        success = handle_pio_fault(&vctx, qualification);
+        break;
+    // case APIC_ACCESS:
+    case VIRTUALIZED_EOI: {
+        uint8_t eoi_vector = qualification;
+        // if we get here then the guest has ack'ed a passed through I/O APIC irq,
+        // find and run the ack function, the clear the vector from the bitmap
+        // @billn the whole clearing vector from bitmap thing could be done more efficiently, e.g.
+        // only do it when the guest reprogram the vector
+
+        success = ioapic_ack_passthrough_irq(eoi_vector);
+        break;
+    }
+    case APIC_WRITE: {
+        // 32.4.3.3 APIC-Write VM Exits
+        // "The exit qualification is the page offset of the write access that led to the VM exit."
+        uint64_t lapic_reg_offset = qualification;
+        success = lapic_write_fault_handle(lapic_reg_offset, vapic_read_reg(lapic_reg_offset));
+        break;
+    }
+    case APIC_ACCESS: {
+        uint16_t offset = qualification & 0x7ff;
+        uint8_t access_type = (qualification >> 12) & 0xf;
+
+        // only handle reads and writes due to instruciton execution
+
+        // LOG_VMM("offset 0x%x, access type %d\n", offset, access_type);
+
+        if (access_type == 0) {
+            uint32_t data;
+            success = lapic_read_fault_handle(offset, &data);
+            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
+        } else if (access_type == 1) {
+            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            // TODO: probably do not have this assert
+            assert(mem_access_width_to_bytes(decoded_ins) == 4);
+            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            // TODO: probably use wrapper for getting write value.
+            success = lapic_write_fault_handle(offset, vctx_raw[decoded_ins.decoded.memory_instruction.target_reg]);
+        } else {
+            LOG_VMM_ERR("unsupported access type %d for apic access vm exit\n", access_type);
+            success = false;
+        }
+        break;
+    }
+    case XSETBV:
+        // LOG_VMM("XSETBV, rip 0x%lx\n", rip);
+        success = true;
+        break;
+    default:
+        LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
+    };
+
+    // n_vmexit_reasons[f_reason] += 1;
+    // n_faults += 1;
+    // if (n_faults % 50000 == 0) {
+    //     LOG_VMM("vm exit stats:\n");
+    //     for (int i = 0; i < NUM_EXIT_REASONS; i++) {
+    //         char *reason_human = fault_to_string(i);
+    //         uint64_t n_fault = n_vmexit_reasons[i];
+    //         if (reason_human[0] != 0 && n_fault) {
+    //             LOG_VMM("%s: %lu\n", reason_human, n_fault);
+    //         }
+    //     }
+    //     LOG_VMM("number of notifieds: %lu\n", n_notifieds);
+    // }
+
+    *new_rip = rip;
+    if (success && f_reason != INTERRUPT_WINDOW) {
+        // uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+        // if (cr4 & BIT(18)) {
+        //     LOG_VMM("======== HELLO OSXSAVE IS ON!!!!\n");
+        // }
+
+        // uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
+        // uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
+        // uint64_t idtr_gpa, _bytes_remaining;
+        // bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
+        // uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
+        // uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
+        // uint16_t num_present_entries = 0;
+        // for (int i = 0; i < idt_num_entries; i++) {
+        //     uint32_t entry[4];
+        //     uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+        //     entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
+        //     entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
+        //     entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
+        //     entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
+
+        //     uint32_t present = (entry[1] & BIT(15));
+        //     if (present)
+        //         num_present_entries++;
+        // }
+
+        // if (num_present_entries != prev_valid_idt_entries) {
+        //     LOG_VMM("+_+_+_+_+ IDT have %d valid entries\n", num_present_entries);
+        //     LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
+        // }
+
+        // prev_valid_idt_entries = num_present_entries;
+
+        // TODO hack force osxsave on so that windows doesnt #UD on xgetbv/xsetbv
+        uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
+
+        microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
+
+        if (!fault_is_trap_like(f_reason)) {
+            *new_rip = rip + ins_len;
+        }
+    } else if (!success) {
+        LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
+        LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
+        if (guest_paging_on()) {
+            uint64_t _sp_gpa, _bytes_remaining;
+            bool sp_valid = gva_to_gpa(0, microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RSP), &_sp_gpa, &_bytes_remaining);
+            LOG_VMM_ERR("stack pointer valid: %s\n", sp_valid ? "YES" : "NO");
+
+            uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
+            uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
+            uint64_t idtr_gpa;
+            bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
+            LOG_VMM_ERR("IDTR gva: 0x%lx\n", idtr_gva);
+            LOG_VMM_ERR("IDTR limit: 0x%lx\n", idtr_limit);
+            LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
+            LOG_VMM_ERR("IDTR valid: %s\n", idtr_valid ? "YES" : "NO");
+            uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
+            uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
+            LOG_VMM_ERR("IDTR num entries: %d\n", idt_num_entries);
+
+            uint16_t idt_num_valid_entries = 0;
+            for (int i = 0; i < idt_num_entries; i++) {
+                uint32_t entry[4];
+                uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
+                entry[0] = *((uint64_t *)gpa_to_vaddr(entry_gpa));
+                entry[1] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 4));
+                entry[2] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 8));
+                entry[3] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 12));
+
+                uint32_t present = (entry[1] & BIT(15));
+                // LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
+                if (present) {
+                    idt_num_valid_entries += 1;
+                }
+            }
+
+            LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
+        }
+        // if (ins_len) {
+        //     uint64_t gpa;
+        //     int bytes_remaining;
+        //     assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
+        //     assert(bytes_remaining >= ins_len);
+        //     LOG_VMM_ERR("faulting instruction:\n");
+        //     uint8_t *ins = gpa_to_vaddr(gpa);
+        //     for (int i = 0; i < ins_len; i++) {
+        //         LOG_VMM_ERR("0x%02x\n", ins[i]);
+        //         bytes_remaining--;
+        //     }
+
+        //     LOG_VMM_ERR("proceeding instructions:\n");
+        //     for (int i = 0; i < MIN(bytes_remaining, 16); i++) {
+        //         LOG_VMM_ERR("0x%02x\n", ins[i + ins_len]);
+        //         bytes_remaining--;
+        //     }
+        // }
+        vcpu_print_regs(vcpu_id);
+    }
+
+    return success;
+}
