@@ -3,9 +3,7 @@
     .version = "0.0.0",
 
     .dependencies = .{
-        .libvmm = .{
-            .path = "../../"
-        },
+        .libvmm = .{ .path = "../../" },
         .sddf = .{
             .path = "../../dep/sddf",
         },
@@ -19,6 +17,16 @@
             .hash = "rootfs_cpio_gz-0.0.0-AAAAAFuyCwDpUITQ72Vk5neE9sZHvBPQTXdJFAvR05wM",
             .lazy = true
         },
+        .linux_x86_64 = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage.tar.gz",
+            .hash = "linux_x86_64-0.0.0-AAAAAADU3ADWi6sVP6IFUJ-PsCs8fDTAwv3hAIxaidVW",
+            .lazy = true
+        },
+        .initrd_x86_64 = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz.tar.gz",
+            .hash = "initrd_x86_64-0.0.0-AAAAAJKgKADVLj-nFcMEMcipVGtzNapm0uqv_bYVsRef",
+            .lazy = true
+        }
     },
     .paths = .{
         "build.zig",
