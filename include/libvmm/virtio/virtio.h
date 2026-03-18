@@ -16,9 +16,9 @@
  */
 
 typedef enum virtio_transport_type {
-    VIRTIO_TRANSPORT_PCI,
-    VIRTIO_TRANSPORT_MMIO,
-    VIRTIO_TRANSPORT_CCW,    // For future expansion
+    VIRTIO_TRANSPORT_PCI = 1,
+    VIRTIO_TRANSPORT_MMIO = 2,
+    VIRTIO_TRANSPORT_CCW = 3,
 } virtio_transport_type_t;
 
 typedef union virtio_transport_data {

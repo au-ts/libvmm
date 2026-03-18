@@ -309,6 +309,7 @@ bool virtio_mmio_register_device(virtio_device_t *dev,
                                  size_t virq)
 {
     bool success;
+    assert(dev->transport_type == VIRTIO_TRANSPORT_MMIO);
     success = fault_register_vm_exception_handler(region_base,
                                                   region_size,
                                                   &virtio_mmio_fault_handle,
