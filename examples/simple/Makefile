@@ -19,11 +19,11 @@ endif
 export BUILD_DIR := $(abspath $(BUILD_DIR))
 export EXAMPLE_DIR := $(abspath .)
 
-export TARGET := aarch64-none-elf
 export CC := clang
 export LD := ld.lld
 export AS := llvm-as
 export AR := llvm-ar
+export OBJCOPY := llvm-objcopy
 export DTC := dtc
 export RANLIB := llvm-ranlib
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit

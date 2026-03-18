@@ -3,7 +3,6 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-QEMU := qemu-system-aarch64
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
@@ -18,13 +17,29 @@ SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
-IMAGES := vmm.elf
+ifeq ($(ARCH),aarch64)
+	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+	ARCH_FLAGS := -target aarch64-none-elf -mstrict-align
+	VMM_NAME := vmm_aarch64
+	IMAGES = $(VMM_NAME).elf
 
-LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+	QEMU := qemu-system-aarch64
+	QEMU_ARCH_ARGS := -machine virt,virtualization=on -cpu cortex-a53 -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
+else ifeq ($(ARCH),x86_64)
+	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
+	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	ARCH_FLAGS := -target x86_64-unknown-elf
+	VMM_NAME := vmm_x86_64
+	IMAGES = $(VMM_NAME).elf timer_driver.elf
+
+	QEMU := qemu-system-x86_64
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
+else
+$(error Unsupported ARCH given)
+endif
 
 CFLAGS := \
-	  -mstrict-align \
 	  -ffreestanding \
 	  -g3 -O3 -Wall \
 	  -Wno-unused-function \
@@ -36,7 +51,7 @@ CFLAGS := \
 	  -I$(SDDF)/include/microkit \
 	  -MD \
 	  -MP \
-	  -target $(TARGET)
+	  $(ARCH_FLAGS)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
@@ -47,7 +62,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-vmm.elf: vmm.o images.o
+$(VMM_NAME).elf: vmm.o images.o
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
@@ -63,7 +78,11 @@ ${LINUX}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@.tar.gz
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
+ifeq ($(ARCH),aarch64)
 	cp linux_download_dir/${LINUX}/linux ${LINUX}
+else ifeq ($(ARCH),x86_64)
+	cp linux_download_dir/${LINUX}/bzImage ${LINUX}
+endif
 
 ${INITRD}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
@@ -77,26 +96,39 @@ vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 vm.dtb: vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
+vmm.o: $(EXAMPLE_DIR)/$(VMM_NAME).c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+ifeq ($(ARCH),x86_64)
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD)
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					$(ARCH_FLAGS) \
+					$(LIBVMM)/tools/package_guest_images.S -o $@
+else
 images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
-					-target $(TARGET) \
+					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
+endif
 
 include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
 
+ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
+TIMER_DRIVER_DIR := hpet
+TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER_DIR)
+include ${TIMER_DRIVER}/timer_driver.mk
+endif
+
 qemu: $(IMAGE_FILE)
-	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
-	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
+	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
 
