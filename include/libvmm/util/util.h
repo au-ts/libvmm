@@ -27,11 +27,7 @@
 #define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR (%s:%lu): ", microkit_name, __FUNCTION__, __LINE__); printf(__VA_ARGS__); }while(0)
 
-static void assert_fail(
-    const char  *assertion,
-    const char  *file,
-    unsigned int line,
-    const char  *function)
+static void assert_fail(const char *assertion, const char *file, unsigned int line, const char *function)
 {
     printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
     __builtin_trap();
@@ -66,4 +62,13 @@ void print_mem_hex(uintptr_t addr, size_t size);
     } while(0)
 
 #endif
+#endif
+
+#if defined(CONFIG_ARCH_X86_64)
+static __inline__ uint64_t rdtsc(void)
+{
+    uint32_t lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
 #endif
