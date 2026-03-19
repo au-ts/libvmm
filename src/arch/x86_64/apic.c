@@ -84,13 +84,15 @@ static void debug_print_lapic_pending_irqs(void)
 uint32_t vapic_read_reg(int offset)
 {
     assert(offset < 0x1000);
-    return *((uint32_t *)(vapic_vaddr + offset));
+    // @billn fix hardcoded vaddr
+    return *((volatile uint32_t *)(0x101000ull + offset));
 }
 
 void vapic_write_reg(int offset, uint32_t value)
 {
     assert(offset < 0x1000);
-    volatile uint32_t *reg = (uint32_t *)(vapic_vaddr + offset);
+    // @billn fix hardcoded vaddr
+    volatile uint32_t *reg = (uint32_t *)(0x101000ull + offset);
     *reg = value;
 }
 
@@ -462,8 +464,10 @@ bool inject_ioapic_irq(int ioapic, int pin)
         LOG_VMM_ERR("unknown I/O APIC delivery mode for injection on pin %d, mode 0x%x\n", pin, delivery_mode);
         assert(false);
     }
-    // uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
-    // assert(!level_trigger);
+
+    // @billn sus only support edge triggered interrupts right now
+    uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
+    assert(!level_trigger);
 
     uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
 
@@ -495,7 +499,7 @@ bool inject_ioapic_irq(int ioapic, int pin)
             break;
         }
         default:
-            LOG_VMM_ERR("bug: eoi_bitmap_n > 3\n");
+            LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
             return false;
         }
     }
@@ -546,7 +550,7 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
                         break;
                     }
                     default:
-                        LOG_VMM_ERR("bug: eoi_bitmap_n > 3\n");
+                        LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
                         return false;
                     }
 
