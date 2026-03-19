@@ -68,12 +68,7 @@ void init(void)
         return;
     }
 
-    assert(guest_vapic_size == 0x1000);
-    assert(guest_apic_access_size == 0x1000);
-    memset((void *)guest_vapic_vaddr, 0, guest_vapic_size);
-    memset((void *)guest_apic_access_vaddr, 0, guest_apic_access_size);
-    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit, guest_vapic_paddr,
-                          guest_apic_access_paddr);
+    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
 
     // Set up the PCI bus
     assert(pci_x86_init());
