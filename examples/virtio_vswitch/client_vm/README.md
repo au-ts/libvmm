@@ -22,7 +22,7 @@ IPv4 network stack + DNS + DHCP and virtIO device drivers.
 ### Instructions for reproducing
 ```
 git clone --depth 1 --branch v6.13 https://github.com/torvalds/linux.git
-cp config linux/.config
+cp linux_config linux/.config
 make -C linux ARCH=arm64 CROSS_COMPILE=aarch64-none-elf- all -j$(nproc)
 ```
 

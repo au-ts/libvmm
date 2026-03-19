@@ -89,7 +89,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    client0.add_virtio_mmio_net(guest_net_node, net_system, client0_net_copier)
+    client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=None)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)

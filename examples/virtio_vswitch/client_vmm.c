@@ -121,7 +121,6 @@ void init(void)
     assert(blk_vdev_idx != -1);
     assert(net_vdev_idx != -1);
 
-    // TODO: probably need to initialize everything doubled
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,

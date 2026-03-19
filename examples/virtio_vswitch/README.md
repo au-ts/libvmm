@@ -94,7 +94,7 @@ Trustworthy Systems' website. To use your own images, specify `LINUX` and/or
 `INITRD`. For example:
 
 ```sh
-make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd
+make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux/arch/<arch>/boot/Image INITRD=/path/to/initrd
 ```
 
 If you would like to simulate the QEMU board you can run the following command:

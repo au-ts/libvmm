@@ -83,9 +83,9 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
     net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx)
     client0_net_copier = ProtectionDomain(
-        "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
+        "client0_net_copier", "network_copy0.elf", priority=98, budget=20000)
     client1_net_copier = ProtectionDomain(
-        "client1_net_copier", "network_copy.elf", priority=98, budget=20000)
+        "client1_net_copier", "network_copy1.elf", priority=98, budget=20000)
     vswitch = ProtectionDomain("net_vswitch", "network_vswitch.elf", priority=97) # TODO: prio?
 
     pds = [
