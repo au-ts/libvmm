@@ -66,6 +66,7 @@ int handle_virtio_mmio_set_status_flag(virtio_device_t *dev, uint32_t reg)
         break;
 
     case VIRTIO_CONFIG_S_DRIVER_OK:
+        LOG_VMM("status is ok: dev->regs.DeviceID: 0x%x!\n", dev->regs.DeviceID);
         dev->regs.Status |= VIRTIO_CONFIG_S_DRIVER_OK;
         // probably do some san checks here
         break;
