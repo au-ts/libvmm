@@ -45,6 +45,14 @@
 #define CTL_TX_QUEUE 3
 
 /* For the console device to function, we only need an RX queue and TX queue. */
+// TODO:
+// According to the virtIO specification:
+// "The port 0 receive and transmit queues always exist: other queues only exist if VIRTIO_CONSOLE_F_-
+// MULTIPORT is set."
+// Since we do not offer MULTIPORT, we shouldn't need to define the control queues.
+// *However*, UEFI does not seem to think like that, and instead expects all the control queues to exist
+// even though it does not negotiate the MULTIPORT feature.
+// To get around this, we just pretend we have control queues but just don't do anything about it.
 #define VIRTIO_CONSOLE_NUM_VIRTQ 4
 
 /* Feature bits */
@@ -91,6 +99,7 @@ struct virtio_console_control {
 
 struct virtio_console_device {
     struct virtio_device virtio_device;
+    struct virtio_console_config config;
     struct virtio_queue_handler vqs[VIRTIO_CONSOLE_NUM_VIRTQ];
     serial_queue_handle_t *rxq;
     serial_queue_handle_t *txq;

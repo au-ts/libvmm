@@ -404,6 +404,7 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_ba
                           microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = virtio_net_init(net_dev, virq, rx, tx, rx_data, tx_data, rx_ch, tx_ch, mac);
+    dev->transport_type = VIRTIO_TRANSPORT_MMIO;
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
