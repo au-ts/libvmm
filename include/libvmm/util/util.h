@@ -68,3 +68,7 @@ void print_mem_hex(uintptr_t addr, size_t size);
 
 // #endif
 // #endif
+
+static inline void *gpa_to_vaddr(uint64_t gpa) {
+    return (void *)gpa;
+}
