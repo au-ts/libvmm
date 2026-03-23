@@ -584,7 +584,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
             if ((1 << i) & target_list && vcpu_is_on(i)) {
                 success = vgic_inject_irq(i, virq);
-                assert(success);
+                //assert(success);
                 if (!success) {
                     return false;
                 }
