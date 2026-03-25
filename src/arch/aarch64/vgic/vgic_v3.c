@@ -37,12 +37,14 @@
  */
 
 #include <stdint.h>
-
 #include <string.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 #include <libvmm/arch/aarch64/vgic/virq.h>
+
+#ifdef GIC_V3
+
 #include <libvmm/arch/aarch64/vgic/vgic_v3.h>
 #include <libvmm/arch/aarch64/vgic/vdist.h>
 
@@ -266,3 +268,5 @@ void vgic_init()
 
     vgic_dist_reset(&dist);
 }
+
+#endif

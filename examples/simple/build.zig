@@ -91,16 +91,10 @@ pub fn build(b: *std.Build) !void {
     const libmicrokit_include = microkit_board_dir.path(b, "include");
     const libmicrokit_linker_script = microkit_board_dir.path(b, "lib/microkit.ld");
 
-    const arm_vgic_version: usize = switch (microkit_board_option) {
-        .qemu_virt_aarch64, .odroidc4 => 2,
-        .maaxboard => 3,
-    };
-
     const libvmm_dep = b.dependency("libvmm", .{
         .target = target,
         .optimize = optimize,
         .microkit_board_dir = microkit_board_dir,
-        .arm_vgic_version = arm_vgic_version,
     });
     const libvmm = libvmm_dep.artifact("vmm");
 

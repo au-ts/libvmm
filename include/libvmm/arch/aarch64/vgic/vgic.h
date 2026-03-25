@@ -10,14 +10,17 @@
 #include <stdint.h>
 #include <libvmm/virq.h>
 
-#if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
+#if defined(CONFIG_ARM_GIC_V3_SUPPORT)
+#define GIC_V3
+#else
 #define GIC_V2
+#endif
+
+#if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
 #define GIC_DIST_PADDR      0x8000000
 #elif defined(CONFIG_PLAT_ODROIDC4)
-#define GIC_V2
 #define GIC_DIST_PADDR      0xffc01000
 #elif defined(CONFIG_PLAT_MAAXBOARD)
-#define GIC_V3
 #define GIC_DIST_PADDR      0x38800000
 #define GIC_REDIST_PADDR    0x38880000
 #elif defined(CONFIG_PLAT_ZYNQMP)
