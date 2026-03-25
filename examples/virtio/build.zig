@@ -109,7 +109,6 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .microkit_board_dir = microkit_board_dir,
-        .arm_vgic_version = arm_vgic_version,
     });
     const libvmm = libvmm_dep.artifact("vmm");
 

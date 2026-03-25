@@ -84,8 +84,6 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .microkit_board_dir = microkit_board_dir,
-        // Because we only support QEMU virt AArch64, vGIC version is always 2.
-        .arm_vgic_version = @as(usize, 2),
     });
     const libvmm = libvmm_dep.artifact("vmm");
 

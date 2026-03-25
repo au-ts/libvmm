@@ -13,6 +13,8 @@
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 #include <libvmm/arch/aarch64/vgic/vgic_v3_cpuif.h>
 
+#ifdef GIC_V3
+
 #define ICC_SGI1R_EL1_IRM_BIT 40
 #define ICC_SGI1R_EL1_INTID_SHIFT 24
 #define ICC_SGI1R_EL1_INTID_MASK  0xf
@@ -42,3 +44,5 @@ bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
 
     return fault_advance_vcpu(vcpu_id, regs);
 }
+
+#endif

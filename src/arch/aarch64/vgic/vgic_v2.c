@@ -47,8 +47,11 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
-#include <libvmm/arch/aarch64/vgic/vgic_v2.h>
 #include <libvmm/arch/aarch64/vgic/virq.h>
+
+#ifdef GIC_V2
+
+#include <libvmm/arch/aarch64/vgic/vgic_v2.h>
 #include <libvmm/arch/aarch64/vgic/vdist.h>
 
 vgic_t vgic;
@@ -133,3 +136,5 @@ void vgic_init()
     memset(vgic.registers, 0, sizeof(struct gic_dist_map));
     vgic_dist_reset(vgic_get_dist(vgic.registers));
 }
+
+#endif

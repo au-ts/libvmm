@@ -16,17 +16,11 @@ const src = [_][]const u8{
     "src/virtio/sound.c",
 };
 
-const src_aarch64_vgic_v2 = [_][]const u8{
-    "src/arch/aarch64/vgic/vgic_v2.c",
-};
-
-const src_aarch64_vgic_v3 = [_][]const u8{
-    "src/arch/aarch64/vgic/vgic_v3.c",
-    "src/arch/aarch64/vgic/vgic_v3_cpuif.c",
-};
-
 const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vgic/vgic.c",
+    "src/arch/aarch64/vgic/vgic_v2.c",
+    "src/arch/aarch64/vgic/vgic_v3.c",
+    "src/arch/aarch64/vgic/vgic_v3_cpuif.c",
     "src/arch/aarch64/fault.c",
     "src/arch/aarch64/psci.c",
     "src/arch/aarch64/smc.c",
@@ -50,9 +44,6 @@ fn linuxTarget(b: *std.Build, target: std.Build.ResolvedTarget) std.Build.Resolv
 pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
-
-    // Default to vGIC version 2
-    const arm_vgic_version = b.option(usize, "arm_vgic_version", "ARM vGIC version to emulate") orelse null;
 
     const maybe_microkit_board_dir = b.option(LazyPath, "microkit_board_dir", "Path within Microkit SDK for the target board") orelse null;
     if (maybe_microkit_board_dir) |microkit_board_dir| {
@@ -79,12 +70,6 @@ pub fn build(b: *std.Build) !void {
 
         switch (target.result.cpu.arch) {
             .aarch64 => {
-                switch (arm_vgic_version.?) {
-                    2 => try srcs.appendSlice(b.allocator, &src_aarch64_vgic_v2),
-                    3 => try srcs.appendSlice(b.allocator, &src_aarch64_vgic_v3),
-                    else => @panic("Unsupported vGIC version given"),
-                }
-
                 try srcs.appendSlice(b.allocator, &src_aarch64);
             },
             else => {
