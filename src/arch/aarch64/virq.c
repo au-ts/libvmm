@@ -31,9 +31,9 @@ bool virq_controller_init()
 
     vgic_init();
 #if defined(GIC_V2)
-    LOG_VMM("initialised virtual GICv2 driver\n");
+    LOG_VMM("initialised virtual GICv2 (distributor: 0x%lx)\n", GIC_DIST_PADDR);
 #elif defined(GIC_V3)
-    LOG_VMM("initialised virtual GICv3 driver\n");
+    LOG_VMM("initialised virtual GICv3 (distributor: 0x%lx, redistributor: 0x%lx)\n", GIC_DIST_PADDR, GIC_REDIST_PADDR);
 #else
 #error "Unsupported GIC version"
 #endif
