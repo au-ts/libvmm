@@ -108,11 +108,6 @@ extern uint64_t tsc_hz;
 
 static const char brand_string[48] = "Trustworthy Systems CPU";
 
-static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
-{
-    __asm__ __volatile__("cpuid" : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d) : "a"(leaf), "c"(subleaf));
-}
-
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
     LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);

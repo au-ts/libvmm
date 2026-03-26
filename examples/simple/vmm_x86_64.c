@@ -49,9 +49,7 @@ uint64_t guest_flash_size;
 uintptr_t guest_high_ram_vaddr;
 uint64_t guest_high_ram_size;
 
-bool tsc_calibrating = true;
 linux_x86_setup_ret_t linux_setup;
-uint64_t tsc_pre, tsc_post, measured_tsc_hz;
 
 void init(void)
 {
@@ -70,42 +68,38 @@ void init(void)
 
     vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
 
-    // Set up the PCI bus
+    /* Set up the virtual PCI bus */
     assert(pci_x86_init());
 
     /* Pass through COM1 serial port */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
     microkit_irq_ack(COM1_IRQ_CH);
 
-    LOG_VMM("Measuring TSC frequency...\n");
-    sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
-    tsc_pre = rdtsc();
+    /* Retrieve the TSC frequency from hardware */
+    x86_host_tsc_t tsc_metadata = get_host_tsc(TIMER_DRV_CH_FOR_LAPIC);
+    if (!tsc_metadata.valid) {
+        LOG_VMM_ERR("cannot retrieve TSC frequency\n");
+        return;
+    }
+
+    /* Initialise the virtual Local and I/O APICs */
+    bool success = virq_controller_init(tsc_metadata.freq_hz, guest_vapic_vaddr);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
+        return;
+    }
+
+    /* Pass through serial IRQs */
+    assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
+
+    guest_start(linux_setup.kernel_entry_gpa, 0, 0);
 }
 
 void notified(microkit_channel ch)
 {
     switch (ch) {
     case TIMER_DRV_CH_FOR_LAPIC: {
-        if (tsc_calibrating) {
-            tsc_post = rdtsc();
-            measured_tsc_hz = tsc_post - tsc_pre;
-            LOG_VMM("TSC frequency is %lu Hz\n", measured_tsc_hz);
-            tsc_calibrating = false;
-
-            /* Initialise the virtual APIC */
-            bool success = virq_controller_init(measured_tsc_hz, guest_vapic_vaddr);
-            if (!success) {
-                LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
-                return;
-            }
-
-            /* Pass through serial IRQs */
-            assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
-
-            guest_start(linux_setup.kernel_entry_gpa, 0, 0);
-        } else {
-            handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
-        }
+        handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
         break;
     }
     case TIMER_DRV_CH_FOR_HPET_CH0:
