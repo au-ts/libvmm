@@ -55,46 +55,9 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
     microkit_vcpu_restart(GUEST_BOOT_VCPU_ID, kernel_pc);
 
 #elif defined(CONFIG_ARCH_X86_64)
-    LOG_VMM("starting guest at 0x%lx, DTB at 0x%lx, initial RAM disk at 0x%lx\n", kernel_pc, dtb, initrd);
+    LOG_VMM("starting guest at 0x%lx, initial RAM disk at 0x%lx\n", kernel_pc, dtb);
+    microkit_vcpu_x86_deferred_resume(kernel_pc, VMCS_PCC_DEFAULT, 0);
 
-    microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, kernel_pc);
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PCC_DEFAULT);
-    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, 0);
-
-    while (true) {
-        seL4_Word badge;
-        seL4_Word ret = seL4_VMEnter(&badge);
-
-        if (ret == SEL4_VMENTER_RESULT_NOTIF) {
-            // @billn refactor
-            uint64_t rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
-
-            // @billn highly fucking sus, need to incorporate vmenter into the microkit event loop
-            uint64_t is_endpoint = badge >> 63;
-            uint64_t is_fault = (badge >> 62) & 1;
-
-            assert(!is_endpoint);
-            assert(!is_fault);
-
-            unsigned int idx = 0;
-            do {
-                if (badge & 1) {
-                    notified(idx);
-                }
-                badge >>= 1;
-                idx++;
-            } while (badge != 0);
-
-            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, rip);
-        } else if (ret == SEL4_VMENTER_RESULT_FAULT) {
-            uint64_t new_rip;
-            assert(fault_handle(GUEST_BOOT_VCPU_ID, &new_rip));
-            microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, new_rip);
-        } else {
-            LOG_VMM_ERR("unexpected VM exit reason 0x%x\n", ret);
-        }
-    }
-    LOG_VMM("done\n");
 #endif
 
     return true;
