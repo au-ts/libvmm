@@ -14,9 +14,10 @@
 #include <libvmm/guest.h>
 #include <sddf/util/util.h>
 
+// Documents referenced:
 // https://wiki.osdev.org/X86-64_Instruction_Encoding
-
 // https://c9x.me/x86/html/file_module_x86_id_176.html
+
 #define NUM_MOV_OPCODES 4
 #define OPCODE_MOV_BYTE_TO_MEM 0x88
 #define OPCODE_MOV_WORD_TO_MEM 0x89
@@ -400,10 +401,5 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
         vcpu_print_regs(0);
         assert(opcode_valid);
     }
-
-    // LOG_VMM("raw instruction:\n");
-    // for (int i = 0; i < instruction_len; i++) {
-    //     LOG_VMM("[%d]: 0x%x\n", i, instruction_buf[i]);
-    // }
     return ret;
 }

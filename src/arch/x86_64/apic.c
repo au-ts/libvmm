@@ -23,14 +23,14 @@
 
 // @billn the APIC timer doesn't need to be tied to the TSC, I did it like this originally because
 // I didn't know anything about x86 architecture. But for simplicity it could be tied to the sDDF timer
-// instead.
+// instead. The only case where the TSC comes into play is the TSC deadline mode, but we don't support right now
 
+// Documents referenced:
 // https://wiki.osdev.org/APIC
+// https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 
-/* Uncomment this to enable debug logging */
+// Uncomment this to enable debug logging
 // #define DEBUG_APIC
-
-extern bool fault_cond;
 
 #if defined(DEBUG_APIC)
 #define LOG_APIC(...) do{ printf("%s|APIC: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -38,7 +38,6 @@ extern bool fault_cond;
 #define LOG_APIC(...) do{}while(0)
 #endif
 
-// https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
 extern uintptr_t vapic_vaddr;
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
@@ -94,19 +93,6 @@ void vapic_write_reg(int offset, uint32_t value)
     // @billn fix hardcoded vaddr
     volatile uint32_t *reg = (uint32_t *)(0x101000ull + offset);
     *reg = value;
-}
-
-bool vcpu_can_take_irq(size_t vcpu_id)
-{
-    // Not executing anything that blocks IRQs
-    if (microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_INTERRUPTABILITY) != 0) {
-        return false;
-    }
-    // IRQ on in cpu register
-    if (!(microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RFLAGS) & BIT(9))) {
-        return false;
-    }
-    return true;
 }
 
 int lapic_dcr_to_divider(void)
@@ -256,15 +242,11 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
             if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
                 LOG_VMM_ERR("failed to send IPI\n");
                 return false;
-            } else {
-                // LOG_VMM("sent ipi\n");
             }
         } else {
             LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
                         delivery_mode, destination);
         }
-
-        // LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
         break;
     }
 
@@ -300,9 +282,6 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
                                         / 2;
                 int is_high = ioapic_regs.selected_reg & 0x1;
-
-                // LOG_VMM("reading indirect register 0x%x, is high %d\n", redirection_reg_idx, is_high);
-
                 if (is_high) {
                     data = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
                 } else {
@@ -325,7 +304,6 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
 
         if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
             ioapic_regs.selected_reg = data & 0xff;
-            // LOG_VMM("selecting I/O APIC register 0x%x for write\n", ioapic_regs.selected_reg);
 
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
@@ -401,7 +379,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     // Mark as pending for injection, let hardware handle the rest
     vapic_write_reg(irr_reg_off, vapic_read_reg(irr_reg_off) | BIT(irr_idx));
 
-    // page 26-8 Vol. 3C "Guest interrupt status"
+    // Intel manual page 26-8 Vol. 3C "Guest interrupt status"
     int highest_vector_pending = get_next_pending_irq_vector();
     assert(highest_vector_pending != -1);
     uint16_t guest_irq_status = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPT_STATUS);
@@ -433,7 +411,6 @@ bool handle_lapic_timer_nftn(size_t vcpu_id)
     if (!(timer_reg & BIT(16))) {
         uint8_t vector = timer_reg & 0xff;
         if (!inject_lapic_irq(vcpu_id, vector)) {
-            // LOG_VMM_ERR("failed to inject LAPIC timer IRQ vector 0x%x\n", vector);
             return false;
         }
     }
@@ -456,10 +433,8 @@ bool inject_ioapic_irq(int ioapic, int pin)
         return false;
     }
 
-    // @billn sus
-    uint8_t delivery_mode = (ioapic_regs.ioredtbl[pin] >> 8) & 0x7;
-
     // @billn sus revisit delivery mode 1 for multiple vcpu
+    uint8_t delivery_mode = (ioapic_regs.ioredtbl[pin] >> 8) & 0x7;
     if (delivery_mode != 0 && delivery_mode != 1) {
         LOG_VMM_ERR("unknown I/O APIC delivery mode for injection on pin %d, mode 0x%x\n", pin, delivery_mode);
         assert(false);
@@ -474,7 +449,6 @@ bool inject_ioapic_irq(int ioapic, int pin)
     // For any passed through interrupts:
     // When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
     if (ioapic_regs.virq_passthrough_map[pin].valid) {
-
         int eoi_bitmap_n = vector / 64;
         int n_bitmap_i = vector % 64;
         switch (eoi_bitmap_n) {
@@ -504,7 +478,7 @@ bool inject_ioapic_irq(int ioapic, int pin)
         }
     }
 
-    // @billn need to read cpu id from redirection register
+    // @billn need to read cpu id from redirection register, revisit for multi vcpu
     return inject_lapic_irq(0, vector);
 }
 
