@@ -8,17 +8,11 @@
 #include <stdbool.h>
 #include <microkit.h>
 #include <libvmm/libvmm.h>
-
 #include <sddf/timer/client.h>
-
-// @billn sus, use package asm script
-#include "board/x86_64_generic_vtx/simple_dsdt.hex"
 
 uint64_t com1_ioport_id;
 uint64_t com1_ioport_addr;
 uint64_t com1_ioport_size = 8;
-
-#define COM1_IRQ_CH 0
 
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
@@ -28,6 +22,10 @@ extern char _guest_kernel_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
+/* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
+extern char _guest_dsdt_aml[];
+extern char _guest_dsdt_aml_end[];
+
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 uint64_t guest_ram_size;
@@ -58,10 +56,11 @@ void init(void)
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+    size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
 
     if (!linux_setup_images(guest_ram_vaddr, guest_ram_size, (uintptr_t)_guest_kernel_image, kernel_size,
-                            (uintptr_t)_guest_initrd_image, initrd_size, simple_dsdt_aml_code,
-                            sizeof(simple_dsdt_aml_code), GUEST_CMDLINE, &linux_setup)) {
+                            (uintptr_t)_guest_initrd_image, initrd_size, _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE,
+                            &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
@@ -73,7 +72,7 @@ void init(void)
 
     /* Pass through COM1 serial port */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, com1_ioport_id, com1_ioport_addr, com1_ioport_size);
-    microkit_irq_ack(COM1_IRQ_CH);
+    microkit_irq_ack(com1_ioport_id);
 
     /* Retrieve the TSC frequency from hardware */
     x86_host_tsc_t tsc_metadata = get_host_tsc(TIMER_DRV_CH_FOR_LAPIC);
@@ -90,7 +89,7 @@ void init(void)
     }
 
     /* Pass through serial IRQs */
-    assert(virq_ioapic_register_passthrough(0, 4, COM1_IRQ_CH));
+    assert(virq_ioapic_register_passthrough(0, 4, com1_ioport_id));
 
     guest_start(linux_setup.kernel_entry_gpa, 0, 0);
 }
