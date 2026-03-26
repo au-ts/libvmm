@@ -66,10 +66,15 @@ static void assert_fail(const char *assertion, const char *file, unsigned int li
 #endif
 
 #if defined(CONFIG_ARCH_X86_64)
-static __inline__ uint64_t rdtsc(void)
+static inline uint64_t rdtsc(void)
 {
     uint32_t lo, hi;
     __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
+}
+
+static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
+{
+    __asm__ __volatile__("cpuid" : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d) : "a"(leaf), "c"(subleaf));
 }
 #endif
