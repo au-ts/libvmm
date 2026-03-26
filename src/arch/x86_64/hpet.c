@@ -224,8 +224,9 @@ bool bug_check_irq_at_correct_time(int comparator, uint64_t main_counter_val)
     } else {
         difference_units = main_counter_val - expected_counter_val;
         if (difference_units > tolerance_units) {
-            // LOG_VMM_ERR("HPET timer irq too late!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n", comparator,
-            // main_counter_val, hpet_regs.comparators[comparator].armed_comparator, difference_units, tolerance_units);
+            LOG_VMM_ERR("HPET timer irq too late!!! comp %d, counter %lu, comparator %lu, diff %lu > margin %lu\n",
+                        comparator, main_counter_val, hpet_regs.comparators[comparator].armed_comparator,
+                        difference_units, tolerance_units);
             return false;
         }
     }
@@ -430,7 +431,6 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
     bool periodic_old = timer_n_in_periodic_mode(comparator);
 
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
-    // uint64_t reg_old = regs->config;
 
     if (mem_access_width_to_bytes(decoded_ins) == 4) {
         uint64_t curr_hi = (regs->config >> 32) << 32;
@@ -486,18 +486,6 @@ static bool hpet_fault_handle_comparator_write(uint8_t comparator, uint64_t data
 bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                        decoded_instruction_ret_t decoded_ins)
 {
-    // if (ept_fault_is_read(qualification)) {
-    //     assert(decoded_ins.type == INSTRUCTION_MEMORY);
-    //     LOG_HPET("handling HPET read at offset 0x%lx, acc width %d bytes, reg idx %d\n", offset,
-    //              mem_access_width_to_bytes(decoded_ins), decoded_ins.decoded.memory_instruction.target_reg);
-    // } else if (ept_fault_is_write(qualification)) {
-    //     uint64_t data;
-    //     assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
-    //     LOG_HPET("handling HPET write at offset 0x%lx, value 0x%x\n", offset, data);
-    // }
-
-    // vcpu_print_regs(0);
-
     uint8_t comparator;
     if (ept_fault_is_read(qualification)) {
         uint64_t data;
