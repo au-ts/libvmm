@@ -120,7 +120,7 @@ include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
 
 ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
-TIMER_DRIVER_DIR := hpet
+TIMER_DRIVER_DIR := tsc_hpet
 TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER_DIR)
 include ${TIMER_DRIVER}/timer_driver.mk
 endif
