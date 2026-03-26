@@ -50,23 +50,10 @@ static uint8_t acpi_compute_checksum(char *table, int size)
     return 0x100 - acpi_table_sum(table, size);
 }
 
-// TODO: when creating MADT, get the user to pass the address of APIC that is definitely
-// outside of RAM, or determine it ourselves.
-
-// static void madt_add_entry(struct madt *madt, uintptr_t dest, void *entry)
-// {
-//     struct madt_irq_controller *madt_entry = (struct madt_irq_controller *)entry;
-
-//     madt->h.length += madt_entry->length;
-
-//     memcpy((void *)dest, entry, madt_entry->length);
-// }
-
 size_t madt_build(struct madt *madt)
 {
     memcpy(madt->h.signature, "APIC", 4);
     madt->h.revision = MADT_REVISION;
-    // TODO: not very elegant, maybe do something better.
     memcpy(madt->h.oem_id, ACPI_OEMID, 6);
     memcpy(madt->h.oem_table_id, ACPI_OEMID, 6);
     madt->h.oem_revision = 1;
@@ -181,8 +168,6 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    // TODO: handle unused variable
-    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);
@@ -190,11 +175,9 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 
     if (port_offset == 0) {
         if (is_read) {
-            // LOG_VMM("PM1 control reg read 0x%x\n", pm1_control_reg);
             vctx->eax = pm1_control_reg;
         } else {
             pm1_control_reg = vctx->eax & 0xffff;
-            // LOG_VMM("PM1 control reg write 0x%x\n", pm1_control_reg);
         }
 
     } else {
@@ -209,8 +192,6 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    // TODO: handle unused variable
-    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);
@@ -245,8 +226,6 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    // TODO: handle unused variable
-    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);
@@ -265,8 +244,6 @@ bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t quali
 {
     uint64_t is_read = qualification & BIT(3);
     uint64_t is_string = qualification & BIT(4);
-    // TODO: handle unused variable
-    // uint16_t port_addr = (qualification >> 16) & 0xffff;
     ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
     int access_width_bytes = ioports_access_width_to_bytes(access_width);
     assert(!is_string);
@@ -404,7 +381,6 @@ size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs
     xsdt->h.length = length;
     xsdt->h.revision = XSDP_REVISION;
 
-    // TODO: not very elegant, maybe do something better.
     memcpy(xsdt->h.oem_id, ACPI_OEMID, 6);
     memcpy(xsdt->h.oem_table_id, ACPI_OEMID, 6);
     xsdt->h.oem_revision = 1;
@@ -427,18 +403,12 @@ size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs
 size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
 {
     memset(xsdp, 0, sizeof(struct xsdp));
-
-    // memcpy as we do not want to null-termiante
     memcpy(xsdp->signature, XSDP_SIGNATURE, strlen(XSDP_SIGNATURE));
     memcpy(xsdp->oem_id, ACPI_OEMID, strlen(ACPI_OEMID));
     xsdp->revision = XSDP_REVISION;
     xsdp->length = sizeof(struct xsdp);
 
     xsdp->xsdt_gpa = xsdt_gpa;
-
-    // // @billn sus
-    // assert(xsdt_gpa < (1ull << 32));
-    // xsdp->rsdp_gpa = xsdt_gpa;
 
     xsdp->checksum = acpi_compute_checksum((char *)xsdp, offsetof(struct xsdp, length));
     assert(acpi_checksum_ok((char *)xsdp, offsetof(struct xsdp, length)));
@@ -474,13 +444,12 @@ uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsd
     uint64_t xsdt_gpa = acpi_allocate_gpa(sizeof(struct xsdt));
     xsdp_build(xsdp, xsdt_gpa);
 
-    // TODO: hack
     uint64_t madt_gpa = acpi_allocate_gpa(sizeof(struct madt));
     struct madt *madt = (struct madt *)(guest_ram_vaddr + madt_gpa);
     madt_build(madt);
+    // TODO: hack
     assert(madt->h.length <= 0x1000);
 
-    // @billn todo really need some sort of memory range allocator
     uint64_t hpet_gpa = acpi_allocate_gpa(sizeof(struct hpet));
     struct hpet *hpet = (struct hpet *)(guest_ram_vaddr + hpet_gpa);
     hpet_build(hpet);
