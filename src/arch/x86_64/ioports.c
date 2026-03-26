@@ -13,7 +13,6 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/fault.h>
-#include <libvmm/arch/x86_64/cmos.h>
 #include <libvmm/arch/x86_64/com.h>
 #include <libvmm/guest.h>
 
@@ -118,9 +117,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
-    uint64_t is_rep = f_qualification & BIT(5);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
-    ioport_access_width_t access_width = (ioport_access_width_t)(f_qualification & 0x7);
 
     bool success = false;
 
@@ -148,7 +145,7 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr == 0x70 || port_addr == 0x71) {
         // cmos
         assert(!is_string);
-        success = emulate_cmos_access(vctx, port_addr, is_read, access_width);
+        success = true;
     } else if (port_addr == 0x80) {
         assert(!is_string);
         // io port access delay, no-op
@@ -191,21 +188,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     } else if (port_addr == 0x92) {
         // TODO: handle properly, I don't understand why UEFI is touching A20 gate register
         assert(!is_string);
-        success = true;
-    } else if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
-        emulate_com(vctx, 0, port_addr - 0x3f8, is_read, is_rep, is_string, access_width);
-        success = true;
-    } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
-        emulate_com(vctx, 1, port_addr - 0x2f8, is_read, is_rep, is_string, access_width);
-        success = true;
-    } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
-        emulate_com(vctx, 2, port_addr - 0x3e8, is_read, is_rep, is_string, access_width);
-        success = true;
-    } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
-        emulate_com(vctx, 3, port_addr - 0x2ef, is_read, is_rep, is_string, access_width);
-        success = true;
-    } else if (port_addr >= 0x2e8 && port_addr <= 0x2e8 + 8) {
-        emulate_com(vctx, 4, port_addr - 0x2e8, is_read, is_rep, is_string, access_width);
         success = true;
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;

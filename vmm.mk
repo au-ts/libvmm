@@ -38,8 +38,6 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/hpet.c \
 			   src/arch/x86_64/pci.c \
 			   src/arch/x86_64/util.c \
-			   src/arch/x86_64/cmos.c \
-			   src/arch/x86_64/com.c \
 			   src/arch/x86_64/tsc.c
 
 # VIRTIO MMIO and PCI depends on sddf
