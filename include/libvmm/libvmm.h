@@ -25,7 +25,6 @@
 #elif defined(CONFIG_ARCH_X86)
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/apic.h>
-#include <libvmm/arch/x86_64/cmos.h>
 #include <libvmm/arch/x86_64/com.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/e820.h>

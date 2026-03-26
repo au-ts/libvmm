@@ -19,19 +19,18 @@
             <map mr="guest_ram" vaddr="0x0" perms="rwx" cached="true" />
         </virtual_machine>
 
+        <!-- Passthrough COM1 serial port -->
         <ioport id="0" addr="0x3f8" size="8" setvar_id="com1_ioport_id" setvar_addr="com1_ioport_addr" />
 
-        <!-- serial port com1 irq -->
+        <!-- COM1 serial port IRQ -->
         <irq pin="4" vector="41" id="0" ioapic="0" trigger="edge"/>
-
-        <!-- CMOS passthrough -->
-        <ioport id="36" addr="112" size="1" />
-        <ioport id="37" addr="113" size="1" />
     </protection_domain>
 
     <protection_domain name="timer_driver" priority="254" passive="true">
         <program_image path="timer_driver.elf" />
         <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
+
+        <!-- HPET comparater 0 IRQ in legacy mode, highest priority -->
         <irq pin="2" vector="107" id="0" ioapic="0" trigger="edge" />
     </protection_domain>
 
