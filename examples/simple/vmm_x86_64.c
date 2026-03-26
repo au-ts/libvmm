@@ -112,3 +112,19 @@ void notified(microkit_channel ch)
         };
     }
 }
+
+/*
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
+ * the VMM to handle.
+ */
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
+{
+    uint64_t new_rip;
+    bool success = fault_handle(child, &new_rip);
+    if (success) {
+        microkit_vcpu_x86_deferred_resume(new_rip, VMCS_PCC_DEFAULT, 0);
+    }
+
+    return seL4_True;
+}
