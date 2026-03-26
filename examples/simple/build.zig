@@ -234,7 +234,7 @@ pub fn build(b: *std.Build) !void {
 
     var timer_driver: ?*std.Build.Step.InstallArtifact = null;
     if (target.result.cpu.arch == .x86_64) {
-        timer_driver = b.addInstallArtifact(sddf_dep.artifact("driver_timer_hpet.elf"), .{ .dest_sub_path = "timer_driver_x86_64.elf" });
+        timer_driver = b.addInstallArtifact(sddf_dep.artifact("driver_timer_tsc_hpet.elf"), .{ .dest_sub_path = "timer_driver_x86_64.elf" });
     }
 
     const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
