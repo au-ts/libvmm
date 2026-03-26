@@ -29,6 +29,7 @@ ifeq ($(ARCH),aarch64)
 else ifeq ($(ARCH),x86_64)
 	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
 	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	DSDT_AML ?= $(SYSTEM_DIR)/simple_dsdt.aml
 	ARCH_FLAGS := -target x86_64-unknown-elf
 	VMM_NAME := vmm_x86_64
 	IMAGES = $(VMM_NAME).elf timer_driver.elf
@@ -104,6 +105,7 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD)
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
+					-DGUEST_DSDT_AML_PATH=\"${DSDT_AML}\" \
 					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 else
