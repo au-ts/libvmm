@@ -238,7 +238,6 @@ bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_excep
 static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, decoded_instruction_ret_t decoded_ins)
 {
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
-    // LOG_VMM("handling EPT fault on GPA 0x%lx, qualification: 0x%lx\n", addr, qualification);
 
     if (addr >= IOAPIC_GPA && addr < IOAPIC_GPA + IOAPIC_SIZE) {
         LOG_FAULT("handling IO APIC 0x%lx\n", addr);
@@ -246,8 +245,6 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
     } else if (addr >= HPET_GPA && addr < HPET_GPA + HPET_SIZE) {
         LOG_FAULT("handling HPET 0x%lx\n", addr);
         return hpet_fault_handle(vctx, addr - HPET_GPA, qualification, decoded_ins);
-    // } else if (addr >= ECAM_GPA && addr < ECAM_GPA + ECAM_SIZE) {
-    //     return pci_x86_emulate_ecam_access(vctx, addr - ECAM_GPA, qualification, decoded_mem_ins);
     } else {
         LOG_FAULT("handling other EPT 0x%lx\n", addr);
         for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
@@ -269,8 +266,6 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
 
         LOG_VMM_ERR("failed to find EPT handler for address 0x%lx\n", addr);
     }
-
-    // LOG_VMM("done\n");
 
     return false;
 }
@@ -326,8 +321,6 @@ bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exce
 static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
 {
     uint16_t port_addr = (qualification >> 16) & 0xffff;
-    // TODO: pass access width to the callbacks?
-    // ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
 
     if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
     } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
@@ -357,53 +350,6 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
     return emulate_ioports(vctx, qualification);
 }
 
-// static uint64_t prev_valid_idt_entries = 0;
-
-uint64_t *cr_fault_reg_idx_to_vctx_ptr(int idx, seL4_VCPUContext *vctx)
-{
-    switch (idx) {
-    case 0:
-        return &vctx->eax;
-    case 1:
-        return &vctx->ecx;
-    case 2:
-        return &vctx->edx;
-    case 3:
-        return &vctx->ebx;
-        // case 4:
-        //     return stack pointer;
-    case 5:
-        return &vctx->ebp;
-    case 6:
-        return &vctx->esi;
-    case 7:
-        return &vctx->edi;
-    case 8:
-        return &vctx->r8;
-    case 9:
-        return &vctx->r9;
-    case 10:
-        return &vctx->r10;
-    case 11:
-        return &vctx->r11;
-    case 12:
-        return &vctx->r12;
-    case 13:
-        return &vctx->r13;
-    case 14:
-        return &vctx->r14;
-    case 15:
-        return &vctx->r15;
-    default:
-        return NULL;
-    }
-}
-
-uint64_t n_faults = 0;
-uint64_t n_vmexit_reasons[NUM_EXIT_REASONS] = { 0 };
-
-uint64_t n_notifieds = 0;
-
 bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 {
     bool success = false;
@@ -413,13 +359,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
     seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
     seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
-
-    // if (rip > 0xfffff00000000000) {
-    //     LOG_FAULT("vmm exit in kernel at rip 0x%lx\n", rip);
-    //     fault_cond = true;
-    // } else {
-    //     fault_cond = false;
-    // }
 
     LOG_FAULT("handling vmexit reason %s\n", fault_to_string(f_reason));
 
@@ -461,7 +400,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
     case IO:
         success = handle_pio_fault(&vctx, qualification);
         break;
-    // case APIC_ACCESS:
     case VIRTUALIZED_EOI: {
         uint8_t eoi_vector = qualification;
         // if we get here then the guest has ack'ed a passed through I/O APIC irq,
@@ -484,9 +422,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         uint8_t access_type = (qualification >> 12) & 0xf;
 
         // only handle reads and writes due to instruciton execution
-
-        // LOG_VMM("offset 0x%x, access type %d\n", offset, access_type);
-
         if (access_type == 0) {
             uint32_t data;
             success = lapic_read_fault_handle(offset, &data);
@@ -516,55 +451,9 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
 
-    // n_vmexit_reasons[f_reason] += 1;
-    // n_faults += 1;
-    // if (n_faults % 50000 == 0) {
-    //     LOG_VMM("vm exit stats:\n");
-    //     for (int i = 0; i < NUM_EXIT_REASONS; i++) {
-    //         char *reason_human = fault_to_string(i);
-    //         uint64_t n_fault = n_vmexit_reasons[i];
-    //         if (reason_human[0] != 0 && n_fault) {
-    //             LOG_VMM("%s: %lu\n", reason_human, n_fault);
-    //         }
-    //     }
-    //     LOG_VMM("number of notifieds: %lu\n", n_notifieds);
-    // }
-
     *new_rip = rip;
     if (success && f_reason != INTERRUPT_WINDOW) {
-        // uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
-        // if (cr4 & BIT(18)) {
-        //     LOG_VMM("======== HELLO OSXSAVE IS ON!!!!\n");
-        // }
-
-        // uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
-        // uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
-        // uint64_t idtr_gpa, _bytes_remaining;
-        // bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
-        // uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
-        // uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
-        // uint16_t num_present_entries = 0;
-        // for (int i = 0; i < idt_num_entries; i++) {
-        //     uint32_t entry[4];
-        //     uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-        //     entry[0] = *((uint64_t *) gpa_to_vaddr(entry_gpa));
-        //     entry[1] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 4));
-        //     entry[2] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 8));
-        //     entry[3] = *((uint64_t *) gpa_to_vaddr(entry_gpa + 12));
-
-        //     uint32_t present = (entry[1] & BIT(15));
-        //     if (present)
-        //         num_present_entries++;
-        // }
-
-        // if (num_present_entries != prev_valid_idt_entries) {
-        //     LOG_VMM("+_+_+_+_+ IDT have %d valid entries\n", num_present_entries);
-        //     LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
-        // }
-
-        // prev_valid_idt_entries = num_present_entries;
-
-        // TODO hack force osxsave on so that windows doesnt #UD on xgetbv/xsetbv
+        // TODO hack force osxsave on so that Windows doesnt #UD on xgetbv/xsetbv
         uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
 
@@ -603,7 +492,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
                 entry[3] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 12));
 
                 uint32_t present = (entry[1] & BIT(15));
-                // LOG_VMM("IDT entry %d is present: %s\n", i, present ? "YES" : "NO");
                 if (present) {
                     idt_num_valid_entries += 1;
                 }
@@ -611,24 +499,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 
             LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
         }
-        // if (ins_len) {
-        //     uint64_t gpa;
-        //     int bytes_remaining;
-        //     assert(gva_to_gpa(0, rip, &gpa, &bytes_remaining));
-        //     assert(bytes_remaining >= ins_len);
-        //     LOG_VMM_ERR("faulting instruction:\n");
-        //     uint8_t *ins = gpa_to_vaddr(gpa);
-        //     for (int i = 0; i < ins_len; i++) {
-        //         LOG_VMM_ERR("0x%02x\n", ins[i]);
-        //         bytes_remaining--;
-        //     }
-
-        //     LOG_VMM_ERR("proceeding instructions:\n");
-        //     for (int i = 0; i < MIN(bytes_remaining, 16); i++) {
-        //         LOG_VMM_ERR("0x%02x\n", ins[i + ins_len]);
-        //         bytes_remaining--;
-        //     }
-        // }
         vcpu_print_regs(vcpu_id);
     }
 
