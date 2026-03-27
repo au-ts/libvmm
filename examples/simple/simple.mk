@@ -17,12 +17,12 @@ SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
+IMAGES := vmm.elf
+
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
 	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
 	ARCH_FLAGS := -target aarch64-none-elf -mstrict-align
-	VMM_NAME := vmm_aarch64
-	IMAGES = $(VMM_NAME).elf
 
 	QEMU := qemu-system-aarch64
 	QEMU_ARCH_ARGS := -machine virt,virtualization=on -cpu cortex-a53 -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
@@ -31,8 +31,7 @@ else ifeq ($(ARCH),x86_64)
 	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
 	DSDT_AML ?= $(SYSTEM_DIR)/simple_dsdt.aml
 	ARCH_FLAGS := -target x86_64-unknown-elf
-	VMM_NAME := vmm_x86_64
-	IMAGES = $(VMM_NAME).elf timer_driver.elf
+	IMAGES += timer_driver.elf
 
 	QEMU := qemu-system-x86_64
 	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
@@ -63,7 +62,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-$(VMM_NAME).elf: vmm.o images.o
+vmm.elf: vmm.o images.o
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
@@ -97,7 +96,7 @@ vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 vm.dtb: vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-vmm.o: $(EXAMPLE_DIR)/$(VMM_NAME).c $(CHECK_FLAGS_BOARD_MD5)
+vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 ifeq ($(ARCH),x86_64)
