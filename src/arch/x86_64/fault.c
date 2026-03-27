@@ -32,6 +32,9 @@ bool fault_cond = false;
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  *   [2a] Location: Table C-1 "VMX BASIC EXIT REASONS", page: "Vol. 3D C-1"
+ *   [2b] Location: "RDMSR—Read From Model Specific Register", page: "Vol. 2B 4-537"
+ *   [2c] Location: Table 25-17 "Format of the VM-Entry Interruption-Information Field"
+ * [3] https://wiki.osdev.org/Interrupt_Vector_Table
  */
 
 /* Exit reasons.
@@ -463,6 +466,18 @@ bool fault_handle(size_t vcpu_id)
             resume_rip += ins_len;
         }
         microkit_vcpu_x86_deferred_resume(resume_rip, VMCS_PCC_DEFAULT, 0);
+    } else if (!success && (f_reason == RDMSR || f_reason == WRMSR)) {
+        // From [2b] "Specifying a reserved or unimplemented MSR address in ECX will also cause a
+        // general protection exception."
+        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_EXCEPTION_ERROR_CODE, 0);
+
+        // [2c] and [3]
+        uint64_t interruption = GP_VECTOR; // General protection fault vector
+        interruption = 3ull << 8; // Hardware exception
+        interruption = BIT(11); // deliver error code
+        interruption = BIT(31); // valid
+
+        microkit_vcpu_x86_deferred_resume(rip, VMCS_PCC_DEFAULT, interruption);
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
         LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
