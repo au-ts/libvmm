@@ -12,6 +12,8 @@
 
 #include <libvmm/arch/x86_64/instruction.h>
 
+#define GP_VECTOR 13
+
 char *fault_to_string(int exit_reason);
 /* @billn revisit, seL4 vmexit doesnt have msginfo! */
 
