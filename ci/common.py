@@ -40,16 +40,6 @@ def example_build_path(test_config: TestConfig):
     )
 
 
-def loader_img_path(
-    test_config: TestConfig,
-):
-    return (
-        example_build_path(test_config)
-        / ("bin" if test_config.build_system == "zig" else "")
-        / "loader.img"
-    )
-
-
 def backend_fn(
     test_config: TestCase,
     loader_img: Path,
