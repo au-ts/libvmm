@@ -120,11 +120,6 @@ void notified(microkit_channel ch)
  */
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
 {
-    uint64_t new_rip;
-    bool success = fault_handle(child, &new_rip);
-    if (success) {
-        microkit_vcpu_x86_deferred_resume(new_rip, VMCS_PCC_DEFAULT, 0);
-    }
-
+    fault_handle(child);
     return seL4_True;
 }
