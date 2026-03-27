@@ -183,6 +183,16 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     bool transferred = false;
 
     struct virtio_queue_handler *vq = &console->virtio_device.vqs[RX_QUEUE];
+    if (!vq->ready) {
+        /*
+         * It is valid for RX from the real device before the guest has
+         * started, so just dequeue all data and early return.
+         */
+        char c;
+        while (serial_dequeue(console->rxq, &c));
+        return true;
+    }
+
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
         transferred = true;
