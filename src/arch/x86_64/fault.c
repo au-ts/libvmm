@@ -502,10 +502,10 @@ bool fault_handle(size_t vcpu_id)
             for (int i = 0; i < idt_num_entries; i++) {
                 uint32_t entry[4];
                 uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-                entry[0] = *((uint64_t *)gpa_to_vaddr(entry_gpa));
-                entry[1] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 4));
-                entry[2] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 8));
-                entry[3] = *((uint64_t *)gpa_to_vaddr(entry_gpa + 12));
+                entry[0] = *((uint32_t *)gpa_to_vaddr(entry_gpa));
+                entry[1] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 4));
+                entry[2] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 8));
+                entry[3] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 12));
 
                 uint32_t present = (entry[1] & BIT(15));
                 if (present) {
@@ -516,6 +516,8 @@ bool fault_handle(size_t vcpu_id)
             LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
         }
         vcpu_print_regs(vcpu_id);
+
+        LOG_VMM_ERR("VCPU will not be resumed.\n");
     }
 
     return success;
