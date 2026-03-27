@@ -1,0 +1,229 @@
+/*
+ * Copyright 2025, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <stdbool.h>
+#include <libvmm/util/util.h>
+#include <sddf/util/util.h>
+#include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/ioports.h>
+#include <libvmm/arch/x86_64/pci.h>
+#include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/com.h>
+#include <libvmm/guest.h>
+
+extern uint64_t primary_ata_cmd_pio_id;
+extern uint64_t primary_ata_cmd_pio_addr;
+
+extern uint64_t primary_ata_ctrl_pio_id;
+extern uint64_t primary_ata_ctrl_pio_addr;
+
+extern uint64_t second_ata_cmd_pio_id;
+extern uint64_t second_ata_cmd_pio_addr;
+
+extern uint64_t second_ata_ctrl_pio_id;
+extern uint64_t second_ata_ctrl_pio_addr;
+
+extern struct pci_bus pci_bus_state;
+
+// TODO: hack
+#define TIMER_DRV_CH_FOR_LAPIC 11
+
+int ioports_access_width_to_bytes(ioport_access_width_t access_width)
+{
+    switch (access_width) {
+    case IOPORT_BYTE_ACCESS_QUAL:
+        return 1;
+    case IOPORT_WORD_ACCESS_QUAL:
+        return 2;
+    case IOPORT_DWORD_ACCESS_QUAL:
+        return 4;
+    default:
+        return 0;
+    }
+}
+
+int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_len, bool is_rep,
+                                ioport_access_width_t access_width)
+{
+    int data_index = 0;
+    int max_iterations = 1;
+    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
+
+    if (is_rep) {
+        max_iterations = vctx->ecx;
+    }
+
+    int iteration = 0;
+    for (; iteration < max_iterations && data_index < data_len; iteration++) {
+        uint64_t src_gpa;
+        uint64_t bytes_to_page_boundary;
+        assert(gva_to_gpa(0, vctx->esi, &src_gpa, &bytes_to_page_boundary));
+        char *src = gpa_to_vaddr(src_gpa);
+
+        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
+
+        memcpy(&dest[data_index], src, ioports_access_width_to_bytes(access_width));
+
+        if (eflags & BIT(10)) {
+            vctx->esi -= ioports_access_width_to_bytes(access_width);
+        } else {
+            vctx->esi += ioports_access_width_to_bytes(access_width);
+        }
+        data_index += ioports_access_width_to_bytes(access_width);
+    }
+
+    return ioports_access_width_to_bytes(access_width) * data_index;
+}
+
+int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep,
+                               ioport_access_width_t access_width)
+{
+    int data_index = 0;
+    int max_iterations = 1;
+    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
+
+    if (is_rep) {
+        max_iterations = vctx->ecx;
+    }
+
+    int iteration = 0;
+    for (; iteration < max_iterations && data_index < data_len; iteration++) {
+        uint64_t dest_gpa;
+        uint64_t bytes_to_page_boundary;
+        assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &bytes_to_page_boundary));
+        char *dest = gpa_to_vaddr(dest_gpa);
+
+        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
+
+        memcpy(dest, &data[data_index], ioports_access_width_to_bytes(access_width));
+
+        if (eflags & BIT(10)) {
+            vctx->edi -= ioports_access_width_to_bytes(access_width);
+        } else {
+            vctx->edi += ioports_access_width_to_bytes(access_width);
+        }
+        data_index += ioports_access_width_to_bytes(access_width);
+    }
+
+    return ioports_access_width_to_bytes(access_width) * data_index;
+}
+
+bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
+{
+    uint64_t is_read = f_qualification & BIT(3);
+    uint64_t is_string = f_qualification & BIT(4);
+    uint16_t port_addr = (f_qualification >> 16) & 0xffff;
+
+    bool success = false;
+
+    if (is_read) {
+        // prime the result
+        vctx->eax = 0;
+    }
+
+    if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
+        assert(!is_string);
+        if (is_read) {
+            // invalid read to simulate no device on pci bus
+            vctx->eax = 0xffffffff;
+        }
+        success = true;
+    } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1
+               || port_addr == 0x4d0) {
+        assert(!is_string);
+        // PIC1/2 access
+        if (is_read) {
+            // invalid read
+            vctx->eax = 0xffffffff;
+        }
+        success = true;
+    } else if (port_addr == 0x70 || port_addr == 0x71) {
+        // cmos
+        assert(!is_string);
+        success = true;
+    } else if (port_addr == 0x80) {
+        assert(!is_string);
+        // io port access delay, no-op
+        if (!is_read) {
+            success = true;
+        }
+    } else if (port_addr == 0x3f2) {
+        assert(!is_string);
+        // floppy disk, seems sus, when booting memtest in nixos, it will write IRQ enable to this register and hangs...
+        success = true;
+
+    } else if (port_addr == 0x87 || (port_addr >= 0 && port_addr <= 0x1f)) {
+        assert(!is_string);
+        // dma controller
+        success = true;
+
+    } else if (port_addr == 0x2f9) {
+        assert(!is_string);
+        // parallel port
+        success = true;
+
+    } else if (port_addr == 0x3e9 || port_addr == 0x2e9) {
+        assert(!is_string);
+        // some sort of serial device
+        success = true;
+
+    } else if (port_addr >= 0x60 && port_addr <= 0x64) {
+        assert(!is_string);
+        // PS2 controller
+        success = true;
+    } else if (port_addr >= 0xAF00 && port_addr <= 0xaf00 + 12) {
+        /* See https://www.qemu.org/docs/master/specs/acpi_cpu_hotplug.html for details.
+         * Basically we want to emulate QEMU_CPUHP_R_CMD_DATA2 so that the guest does not try to
+         * use modern CPU hot plugging functionality which invovles more emulation.
+         */
+        if (port_addr == 0xAF00) {
+            vctx->eax = 0x1;
+        }
+        success = true;
+    } else if (port_addr == 0x92) {
+        // TODO: handle properly, I don't understand why UEFI is touching A20 gate register
+        assert(!is_string);
+        success = true;
+    } else if (port_addr == 0xb004) {
+        vctx->eax = 0;
+        success = true;
+    } else if (port_addr == 0x5658 || port_addr == 0x5659) {
+        // vmware backdoor
+        // https://wiki.osdev.org/VMware_tools
+        success = true;
+    } else if (port_addr == 0x4e || port_addr == 0x4f || port_addr == 0x2e || port_addr == 0x2f
+               || (port_addr >= 0xc80 && port_addr <= 0xc84) || (port_addr >= 0x1c80 && port_addr <= 0x1c84)
+               || (port_addr >= 0x2c80 && port_addr <= 0x2c84) || (port_addr >= 0x3c80 && port_addr <= 0x3c84)
+               || (port_addr >= 0x4c80 && port_addr <= 0x4c84) || (port_addr >= 0x5c80 && port_addr <= 0x5c84)
+               || (port_addr >= 0x6c80 && port_addr <= 0x6c84) || (port_addr >= 0x7c80 && port_addr <= 0x7c84)
+               || (port_addr >= 0x8c80 && port_addr <= 0x8c84) || (port_addr >= 0x9c80 && port_addr <= 0x9c84)
+               || (port_addr >= 0xac80 && port_addr <= 0xac84) || (port_addr >= 0xbc80 && port_addr <= 0xbc84)
+               || (port_addr >= 0xcc80 && port_addr <= 0xcc84) || (port_addr >= 0xdc80 && port_addr <= 0xdc84)
+               || (port_addr >= 0xec80 && port_addr <= 0xec84) || (port_addr >= 0xfc80 && port_addr <= 0xfc84)) {
+        if (is_read) {
+            vctx->eax = 0;
+        }
+        success = true;
+    } else if (port_addr == 0x3BE || port_addr == 0x7BE || port_addr == 0x3BD || port_addr == 0x3BC
+               || port_addr == 0x37A || port_addr == 0x77A || port_addr == 0x379 || port_addr == 0x378
+               || port_addr == 0x27A || port_addr == 0x67a || port_addr == 0x279 || port_addr == 0x278) {
+        // parallel/printer port
+        if (is_read) {
+            vctx->eax = 0;
+        }
+        success = true;
+    } else {
+        if (is_read) {
+            LOG_VMM_ERR("unhandled io port read 0x%x\n", port_addr);
+        } else {
+            LOG_VMM_ERR("unhandled io port write 0x%x (value: 0x%lx)\n", port_addr, vctx->eax);
+        }
+    }
+
+    return success;
+}

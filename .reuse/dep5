@@ -42,3 +42,9 @@ Files:
     examples/*/board/*/rootfs.cpio.gz
 Copyright: Buildroot
 License: GPL-2.0-or-later
+
+Files:
+    examples/simple/board/x86_64_generic_vtx/simple_dsdt.aml
+    examples/simple/board/x86_64_generic_vtx/simple_dsdt.hex
+Copyright: Intel
+License: ACPICA
