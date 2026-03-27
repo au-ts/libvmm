@@ -15,7 +15,7 @@
 char *fault_to_string(int exit_reason);
 /* @billn revisit, seL4 vmexit doesnt have msginfo! */
 
-bool fault_handle(size_t vcpu_id, uint64_t *new_rip);
+bool fault_handle(size_t vcpu_id);
 
 typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,
                                          decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie);
