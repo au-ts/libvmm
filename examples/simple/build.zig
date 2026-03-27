@@ -127,7 +127,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const exe = b.addExecutable(.{
-        .name = b.fmt("vmm_{s}.elf", .{ @tagName(target.result.cpu.arch) }),
+        .name = b.fmt("vmm.elf", .{ @tagName(target.result.cpu.arch) }),
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
