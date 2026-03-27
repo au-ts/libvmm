@@ -350,7 +350,7 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
     return emulate_ioports(vctx, qualification);
 }
 
-bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
+bool fault_handle(size_t vcpu_id)
 {
     bool success = false;
     decoded_instruction_ret_t decoded_ins;
@@ -451,7 +451,6 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
     };
 
-    *new_rip = rip;
     if (success && f_reason != INTERRUPT_WINDOW) {
         // TODO hack force osxsave on so that Windows doesnt #UD on xgetbv/xsetbv
         uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
@@ -459,9 +458,11 @@ bool fault_handle(size_t vcpu_id, uint64_t *new_rip)
 
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
 
+        uint64_t resume_rip = rip;
         if (!fault_is_trap_like(f_reason)) {
-            *new_rip = rip + ins_len;
+            resume_rip += ins_len;
         }
+        microkit_vcpu_x86_deferred_resume(resume_rip, VMCS_PCC_DEFAULT, 0);
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
         LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
