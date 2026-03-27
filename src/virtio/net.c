@@ -325,23 +325,17 @@ static void handle_rx_buffer(struct virtio_device *dev,
 bool virtio_net_handle_rx(struct virtio_net_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
-
-    if (!driver_ok(dev)) {
-        return false;
-    }
-    if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
-        /* vq is not initialised, drop the packet */
-        return false;
-    }
-
     net_buff_desc_t sddf_buffer;
     bool reprocess = true;
     bool respond_to_guest = false;
 
     while (reprocess) {
         while (net_dequeue_active(&state->rx, &sddf_buffer) != -1) {
-            /* On failure, drop packet since we don't know how long until next interrupt */
-            handle_rx_buffer(dev, sddf_buffer.io_or_offset, sddf_buffer.len, &respond_to_guest);
+            /* this is likely most of the time, we don't want to pay the branch misprediction cost */
+            if (likely(driver_ok(dev) && dev->vqs[VIRTIO_NET_RX_VIRTQ].ready)) {
+                /* On failure, drop packet since we don't know how long until next interrupt */
+                handle_rx_buffer(dev, sddf_buffer.io_or_offset, sddf_buffer.len, &respond_to_guest);
+            }
 
             sddf_buffer.len = 0;
             net_enqueue_free(&state->rx, sddf_buffer);
@@ -360,7 +354,7 @@ bool virtio_net_handle_rx(struct virtio_net_device *state)
         return virtio_net_respond(dev);
     }
 
-    return true;
+    return respond_to_guest;
 }
 
 static virtio_device_funs_t functions = {
