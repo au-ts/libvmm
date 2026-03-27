@@ -429,17 +429,30 @@ static void handle_rx_buffer(struct virtio_device *dev,
 bool virtio_net_handle_rx(struct virtio_net_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
-
-    if (!driver_ok(dev)) {
-        return false;
-    }
-    if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
-        /* vq is not initialised, drop the packet */
-        return false;
-    }
-
     net_buff_desc_t sddf_buffer;
     bool reprocess = true;
+
+    if (!driver_ok(dev) || !dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
+        /* vq is not initialised, drop the packet */
+        while (reprocess) {
+            while (!net_queue_empty_active(&state->rx)) {
+                int err = net_dequeue_active(&state->rx, &sddf_buffer);
+                assert(!err);
+
+                net_enqueue_free(&state->rx, sddf_buffer);
+            }
+
+            net_request_signal_active(&state->rx);
+            reprocess = false;
+
+            if (!net_queue_empty_active(&state->rx)) {
+                net_cancel_signal_active(&state->rx);
+                reprocess = true;
+            }
+        }
+        return false;
+    }
+
     bool respond_to_guest = false;
 
     while (reprocess) {
