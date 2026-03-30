@@ -14,7 +14,7 @@
 #include <sddf/network/queue.h>
 
 /* Uncomment this to enable debug logging */
-//#define DEBUG_NET
+// #define DEBUG_NET
 
 #if defined(DEBUG_NET)
 #define LOG_NET(...) do{ printf("VIRTIO(NET): "); printf(__VA_ARGS__); }while(0)
@@ -24,60 +24,6 @@
 
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
 
-
-static void dbg_hexdump(const char *tag, const void *buf, uint32_t len)
-{
-    const uint8_t *p = (const uint8_t *)buf;
-    uint32_t i, j;
-    uint32_t dump_len = len > 128 ? 128 : len; /* clamp */
-
-    if (!buf) {
-        LOG_NET_ERR("%s: <null>\n", tag);
-        return;
-    }
-
-    LOG_NET_ERR("%s: ptr=%p len=%u\n", tag, buf, len);
-
-    for (i = 0; i < dump_len; i += 16) {
-        char line[16 * 3 + 1];
-        char *out = line;
-
-        for (j = 0; j < 16 && (i + j) < dump_len; j++) {
-            out += snprintf(out, sizeof(line) - (out - line),
-                            "%02x ", p[i + j]);
-        }
-
-        *out = '\0';
-        LOG_NET_ERR("%s: %04x: %s\n", tag, i, line);
-    }
-}
-
-static void dbg_dump_rx_chain(struct virtq *virtq, uint16_t head)
-{
-    uint16_t idx = head;
-    int n = 0;
-
-    LOG_NET_ERR("RX chain dump: head=%u virtq->num=%u\n", head, virtq->num);
-
-    while (1) {
-        struct virtq_desc *d = &virtq->desc[idx];
-
-        LOG_NET_ERR("RX desc[%d]: idx=%u addr=%p len=%u flags=0x%x next=%u\n",
-                    n, idx, (void *)(uintptr_t)d->addr, d->len, d->flags, d->next);
-
-        n++;
-
-        if (!(d->flags & VIRTQ_DESC_F_NEXT))
-            break;
-
-        idx = d->next;
-
-        if (n > 16) {
-            LOG_NET_ERR("RX chain dump: stopping after 16 descs\n");
-            break;
-        }
-    }
-}
 
 static inline struct virtio_net_device *device_state(struct virtio_device *dev)
 {
@@ -230,7 +176,6 @@ static void handle_tx_msg(struct virtio_device *dev,
     struct virtq_desc *desc = &virtq->desc[desc_head];
 
     while (dest_remaining > 0) {
-        LOG_NET_ERR("VIRTIO TX transmitting desc len: %d dest_rem: %d skip_rem: %d\n", desc->len, dest_remaining, skip_remaining);
         uint32_t skipping = 0;
         /* Work out how much of this descriptor must be skipped */
         skipping = MIN(skip_remaining, desc->len);
@@ -255,7 +200,6 @@ static void handle_tx_msg(struct virtio_device *dev,
     /* This cannot fail as we check above */
     assert(!error);
 
-    LOG_NET_ERR("VIRTIO TX buffer len: %d\n", written);
     virtq_enqueue_used(virtq, desc_head, written);
     *respond_to_guest = true;
     *notify_tx_server = true;
@@ -350,78 +294,31 @@ static void handle_rx_buffer(struct virtio_device *dev,
     uint16_t guest_idx = virtq->avail->idx;
     uint16_t idx = vq->last_idx;
 
-    //LOG_NET_ERR("VIRTIO RX HANDLING BUFFER 1\n");
-    LOG_NET_ERR("RX enter: buf_offset=%llu size=%u last_idx=%u avail_idx=%u virtq_num=%u\n",
-                (unsigned long long)buf_offset, size, idx, guest_idx, virtq->num);
-
     if (idx == guest_idx) {
+        /* vq is full or not initialised, drop the packet */
         LOG_NET_ERR("RX drop: no available guest RX descs\n");
         return;
     }
-
-    //LOG_NET_ERR("VIRTIO RX HANDLING BUFFER 2\n");
 
     /* Read the head of the descriptor chain */
     uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
     uint16_t curr_desc_head = desc_head;
 
     uint32_t copied = 0;
+    /* Amount of the current descriptor copied */
     uint32_t desc_copied = 0;
 
     struct virtio_net_hdr_mrg_rxbuf virtio_hdr = {0};
     virtio_hdr.num_buffers = 1;
 
-    //LOG_NET_ERR("RX desc_head=%u avail_slot=%u curr_desc_head=%u\n",
-    //            desc_head, idx % virtq->num, curr_desc_head);
-
-    //dbg_dump_rx_chain(virtq, desc_head);
-
-    ///* Dump source payload that will be injected into guest RX */
-    //dbg_hexdump("RX source frame", state->rx_data + buf_offset, size);
-
-    ///* Dump virtio header we prepend */
-    //dbg_hexdump("RX virtio hdr", &virtio_hdr, sizeof(virtio_hdr));
-
-    /* Optional: dump first guest buffer before writing */
-    //{
-    //    struct virtq_desc *first = &virtq->desc[desc_head];
-    //    dbg_hexdump("RX guest first desc BEFORE",
-    //                (void *)(uintptr_t)first->addr,
-    //                first->len);
-    //}
-
-    {
-        uint32_t n = copy_rx(virtq, &curr_desc_head, &desc_copied,
-                             &virtio_hdr, sizeof(struct virtio_net_hdr_mrg_rxbuf));
-        copied += n;
-        //LOG_NET_ERR("RX copy virtio_hdr: wrote=%u copied_total=%u curr_desc_head=%u desc_copied=%u\n",
-        //            n, copied, curr_desc_head, desc_copied);
-    }
-
-    {
-        uint32_t n = copy_rx(virtq, &curr_desc_head, &desc_copied,
-                             state->rx_data + buf_offset, size);
-        copied += n;
-        //LOG_NET_ERR("RX copy payload: wrote=%u copied_total=%u curr_desc_head=%u desc_copied=%u payload_size=%u\n",
-        //            n, copied, curr_desc_head, desc_copied, size);
-    }
-
-    /* Optional: dump first guest buffer after writing */
-    {
-        struct virtq_desc *first = &virtq->desc[desc_head];
-        //dbg_hexdump("RX guest first desc AFTER",
-        //            (void *)(uintptr_t)first->addr,
-        //            first->len);
-    }
-
-    //LOG_NET_ERR("RX enqueue used: desc_head=%u used_len=%u\n", desc_head, copied);
+    copied += copy_rx(virtq, &curr_desc_head, &desc_copied, &virtio_hdr, sizeof(struct virtio_net_hdr_mrg_rxbuf));
+    copied += copy_rx(virtq, &curr_desc_head, &desc_copied, state->rx_data + buf_offset, size);
 
     /* Put it in the used ring */
     virtq_enqueue_used(virtq, desc_head, copied);
 
     /* Record that we've used this descriptor chain now */
     vq->last_idx++;
-    //LOG_NET_ERR("VIRTIO RX HANDLING BUFFER 3 new_last_idx=%u\n", vq->last_idx);
 
     *respond_to_guest = true;
 }
@@ -457,7 +354,6 @@ bool virtio_net_handle_rx(struct virtio_net_device *state)
 
     while (reprocess) {
         while (net_dequeue_active(&state->rx, &sddf_buffer) != -1) {
-            //LOG_NET_ERR("VIRTIO RX GOT BUFFER\n");
             /* On failure, drop packet since we don't know how long until next interrupt */
             handle_rx_buffer(dev, sddf_buffer.io_or_offset, sddf_buffer.len, &respond_to_guest);
 
@@ -473,7 +369,6 @@ bool virtio_net_handle_rx(struct virtio_net_device *state)
             reprocess = true;
         }
     }
-    LOG_NET_ERR("VIRTIO RX\n");
 
     if (respond_to_guest) {
         return virtio_net_respond(dev);

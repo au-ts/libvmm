@@ -292,7 +292,8 @@ bool fault_handle_vppi_event(size_t vcpu_id)
     bool success = vgic_inject_irq(vcpu_id, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error
-        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
+        // TODO: this is probably due to some race condition? Was happening to me but I commented out vdist.h:442
+        //LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
         // Acknowledge to unmask it as our guest will not use the interrupt
         microkit_vcpu_arm_ack_vppi(vcpu_id, ppi_irq);
     }

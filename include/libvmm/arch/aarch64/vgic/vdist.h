@@ -439,8 +439,8 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         } else if (data == 0) {
             vgic_dist_disable(gic_dist);
         } else {
-            LOG_VMM_ERR("Unknown enable register encoding");
-            // @ivanv: goto ignore fault?
+            //LOG_VMM_ERR("Unknown enable register encoding");
+            // @ivanv: goto ignore fault? TODO: this causes something to be not configured on time and we have walls of IRQ not configured errors
         }
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
