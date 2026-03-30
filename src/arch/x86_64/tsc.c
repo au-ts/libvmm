@@ -98,7 +98,7 @@ static uint64_t get_tsc_frequency(void)
      */
 
     uint64_t tsc_hz = (uint64_t)crystal_hz * (numerator / (double)denominator);
-    LOG_TSC("TSC frequency is %u * (%u / %u) = %lu Hz\n", crystal_hz, numerator, denominator, tsc_hz);
+    LOG_TSC("detected TSC frequency is %u * (%u / %u) = %lu Hz\n", crystal_hz, numerator, denominator, tsc_hz);
     return tsc_hz;
 }
 
@@ -113,25 +113,27 @@ static uint64_t measure_tsc_frequency(microkit_channel timer_ch)
     tsc_post = rdtsc();
 
     uint64_t tsc_hz = tsc_post - tsc_pre;
+    LOG_TSC("measured TSC frequency %lu Hz\n", tsc_hz);
     return tsc_hz;
 }
 
-x86_host_tsc_t get_host_tsc(microkit_channel timer_ch)
+uint64_t get_host_tsc_hz(microkit_channel timer_ch)
 {
-    x86_host_tsc_t tsc_metadata = {
-        .valid = true,
-        .invariant = false,
-        .freq_hz = 0,
-    };
-
-    tsc_metadata.freq_hz = measure_tsc_frequency(timer_ch);
-    if (tsc_metadata.freq_hz == 0) {
-        tsc_metadata.valid = false;
+    uint64_t tsc_hz = 0;
+    if (!is_intel_cpu()) {
+        LOG_TSC("Not an Intel CPU.\n");
+        return 0;
     } else {
-        LOG_TSC("TSC frequency: %llu Hz\n", tsc_metadata.freq_hz);
+        tsc_hz = get_tsc_frequency();
+        if (!tsc_hz) {
+            LOG_TSC("cannot detect TSC frequency via cpuid, manually measuring.\n");
+        }
     }
 
-    tsc_metadata.invariant = true;
+    if (!tsc_hz) {
+        /* Likely running on QEMU under nested virtualisation. QEMU doesn't enumerate TSC cpuid leafs */
+        tsc_hz = measure_tsc_frequency(timer_ch);
+    }
 
-    return tsc_metadata;
+    return tsc_hz;
 }
