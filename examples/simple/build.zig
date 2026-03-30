@@ -127,7 +127,7 @@ pub fn build(b: *std.Build) !void {
     });
 
     const exe = b.addExecutable(.{
-        .name = b.fmt("vmm.elf", .{ @tagName(target.result.cpu.arch) }),
+        .name = "vmm.elf",
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
@@ -138,7 +138,10 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    const dtb = blk: {
+    // Architecture-specific system description file
+    // on ARM this is the device tree
+    // on x86 this is the ACPI Differentiated System Description Table
+    const arch_sys_desc = blk: {
         if (target.result.cpu.arch != .x86_64) {
             const base_dts_path = b.fmt("board/{s}/linux.dts", .{ microkit_board });
             const overlay = b.fmt("board/{s}/overlay.dts", .{ microkit_board });
@@ -157,7 +160,8 @@ pub fn build(b: *std.Build) !void {
             dtc_cmd.step.dependOn(&b.addInstallFileWithDir(final_dts, .prefix, "final.dts").step);
             break :blk dtc_cmd.captureStdOut();
         } else {
-            break :blk null;
+            const dsdt_aml_path = b.fmt("board/{s}/simple_dsdt.aml", .{microkit_board});
+            break :blk b.path(dsdt_aml_path);
         }
     };
 
@@ -175,7 +179,7 @@ pub fn build(b: *std.Build) !void {
     exe.linkLibrary(sddf_dep.artifact("util"));
 
     exe.addCSourceFiles(.{
-        .files = &.{ b.fmt("vmm_{s}.c", .{ @tagName(target.result.cpu.arch) }) },
+        .files = &.{"vmm.c"},
         .flags = &.{
             "-Wall",
             "-Werror",
@@ -192,9 +196,11 @@ pub fn build(b: *std.Build) !void {
         }),
     });
 
-    if (dtb != null) {
+    if (microkit_board_option != .x86_64_generic_vtx) {
         // We need to produce the DTB from the DTS before doing anything to produce guest_images
-        guest_images.step.dependOn(&b.addInstallFileWithDir(dtb.?, .prefix, "linux.dtb").step);
+        guest_images.step.dependOn(&b.addInstallFileWithDir(arch_sys_desc, .prefix, "linux.dtb").step);
+    } else {
+        guest_images.step.dependOn(&b.addInstallFileWithDir(arch_sys_desc, .prefix, "dsdt.aml").step);
     }
 
     const linux_image_dep = b.lazyDependency(b.fmt("linux_{t}", .{ target.result.cpu.arch }), .{});
@@ -214,15 +220,17 @@ pub fn build(b: *std.Build) !void {
 
     const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, linuxKernelImageName(target.result.cpu.arch).?) });
     const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "rootfs.cpio.gz") });
-    var dtb_image_arg: []const u8 = "";
-    if (dtb != null) {
-        dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    var arch_sys_desc_image_arg: []const u8 = "";
+    if (microkit_board_option != .x86_64_generic_vtx) {
+        arch_sys_desc_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
+    } else {
+        arch_sys_desc_image_arg = b.fmt("-DGUEST_DSDT_AML_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "dsdt.aml") });
     }
     guest_images.addCSourceFile(.{
         .file = libvmm_dep.path("tools/package_guest_images.S"),
         .flags = &.{
             kernel_image_arg,
-            dtb_image_arg,
+            arch_sys_desc_image_arg,
             initrd_image_arg,
             "-x",
             "assembler-with-cpp",
@@ -234,7 +242,7 @@ pub fn build(b: *std.Build) !void {
 
     var timer_driver: ?*std.Build.Step.InstallArtifact = null;
     if (target.result.cpu.arch == .x86_64) {
-        timer_driver = b.addInstallArtifact(sddf_dep.artifact("driver_timer_tsc_hpet.elf"), .{ .dest_sub_path = "timer_driver_x86_64.elf" });
+        timer_driver = b.addInstallArtifact(sddf_dep.artifact("driver_timer_tsc_hpet.elf"), .{ .dest_sub_path = "timer_driver.elf" });
     }
 
     const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
