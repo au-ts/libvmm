@@ -47,17 +47,17 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
 
-    ## Client2 VM
-    #vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=100)
-    #vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0)])
-    #client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
-    #sdf.add_pd(vmm_client2)
+    # Client2 VM
+    vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=100)
+    vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0)])
+    client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
+    sdf.add_pd(vmm_client2)
 
-    ## Client3 VM - Outside vswitch
-    #vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=100)
-    #vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0)])
-    #client3 = Vmm(sdf, vmm_client3, vm_client3, client_dtb)
-    #sdf.add_pd(vmm_client3)
+    # Client3 VM - Outside vswitch
+    vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=100)
+    vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0)])
+    client3 = Vmm(sdf, vmm_client3, vm_client3, client_dtb)
+    sdf.add_pd(vmm_client3)
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
@@ -74,8 +74,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
                                 serial_virt_tx, virt_rx=serial_virt_rx, enable_color=True)
     client0.add_virtio_mmio_console(guest_serial_node, serial_system)
     client1.add_virtio_mmio_console(guest_serial_node, serial_system)
-    #client2.add_virtio_mmio_console(guest_serial_node, serial_system)
-    #client3.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client2.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client3.add_virtio_mmio_console(guest_serial_node, serial_system)
 
     pds = [
         serial_driver,
@@ -100,10 +100,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         "client0_net_copier", "network_copy0.elf", priority=98, budget=20000)
     client1_net_copier = ProtectionDomain(
         "client1_net_copier", "network_copy1.elf", priority=98, budget=20000)
-    #client2_net_copier = ProtectionDomain(
-    #    "client2_net_copier", "network_copy2.elf", priority=98, budget=20000)
-    #client3_net_copier = ProtectionDomain(
-    #    "client3_net_copier", "network_copy3.elf", priority=98, budget=20000)
+    client2_net_copier = ProtectionDomain(
+        "client2_net_copier", "network_copy2.elf", priority=98, budget=20000)
+    client3_net_copier = ProtectionDomain(
+        "client3_net_copier", "network_copy3.elf", priority=98, budget=20000)
     vswitch = ProtectionDomain("net_vswitch", "network_vswitch.elf", priority=97) # TODO: prio?
 
     pds = [
@@ -112,8 +112,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         net_virt_tx,
         client0_net_copier,
         client1_net_copier,
-    #    client2_net_copier,
-    #    client3_net_copier,
+        client2_net_copier,
+        client3_net_copier,
         vswitch,
     ]
     for pd in pds:
@@ -121,8 +121,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
 
     client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=vswitch)
     client1.add_virtio_mmio_net(guest_net_node, net_system, copier=client1_net_copier, vswitch=vswitch)
-    #client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=vswitch)
-    #client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=None)
+    client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=vswitch)
+    client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=None)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -137,8 +137,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     partition = int(args.partition) if args.partition else board.partition
     client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
     client1.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    #client2.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    #client3.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client2.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client3.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
 
     pds = [
         blk_driver,
@@ -171,10 +171,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert client0.serialise_config(output_dir)
     assert client1.connect()
     assert client1.serialise_config(output_dir)
-    #assert client2.connect()
-    #assert client2.serialise_config(output_dir)
-    #assert client3.connect()
-    #assert client3.serialise_config(output_dir)
+    assert client2.connect()
+    assert client2.serialise_config(output_dir)
+    assert client3.connect()
+    assert client3.serialise_config(output_dir)
 
     with open(f"{output_dir}/{sdf_file}", "w+") as f:
         f.write(sdf.render())
