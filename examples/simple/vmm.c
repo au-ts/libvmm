@@ -121,16 +121,16 @@ void init(void)
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, COM1_IO_PORT_ID, COM1_IO_PORT_ADDR, COM1_IO_PORT_SIZE);
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    /* Retrieve the TSC frequency from hardware */
-    x86_host_tsc_t tsc_metadata = get_host_tsc(TIMER_DRV_CH_FOR_LAPIC);
-    if (!tsc_metadata.valid) {
-        LOG_VMM_ERR("cannot retrieve TSC frequency\n");
+    /* Determine the CPU's TSC frequency */
+    uint64_t tsc_hz = get_host_tsc_hz(TIMER_DRV_CH_FOR_LAPIC);
+    if (!tsc_hz) {
+        LOG_VMM_ERR("cannot determine TSC frequency\n");
         return;
     }
 
     /* Initialise the virtual Local and I/O APICs */
     //                                                        @billn revisit vapic vaddr
-    bool success = virq_controller_init(tsc_metadata.freq_hz, 0xfffffffffffffff);
+    bool success = virq_controller_init(tsc_hz, 0xfffffffffffffff);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
         return;
