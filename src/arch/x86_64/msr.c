@@ -93,11 +93,11 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         //                   enable    is boot cpu
         result = LAPIC_GPA | BIT(11) | BIT(8);
         break;
-    case IA32_MCG_CAP:
-    case IA32_MCG_STATUS:
-    case IA32_MTRRCAP:
-    case IA32_MTRR_DEF_TYPE:
-    case IA32_PAT:
+    // case IA32_MCG_CAP:
+    // case IA32_MCG_STATUS:
+    // case IA32_MTRRCAP:
+    // case IA32_MTRR_DEF_TYPE:
+    // case IA32_PAT:
         // @billn revisit above 5
     case IA32_SPEC_CTRL:
         // @billn revisit, I think we should use Virtualize IA32_SPEC_CTRL
