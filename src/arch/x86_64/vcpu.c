@@ -16,35 +16,73 @@
 #include <libvmm/arch/x86_64/util.h>
 #include <sel4/arch/vmenter.h>
 
-void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
-{
-    // @billn explain
+/* Document referenced:
+ * [1] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *     Order Number: 325462-080US June 2023
+ */
 
-    // Set up system registers
+bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
+{
+    /* Set up control registers */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0, CR0_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR3, cr3);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, CR4_DEFAULT);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_DEFAULT);
+    /* Prevent guest from turning off VM mode */
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, CR4_EN_MASK);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_LM_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, RFLAGS_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, gdt_gpa);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_LIMIT, gdt_limit);
+
+    /* Check that all CR0 and CR4 features we need are supported by the host.
+     * We perform this check because seL4 will clear any unsupported feature bits. */
+    uint64_t read_back_cr0 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0);
+    if (!check_baseline_bits(CR0_DEFAULT, read_back_cr0)) {
+        LOG_VMM_ERR("required Control Register 0 (CR0) features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", CR0_DEFAULT, read_back_cr0);
+        print_missing_baseline_bits(CR0_DEFAULT, read_back_cr0);
+        return false;
+    }
+
+    uint64_t read_back_cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+    if (!check_baseline_bits(CR4_DEFAULT, read_back_cr4)) {
+        LOG_VMM_ERR("required Control Register 4 (CR4) features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", CR4_DEFAULT, read_back_cr4);
+        print_missing_baseline_bits(CR4_DEFAULT, read_back_cr4);
+        return false;
+    }
+
+    /* Set up VMCS control registers */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, VMCS_SPC_DEFAULT);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, VMCS_VEC_LM_DEFAULT);
 
-    // These asserts will fail if your host CPU doesn't support all the VT-x features
-    // that libvmm uses.
+    /* Check that all the VT-x features we need are supported by the host. */
     uint64_t read_back_ppc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
+    if (!check_baseline_bits(VMCS_PCC_DEFAULT, read_back_ppc)) {
+        LOG_VMM_ERR("required Primary Processor-Based VM-Execution Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_PCC_DEFAULT, read_back_ppc);
+        print_missing_baseline_bits(VMCS_PCC_DEFAULT, read_back_ppc);
+        return false;
+    }
+
     uint64_t read_back_spc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS);
-    assert((read_back_ppc & VMCS_PCC_DEFAULT) == VMCS_PCC_DEFAULT);
-    assert((read_back_spc & VMCS_SPC_DEFAULT) == VMCS_SPC_DEFAULT);
+    if (!check_baseline_bits(VMCS_SPC_DEFAULT, read_back_spc)) {
+        LOG_VMM_ERR("required Secondary Processor-Based VM-Execution Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_SPC_DEFAULT, read_back_spc);
+        print_missing_baseline_bits(VMCS_SPC_DEFAULT, read_back_spc);
+        return false;
+    }
 
-    // @billn explain
-    // @billn todo add other important bits
+    uint64_t read_back_vec = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
+    if (!check_baseline_bits(VMCS_VEC_LM_DEFAULT, read_back_vec)) {
+        LOG_VMM_ERR("required VM-Entry Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_VEC_LM_DEFAULT, read_back_vec);
+        print_missing_baseline_bits(VMCS_VEC_LM_DEFAULT, read_back_vec);
+        return false;
+    }
 
-    // prevent the guest from turning off VMX mode
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, 1 << 13);
-    // @billn todo add other registers with mask
-
+    /* These aren't useful in long mode so we just leave them in a sane default enough to boot a guest kernel. */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_BASE, 0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_BASE, 0);
@@ -66,25 +104,18 @@ void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_LIMIT, 0xfffff);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_LIMIT, 0xfffff);
 
-    // 25-4 Vol. 3C @billn explain
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 0xA09B);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093);
+    /* See [1] "Table 25-2. Format of Access Rights" */
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS,
+                                 0xA09B); // present ring-0 executable 64-bit code segment
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 0xC093); // present ring-0 data segment
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 0xC093);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_ACCESS_RIGHTS, 0xC093);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 0x3 | 1 << 4 | 1 << 7 | 1 << 15);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, 0x2 | 1 << 7);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, BIT(16)); // not present
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, BIT(16)); // not present
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, BIT(16)); // not present
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7); // busy 32-bit TSS
 
-    // microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_VIRTUAL_APIC_ADDRESS, vapic_page_paddr);
-    // microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_APIC_ACCESS_ADDRESS, apic_access_page_paddr);
-
-    // Table 25-16. Definitions of VM-Entry Controls
-    // load EFER on entry
-    uint64_t entry_controls = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
-    entry_controls |= BIT(15) | BIT(9);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, entry_controls);
+    return true;
 }
 
 void vcpu_print_regs(size_t vcpu_id)
