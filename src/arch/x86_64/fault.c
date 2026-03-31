@@ -17,6 +17,7 @@
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
+#include <libvmm/arch/x86_64/fpu.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
@@ -447,8 +448,7 @@ bool fault_handle(size_t vcpu_id)
         break;
     }
     case XSETBV:
-        // LOG_VMM("XSETBV, rip 0x%lx\n", rip);
-        success = true;
+        success = emulate_xsetbv(&vctx);
         break;
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
@@ -466,7 +466,7 @@ bool fault_handle(size_t vcpu_id)
             resume_rip += ins_len;
         }
         microkit_vcpu_x86_deferred_resume(resume_rip, VMCS_PCC_DEFAULT, 0);
-    } else if (!success && (f_reason == RDMSR || f_reason == WRMSR)) {
+    } else if (!success && (f_reason == RDMSR || f_reason == WRMSR || f_reason == XSETBV)) {
         // From [2b] "Specifying a reserved or unimplemented MSR address in ECX will also cause a
         // general protection exception."
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_EXCEPTION_ERROR_CODE, 0);
