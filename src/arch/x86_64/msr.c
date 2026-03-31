@@ -133,6 +133,11 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case IA32_PRED_CMD:
         // @billn revisit, security concerns same as IA32_SPEC_CTRL, as they are used for speculative exec controls
         break;
+    case IA32_XSS:
+        if (value != 0) {
+            LOG_VMM_ERR("unexpected value 0x%lx written to IA32_XSS\n", value);
+        }
+        break;
     default:
         LOG_VMM("unknown wrmsr 0x%x, value 0x%lx\n", vctx->ecx, value);
         return false;
