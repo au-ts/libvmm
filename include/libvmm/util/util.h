@@ -9,6 +9,7 @@
 
 #include <microkit.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <libvmm/util/printf.h>
 
@@ -63,6 +64,12 @@ void print_mem_hex(uintptr_t addr, size_t size);
 
 #endif
 #endif
+
+/* Returns true if all set bits in `baseline` are also set in `actual` */
+bool check_baseline_bits(uint64_t baseline, uint64_t actual);
+
+/* Print all bit indexes that are set in `baseline` but not set in `actual` */
+void print_missing_baseline_bits(uint64_t baseline, uint64_t actual);
 
 #if defined(CONFIG_ARCH_X86_64)
 static inline uint64_t rdtsc(void)
