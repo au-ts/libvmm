@@ -50,7 +50,7 @@ const targets = [_]Target {
         .board = MicrokitBoard.x86_64_generic_vtx,
         .zig_target = std.Target.Query{
             .cpu_arch = .x86_64,
-            .cpu_model = .{ .explicit = std.Target.Cpu.Model.generic(.x86_64) },
+            .cpu_model = .{ .explicit = &std.Target.x86.cpu.x86_64_v2 },
             .os_tag = .freestanding,
             .abi = .none,
         },
