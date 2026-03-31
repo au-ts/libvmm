@@ -176,9 +176,9 @@ qemu: $(IMAGE_FILE) blk_storage
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
-			-drive file=blk_storage,format=raw,if=none,id=hd \
-			$(QEMU_BLK_ARGS) \
-			$(QEMU_NET_ARGS) \
+			-drive file=blk_storage,format=raw,if=none,id=drive0 \
+			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1,bus=virtio-mmio-bus.1 \
+			-device virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0 \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 
 clean::

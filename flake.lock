@@ -138,18 +138,14 @@
         "zig-overlay": "zig-overlay"
       },
       "locked": {
-        "lastModified": 1764823094,
-        "narHash": "sha256-Eeef5J0y31NH/F5Z0fayJ+4mroYfb8JPadu3cw6cNhc=",
-        "owner": "au-ts",
-        "repo": "microkit_sdf_gen",
-        "rev": "13686a373b9189c7b1d778cd749d7d8bbd8a63f6",
-        "type": "github"
+        "lastModified": 1770854772,
+        "narHash": "sha256-f6LRUewppNF/E/QrvE7nCI++NOK+Eg4x9MjiCbE66KQ=",
+        "path": "/home/jduchniewicz/Projects/UNSW/microkit_sdf_gen",
+        "type": "path"
       },
       "original": {
-        "owner": "au-ts",
-        "ref": "0.28.1",
-        "repo": "microkit_sdf_gen",
-        "type": "github"
+        "path": "/home/jduchniewicz/Projects/UNSW/microkit_sdf_gen",
+        "type": "path"
       }
     },
     "systems": {

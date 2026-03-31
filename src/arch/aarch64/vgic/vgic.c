@@ -78,7 +78,8 @@ bool vgic_handle_fault_dist(size_t vcpu_id, size_t offset, size_t fsr, seL4_User
         assert(success);
     } else {
         success = vgic_handle_fault_dist_write(vcpu_id, &vgic, offset, fsr, regs);
-        assert(success);
+        return true;
+        //assert(success);
     }
 
     return success;

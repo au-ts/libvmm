@@ -9,7 +9,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     zig-overlay.url = "github:mitchellh/zig-overlay";
     zig-overlay.inputs.nixpkgs.follows = "nixpkgs";
-    sdfgen.url = "github:au-ts/microkit_sdf_gen/0.28.1";
+    sdfgen.url = "path:/home/jduchniewicz/Projects/UNSW/microkit_sdf_gen";
     sdfgen.inputs.nixpkgs.follows = "nixpkgs";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -92,6 +92,7 @@
               name = "libvmm-dev";
 
               microkit-platform = microkit-platforms.${system} or (throw "Unsupported system: ${system}");
+
 
               env.MICROKIT_SDK = pkgs.fetchzip {
                 url = "${microkit-url}/microkit-sdk-${microkit-version}-${microkit-platform}.tar.gz";

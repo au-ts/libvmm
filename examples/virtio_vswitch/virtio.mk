@@ -20,6 +20,7 @@ SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
+BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
@@ -37,7 +38,8 @@ REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
 
-CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
+CLIENT_VM_USERLEVEL_INIT := blk_client_init
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
@@ -53,15 +55,17 @@ CFLAGS += \
 	  -I$(VIRTIO_EXAMPLE)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
 
 include $(SDDF)/util/util.mk
+ifeq ($(MICROKIT_BOARD), maaxboard)
 include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
-include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
+endif
 include $(SERIAL_COMPONENTS)/serial_components.mk
+include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
+include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
 include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
 include $(BLK_COMPONENTS)/blk_components.mk
-include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
 include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/uio/uio.mk
@@ -69,7 +73,7 @@ include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
-	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
+	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf network_vswitch.elf
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -81,9 +85,17 @@ all: ${IMAGE_FILE}
 
 -include vmm.d
 
-$(IMAGES): libsddf_util_debug.a
+$(IMAGES): libsddf_util_debug.a libvmm.a
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
+	cp client_vmm.elf client_vmm0.elf
+	cp client_vmm.elf client_vmm1.elf
+	cp client_vmm.elf client_vmm2.elf
+	cp client_vmm.elf client_vmm3.elf
+	cp network_copy.elf network_copy0.elf
+	cp network_copy.elf network_copy1.elf
+	cp network_copy.elf network_copy2.elf
+	cp network_copy.elf network_copy3.elf
 	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
@@ -93,26 +105,42 @@ endif
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM2.data client_vmm2.elf
+	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM3.data client_vmm3.elf
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
 	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM.data client_vmm.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM2.data client_vmm2.elf
+	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM3.data client_vmm3.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM2.data client_vmm2.elf
+	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM3.data client_vmm3.elf
 	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy0.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client1_net_copier.data network_copy1.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client2_net_copier.data network_copy2.elf
+	$(OBJCOPY) --update-section .net_copy_config=net_copy_client3_net_copier.data network_copy3.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM2.data client_vmm2.elf
+	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM3.data client_vmm3.elf
+	$(OBJCOPY) --update-section .net_vswitch_config=net_vswitch.data network_vswitch.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
 		--config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-.PHONY: client_vm
-client_vm:
+.PHONY: vm_dir
+vm_dir:
 	mkdir -p client_vm
 
 ${LINUX}:
@@ -128,22 +156,23 @@ ${INITRD}:
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 client_vm/rootfs.cpio.gz: ${INITRD} \
-	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
+	$(CLIENT_VM_USERLEVEL_INIT) $(CLIENT_VM_USERLEVEL_HOME) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(SDDF)/tools/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM) GPT
 
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
-	$(CHECK_FLAGS_BOARD_MD5) |client_vm
+	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
+client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
@@ -155,7 +184,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
+client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files

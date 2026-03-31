@@ -6,7 +6,16 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <microkit.h>
-#include <libvmm/libvmm.h>
+#include <libvmm/config.h>
+#include <libvmm/guest.h>
+#include <libvmm/virq.h>
+#include <libvmm/util/util.h>
+#include <libvmm/virtio/virtio.h>
+#include <libvmm/virtio/console.h>
+#include <libvmm/virtio/block.h>
+#include <libvmm/virtio/net.h>
+#include <libvmm/arch/aarch64/linux.h>
+#include <libvmm/arch/aarch64/fault.h>
 #include <sddf/serial/queue.h>
 #include <sddf/serial/config.h>
 #include <sddf/blk/queue.h>
@@ -38,18 +47,14 @@ serial_queue_handle_t serial_tx_queue;
 
 static struct virtio_console_device virtio_console;
 
-/* /\* Virtio Block *\/ */
+/* Virtio Block */
 static blk_queue_handle_t blk_queue;
 static struct virtio_blk_device virtio_blk;
 
-/* /\* Virtio Net *\/ */
+/* Virtio Net */
 net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
 static struct virtio_net_device virtio_net;
-
-/* PCI Configuration */
-uintptr_t pci_ecam;
-uintptr_t pci_memory_resource;
 
 void init(void)
 {
@@ -72,9 +77,16 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram, (uintptr_t)_guest_kernel_image, kernel_size,
-                                             (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
-                                             (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
+    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
+                                             (uintptr_t) _guest_kernel_image,
+                                             kernel_size,
+                                             (uintptr_t) _guest_dtb_image,
+                                             vmm_config.dtb,
+                                             dtb_size,
+                                             (uintptr_t) _guest_initrd_image,
+                                             vmm_config.initrd,
+                                             initrd_size
+                                            );
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -87,21 +99,48 @@ void init(void)
         return;
     }
 
-    success = virtio_pci_ecam_init(0x10000000, 0x100000000, 0x100000);
-    assert(success);
-    success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
-    assert(success);
+    /* Find the details of VirtIO console, net and block devices from sdfgen */
+    int console_vdev_idx = -1;
+    int blk_vdev_idx = -1;
+    int net_vdev_idx = -1;
+    assert(vmm_config.num_virtio_mmio_devices == 3);
+    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
+        switch (vmm_config.virtio_mmio_devices[i].type) {
+        case VIRTIO_DEVICE_ID_CONSOLE:
+            console_vdev_idx = i;
+            break;
+        case VIRTIO_DEVICE_ID_BLOCK:
+            blk_vdev_idx = i;
+            break;
+        case VIRTIO_DEVICE_ID_NET:
+            net_vdev_idx = i;
+            break;
+        }
+    }
+    assert(console_vdev_idx != -1);
+    assert(blk_vdev_idx != -1);
+    assert(net_vdev_idx != -1);
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id);
+    /* Initialise virtIO console device */
+    success = virtio_mmio_console_init(&virtio_console,
+                                       vmm_config.virtio_mmio_devices[console_vdev_idx].base,
+                                       vmm_config.virtio_mmio_devices[console_vdev_idx].size,
+                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
+                                       &serial_rx_queue, &serial_tx_queue,
+                                       serial_config.tx.id);
     assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
-                                  storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
+    /* Initialise virtIO block device */
+    success = virtio_mmio_blk_init(&virtio_blk, vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
+                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, (uintptr_t)blk_config.data.vaddr,
+                                   blk_config.data.size, storage_info, &blk_queue, blk_config.virt.num_buffers,
+                                   blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -110,10 +149,15 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
-
-    success = virtio_pci_net_init(&virtio_net, 2, 50, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                  net_config.mac_addr);
+    success = virtio_mmio_net_init(&virtio_net,
+                                   vmm_config.virtio_mmio_devices[net_vdev_idx].base,
+                                   vmm_config.virtio_mmio_devices[net_vdev_idx].size,
+                                   vmm_config.virtio_mmio_devices[net_vdev_idx].irq,
+                                   &net_rx_queue, &net_tx_queue,
+                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                   net_config.rx.id, net_config.tx.id,
+                                   net_config.mac_addr
+                                  );
     assert(success);
 
     /* Finally start the guest */
