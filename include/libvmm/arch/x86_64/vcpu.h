@@ -21,8 +21,8 @@
 /* "CR0 — Contains system control flags that control operating mode and states of the processor."
  * Consult [1a] for more details
  */
-#define CR0_PG BIT_LOW(31) /* Paging On */
-#define CR0_PE BIT_LOW(0)  /* Protection Enable */
+#define CR0_PG BIT(31) /* Paging On */
+#define CR0_PE BIT(0)  /* Protection Enable */
 
 #define CR0_DEFAULT (CR0_PG | CR0_PE)
 
@@ -30,26 +30,29 @@
  *  operating system or executive support for specific processor capabilities."
  * Consult [1b] for more details
  */
-#define CR4_PAE BIT_LOW(5) /* Physical Address Extension */
-// @billn do we need CR4.PGE and CR4.MCE as well?
+#define CR4_PAE     BIT(5)  /* Physical Address Extension */
+#define CR4_OSFXSR  BIT(9)  /* Operating system support for FXSAVE and FXRSTOR instructions */
+#define CR4_VMXE    BIT(13) /* Virtual Machine Extensions Enable */
+#define CR4_OSXSAVE BIT(18) /* XSAVE and Processor Extended States Enable */
 
-#define CR4_DEFAULT (CR4_PAE)
+#define CR4_DEFAULT (CR4_PAE | CR4_OSFXSR | CR4_OSXSAVE)
+#define CR4_EN_MASK (CR4_VMXE)
 
 /* Extended Feature Enable Register: "provides several fields related to IA-32e mode
  *                                    enabling and operation"
  * Note: "IA-32e" is just Intel's name for long mode.
  * Consult [1c] for more details
  */
-#define IA32_EFER_LME (BIT_LOW(8) | BIT_LOW(10)) /* Enable IA-32e mode operation */
+#define IA32_EFER_LME (BIT(8) | BIT(10)) /* Enable IA-32e mode operation */
 
-#define IA32_EFER_DEFAULT (IA32_EFER_LME)
+/* Long mode default */
+#define IA32_EFER_LM_DEFAULT (IA32_EFER_LME)
 
 /* The 32-bit EFLAGS/RFLAGS register contains a group of status flags, a control flag, and a group of system flags.
  * We don't use anything here during boot to mask all IRQs, but the 2nd bit must always be set as 1. See [1d]
  */
 #define RFLAGS_DEFAULT BIT(1)
 
-void vcpu_set_up_reset_state(uint64_t vapic_page_paddr, uint64_t apic_access_page_paddr);
-void vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
+bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
 
 void vcpu_print_regs(size_t vcpu_id);

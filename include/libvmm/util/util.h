@@ -9,6 +9,7 @@
 
 #include <microkit.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sddf/util/printf.h>
 
@@ -64,6 +65,12 @@ static void assert_fail(const char *assertion, const char *file, unsigned int li
 
 #endif
 #endif
+
+/* Returns true if all set bits in `baseline` are also set in `actual` */
+bool check_baseline_bits(uint64_t baseline, uint64_t actual);
+
+/* Print all bit indexes that are set in `baseline` but not set in `actual` */
+void print_missing_baseline_bits(uint64_t baseline, uint64_t actual);
 
 #if defined(CONFIG_ARCH_X86_64)
 static inline uint64_t rdtsc(void)
