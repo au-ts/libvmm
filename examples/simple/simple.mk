@@ -30,7 +30,8 @@ else ifeq ($(ARCH),x86_64)
 	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
 	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
 	DSDT_AML ?= $(SYSTEM_DIR)/simple_dsdt.aml
-	ARCH_FLAGS := -target x86_64-unknown-elf
+# -march=x86-64-v2 so that we get extra optimisations without AVX, since seL4 doesnt't enable it by default
+	ARCH_FLAGS := -target x86_64-unknown-elf -march=x86-64-v2
 	IMAGES += timer_driver.elf
 
 	QEMU := qemu-system-x86_64
