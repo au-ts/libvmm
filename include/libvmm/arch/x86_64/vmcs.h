@@ -13,8 +13,6 @@
  * Document referenced:
  * [1] include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
- *   [2a] Location: "VIRTUAL MACHINE CONTROL STRUCTURES", page: "25-10 Vol. 3C"
- *   [2b] Location: "VIRTUAL MACHINE CONTROL STRUCTURES", page: "25-12 Vol. 3C"
  */
 
 // [1] Virtual Machine Control Structure (VMCS) field selectors used by seL4
@@ -178,21 +176,18 @@
 #define VMX_HOST_RSP 0x00006C14
 #define VMX_HOST_RIP 0x00006C16
 
-// [2a] Primary Processor-Based VM-Execution Controls Register
+/* [2] "Primary Processor-Based VM-Execution Controls Register" */
 #define VMCS_PPC_ACTIVATE_SECONDARY_CTRL BIT(31)
 #define VMCS_PPC_USE_TPR_SHADOW BIT(21)
 
-#define VMCS_PPC_IRQ_WINDOW_EXITING BIT(2)
-
 #define VMCS_PCC_DEFAULT (VMCS_PPC_USE_TPR_SHADOW | VMCS_PPC_ACTIVATE_SECONDARY_CTRL)
-#define VMCS_PCC_EXIT_IRQ_WINDOW (VMCS_PCC_DEFAULT | VMCS_PPC_IRQ_WINDOW_EXITING)
 
-// [2b] Secondary Processor-Based VM-Execution Controls Register
-#define VMCS_SPC_ENABLE_EPT BIT(1)
-#define VMCS_SPC_ENABLE_XSAVE BIT(20)
-
-#define VMCS_SPC_ENABLE_VAPIC BIT(0)
-#define VMCS_SPC_ENABLE_APIC_REG_VIRT BIT(8)
+/* [2] "Definitions of Secondary Processor-Based VM-Execution Controls" */
+#define VMCS_SPC_ENABLE_VAPIC             BIT(0)
+#define VMCS_SPC_ENABLE_EPT               BIT(1)
+#define VMCS_SPC_ENABLE_VPID              BIT(5)
+#define VMCS_SPC_ENABLE_APIC_REG_VIRT     BIT(8)
 #define VMCS_SPC_ENABLE_VIRT_IRQ_DELIVERY BIT(9)
+#define VMCS_SPC_ENABLE_XSAVES            BIT(20)
 
-#define VMCS_SPC_DEFAULT (VMCS_SPC_ENABLE_EPT | VMCS_SPC_ENABLE_XSAVE | VMCS_SPC_ENABLE_VAPIC | VMCS_SPC_ENABLE_APIC_REG_VIRT | VMCS_SPC_ENABLE_VIRT_IRQ_DELIVERY)
+#define VMCS_SPC_DEFAULT (VMCS_SPC_ENABLE_EPT | VMCS_SPC_ENABLE_VPID | VMCS_SPC_ENABLE_XSAVES | VMCS_SPC_ENABLE_VAPIC | VMCS_SPC_ENABLE_APIC_REG_VIRT | VMCS_SPC_ENABLE_VIRT_IRQ_DELIVERY)
