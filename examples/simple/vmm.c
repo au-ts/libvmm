@@ -125,7 +125,10 @@ void init(void)
         return;
     }
 
-    vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit);
+    if (!vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit)) {
+        LOG_VMM_ERR("Failed to set up virtual CPU\n");
+        return;
+    }
 
     /* Set up the virtual PCI bus */
     assert(pci_x86_init());
