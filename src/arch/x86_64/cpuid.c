@@ -15,22 +15,96 @@
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
  *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
  *    Order Number: 325462-080US June 2023
- * 2. https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
- * 3. https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.txt
  */
 
 /* 4 chars per 32-bit register, 4 registers per leaf, 3 leafs */
 #define CPUID_BRAND_STR_LEN (4 * 4 * 3)
 static const char brand_string[CPUID_BRAND_STR_LEN] = "Trustworthy Systems CPU";
 
-extern uint64_t tsc_hz;
+struct cpuid_state {
+    bool valid;
+    uint64_t tsc_hz;
+};
+
+static struct cpuid_state cpuid_state = { .valid = false };
+
+bool initialise_cpuid(uint64_t tsc_hz)
+{
+    /* Same idea as vcpu.c, we need to check that all CPU features advertised to the guest are
+     * supported by the host CPU. Otherwise guests can crash with undefined opcode. */
+
+    uint32_t a, b, c, d;
+
+    /* Make sure that leaf 0.."Processor Extended State Enumeration" inclusive are enumerated.
+     * Because we also passthrough values for leafs in this range.
+     */
+    uint32_t max_basic_leaf;
+    cpuid(0, 0, &max_basic_leaf, &b, &c, &d);
+    if (max_basic_leaf < 0xd) {
+        LOG_VMM_ERR("Host CPU does not enumerate basic CPUID leafs up to and including 0xd\n");
+        return false;
+    }
+
+    /* Check baseline of basic leafs */
+    cpuid(0x1, 0, &a, &b, &c, &d);
+    if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c)) {
+        LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 ECX\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_1H_X64_V2_BASELINE_ECX, c);
+        print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c);
+        return false;
+    }
+    if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d)) {
+        LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 EDX\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_1H_X64_V2_BASELINE_EDX, d);
+        print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d);
+        return false;
+    }
+
+    cpuid(0x7, 0, &a, &b, &c, &d);
+    if (!check_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b)) {
+        LOG_VMM_ERR("Missing required features in host CPUID leaf 0x7 EBX\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_7H_0_X64_V2_BASELINE_EBX, b);
+        print_missing_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b);
+        return false;
+    }
+
+    /* Now check whether the host CPU enumerates "Extended Processor Signature and Feature Bits" */
+    uint32_t max_ext_leaf;
+    cpuid(0x80000000, 0, &max_ext_leaf, &b, &c, &d);
+    if (max_ext_leaf < 0x80000001) {
+        LOG_VMM_ERR("Host CPU does not enumerate Extended Processor Signature and Feature Bits leaf\n");
+        return false;
+    }
+
+    /* Then check extended leaf feature baseline */
+    cpuid(0x80000001, 0, &max_ext_leaf, &b, &c, &d);
+    if (!check_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_ECX, c)) {
+        LOG_VMM_ERR("Missing required features in host CPUID leaf 0x800000001 ECX\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_80000001H_X64_V2_BASELINE_ECX, c);
+        print_missing_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_ECX, c);
+        return false;
+    }
+
+    if (!check_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_EDX, d)) {
+        LOG_VMM_ERR("Missing required features in host CPUID leaf 0x800000001 EDX\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_80000001H_X64_V2_BASELINE_EDX, d);
+        print_missing_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_EDX, d);
+        return false;
+    }
+
+    cpuid_state = (struct cpuid_state) {
+        .valid = true,
+        .tsc_hz = tsc_hz,
+    };
+    return true;
+}
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
     LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);
 
     switch (vctx->eax) {
-    case 0x0: /* Basic CPUID Information */
+    case 0x0: /* "Basic CPUID Information" */
         vctx->eax = CPUID_0H_EAX_MAX_BASIC_LEAF;
         vctx->ebx = CPUID_0H_GENUINEINTEL_EBX;
         vctx->edx = CPUID_0H_GENUINEINTEL_EDX;
@@ -44,16 +118,16 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = CPUID_1H_X64_V2_BASELINE_EDX;
         break;
 
-    case 0x2: /* Cache and TLB Information */
+    case 0x2: /* "Cache and TLB Information" */
 
-    case 0x4: /* Deterministic Cache Parameters */
+    case 0x4: /* "Deterministic Cache Parameters" */
         /* Passthrough host's values */
         cpuid(vctx->eax, vctx->ecx, (uint32_t *)&vctx->eax, (uint32_t *)&vctx->ebx, (uint32_t *)&vctx->ecx,
               (uint32_t *)&vctx->edx);
         break;
 
-    case 0x7: /* Structured Extended Feature Flags Enumeration */
-        if (vctx->ecx == CPUID_7H_EAX_MAX_SUBLEAF && vctx->ecx == 0) {
+    case 0x7: /* "Structured Extended Feature Flags Enumeration" */
+        if (vctx->ecx == 0) {
             vctx->ebx = CPUID_7H_0_X64_V2_BASELINE_EBX;
         }
         vctx->eax = 0;
@@ -61,7 +135,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0;
         break;
 
-    case 0xb: /* Extended Topology Enumeration Leaf */
+    case 0xb: /* "Extended Topology Enumeration Leaf" */
         // @billn revisit for multiple VCPUs
         vctx->eax = 0;
         vctx->ebx = 0;
@@ -69,7 +143,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0; // x2apic id, though we don't use x2apic
         break;
 
-    case 0xd: { /* Processor Extended State Enumeration */
+    case 0xd: { /* "Processor Extended State Enumeration" */
         uint32_t ecx = vctx->ecx;
         cpuid(0xd, vctx->ecx, (uint32_t *)&vctx->eax, (uint32_t *)&vctx->ebx, (uint32_t *)&vctx->ecx,
               (uint32_t *)&vctx->edx);
@@ -98,28 +172,28 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         break;
     }
 
-    case 0x15: /* Time Stamp Counter and Nominal Core Crystal Clock */
+    case 0x15: /* "Time Stamp Counter and Nominal Core Crystal Clock" */
         vctx->eax = 1; /* Making ratio between Crystal and TSC 1-to-1 */
         vctx->ebx = 1;
-        vctx->ecx = tsc_hz;
+        vctx->ecx = cpuid_state.tsc_hz;
         vctx->edx = 0;
         break;
 
-    case 0x16: /* Processor Frequency Information Leaf */
+    case 0x16: /* "Processor Frequency Information Leaf" */
         /* CPU base, max and bus frequency in MHz */
-        vctx->eax = tsc_hz / 1000000;
-        vctx->ebx = tsc_hz / 1000000;
-        vctx->ecx = tsc_hz / 1000000;
+        vctx->eax = cpuid_state.tsc_hz / 1000000;
+        vctx->ebx = cpuid_state.tsc_hz / 1000000;
+        vctx->ecx = cpuid_state.tsc_hz / 1000000;
         vctx->edx = 0;
         break;
 
-    case 0x80000000: /* Extended Function CPUID Information */
+    case 0x80000000: /* "Extended Function CPUID Information" */
         vctx->eax = CPUID_80000000H_EAX_MAX_EXT_LEAF; /* max input value for extended function cpuid information */
         vctx->ebx = 0;
         vctx->ecx = 0;
         vctx->edx = 0;
         break;
-    case 0x80000001: /* Extended Processor Signature and Feature Bits */
+    case 0x80000001: /* "Extended Processor Signature and Feature Bits" */
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = CPUID_80000001H_X64_V2_BASELINE_ECX;
@@ -130,7 +204,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         }
         break;
 
-    case 0x80000002: /* Processor Brand String. */
+    case 0x80000002: /* "Processor Brand String." */
         memcpy(&(vctx->eax), brand_string, 4);
         memcpy(&(vctx->ebx), brand_string + 4, 4);
         memcpy(&(vctx->ecx), brand_string + 8, 4);
