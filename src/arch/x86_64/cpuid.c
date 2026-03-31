@@ -27,7 +27,6 @@ extern uint64_t tsc_hz;
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
-    uint32_t a, b, c, d;
     LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);
 
     switch (vctx->eax) {
@@ -49,11 +48,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
     case 0x4: /* Deterministic Cache Parameters */
         /* Passthrough host's values */
-        cpuid(vctx->eax, vctx->ecx, &a, &b, &c, &d);
-        vctx->eax = a;
-        vctx->ebx = b;
-        vctx->ecx = c;
-        vctx->edx = d;
+        cpuid(vctx->eax, vctx->ecx, (uint32_t *)&vctx->eax, (uint32_t *)&vctx->ebx, (uint32_t *)&vctx->ecx,
+              (uint32_t *)&vctx->edx);
         break;
 
     case 0x7: /* Structured Extended Feature Flags Enumeration */
@@ -73,35 +69,31 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0; // x2apic id, though we don't use x2apic
         break;
 
-    // sus @billn revisit
-    case 0xd: {
+    case 0xd: { /* Processor Extended State Enumeration */
         uint32_t ecx = vctx->ecx;
         cpuid(0xd, vctx->ecx, (uint32_t *)&vctx->eax, (uint32_t *)&vctx->ebx, (uint32_t *)&vctx->ecx,
               (uint32_t *)&vctx->edx);
         if (ecx == 0) {
-            // TODO: this is a complete hack because we know seL4 will set the XCR
-            // to 0x3.
-            vctx->eax = 0x3;
+            /* Main leaf, only report XCR0 bits that seL4 is configured to support. */
+            vctx->eax = CONFIG_XSAVE_FEATURE_SET;
         }
         if (ecx == 1) {
+            /* Sub-leaf */
 #if !defined(CONFIG_XSAVE_XSAVEC)
             if (vctx->eax & BIT(1)) {
                 vctx->eax &= ~BIT(1);
-                // LOG_VMM("XSAVEC is available in CPU but not available in seL4, disabling for guest\n");
             }
-#endif
+#endif /* !CONFIG_XSAVE_XSAVEC */
 #if !defined(CONFIG_XSAVE_XSAVEOPT)
             if (vctx->eax & BIT(0)) {
                 vctx->eax &= ~BIT(0);
-                // LOG_VMM("XSAVEOPT is available in CPU but not available in seL4, disabling for guest\n");
             }
-#endif
+#endif /* !CONFIG_XSAVE_XSAVEOPT */
 #if !defined(CONFIG_XSAVE_XSAVES)
             if (vctx->eax & BIT(3)) {
                 vctx->eax &= ~BIT(3);
-                // LOG_VMM("XSAVES is available in CPU but not available in seL4, disabling for guest\n");
             }
-#endif
+#endif /* !CONFIG_XSAVE_XSAVES */
         }
         break;
     }
@@ -161,11 +153,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x80000007: /* Invariant TSC */
     case 0x80000008: /* Physical Address size */
         /* Passthrough host's values */
-        cpuid(vctx->eax, vctx->ecx, &a, &b, &c, &d);
-        vctx->eax = a;
-        vctx->ebx = b;
-        vctx->ecx = c;
-        vctx->edx = d;
+        cpuid(vctx->eax, vctx->ecx, (uint32_t *)&vctx->eax, (uint32_t *)&vctx->ebx, (uint32_t *)&vctx->ecx,
+              (uint32_t *)&vctx->edx);
         break;
 
     case 0x3:
