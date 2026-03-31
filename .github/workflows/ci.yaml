@@ -10,8 +10,8 @@ on:
     branches: [ "main" ]
 
 env:
-  MICROKIT_VERSION: 2.1.0
-  MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.1.0/microkit-sdk-2.1.0
+  MICROKIT_VERSION: 2.2.0
+  MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.2.0/
   SDFGEN_VERSION: 0.28.1
   ZIG_VERSION: 0.15.1
 
@@ -43,7 +43,7 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget ${{ env.MICROKIT_URL }}-linux-x86-64.tar.gz
+          wget ${{ env.MICROKIT_URL }}/microkit-sdk-${{ env.MICROKIT_VERSION }}-linux-x86-64.tar.gz
           tar xf microkit-sdk-${{ env.MICROKIT_VERSION }}-linux-x86-64.tar.gz
       - name: Install dependencies (via apt)
         # 'expect' is only a dependency for CI testing
@@ -76,7 +76,7 @@ jobs:
           submodules: 'true'
       - name: Download Microkit SDK
         run: |
-          wget ${{ env.MICROKIT_URL }}-macos-aarch64.tar.gz
+          wget ${{ env.MICROKIT_URL }}/microkit-sdk-${{ env.MICROKIT_VERSION }}-macos-aarch64.tar.gz
           tar xf microkit-sdk-${{ env.MICROKIT_VERSION }}-macos-aarch64.tar.gz
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
