@@ -37,7 +37,7 @@ bool check_baseline_bits(uint64_t baseline, uint64_t actual)
 void print_missing_baseline_bits(uint64_t baseline, uint64_t actual)
 {
     for (int i = 0; i < 64; i++) {
-        if ((baseline & BIT(i)) != (actual & BIT(i))) {
+        if ((baseline & BIT(i)) && !(actual & BIT(i))) {
             printf("missing bit %d\n", i);
         }
     }

@@ -144,6 +144,12 @@ void init(void)
         return;
     }
 
+    /* Initialise CPUID */
+    if (!initialise_cpuid(tsc_hz)) {
+        LOG_VMM_ERR("cannot initialise CPUID\n");
+        return;
+    }
+
     /* Initialise the virtual Local and I/O APICs */
     //                                                        @billn revisit vapic vaddr
     bool success = virq_controller_init(tsc_hz, 0xfffffffffffffff);

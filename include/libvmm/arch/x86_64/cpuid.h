@@ -8,6 +8,14 @@
 
 #include <microkit.h>
 
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ * 2. https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+ * 3. https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.txt
+ */
+
 #define CACHE_LINE_SIZE 64
 #define NUM_LOGICAL_PROCESSORS 1
 
@@ -23,12 +31,9 @@
 /* [1] Table 3-10. More on Feature Information Returned in the ECX Register */
 #define CPUID_1H_ECX_SSE3 BIT(0)
 #define CPUID_1H_ECX_PCLMULQDQ BIT(1)
-#define CPUID_1H_ECX_DTES64 BIT(2)     // DTES64: 64-bit DS area
-#define CPUID_1H_ECX_DS_CPL BIT(4)     // DS-CPL: CPL qualified debug store
 #define CPUID_1H_ECX_SSSE3 BIT(9)
 #define CPUID_1H_ECX_FMA BIT(12)
 #define CPUID_1H_ECX_CMPXCHG16B BIT(13)
-#define CPUID_1H_ECX_XTPR BIT(14)      // xTPR update control
 #define CPUID_1H_ECX_SSE4_1 BIT(19)
 #define CPUID_1H_ECX_SSE4_2 BIT(20)
 #define CPUID_1H_ECX_MOVBE BIT(22)
@@ -59,21 +64,18 @@
 #define CPUID_1H_EDX_SSE1 BIT(25)
 #define CPUID_1H_EDX_SSE2 BIT(26)
 #define CPUID_1H_EDX_SELF_SNOOP BIT(27)
-#define CPUID_1H_EDX_PBE BIT(31) // PBE: Pending Break Enable
 
 /* [1] Table 3-8. Information Returned by CPUID Instruction */
 #define CPUID_7H_EAX_MAX_SUBLEAF 0
 
 #define CPUID_7H_00_EBX_FSGSBASE BIT(0)
 #define CPUID_7H_00_EBX_BMI1 BIT(3)
-#define CPUID_7H_00_EBX_AVX2 BIT(5)
 #define CPUID_7H_00_EBX_SMEP BIT(7) // SMEP: Supervisor Mode Execution Protection
 #define CPUID_7H_00_EBX_BMI2 BIT(8)
 #define CPUID_7H_00_EBX_DEPRECATE_FCS_FDS BIT(13) // Deprecates FPU CS and FPU DS values
 #define CPUID_7H_00_EBX_ADX BIT(19) // ADCX/ADOX instructions support
 #define CPUID_7H_00_EBX_SMAP BIT(20) // SMAP: Supervisor Mode Access Prevention
 #define CPUID_7H_00_EBX_CLFLUSHOPT BIT(23)
-#define CPUID_7H_00_EBX_CLWB BIT(24)
 
 #define CPUID_80000000H_EAX_MAX_EXT_LEAF 0x80000008
 
@@ -102,12 +104,9 @@
 #define CPUID_1H_X64_V2_BASELINE_ECX ( \
     CPUID_1H_ECX_SSE3 | \
     CPUID_1H_ECX_PCLMULQDQ | \
-    CPUID_1H_ECX_DTES64 | \
-    CPUID_1H_ECX_DS_CPL | \
     CPUID_1H_ECX_SSSE3 | \
     CPUID_1H_ECX_FMA | \
     CPUID_1H_ECX_CMPXCHG16B | \
-    CPUID_1H_ECX_XTPR | \
     CPUID_1H_ECX_SSE4_1 | \
     CPUID_1H_ECX_SSE4_2 | \
     CPUID_1H_ECX_MOVBE | \
@@ -147,8 +146,7 @@
     CPUID_1H_EDX_FXSR | \
     CPUID_1H_EDX_SSE1 | \
     CPUID_1H_EDX_SSE2 | \
-    CPUID_1H_EDX_SELF_SNOOP | \
-    CPUID_1H_EDX_PBE \
+    CPUID_1H_EDX_SELF_SNOOP \
 )
 
 /* No:
@@ -160,14 +158,12 @@
 #define CPUID_7H_0_X64_V2_BASELINE_EBX ( \
     CPUID_7H_00_EBX_FSGSBASE | \
     CPUID_7H_00_EBX_BMI1 | \
-    CPUID_7H_00_EBX_AVX2 | \
     CPUID_7H_00_EBX_SMEP | \
     CPUID_7H_00_EBX_BMI2 | \
     CPUID_7H_00_EBX_DEPRECATE_FCS_FDS | \
     CPUID_7H_00_EBX_ADX | \
     CPUID_7H_00_EBX_SMAP | \
-    CPUID_7H_00_EBX_CLFLUSHOPT | \
-    CPUID_7H_00_EBX_CLWB \
+    CPUID_7H_00_EBX_CLFLUSHOPT \
 )
 
 #define CPUID_80000001H_X64_V2_BASELINE_ECX ( \
@@ -182,5 +178,7 @@
     CPUID_80000001_EDX_1GB_PAGE | \
     CPUID_80000001_EDX_LONG_MODE \
 )
+
+bool initialise_cpuid(uint64_t tsc_hz);
 
 bool emulate_cpuid(seL4_VCPUContext *vctx);
