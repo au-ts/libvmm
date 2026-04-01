@@ -16,18 +16,6 @@
 #include <libvmm/arch/x86_64/com.h>
 #include <libvmm/guest.h>
 
-extern uint64_t primary_ata_cmd_pio_id;
-extern uint64_t primary_ata_cmd_pio_addr;
-
-extern uint64_t primary_ata_ctrl_pio_id;
-extern uint64_t primary_ata_ctrl_pio_addr;
-
-extern uint64_t second_ata_cmd_pio_id;
-extern uint64_t second_ata_cmd_pio_addr;
-
-extern uint64_t second_ata_ctrl_pio_id;
-extern uint64_t second_ata_ctrl_pio_addr;
-
 extern struct pci_bus pci_bus_state;
 
 // TODO: hack
