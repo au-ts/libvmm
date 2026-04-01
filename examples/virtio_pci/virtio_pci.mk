@@ -38,6 +38,7 @@ REPORT_FILE := report.txt
 include ${SDDF}/tools/make/board/common.mk
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
+CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
@@ -131,7 +132,8 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 	$(CLIENT_VM_USERLEVEL_INIT) |client_vm
 	$(LIBVMM)/tools/packrootfs ${INITRD} \
 		client_vm/rootfs_staging -o $@ \
-		--startup $(CLIENT_VM_USERLEVEL_INIT)
+		--startup $(CLIENT_VM_USERLEVEL_INIT) \
+		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 blk_storage:
 	$(SDDF)/tools/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM) GPT
