@@ -135,8 +135,8 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_SECTOR_SIZE 512
 
 /* Device (backend) implementation */
-#define SDDF_BLK_NUM_HANDLES 1
-#define SDDF_BLK_DEFAULT_HANDLE 0
+#define VIRTIO_BLK_SIZE_MAX BLK_TRANSFER_SIZE
+#define VIRTIO_BLK_SEG_MAX 8
 // TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
 #define SDDF_MAX_DATA_CELLS 128
