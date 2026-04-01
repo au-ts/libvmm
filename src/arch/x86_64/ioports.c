@@ -47,77 +47,13 @@ int ioports_access_width_to_bytes(ioport_access_width_t access_width)
     }
 }
 
-int emulate_ioport_string_write(seL4_VCPUContext *vctx, char *dest, size_t data_len, bool is_rep,
-                                ioport_access_width_t access_width)
-{
-    int data_index = 0;
-    int max_iterations = 1;
-    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
-
-    if (is_rep) {
-        max_iterations = vctx->ecx;
-    }
-
-    int iteration = 0;
-    for (; iteration < max_iterations && data_index < data_len; iteration++) {
-        uint64_t src_gpa;
-        uint64_t bytes_to_page_boundary;
-        assert(gva_to_gpa(0, vctx->esi, &src_gpa, &bytes_to_page_boundary));
-        char *src = gpa_to_vaddr(src_gpa);
-
-        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
-
-        memcpy(&dest[data_index], src, ioports_access_width_to_bytes(access_width));
-
-        if (eflags & BIT(10)) {
-            vctx->esi -= ioports_access_width_to_bytes(access_width);
-        } else {
-            vctx->esi += ioports_access_width_to_bytes(access_width);
-        }
-        data_index += ioports_access_width_to_bytes(access_width);
-    }
-
-    return ioports_access_width_to_bytes(access_width) * data_index;
-}
-
-int emulate_ioport_string_read(seL4_VCPUContext *vctx, char *data, size_t data_len, bool is_rep,
-                               ioport_access_width_t access_width)
-{
-    int data_index = 0;
-    int max_iterations = 1;
-    uint64_t eflags = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
-
-    if (is_rep) {
-        max_iterations = vctx->ecx;
-    }
-
-    int iteration = 0;
-    for (; iteration < max_iterations && data_index < data_len; iteration++) {
-        uint64_t dest_gpa;
-        uint64_t bytes_to_page_boundary;
-        assert(gva_to_gpa(0, vctx->edi, &dest_gpa, &bytes_to_page_boundary));
-        char *dest = gpa_to_vaddr(dest_gpa);
-
-        assert(bytes_to_page_boundary >= ioports_access_width_to_bytes(access_width));
-
-        memcpy(dest, &data[data_index], ioports_access_width_to_bytes(access_width));
-
-        if (eflags & BIT(10)) {
-            vctx->edi -= ioports_access_width_to_bytes(access_width);
-        } else {
-            vctx->edi += ioports_access_width_to_bytes(access_width);
-        }
-        data_index += ioports_access_width_to_bytes(access_width);
-    }
-
-    return ioports_access_width_to_bytes(access_width) * data_index;
-}
-
 bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
 {
     uint64_t is_read = f_qualification & BIT(3);
     uint64_t is_string = f_qualification & BIT(4);
     uint16_t port_addr = (f_qualification >> 16) & 0xffff;
+
+    assert(!is_string);
 
     bool success = false;
 
@@ -127,7 +63,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
     }
 
     if (port_addr >= 0xC000 && port_addr < 0xCFFF) {
-        assert(!is_string);
         if (is_read) {
             // invalid read to simulate no device on pci bus
             vctx->eax = 0xffffffff;
@@ -135,7 +70,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0xA0 || port_addr == 0xA1 || port_addr == 0x20 || port_addr == 0x21 || port_addr == 0x4d1
                || port_addr == 0x4d0) {
-        assert(!is_string);
         // PIC1/2 access
         if (is_read) {
             // invalid read
@@ -144,36 +78,29 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0x70 || port_addr == 0x71) {
         // cmos
-        assert(!is_string);
         success = true;
     } else if (port_addr == 0x80) {
-        assert(!is_string);
         // io port access delay, no-op
         if (!is_read) {
             success = true;
         }
     } else if (port_addr == 0x3f2) {
-        assert(!is_string);
         // floppy disk, seems sus, when booting memtest in nixos, it will write IRQ enable to this register and hangs...
         success = true;
 
     } else if (port_addr == 0x87 || (port_addr >= 0 && port_addr <= 0x1f)) {
-        assert(!is_string);
         // dma controller
         success = true;
 
     } else if (port_addr == 0x2f9) {
-        assert(!is_string);
         // parallel port
         success = true;
 
     } else if (port_addr == 0x3e9 || port_addr == 0x2e9) {
-        assert(!is_string);
         // some sort of serial device
         success = true;
 
     } else if (port_addr >= 0x60 && port_addr <= 0x64) {
-        assert(!is_string);
         // PS2 controller
         success = true;
     } else if (port_addr >= 0xAF00 && port_addr <= 0xaf00 + 12) {
@@ -187,7 +114,6 @@ bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification)
         success = true;
     } else if (port_addr == 0x92) {
         // TODO: handle properly, I don't understand why UEFI is touching A20 gate register
-        assert(!is_string);
         success = true;
     } else if (port_addr == 0xb004) {
         vctx->eax = 0;
