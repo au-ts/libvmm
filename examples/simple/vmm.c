@@ -63,12 +63,6 @@ extern char _guest_initrd_image_end[];
 /* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
 extern char _guest_dsdt_aml[];
 extern char _guest_dsdt_aml_end[];
-
-// @billn sort out ridiculousness
-uintptr_t guest_high_ram_vaddr;
-uintptr_t guest_flash_vaddr;
-uint64_t guest_high_ram_size;
-
 #else
 /* Data for the device tree to be passed to the kernel. */
 extern char _guest_dtb_image[];
@@ -104,6 +98,8 @@ void init(void)
         LOG_VMM_ERR("DSDT AML image is empty\n");
         return;
     }
+
+    assert(guest_ram_add_region(LOW_RAM_START_GPA, guest_ram_vaddr, GUEST_RAM_SIZE));
 
     if (!linux_setup_images(guest_ram_vaddr, GUEST_RAM_SIZE, (uintptr_t)_guest_kernel_image, kernel_size,
                             (uintptr_t)_guest_initrd_image, initrd_size, _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE,
