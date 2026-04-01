@@ -20,7 +20,7 @@
 #include <libvmm/arch/x86_64/fpu.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
-#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_ram.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
@@ -480,43 +480,7 @@ bool fault_handle(size_t vcpu_id)
         microkit_vcpu_x86_deferred_resume(rip, VMCS_PCC_DEFAULT, interruption);
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
-        LOG_VMM_ERR("paging on: %s\n", guest_paging_on() ? "YES" : "NO");
-        if (guest_paging_on()) {
-            uint64_t _sp_gpa, _bytes_remaining;
-            bool sp_valid = gva_to_gpa(0, microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RSP), &_sp_gpa, &_bytes_remaining);
-            LOG_VMM_ERR("stack pointer valid: %s\n", sp_valid ? "YES" : "NO");
-
-            uint64_t idtr_gva = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_BASE);
-            uint64_t idtr_limit = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_IDTR_LIMIT);
-            uint64_t idtr_gpa;
-            bool idtr_valid = gva_to_gpa(0, idtr_gva, &idtr_gpa, &_bytes_remaining);
-            LOG_VMM_ERR("IDTR gva: 0x%lx\n", idtr_gva);
-            LOG_VMM_ERR("IDTR limit: 0x%lx\n", idtr_limit);
-            LOG_VMM_ERR("IDTR gpa: 0x%lx\n", idtr_gpa);
-            LOG_VMM_ERR("IDTR valid: %s\n", idtr_valid ? "YES" : "NO");
-            uint8_t idt_entry_size = guest_in_64_bits() ? 16 : 8;
-            uint16_t idt_num_entries = (idtr_limit + 1) / idt_entry_size;
-            LOG_VMM_ERR("IDTR num entries: %d\n", idt_num_entries);
-
-            uint16_t idt_num_valid_entries = 0;
-            for (int i = 0; i < idt_num_entries; i++) {
-                uint32_t entry[4];
-                uint64_t entry_gpa = idtr_gpa + (i * idt_entry_size);
-                entry[0] = *((uint32_t *)gpa_to_vaddr(entry_gpa));
-                entry[1] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 4));
-                entry[2] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 8));
-                entry[3] = *((uint32_t *)gpa_to_vaddr(entry_gpa + 12));
-
-                uint32_t present = (entry[1] & BIT(15));
-                if (present) {
-                    idt_num_valid_entries += 1;
-                }
-            }
-
-            LOG_VMM_ERR("IDTR num valid entries: %d\n", idt_num_valid_entries);
-        }
         vcpu_print_regs(vcpu_id);
-
         LOG_VMM_ERR("VCPU will not be resumed.\n");
     }
 

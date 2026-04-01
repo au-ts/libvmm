@@ -41,4 +41,5 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/tsc.h>
+#include <libvmm/arch/x86_64/guest_ram.h>
 #endif

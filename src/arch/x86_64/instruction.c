@@ -252,20 +252,22 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
 
     uint64_t rip_gpa;
-    uint64_t bytes_remaining;
+    int bytes_remaining;
     assert(gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining));
 
-    // @billn fix lazyness
+    // @billn fix lazyness, crashes if the instruction crosses a page boundary
     assert(bytes_remaining >= instruction_len);
-
     assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
-    memcpy(instruction_buf, gpa_to_vaddr(rip_gpa), instruction_len);
+
+    void *instruction_vaddr;
+    assert(gpa_to_vaddr(rip_gpa, &instruction_vaddr, &bytes_remaining));
+    memcpy(instruction_buf, instruction_vaddr, instruction_len);
 
     // @billn I really think something more "industrial grade" should be used for a job like this.
     // Such as https://github.com/zyantific/zydis which is no-malloc and no-libc, but it uses cmake...yuck
     // But then we introduce a dependency...
     decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
-    memcpy(&ret.raw, gpa_to_vaddr(rip_gpa), instruction_len);
+    memcpy(&ret.raw, instruction_vaddr, instruction_len);
     ret.raw_len = instruction_len;
 
     bool opcode_valid = false;

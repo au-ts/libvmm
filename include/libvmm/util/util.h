@@ -72,6 +72,9 @@ bool check_baseline_bits(uint64_t baseline, uint64_t actual);
 /* Print all bit indexes that are set in `baseline` but not set in `actual` */
 void print_missing_baseline_bits(uint64_t baseline, uint64_t actual);
 
+/* Returns true if two [x..y) ranges overlap. */
+bool ranges_overlap(uint64_t left_start, uint64_t left_size, uint64_t right_start, uint64_t right_size);
+
 #if defined(CONFIG_ARCH_X86_64)
 static inline uint64_t rdtsc(void)
 {

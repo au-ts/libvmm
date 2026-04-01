@@ -39,11 +39,11 @@ void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
 
 // Convert guest physical address to the VMM's virtual memory address.
-void *gpa_to_vaddr(uint64_t gpa);
+bool gpa_to_vaddr(uint64_t gpa, void **ret, int *bytes_remaining);
 
 #if defined(CONFIG_ARCH_X86)
 bool guest_paging_on(void);
 bool guest_in_64_bits(void);
-bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, uint64_t *bytes_remaining);
+bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remaining);
 uint64_t gpa_to_pa(uint64_t gpa);
 #endif
