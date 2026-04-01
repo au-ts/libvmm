@@ -24,11 +24,6 @@
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
-// @billn sus
-extern struct lapic_regs lapic_regs;
-
-bool fault_cond = false;
-
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
@@ -455,10 +450,6 @@ bool fault_handle(size_t vcpu_id)
     };
 
     if (success && f_reason != INTERRUPT_WINDOW) {
-        // TODO hack force osxsave on so that Windows doesnt #UD on xgetbv/xsetbv
-        uint64_t cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
-        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4 | BIT(18));
-
         microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
 
         uint64_t resume_rip = rip;
