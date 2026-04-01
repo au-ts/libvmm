@@ -38,7 +38,7 @@ REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
 
-CLIENT_VM_USERLEVEL_INIT := blk_client_init
+CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
