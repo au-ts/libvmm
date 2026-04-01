@@ -71,13 +71,18 @@ def backend_fn(test_config: TestConfig, loader_img: Path) -> HardwareBackend:
 
 
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
-    async with asyncio.timeout(30):
+    async with asyncio.timeout(60):
         await wait_for_output(backend, b"buildroot login: ")
         # Sleep should not be necessary, see https://github.com/au-ts/libvmm/issues/195
         await asyncio.sleep(1)
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
-
+        await send_input(backend, b"./blk_integration_tests.sh\n")
+        await wait_for_output(backend, b"All is well in the universe\n# ")
+        await send_input(backend, b"wget google.com\n")
+        await wait_for_output(backend, b"'index.html' saved\n# ")
+        await send_input(backend, b"head index.html\n")
+        await wait_for_output(backend, b"<!doctype html>")
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
