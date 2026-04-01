@@ -14,7 +14,7 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vcpu.h>
-#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_ram.h>
 #include <libvmm/virtio/pci.h>
 
 /* Uncomment this to enable debug logging */

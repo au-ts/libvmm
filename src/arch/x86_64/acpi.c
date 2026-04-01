@@ -11,7 +11,7 @@
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/fault.h>
-#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_ram.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 

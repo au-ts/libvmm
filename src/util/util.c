@@ -42,3 +42,8 @@ void print_missing_baseline_bits(uint64_t baseline, uint64_t actual)
         }
     }
 }
+
+bool ranges_overlap(uint64_t left_start, uint64_t left_end, uint64_t right_start, uint64_t right_end)
+{
+    return !(left_end <= right_start || right_end <= left_start);
+}
