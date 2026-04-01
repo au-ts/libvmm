@@ -1,0 +1,38 @@
+/*
+ * Copyright 2026, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <microkit.h>
+#include <libvmm/util/util.h>
+
+/* Document layout of guest RAM */
+#define LOW_RAM_START_GPA 0x0
+
+#define ECAM_GPA 0xD0000000
+/* 1 bus, 32 devices per bus, 8 functions per device, 4k config space per function */
+#define ECAM_SIZE (1 * 32 * 8 * 4096)
+
+#define IOAPIC_GPA 0xFEC00000
+#define IOAPIC_SIZE 0x1000
+
+/* This just matches the x86 CPU default physical address from
+ * See bit 9 of 'Table 1-20. More on Feature Information Returned in the EDX Register'.
+ */
+#define LAPIC_GPA 0xFEE00000
+#define LAPIC_SIZE 0x1000
+
+/* Standard x86 PC convention */
+#define HPET_GPA 0xFED00000
+#define HPET_SIZE 0x1000
+
+#define HIGH_RAM_START_GPA 0x100000000
+/* End of guest RAM layout */
+
+/* enough for low RAM + high RAM and a firmware region */
+#define MAX_GUEST_RAM_REGIONS 3
+
+bool guest_ram_add_region(uint64_t gpa, uintptr_t vmm_vaddr, uint64_t size);

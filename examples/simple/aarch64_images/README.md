@@ -5,7 +5,7 @@
 
 # Guest images used
 
-We use the same images (Linux kernel and initrd/rootfs) for all platforms.
+We use the same images (Linux kernel and initrd/rootfs) for all ARM platforms.
 
 Below are instructions for reproducing them.
 

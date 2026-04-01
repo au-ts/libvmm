@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <sddf/util/util.h>
 #include <libvmm/util/util.h>
 #include <libvmm/util/printf.h>
 
@@ -26,4 +27,23 @@ void print_mem_hex(uintptr_t addr, size_t size)
     }
     printf("\n");
 #endif
+}
+
+bool check_baseline_bits(uint64_t baseline, uint64_t actual)
+{
+    return (actual & baseline) == baseline;
+}
+
+void print_missing_baseline_bits(uint64_t baseline, uint64_t actual)
+{
+    for (int i = 0; i < 64; i++) {
+        if ((baseline & BIT(i)) && !(actual & BIT(i))) {
+            printf("missing bit %d\n", i);
+        }
+    }
+}
+
+bool ranges_overlap(uint64_t left_start, uint64_t left_end, uint64_t right_start, uint64_t right_end)
+{
+    return !(left_end <= right_start || right_end <= left_start);
 }
