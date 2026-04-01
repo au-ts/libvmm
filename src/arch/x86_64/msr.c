@@ -11,7 +11,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/util.h>
-#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_ram.h>
 
 #include <x86intrin.h>
 
@@ -93,12 +93,6 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         //                   enable    is boot cpu
         result = LAPIC_GPA | BIT(11) | BIT(8);
         break;
-    // case IA32_MCG_CAP:
-    // case IA32_MCG_STATUS:
-    // case IA32_MTRRCAP:
-    // case IA32_MTRR_DEF_TYPE:
-    // case IA32_PAT:
-        // @billn revisit above 5
     case IA32_SPEC_CTRL:
         // @billn revisit, I think we should use Virtualize IA32_SPEC_CTRL
         // in Tertiary Processor-Based VM-Execution Controls
