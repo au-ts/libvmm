@@ -6,7 +6,10 @@
 
 #include <libvmm/guest.h>
 
-void *gpa_to_vaddr(uint64_t gpa)
+bool gpa_to_vaddr(uint64_t gpa, void **ret, int *bytes_remaining)
 {
-    return (void *)gpa;
+    /* On ARM we make have 1 to 1 mapping so nothing to do. */
+    *bytes_remaining = 0;
+    *ret = (void *) gpa;
+    return true;
 }
