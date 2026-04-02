@@ -12,6 +12,7 @@
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/net.h>
 #include <sddf/network/queue.h>
+#include <sddf/network/constants.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_NET
@@ -56,7 +57,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     switch (dev->regs.DeviceFeaturesSel) {
     /* Feature bits 0 to 31 */
     case 0:
-        *features = BIT_LOW(VIRTIO_NET_F_MAC);
+        *features = BIT_LOW(VIRTIO_NET_F_MAC | VIRTIO_NET_F_CSUM);
         break;
     /* Features bits 32 to 63 */
     case 1:
@@ -69,7 +70,6 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     return true;
 }
 
-
 static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
     bool success = true;
@@ -78,7 +78,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     /* Feature bits 0 to 31 */
     case 0:
         /** F_MAC is required */
-        success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
+        success = (features == BIT_LOW(VIRTIO_NET_F_MAC | VIRTIO_NET_F_CSUM));
         break;
 
     /* Features bits 32 to 63 */
@@ -196,6 +196,14 @@ static void handle_tx_msg(struct virtio_device *dev,
     }
 
     sddf_buffer.len = written;
+
+#ifdef NETWORK_HW_HAS_CHECKSUM
+    /* zero-out the checksum for DHCP packets if HW handles that for us to prevent double-checksumming */
+    if (is_dhcp_frame(dest_buf)) {
+        uintptr_t *chksum = dest_buf + 0x28;
+        memset(chksum, 0, 2);
+    }
+#endif
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we check above */
     assert(!error);

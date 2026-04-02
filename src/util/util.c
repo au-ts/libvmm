@@ -27,3 +27,19 @@ void print_mem_hex(uintptr_t addr, size_t size)
     printf("\n");
 #endif
 }
+
+bool is_dhcp_frame(uintptr_t addr)
+{
+    uint16_t ethtype = htons(addr + 0xC);
+    if (ethtype == 0x0800) {
+        uint8_t type = addr + 0x17;
+        if (type == 17) {
+            uint16_t srcp = htons(addr + 0x22);
+            uint16_t dstp = htons(addr + 0x24);
+            if (srcp == 67 && dstp == 68) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
