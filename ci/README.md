@@ -17,7 +17,7 @@ to a pull request. This is done to not overwhelm our supply of hardware.
 > [!NOTE]
 > Whilst the CI scripts are able to run machines on real hardware with the
 > Machine Queue scripts in our laboratory, at the moment we have yet to set up
-> Github Actions to have access to our boards for libVMM, so no CI hardware
+> Github Actions to have access to our boards for libvmm, so no CI hardware
 > tests happen at the moment
 
 ### Setup
@@ -94,7 +94,7 @@ the test cases which we are to run. We provide a `matrix.py` abstraction
 `matrix.generate_example_test_cases` which can generate the list of test cases
 from central information in the matrix.py. The first argument is the test name,
 the second argument is a list of examples to run the test on. In this way
-the tests in libVMM are structured differently to in sDDF, where we can test
+the tests in libvmm are structured differently to in sDDF, where we can test
 the same example in multiple ways.
 
 To write a test, one needs to write a `test_fn`, and optionally, a `backend_fn`.
