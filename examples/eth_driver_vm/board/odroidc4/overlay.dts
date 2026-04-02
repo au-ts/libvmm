@@ -1,0 +1,159 @@
+/*
+ * Copyright 2024, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+/ {
+    /* 128MiB of RAM for guest */
+    memory@0 {
+        device_type = "memory";
+        reg = <0x00 0x20000000 0x00 0x8000000>;
+    };
+
+    secure-monitor {
+        status = "disabled";
+    };
+
+    soc {
+        bus@ff800000 {
+            ao-secure@140 {
+                status = "disabled";
+            };
+
+            adc@9000 {
+                status = "disabled";
+            };
+
+            serial@3000 {
+                status = "disabled";
+            };
+        };
+
+        bus@ffd00000 {
+            interrupt-controller@f080 {
+                status = "disabled";
+            };
+
+            watchdog@f0d0 {
+                status = "disabled";
+            };
+        };
+
+        vpu@ff900000 {
+            status = "disabled";
+        };
+
+        usb@ffe09000 {
+            status = "disabled";
+        };
+
+        sd@ffe05000 {
+            status = "disabled";
+        };
+
+        mmc@ffe07000 {
+            status = "disabled";
+        };
+
+        gpu@ffe40000 {
+            status = "disabled";
+        };
+    };
+
+    chosen {
+        stdout-path = "/virtio-console@100000";
+        linux,initrd-end = <0x00000000 0x26000000>;
+        linux,initrd-start = <0x00000000 0x25700000>;
+        bootargs = "clk_ignore_unused console=hvc0 loglevel=8 maxcpus=1 nosmp uio_pdrv_genirq.of_id=generic-uio";
+    };
+
+	virtio-console@100000 {
+		compatible = "virtio,mmio";
+		reg = <0x00 0x100000 0x00 0x200>;
+		interrupts = <0x00 40 0x04>;
+	};
+
+    uio@0 {
+        compatible = "generic-uio\0data_passing";
+        reg = <
+            // Data passing from VMM -> guest
+            0x00 0xF04000 0x00 0x1000
+        >;
+    };
+
+    uio@1 {
+        compatible = "generic-uio\0rx_free";
+        reg = <
+            0x00 0x200000 0x00 0x3000
+        >;
+    };
+
+    uio@2 {
+        compatible = "generic-uio\0tx_free";
+        reg = <
+            0x00 0x210000 0x00 0x5000
+        >;
+    };
+
+    uio@3 {
+        compatible = "generic-uio\0rx_active";
+        reg = <
+            0x00 0x220000 0x00 0x3000
+        >;
+    };
+
+    uio@4 {
+        compatible = "generic-uio\0tx_active";
+        reg = <
+            0x00 0x230000 0x00 0x5000
+        >;
+    };
+
+    uio@5 {
+        compatible = "generic-uio\0rx_fault";
+        reg = <
+            // Guest -> VMM notification for RX. This physaddr remain unmapped in guest
+            // Guest writes to this address when it want to notify the VMM.
+            0x00 0x300000 0x00 0x1000
+        >;
+    };
+
+    uio@6 {
+        compatible = "generic-uio\0tx_fault";
+        reg = <
+            // Same idea as above but for TX
+            0x00 0x301000 0x00 0x1000
+        >;
+    };
+
+    uio@7 {
+        compatible = "generic-uio\0rx_irq";
+        // VMM -> Guest notification for RX.
+        // VMM inject this IRQ when it wants to notify the guest.
+        interrupts = <0x00 400 0x04>;
+        // IRQ = 432, arbitrary number
+    };
+
+    uio@8 {
+        compatible = "generic-uio\0tx_irq";
+        // Same idea as above
+        interrupts = <0x00 401 0x04>;
+        // IRQ = 433, arbitrary number
+    };
+
+    uio@9 {
+        compatible = "generic-uio\0rx_data";
+        reg = <
+            // RX data region
+            0x00 0x400000 0x00 0x100000
+        >;
+    };
+
+    uio@10 {
+        compatible = "generic-uio\0tx_data";
+        reg = <
+            // TX data region, hard coded provisioning for 2 clients
+            0x00 0x600000 0x00 0x200000
+        >;
+    };
+};
