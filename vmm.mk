@@ -58,7 +58,7 @@ endif
 
 ARCH_INDEP_FILES := src/util/printf.c \
 		    src/util/util.c \
-		    src/guest.c
+			src/guest_ram.c
 
 VIRTIO_FILES := src/virtio/block.c \
 		    src/virtio/console.c \

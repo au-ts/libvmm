@@ -9,9 +9,12 @@ use core::{include_bytes};
 
 use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, debug_println};
 
-const GUEST_RAM_VADDR: usize = 0x40000000;
-const GUEST_DTB_VADDR: usize = 0x4f000000;
-const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
+const GUEST_RAM_VMM_VADDR: usize = 0x20000000;
+/* For ARM, these constants depends on what's defined in your DTB. */
+const GUEST_RAM_START_GPA: usize = 0x40000000;
+const GUEST_DTB_GPA: usize = 0x4f000000;
+const GUEST_INIT_RAM_DISK_GPA: usize = 0x4d700000;
+const GUEST_RAM_SIZE: usize = 0x10000000;
 const GUEST_BOOT_VCPU_ID: usize = 0;
 
 /// On the QEMU virt AArch64 platform the UART we are using has an IRQ number of 33.
@@ -32,15 +35,16 @@ const UART_CH: Channel = Channel::new(1);
 #[link(name = "vmm", kind = "static")]
 #[link(name = "microkit", kind = "static")]
 extern "C" {
-    fn linux_setup_images(ram_start: usize,
+    fn linux_setup_images(ram_start_gpa: usize,
                           kernel: usize, kernel_size: usize,
-                          dtb_src: usize, dtb_dest: usize, dtb_size: usize,
-                          initrd_src: usize, initrd_dest: usize, initrd_size: usize) -> usize;
+                          dtb_src: usize, dtb_dest_gpa: usize, dtb_size: usize,
+                          initrd_src: usize, initrd_dest_gpa: usize, initrd_size: usize) -> usize;
     fn virq_controller_init() -> bool;
     fn virq_register_passthrough(vcpu_id: usize, irq: i32, irq_ch: u32) -> bool;
     fn virq_handle_passthrough(irq_ch: u32) -> bool;
     fn guest_start(kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
+    fn guest_ram_add_region(gpa: usize, vmm_vaddr: usize, size: usize) -> bool;
 }
 
 #[protection_domain]
@@ -59,16 +63,21 @@ fn init() -> VmmHandler {
     let initrd_addr = initrd.as_ptr() as usize;
 
     unsafe {
-        let guest_pc = linux_setup_images(GUEST_RAM_VADDR,
+        let success = guest_ram_add_region(GUEST_RAM_START_GPA, GUEST_RAM_VMM_VADDR, GUEST_RAM_SIZE);
+        assert!(success);
+
+        let guest_pc = linux_setup_images(GUEST_RAM_START_GPA,
                                             linux_addr, linux.len(),
-                                            dtb_addr, GUEST_DTB_VADDR, dtb.len(),
-                                            initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
+                                            dtb_addr, GUEST_DTB_GPA, dtb.len(),
+                                            initrd_addr, GUEST_INIT_RAM_DISK_GPA, initrd.len()
                                          );
+        assert!(guest_pc != 0);
+
         let success = virq_controller_init();
         assert!(success);
         let success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, UART_CH.index() as u32);
         assert!(success);
-        guest_start(guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+        guest_start(guest_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
     }
 
     VmmHandler {}

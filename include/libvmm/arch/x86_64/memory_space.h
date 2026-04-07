@@ -30,9 +30,3 @@
 #define HPET_SIZE 0x1000
 
 #define HIGH_RAM_START_GPA 0x100000000
-/* End of guest RAM layout */
-
-/* enough for low RAM + high RAM and a firmware region */
-#define MAX_GUEST_RAM_REGIONS 3
-
-bool guest_ram_add_region(uint64_t gpa, uintptr_t vmm_vaddr, uint64_t size);
