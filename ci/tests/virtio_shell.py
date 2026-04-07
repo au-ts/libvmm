@@ -8,17 +8,16 @@ import sys
 
 from ts_ci import (
     HardwareBackend,
-    QemuBackend,
     send_input,
     wait_for_output,
 )
 
 sys.path.insert(1, Path(__file__).parents[2].as_posix())
 from ci import common, matrix
-from ci.common import virtio_backend_fn, run_tests
+from ci.common import run_tests
 
 
-async def test(backend: HardwareBackend, test_config: common.TestConfig):
+async def test_virtio_shell(backend: HardwareBackend, test_config: common.TestConfig):
     async with asyncio.timeout(30):
         await wait_for_output(backend, b"buildroot login: ")
         # Sleep should not be necessary, see https://github.com/au-ts/libvmm/issues/195
@@ -29,10 +28,10 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
-    "virtio",
+    "virtio_get_to_shell",
     ["virtio", "virtio_pci"],
-    test_fn=test,
-    backend_fn=virtio_backend_fn,
+    test_fn=test_virtio_shell,
+    backend_fn=common.virtio_backend_fn,
     no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
 )
 
