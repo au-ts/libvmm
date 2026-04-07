@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <libvmm/util/util.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/guest.h>
 #include <sddf/util/util.h>
 #include <libvmm/arch/x86_64/pci.h>
@@ -14,7 +15,7 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vcpu.h>
-#include <libvmm/arch/x86_64/guest_ram.h>
+#include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/virtio/pci.h>
 
 /* Uncomment this to enable debug logging */

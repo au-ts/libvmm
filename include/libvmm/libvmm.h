@@ -9,6 +9,7 @@
 
 #include <libvmm/config.h>
 #include <libvmm/guest.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/virq.h>
@@ -41,5 +42,5 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/tsc.h>
-#include <libvmm/arch/x86_64/guest_ram.h>
+#include <libvmm/arch/x86_64/memory_space.h>
 #endif

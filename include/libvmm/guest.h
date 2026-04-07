@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <microkit.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -34,16 +35,12 @@ typedef struct arch_guest_init {
  * initialised, as that is handled by `guest_start`. */
 bool guest_init(arch_guest_init_t init_args);
 
+#if defined(CONFIG_ARCH_AARCH64)
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
-
-// Convert guest physical address to the VMM's virtual memory address.
-bool gpa_to_vaddr(uint64_t gpa, void **ret, int *bytes_remaining);
-
-#if defined(CONFIG_ARCH_X86)
-bool guest_paging_on(void);
-bool guest_in_64_bits(void);
-bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, int *bytes_remaining);
-uint64_t gpa_to_pa(uint64_t gpa);
+#elif defined(CONFIG_ARCH_X86_64)
+bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext initial_regs);
+#else
+#error "Unsupported guest architecture"
 #endif

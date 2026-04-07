@@ -8,12 +8,23 @@
 #include <libvmm/libvmm.h>
 #include <libvmm/guest.h>
 
-bool guest_paging_on(void)
-{
-    return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_CR0) & BIT(31);
-}
+#if defined(CONFIG_ARCH_X86_64)
+#include <libvmm/arch/x86_64/vcpu.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/fault.h>
+#include <sel4/arch/vmenter.h>
+#endif
 
-bool guest_in_64_bits(void)
+bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext initial_regs)
 {
-    return guest_paging_on() && (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER) & BIT(10));
+    /* Write out the initial CPU registers. This is required when there is some sort
+       of ABI between the guest software being booted and us acting as the "bootloader".
+       For example, Linux expects the GPA of the "zero page" to be in RSI when the CPU
+       is resumed. */
+    microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, &initial_regs);
+
+    LOG_VMM("starting guest at 0x%lx\n", kernel_rip);
+    microkit_vcpu_x86_deferred_resume(kernel_rip, VMCS_PCC_DEFAULT, 0);
+    return true;
 }
