@@ -9,7 +9,11 @@ from dataclasses import dataclass
 from pathlib import Path
 import itertools
 import sys
+import os
+import subprocess
+import tempfile
 from typing import Callable, Awaitable
+import types
 
 sys.path.insert(1, Path(__file__).parents[1].as_posix())
 
@@ -27,6 +31,8 @@ from ts_ci import (
 )
 
 CI_BUILD_DIR = Path(__file__).parents[1] / "ci_build"
+LIBVMM = Path(__file__).parents[1]
+mkvirtdisk = (LIBVMM / "dep" / "sddf" / "tools" / "mkvirtdisk").resolve()
 
 
 def example_build_path(test_config: TestConfig):
@@ -72,6 +78,51 @@ def backend_fn(
         mq_boards: list[str] = MACHINE_QUEUE_BOARDS[test_config.board]
         options = MACHINE_QUEUE_BOARD_OPTIONS.get(test_config.board, {})
         return MachineQueueBackend(loader_img.resolve(), mq_boards, **options)
+
+
+def virtio_backend_fn(test_config: TestConfig, loader_img: Path) -> HardwareBackend:
+    backend = backend_fn(test_config, loader_img)
+
+    if isinstance(backend, QemuBackend):
+        tmpdir = tempfile.TemporaryDirectory(suffix="libvmm_blk_disks")
+
+        fd, disk_path = tempfile.mkstemp(dir=tmpdir.name)
+        os.close(fd)
+
+        subprocess.run(
+            [mkvirtdisk, disk_path, "1", "512", "16777216", "GPT"],
+            check=True,
+            capture_output=True,
+        )
+
+        if test_config.board == "x86_64_generic":
+            virtio_blk_device = "virtio-blk-pci,drive=hd,addr=0x3.0"
+            virtio_net_device = "virtio-net-pci,netdev=netdev0,addr=0x2.0"
+        else:
+            virtio_blk_device = "virtio-blk-device,drive=hd,bus=virtio-mmio-bus.1"
+            virtio_net_device = "virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0"
+
+        # fmt: off
+        backend.invocation_args.extend([
+            "-global", "virtio-mmio.force-legacy=false",
+            "-drive", "file={},if=none,format=raw,id=hd".format(disk_path),
+            "-device", virtio_blk_device,
+            "-device", virtio_net_device,
+            "-netdev", "user,id=netdev0,"
+        ])
+        # fmt: on
+
+        orig_stop = backend.stop
+
+        async def stop_with_cleanup(self):
+            try:
+                await orig_stop()
+            finally:
+                tmpdir.cleanup()
+
+        backend.stop = types.MethodType(stop_with_cleanup, backend)
+
+    return backend
 
 
 TestFunction = Callable[[HardwareBackend, "TestConfig"], Awaitable[None]]
@@ -175,7 +226,9 @@ def run_tests(tests: list[TestConfig]) -> None:
         "--tests", default={test.test for test in tests}, action=ArgparseActionList
     )
     filters.add_argument(
-        "--examples", default={test.example for test in tests}, action=ArgparseActionList
+        "--examples",
+        default={test.example for test in tests},
+        action=ArgparseActionList,
     )
     filters.add_argument(
         "--boards", default={test.board for test in tests}, action=ArgparseActionList
