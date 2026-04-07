@@ -20,6 +20,9 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
+/* RAM base in guest physical address space depends on what's defined in your DTB. */
+#define GUEST_RAM_START_GPA 0x40000000
+
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -57,6 +60,8 @@ void init(void)
     assert(blk_config_check_magic(&blk_config));
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
+
+    assert(guest_ram_add_region(GUEST_RAM_START_GPA, (void *)vmm_config.ram, vmm_config.ram_size));
 
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
                    blk_config.virt.num_buffers);

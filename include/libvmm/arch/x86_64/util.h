@@ -24,3 +24,6 @@ bool ept_fault_is_write(seL4_Word qualification);
 bool pte_present(uint64_t pte);
 uint64_t pte_to_gpa(uint64_t pte);
 bool pt_page_size(uint64_t pte);
+
+bool guest_paging_on(void);
+bool guest_in_64_bits(void);

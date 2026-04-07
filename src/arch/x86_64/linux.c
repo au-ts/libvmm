@@ -9,7 +9,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/arch/x86_64/linux.h>
-#include <libvmm/arch/x86_64/guest_ram.h>
+#include <libvmm/arch/x86_64/memory_space.h>
 #include <sddf/util/util.h>
 
 /* Documents referenced:

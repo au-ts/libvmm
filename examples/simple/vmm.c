@@ -17,16 +17,21 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
+/* For ARM, these constants depends on what's defined in your DTB. */
 #if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d000000
+#define GUEST_RAM_START_GPA 0x40000000
+#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x4d000000
 #elif defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
+#define GUEST_RAM_START_GPA 0x20000000
+#define GUEST_DTB_GPA 0x2f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x2d700000
 #elif defined(BOARD_maaxboard)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#define GUEST_RAM_START_GPA 0x40000000
+#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
+#define GUEST_RAM_START_GPA LOW_RAM_START_GPA
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 #else
 #error Need to define guest kernel image address and DTB address
@@ -103,6 +108,8 @@ void init(void)
         return;
     }
 
+    assert(guest_ram_add_region(GUEST_RAM_START_GPA, (void *)guest_ram_vaddr, GUEST_RAM_SIZE));
+
 #if defined(BOARD_x86_64_generic_vtx)
     linux_x86_setup_ret_t linux_setup;
     size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
@@ -111,8 +118,6 @@ void init(void)
         LOG_VMM_ERR("DSDT AML image is empty\n");
         return;
     }
-
-    assert(guest_ram_add_region(LOW_RAM_START_GPA, guest_ram_vaddr, GUEST_RAM_SIZE));
 
     if (!linux_setup_images(guest_ram_vaddr, GUEST_RAM_SIZE, (uintptr_t)_guest_kernel_image, kernel_size,
                             (uintptr_t)_guest_initrd_image, initrd_size, _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE,
@@ -147,7 +152,7 @@ void init(void)
     }
 
     /* Initialise the virtual Local and I/O APICs */
-    //                                                        @billn revisit vapic vaddr
+    //                                          @billn revisit vapic vaddr
     bool success = virq_controller_init(tsc_hz, 0xfffffffffffffff);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
@@ -157,7 +162,9 @@ void init(void)
     /* Pass through serial IRQs */
     assert(virq_ioapic_register(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN, &serial_ack, NULL));
 
-    guest_start(linux_setup.kernel_entry_gpa, 0, 0);
+    seL4_VCPUContext initial_regs;
+    memset(&initial_regs, 0, sizeof(seL4_VCPUContext));
+    guest_start(linux_setup.kernel_entry_gpa, initial_regs);
 #else
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     if (!dtb_size) {
@@ -165,9 +172,9 @@ void init(void)
         return;
     }
 
-    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
-                                             (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
-                                             (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
+    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
+                                             (uintptr_t)_guest_dtb_image, GUEST_DTB_GPA, dtb_size,
+                                             (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_GPA, initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
@@ -183,7 +190,7 @@ void init(void)
     /* Just in case there is already an interrupt available to handle, we ack it here. */
     microkit_irq_ack(SERIAL_IRQ_CH);
     /* Finally start the guest */
-    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
 #endif
 }
 

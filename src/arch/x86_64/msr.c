@@ -11,7 +11,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/util.h>
-#include <libvmm/arch/x86_64/guest_ram.h>
+#include <libvmm/arch/x86_64/memory_space.h>
 
 #include <x86intrin.h>
 
