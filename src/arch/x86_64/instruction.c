@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/util/util.h>
 #include <libvmm/guest.h>
+#include <libvmm/guest_ram.h>
 #include <sddf/util/util.h>
 
 // Documents referenced:
@@ -252,15 +253,14 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
     memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
 
     uint64_t rip_gpa;
-    int bytes_remaining;
+    size_t bytes_remaining;
     assert(gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining));
 
     // @billn fix lazyness, crashes if the instruction crosses a page boundary
     assert(bytes_remaining >= instruction_len);
     assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
 
-    void *instruction_vaddr;
-    assert(gpa_to_vaddr(rip_gpa, &instruction_vaddr, &bytes_remaining));
+    void *instruction_vaddr = gpa_to_vaddr_or_crash(rip_gpa, &bytes_remaining);
     memcpy(instruction_buf, instruction_vaddr, instruction_len);
 
     // @billn I really think something more "industrial grade" should be used for a job like this.

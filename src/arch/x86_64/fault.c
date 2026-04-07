@@ -20,7 +20,7 @@
 #include <libvmm/arch/x86_64/fpu.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
-#include <libvmm/arch/x86_64/guest_ram.h>
+#include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
