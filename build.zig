@@ -14,6 +14,7 @@ const src = [_][]const u8{
     "src/virtio/console.c",
     "src/virtio/net.c",
     "src/virtio/sound.c",
+    "src/virtio/util.c",
 };
 
 const src_aarch64 = [_][]const u8{
