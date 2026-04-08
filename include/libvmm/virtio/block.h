@@ -136,7 +136,10 @@ struct virtio_blk_outhdr {
 
 /* Device (backend) implementation */
 #define VIRTIO_BLK_SIZE_MAX BLK_TRANSFER_SIZE
-#define VIRTIO_BLK_SEG_MAX 1
+/* Restrict the guest driver to only send 8x 4K segment per request at any given time.
+This is to prevent internal fragmentation within the data region, leading to a deadlock
+where we can't handle large requests when the free cells in the data region isn't contiguous. */
+#define VIRTIO_BLK_SEG_MAX 8
 // TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
 #define SDDF_MAX_DATA_CELLS 128
