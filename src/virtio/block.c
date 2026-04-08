@@ -711,9 +711,6 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
         blk_dev->config.blk_size = storage_info->sector_size;
     }
 
-    /* Restrict the guest driver to only send 1x 4K segment per request at any given time.
-    This is to prevent internal fragmentation within the data region, leading to a deadlock
-    where we can't handle large requests when the free cells in the data region isn't contiguous. */
     blk_dev->config.size_max = VIRTIO_BLK_SIZE_MAX;
     blk_dev->config.seg_max = VIRTIO_BLK_SEG_MAX;
 
