@@ -5,4 +5,4 @@ make \
     MICROKIT_CONFIG=benchmark \
     ${1:-all}
 
-# MICROKIT_BOARD=odroidc4 \
+# MICROKIT_BOARD=odroidc4 \ qemu_virt_aarch64

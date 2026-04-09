@@ -123,12 +123,12 @@ idle.elf: $(IDLE_OBJS) ${LIBUTIL_DBG}
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
+			-cpu cortex-a53,pmu=on \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic
-# 			-s -S
+			-nographic \
+ 			-s -S
 
 clean::
 	$(RM) -f *.elf .depend* vm.dts vm.dtb

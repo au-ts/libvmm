@@ -14,6 +14,7 @@
 #include <libvmm/arch/aarch64/fault.h>
 
 #include <sddf/benchmark/sel4bench.h>
+#include <sel4/benchmark_utilisation_types.h>
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -70,11 +71,21 @@ static void serial_ack(size_t vcpu_id, int irq, void *cookie)
     microkit_irq_ack(SERIAL_IRQ_CH);
 }
 
+ccnt_t counter_value;
+counter_bitfield_t benchmark_bf;
+
 void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     sel4bench_init();
+    // sel4bench_set_count_event(0, SEL4BENCH_EVENT_EXECUTE_INSTRUCTION);
+    // benchmark_bf |= BIT(0);
+    // sel4bench_reset_counters();
+    // sel4bench_start_counters(benchmark_bf);
+
+    // volatile uint64_t pmuserenr;
+    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -99,13 +110,28 @@ void init(void)
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-// uint64_t total_cycles = 0;
-// uint64_t request_count = 0;
+#define CYCLES_LOG_SIZE 50
 
 void notified(microkit_channel ch)
-{
+{   
+    volatile uint64_t start_cycles;
+    SEL4BENCH_READ_CCNT(start_cycles);
+    // volatile uint64_t pmuserenr;
+    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
+
+    // sel4bench_reset_counters();
+    // // THREAD_MEMORY_RELEASE();
+    // sel4bench_start_counters(benchmark_bf);
+
+    static volatile uint64_t cycle_log[CYCLES_LOG_SIZE];
+    static volatile uint64_t request_count = 0;
+    // volatile uint64_t pmuserenr;
+    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
+
     // volatile uint64_t start_cycles;
     // SEL4BENCH_READ_CCNT(start_cycles);
+
+    // seL4_BenchmarkResetThreadUtilisation(TCB_CAP);
     
     switch (ch) {
     case SERIAL_IRQ_CH: {
@@ -117,6 +143,28 @@ void notified(microkit_channel ch)
     }
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);
+    }
+
+    volatile uint64_t end_cycles;
+    SEL4BENCH_READ_CCNT(end_cycles);
+
+    // sel4bench_get_counters(benchmark_bf, &counter_value);
+    // sel4bench_stop_counters(benchmark_bf);
+
+    // seL4_BenchmarkGetThreadUtilisation(TCB_CAP);
+    
+    // Read the result 
+    // volatile uint64_t *buffer = (uint64_t *)&seL4_GetIPCBuffer()->msg[0];
+    // volatile uint64_t cycles = buffer[BENCHMARK_TCB_UTILISATION];
+    
+    cycle_log[request_count] = end_cycles - start_cycles;
+    request_count++;
+    
+    // Breakpoint target when full
+    if (request_count >= CYCLES_LOG_SIZE) {
+        // Put your GDB breakpoint on the NOP instruction below
+        asm volatile("nop");
+        request_count = 0;
     }
 
     // volatile uint64_t end_cycles;
