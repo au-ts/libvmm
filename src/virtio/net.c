@@ -11,7 +11,9 @@
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/net.h>
+#include <libvmm/virtio/util.h>
 #include <sddf/network/queue.h>
+#include <sddf/network/constants.h>
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_NET
@@ -23,7 +25,6 @@
 #endif
 
 #define LOG_NET_ERR(...) do{ printf("VIRTIO(NET)|ERROR: "); printf(__VA_ARGS__); }while(0)
-
 
 static inline struct virtio_net_device *device_state(struct virtio_device *dev)
 {
@@ -41,8 +42,7 @@ static void virtio_net_reset(struct virtio_device *dev)
 
 static bool driver_ok(struct virtio_device *dev)
 {
-    return (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER_OK) &&
-           (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK);
+    return (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER_OK) && (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK);
 }
 
 static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -68,7 +68,6 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     }
     return true;
 }
-
 
 static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
@@ -96,9 +95,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     return success;
 }
 
-static bool virtio_net_get_device_config(struct virtio_device *dev,
-                                         uint32_t offset,
-                                         uint32_t *ret_val)
+static bool virtio_net_get_device_config(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val)
 {
     struct virtio_net_config *config = &device_state(dev)->config;
 
@@ -130,14 +127,6 @@ static bool virtio_net_set_device_config(struct virtio_device *dev, uint32_t off
     return false;
 }
 
-static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t bytes_written)
-{
-    struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
-    used_elem->id = desc_head;
-    used_elem->len = bytes_written;
-    virtq->used->idx++;
-}
-
 static bool virtio_net_respond(struct virtio_device *dev)
 {
     dev->regs.InterruptStatus = BIT_LOW(0);
@@ -147,13 +136,40 @@ static bool virtio_net_respond(struct virtio_device *dev)
     return success;
 }
 
-static void handle_tx_msg(struct virtio_device *dev,
-                          struct virtq *virtq,
-                          uint16_t desc_head,
-                          bool *notify_tx_server,
-                          bool *respond_to_guest)
+void sanitise_packet_for_hw_csum(char *buf, size_t len)
+{
+    /* Make sure it's an IPv4 frame */
+    uint16_t eth_type = (buf[12] << 8) | buf[13];
+    if (eth_type != 0x0800)
+        return; // Only handling IPv4 for now
+
+    /* Locate IP header */
+    char *ip_hdr = &buf[14];
+    char ip_proto = ip_hdr[9];
+    char ip_hdr_len = (ip_hdr[0] & 0x0F) * 4;
+    char *l4_hdr = ip_hdr + ip_hdr_len;
+
+    /* Zero out IP csum */
+    ip_hdr[10] = 0;
+    ip_hdr[11] = 0;
+
+    /* Zero out L4 csum */
+    if (ip_proto == 1) {        // ICMP
+        l4_hdr[2] = 0;
+        l4_hdr[3] = 0;
+    } else if (ip_proto == 6) { // TCP
+        l4_hdr[16] = 0;
+        l4_hdr[17] = 0;
+    } else if (ip_proto == 17) { // UDP
+        l4_hdr[6] = 0;
+        l4_hdr[7] = 0;
+    }
+}
+
+static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *notify_tx_server, bool *respond_to_guest)
 {
     struct virtio_net_device *state = device_state(dev);
+    virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_TX_VIRTQ];
 
     if (net_queue_full_active(&state->tx)) {
         goto fail;
@@ -165,48 +181,30 @@ static void handle_tx_msg(struct virtio_device *dev,
         goto fail;
     }
 
-    void *dest_buf = state->tx_data + sddf_buffer.io_or_offset;
+    char *dest_buf = state->tx_data + sddf_buffer.io_or_offset;
 
-    uint32_t written = 0;
-    uint32_t dest_remaining = NET_BUFFER_SIZE;
+    uint64_t payload_len = virtio_desc_chain_payload_len(vq, desc_head);
+    uint64_t packet_len = payload_len - sizeof(struct virtio_net_hdr_mrg_rxbuf);
 
-    /* Strip virtio header before copying to sDDF */
-    uint32_t skip_remaining = sizeof(struct virtio_net_hdr_mrg_rxbuf);
+    assert(
+        virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
 
-    struct virtq_desc *desc = &virtq->desc[desc_head];
+#ifdef NETWORK_HW_HAS_CHECKSUM
+    sanitise_packet_for_hw_csum(dest_buf, packet_len);
+#endif
 
-    while (dest_remaining > 0) {
-        uint32_t skipping = 0;
-        /* Work out how much of this descriptor must be skipped */
-        skipping = MIN(skip_remaining, desc->len);
-        /* Truncate packets that are large than BUF_SIZE */
-        uint32_t writing = MIN(dest_remaining, desc->len - skipping);
-
-        memcpy(dest_buf + written, (void *)desc->addr + skipping, writing);
-
-        skip_remaining -= skipping;
-        written += writing;
-        dest_remaining -= writing;
-
-        if (desc->flags & VIRTQ_DESC_F_NEXT) {
-            desc = &virtq->desc[desc->next];
-        } else {
-            break;
-        }
-    }
-
-    sddf_buffer.len = written;
+    sddf_buffer.len = packet_len;
     error = net_enqueue_active(&state->tx, sddf_buffer);
-    /* This cannot fail as we check above */
+    /* This cannot fail as we've checked above */
     assert(!error);
 
-    virtq_enqueue_used(virtq, desc_head, written);
+    virtio_virtq_add_used(vq, desc_head, 0);
     *respond_to_guest = true;
     *notify_tx_server = true;
     return;
 
 fail:
-    virtq_enqueue_used(virtq, desc_head, 0);
+    // virtq_enqueue_used(virtq, desc_head, 0);
     *respond_to_guest = true;
 }
 
@@ -228,20 +226,14 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
     }
 
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_TX_VIRTQ];
-    struct virtq *virtq = &vq->virtq;
-
-    uint16_t guest_idx = virtq->avail->idx;
-    uint16_t idx = vq->last_idx;
 
     bool notify_tx_server = false;
     bool respond_to_guest = false;
 
-    for (; idx != guest_idx; idx++) {
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-        handle_tx_msg(dev, virtq, desc_head, &notify_tx_server, &respond_to_guest);
+    uint16_t desc_head;
+    while (virtio_virtq_pop_avail(vq, &desc_head)) {
+        handle_tx_msg(dev, desc_head, &notify_tx_server, &respond_to_guest);
     }
-
-    vq->last_idx = idx;
 
     if (notify_tx_server && net_require_signal_active(&state->tx)) {
         net_cancel_signal_active(&state->tx);
@@ -256,68 +248,30 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
     return success;
 }
 
-static uint32_t copy_rx(struct virtq *virtq,
-                        uint16_t *curr_desc_head,
-                        uint32_t *desc_copied,
-                        const void *buf, uint32_t size)
-{
-    uint32_t copied = 0;
-    do {
-        uint32_t copying = MIN(size - copied, virtq->desc[*curr_desc_head].len - *desc_copied);
-
-        memcpy((void *)virtq->desc[*curr_desc_head].addr + *desc_copied, buf + copied, copying);
-
-        copied += copying;
-        *desc_copied += copying;
-
-        if (*desc_copied == virtq->desc[*curr_desc_head].len) {
-            if (!(virtq->desc[*curr_desc_head].flags & VIRTQ_DESC_F_NEXT)) {
-                break;
-            }
-            *curr_desc_head = virtq->desc[*curr_desc_head].next;
-            *desc_copied = 0;
-        }
-    } while (copied < size);
-
-    return copied;
-}
-
-static void handle_rx_buffer(struct virtio_device *dev,
-                             uint64_t buf_offset, uint32_t size,
-                             bool *respond_to_guest)
+static void handle_rx_buffer(struct virtio_device *dev, uint64_t buf_offset, uint32_t size, bool *respond_to_guest)
 {
     struct virtio_net_device *state = device_state(dev);
-
     virtio_queue_handler_t *vq = &dev->vqs[VIRTIO_NET_RX_VIRTQ];
-    struct virtq *virtq = &vq->virtq;
 
-    uint16_t guest_idx = virtq->avail->idx;
-    uint16_t idx = vq->last_idx;
-
-    if (idx == guest_idx) {
-        /* vq is full or not initialised, drop the packet */
+    if (!vq->ready) {
         return;
     }
 
-    /* Read the head of the descriptor chain */
-    uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
-    uint16_t curr_desc_head = desc_head;
+    uint16_t desc_head;
+    if (!virtio_virtq_pop_avail(vq, &desc_head)) {
+        /* No available buffer */
+        return;
+    }
 
-    uint32_t copied = 0;
-    /* Amount of the current descriptor copied */
-    uint32_t desc_copied = 0;
-
-    struct virtio_net_hdr_mrg_rxbuf virtio_hdr = {0};
+    struct virtio_net_hdr_mrg_rxbuf virtio_hdr = { 0 };
     virtio_hdr.num_buffers = 1;
 
-    copied += copy_rx(virtq, &curr_desc_head, &desc_copied, &virtio_hdr, sizeof(struct virtio_net_hdr_mrg_rxbuf));
-    copied += copy_rx(virtq, &curr_desc_head, &desc_copied, state->rx_data + buf_offset, size);
+    assert(virtio_write_data_to_desc_chain(vq, desc_head, sizeof(struct virtio_net_hdr_mrg_rxbuf), 0, (char *) &virtio_hdr));
+    assert(virtio_write_data_to_desc_chain(vq, desc_head, size, sizeof(struct virtio_net_hdr_mrg_rxbuf),
+                                           (char *)(state->rx_data + buf_offset)));
 
     /* Put it in the used ring */
-    virtq_enqueue_used(virtq, desc_head, copied);
-
-    /* Record that we've used this descriptor chain now */
-    vq->last_idx++;
+    virtio_virtq_add_used(vq, desc_head, sizeof(struct virtio_net_hdr_mrg_rxbuf) + size);
 
     *respond_to_guest = true;
 }

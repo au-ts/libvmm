@@ -106,7 +106,7 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
         success = dev->funs->get_device_features(dev, &reg);
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_NUM_MAX, REG_VIRTIO_MMIO_QUEUE_NUM):
-        reg = QUEUE_SIZE;
+        reg = VIRTIO_QUEUE_SIZE;
         break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_READY, REG_VIRTIO_MMIO_QUEUE_NOTIFY):
         if (dev->regs.QueueSel < dev->num_vqs) {

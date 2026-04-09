@@ -144,7 +144,6 @@
 #define VIRTIO_PCI_CONSOLE_DEV_ID       0x1003
 #define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
 #define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
-#define VIRTIO_PCI_QUEUE_SIZE           0x100
 
 // Type 0 headers for endpoints
 struct pci_config_space {

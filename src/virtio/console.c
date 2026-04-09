@@ -10,6 +10,7 @@
 #include <libvmm/virtio/config.h>
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/console.h>
+#include <libvmm/virtio/util.h>
 #include <sddf/serial/queue.h>
 
 /* Uncomment this to enable debug logging */
@@ -62,7 +63,8 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
+        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n",
+                        dev->regs.DeviceFeaturesSel);
         return false;
     }
 
@@ -87,7 +89,8 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
+        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
+                        dev->regs.DriverFeaturesSel);
         return false;
     }
 
@@ -123,40 +126,65 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     /* Transmit all available descriptors possible */
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
-    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_full(console->txq, console->txq->queue->head)) {
-        uint16_t desc_idx = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
-        struct virtq_desc desc;
-        /* Traverse chained descriptors */
-        do {
-            desc = vq->virtq.desc[desc_idx];
-            // @ivanv: to the debug logging, we should actually print out the buffer contents
-            LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_idx, desc.addr, desc.addr + desc.len);
+    uint16_t desc_head;
+    while (virtio_virtq_peek_avail(vq, &desc_head) && !serial_queue_full(console->txq, console->txq->queue->head)) {
+        uint64_t payload_len = virtio_desc_chain_payload_len(vq, desc_head);
 
-            uint32_t bytes_remain = desc.len;
-            /* Copy all contiguous data */
-            while (bytes_remain > 0 && !serial_queue_full(console->txq, console->txq->queue->head)) {
-                uint32_t free = serial_queue_contiguous_free(console->txq);
-                uint32_t to_transfer = (bytes_remain < free) ? bytes_remain : free;
-                if (to_transfer) {
-                    transferred = true;
-                }
+        if (payload_len > console->txq->capacity) {
+            // @billn, fix properly by partial TX, bookkeep, then continue once serial virt notifies?
+            LOG_CONSOLE_ERR(
+                "payload length 0x%lx bytes of desciptor %u is larger than serial TX queue capacity of 0x%lx bytes\n",
+                payload_len, desc_head, console->txq->capacity);
+            assert(false);
+        }
 
-                memcpy(console->txq->data_region + (console->txq->queue->tail % console->txq->capacity),
-                       (char *)(desc.addr + (desc.len - bytes_remain)), to_transfer);
+        uint32_t serial_txq_free_len = serial_queue_free(console->txq);
 
-                serial_update_shared_tail(console->txq, console->txq->queue->tail + to_transfer);
-                bytes_remain -= to_transfer;
-            }
+        if (payload_len > serial_txq_free_len) {
+            /* Can't consume this descriptor in full for now, just wait for serial TXQ to drain. */
+            LOG_CONSOLE("payload length 0x%lx bytes of desciptor %u is larger than serial TX queue contiguous free "
+                        "length of 0x%lx bytes, won't consume for now.\n",
+                        payload_len, desc_head, serial_txq_free_len);
+            serial_request_consumer_signal(console->txq);
+            break;
+        }
+        /* Ok there is enough space in TX queue for this descriptor */
 
-            desc_idx = desc.next;
+        uint32_t serial_txq_contiguous_free_len = serial_queue_contiguous_free(console->txq);
+        bool copy_twice = false;
+        if (payload_len > serial_txq_contiguous_free_len) {
+            /* Handle case where the free space wraps around */
+            copy_twice = true;
+        }
 
-        } while (desc.flags & VIRTQ_DESC_F_NEXT && !serial_queue_full(console->txq, console->txq->queue->head));
+        uint32_t bytes_copied = 0;
 
-        struct virtq_used_elem used_elem = {vq->virtq.avail->ring[vq->last_idx % vq->virtq.num], 0};
-        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
-        vq->virtq.used->idx++;
+        /* Copy data until no more to copy or until the queue wraps around */
+        char *serial_txq_dest = (char *)(console->txq->data_region
+                                         + (console->txq->queue->tail % console->txq->capacity));
+        uint32_t copy_len = MIN(payload_len, serial_txq_contiguous_free_len);
+        assert(virtio_read_data_from_desc_chain(vq, desc_head, copy_len, bytes_copied, serial_txq_dest));
+        bytes_copied += copy_len;
+        serial_update_shared_tail(console->txq, console->txq->queue->tail + copy_len);
 
-        vq->last_idx++;
+        if (copy_twice) {
+            /* Need to copy more data after the queue wraps around */
+            serial_txq_dest = (char *)(console->txq->data_region
+                                       + (console->txq->queue->tail % console->txq->capacity));
+            copy_len = payload_len - bytes_copied;
+            assert(copy_len <= serial_queue_contiguous_free(console->txq));
+            assert(virtio_read_data_from_desc_chain(vq, desc_head, copy_len, bytes_copied, serial_txq_dest));
+            bytes_copied += copy_len;
+            serial_update_shared_tail(console->txq, console->txq->queue->tail + copy_len);
+        }
+
+        assert(bytes_copied == payload_len);
+
+        LOG_CONSOLE("processed descriptor %u with content: %s\n", desc_head, serial_txq_dest);
+
+        virtio_virtq_add_used(vq, desc_head, 0);
+        virtio_virtq_pop_avail(vq, &desc_head);
+        transferred = true;
     }
 
     /* While unlikely, it is possible that we could not consume any of the
@@ -179,6 +207,9 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     LOG_CONSOLE("operation: handle rx\n");
     assert(console->virtio_device.num_vqs > RX_QUEUE);
 
+    /* See if we have more room in TX queue to send more data. */
+    virtio_console_handle_tx(&(console->virtio_device));
+
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
 
@@ -194,24 +225,20 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     }
 
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
-    while (vq->last_idx != vq->virtq.avail->idx && !serial_queue_empty(console->rxq, console->rxq->queue->head)) {
+    uint16_t desc_head;
+    while (!serial_queue_empty(console->rxq, console->rxq->queue->head) && virtio_virtq_pop_avail(vq, &desc_head)) {
         transferred = true;
-
-        uint16_t desc_head = vq->virtq.avail->ring[vq->last_idx % vq->virtq.num];
         struct virtq_desc desc = vq->virtq.desc[desc_head];
-        LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr, desc.addr + desc.len);
+        LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr,
+                    desc.addr + desc.len);
         uint32_t bytes_written = 0;
         char c;
         while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
-            *(char *)(desc.addr + bytes_written) = c;
+            assert(virtio_write_data_to_desc_chain(vq, desc_head, 1, bytes_written, &c));
             bytes_written++;
         }
 
-        struct virtq_used_elem used_elem = {desc_head, bytes_written};
-        vq->virtq.used->ring[vq->virtq.used->idx % vq->virtq.num] = used_elem;
-        vq->virtq.used->idx++;
-
-        vq->last_idx++;
+        virtio_virtq_add_used(vq, desc_head, bytes_written);
     }
 
     /* While unlikely, it is possible that we could not consume any of the
