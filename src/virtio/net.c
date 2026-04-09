@@ -147,6 +147,42 @@ static bool virtio_net_respond(struct virtio_device *dev)
     return success;
 }
 
+void sanitise_packet_for_hw_csum(char *buf, size_t len)
+{
+    /* Make sure it's an IPv4 frame */
+    uint16_t eth_type = (buf[12] << 8) | buf[13];
+    if (eth_type != 0x0800) {
+        return; // Only handling IPv4 for now
+    }
+
+    /* Locate IP header */
+    char *ip_hdr = &buf[14];
+    char ip_proto = ip_hdr[9];
+    char ip_hdr_len = (ip_hdr[0] & 0x0F) * 4;
+    char *l4_hdr = ip_hdr + ip_hdr_len;
+
+    /* Zero out IP csum */
+    ip_hdr[10] = 0;
+    ip_hdr[11] = 0;
+
+    /* Zero out L4 csum */
+    if (ip_proto == 1) {
+        /* ICMP */
+        l4_hdr[2] = 0;
+        l4_hdr[3] = 0;
+    } else if (ip_proto == 6) {
+        /* TCP */
+        l4_hdr[16] = 0;
+        l4_hdr[17] = 0;
+    } else if (ip_proto == 17) {
+        /* UDP */
+        l4_hdr[6] = 0;
+        l4_hdr[7] = 0;
+    } else {
+        LOG_NET_ERR("unknown IP protocol for checksum clearning: 0x%x\n", ip_proto);
+    }
+}
+
 static void handle_tx_msg(struct virtio_device *dev,
                           struct virtq *virtq,
                           uint16_t desc_head,
@@ -196,6 +232,17 @@ static void handle_tx_msg(struct virtio_device *dev,
     }
 
     sddf_buffer.len = written;
+
+#ifdef NETWORK_HW_HAS_CHECKSUM
+    /*
+     * The virtIO spec does not have a defined way to tell the guest to send packets without
+     * any checksums. When using native hardware that has TX checksum offloading, this means
+     * each virtIO net packet must be inspected and have the checksum cleared to avoid double
+     * checksumming. We inspect the packet and clear the IP and level 4 checksums.
+     */
+    sanitise_packet_for_hw_csum(dest_buf, sddf_buffer.len);
+#endif
+
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we check above */
     assert(!error);
