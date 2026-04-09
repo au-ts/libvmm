@@ -13,6 +13,8 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 
+#include <sddf/benchmark/sel4bench.h>
+
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
@@ -72,6 +74,7 @@ void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
+    sel4bench_init();
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -96,8 +99,14 @@ void init(void)
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
+// uint64_t total_cycles = 0;
+// uint64_t request_count = 0;
+
 void notified(microkit_channel ch)
 {
+    // volatile uint64_t start_cycles;
+    // SEL4BENCH_READ_CCNT(start_cycles);
+    
     switch (ch) {
     case SERIAL_IRQ_CH: {
         bool success = virq_inject(SERIAL_IRQ);
@@ -109,6 +118,20 @@ void notified(microkit_channel ch)
     default:
         printf("Unexpected channel, ch: 0x%lx\n", ch);
     }
+
+    // volatile uint64_t end_cycles;
+    // SEL4BENCH_READ_CCNT(end_cycles);
+    
+    // total_cycles += (end_cycles - start_cycles);
+    // request_count++;
+
+    // if (request_count % 1000 == 0) {
+    //     printf("VMM|PERF: Avg handling cycles over 1000 IRQs: %lu\n", 
+    //            total_cycles / 1000);
+    //     total_cycles = 0; // Reset
+    // }
+    
+    // printf("Cycle count start: %ld, end: %ld, difference: %ld\n", end_cycle, start_cycle, end_cycle - start_cycle);
 }
 
 /*

@@ -128,7 +128,7 @@ qemu: $(IMAGE_FILE)
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
-#  			-s -S
+# 			-s -S
 
 clean::
 	$(RM) -f *.elf .depend* vm.dts vm.dtb

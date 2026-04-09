@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
+
 QEMU := qemu-system-aarch64
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
@@ -80,10 +81,10 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
-vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
+vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts $(CHECK_FLAGS_BOARD_MD5)
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-vm.dtb: vm.dts
+vm.dtb: vm.dts $(CHECK_FLAGS_BOARD_MD5)
 	$(DTC) -q -I dts -O dtb $< > $@
 
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
@@ -108,9 +109,10 @@ qemu: $(IMAGE_FILE)
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic
+# 			-s -S
 
 clean::
-	$(RM) -f *.elf .depend* $
+	$(RM) -f *.elf .depend* vm.dts vm.dtb
 	find . -name \*.[do] |xargs --no-run-if-empty rm
 
 clobber:: clean
