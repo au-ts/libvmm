@@ -48,12 +48,6 @@
 #define VIRTIO_DEVICE_ID_CONSOLE      3
 #define VIRTIO_DEVICE_ID_SOUND        25
 
-/* The maximum size (number of elements) of a virtqueue. It is set
- * to 128 because I copied it from the camkes virtio device. If you find
- * out that the virtqueue gets full easily, increase the number.
- */
-#define QUEUE_SIZE 128
-
 /* handler of a virtqueue */
 // @ivanv: we can pack/bitfield this struct
 typedef struct virtio_queue_handler {

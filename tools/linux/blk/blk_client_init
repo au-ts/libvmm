@@ -4,4 +4,8 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-mount /dev/vda /mnt
+if ! mount /dev/vda /mnt;
+then
+    echo "FAILED to mount virtio block device, powering down"
+    poweroff
+fi
