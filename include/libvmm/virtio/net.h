@@ -239,13 +239,13 @@ bool virtio_mmio_net_init(struct virtio_net_device *dev,
                           uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);
 
 /**
- * Handles the incoming net traffic and queues the data into the virtio queues.
+ * Handles the incoming sDDF net traffic and queues the data into the virtio queues.
  * Will drop the packets if the virtio device is not yet initialized by the guest.
+ * If there are packets to be processed, injects the virtual IRQ into the guest.
  *
  * @param virtio device to use
- * @return whether data has been enqueued into the virtio queue
  */
-bool virtio_net_handle_rx(struct virtio_net_device *dev);
+void virtio_net_handle_rx(struct virtio_net_device *dev);
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t pci_dev_slot, size_t virq, net_queue_handle_t *rx,
                          net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch,
