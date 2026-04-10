@@ -1,0 +1,78 @@
+diff --git a/libsel4/tools/syscall_stub_gen.py b/libsel4/tools/syscall_stub_gen.py
+index 6f465383d..d8dfed0e9 100644
+--- a/libsel4/tools/syscall_stub_gen.py
++++ b/libsel4/tools/syscall_stub_gen.py
+@@ -548,6 +548,11 @@ def generate_unmarshal_expressions(params, wordsize):
+         results.append((param, unmarshal_single_param(first_bit, num_bits, wordsize)))
+     return results
+ 
++def is_count_limiter_required(method_name):
++ #    if method_name == "WriteRegisters" or method_name == "ReadRegisters":
++     if method_name == "WriteRegisters":
++         return True
++     return False
+ 
+ def is_result_struct_required(output_params):
+     return len([x for x in output_params if not x.type.pass_by_reference()]) != 0
+@@ -689,17 +694,33 @@ def generate_stub(arch, wordsize, interface_name, method_name, method_id, input_
+     #   ...
+     #
+     if max(num_mrs, len(input_expressions)) > 0:
+-        result.append("\t/* Marshal and initialise parameters. */")
+-        # Initialise in-register parameters
+-        for i in range(num_mrs):
+-            if i < len(input_expressions):
+-                result.append("\tmr%d = %s;" % (i, input_expressions[i]))
+-            else:
+-                result.append("\tmr%d = 0;" % i)
+-        # Initialise buffered parameters
+-        for i in range(num_mrs, len(input_expressions)):
+-            result.append("\tseL4_SetMR(%d, %s);" % (i, input_expressions[i]))
+-        result.append("")
++        if is_count_limiter_required(method_name):
++            result.append("\t/* Marshal and initialise parameters with limiter. */")
++            # Initialise in-register parameters
++            for i in range(num_mrs):
++                if i < len(input_expressions):
++                    result.append("\tmr%d = %s;" % (i, input_expressions[i]))
++            # Initialise buffered parameters only when requesting more than 2 registers
++            result.append("\tif (count > 2)\n\t{")
++            result.append("\t  seL4_Word registers[] = {")
++            for i in range(num_mrs, len(input_expressions)):
++                result.append("\t\t" + input_expressions[i].strip() + ",")
++            # Generate loop
++            result.append("\t};")
++            result.append("\t\tfor (seL4_Word i=0; i<count-2; i++) {")
++            result.append("\t\t\tseL4_SetMR(i+" + str(num_mrs) + ", registers[i]);\n\t\t}")
++            result.append("\t}")
++        else:
++            result.append("\t/* Marshal and initialise parameters. */")
++            # Initialise in-register parameters
++            for i in range(num_mrs):
++                if i < len(input_expressions):
++                    result.append("\tmr%d = %s;" % (i, input_expressions[i]))
++                else:
++                    result.append("\tmr%d = 0;" % i)
++            # Initialise buffered parameters
++            for i in range(num_mrs, len(input_expressions)):
++                result.append("\tseL4_SetMR(%d, %s);" % (i, input_expressions[i]))
+ 
+     #
+     # Generate the call.
+diff --git a/src/api/syscall.c b/src/api/syscall.c
+index b4c2c6bec..1b6ff2afa 100644
+--- a/src/api/syscall.c
++++ b/src/api/syscall.c
+@@ -225,6 +225,12 @@ exception_t handleUnknownSyscall(word_t w)
+ #endif /* CONFIG_DEBUG_BUILD */
+ #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
+     case SysBenchmarkNullSyscall:
++        /* hijack NullSyscall for re-enable user level access to PMU */
++        /* Linux will disable this bit on boot so we need to toggle again it after
++         * Linux boots */
++        uint32_t val = BIT(0);
++        MSR("PMUSERENR_EL0", val);
++        printf("Kernel print: enabled PMU\n");
+         return EXCEPTION_NONE;
+     default:
+         break; /* syscall is not for benchmarking */

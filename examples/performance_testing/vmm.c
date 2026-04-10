@@ -15,6 +15,16 @@
 
 #include <sddf/benchmark/sel4bench.h>
 #include <sel4/benchmark_utilisation_types.h>
+#include <sel4/sel4.h>
+
+#include <os/sddf.h>
+#include <sddf/serial/queue.h>
+#include <sddf/serial/config.h>
+#include <sddf/util/printf.h>
+
+__attribute__((__section__(".serial_client_config"))) serial_client_config_t config;
+
+serial_queue_handle_t tx_queue_handle;
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -38,7 +48,7 @@
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
  * across platforms. */
-#define SERIAL_IRQ_CH 1
+#define SERIAL_IRQ_CH 2
 
 #if defined(BOARD_qemu_virt_aarch64)
 #define SERIAL_IRQ 33
@@ -79,13 +89,14 @@ void init(void)
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     sel4bench_init();
-    // sel4bench_set_count_event(0, SEL4BENCH_EVENT_EXECUTE_INSTRUCTION);
-    // benchmark_bf |= BIT(0);
-    // sel4bench_reset_counters();
-    // sel4bench_start_counters(benchmark_bf);
+    
+    assert(serial_config_check_magic(&config));
 
-    // volatile uint64_t pmuserenr;
-    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
+    serial_queue_init(&tx_queue_handle, config.tx.queue.vaddr, config.tx.data.size, config.tx.data.vaddr);
+
+    serial_putchar_init(config.tx.id, &tx_queue_handle);
+    sddf_printf("Hello world! I am %s.\nPlease give me character!\n", sddf_get_pd_name());
+    
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -110,10 +121,16 @@ void init(void)
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-#define CYCLES_LOG_SIZE 50
+#define CYCLES_LOG_SIZE 100
 
 void notified(microkit_channel ch)
 {   
+    #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+        seL4_BenchmarkNullSyscall();
+    #endif
+
+    sddf_printf("hey mate\n");
+
     volatile uint64_t start_cycles;
     SEL4BENCH_READ_CCNT(start_cycles);
     // volatile uint64_t pmuserenr;
@@ -160,11 +177,12 @@ void notified(microkit_channel ch)
     cycle_log[request_count] = end_cycles - start_cycles;
     request_count++;
     
-    // Breakpoint target when full
     if (request_count >= CYCLES_LOG_SIZE) {
-        // Put your GDB breakpoint on the NOP instruction below
-        asm volatile("nop");
+        // asm volatile("nop");
         request_count = 0;
+        for (int i = 0; i < CYCLES_LOG_SIZE; i++) {
+            sddf_printf("%d: %lu\n", i, cycle_log[i]);
+        }
     }
 
     // volatile uint64_t end_cycles;

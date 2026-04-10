@@ -5,6 +5,48 @@
  SPDX-License-Identifier: BSD-2-Clause
 -->
 <system>
+    <memory_region name="pl011@9000000/drivers/serial/arm/regs" size="0x1000" phys_addr="0x9000000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_driver/serial_virt_rx" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_driver/serial_virt_rx" size="0x10000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_virt_rx/client0" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_virt_rx/client0" size="0x10000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_virt_rx/client1" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_virt_rx/client1" size="0x10000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_driver/serial_virt_tx" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_driver/serial_virt_tx" size="0x20000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_virt_tx/client0" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_virt_tx/client0" size="0x10000" />
+    <memory_region name="pl011@9000000/serial/queue/serial_virt_tx/client1" size="0x1000" />
+    <memory_region name="pl011@9000000/serial/data/serial_virt_tx/client1" size="0x10000" />
+    <protection_domain name="serial_driver" priority="200">
+        <program_image path="serial_driver.elf" />
+        <map mr="pl011@9000000/drivers/serial/arm/regs" vaddr="0x20000000" perms="rw" cached="false" />
+        <map mr="pl011@9000000/serial/queue/serial_driver/serial_virt_rx" vaddr="0x20001000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_driver/serial_virt_rx" vaddr="0x20002000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_driver/serial_virt_tx" vaddr="0x20012000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_driver/serial_virt_tx" vaddr="0x20013000" perms="rw" />
+        <irq irq="34" id="0" trigger="level" />
+    </protection_domain>
+    <protection_domain name="serial_virt_tx" priority="199">
+        <program_image path="serial_virt_tx.elf" />
+        <map mr="pl011@9000000/serial/queue/serial_driver/serial_virt_tx" vaddr="0x20000000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_driver/serial_virt_tx" vaddr="0x20001000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_virt_tx/client0" vaddr="0x20021000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_tx/client0" vaddr="0x20022000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_virt_tx/client1" vaddr="0x20032000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_tx/client1" vaddr="0x20033000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="serial_virt_rx" priority="199">
+        <program_image path="serial_virt_rx.elf" />
+        <map mr="pl011@9000000/serial/queue/serial_driver/serial_virt_rx" vaddr="0x20000000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_driver/serial_virt_rx" vaddr="0x20001000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_virt_rx/client0" vaddr="0x20011000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_rx/client0" vaddr="0x20012000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_virt_rx/client1" vaddr="0x20022000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_rx/client1" vaddr="0x20023000" perms="rw" />
+    </protection_domain>
+
+
     <!--
      Here we give the guest 256MiB to use as RAM. Note that we use 2MiB page
      sizes for efficiency, it does not have any functional effect.
@@ -15,7 +57,7 @@
      We intend to map in this UART into the guest's virtual address space so
      we define the memory region here.
     -->
-    <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
+    <!-- <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" /> -->
 
     <!--
      We need to map in the interrupt controller's (GIC) virtual CPU interface.
@@ -28,6 +70,12 @@
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
+
+        <map mr="pl011@9000000/serial/queue/serial_virt_rx/client0" vaddr="0x20000000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_rx/client0" vaddr="0x20001000" perms="rw" />
+        <map mr="pl011@9000000/serial/queue/serial_virt_tx/client0" vaddr="0x20011000" perms="rw" />
+        <map mr="pl011@9000000/serial/data/serial_virt_tx/client0" vaddr="0x20012000" perms="rw" />
+
         <!--
             Currently the VMM is expecting the address set to the variable
             "guest_ram_vaddr" to be the same as the address of where the guest
@@ -49,7 +97,7 @@
              consequence of this is that the guest can just use the serial without
              trapping into the VMM and hence we do not have to emulate access.
             -->
-            <map mr="serial" vaddr="0x9000000" perms="rw" cached="false" />
+            <map mr="pl011@9000000/drivers/serial/arm/regs" vaddr="0x9000000" perms="rw" cached="false" />
             <!--
              As stated above, we need to map in the virtual CPU interface into
              the guest's virtual address space. Any access to the GIC from
@@ -65,6 +113,20 @@
             so that it can handle it appropriately. The IRQ is for the
             platform's PL011 UART the VMM is expecting the ID of the IRQ to be 1.
          -->
-        <irq irq="33" id="1" />
+        <irq irq="33" id="2" />
     </protection_domain>
+
+    <channel>
+        <end pd="serial_driver" id="1" />
+        <end pd="serial_virt_rx" id="0" />
+    </channel>
+    <channel>
+        <end pd="serial_driver" id="2" />
+        <end pd="serial_virt_tx" id="0" />
+    </channel>
+    <channel>
+        <end pd="serial_virt_tx" id="1" />
+        <end pd="VMM" id="1" />
+    </channel>
+
 </system>

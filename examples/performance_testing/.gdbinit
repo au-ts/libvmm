@@ -1,14 +1,18 @@
 # .gdbinit
-file /home/alexkv/thesis/microkit-sdk-2.2.0/board/qemu_virt_aarch64/benchmark/elf/sel4.elf
+file /home/alexkv/thesis/microkit-sdk-2.2.0-dev/board/qemu_virt_aarch64/benchmark/elf/sel4.elf
 add-symbol-file build/vmm.elf
 add-symbol-file build/benchmark.elf 
+add-symbol-file build/serial_driver.elf
+add-symbol-file build/serial_virt_rx.elf
+add-symbol-file build/serial_virt_tx.elf
+
+
 
 target remote :1234
 
 # break vmm.c:notified
 # break vmm.c:init
-break vmm.c:120
-break vmm.c:90
+break vmm.c:132
 
 # Set hardware breakpoints on the Microkit entry points
 # hbreak init

@@ -52,7 +52,7 @@ CFLAGS := \
 	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util.a --end-group
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -67,7 +67,7 @@ all: loader.img
 
 -include vmm.d
 
-$(IMAGES): libvmm.a libsddf_util_debug.a
+$(IMAGES): libvmm.a libsddf_util.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	python3 $(BENCH_CONFIG) --objcopy $(OBJCOPY)
