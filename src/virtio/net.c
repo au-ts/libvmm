@@ -322,7 +322,7 @@ static void handle_rx_buffer(struct virtio_device *dev,
     *respond_to_guest = true;
 }
 
-bool virtio_net_handle_rx(struct virtio_net_device *state)
+void virtio_net_handle_rx(struct virtio_net_device *state)
 {
     struct virtio_device *dev = &state->virtio_device;
     net_buff_desc_t sddf_buffer;
@@ -351,10 +351,8 @@ bool virtio_net_handle_rx(struct virtio_net_device *state)
     }
 
     if (respond_to_guest) {
-        return virtio_net_respond(dev);
+        virtio_net_respond(dev);
     }
-
-    return respond_to_guest;
 }
 
 static virtio_device_funs_t functions = {
