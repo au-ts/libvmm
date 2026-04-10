@@ -258,7 +258,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         reg = dev->regs.ConfigGeneration;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_SIZE, VIRTIO_PCI_COMMON_Q_ENABLE):
-        reg = VIRTIO_QUEUE_SIZE;
+        reg = VIRTIO_DEFAULT_QUEUE_SIZE;
         break;
     case REG_RANGE(VIRTIO_PCI_COMMON_Q_ENABLE, VIRTIO_PCI_COMMON_Q_NOTIF_OFF):
         reg = dev->vqs[dev->regs.QueueSel].ready;
