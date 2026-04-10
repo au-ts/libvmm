@@ -9,11 +9,12 @@
 #include <libvmm/virtio/mmio.h>
 #include <libvmm/virtio/pci.h>
 
-/* The maximum size (number of elements) of a virtqueue. It is set
-* to 128 because I copied it from the camkes virtio device. If you find
-* out that the virtqueue gets full easily, increase the number.
-*/
-#define VIRTIO_QUEUE_SIZE 128
+/*
+ * Default maximum capacity of each virtIO queue. Currently applies to all
+ * virtIO queues for all virtIO devices. In the future, this could be
+ * configurable but our use-cases have not required it yet.
+ */
+#define VIRTIO_DEFAULT_QUEUE_SIZE 128
 
 /*
  * All terminology used and functionality of the virtIO device implementation
