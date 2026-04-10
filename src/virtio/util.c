@@ -12,7 +12,7 @@
 #include <libvmm/virtio/virtio.h>
 
 /* Prevent the guest from hanging us by passing a descriptor loop */
-#define MAX_WALK_LEN VIRTIO_QUEUE_SIZE
+#define MAX_WALK_LEN VIRTIO_DEFAULT_QUEUE_SIZE
 
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
