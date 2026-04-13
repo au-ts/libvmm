@@ -92,10 +92,9 @@ static uint32_t pci_geo_addr_to_ecam_offset(uint8_t bus, uint8_t dev, uint8_t fu
 static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
                                         seL4_VCPUContext *vctx, void *cookie)
 {
-    uint64_t is_read = qualification & BIT(3);
-    uint16_t port_addr = (qualification >> 16) & 0xffff;
+    uint16_t port_addr = pio_fault_addr(qualification);
 
-    if (is_read) {
+    if (pio_fault_is_read(qualification)) {
         LOG_PCI_PIO("reg select read: 0x%x\n", pci_x86_state.selected_pio_addr_reg);
         assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
         vctx->eax = pci_x86_state.selected_pio_addr_reg;
@@ -105,7 +104,6 @@ static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, si
 
         if (value >> 31) {
             // @billn revisit
-            // vcpu_print_regs(0);
             // assert(port_addr == PCI_CONFIG_ADDRESS_START_PORT);
             pci_x86_state.selected_pio_addr_reg = value;
 
@@ -133,7 +131,6 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
 static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
                                           int access_width_bytes)
 {
-
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
     struct pci_config_space *config_space = (struct pci_config_space *)(pci_get_ecam() + config_space_ecam_off);
 
@@ -149,13 +146,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
 static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
                                       seL4_VCPUContext *vctx, void *cookie)
 {
-    // @billn make helpers
-    uint64_t is_read = qualification & BIT(3);
-    // uint16_t port_addr = (qualification >> 16) & 0xffff;
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
-
-    uint64_t is_string = qualification & BIT(4);
-    assert(!is_string);
+    assert(!pio_fault_is_string_op(qualification));
 
     if (!pci_pio_addr_reg_enable()) {
         pci_invalid_pio_read(vctx);
@@ -170,14 +161,14 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
         uint8_t func = pci_pio_addr_reg_func();
         uint8_t reg_off = pci_pio_addr_reg_offset() + port_offset;
 
-        LOG_PCI_PIO("accessing bus %d, dev %d, func %d, reg off 0x%x, is read $d\n", bus, dev, func, reg_off, is_read);
+        LOG_PCI_PIO("accessing bus %d, dev %d, func %d, reg off 0x%x\n", bus, dev, func, reg_off);
 
-        if (is_read) {
+        if (pio_fault_is_read(qualification)) {
             return pci_config_space_read_access(bus, dev, func, reg_off, &(vctx->eax),
-                                                ioports_access_width_to_bytes(access_width));
+                                                pio_fault_to_access_width_bytes(qualification));
         } else {
             return pci_config_space_write_access(bus, dev, func, reg_off, vctx->eax,
-                                                 ioports_access_width_to_bytes(access_width));
+                                                 pio_fault_to_access_width_bytes(qualification));
         }
     }
 }

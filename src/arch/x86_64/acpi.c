@@ -122,7 +122,7 @@ size_t hpet_build(struct hpet *hpet)
     hpet->address_desc.address = HPET_GPA;
 
     hpet->hpet_number = 0;
-    hpet->minimum_clk_tick = 1; // @billn ??? revisit
+    hpet->minimum_clk_tick = 1;
     hpet->page_protection = 0;
 
     hpet->h.checksum = acpi_compute_checksum((char *)hpet, hpet->h.length);
@@ -166,15 +166,12 @@ bool acpi_pm_timer_can_irq(void)
 bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    uint64_t is_read = qualification & BIT(3);
-    uint64_t is_string = qualification & BIT(4);
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
-    int access_width_bytes = ioports_access_width_to_bytes(access_width);
-    assert(!is_string);
+    assert(!pio_fault_is_string_op(qualification));
+    int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
     assert(access_width_bytes == 2);
 
     if (port_offset == 0) {
-        if (is_read) {
+        if (pio_fault_is_read(qualification)) {
             vctx->eax = pm1_control_reg;
         } else {
             pm1_control_reg = vctx->eax & 0xffff;
@@ -190,15 +187,12 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    uint64_t is_read = qualification & BIT(3);
-    uint64_t is_string = qualification & BIT(4);
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
-    int access_width_bytes = ioports_access_width_to_bytes(access_width);
-    assert(!is_string);
+    assert(!pio_fault_is_string_op(qualification));
+    int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
     assert(access_width_bytes == 2);
 
     if (port_offset == 2) {
-        if (is_read) {
+        if (pio_fault_is_read(qualification)) {
             vctx->eax = pm1_enable_reg;
         } else {
             pm1_enable_reg = vctx->eax;
@@ -208,7 +202,7 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
             }
         }
     } else if (port_offset == 0) {
-        if (is_read) {
+        if (pio_fault_is_read(qualification)) {
             vctx->eax = pm1_status_reg;
         } else {
             // @billn sus implement proper set to clear
@@ -224,14 +218,10 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    uint64_t is_read = qualification & BIT(3);
-    uint64_t is_string = qualification & BIT(4);
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
-    int access_width_bytes = ioports_access_width_to_bytes(access_width);
-    assert(!is_string);
+    assert(!pio_fault_is_string_op(qualification));
+    int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
     assert(access_width_bytes == 4);
-    assert(port_offset == 0);
-    assert(is_read);
+    assert(pio_fault_is_read(qualification));
 
     uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
     vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQ_HZ);
@@ -242,18 +232,12 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                               void *cookie)
 {
-    uint64_t is_read = qualification & BIT(3);
-    uint64_t is_string = qualification & BIT(4);
-    ioport_access_width_t access_width = (ioport_access_width_t)(qualification & 0x7);
-    int access_width_bytes = ioports_access_width_to_bytes(access_width);
-    assert(!is_string);
+    assert(!pio_fault_is_string_op(qualification));
+    int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
     assert(access_width_bytes == 1);
-    assert(port_offset == 0);
-    assert(!is_read);
+    assert(pio_fault_is_write(qualification));
 
     uint8_t cmd = vctx->eax & 0xff;
-    // LOG_VMM("smi cmd write 0x%x\n", cmd);
-
     if (cmd == ACPI_ENABLE) {
         pm1_control_reg |= BIT(0);
     } else if (cmd == ACPI_DISABLE) {

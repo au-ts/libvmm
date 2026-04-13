@@ -8,18 +8,24 @@
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 
-/* Table 28-7. Exit Qualification for EPT Violations */
-#define EPT_VIOLATION_READ (1 << 0)
-#define EPT_VIOLATION_WRITE (1 << 1)
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-088US June 2025
+ */
+
+/* Table 29-7. "Exit Qualification for EPT Violations" */
+#define EPT_VIOLATION_READ_BIT BIT(0)
+#define EPT_VIOLATION_WRITE_BIT BIT(1)
 
 bool ept_fault_is_read(seL4_Word qualification)
 {
-    return qualification & EPT_VIOLATION_READ;
+    return !!(qualification & EPT_VIOLATION_READ_BIT);
 }
 
 bool ept_fault_is_write(seL4_Word qualification)
 {
-    return qualification & EPT_VIOLATION_WRITE;
+    return !!(qualification & EPT_VIOLATION_WRITE_BIT);
 }
 
 uint64_t pte_to_gpa(uint64_t pte)
