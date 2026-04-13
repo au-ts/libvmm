@@ -31,9 +31,6 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Name (_SEG, Zero)
             Name (_BBN, Zero)
 
-            // @billn add I/O Port ranges that the host bridge decodes,
-            // so that we can get rid of "pci=nocrs" in cmdline
-
             Name (_CRS, ResourceTemplate ()
             {
                 // Bus numbers this root bridge owns

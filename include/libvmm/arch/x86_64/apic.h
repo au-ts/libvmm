@@ -76,6 +76,14 @@
 #define IOAPIC_LAST_INDIRECT_INDEX 0x17
 #define IOAPIC_NUM_PINS (IOAPIC_LAST_INDIRECT_INDEX + 1)
 
+#define IOAPIC_IRQ_HANDLE_NO_CH (-1)
+struct ioapic_virq_handle {
+    bool valid;
+    int ch;
+    virq_ioapic_ack_fn_t ack_fn;
+    void *ack_data;
+};
+
 struct ioapic_regs {
     uint32_t selected_reg;
 
