@@ -34,7 +34,7 @@ jobs:
           name: MANUAL
           path: docs/MANUAL.pdf
   build_linux_x86_64:
-    name: Build and run examples (Linux x86-64)
+    name: Build examples (Linux x86-64)
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -67,7 +67,7 @@ jobs:
           PYTHON: ${{ github.workspace }}/venv/bin/python
 
   build_macos_arm64:
-    name: Build and run examples (macOS ARM64)
+    name: Build examples (macOS ARM64)
     runs-on: macos-14
     steps:
       - name: Checkout repository
@@ -100,7 +100,7 @@ jobs:
           PYTHON: ${{ github.workspace }}/venv/bin/python
 
   build_linux_x86_64_nix:
-    name: Build and run examples (Linux x86-64 via Nix)
+    name: Build examples (Linux x86-64 via Nix)
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout repository
