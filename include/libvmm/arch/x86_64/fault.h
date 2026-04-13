@@ -15,7 +15,6 @@
 #define GP_VECTOR 13
 
 char *fault_to_string(int exit_reason);
-/* @billn revisit, seL4 vmexit doesnt have msginfo! */
 
 bool fault_handle(size_t vcpu_id);
 
