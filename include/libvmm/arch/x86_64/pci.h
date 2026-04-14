@@ -10,6 +10,11 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 
+/* Document referenced:
+ * 1. https://wiki.osdev.org/PCI
+ */
+
+/* [1] "Configuration Space Access Mechanism #1" */
 #define PCI_CONFIG_ADDRESS_START_PORT 0xCF8
 #define PCI_CONFIG_ADDRESS_PORT_SIZE 4
 #define PCI_CONFIG_ADDRESS_END_PORT (PCI_CONFIG_ADDRESS_START_PORT + PCI_CONFIG_ADDRESS_PORT_SIZE)

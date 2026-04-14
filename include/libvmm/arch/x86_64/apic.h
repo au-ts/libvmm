@@ -11,11 +11,15 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
-#define LAPIC_NUM_ISR_IRR_TMR_32B 8
-#define MIN_VECTOR 32
-#define MAX_VECTOR (LAPIC_NUM_ISR_IRR_TMR_32B * 32)
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ * 2. Intel 82093AA I/O ADVANCED PROGRAMMABLE INTERRUPT CONTROLLER (IOAPIC)
+ *    Order Number: 290566-001 May 1996
+ */
 
-// Table 11-1. Local APIC Register Address Map
+/* [1] "Table 12-1. Local APIC Register Address Map" */
 #define REG_LAPIC_ID 0x20
 #define REG_LAPIC_REV 0x30
 #define REG_LAPIC_TPR 0x80
@@ -63,6 +67,7 @@
 #define REG_LAPIC_CURR_CNT 0x390
 #define REG_LAPIC_DCR 0x3e0
 
+/* [2] "3.0. REGISTER DESCRIPTION"  */
 #define REG_IOAPIC_IOREGSEL_MMIO_OFF 0x0
 #define REG_IOAPIC_IOWIN_MMIO_OFF 0x10
 #define REG_IOAPIC_IOAPICID_REG_OFF 0x0

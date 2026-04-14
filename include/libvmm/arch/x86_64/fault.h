@@ -12,6 +12,13 @@
 
 #include <libvmm/arch/x86_64/instruction.h>
 
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ */
+
+/* [1] "Table 6-1. Exceptions and Interrupts" */
 #define GP_VECTOR 13
 
 char *fault_to_string(int exit_reason);

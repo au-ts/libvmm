@@ -10,6 +10,14 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/linux.h>
 
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ * 2. Intel 82093AA I/O ADVANCED PROGRAMMABLE INTERRUPT CONTROLLER (IOAPIC)
+ *    Order Number: 290566-001 May 1996
+ */
+
 uintptr_t vapic_vaddr;
 struct ioapic_regs ioapic_regs;
 uint64_t tsc_hz;
@@ -25,23 +33,23 @@ bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
 
     vapic_vaddr = guest_vapic_vaddr;
 
-    // Figure 11-7. Local APIC Version Register
+    // [1] "12.4.8 Local APIC Version Register"
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
     vapic_write_reg(REG_LAPIC_REV, (uint32_t)0x10 | (uint32_t)6 << 16);
-    // Figure 11-23. Spurious-Interrupt Vector Register (SVR)
+    // [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
     vapic_write_reg(REG_LAPIC_SVR, (uint32_t)0xff); // reset value
+    // [1] "Figure 12-8. Local Vector Table (LVT)"
     // LVT Timer Register
     vapic_write_reg(REG_LAPIC_TIMER, 0x10000); // reset value, masked.
+    // [1] "Figure 12-8. Local Vector Table (LVT)"
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
-    // Figure 11-8. Local Vector Table (LVT)
     vapic_write_reg(REG_LAPIC_LVT_LINT0, 0x10000); // reset value
     vapic_write_reg(REG_LAPIC_LVT_LINT1, 0x10000); // reset value
-    // Figure 11-14. Destination Format Register (DFR)
+    // [1] "Figure 12-14. Destination Format Register (DFR)"
     vapic_write_reg(REG_LAPIC_DFR, 0xffffffff); // reset value
 
     LOG_VMM("initialising I/O APIC\n");
-    // https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
-    // default value for the Intel 82093AA IOAPIC.
+    // [2] default value for the Intel 82093AA IOAPIC.
     // supports 0x17 indirection entries.
     ioapic_regs.ioapicver = 0x11 | (IOAPIC_LAST_INDIRECT_INDEX << 16);
     // Wire up all the IRQs
