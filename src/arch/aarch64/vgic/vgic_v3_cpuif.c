@@ -44,7 +44,7 @@ bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
         }
     }
 
-    return fault_advance_vcpu(vcpu_id, regs);
+    return fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
 }
 
 #endif

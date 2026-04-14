@@ -171,7 +171,7 @@ bool smc_sip_forward(size_t vcpu_id, seL4_UserContext *regs, size_t fn_number)
     regs->x6 = response.x6;
     regs->x7 = response.x7;
 
-    bool success = fault_advance_vcpu(vcpu_id, regs);
+    bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
     assert(success);
 
     return success;
