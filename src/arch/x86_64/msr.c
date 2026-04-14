@@ -15,8 +15,13 @@
 
 #include <x86intrin.h>
 
-// Table 2-2. IA-32 Architectural MSRs
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ */
 
+/* [1] "Table 2-2. IA-32 Architectural MSRs" */
 #define IA32_TIME_STAMP_COUNTER (0x10)
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_SPEC_CTRL (0x48)

@@ -28,9 +28,6 @@
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
- *   [2a] Location: Table C-1 "VMX BASIC EXIT REASONS", page: "Vol. 3D C-1"
- *   [2b] Location: "RDMSR—Read From Model Specific Register", page: "Vol. 2B 4-537"
- *   [2c] Location: Table 25-17 "Format of the VM-Entry Interruption-Information Field"
  * [3] https://wiki.osdev.org/Interrupt_Vector_Table
  */
 
@@ -98,7 +95,7 @@ enum exit_reasons {
     NUM_EXIT_REASONS = 0x39,
 };
 
-/* [2a] */
+/* [2] "Table C-1. Basic Exit Reasons" */
 static char *exit_reason_strs[] = { "Exception or non-maskable interrupt (NMI)",
                                     "External interrupt",
                                     "Triple Fault",
@@ -320,15 +317,7 @@ bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exce
 
 static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
 {
-    uint16_t port_addr = (qualification >> 16) & 0xffff;
-
-    if (port_addr >= 0x3f8 && port_addr <= 0x3f8 + 8) {
-    } else if (port_addr >= 0x2f8 && port_addr <= 0x2f8 + 8) {
-    } else if (port_addr >= 0x3e8 && port_addr <= 0x3e8 + 8) {
-    } else if (port_addr >= 0x2ef && port_addr <= 0x2ef + 8) {
-    } else {
-        LOG_FAULT("handling PIO 0x%lx\n", port_addr);
-    }
+    uint16_t port_addr = pio_fault_addr(qualification);
 
     for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
         uint16_t base = registered_pio_exception_handlers[i].base;
@@ -402,8 +391,9 @@ bool fault_handle(size_t vcpu_id)
         break;
     case VIRTUALIZED_EOI: {
         uint8_t eoi_vector = qualification;
-        // if we get here then the guest has ack'ed a passed through I/O APIC irq,
-        // find and run the ack function, the clear the vector from the bitmap
+        /* If we get here then the guest has ack'ed a passed through I/O APIC irq,
+         * find and run the ack function, the clear the vector from the bitmap
+         */
         // @billn the whole clearing vector from bitmap thing could be done more efficiently, e.g.
         // only do it when the guest reprogram the vector
 
@@ -411,17 +401,19 @@ bool fault_handle(size_t vcpu_id)
         break;
     }
     case APIC_WRITE: {
-        // 32.4.3.3 APIC-Write VM Exits
-        // "The exit qualification is the page offset of the write access that led to the VM exit."
+        /* [2] "31.4.3.3 APIC-Write VM Exits"
+         * "The exit qualification is the page offset of the write access that led to the VM exit."
+         */
         uint64_t lapic_reg_offset = qualification;
         success = lapic_write_fault_handle(lapic_reg_offset, vapic_read_reg(lapic_reg_offset));
         break;
     }
     case APIC_ACCESS: {
+        /* [2] "Table 29-6. Exit Qualification for APIC-Access VM Exits from Linear Accesses and Guest-Physical Accesses" */
         uint16_t offset = qualification & 0x7ff;
         uint8_t access_type = (qualification >> 12) & 0xf;
 
-        // only handle reads and writes due to instruciton execution
+        // only handle reads and writes due to instruction execution
         if (access_type == 0) {
             uint32_t data;
             success = lapic_read_fault_handle(offset, &data);
@@ -463,11 +455,11 @@ bool fault_handle(size_t vcpu_id)
         }
         microkit_vcpu_x86_deferred_resume(resume_rip, VMCS_PCC_DEFAULT, 0);
     } else if (!success && (f_reason == RDMSR || f_reason == WRMSR || f_reason == XSETBV)) {
-        // From [2b] "Specifying a reserved or unimplemented MSR address in ECX will also cause a
-        // general protection exception."
+        /* [2] "RDMSR—Read From Model Specific Register":
+         * "Specifying a reserved or unimplemented MSR address in ECX will also cause a general protection exception." */
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_EXCEPTION_ERROR_CODE, 0);
 
-        // [2c] and [3]
+        /* [2] "Table 26-17. Format of the VM-Entry Interruption-Information Field" and [3] */
         uint64_t interruption = GP_VECTOR; // General protection fault vector
         interruption |= 3ull << 8; // Hardware exception
         interruption |= BIT(11); // deliver error code

@@ -12,9 +12,15 @@
  *     [1a] "5.2.5.3 Root System Description Pointer (RSDP) Structure"
  *     [1b] "5.2.6 System Description Table Header"
  *     [1c] "5.2.8 Extended System Description Table (XSDT)"
+ *     [1d] "5.2.12 Multiple APIC Description Table (MADT)"
+ *     [1e] "5.2.10 Firmware ACPI Control Structure (FACS)"
+ *     [1f] "4.8.3.3 Power Management Timer (PM_TMR)"
+ *     [1g] "5.2.9 Fixed ACPI Description Table (FADT)"
  * [2] IA-PC HPET (High Precision Event Timers) Specification Revision: 1.0a Date: October 2004
  *     https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
  *     [2a] "3.2.4 The ACPI 2.0 HPET Description Table (HPET)"
+ * [3] PCI SIG, PCI Firmware Specification Revision 3.3 January 20, 2021
+ *     [3a] "Table 4-2: MCFG Table to Support Enhanced Configuration Space Access"
  */
 
 /* XSDP (Root System Description Pointer) -> XSDT (Extended System Description Table)
@@ -74,6 +80,7 @@ struct xsdt {
 
 ////////////////////////////////////////
 
+/* [1d] Multiple APIC Description Table */
 #define MADT_ENTRY_TYPE_LAPIC 0x0
 #define MADT_ENTRY_TYPE_IOAPIC 0x1
 
@@ -159,7 +166,7 @@ struct hpet {
 
 ////////////////////////////////////////
 
-/* PCI Express Memory-mapped Configuration Space base address description table */
+/* [3a] PCI Express Memory-mapped Configuration Space base address description table */
 #define MCFG_SIGNATURE "MCFG"
 #define MCFG_REVISION 1
 #define MCFG_NUM_CONFIG_SPACES 1
@@ -180,7 +187,7 @@ struct mcfg {
 
 ////////////////////////////////////////
 
-/* Firmware ACPI Control Structure (FACS) */
+/* [1e] Firmware ACPI Control Structure (FACS) */
 #define FACS_SIGNATURE "FACS"
 
 struct facs {
@@ -197,23 +204,27 @@ struct facs {
     uint8_t _reserved2[24];
 };
 
-_Static_assert(sizeof(struct facs) == 64, "facs must be 64 bytes large");
+_Static_assert(sizeof(struct facs) == 64, "FACS must be 64 bytes large");
 
 ////////////////////////////////////////
+
+/* [1g] Fixed ACPI Description Table (FADT) */
+
+/* Arbitrary addresses chosen to not collide with anything else */
 #define PM1A_EVT_BLK_PIO_ADDR 0x600
 #define PM1A_EVT_BLK_PIO_LEN 4
 #define PM1A_CNT_BLK_PIO_ADDR 0x604
 #define PM1A_CNT_BLK_PIO_LEN 2
 #define PM_TMR_BLK_PIO_ADDR 0x608
 #define PM_TMR_BLK_PIO_LEN 4
-
 #define SMI_CMD_PIO_ADDR 0x60c
+
 #define ACPI_ENABLE 0x12
 #define ACPI_DISABLE 0x13
 
 // @billn have a way to detect and warn about collision
 #define ACPI_SCI_IRQ_PIN 7
-#define ACPI_PMT_FREQ_HZ 3579545
+#define ACPI_PMT_FREQ_HZ 3579545 // [1f]
 #define ACPI_PMT_MAX_COUNT (1 << 24)
 
 struct FADT {
@@ -281,11 +292,8 @@ struct FADT {
     struct address_structure X_GPE0Block;
     struct address_structure X_GPE1Block;
 } __attribute__((packed));
-;
 
 ////////////////////////////////////////
-
-// bool acpi_pm_timer_irq_enabled(void);
 
 size_t facs_build(struct facs *facs);
 size_t madt_build(struct madt *madt);
