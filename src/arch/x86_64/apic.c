@@ -18,7 +18,8 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
-void handle_lapic_timer_nftn(size_t vcpu_id);
+// Uncomment this to enable debug logging
+// #define DEBUG_APIC
 
 // @billn there seems to be a big problem with this code. If the host CPU load is high, the fault
 // and IRQ injection latency will also be high. Which will cause the timer value to skew and linux
@@ -28,12 +29,19 @@ void handle_lapic_timer_nftn(size_t vcpu_id);
 // I didn't know anything about x86 architecture. But for simplicity it could be tied to the sDDF timer
 // instead. The only case where the TSC comes into play is the TSC deadline timer mode, which we haven't implemented
 
-// Documents referenced:
-// https://wiki.osdev.org/APIC
-// https://pdos.csail.mit.edu/6.828/2016/readings/ia32/ioapic.pdf
+/* Documents referenced:
+ * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
+ *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
+ *    Order Number: 325462-080US June 2023
+ * 2. Intel 82093AA I/O ADVANCED PROGRAMMABLE INTERRUPT CONTROLLER (IOAPIC)
+ *    Order Number: 290566-001 May 1996
+ */
 
-// Uncomment this to enable debug logging
-// #define DEBUG_APIC
+/* [1] "12.5.2 Valid Interrupt Vectors" */
+#define MIN_VECTOR 32
+
+#define LAPIC_NUM_ISR_IRR_TMR_32B 8
+#define MAX_VECTOR (LAPIC_NUM_ISR_IRR_TMR_32B * 32)
 
 #if defined(DEBUG_APIC)
 #define LOG_APIC(...) do{ printf("%s|APIC: ", microkit_name); printf(__VA_ARGS__); }while(0)
@@ -53,8 +61,9 @@ guest_timeout_handle_t timeout_handle;
 
 static int get_next_pending_irq_vector(void)
 {
-    // scan IRRs for *a* pending interrupt
-    // do it "right-to-left" as the higer vector is higher prio
+    /* Scans IRRs for *a* pending interrupt,
+     * do it "right-to-left" as the higer vector is higher priority.
+     */
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             int irr_reg_off = REG_LAPIC_IRR_0 + (i * 0x10);
@@ -96,7 +105,7 @@ void vapic_write_reg(int offset, uint32_t value)
 
 int lapic_dcr_to_divider(void)
 {
-    // Figure 11-10. Divide Configuration Register
+    /* [1] "Figure 12-10. Divide Configuration Register" */
     switch (vapic_read_reg(REG_LAPIC_DCR)) {
     case 0:
         return 2;
@@ -136,7 +145,7 @@ enum lapic_timer_mode {
 
 enum lapic_timer_mode lapic_parse_timer_reg(void)
 {
-    // Figure 11-8. Local Vector Table (LVT)
+    // [1] "Figure 12-8. Local Vector Table (LVT)"
     uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
     switch (((timer_reg >> 17) & 0x3)) {
     case 0:
@@ -164,6 +173,7 @@ bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
 {
     switch (offset) {
     case REG_LAPIC_CURR_CNT: {
+        /* [1] "12.5.4 APIC Timer" */
         if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
             *result = 0;
         } else {
@@ -191,6 +201,37 @@ bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
     return true;
 }
 
+static void handle_lapic_timer_nftn(size_t vcpu_id)
+{
+    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
+        /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
+         * APIC Software Disable bit */
+        return;
+    }
+
+    assert(timeout_handle_valid);
+    guest_time_cancel_timeout(timeout_handle);
+
+    /* Restart timeout if periodic */
+    uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
+    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
+        native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
+        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
+        LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
+
+        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
+        timeout_handle_valid = true;
+    }
+
+    /* But only inject IRQ if it is not masked */
+    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
+    if (!(timer_reg & BIT(16))) {
+        uint8_t vector = timer_reg & 0xff;
+        assert(inject_lapic_irq(vcpu_id, vector));
+    }
+}
+
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
 {
     switch (offset) {
@@ -211,7 +252,7 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
         break;
 
     case REG_LAPIC_INIT_CNT: {
-        // Figure 11-8. Local Vector Table (LVT)
+        /* [1] "12.5.4 APIC Timer" */
         uint32_t init_count = data;
         if (init_count > 0) {
             uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
@@ -238,8 +279,9 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     }
 
     case REG_LAPIC_ICR_LOW: {
-        // Figure 11-12. Interrupt Command Register (ICR)
-        // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
+        /* [1] "12.6.1 Interrupt Command Register (ICR)"
+         * "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
+         */
         uint64_t icr = (uint64_t)data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
         // @billn sus, handle other types of IPIs
@@ -379,7 +421,8 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     assert(vcpu_id == 0);
 
     if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
-        // APIC software disable
+        /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
+         * APIC Software Disable bit */
         return false;
     }
 
@@ -389,10 +432,10 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     int irr_reg_off = REG_LAPIC_IRR_0 + (irr_n * 0x10);
     assert(irr_reg_off <= REG_LAPIC_IRR_7);
 
-    // Mark as pending for injection, let hardware handle the rest
+    /* Mark as pending for injection, let hardware handle the rest */
     vapic_write_reg(irr_reg_off, vapic_read_reg(irr_reg_off) | BIT(irr_idx));
 
-    // Intel manual page 26-8 Vol. 3C "Guest interrupt status"
+    /* See "26.4.2 Guest Non-Register State" for "Guest interrupt status" layout */
     int highest_vector_pending = get_next_pending_irq_vector();
     assert(highest_vector_pending != -1);
     uint16_t guest_irq_status = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPT_STATUS);
@@ -403,39 +446,9 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     return true;
 }
 
-void handle_lapic_timer_nftn(size_t vcpu_id)
-{
-    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
-        // APIC software disable
-        return;
-    }
-
-    assert(timeout_handle_valid);
-    guest_time_cancel_timeout(timeout_handle);
-
-    // restart timeout if periodic
-    uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
-    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
-        native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
-        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
-        LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
-
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
-    }
-
-    // but only inject IRQ if it is not masked
-    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
-    if (!(timer_reg & BIT(16))) {
-        uint8_t vector = timer_reg & 0xff;
-        assert(inject_lapic_irq(vcpu_id, vector));
-    }
-}
-
 bool inject_ioapic_irq(int ioapic, int pin)
 {
-    // only 1 chip right now, which is a direct map to the dual 8259
+    /* Only 1 chip right now, which is a direct map to the dual 8259. */
     assert(ioapic == 0);
 
     if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
@@ -443,7 +456,7 @@ bool inject_ioapic_irq(int ioapic, int pin)
         return false;
     }
 
-    // check if the irq is masked
+    /* Check if the irq line is masked. */
     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
         return false;
     }
@@ -461,8 +474,9 @@ bool inject_ioapic_irq(int ioapic, int pin)
 
     uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
 
-    // For any passed through interrupts:
-    // When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
+    /* For any passed through interrupts:
+     * When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
+     */
     if (ioapic_regs.virq_passthrough_map[pin].valid) {
         int eoi_bitmap_n = vector / 64;
         int n_bitmap_i = vector % 64;
@@ -506,7 +520,7 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
                 if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
                     ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
 
-                    // Now clear the vector's bit in EOI exit bitmap
+                    /* Now clear the vector's bit in EOI exit bitmap */
                     int eoi_bitmap_n = vector / 64;
                     int n_bitmap_i = vector % 64;
                     switch (eoi_bitmap_n) {

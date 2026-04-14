@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-/* Documents referenced: Linux: arch/x86/include/uapi/asm/e820.h */
+/* Documents referenced: Linux v6.19: arch/x86/include/uapi/asm/e820.h */
 
 #define E820_RAM        1
 #define E820_RESERVED   2

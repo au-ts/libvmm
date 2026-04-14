@@ -18,10 +18,11 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
-// Implements a minimum HPET specification (3 comparators with 1 being periodic capable)
+/* Implements a minimum HPET specification (10Mhz counter, 3 comparators with 1 being periodic capable) */
 
-// https://wiki.osdev.org/HPET
-// https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+/* Document referenced:
+ * https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
+ */
 
 /* Uncomment this to enable debug logging */
 // #define DEBUG_HPET
