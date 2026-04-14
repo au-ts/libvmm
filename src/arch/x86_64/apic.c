@@ -7,6 +7,7 @@
 #include <microkit.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
+#include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
@@ -17,13 +18,15 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
+void handle_lapic_timer_nftn(size_t vcpu_id);
+
 // @billn there seems to be a big problem with this code. If the host CPU load is high, the fault
 // and IRQ injection latency will also be high. Which will cause the timer value to skew and linux
 // will complain that TSC isn't stable. I don't know if this is a problem with the code or just how it is...
 
-// @billn the APIC timer doesn't need to be tied to the TSC, I did it like this originally because
+// @billn the APIC timer doesn't need to be tied to the TSC I think, I did it like this originally because
 // I didn't know anything about x86 architecture. But for simplicity it could be tied to the sDDF timer
-// instead. The only case where the TSC comes into play is the TSC deadline mode, but we don't support right now
+// instead. The only case where the TSC comes into play is the TSC deadline timer mode, which we haven't implemented
 
 // Documents referenced:
 // https://wiki.osdev.org/APIC
@@ -42,15 +45,11 @@ extern uintptr_t vapic_vaddr;
 extern struct ioapic_regs ioapic_regs;
 extern uint64_t tsc_hz;
 
+/* Bookkeeping for the local APIC timer */
 // @billn revisit for multiple vcpus
-uint64_t native_scaled_tsc_when_timer_starts;
-
-static uint64_t ticks_to_ns(uint64_t hz, uint64_t ticks)
-{
-    __uint128_t tmp = (__uint128_t)ticks * (uint64_t)NS_IN_S;
-    tmp += hz / 2;
-    return (uint64_t)(tmp / hz);
-}
+uint64_t native_scaled_apic_ticks_when_timer_starts;
+bool timeout_handle_valid;
+guest_timeout_handle_t timeout_handle;
 
 static int get_next_pending_irq_vector(void)
 {
@@ -156,7 +155,7 @@ enum lapic_timer_mode lapic_parse_timer_reg(void)
     return -1;
 }
 
-uint64_t tsc_now_scaled(void)
+uint64_t apic_time_now_scaled(void)
 {
     return rdtsc() / lapic_dcr_to_divider();
 }
@@ -168,16 +167,20 @@ bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
         if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
             *result = 0;
         } else {
-            uint64_t tsc_tick_now_scaled = tsc_now_scaled();
-            uint64_t elapsed_scaled_tsc_tick = tsc_tick_now_scaled - native_scaled_tsc_when_timer_starts;
+            uint64_t apic_tick_now_scaled = apic_time_now_scaled();
+            uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled - native_scaled_apic_ticks_when_timer_starts;
 
             uint64_t remaining = 0;
-            if (elapsed_scaled_tsc_tick < vapic_read_reg(REG_LAPIC_INIT_CNT)) {
-                remaining = vapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_tsc_tick;
+            if (elapsed_scaled_apic_tick < vapic_read_reg(REG_LAPIC_INIT_CNT)) {
+                remaining = vapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_apic_tick;
             }
             *result = remaining;
             LOG_APIC("current count read 0x%lx\n", remaining);
         }
+        break;
+    }
+    case REG_LAPIC_CMCI: {
+        *result = 0;
         break;
     }
     default:
@@ -203,6 +206,7 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     case REG_LAPIC_LDR:
     case REG_LAPIC_THERMAL:
     case REG_LAPIC_PERF_MON_CNTER:
+    case REG_LAPIC_CMCI:
         vapic_write_reg(offset, data);
         break;
 
@@ -215,11 +219,20 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
             LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3,
                      !!(timer_reg & BIT(16)));
 
-            uint64_t delay_ns = ticks_to_ns(tsc_hz, init_count * lapic_dcr_to_divider());
-            LOG_APIC("setting timeout for 0x%lx ns, from init count 0x%lx\n", delay_ns, init_count);
-            sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
+            uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
+            LOG_APIC("setting timeout for 0x%lx ticks\n", init_count);
 
-            native_scaled_tsc_when_timer_starts = tsc_now_scaled();
+            if (timeout_handle_valid) {
+                /* Guest kernel has changed the timeout */
+                guest_time_cancel_timeout(timeout_handle);
+                timeout_handle_valid = false;
+            }
+
+            timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+            assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
+            timeout_handle_valid = true;
+
+            native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
         }
         break;
     }
@@ -390,32 +403,34 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     return true;
 }
 
-bool handle_lapic_timer_nftn(size_t vcpu_id)
+void handle_lapic_timer_nftn(size_t vcpu_id)
 {
     if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         // APIC software disable
-        return true;
+        return;
     }
+
+    assert(timeout_handle_valid);
+    guest_time_cancel_timeout(timeout_handle);
 
     // restart timeout if periodic
     uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
-        native_scaled_tsc_when_timer_starts = tsc_now_scaled();
-        uint64_t delay_ns = ticks_to_ns(tsc_hz, init_count * lapic_dcr_to_divider());
-        LOG_APIC("restarting periodic timeout for 0x%lx ns\n", delay_ns);
-        sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, delay_ns);
+        native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
+        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
+        LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
+
+        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
+        timeout_handle_valid = true;
     }
 
     // but only inject IRQ if it is not masked
     uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
     if (!(timer_reg & BIT(16))) {
         uint8_t vector = timer_reg & 0xff;
-        if (!inject_lapic_irq(vcpu_id, vector)) {
-            return false;
-        }
+        assert(inject_lapic_irq(vcpu_id, vector));
     }
-
-    return true;
 }
 
 bool inject_ioapic_irq(int ioapic, int pin)

@@ -12,6 +12,7 @@
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_time.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
@@ -223,8 +224,7 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
     assert(access_width_bytes == 4);
     assert(pio_fault_is_read(qualification));
 
-    uint64_t timer_ns = sddf_timer_time_now(TIMER_DRV_CH_FOR_LAPIC);
-    vctx->eax = (uint64_t)(((double)timer_ns / (double)NS_IN_S) * ACPI_PMT_FREQ_HZ);
+    vctx->eax = convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), ACPI_PMT_FREQ_HZ);
 
     return true;
 }
