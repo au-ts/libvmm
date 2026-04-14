@@ -21,9 +21,6 @@
  *    Order Number: 325462-088US June 2025
  */
 
-// @billn do properly: hack for ACPI PM timer
-#define TIMER_DRV_CH_FOR_LAPIC 11
-
 /* Table 29-5. "Exit Qualification for I/O Instructions" */
 #define PIO_VIOLATION_READ_DIRECTION_BIT BIT(3)
 #define PIO_VIOLATION_STRING_OP_BIT BIT(4)
