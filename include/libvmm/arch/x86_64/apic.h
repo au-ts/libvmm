@@ -11,8 +11,6 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
-#define TIMER_DRV_CH_FOR_LAPIC 11
-
 #define LAPIC_NUM_ISR_IRR_TMR_32B 8
 #define MIN_VECTOR 32
 #define MAX_VECTOR (LAPIC_NUM_ISR_IRR_TMR_32B * 32)
@@ -106,5 +104,3 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
 bool inject_ioapic_irq(int ioapic, int pin);
 bool ioapic_ack_passthrough_irq(uint8_t vector);
-
-bool handle_lapic_timer_nftn(size_t vcpu_id);

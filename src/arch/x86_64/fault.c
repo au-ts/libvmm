@@ -21,6 +21,7 @@
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
@@ -444,6 +445,10 @@ bool fault_handle(size_t vcpu_id)
     }
     case XSETBV:
         success = emulate_xsetbv(&vctx);
+        break;
+    case VMX_PREEMPTION_TIMER:
+        guest_time_handle_timer_ntfn();
+        success = true;
         break;
     default:
         LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);

@@ -31,6 +31,7 @@
 #define GUEST_DTB_GPA 0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4c000000
 #elif defined(BOARD_x86_64_generic_vtx)
+#define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 #else
@@ -125,22 +126,21 @@ void init(void)
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, COM1_IO_PORT_ID, COM1_IO_PORT_ADDR, COM1_IO_PORT_SIZE);
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    /* Determine the CPU's TSC frequency */
-    uint64_t tsc_hz = get_host_tsc_hz(TIMER_DRV_CH_FOR_LAPIC);
-    if (!tsc_hz) {
-        LOG_VMM_ERR("cannot determine TSC frequency\n");
+    /* Initialise guest time library */
+    if (!initialise_guest_time(TIMER_DRV_CH)) {
+        LOG_VMM_ERR("cannot initialise guest time keeper.\n");
         return;
     }
 
     /* Initialise CPUID */
-    if (!initialise_cpuid(tsc_hz)) {
+    if (!initialise_cpuid(guest_time_tsc_hz())) {
         LOG_VMM_ERR("cannot initialise CPUID\n");
         return;
     }
 
     /* Initialise the virtual Local and I/O APICs */
     //                                          @billn revisit vapic vaddr
-    bool success = virq_controller_init(tsc_hz, 0xfffffffffffffff);
+    bool success = virq_controller_init(guest_time_tsc_hz(), 0xfffffffffffffff);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
         return;
@@ -184,15 +184,10 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
 #if defined(BOARD_x86_64_generic_vtx)
-    case TIMER_DRV_CH_FOR_LAPIC: {
-        handle_lapic_timer_nftn(GUEST_BOOT_VCPU_ID);
+    case TIMER_DRV_CH: {
+        guest_time_handle_timer_ntfn();
         break;
     }
-    case TIMER_DRV_CH_FOR_HPET_CH0:
-    case TIMER_DRV_CH_FOR_HPET_CH1:
-    case TIMER_DRV_CH_FOR_HPET_CH2:
-        hpet_handle_timer_ntfn(ch);
-        break;
     case SERIAL_IRQ_CH: {
         bool success = virq_ioapic_handle_passthrough(ch);
         if (!success) {

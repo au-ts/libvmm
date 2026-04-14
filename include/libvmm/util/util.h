@@ -74,6 +74,9 @@ void print_missing_baseline_bits(uint64_t baseline, uint64_t actual);
 /* Returns true if two [x..y) ranges overlap. */
 bool ranges_overlap(uint64_t left_start, uint64_t left_size, uint64_t right_start, uint64_t right_size);
 
+/* Converts `ticks` quantity at `in_freq` Hz to equvalent quantity at `out_freq` Hz */
+uint64_t convert_ticks_by_frequency(uint64_t ticks, uint64_t in_freq, uint64_t out_freq);
+
 #if defined(CONFIG_ARCH_X86_64)
 static inline uint64_t rdtsc(void)
 {
