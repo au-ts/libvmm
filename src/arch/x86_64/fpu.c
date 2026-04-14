@@ -15,7 +15,7 @@
 
 bool emulate_xsetbv(seL4_VCPUContext *vctx)
 {
-    /* "Writes the contents of registers EDX:EAX into the 64-bit
+    /* [1] "Writes the contents of registers EDX:EAX into the 64-bit
      * extended control register (XCR) specified in the ECX register." */
 
     /* "Currently, only XCR0 is supported. Thus, all other values of ECX are reserved and will cause a #GP(0)." */

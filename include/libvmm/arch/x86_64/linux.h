@@ -11,12 +11,9 @@
 #include <libvmm/arch/x86_64/e820.h>
 
 // Documents referenced.
-// 1. https://www.kernel.org/doc/html/v6.1/x86/boot.html
-// 2. Linux: arch/x86/include/uapi/asm/bootparam.h
-// 3. Linux: include/uapi/linux/edd.h
-// 4. Linux: arch/x86/include/uapi/asm/setup_data.h
+// 1. Linux v6.19: arch/x86/include/uapi/asm/bootparam.h
 
-// [2]
+// [1]
 struct setup_header {
     uint8_t setup_sects;
     uint16_t root_flags;

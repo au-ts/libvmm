@@ -15,9 +15,10 @@
 #include <libvmm/guest_ram.h>
 #include <sddf/util/util.h>
 
-// Documents referenced:
-// https://wiki.osdev.org/X86-64_Instruction_Encoding
-// https://c9x.me/x86/html/file_module_x86_id_176.html
+/* Documents referenced:
+ * https://wiki.osdev.org/X86-64_Instruction_Encoding
+ * https://c9x.me/x86/html/file_module_x86_id_176.html
+ */
 
 #define NUM_MOV_OPCODES 4
 #define OPCODE_MOV_BYTE_TO_MEM 0x88
