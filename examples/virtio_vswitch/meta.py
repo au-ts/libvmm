@@ -122,7 +122,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=vswitch)
     client1.add_virtio_mmio_net(guest_net_node, net_system, copier=client1_net_copier, vswitch=vswitch)
     client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=vswitch)
-    client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=None)
+    client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=vswitch)
 
     # Block subsystem
     blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
@@ -166,6 +166,21 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     assert blk_system.connect()
     assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
+
+    # Add ACLs - by default bidirectional
+    # 0 <-> 1, 3, V
+    # 1 <-> 0, V
+    # 2 <-> V
+    # 3 <-> 0, 1, V
+    net_system.add_acl_rule(vmm_client0, vmm_client3, vswitch)
+    net_system.add_acl_rule(vmm_client0, net_virt_tx, vswitch)
+    net_system.add_acl_rule(vmm_client1, vmm_client0, vswitch)
+    net_system.add_acl_rule(vmm_client1, net_virt_tx, vswitch)
+    net_system.add_acl_rule(vmm_client2, net_virt_tx, vswitch)
+    net_system.add_acl_rule(vmm_client3, vmm_client0, vswitch)
+    net_system.add_acl_rule(vmm_client3, vmm_client1, vswitch)
+    net_system.add_acl_rule(vmm_client3, net_virt_tx, vswitch)
+
     assert net_system.serialise_config(output_dir)
     assert client0.connect()
     assert client0.serialise_config(output_dir)
