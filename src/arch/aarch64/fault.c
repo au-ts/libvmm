@@ -23,7 +23,7 @@
 //     return !CPSR_IS_THUMB(regs->spsr);
 // }
 
-bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs)
+bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, size_t regs_size)
 {
     // For now we just ignore it and continue
     // Assume 32-bit instruction
@@ -32,7 +32,7 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs)
      * Do not explicitly resume the TCB because we will eventually reply to the
      * fault which will result in the TCB being restarted.
      */
-    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, regs);
+    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, regs_size, SEL4_USER_CONTEXT_SIZE, regs);
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
@@ -257,7 +257,12 @@ bool fault_advance(size_t vcpu_id, seL4_UserContext *regs, uint64_t addr, uint64
     seL4_Word *reg_ctx = decode_rt(rt, regs);
     *reg_ctx = fault_emulate(regs, *reg_ctx, addr, fsr, reg_val);
 
-    return fault_advance_vcpu(vcpu_id, regs);
+    size_t regs_size = SEL4_USER_CONTEXT_SIZE;
+    /* Only need regs->pc */
+    if (fault_is_write(fsr)) {
+        regs_size = 1;
+    }
+    return fault_advance_vcpu(vcpu_id, regs, regs_size);
 }
 
 bool fault_handle_vcpu_exception(size_t vcpu_id)
@@ -344,7 +349,7 @@ bool fault_handle_unknown_syscall(size_t vcpu_id)
         return false;
     }
 
-    return fault_advance_vcpu(vcpu_id, &regs);
+    return fault_advance_vcpu(vcpu_id, &regs, SEL4_USER_CONTEXT_SIZE);
 }
 
 #define MAX_VM_EXCEPTION_HANDLERS 16
@@ -439,7 +444,7 @@ bool fault_handle_vm_exception(size_t vcpu_id)
         tcb_print_regs(vcpu_id);
         vcpu_print_regs(vcpu_id);
     } else {
-        return fault_advance_vcpu(vcpu_id, &regs);
+        return fault_advance_vcpu(vcpu_id, &regs, SEL4_USER_CONTEXT_SIZE);
     }
 
     return success;
