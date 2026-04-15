@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/acpi.h>
@@ -16,12 +17,6 @@
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
-#define LOG_ACPI_INFO(...) do{ printf("%s|ACPI INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
-#define LOG_ACPI_ERR(...) do{ printf("%s|ACPI ERR: ", microkit_name); printf(__VA_ARGS__); }while(0)
-
-#define PAGE_SIZE_4K 0x1000
-#define ACPI_OEMID "libvmm"
-
 /* Documents referenced:
  * [1] Advanced Configuration and Power Interface (ACPI) Specification Release 6.5 UEFI Forum, Inc. Aug 29, 2022
  *     [1a] "5.2.5.3 Root System Description Pointer (RSDP) Structure"
@@ -31,6 +26,20 @@
  *     https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
  *     [2a] "3.2.4 The ACPI 2.0 HPET Description Table (HPET)"
  */
+
+#define LOG_ACPI_INFO(...) do{ printf("%s|ACPI INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#define LOG_ACPI_ERR(...) do{ printf("%s|ACPI ERR: ", microkit_name); printf(__VA_ARGS__); }while(0)
+
+/* This isn't enforced by any specifications, but we will align all the tables to prevent
+ * UBSAN from tripping. */
+#define ACPI_TABLES_ALIGNMENT 8
+
+/* The FACS is an exception to the above. [1] "5.2.10 Firmware ACPI Control Structure (FACS)":
+ * "The platform boot firmware aligns the FACS on a 64-byte boundary anywhere within the system’s memory address space." */
+#define FACS_ALIGNMENT 64
+
+#define PAGE_SIZE_4K 0x1000
+#define ACPI_OEMID "libvmm"
 
 static uint8_t acpi_table_sum(char *table, int size)
 {
@@ -259,15 +268,15 @@ size_t facs_build(struct facs *facs)
     return sizeof(struct facs);
 }
 
-size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
+size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
 {
     /* Despite the table being called 'FADT', this table was FACP in an earlier ACPI version,
      * hence the inconsistency. */
-    memset(fadt, 0, sizeof(struct FADT));
+    memset(fadt, 0, sizeof(struct fadt));
 
     memcpy(fadt->h.signature, "FACP", 4);
 
-    fadt->h.length = sizeof(struct FADT);
+    fadt->h.length = sizeof(struct fadt);
     fadt->h.revision = 6;
 
     memcpy(fadt->h.oem_id, ACPI_OEMID, 6);
@@ -402,75 +411,86 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
     return sizeof(struct xsdp);
 }
 
-uint64_t acpi_top;
-
-uint64_t acpi_allocate_gpa(size_t length)
+uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, void *dsdt_blob, uint64_t dsdt_blob_size,
+                        uint64_t *num_bytes_used)
 {
-    assert(length);
-    acpi_top -= length;
+    /* Make the starting point aligned */
+    uint64_t num_bytes_used_for_acpi = acpi_gpa_start % ACPI_TABLES_ALIGNMENT;
 
-    return acpi_top;
-}
-
-uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top,
-                        uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa)
-{
-    acpi_top = ram_top;
-    // Step 1: create the Root System Description Pointer structure.
-
-    // We want to place everything at "ram_top", do that we can carve out a chunk
-    // at the end and mark it as "ACPI" memory in the E820 table.
-    uint64_t xsdp_gpa = acpi_allocate_gpa(sizeof(struct xsdp));
-    struct xsdp *xsdp = (struct xsdp *)(guest_ram_vaddr + xsdp_gpa);
+    /* Firstly create the Root System Description Pointer structure.
+     * Start placing tables from `acpi_gpa_start` */
+    uint64_t xsdp_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_xsdp;
+    struct xsdp *xsdp = (struct xsdp *)(gpa_to_vaddr_or_crash(xsdp_gpa, &bytes_remaining_for_xsdp));
+    assert(bytes_remaining_for_xsdp >= sizeof(struct xsdp));
+    /* Make sure the rest of the tables will be aligned */
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct xsdp), ACPI_TABLES_ALIGNMENT);
 
     // All the other tables "grow down" from the XSDP, here we pre-allocate the XSDT
     // so that we can compute the XSDP checksum.
-    uint64_t xsdt_gpa = acpi_allocate_gpa(sizeof(struct xsdt));
+    uint64_t xsdt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_xsdt;
+    struct xsdt *xsdt = gpa_to_vaddr_or_crash(xsdt_gpa, &bytes_remaining_for_xsdt);
+    assert(bytes_remaining_for_xsdt >= sizeof(struct xsdt));
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct xsdt), ACPI_TABLES_ALIGNMENT);
+
     xsdp_build(xsdp, xsdt_gpa);
 
-    uint64_t madt_gpa = acpi_allocate_gpa(sizeof(struct madt));
-    struct madt *madt = (struct madt *)(guest_ram_vaddr + madt_gpa);
-    madt_build(madt);
-    // TODO: hack
-    assert(madt->h.length <= 0x1000);
+    uint64_t madt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_madt;
+    struct madt *madt = (struct madt *)(gpa_to_vaddr_or_crash(madt_gpa, &bytes_remaining_for_madt));
+    assert(bytes_remaining_for_madt >= sizeof(struct madt));
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct madt), ACPI_TABLES_ALIGNMENT);
 
-    uint64_t hpet_gpa = acpi_allocate_gpa(sizeof(struct hpet));
-    struct hpet *hpet = (struct hpet *)(guest_ram_vaddr + hpet_gpa);
+    madt_build(madt);
+
+    uint64_t hpet_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_hpet;
+    struct hpet *hpet = (struct hpet *)(gpa_to_vaddr_or_crash(hpet_gpa, &bytes_remaining_for_hpet));
+    assert(bytes_remaining_for_hpet >= sizeof(struct hpet));
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct hpet), ACPI_TABLES_ALIGNMENT);
+
     hpet_build(hpet);
-    assert(hpet->h.length <= 0x1000);
 
     // Differentiated System Description Table
     // Used for things that cannot be described by other tables or probed.
     // An example is legacy I/O Port serial IRQ pin.
     // It is in a binary format from the ASL compiler, which just needs to be copied to guest RAM.
-    assert(dsdt_blob_size < 0x1000);
-    uint64_t dsdt_gpa = acpi_allocate_gpa(0x1000);
-    memcpy((void *)(guest_ram_vaddr + dsdt_gpa), dsdt_blob, dsdt_blob_size);
+    uint64_t dsdt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_dsdt;
+    void *dsdt = gpa_to_vaddr_or_crash(dsdt_gpa, &bytes_remaining_for_dsdt);
+    assert(bytes_remaining_for_dsdt >= dsdt_blob_size);
+    /* The next table after DSDT is FACS which have special alignment requirement. */
+    num_bytes_used_for_acpi += ROUND_UP(dsdt_blob_size, FACS_ALIGNMENT);
 
-    uint64_t facs_gpa = acpi_allocate_gpa(0x1000);
-    facs_gpa = ROUND_UP(facs_gpa, 64);
-    assert(facs_gpa % 64 == 0);
-    struct facs *facs = (struct facs *)(guest_ram_vaddr + facs_gpa);
+    memcpy(dsdt, dsdt_blob, dsdt_blob_size);
+
+    uint64_t facs_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_facs;
+    struct facs *facs = (struct facs *)(gpa_to_vaddr_or_crash(facs_gpa, &bytes_remaining_for_facs));
+    assert(bytes_remaining_for_facs >= sizeof(struct facs));
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct facs), ACPI_TABLES_ALIGNMENT);
+
     facs_build(facs);
 
-    uint64_t fadt_gpa = acpi_allocate_gpa(sizeof(struct FADT));
-    struct FADT *fadt = (struct FADT *)(guest_ram_vaddr + fadt_gpa);
+    uint64_t fadt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
+    size_t bytes_remaining_for_fadt;
+    struct fadt *fadt = (struct fadt *)(gpa_to_vaddr_or_crash(fadt_gpa, &bytes_remaining_for_fadt));
+    assert(bytes_remaining_for_fadt >= sizeof(struct fadt));
+    num_bytes_used_for_acpi += ROUND_UP(sizeof(struct fadt), ACPI_TABLES_ALIGNMENT);
+
     fadt_build(fadt, dsdt_gpa, facs_gpa);
-    assert(fadt->h.length <= 0x1000);
 
     // uint64_t mcfg_gpa = acpi_allocate_gpa(sizeof(struct mcfg));
     // struct mcfg *mcfg = (struct mcfg *)(guest_ram_vaddr + mcfg_gpa);
     // mcfg_build(mcfg);
     // assert(mcfg->h.length <= 0x1000);
 
-    struct xsdt *xsdt = (struct xsdt *)(guest_ram_vaddr + xsdp->xsdt_gpa);
-
     memset(xsdt, 0, sizeof(struct xsdt));
     uint64_t xsdt_table_ptrs[XSDT_ENTRIES] = { madt_gpa, hpet_gpa, fadt_gpa };
     xsdt_build(xsdt, xsdt_table_ptrs, XSDT_ENTRIES);
 
-    *acpi_start_gpa = ROUND_DOWN(acpi_top, PAGE_SIZE_4K);
-    *acpi_end_gpa = ram_top;
+    *num_bytes_used = num_bytes_used_for_acpi;
 
     return xsdp_gpa;
 }
