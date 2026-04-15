@@ -227,7 +227,7 @@ _Static_assert(sizeof(struct facs) == 64, "FACS must be 64 bytes large");
 #define ACPI_PMT_FREQ_HZ 3579545 // [1f]
 #define ACPI_PMT_MAX_COUNT (1 << 24)
 
-struct FADT {
+struct fadt {
     struct dst_header h;
     uint32_t FirmwareCtrl;
     uint32_t Dsdt;
@@ -298,14 +298,14 @@ struct FADT {
 size_t facs_build(struct facs *facs);
 size_t madt_build(struct madt *madt);
 size_t hpet_build(struct hpet *hpet);
-size_t fadt_build(struct FADT *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa);
+size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa);
 size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs);
 size_t mcfg_build(struct mcfg *mcfg);
 size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa);
 
-// Create all the ACPI tables from guest's ram_top.
-// Returns GPA of the XSDP.
-// The contiguous range of memory used by all ACPI tables are written to acpi_start_gpa and acpi_end_gpa
-// Assume that the Guest-Physical Address of RAM is 0!!!
-uint64_t acpi_build_all(uintptr_t guest_ram_vaddr, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t ram_top,
-                        uint64_t *acpi_start_gpa, uint64_t *acpi_end_gpa);
+// Create all the ACPI tables in guest RAM starting from `acpi_gpa_start`.
+// Returns GPA of the XSDP. Returns 0 if `acpi_bytes_allowed` is less than the number
+// of bytes required by all tables that needed to be built.
+// The sum of the tables' size in bytes will be written to `num_bytes_used`
+uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, void *dsdt_blob, uint64_t dsdt_blob_size,
+                        uint64_t *num_bytes_used);
