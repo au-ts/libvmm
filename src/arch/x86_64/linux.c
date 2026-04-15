@@ -28,7 +28,7 @@
 #define MINIMUM_BOOT_PROT_MINOR 12
 
 #define IMAGE_SETUP_HEADER_OFFSET 0x1f1
-#define HEADER_MAGIC 0x53726448
+#define BZIMAGE_MAGIC 0x53726448
 
 /* [5] */
 #define XLF_KERNEL_64 BIT(0) // Kernel have 64-bits entry
@@ -142,8 +142,6 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
 {
     /* See [3] for details of operations done in this function. */
 
-    // @billn todo check that we got a bzImage and not something else.
-
     if (ram_size % PAGE_SIZE_4K) {
         LOG_VMM_ERR("expected ram size to be page aligned, but got 0x%x\n", ram_size);
         return false;
@@ -157,9 +155,9 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     struct setup_header setup_header;
     memcpy(&setup_header, setup_header_src, sizeof(struct setup_header));
 
-    if (setup_header.header != HEADER_MAGIC) {
+    if (setup_header.header != BZIMAGE_MAGIC) {
         LOG_VMM_ERR("invalid Linux kernel magic or boot protocol too old (< 2.0): expected magic 0x%x, got 0x%x\n",
-                    HEADER_MAGIC, setup_header.header);
+                    BZIMAGE_MAGIC, setup_header.header);
         return false;
     }
 
@@ -191,7 +189,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     setup_header.vid_mode = SETUP_HDR_VGA_MODE_NORMAL;
     setup_header.type_of_loader = SETUP_HDR_TYPE_OF_LOADER;
     setup_header.ramdisk_image = initrd_gpa;
-    setup_header.ramdisk_size = initrd_size; // @billn for now
+    setup_header.ramdisk_size = initrd_size;
     setup_header.cmd_line_ptr = CMDLINE_GPA;
     assert(strlen(cmdline) <= setup_header.cmdline_size);
     strcpy((char *)(ram_start + CMDLINE_GPA), cmdline);
@@ -233,16 +231,19 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     LOG_VMM("Identity paging objects GPA: [0x%x..0x%x)\n", pt_objs_start_gpa, pt_objs_end_gpa);
 
     /* Now create the ACPI tables and get the RSDP. */
-    uint64_t acpi_start_gpa, acpi_end_gpa;
-    /* Pass pt_objs_start_gpa as "ram_top" so that the ACPI tables live straight below the initial paging objects. */
+    // @billn hack, and still assume that guest ram gpa starts from 0
+    uint64_t acpi_start_gpa = pt_objs_start_gpa - 0x4000;
+    uint64_t acpi_max_num_bytes = 0x3000;
+    /* ACPI tables live straight below the initial paging objects. */
 
     // When the size of the DSDT crosses 255 bytes, it seens like the initial paging objects are overwritten, so we hack
     // by leaving a page of room, TODO investigate.
-    uint64_t acpi_rsdp_gpa = acpi_build_all(ram_start, dsdt_blob, dsdt_blob_size, pt_objs_start_gpa - 0x1000,
-                                            &acpi_start_gpa, &acpi_end_gpa);
-    LOG_VMM("ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa, acpi_end_gpa);
-
-    assert(acpi_end_gpa < pt_objs_start_gpa);
+    uint64_t num_bytes_used_for_acpi;
+    uint64_t acpi_rsdp_gpa = acpi_build_all(acpi_start_gpa, acpi_max_num_bytes, dsdt_blob, dsdt_blob_size,
+                                            &num_bytes_used_for_acpi);
+    LOG_VMM("ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa,
+            acpi_start_gpa + num_bytes_used_for_acpi);
+    assert(num_bytes_used_for_acpi <= acpi_max_num_bytes);
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */
     uint64_t *acpi_rsdp = (uint64_t *)(ram_start + ZERO_PAGE_GPA + ZERO_PAGE_ACPI_RSDP_OFFSET);
@@ -261,7 +262,7 @@ bool linux_setup_images(uintptr_t ram_start, size_t ram_size, uintptr_t kernel, 
     };
     e820_table[1] = (struct boot_e820_entry) {
         .addr = acpi_start_gpa,
-        .size = acpi_end_gpa - acpi_start_gpa,
+        .size = num_bytes_used_for_acpi,
         .type = E820_ACPI,
     };
     e820_table[2] = (struct boot_e820_entry) {
