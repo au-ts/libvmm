@@ -172,6 +172,9 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         break;
     }
 
+    /* For leaf 0x15 and 0x16, we have to specify code it rather than passing through the host values.
+     * As QEMU doesn't expose these leafs, which make Linux touches the PIT to measure the TSC frequency.
+     * Which we have not emulated. On real silicon this isn't an issue. */
     case 0x15: /* "Time Stamp Counter and Nominal Core Crystal Clock" */
         vctx->eax = 1; /* Making ratio between Crystal and TSC 1-to-1 */
         vctx->ebx = 1;
