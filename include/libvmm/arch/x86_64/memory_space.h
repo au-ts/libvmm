@@ -17,7 +17,17 @@
  */
 
 /* Document layout of guest RAM */
-#define LOW_RAM_START_GPA 0x0
+
+/* We start guest memory from GPA 0 for 2 reasons:
+ * 1. modern Linux prefers to be loaded at 0x100000, so if we start guest ram from 0,
+ *    we can use large 2MiB pages for guest RAM.
+ * 2. Linux also assumes that RAM starts from zero, for example, if you start RAM at
+ *    0x1000, the kernel complains, but it isn't fatal per se:
+ * [    0.000000] BIOS-provided physical RAM map:
+ * [    0.000000] BIOS-e820: [gap 0x0000000000000000-0x0000000000000fff]
+ * [    0.000000] BIOS-e820: [mem 0x0000000000001000-0x0000000003e61fff]  System RAM
+ */
+#define LOW_RAM_START_GPA 0
 
 #define ECAM_GPA 0xD0000000
 /* 1 bus, 32 devices per bus, 8 functions per device, 4k config space per function */
