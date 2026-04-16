@@ -13,7 +13,8 @@
 
         <virtual_machine name="linux">
             <vcpu id="0" x86_apicv_guest_access_addr="0xfee00000" />
-            <map mr="guest_ram" vaddr="0x0" perms="rwx" cached="true" />
+            <!-- Make sure the base RAM guest GPA matches with LOW_RAM_START_GPA -->
+            <map mr="guest_ram" vaddr="0" perms="rwx" cached="true" />
         </virtual_machine>
 
         <!-- Passthrough COM1 serial port -->
