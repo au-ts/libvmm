@@ -160,9 +160,9 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
-    if (ch == serial_config.rx.id) {
+    if (ch == serial_config.rx.id || ch == serial_config.tx.id) {
         virtio_console_handle_rx(&virtio_console);
-    } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
+    } else if (ch == net_config.tx.id) {
         /* Nothing to do */
     } else if (ch == blk_config.virt.id) {
         virtio_blk_handle_resp(&virtio_blk);
