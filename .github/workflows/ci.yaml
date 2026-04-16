@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install Nix
         uses: cachix/install-nix-action@v31
       - name: Create nix-shell and build PDF
@@ -29,7 +29,7 @@ jobs:
           cd docs
           nix develop .#docs --ignore-environment -c bash -c 'pandoc MANUAL.md -o MANUAL.pdf'
       - name: Upload manual PDF
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MANUAL
           path: docs/MANUAL.pdf
@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: 'true'
       - name: Download Microkit SDK
@@ -71,7 +71,7 @@ jobs:
     runs-on: macos-14
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: 'true'
       - name: Download Microkit SDK
@@ -104,7 +104,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: 'true'
       - name: Setup systems-ci
@@ -134,7 +134,7 @@ jobs:
     needs: build_linux_x86_64_nix
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
       - name: Install dependencies (via apt)
@@ -144,7 +144,7 @@ jobs:
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
       - name: Download images
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: loader-images
           path: ci_build
@@ -154,7 +154,7 @@ jobs:
           exec ./ci/run.py --only-qemu
       - name: Archive logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-logs-qemu
           path: ci_logs
