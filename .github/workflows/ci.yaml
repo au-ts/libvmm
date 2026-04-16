@@ -9,6 +9,13 @@ on:
     types: [synchronize, labeled]
   push:
     branches: [ "main" ]
+  schedule:
+    # 19.37 AEST on a Friday weekly
+    # i.e. 07.37 UTC on Friday weekly.
+    # This is a random time as GitHub suggests non-hour-aligned times as their
+    # runners are busier at that time, and it has been scheduled to avoid
+    # conflicts with humans trying to use the boards.
+    - cron: '37 7 * * 4'
 
 env:
   MICROKIT_VERSION: 2.2.0
