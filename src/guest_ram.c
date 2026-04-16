@@ -11,12 +11,6 @@
 #include <libvmm/guest_ram.h>
 #include <libvmm/util/util.h>
 
-struct guest_ram_region {
-    uint64_t gpa_start;
-    uint64_t gpa_end;
-    void *vmm_vaddr;
-};
-
 int guest_ram_regions_len = 0;
 struct guest_ram_region guest_ram_regions[MAX_GUEST_RAM_REGIONS];
 
@@ -55,6 +49,12 @@ bool guest_ram_add_region(uint64_t gpa, void *vmm_vaddr, uint64_t size)
     guest_ram_regions_len++;
 
     return true;
+}
+
+struct guest_ram_region *guest_ram_get_regions(int *num_regions)
+{
+    *num_regions = guest_ram_regions_len;
+    return guest_ram_regions;
 }
 
 void *gpa_to_vaddr(uint64_t gpa, size_t *bytes_remaining)
