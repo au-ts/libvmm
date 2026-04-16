@@ -20,7 +20,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
 #elif defined(CONFIG_ARCH_X86_64)
-bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext initial_regs);
+bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext *initial_regs);
 #else
 #error "Unsupported guest architecture"
 #endif

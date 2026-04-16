@@ -304,8 +304,6 @@ size_t mcfg_build(struct mcfg *mcfg);
 size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa);
 
 // Create all the ACPI tables in guest RAM starting from `acpi_gpa_start`.
-// Returns GPA of the XSDP. Returns 0 if `acpi_bytes_allowed` is less than the number
-// of bytes required by all tables that needed to be built.
-// The sum of the tables' size in bytes will be written to `num_bytes_used`
-uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, void *dsdt_blob, uint64_t dsdt_blob_size,
-                        uint64_t *num_bytes_used);
+// Returns GPA of the XSDP and the sum of the tables' size in bytes will be written to `num_bytes_used`
+// Returns 0 and `num_bytes_used` will be 0 if out of guest memory
+uint64_t acpi_build_all(uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t *num_bytes_used);

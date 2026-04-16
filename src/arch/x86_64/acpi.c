@@ -411,43 +411,62 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
     return sizeof(struct xsdp);
 }
 
-uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, void *dsdt_blob, uint64_t dsdt_blob_size,
-                        uint64_t *num_bytes_used)
+uint64_t acpi_build_all(uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t *num_bytes_used)
 {
-    /* Make the starting point aligned */
+    /* Make the starting point is naturally aligned */
     uint64_t num_bytes_used_for_acpi = acpi_gpa_start % ACPI_TABLES_ALIGNMENT;
 
     /* Firstly create the Root System Description Pointer structure.
      * Start placing tables from `acpi_gpa_start` */
     uint64_t xsdp_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_xsdp;
-    struct xsdp *xsdp = (struct xsdp *)(gpa_to_vaddr_or_crash(xsdp_gpa, &bytes_remaining_for_xsdp));
-    assert(bytes_remaining_for_xsdp >= sizeof(struct xsdp));
+    struct xsdp *xsdp = (struct xsdp *)gpa_to_vaddr(xsdp_gpa, &bytes_remaining_for_xsdp);
+    if (!xsdp || bytes_remaining_for_xsdp < sizeof(struct xsdp)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for XSDP, available %lu < needed %lu\n", bytes_remaining_for_xsdp,
+                    sizeof(struct xsdp));
+        *num_bytes_used = 0;
+        return 0;
+    }
     /* Make sure the rest of the tables will be aligned */
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct xsdp), ACPI_TABLES_ALIGNMENT);
 
-    // All the other tables "grow down" from the XSDP, here we pre-allocate the XSDT
-    // so that we can compute the XSDP checksum.
+    /* All the other tables "grow down" from the XSDP, here we pre-allocate the XSDT
+     * so that we can compute the XSDP checksum. */
     uint64_t xsdt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_xsdt;
-    struct xsdt *xsdt = gpa_to_vaddr_or_crash(xsdt_gpa, &bytes_remaining_for_xsdt);
-    assert(bytes_remaining_for_xsdt >= sizeof(struct xsdt));
+    struct xsdt *xsdt = (struct xsdt *)gpa_to_vaddr(xsdt_gpa, &bytes_remaining_for_xsdt);
+    if (!xsdt || bytes_remaining_for_xsdt < sizeof(struct xsdt)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for XSDT, available %lu < needed %lu\n", bytes_remaining_for_xsdt,
+                    sizeof(struct xsdt));
+        *num_bytes_used = 0;
+        return 0;
+    }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct xsdt), ACPI_TABLES_ALIGNMENT);
 
     xsdp_build(xsdp, xsdt_gpa);
 
     uint64_t madt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_madt;
-    struct madt *madt = (struct madt *)(gpa_to_vaddr_or_crash(madt_gpa, &bytes_remaining_for_madt));
-    assert(bytes_remaining_for_madt >= sizeof(struct madt));
+    struct madt *madt = (struct madt *)gpa_to_vaddr(madt_gpa, &bytes_remaining_for_madt);
+    if (!madt || bytes_remaining_for_madt < sizeof(struct madt)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for MADT, available %lu < needed %lu\n", bytes_remaining_for_madt,
+                    sizeof(struct madt));
+        *num_bytes_used = 0;
+        return 0;
+    }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct madt), ACPI_TABLES_ALIGNMENT);
 
     madt_build(madt);
 
     uint64_t hpet_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_hpet;
-    struct hpet *hpet = (struct hpet *)(gpa_to_vaddr_or_crash(hpet_gpa, &bytes_remaining_for_hpet));
-    assert(bytes_remaining_for_hpet >= sizeof(struct hpet));
+    struct hpet *hpet = (struct hpet *)gpa_to_vaddr(hpet_gpa, &bytes_remaining_for_hpet);
+    if (!hpet || bytes_remaining_for_hpet < sizeof(struct hpet)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for HPET, available %lu < needed %lu\n", bytes_remaining_for_hpet,
+                    sizeof(struct hpet));
+        *num_bytes_used = 0;
+        return 0;
+    }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct hpet), ACPI_TABLES_ALIGNMENT);
 
     hpet_build(hpet);
@@ -458,8 +477,13 @@ uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, vo
     // It is in a binary format from the ASL compiler, which just needs to be copied to guest RAM.
     uint64_t dsdt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_dsdt;
-    void *dsdt = gpa_to_vaddr_or_crash(dsdt_gpa, &bytes_remaining_for_dsdt);
-    assert(bytes_remaining_for_dsdt >= dsdt_blob_size);
+    void *dsdt = gpa_to_vaddr(dsdt_gpa, &bytes_remaining_for_dsdt);
+    if (!dsdt || bytes_remaining_for_dsdt < dsdt_blob_size) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for DSDT, available %lu < needed %lu\n", bytes_remaining_for_dsdt,
+                    dsdt_blob_size);
+        *num_bytes_used = 0;
+        return 0;
+    }
     /* The next table after DSDT is FACS which have special alignment requirement. */
     num_bytes_used_for_acpi += ROUND_UP(dsdt_blob_size, FACS_ALIGNMENT);
 
@@ -467,16 +491,26 @@ uint64_t acpi_build_all(uint64_t acpi_gpa_start, uint64_t acpi_bytes_allowed, vo
 
     uint64_t facs_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_facs;
-    struct facs *facs = (struct facs *)(gpa_to_vaddr_or_crash(facs_gpa, &bytes_remaining_for_facs));
-    assert(bytes_remaining_for_facs >= sizeof(struct facs));
+    struct facs *facs = (struct facs *)gpa_to_vaddr(facs_gpa, &bytes_remaining_for_facs);
+    if (!facs || bytes_remaining_for_facs < sizeof(struct facs)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for FACS, available %lu < needed %lu\n", bytes_remaining_for_facs,
+                    sizeof(struct facs));
+        *num_bytes_used = 0;
+        return 0;
+    }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct facs), ACPI_TABLES_ALIGNMENT);
 
     facs_build(facs);
 
     uint64_t fadt_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_fadt;
-    struct fadt *fadt = (struct fadt *)(gpa_to_vaddr_or_crash(fadt_gpa, &bytes_remaining_for_fadt));
-    assert(bytes_remaining_for_fadt >= sizeof(struct fadt));
+    struct fadt *fadt = (struct fadt *)gpa_to_vaddr(fadt_gpa, &bytes_remaining_for_fadt);
+    if (!fadt || bytes_remaining_for_fadt < sizeof(struct fadt)) {
+        LOG_VMM_ERR("acpi_build_all(): out of memory for FADT, available %lu < needed %lu\n", bytes_remaining_for_fadt,
+                    sizeof(struct fadt));
+        *num_bytes_used = 0;
+        return 0;
+    }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct fadt), ACPI_TABLES_ALIGNMENT);
 
     fadt_build(fadt, dsdt_gpa, facs_gpa);
