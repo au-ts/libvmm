@@ -20,6 +20,16 @@ bool guest_ram_add_region(uint64_t gpa, void *vmm_vaddr, uint64_t size);
 void *gpa_to_vaddr(uint64_t gpa, size_t *bytes_remaining);
 void *gpa_to_vaddr_or_crash(uint64_t gpa, size_t *bytes_remaining);
 
+struct guest_ram_region {
+    uint64_t gpa_start;
+    uint64_t gpa_end;
+    void *vmm_vaddr;
+};
+
+/* Returns the list of guest RAM regions registered. The number of regions
+ * in the list will be written to `num_regions_ret`. */
+struct guest_ram_region *guest_ram_get_regions(int *num_regions_ret);
+
 #if defined(CONFIG_ARCH_X86_64)
 /* Convert guest virtual address to guest physical address. `bytes_remaining` will
  * contain number of bytes to page boundary. */

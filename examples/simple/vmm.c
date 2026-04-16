@@ -112,7 +112,6 @@ void init(void)
     assert(guest_ram_add_region(GUEST_RAM_START_GPA, (void *)guest_ram_vaddr, GUEST_RAM_SIZE));
 
 #if defined(BOARD_x86_64_generic_vtx)
-    linux_x86_setup_ret_t linux_setup;
     size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
 
     if (!dsdt_aml_size) {
@@ -120,9 +119,10 @@ void init(void)
         return;
     }
 
-    if (!linux_setup_images(guest_ram_vaddr, GUEST_RAM_SIZE, (uintptr_t)_guest_kernel_image, kernel_size,
-                            (uintptr_t)_guest_initrd_image, initrd_size, _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE,
-                            &linux_setup)) {
+    seL4_VCPUContext initial_regs;
+    linux_x86_setup_ret_t linux_setup;
+    if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
+                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
@@ -162,9 +162,7 @@ void init(void)
     /* Pass through serial IRQs */
     assert(virq_ioapic_register(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN, &serial_ack, NULL));
 
-    seL4_VCPUContext initial_regs;
-    memset(&initial_regs, 0, sizeof(seL4_VCPUContext));
-    guest_start(linux_setup.kernel_entry_gpa, initial_regs);
+    guest_start(linux_setup.kernel_entry_gpa, &initial_regs);
 #else
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     if (!dtb_size) {

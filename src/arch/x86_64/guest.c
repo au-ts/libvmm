@@ -16,13 +16,13 @@
 #include <sel4/arch/vmenter.h>
 #endif
 
-bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext initial_regs)
+bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext *initial_regs)
 {
     /* Write out the initial CPU registers. This is required when there is some sort
        of ABI between the guest software being booted and us acting as the "bootloader".
        For example, Linux expects the GPA of the "zero page" to be in RSI when the CPU
        is resumed. */
-    microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, &initial_regs);
+    microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, initial_regs);
 
     LOG_VMM("starting guest at 0x%lx\n", kernel_rip);
     microkit_vcpu_x86_deferred_resume(kernel_rip, VMCS_PCC_DEFAULT, 0);
