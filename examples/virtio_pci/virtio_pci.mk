@@ -45,7 +45,6 @@ vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 CFLAGS += \
 	  -Wall \
 	  -Wno-unused-function \
-	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \

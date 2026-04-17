@@ -39,7 +39,6 @@ CFLAGS := \
 	  -ffreestanding \
 	  -g3 -O3 -Wall \
 	  -Wno-unused-function \
-	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
