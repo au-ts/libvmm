@@ -89,7 +89,7 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
                     target_vcpu_id);
         assert(false);
         // @ivanv: used to be ignore_fault, double check this is right
-        bool success = fault_advance_vcpu(vcpu_id, regs);
+        bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
         // @ivanv: todo error handling
         assert(success);
     }
