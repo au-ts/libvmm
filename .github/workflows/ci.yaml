@@ -41,38 +41,6 @@ jobs:
         with:
           name: MANUAL
           path: docs/MANUAL.pdf
-  build_linux_x86_64:
-    name: Build examples (Linux x86-64)
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          submodules: 'true'
-      - name: Download Microkit SDK
-        run: |
-          wget ${{ env.MICROKIT_URL }}/microkit-sdk-${{ env.MICROKIT_VERSION }}-linux-x86-64.tar.gz
-          tar xf microkit-sdk-${{ env.MICROKIT_VERSION }}-linux-x86-64.tar.gz
-      - name: Install dependencies (via apt)
-        # 'expect' is only a dependency for CI testing
-        run: sudo apt update && sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler expect gcc-aarch64-linux-gnu
-      - name: Install Zig
-        uses: mlugg/setup-zig@v2.0.5
-        with:
-          version: ${{ env.ZIG_VERSION }}
-      - name: Setup pyenv
-        run: |
-          python3 -m venv venv
-          ./venv/bin/pip install --upgrade sdfgen==${{ env.SDFGEN_VERSION }}
-      - name: Setup systems-ci
-        uses: au-ts/systems-ci@main
-        with:
-          path: systems-ci
-      - name: Build examples
-        run: ./ci/build.py ${PWD}/microkit-sdk-${{ env.MICROKIT_VERSION }} $(nproc)
-        shell: bash
-        env:
-          PYTHON: ${{ github.workspace }}/venv/bin/python
 
   build_macos_arm64:
     name: Build examples (macOS ARM64)
