@@ -151,8 +151,18 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -m size=9G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
-							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
-							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
+							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
+							  -cdrom /home/billn/Downloads/nixos-graphical-25.11.9418.c7f47036d3df-x86_64-linux.iso
+
+# nixos 2026
+# -cdrom /home/billn/Downloads/nixos-graphical-25.11.9418.c7f47036d3df-x86_64-linux.iso
+
+# nixos 1984
+# -cdrom /home/billn/Downloads/nixos-minimal-25.11.9418.c7f47036d3df-x86_64-linux.iso
+
+# working windows 10:
+# 							  -drive file=$(EXAMPLE_DIR)/disk.img,format=raw,if=none,id=drive0 \
 
 
 clean::

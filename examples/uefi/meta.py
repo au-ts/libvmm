@@ -6,7 +6,7 @@ from typing import List, Optional
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
-assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
+assert version('sdfgen').split(".")[1] == "29", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -55,7 +55,7 @@ def x86_virtio_net(eth_driver):
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0x380000000000
+        sdf, "virtio_net_regs", 0x4000, paddr=0x7000000000
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -86,7 +86,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0x380000004000
+        sdf, "virtio_blk_regs", 0x4000, paddr=0x7000004000
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
