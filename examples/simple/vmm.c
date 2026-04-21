@@ -55,15 +55,6 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-static void serial_ack(size_t vcpu_id, int irq, void *cookie)
-{
-    /*
-     * For now we by default simply ack the serial IRQ, we have not
-     * come across a case yet where more than this needs to be done.
-     */
-    microkit_irq_ack(SERIAL_IRQ_CH);
-}
-
 void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -85,9 +76,8 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
         return;
     }
-    success = virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, NULL);
-    /* Just in case there is already an interrupt available to handle, we ack it here. */
-    microkit_irq_ack(SERIAL_IRQ_CH);
+    success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
+    assert(success);
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
@@ -96,7 +86,7 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
     case SERIAL_IRQ_CH: {
-        bool success = virq_inject(SERIAL_IRQ);
+        bool success = virq_handle_passthrough(ch);
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
         }
