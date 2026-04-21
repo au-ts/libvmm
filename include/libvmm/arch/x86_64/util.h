@@ -20,3 +20,6 @@ extern bool fault_cond;
 
 bool ept_fault_is_read(seL4_Word qualification);
 bool ept_fault_is_write(seL4_Word qualification);
+uint64_t pte_to_gpa(uint64_t pte);
+bool pte_present(uint64_t pte);
+bool pt_page_size(uint64_t pte);

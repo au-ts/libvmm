@@ -1,4 +1,13 @@
 #include <libvmm/guest.h>
+#include <sddf/util/util.h>
+#include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/util.h>
+
+extern uint64_t guest_ram_vaddr;
+extern uint64_t guest_flash_vaddr;
+extern uint64_t guest_high_ram_size;
+
 
 bool guest_paging_on(void) {
     return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_CR0) & BIT(31);

@@ -28,18 +28,18 @@ bool ept_fault_is_write(seL4_Word qualification)
     return qualification & EPT_VIOLATION_WRITE;
 }
 
-static uint64_t pte_to_gpa(uint64_t pte)
+uint64_t pte_to_gpa(uint64_t pte)
 {
     assert(pte & 1);
     return pte & 0xffffffffff000;
 }
 
-static bool pte_present(uint64_t pte)
+bool pte_present(uint64_t pte)
 {
     return pte & BIT(0);
 }
 
-static bool pt_page_size(uint64_t pte)
+bool pt_page_size(uint64_t pte)
 {
     return pte & BIT(7);
 }
