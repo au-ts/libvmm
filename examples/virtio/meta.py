@@ -7,7 +7,7 @@ from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 from typing import Optional
 
-assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
+assert version('sdfgen').split(".")[1] == "29", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
