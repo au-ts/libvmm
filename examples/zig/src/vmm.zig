@@ -84,11 +84,6 @@ const log = struct {
 const SERIAL_IRQ_CH: c.microkit_channel = 1;
 const SERIAL_IRQ: i32 = 33;
 
-fn serial_ack(_: usize, _: c_int, _: ?*anyopaque) callconv(.c) void {
-    // Nothing else needs to be done other than acking the IRQ.
-    c.microkit_irq_ack(SERIAL_IRQ_CH);
-}
-
 export fn init() callconv(.c) void {
     // Initialise the VMM, the VCPU(s), and start the guest
     log.info("starting", .{});
@@ -114,13 +109,10 @@ export fn init() callconv(.c) void {
         return;
     }
     // Register the interrupt for the UART with the virtual interrupt controller
-    if (!c.virq_register(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, &serial_ack, null)) {
+    if (!c.virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH)) {
         log.err("Failed to register serial IRQ\n", .{});
         return;
     }
-    // Just in case there is already an interrupt from the UART available to
-    // handle, we ack it here.
-    c.microkit_irq_ack(SERIAL_IRQ_CH);
     // Finally we can start the guest
     if (!c.guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR)) {
         log.err("Failed to start guest\n", .{});
@@ -131,7 +123,7 @@ export fn init() callconv(.c) void {
 export fn notified(ch: c.microkit_channel) callconv(.c) void {
     switch (ch) {
         SERIAL_IRQ_CH => {
-            const success = c.virq_inject(SERIAL_IRQ);
+            const success = c.virq_handle_passthrough(SERIAL_IRQ_CH);
             if (!success) {
                 log.err("IRQ {x} dropped\n", .{ SERIAL_IRQ });
             }
@@ -140,10 +132,8 @@ export fn notified(ch: c.microkit_channel) callconv(.c) void {
     }
 }
 
-extern fn fault_handle(id: c.microkit_child, msginfo: c.microkit_msginfo) callconv(.c) bool;
-
 export fn fault(id: c.microkit_child, msginfo: c.microkit_msginfo, msginfo_reply: *c.microkit_msginfo) callconv(.c) bool {
-    if (fault_handle(id, msginfo)) {
+    if (c.fault_handle(id, msginfo)) {
         // Now that we have handled the fault, we reply to it so that the guest can resume execution.
         msginfo_reply.* = c.microkit_msginfo_new(0, 0);
         return true;

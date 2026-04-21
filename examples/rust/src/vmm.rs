@@ -6,7 +6,6 @@
 #![feature(never_type)]
 
 use core::{include_bytes};
-use core::ffi::{c_void};
 
 use sel4_microkit::{protection_domain, MessageInfo, Channel, Child, Handler, debug_println};
 
@@ -38,20 +37,10 @@ extern "C" {
                           dtb_src: usize, dtb_dest: usize, dtb_size: usize,
                           initrd_src: usize, initrd_dest: usize, initrd_size: usize) -> usize;
     fn virq_controller_init() -> bool;
-    fn virq_register(vcpu_id: usize, irq: i32, ack_fn: extern fn(usize, i32, *const c_void), ack_data: *const c_void) -> bool;
-    fn virq_inject(irq: i32) -> bool;
+    fn virq_register_passthrough(vcpu_id: usize, irq: i32, irq_ch: u32) -> bool;
+    fn virq_handle_passthrough(irq_ch: u32) -> bool;
     fn guest_start(kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
-}
-
-extern "C" fn uart_irq_ack(_: usize, _: i32, _: *const c_void) {
-    match UART_CH.irq_ack() {
-        // Do nothing if there's no problem
-        Ok(()) => {}
-        Err(_e) => {
-            debug_println!("VMM|ERROR: received ack from guest, but could not ack UART IRQ channel: {_e}");
-        }
-    }
 }
 
 #[protection_domain]
@@ -77,14 +66,8 @@ fn init() -> VmmHandler {
                                          );
         let success = virq_controller_init();
         assert!(success);
-        let success = virq_register(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, uart_irq_ack, core::ptr::null());
+        let success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, UART_CH.index() as u32);
         assert!(success);
-        match UART_CH.irq_ack() {
-            Ok(()) => {}
-            Err(_e) => {
-                debug_println!("VMM|ERROR: could not ack UART IRQ channel: {_e}");
-            }
-        }
         guest_start(guest_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
     }
 
@@ -100,7 +83,7 @@ impl Handler for VmmHandler {
         match channel {
             UART_CH => {
                 unsafe {
-                    let success = virq_inject(UART_IRQ as i32);
+                    let success = virq_handle_passthrough(UART_CH.index() as u32);
                     if !success {
                         debug_println!("VMM|ERROR: could not inject UART IRQ");
                     }
