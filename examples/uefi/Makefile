@@ -18,7 +18,7 @@ endif
 
 ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	export UART_DRIVER := pc99
-	export TIMER_DRIVER := hpet
+	export TIMER_DRIVER := tsc_hpet
 	export BLK_DRIVER := virtio/pci
 	export ETH_DRIVER := virtio/pci
 	export QEMU := qemu-system-x86_64
