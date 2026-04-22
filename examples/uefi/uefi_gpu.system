@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system>
+    <memory_region name="guest_ram" size="0x40000000" phys_addr="0x10000000" page_size="0x200000" />
+    <memory_region name="guest_ram_high" size="0x1000" phys_addr="0x100000000" page_size="0x1000" />
+    <memory_region name="guest_vapic" size="0x1000" phys_addr="0xf000000" />
+    <memory_region name="guest_apic_access" size="0x1000" phys_addr="0xf001000" />
+    <memory_region name="virtio_gpu_regs" size="0x4000" phys_addr="0x7100000000" />
+    <memory_region name="guest_scratch" size="0x10000" />
+    <memory_region name="guest_flash" size="0x600000" />
+    <memory_region name="fb" size="0x200000" phys_addr="0x7000000" />
+    <memory_region name="fw_cfg_dma_cmd" size="0x1000" phys_addr="0x6000000" />
+    <memory_region name="hw_net_rings" size="0x10000" phys_addr="0xe000000" />
+    <memory_region name="virtio_net_regs" size="0x4000" phys_addr="0x7000000000" />
+    <memory_region name="virtio_blk_requests" size="0x10000" phys_addr="0xd000000" />
+    <memory_region name="virtio_blk_metadata" size="0x10000" phys_addr="0xc000000" />
+    <memory_region name="virtio_blk_regs" size="0x4000" phys_addr="0x7000004000" />
+    <memory_region name="hept_regs" size="0x1000" phys_addr="0xfed00000" />
+    <memory_region name="ecam" size="0x10000000" />
+    <memory_region name="memory_resource" size="0x80000" />
+    <memory_region name="generic/serial/queue/serial_driver/serial_virt_rx" size="0x1000" />
+    <memory_region name="generic/serial/data/serial_driver/serial_virt_rx" size="0x10000" />
+    <memory_region name="generic/serial/queue/serial_virt_rx/CLIENT_VMM" size="0x1000" />
+    <memory_region name="generic/serial/data/serial_virt_rx/CLIENT_VMM" size="0x10000" />
+    <memory_region name="generic/serial/queue/serial_driver/serial_virt_tx" size="0x1000" />
+    <memory_region name="generic/serial/data/serial_driver/serial_virt_tx" size="0x10000" />
+    <memory_region name="generic/serial/queue/serial_virt_tx/CLIENT_VMM" size="0x1000" />
+    <memory_region name="generic/serial/data/serial_virt_tx/CLIENT_VMM" size="0x10000" />
+    <memory_region name="blk_driver_storage_info" size="0x1000" />
+    <memory_region name="blk_driver_request" size="0x4000" />
+    <memory_region name="blk_driver_response" size="0x4000" />
+    <memory_region name="blk_driver_data" size="0xa000" phys_addr="0xbfbf6000" />
+    <memory_region name="blk_client_CLIENT_VMM_storage_info" size="0x1000" />
+    <memory_region name="blk_client_CLIENT_VMM_request" size="0x4000" />
+    <memory_region name="blk_client_CLIENT_VMM_response" size="0x4000" />
+    <memory_region name="blk_client_CLIENT_VMM_data" size="0x8000000" phys_addr="0xb7bf6000" />
+    <memory_region name="generic/net/queue/eth_driver/net_virt_rx/free" size="0x3000" />
+    <memory_region name="generic/net/queue/eth_driver/net_virt_rx/active" size="0x3000" />
+    <memory_region name="generic/net/rx/data/device" size="0x100000" phys_addr="0xb7af6000" />
+    <memory_region name="generic/net/rx/virt_metadata" size="0x1000" />
+    <memory_region name="generic/net/queue/eth_driver/net_virt_tx/free" size="0x3000" />
+    <memory_region name="generic/net/queue/eth_driver/net_virt_tx/active" size="0x3000" />
+    <memory_region name="generic/net/queue/net_virt_rx/client0_net_copier/free" size="0x3000" />
+    <memory_region name="generic/net/queue/net_virt_rx/client0_net_copier/active" size="0x3000" />
+    <memory_region name="generic/net/queue/client0_net_copier/CLIENT_VMM/free" size="0x3000" />
+    <memory_region name="generic/net/queue/client0_net_copier/CLIENT_VMM/active" size="0x3000" />
+    <memory_region name="generic/net/rx/data/client/CLIENT_VMM" size="0x100000" />
+    <memory_region name="generic/net/queue/net_virt_tx/CLIENT_VMM/free" size="0x3000" />
+    <memory_region name="generic/net/queue/net_virt_tx/CLIENT_VMM/active" size="0x3000" />
+    <memory_region name="generic/net/tx/data/client/CLIENT_VMM" size="0x100000" phys_addr="0xb79f6000" />
+    <protection_domain name="CLIENT_VMM" priority="1">
+        <program_image path="vmm_x86_64.elf" />
+        <map mr="guest_ram" vaddr="0x30000000" perms="rw" cached="true" />
+        <map mr="guest_ram_high" vaddr="0x100000000" perms="rw" cached="true" />
+        <map mr="guest_vapic" vaddr="0x3000000000" perms="rw" cached="true" />
+        <map mr="guest_flash" vaddr="0x2000000" perms="rw" cached="true" />
+        <map mr="fb" vaddr="0x800000" perms="rw" cached="true" />
+        <map mr="fw_cfg_dma_cmd" vaddr="0xd00000" perms="rw" cached="true" />
+        <map mr="ecam" vaddr="0x8000000" perms="rw" cached="true" />
+        <map mr="memory_resource" vaddr="0x1000000" perms="rw" cached="true" />
+        <map mr="generic/serial/queue/serial_virt_rx/CLIENT_VMM" vaddr="0x3000001000" perms="rw" />
+        <map mr="generic/serial/data/serial_virt_rx/CLIENT_VMM" vaddr="0x3000002000" perms="rw" />
+        <map mr="generic/serial/queue/serial_virt_tx/CLIENT_VMM" vaddr="0x3000012000" perms="rw" />
+        <map mr="generic/serial/data/serial_virt_tx/CLIENT_VMM" vaddr="0x3000013000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_storage_info" vaddr="0x3000023000" perms="r" />
+        <map mr="blk_client_CLIENT_VMM_request" vaddr="0x3000024000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_response" vaddr="0x3000028000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_data" vaddr="0x3000200000" perms="rw" />
+        <map mr="generic/net/queue/client0_net_copier/CLIENT_VMM/free" vaddr="0x3008200000" perms="rw" />
+        <map mr="generic/net/queue/client0_net_copier/CLIENT_VMM/active" vaddr="0x3008203000" perms="rw" />
+        <map mr="generic/net/rx/data/client/CLIENT_VMM" vaddr="0x3008206000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/free" vaddr="0x3008306000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/active" vaddr="0x3008309000" perms="rw" />
+        <map mr="generic/net/tx/data/client/CLIENT_VMM" vaddr="0x300830c000" perms="rw" />
+
+        <iomap mr="guest_ram" pcidev="0:4.0" addr="0" />
+        <iomap mr="guest_ram_high" pcidev="0:4.0" addr="0x100000000" />
+
+        <virtual_machine name="client_linux">
+            <vcpu id="0" />
+            <map mr="guest_ram" vaddr="0x0" perms="rwx" cached="true" />
+            <map mr="guest_ram_high" vaddr="0x100000000" perms="rwx" cached="true" />
+            <map mr="guest_apic_access" vaddr="0xfee00000" perms="rw" cached="true" />
+            <map mr="virtio_gpu_regs" vaddr="0x7100000000" perms="rw" cached="true" />
+            <map mr="guest_scratch" vaddr="0xfe000000" perms="rwx" cached="true" />
+            <map mr="guest_flash" vaddr="0xffa00000" perms="rwx" cached="true" />
+        </virtual_machine>
+        <irq pin="11" vector="45" id="10" ioapic="0" />
+        <irq pin="1" vector="32" id="3" ioapic="0" />
+        <irq pin="12" vector="33" id="4" ioapic="0" />
+        <irq pin="14" vector="50" id="5" ioapic="0" />
+        <irq pin="15" vector="51" id="6" ioapic="0" />
+        <irq pin="8" vector="61" id="8" ioapic="0" />
+        <irq pin="3" vector="60" id="7" ioapic="0" />
+        <ioport id="20" addr="1296" size="8" />
+        <ioport id="21" addr="1304" size="4" />
+        <ioport id="22" addr="96" size="4" />
+        <ioport id="23" addr="100" size="1" />
+        <ioport id="30" addr="496" size="8" />
+        <ioport id="31" addr="1014" size="1" />
+        <ioport id="32" addr="368" size="8" />
+        <ioport id="33" addr="886" size="1" />
+        <ioport id="34" addr="3320" size="4" />
+        <ioport id="35" addr="3324" size="4" />
+        <ioport id="36" addr="112" size="1" />
+        <ioport id="37" addr="113" size="1" />
+        <ioport id="38" addr="760" size="8" />
+    </protection_domain>
+    <protection_domain name="serial_driver" priority="200">
+        <program_image path="serial_driver.elf" />
+        <map mr="generic/serial/queue/serial_driver/serial_virt_rx" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/serial/data/serial_driver/serial_virt_rx" vaddr="0x20001000" perms="rw" />
+        <map mr="generic/serial/queue/serial_driver/serial_virt_tx" vaddr="0x20011000" perms="rw" />
+        <map mr="generic/serial/data/serial_driver/serial_virt_tx" vaddr="0x20012000" perms="rw" />
+        <irq pin="4" vector="34" id="1" ioapic="0" />
+        <ioport id="0" addr="1016" size="8" />
+    </protection_domain>
+    <protection_domain name="serial_virt_tx" priority="199">
+        <program_image path="serial_virt_tx.elf" />
+        <map mr="generic/serial/queue/serial_driver/serial_virt_tx" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/serial/data/serial_driver/serial_virt_tx" vaddr="0x20001000" perms="rw" />
+        <map mr="generic/serial/queue/serial_virt_tx/CLIENT_VMM" vaddr="0x20011000" perms="rw" />
+        <map mr="generic/serial/data/serial_virt_tx/CLIENT_VMM" vaddr="0x20012000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="serial_virt_rx" priority="199" stack_size="0x2000">
+        <program_image path="serial_virt_rx.elf" />
+        <map mr="generic/serial/queue/serial_driver/serial_virt_rx" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/serial/data/serial_driver/serial_virt_rx" vaddr="0x20001000" perms="rw" />
+        <map mr="generic/serial/queue/serial_virt_rx/CLIENT_VMM" vaddr="0x20011000" perms="rw" />
+        <map mr="generic/serial/data/serial_virt_rx/CLIENT_VMM" vaddr="0x20012000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="eth_driver" priority="254">
+        <program_image path="eth_driver.elf" />
+        <map mr="hw_net_rings" vaddr="0x70000000" perms="rw" cached="true" />
+        <map mr="virtio_net_regs" vaddr="0x60000000" perms="rw" cached="false" />
+        <map mr="generic/net/queue/eth_driver/net_virt_rx/free" vaddr="0x70010000" perms="rw" />
+        <map mr="generic/net/queue/eth_driver/net_virt_rx/active" vaddr="0x70013000" perms="rw" />
+        <map mr="generic/net/queue/eth_driver/net_virt_tx/free" vaddr="0x70016000" perms="rw" />
+        <map mr="generic/net/queue/eth_driver/net_virt_tx/active" vaddr="0x70019000" perms="rw" />
+        <irq pin="10" vector="44" id="16" ioapic="0" />
+    </protection_domain>
+    <protection_domain name="net_virt_rx" priority="99">
+        <program_image path="network_virt_rx.elf" />
+        <map mr="generic/net/queue/eth_driver/net_virt_rx/free" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/net/queue/eth_driver/net_virt_rx/active" vaddr="0x20003000" perms="rw" />
+        <map mr="generic/net/rx/data/device" vaddr="0x20006000" perms="r" />
+        <map mr="generic/net/rx/virt_metadata" vaddr="0x20106000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_rx/client0_net_copier/free" vaddr="0x20107000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_rx/client0_net_copier/active" vaddr="0x2010a000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="net_virt_tx" priority="100" budget="20000">
+        <program_image path="network_virt_tx.elf" />
+        <map mr="generic/net/queue/eth_driver/net_virt_tx/free" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/net/queue/eth_driver/net_virt_tx/active" vaddr="0x20003000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/free" vaddr="0x20006000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/active" vaddr="0x20009000" perms="rw" />
+        <map mr="generic/net/tx/data/client/CLIENT_VMM" vaddr="0x2000c000" perms="r" />
+    </protection_domain>
+    <protection_domain name="client0_net_copier" priority="98" budget="20000">
+        <program_image path="network_copy.elf" />
+        <map mr="generic/net/queue/net_virt_rx/client0_net_copier/free" vaddr="0x20000000" perms="rw" />
+        <map mr="generic/net/queue/net_virt_rx/client0_net_copier/active" vaddr="0x20003000" perms="rw" />
+        <map mr="generic/net/queue/client0_net_copier/CLIENT_VMM/free" vaddr="0x20006000" perms="rw" />
+        <map mr="generic/net/queue/client0_net_copier/CLIENT_VMM/active" vaddr="0x20009000" perms="rw" />
+        <map mr="generic/net/rx/data/device" vaddr="0x2000c000" perms="rw" />
+        <map mr="generic/net/rx/data/client/CLIENT_VMM" vaddr="0x2010c000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="blk_driver" priority="200">
+        <program_image path="blk_driver.elf" />
+        <map mr="virtio_blk_requests" vaddr="0x20200000" perms="rw" cached="true" />
+        <map mr="virtio_blk_metadata" vaddr="0x20210000" perms="rw" cached="true" />
+        <map mr="virtio_blk_regs" vaddr="0x60000000" perms="rw" cached="false" />
+        <map mr="blk_driver_storage_info" vaddr="0x60004000" perms="rw" />
+        <map mr="blk_driver_request" vaddr="0x60005000" perms="rw" />
+        <map mr="blk_driver_response" vaddr="0x60009000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="blk_virt" priority="199" stack_size="0x2000">
+        <program_image path="blk_virt.elf" />
+        <map mr="blk_driver_storage_info" vaddr="0x20000000" perms="r" />
+        <map mr="blk_driver_request" vaddr="0x20001000" perms="rw" />
+        <map mr="blk_driver_response" vaddr="0x20005000" perms="rw" />
+        <map mr="blk_driver_data" vaddr="0x20009000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_storage_info" vaddr="0x20013000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_request" vaddr="0x20014000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_response" vaddr="0x20018000" perms="rw" />
+        <map mr="blk_client_CLIENT_VMM_data" vaddr="0x20200000" perms="rw" />
+    </protection_domain>
+    <protection_domain name="timer_driver" priority="180">
+        <program_image path="timer_driver.elf" />
+        <map mr="hept_regs" vaddr="0x50000000" perms="rw" cached="false" />
+        <irq pin="2" vector="40" id="0" ioapic="0" />
+    </protection_domain>
+    <channel>
+        <end pd="timer_driver" id="1" />
+        <end pd="CLIENT_VMM" id="11" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="2" />
+        <end pd="CLIENT_VMM" id="12" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="3" />
+        <end pd="CLIENT_VMM" id="13" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="4" />
+        <end pd="CLIENT_VMM" id="14" pp="true" />
+    </channel>
+    <channel>
+        <end pd="timer_driver" id="5" />
+        <end pd="CLIENT_VMM" id="15" pp="true" />
+    </channel>
+    <channel>
+        <end pd="serial_driver" id="2" />
+        <end pd="serial_virt_rx" id="0" />
+    </channel>
+    <channel>
+        <end pd="serial_virt_rx" id="1" />
+        <end pd="CLIENT_VMM" id="0" />
+    </channel>
+    <channel>
+        <end pd="serial_driver" id="3" />
+        <end pd="serial_virt_tx" id="0" />
+    </channel>
+    <channel>
+        <end pd="serial_virt_tx" id="1" />
+        <end pd="CLIENT_VMM" id="1" />
+    </channel>
+    <channel>
+        <end pd="blk_virt" id="0" />
+        <end pd="blk_driver" id="0" />
+    </channel>
+    <channel>
+        <end pd="blk_virt" id="1" />
+        <end pd="CLIENT_VMM" id="2" />
+    </channel>
+    <channel>
+        <end pd="eth_driver" id="0" />
+        <end pd="net_virt_rx" id="0" />
+    </channel>
+    <channel>
+        <end pd="eth_driver" id="1" />
+        <end pd="net_virt_tx" id="0" />
+    </channel>
+    <channel>
+        <end pd="net_virt_rx" id="1" />
+        <end pd="client0_net_copier" id="0" />
+    </channel>
+    <channel>
+        <end pd="client0_net_copier" id="1" />
+        <end pd="CLIENT_VMM" id="9" />
+    </channel>
+    <channel>
+        <end pd="net_virt_tx" id="1" />
+        <end pd="CLIENT_VMM" id="16" />
+    </channel>
+</system>

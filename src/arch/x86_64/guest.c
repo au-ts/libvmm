@@ -38,7 +38,7 @@ void *gpa_to_vaddr(uint64_t gpa)
 uint64_t gpa_to_pa(uint64_t gpa)
 {
     // @billn ugly hack
-    uint64_t ram_base_gpa = 0x20000000;
+    uint64_t ram_base_gpa = 0x10000000;
     uint64_t high_ram_base_gpa = 0x100000000;
     if (gpa >= high_ram_base_gpa && gpa < high_ram_base_gpa + guest_high_ram_size) {
         // @billn ugly one-to-one hack

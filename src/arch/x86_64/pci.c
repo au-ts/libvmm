@@ -502,6 +502,22 @@ bool pci_x86_passthrough_ata_controller(uint64_t primary_ata_cmd_pio_id, uint64_
     return true;
 }
 
+bool pci_x86_passthrough_virtio_gpu(void)
+{
+
+    pci_x86_passthrough_bookkeeping.gpu_bus = 0;
+    pci_x86_passthrough_bookkeeping.gpu_dev = 4;
+    pci_x86_passthrough_bookkeeping.gpu_func = 0;
+
+    pci_x86_passthrough_bookkeeping.gpu_v_bus = 0;
+    pci_x86_passthrough_bookkeeping.gpu_v_dev = 7;
+    pci_x86_passthrough_bookkeeping.gpu_v_func = 0;
+
+    pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough = true;
+
+    return true;
+}
+
 bool pci_x86_config_space_read_from_native(int access_width_bytes, uint8_t bus, uint8_t dev, uint8_t func,
                                            uint16_t reg_offset, uint32_t *data)
 {
@@ -529,14 +545,18 @@ bool pci_x86_config_space_read_from_native(int access_width_bytes, uint8_t bus, 
         assert(false);
     }
 
-    // @billn hack
-    if (reg_offset == 0x4) {
-        // disable bus master
-        *data &= ~BIT(2);
-    }
-    if (reg_offset == 0x20) {
-        // BAR4 = 0, no dma
-        *data = 0;
+    // @billn cdrom hack
+    if (bus == pci_x86_passthrough_bookkeeping.ata_bus && dev == pci_x86_passthrough_bookkeeping.ata_dev
+        && func == pci_x86_passthrough_bookkeeping.ata_func) {
+
+        if (reg_offset == 0x4) {
+            // disable bus master
+            *data &= ~BIT(2);
+        }
+        if (reg_offset == 0x20) {
+            // BAR4 = 0, no dma
+            *data = 0;
+        }
     }
 
     return success;

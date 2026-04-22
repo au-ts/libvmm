@@ -835,6 +835,10 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
     if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
         return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, (uint32_t *)data);
     }
+    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == 0 && dev == 7 && func == 0) {
+        // LOG_VMM("gpu pci space read reg 0x%x, width %d\n", reg_off, access_width_bytes);
+        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 4, 0, reg_off, (uint32_t *)data);
+    }
 #endif
 
     uint32_t config_space_ecam_off = pci_geo_addr_to_ecam_offset(bus, dev, func);
@@ -845,7 +849,7 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
 }
 
 void log_pci_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t reg_off) {
-    LOG_VMM("PCI BAR access (%d:%d.%d) at 0x%x\n", bus, dev, func, reg_off);
+    // LOG_VMM("PCI BAR access (%d:%d.%d) at 0x%x\n", bus, dev, func, reg_off);
 }
 
 static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
@@ -855,6 +859,10 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
 #if defined(CONFIG_ARCH_X86_64)
     if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
         return pci_x86_config_space_write_to_native(access_width_bytes, 0, 1, 1, reg_off, data);
+    }
+    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == 0 && dev == 7 && func == 0) {
+        // LOG_VMM("gpu pci space write reg 0x%x, width %d, data 0x%x\n", reg_off, access_width_bytes, data);
+        return pci_x86_config_space_write_to_native(access_width_bytes, 0, 4, 0, reg_off, data);
     }
 
     // @billn hack, prevent corruption of host and ISA bridge config space
@@ -880,7 +888,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
 
         // hack for the host bridge, it doesnt have a dev_handle
         if (!dev_handle) {
-            LOG_VMM("PCI host bridge hack (offset: 0x%lx, data: 0x%lx)\n", reg_off, data);
+            // LOG_VMM("PCI host bridge hack (offset: 0x%lx, data: 0x%lx)\n", reg_off, data);
             return true;
         }
 
@@ -905,24 +913,24 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
         if (dev_bar_id != 0) {
             size = 0;
         }
-        LOG_VMM("PCI BAR offset: 0x%lx, (before) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
+        // LOG_VMM("PCI BAR offset: 0x%lx, (before) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
         if (dev_bar_id != 0) {
             if (data == 0xFFFFFFFF) {
                 uint32_t inverse_size = (~(size - 1));
-                LOG_VMM("PCI BAR inverse_size: 0x%x\n", inverse_size);
+                // LOG_VMM("PCI BAR inverse_size: 0x%x\n", inverse_size);
                 bar->base_address = inverse_size >> 4;
             } else if (data != 0x0) {
-                LOG_VMM("PCI unused bar writing non-zero 0x%x\n", data);
+                // LOG_VMM("PCI unused bar writing non-zero 0x%x\n", data);
                 uintptr_t allocated_addr = data & 0xFFFFFFF0; // Ignore control bits
                 bar->base_address = allocated_addr >> 4; // 16-byte aligned
             } else {
                 bar->base_address &= 0xf;
-                LOG_VMM("writing zero to BAR offset 0x%lx\n", reg_off);
+                // LOG_VMM("writing zero to BAR offset 0x%lx\n", reg_off);
             }
         } else {
             if (data == 0xFFFFFFFF) {
                 uint32_t inverse_size = (~(size - 1));
-                LOG_VMM("PCI BAR inverse_size: 0x%x\n", inverse_size);
+                // LOG_VMM("PCI BAR inverse_size: 0x%x\n", inverse_size);
                 bar->base_address = inverse_size >> 4;
             } else if (data != 0x0) {
                 uintptr_t allocated_addr = data & 0xFFFFFFF0; // Ignore control bits
@@ -931,10 +939,10 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
                                                         + registered_pci_memory_resource.vmm_addr;
             } else {
                 bar->base_address &= 0xf;
-                LOG_VMM("writing zero to BAR offset 0x%lx\n", reg_off);
+                // LOG_VMM("writing zero to BAR offset 0x%lx\n", reg_off);
             }
         }
-        LOG_VMM("PCI BAR offset: 0x%lx, (after) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
+        // LOG_VMM("PCI BAR offset: 0x%lx, (after) bar->base_address: 0x%lx, data: 0x%lx, size: 0x%lx\n", reg_off, bar->base_address, data, size);
         break;
     }
     case PCI_CFG_OFFSET_COMMAND: {
@@ -954,7 +962,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
     case PCI_CFG_OFFSET_CAP_PTR:
     case PCI_CFG_OFFSET_IRQ_LINE: {
         // TODO: don't do this and handle each case
-        LOG_VMM("unchecked write into PCI config reg off 0x%lx, value: 0x%lx\n", reg_off, data);
+        // LOG_VMM("unchecked write into PCI config reg off 0x%lx, value: 0x%lx\n", reg_off, data);
         uint8_t *bytes = (uint8_t *)((uintptr_t)config_space + reg_off);
         memcpy(bytes, &data, access_width_bytes);
         break;
@@ -971,7 +979,7 @@ static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func
             break;
         } else {
             // TODO: do not assert and handle this gracefully instead.
-            LOG_VMM_ERR("tried to write to PCI config offset 0x%x, width: %d, value: 0x%x\n", reg_off, access_width_bytes, data);
+            // LOG_VMM_ERR("tried to write to PCI config offset 0x%x, width: %d, value: 0x%x\n", reg_off, access_width_bytes, data);
         }
     }
     return true;

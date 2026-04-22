@@ -175,6 +175,10 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                                                      .IoSize = 0x4000,
                                                                      .MemStart = 0xe0000000,
                                                                      .MemSize = 0x200000,
+                                                                     .MemAbove4GStart = 0x7100000000,
+                                                                     .MemAbove4GSize = 0x100000,
+                                                                     .PMemAbove4GStart = 0x7100000000,
+                                                                     .PMemAbove4GSize = 0x100000,
                                                                      .PcieConfigStart = ECAM_GPA,
                                                                      .PcieConfigSize = ECAM_SIZE,
                                                                  } };

@@ -114,11 +114,11 @@ extern char _guest_firmware_image_end[];
 
 uintptr_t guest_ram_vaddr = 0x30000000;
 uint64_t guest_ram_gpa = 0;
-uint64_t guest_ram_size = 0xA0000000; // 2.5 GiB
+uint64_t guest_ram_size = 0x40000000; //
 
 uintptr_t guest_high_ram_vaddr = 0x100000000;
 uint64_t guest_high_ram_gpa = 0x100000000;
-uint64_t guest_high_ram_size = 0x150000000; // 6 GiB
+uint64_t guest_high_ram_size = 0x1000; // 6 GiB
 
 uintptr_t guest_flash_vaddr = 0x2000000;
 uint64_t guest_flash_gpa = 0xffa00000;
@@ -128,8 +128,8 @@ uintptr_t guest_ecam_vaddr = 0x8000000;
 uint64_t guest_ecam_size = 0x10000000;
 
 uintptr_t guest_vapic_vaddr = 0x3000000000;
-uint64_t guest_vapic_paddr = 0x13000000;
-uint64_t guest_apic_access_paddr = 0x13001000;
+uint64_t guest_vapic_paddr = 0xF000000;
+uint64_t guest_apic_access_paddr = 0xF001000;
 
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
@@ -150,9 +150,9 @@ void init(void)
 
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
                    blk_config.virt.num_buffers);
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    // blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
     /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
+    // while (!blk_storage_is_ready(storage_info));
 
     size_t firm_size = _guest_firmware_image_end - _guest_firmware_image;
     assert(uefi_setup_images(guest_ram_vaddr, guest_ram_gpa, guest_ram_size, guest_high_ram_vaddr, guest_high_ram_gpa,
@@ -173,6 +173,8 @@ void init(void)
     assert(pci_x86_passthrough_ata_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                               primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                               second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr));
+    assert(pci_x86_passthrough_virtio_gpu());
+    
 
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr,
@@ -197,12 +199,12 @@ void init(void)
                                            net_config.mac_addr);
         assert(success);
     }
-    {
-        bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
-                                           (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info,
-                                           &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
-        assert(success);
-    }
+    // {
+    //     bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+    //                                        (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info,
+    //                                        &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
+    //     assert(success);
+    // }
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -214,6 +216,10 @@ extern uint64_t n_notifieds;
 void notified(microkit_channel ch)
 {
     n_notifieds += 1;
+
+    if (ch == 10) {
+        LOG_VMM("gpu irq\n");
+    }
 
     if (ch == 8) {
         LOG_VMM("cmos irq why???\n");
@@ -260,6 +266,9 @@ void notified(microkit_channel ch)
             /* Pass through ATA IRQs */
             assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
+
+            /* Pass through virtio GPU IRQ */
+            assert(virq_ioapic_register_passthrough(0, 11, 10));
 
             /* COM2 for windbg */
             assert(virq_ioapic_register_passthrough(0, 3, 7));
