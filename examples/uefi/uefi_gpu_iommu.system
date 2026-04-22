@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <system>
-    <memory_region name="guest_ram" size="0x40000000" phys_addr="0x10000000" page_size="0x200000" />
-    <memory_region name="guest_ram_high" size="0x1000" phys_addr="0x100000000" page_size="0x1000" />
+    <memory_region name="guest_ram" size="0x60000000" phys_addr="0x10000000" />
+    <memory_region name="guest_ram_high" size="0x150000000" phys_addr="0x100000000" />
     <memory_region name="guest_vapic" size="0x1000" phys_addr="0xf000000" />
     <memory_region name="guest_apic_access" size="0x1000" phys_addr="0xf001000" />
     <memory_region name="virtio_gpu_regs" size="0x4000" phys_addr="0x7100000000" />
     <memory_region name="guest_scratch" size="0x10000" />
     <memory_region name="guest_flash" size="0x600000" />
-    <memory_region name="fb" size="0x200000" phys_addr="0x7000000" />
-    <memory_region name="fw_cfg_dma_cmd" size="0x1000" phys_addr="0x6000000" />
     <memory_region name="hw_net_rings" size="0x10000" phys_addr="0xe000000" />
     <memory_region name="virtio_net_regs" size="0x4000" phys_addr="0x7000000000" />
     <memory_region name="virtio_blk_requests" size="0x10000" phys_addr="0xd000000" />
@@ -53,8 +51,6 @@
         <map mr="guest_ram_high" vaddr="0x100000000" perms="rw" cached="true" />
         <map mr="guest_vapic" vaddr="0x3000000000" perms="rw" cached="true" />
         <map mr="guest_flash" vaddr="0x2000000" perms="rw" cached="true" />
-        <map mr="fb" vaddr="0x800000" perms="rw" cached="true" />
-        <map mr="fw_cfg_dma_cmd" vaddr="0xd00000" perms="rw" cached="true" />
         <map mr="ecam" vaddr="0x8000000" perms="rw" cached="true" />
         <map mr="memory_resource" vaddr="0x1000000" perms="rw" cached="true" />
         <map mr="generic/serial/queue/serial_virt_rx/CLIENT_VMM" vaddr="0x3000001000" perms="rw" />
@@ -71,10 +67,10 @@
         <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/free" vaddr="0x3008306000" perms="rw" />
         <map mr="generic/net/queue/net_virt_tx/CLIENT_VMM/active" vaddr="0x3008309000" perms="rw" />
         <map mr="generic/net/tx/data/client/CLIENT_VMM" vaddr="0x300830c000" perms="rw" />
-
+        
         <iomap mr="guest_ram" pcidev="0:4.0" addr="0" />
         <iomap mr="guest_ram_high" pcidev="0:4.0" addr="0x100000000" />
-
+        
         <virtual_machine name="client_linux">
             <vcpu id="0" />
             <map mr="guest_ram" vaddr="0x0" perms="rwx" cached="true" />

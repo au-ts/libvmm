@@ -1,1 +1,15 @@
-qemu-system-x86_64 -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -device virtio-net-pci,netdev=netdev0,addr=0x2.0  -serial mon:stdio -m size=6G -d guest_errors -vga none -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 -cdrom /home/billn/Downloads/nixos-graphical-25.11.9418.c7f47036d3df-x86_64-linux.iso -device virtio-gpu -bios /home/billn/ts/libvmm/examples/uefi/board/x86_64_generic_vtx/OVMF.fd
+qemu-system-x86_64 \
+ -machine q35 \
+ -accel kvm \
+ -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
+ -serial mon:stdio \
+ -m size=4G \
+ -d guest_errors \
+ -vga none \
+ -netdev user,id=netdev0 \
+ -cdrom /home/dreamliner787-9/Downloads/nixos-graphical-25.11.9476.e07580dae397-x86_64-linux.iso \
+ -device virtio-gpu \
+ -bios /home/dreamliner787-9/ts/libvmm/examples/uefi/board/x86_64_generic_vtx/OVMF.fd \
+ -device virtio-net-pci,netdev=netdev0 \
+ -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1 \
+ -drive file=/home/dreamliner787-9/ts/libvmm/examples/uefi/nixos_graphical_installed.img,format=raw,if=none,id=drive0

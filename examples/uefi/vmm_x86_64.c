@@ -114,11 +114,11 @@ extern char _guest_firmware_image_end[];
 
 uintptr_t guest_ram_vaddr = 0x30000000;
 uint64_t guest_ram_gpa = 0;
-uint64_t guest_ram_size = 0x40000000; //
+uint64_t guest_ram_size = 0x60000000; //
 
 uintptr_t guest_high_ram_vaddr = 0x100000000;
 uint64_t guest_high_ram_gpa = 0x100000000;
-uint64_t guest_high_ram_size = 0x1000; // 6 GiB
+uint64_t guest_high_ram_size = 0x150000000; // 6 GiB
 
 uintptr_t guest_flash_vaddr = 0x2000000;
 uint64_t guest_flash_gpa = 0xffa00000;

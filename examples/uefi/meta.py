@@ -14,6 +14,17 @@ MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
+# RAM layout of everything
+virtio_blk_metadata_paddr = 0xC00_0000 # size 0x10000
+virtio_blk_requests_paddr = 0xD00_0000 # size 0x10000
+hw_net_rings_paddr = 0xE00_0000        # size 0x10000
+guest_vapic_paddr = 0xF00_0000         # size 0x1000
+guest_apic_access_paddr = 0xF00_1000   # size 0x1000
+guest_low_ram_paddr = 0x1000_0000      # size 0x6000_0000
+guest_high_ram_paddr = 0x1_0000_0000   # size 0x1_5000_0000
+virtio_net_regs_paddr = 0x7000000000 # size 0x4000
+virtio_blk_regs_paddr = 0x7000004000 # size 0x4000
+
 
 @dataclass
 class Board:
@@ -48,14 +59,14 @@ BOARDS: List[Board] = [
 
 def x86_virtio_net(eth_driver):
     hw_net_rings = SystemDescription.MemoryRegion(
-        sdf, "hw_net_rings", 0x10000, paddr=0xE00_0000
+        sdf, "hw_net_rings", 0x10000, paddr=hw_net_rings_paddr
     )
     sdf.add_mr(hw_net_rings)
     hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0x7000000000
+        sdf, "virtio_net_regs", 0x4000, paddr=virtio_net_regs_paddr
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -70,14 +81,14 @@ def x86_virtio_net(eth_driver):
 
 def x86_virtio_blk(blk_driver):
     blk_requests_mr = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_requests", 65536, paddr=0xD00_0000
+        sdf, "virtio_blk_requests", 65536, paddr=virtio_blk_requests_paddr
     )
     sdf.add_mr(blk_requests_mr)
     blk_requests_map = SystemDescription.Map(blk_requests_mr, 0x20200000, "rw")
     blk_driver.add_map(blk_requests_map)
 
     blk_virtio_metadata_mr = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_metadata", 65536, paddr=0xC00_0000
+        sdf, "virtio_blk_metadata", 65536, paddr=virtio_blk_metadata_paddr
     )
     sdf.add_mr(blk_virtio_metadata_mr)
     blk_virtio_metadata_map = SystemDescription.Map(
@@ -86,7 +97,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0x7000004000
+        sdf, "virtio_blk_regs", 0x4000, paddr=virtio_blk_regs_paddr
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
@@ -148,8 +159,8 @@ def x86_virtio_gpu_passthrough(vmm_client0, vm_client0):
     vmm_client0.add_irq(virtio_gpu_irq)
 
 def x86_apic(vmm, vm):
-    guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=0xF00_0000)
-    guest_apic_access_mr = MemoryRegion(sdf, name="guest_apic_access", size=0x1000, paddr=0xF00_1000)
+    guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=guest_vapic_paddr)
+    guest_apic_access_mr = MemoryRegion(sdf, name="guest_apic_access", size=0x1000, paddr=guest_apic_access_paddr)
     sdf.add_mr(guest_vapic_mr)
     sdf.add_mr(guest_apic_access_mr)
 
@@ -163,13 +174,13 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
-    guest_ram_mr = MemoryRegion(sdf, name="guest_ram", size=0x6000_0000, paddr=0x10000000)
+    guest_ram_mr = MemoryRegion(sdf, name="guest_ram", size=0x6000_0000, paddr=guest_low_ram_paddr)
     sdf.add_mr(guest_ram_mr)
     vmm_client0.add_map(Map(guest_ram_mr, vaddr=0x3000_0000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_mr, vaddr=0x0, perms="rwx"))
 
     # Second guest RAM region above 4G, note that this is one-to-one mapped between GPA and VMM Vaddr
-    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_5000_0000, paddr=0x1_0000_0000)
+    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_5000_0000, paddr=guest_high_ram_paddr)
     sdf.add_mr(guest_ram_high_mr)
     vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rw"))
     vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x100000000, perms="rwx"))
@@ -252,14 +263,14 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     com2_irq = SystemDescription.IrqIoapic(0, 3, 60, id=7)
     vmm_client0.add_irq(com2_irq)
 
-    # QEMU Framebuffer
-    fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
-    vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
-    sdf.add_mr(fb_mr)
+    # # QEMU Framebuffer
+    # fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
+    # vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
+    # sdf.add_mr(fb_mr)
 
-    fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=0x600_0000)
-    vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0xD00000, perms="rw"))
-    sdf.add_mr(fw_cfg_dma_cmd_mr)
+    # fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=0x600_0000)
+    # vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0xD00000, perms="rw"))
+    # sdf.add_mr(fw_cfg_dma_cmd_mr)
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)

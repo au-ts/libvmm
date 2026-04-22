@@ -156,7 +156,6 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -device virtio-gpu,addr=0x4.0,iommu_platform=on \
 							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  -cdrom /home/billn/Downloads/nixos-graphical-25.11.9418.c7f47036d3df-x86_64-linux.iso \
 							  --trace "*gpu*"
 # 							  -device ramfb \
 

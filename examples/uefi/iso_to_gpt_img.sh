@@ -7,11 +7,11 @@ if ! file $2 | grep -v "QCOW"; then
 fi
 
 rm -f "$1"
-truncate -s 65G "$1"
+truncate -s 18G "$1"
 sfdisk --no-reread --no-tell-kernel "$1" <<EOF
 label: dos
 
-start=2048,size=64G
+start=2048,size=17G
 EOF
 
 # it is extremely important that bs=512 and seek=2048, as seek is in unit of `bs`.
