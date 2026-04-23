@@ -173,7 +173,7 @@ void init(void)
     assert(pci_x86_passthrough_ata_controller(primary_ata_cmd_pio_id, primary_ata_cmd_pio_addr, primary_ata_ctrl_pio_id,
                                               primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
                                               second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr));
-    assert(pci_x86_passthrough_virtio_gpu());
+    // assert(pci_x86_passthrough_virtio_gpu());
     
 
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);

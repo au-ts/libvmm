@@ -15,6 +15,8 @@ Map = SystemDescription.Map
 Channel = SystemDescription.Channel
 
 # RAM layout of everything
+qemu_fw_cfg_dma_paddr = 0xA00_0000     # size 0x1000
+qemu_ramfb_paddr = 0xB00_0000          # size 0x200000
 virtio_blk_metadata_paddr = 0xC00_0000 # size 0x10000
 virtio_blk_requests_paddr = 0xD00_0000 # size 0x10000
 hw_net_rings_paddr = 0xE00_0000        # size 0x10000
@@ -234,14 +236,14 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     com2_irq = SystemDescription.IrqIoapic(0, 3, 60, id=7)
     vmm_client0.add_irq(com2_irq)
 
-    # # QEMU Framebuffer
-    # fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=0x700_0000)
-    # vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
-    # sdf.add_mr(fb_mr)
+    # QEMU Framebuffer
+    fb_mr = MemoryRegion(sdf, name="fb", size=0x200_000, paddr=qemu_ramfb_paddr)
+    vmm_client0.add_map(Map(fb_mr, vaddr=0x800000, perms="rw"))
+    sdf.add_mr(fb_mr)
 
-    # fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=0x600_0000)
-    # vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0xD00000, perms="rw"))
-    # sdf.add_mr(fw_cfg_dma_cmd_mr)
+    fw_cfg_dma_cmd_mr = MemoryRegion(sdf, name="fw_cfg_dma_cmd", size=0x1000, paddr=qemu_fw_cfg_dma_paddr)
+    vmm_client0.add_map(Map(fw_cfg_dma_cmd_mr, vaddr=0xD00000, perms="rw"))
+    sdf.add_mr(fw_cfg_dma_cmd_mr)
 
     # Serial subsystem
     serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)

@@ -12,7 +12,7 @@
 
 // TODO: sort out and rename
 uint64_t fb_vaddr = 0x800000;
-uint64_t fb_paddr = 0x7000000;
+uint64_t fb_paddr = 0xB000000;
 
 /* See references:
  * https://wiki.osdev.org/QEMU_fw_cfg
@@ -247,32 +247,32 @@ bool emulate_qemu_fw_cfg_access(seL4_VCPUContext *vctx, uint16_t port_addr, bool
         }
         case fw_ctl_write: {
             LOG_VMM("=============== fw cfg DMA write (item 0x%x)\n", selector);
-            // if (selector == FW_CFG_FRAMEBUFFER) {
-            //     struct QemuRamFBCfg *guest_ramfb_cfg = (struct QemuRamFBCfg *)dma_vaddr;
-            //     assert(length == sizeof(struct QemuRamFBCfg));
-            //     LOG_VMM("RAM FB cfg DMA, width: %d, height: %d\n", __builtin_bswap32(guest_ramfb_cfg->width),
-            //             __builtin_bswap32(guest_ramfb_cfg->height));
+            if (selector == FW_CFG_FRAMEBUFFER) {
+                struct QemuRamFBCfg *guest_ramfb_cfg = (struct QemuRamFBCfg *)dma_vaddr;
+                assert(length == sizeof(struct QemuRamFBCfg));
+                LOG_VMM("RAM FB cfg DMA, width: %d, height: %d\n", __builtin_bswap32(guest_ramfb_cfg->width),
+                        __builtin_bswap32(guest_ramfb_cfg->height));
 
-            //     // We need to take this config and apply it to the real QEMU config.
-            //     // 1. Find the real QEMU ramfb
-            //     struct FWCfgFile ramfb_file;
-            //     bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
-            //     assert(found);
-            //     // 2. Select it with the real QEMU fw-cfg
-            //     fw_cfg_select(__builtin_bswap16(ramfb_file.select));
-            //     // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
-            //     //    with the physical address rather than guest physical.
-            //     uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
-            //     guest_ramfb_cfg->address = __builtin_bswap64(gpa_to_pa(ramfb_dma_gpa));
-            //     LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n",
-            //             ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
-            //     memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
+                // We need to take this config and apply it to the real QEMU config.
+                // 1. Find the real QEMU ramfb
+                struct FWCfgFile ramfb_file;
+                bool found = fw_cfg_find_file(&ramfb_file, FRAMEBFUFER_FWCFG_FILE);
+                assert(found);
+                // 2. Select it with the real QEMU fw-cfg
+                fw_cfg_select(__builtin_bswap16(ramfb_file.select));
+                // 3. Take the guest's framebuffer config, copy it to our DMA region and then do the DMA write
+                //    with the physical address rather than guest physical.
+                uint64_t ramfb_dma_gpa = __builtin_bswap64(guest_ramfb_cfg->address);
+                guest_ramfb_cfg->address = __builtin_bswap64(gpa_to_pa(ramfb_dma_gpa));
+                LOG_VMM("GPA frame buffer: 0x%lx, host frame buffer: 0x%lx, VMM framebuffer vaddr: 0x%lx\n",
+                        ramfb_dma_gpa, __builtin_bswap64(guest_ramfb_cfg->address));
+                memcpy((void *)fb_vaddr, (void *)guest_ramfb_cfg, sizeof(struct QemuRamFBCfg));
 
-            //     fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
-            // } else {
-            //     LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
-            //     return false;
-            // }
+                fw_cfg_dma_write(fw_ctl_write, sizeof(struct QemuRamFBCfg), fb_paddr);
+            } else {
+                LOG_VMM_ERR("unknown fw cfg DMA write for selector 0x%x\n", selector);
+                return false;
+            }
             /* To indicate to guest that the DMA command was successful. */
             selected_data_idx += length;
             cmd->control = 0;
@@ -320,7 +320,7 @@ static uint32_t fw_cfg_read_u32()
     return (d << 24) | (c << 16) | (b << 8) | a;
 }
 
-uint64_t fw_cfg_dma_cmd_paddr = 0x6000000;
+uint64_t fw_cfg_dma_cmd_paddr = 0xA000000;
 uint64_t fw_cfg_dma_cmd_vaddr = 0xD00000;
 
 static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address)

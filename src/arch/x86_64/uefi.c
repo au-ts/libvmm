@@ -193,11 +193,6 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                            .select = __builtin_bswap16(FW_CFG_E820),
                                        },
                                        {
-                                           .name = FRAMEBFUFER_FWCFG_FILE,
-                                           .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
-                                           .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
-                                       },
-                                       {
                                            .name = ACPI_BUILD_TABLE_FILE,
                                            .size = __builtin_bswap32(sizeof(struct fw_cfg_acpi_tables)),
                                            .select = __builtin_bswap16(FW_CFG_ACPI_TABLES),
@@ -238,6 +233,11 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                            .name = "",
                                            .size = __builtin_bswap32(0),
                                            .select = FW_CFG_CMDLINE_SIZE,
+                                       },
+                                       {
+                                           .name = FRAMEBFUFER_FWCFG_FILE,
+                                           .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
+                                           .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
                                        },
                                    } };
 

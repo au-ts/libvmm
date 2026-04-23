@@ -157,9 +157,9 @@ qemu: $(IMAGE_FILE) blk_storage
 							  -device intel-iommu,caching-mode=on \
 							  -device virtio-gpu,addr=0x9.0,iommu_platform=on \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  -drive file=$(EXAMPLE_DIR)/nixos_graphical_installed.guest,format=raw,if=none,id=drive0 \
+							  -drive file=$(EXAMPLE_DIR)/win10.guest,format=raw,if=none,id=drive0 \
+							  -device ramfb \
 #  							  --trace "*virtio*" 
-# 							  -device ramfb \
 
 # 							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
 
