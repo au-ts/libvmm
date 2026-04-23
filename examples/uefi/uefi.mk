@@ -111,7 +111,9 @@ blk_storage:
 	$(LIBVMM_TOOLS)/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM)
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
-# 	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+# a hack to make iommu work until it is added to sdfgen
+	sed -i '\@<program_image path="vmm_x86_64.elf" />@a <iomap mr="guest_ram" pcidev="0:9.0" addr="0" />\n<iomap mr="guest_ram_high" pcidev="0:9.0" addr="0x100000000" />' $(SYSTEM_FILE)
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
@@ -147,17 +149,20 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
-	$(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
+	qemu-system-x86_64 $(QEMU_ARCH_ARGS) -serial mon:stdio \
 							  -m size=9G \
 							  -d guest_errors \
 							  -machine q35 \
 							  -vga none \
 							  -device intel-iommu,caching-mode=on \
-							  -device virtio-gpu,addr=0x4.0,iommu_platform=on \
-							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+							  -device virtio-gpu,addr=0x9.0,iommu_platform=on \
 							  -netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
-							  --trace "*gpu*"
+							  -drive file=$(EXAMPLE_DIR)/nixos_graphical_installed.guest,format=raw,if=none,id=drive0 \
+#  							  --trace "*virtio*" 
 # 							  -device ramfb \
+
+# 							  -drive file=blk_storage,format=raw,if=none,id=drive0 \
+
 
 # nixos 2026
 # -cdrom /home/billn/Downloads/nixos-graphical-25.11.9418.c7f47036d3df-x86_64-linux.iso

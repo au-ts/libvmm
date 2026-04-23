@@ -506,7 +506,7 @@ bool pci_x86_passthrough_virtio_gpu(void)
 {
 
     pci_x86_passthrough_bookkeeping.gpu_bus = 0;
-    pci_x86_passthrough_bookkeeping.gpu_dev = 4;
+    pci_x86_passthrough_bookkeeping.gpu_dev = 9;
     pci_x86_passthrough_bookkeeping.gpu_func = 0;
 
     pci_x86_passthrough_bookkeeping.gpu_v_bus = 0;

@@ -150,9 +150,9 @@ void init(void)
 
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
                    blk_config.virt.num_buffers);
-    // blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
+    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
     /* Busy wait until blk device is ready */
-    // while (!blk_storage_is_ready(storage_info));
+    while (!blk_storage_is_ready(storage_info));
 
     size_t firm_size = _guest_firmware_image_end - _guest_firmware_image;
     assert(uefi_setup_images(guest_ram_vaddr, guest_ram_gpa, guest_ram_size, guest_high_ram_vaddr, guest_high_ram_gpa,
@@ -199,12 +199,12 @@ void init(void)
                                            net_config.mac_addr);
         assert(success);
     }
-    // {
-    //     bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
-    //                                        (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info,
-    //                                        &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
-    //     assert(success);
-    // }
+    {
+        bool success = virtio_pci_blk_init(&virtio_blk, VIRTIO_BLK_PCI_DEVICE_SLOT, VIRTIO_BLK_PCI_IOAPIC_PIN,
+                                           (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info,
+                                           &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
+        assert(success);
+    }
 
     LOG_VMM("Measuring TSC frequency...\n");
     sddf_timer_set_timeout(TIMER_DRV_CH_FOR_LAPIC, NS_IN_S);
@@ -217,8 +217,10 @@ void notified(microkit_channel ch)
 {
     n_notifieds += 1;
 
-    if (ch == 10) {
-        LOG_VMM("gpu irq\n");
+    if (!tsc_calibrating && ch == 50) {
+        // a hack for virtio gpu irq, its just a ntfn from the blk driver that holds the irq cap
+        LOG_VMM("gpu irq success %d\n", inject_ioapic_irq(0, 11));
+        return;
     }
 
     if (ch == 8) {
@@ -266,9 +268,6 @@ void notified(microkit_channel ch)
             /* Pass through ATA IRQs */
             assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
-
-            /* Pass through virtio GPU IRQ */
-            assert(virq_ioapic_register_passthrough(0, 11, 10));
 
             /* COM2 for windbg */
             assert(virq_ioapic_register_passthrough(0, 3, 7));

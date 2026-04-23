@@ -830,14 +830,18 @@ bool virtio_pci_register_memory_resource(uintptr_t vm_addr, uintptr_t vmm_addr, 
 static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, seL4_Word *data,
                                          int access_width_bytes)
 {
-// @billn hack cdrom passthrough
 #if defined(CONFIG_ARCH_X86_64)
-    if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
-        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, (uint32_t *)data);
-    }
-    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == 0 && dev == 7 && func == 0) {
+    // @billn hack cdrom passthrough
+    // if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
+    //     return pci_x86_config_space_read_from_native(access_width_bytes, 0, 1, 1, reg_off, (uint32_t *)data);
+    // }
+    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == pci_x86_passthrough_bookkeeping.gpu_v_bus
+        && dev == pci_x86_passthrough_bookkeeping.gpu_v_dev && func == pci_x86_passthrough_bookkeeping.gpu_v_func) {
         // LOG_VMM("gpu pci space read reg 0x%x, width %d\n", reg_off, access_width_bytes);
-        return pci_x86_config_space_read_from_native(access_width_bytes, 0, 4, 0, reg_off, (uint32_t *)data);
+
+        return pci_x86_config_space_read_from_native(
+            access_width_bytes, pci_x86_passthrough_bookkeeping.gpu_bus, pci_x86_passthrough_bookkeeping.gpu_dev,
+            pci_x86_passthrough_bookkeeping.gpu_func, reg_off, (uint32_t *)data);
     }
 #endif
 
@@ -848,21 +852,26 @@ static bool pci_config_space_read_access(uint8_t bus, uint8_t dev, uint8_t func,
     return true;
 }
 
-void log_pci_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t reg_off) {
+void log_pci_bar(uint8_t bus, uint8_t dev, uint8_t func, uint32_t reg_off)
+{
     // LOG_VMM("PCI BAR access (%d:%d.%d) at 0x%x\n", bus, dev, func, reg_off);
 }
 
 static bool pci_config_space_write_access(uint8_t bus, uint8_t dev, uint8_t func, uint16_t reg_off, uint32_t data,
                                           int access_width_bytes)
 {
-// @billn hack cdrom passthrough
 #if defined(CONFIG_ARCH_X86_64)
-    if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
-        return pci_x86_config_space_write_to_native(access_width_bytes, 0, 1, 1, reg_off, data);
-    }
-    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == 0 && dev == 7 && func == 0) {
+    // @billn hack cdrom passthrough
+    // if (pci_x86_passthrough_bookkeeping.ata_passthrough && bus == 0 && dev == 1 && func == 1) {
+    //     return pci_x86_config_space_write_to_native(access_width_bytes, 0, 1, 1, reg_off, data);
+    // }
+    if (pci_x86_passthrough_bookkeeping.virtio_gpu_passthrough && bus == pci_x86_passthrough_bookkeeping.gpu_v_bus
+        && dev == pci_x86_passthrough_bookkeeping.gpu_v_dev && func == pci_x86_passthrough_bookkeeping.gpu_v_func) {
         // LOG_VMM("gpu pci space write reg 0x%x, width %d, data 0x%x\n", reg_off, access_width_bytes, data);
-        return pci_x86_config_space_write_to_native(access_width_bytes, 0, 4, 0, reg_off, data);
+
+        return pci_x86_config_space_write_to_native(access_width_bytes, pci_x86_passthrough_bookkeeping.gpu_bus,
+                                                    pci_x86_passthrough_bookkeeping.gpu_dev,
+                                                    pci_x86_passthrough_bookkeeping.gpu_func, reg_off, data);
     }
 
     // @billn hack, prevent corruption of host and ISA bridge config space

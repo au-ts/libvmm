@@ -22,9 +22,9 @@ guest_vapic_paddr = 0xF00_0000         # size 0x1000
 guest_apic_access_paddr = 0xF00_1000   # size 0x1000
 guest_low_ram_paddr = 0x1000_0000      # size 0x6000_0000
 guest_high_ram_paddr = 0x1_0000_0000   # size 0x1_5000_0000
-virtio_net_regs_paddr = 0x7000000000 # size 0x4000
-virtio_blk_regs_paddr = 0x7000004000 # size 0x4000
-
+virtio_net_regs_paddr = 0x7000000000   # size 0x4000
+virtio_blk_regs_paddr = 0x7000004000   # size 0x4000
+virtio_gpu_regs_paddr = 0x7000008000   # size 0x4000
 
 @dataclass
 class Board:
@@ -45,7 +45,7 @@ BOARDS: List[Board] = [
     Board(
         name="x86_64_generic_vtx",
         arch=SystemDescription.Arch.X86_64,
-        paddr_top=0x0000bfc00000,
+        paddr_top=0x8000_0000,
         serial=None,
         guest_serial=None,
         timer=None,
@@ -74,10 +74,10 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_map(virtio_net_regs_map)
 
-    virtio_net_irq = SystemDescription.IrqIoapic(
-        ioapic_id=0, pin=10, vector=44, id=16
-    )
-    eth_driver.add_irq(virtio_net_irq)
+    # virtio_net_irq = SystemDescription.IrqIoapic(
+    #     ioapic_id=0, pin=10, vector=44, id=16
+    # )
+    # eth_driver.add_irq(virtio_net_irq)
 
 def x86_virtio_blk(blk_driver):
     blk_requests_mr = SystemDescription.MemoryRegion(
@@ -105,58 +105,28 @@ def x86_virtio_blk(blk_driver):
     )
     blk_driver.add_map(virtio_blk_regs_map)
 
+    virtio_blk_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0, pin=11, vector=45, id=17, trigger=SystemDescription.IrqIoapic.Trigger.LEVEL, polarity=SystemDescription.IrqIoapic.Polarity.ACTIVELOW
+    )
+
+    blk_driver.add_irq(virtio_blk_irq)
 
 
 
 
+def x86_virtio_gpu_passthrough(vmm_client0, vm_client0, blk_driver):
+    firm_preferred_addr = 0x7100000000
 
-
-
-
-
-
-
-
-
-    # virtio_blk_irq = SystemDescription.IrqIoapic(
-    #     ioapic_id=0, pin=11, vector=45, id=17
-    # )
-
-    # blk_driver.add_irq(virtio_blk_irq)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-def x86_virtio_gpu_passthrough(vmm_client0, vm_client0):
-    # this won't be where qemu places the virtio gpu registers block
-    # as the firmware will relocate it to the aperature specified in uefi.c
-    virtio_gpu_regs_hpa = 0x7100000000
-    virtio_gpu_regs_gpa = 0x7100000000
-
-    virtio_gpu_regs_mr = MemoryRegion(sdf, name="virtio_gpu_regs", size=0x4000, paddr=virtio_gpu_regs_hpa)
+    virtio_gpu_regs_mr = MemoryRegion(sdf, name="virtio_gpu_regs", size=0x4000, paddr=firm_preferred_addr)
     sdf.add_mr(virtio_gpu_regs_mr)
     # one to one mapping between HPA and GPA!!
-    virtio_gpu_regs_map = SystemDescription.Map(virtio_gpu_regs_mr, virtio_gpu_regs_gpa, "rw")
+    virtio_gpu_regs_map = SystemDescription.Map(virtio_gpu_regs_mr, firm_preferred_addr, "rw", cached=False)
     vm_client0.add_map(virtio_gpu_regs_map)
 
-    virtio_gpu_irq = SystemDescription.IrqIoapic(
-        ioapic_id=0, pin=11, vector=45, id=10
-    )
-    vmm_client0.add_irq(virtio_gpu_irq)
+    # virtio_gpu_irq = SystemDescription.IrqIoapic(
+    #     ioapic_id=0, pin=10, vector=44, id=50
+    # )
+    # vmm_client0.add_irq(virtio_gpu_irq)
 
 def x86_apic(vmm, vm):
     guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=guest_vapic_paddr)
@@ -187,7 +157,6 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
     x86_apic(vmm_client0, vm_client0)
 
-    x86_virtio_gpu_passthrough(vmm_client0, vm_client0)
 
     scratch_mr = MemoryRegion(sdf, name="guest_scratch", size=0x10000)
     sdf.add_mr(scratch_mr)
@@ -333,6 +302,9 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     ]
     for pd in pds:
         sdf.add_pd(pd)
+
+
+    x86_virtio_gpu_passthrough(vmm_client0, vm_client0, blk_driver)
 
     # Timer subsystem
     timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=180)
