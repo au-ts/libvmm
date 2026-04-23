@@ -219,7 +219,7 @@ void notified(microkit_channel ch)
 
     if (!tsc_calibrating && ch == 50) {
         // a hack for virtio gpu irq, its just a ntfn from the blk driver that holds the irq cap
-        LOG_VMM("gpu irq success %d\n", inject_ioapic_irq(0, 11));
+        inject_ioapic_irq(0, 11);
         return;
     }
 

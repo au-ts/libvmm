@@ -128,6 +128,8 @@ def x86_virtio_gpu_passthrough(vmm_client0, vm_client0, blk_driver):
     # )
     # vmm_client0.add_irq(virtio_gpu_irq)
 
+    sdf.add_channel(Channel(vmm_client0, blk_driver, a_id=50, b_id=50))
+
 def x86_apic(vmm, vm):
     guest_vapic_mr = MemoryRegion(sdf, name="guest_vapic", size=0x1000, paddr=guest_vapic_paddr)
     guest_apic_access_mr = MemoryRegion(sdf, name="guest_apic_access", size=0x1000, paddr=guest_apic_access_paddr)
