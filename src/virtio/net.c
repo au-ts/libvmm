@@ -419,7 +419,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
     struct virtio_device *dev = &net_dev->virtio_device;
 
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
     dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;

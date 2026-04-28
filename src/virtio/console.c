@@ -242,7 +242,7 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
 {
     struct virtio_device *dev = &console->virtio_device;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
     dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = console->vqs;
