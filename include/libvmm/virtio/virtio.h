@@ -56,6 +56,7 @@ static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
     assert(dev->regs.QueueSel < dev->num_vqs);
     return &dev->vqs[dev->regs.QueueSel].virtq;
 }
+
 /*
  * Registers a new virtIO device at a given guest-physical region.
  *
@@ -63,3 +64,5 @@ static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
  * and virtual IRQ associated with the device has been registered.
  */
 bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size, size_t virq);
+
+void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change);

@@ -675,6 +675,7 @@ bool virtio_snd_init(struct virtio_snd_device *sound_dev, uintptr_t region_base,
 {
     struct virtio_device *dev = &sound_dev->virtio_device;
 
+    dev->transport_type = VIRTIO_TRANSPORT_MMIO;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_SOUND;
     dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
     dev->transport_type = VIRTIO_TRANSPORT_MMIO;
