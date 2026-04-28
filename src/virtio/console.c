@@ -56,7 +56,7 @@ static void virtio_console_reset(struct virtio_device *dev)
     // TODO: we should not be doing this here, and instead be calling the init function again or something
     // like that.
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
 }
 
 static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)

@@ -63,7 +63,7 @@ static inline void virtio_blk_reset(struct virtio_device *dev)
     assert(blk_queue_empty_resp(&device_state(dev)->queue_h));
     memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
-    dev->regs.VendorID = VIRTIO_MMIO_DEV_VENDOR_ID;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
 
     memset(device_state(dev)->reqsbk, 0, sizeof((device_state(dev)->reqsbk)));
 }
