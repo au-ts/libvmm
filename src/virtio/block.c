@@ -66,18 +66,19 @@ static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uin
     /* feature bits 0 to 31 */
     case 0:
         *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
+        *features |= BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
+        *features |= BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
+        *features |= BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
+        *features |= BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
         break;
     /* features bits 32 to 63 */
     case 1:
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
+        *features = 0;
         LOG_BLOCK_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DeviceFeaturesSel);
-        return false;
+        return true;
     }
 
     return true;
@@ -100,20 +101,24 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
-        success = (features == device_features);
+        LOG_VMM("device_features = 0x%x, features = 0x%x\n", device_features, features);
+        success = (device_features & features) == features;
         break;
     /* features bits 32 to 63 */
     case 1:
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
-                      dev->regs.DriverFeaturesSel);
-        return false;
+        LOG_BLOCK_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n", dev->regs.DriverFeaturesSel);
+        success = true;
     }
 
     if (success) {
+        // TODO: must be done for all other virtIO impls
+        // dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
+    } else {
+        LOG_VMM("set dev features not happy\n");
     }
 
     return success;
