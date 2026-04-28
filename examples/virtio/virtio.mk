@@ -173,12 +173,12 @@ qemu: $(IMAGE_FILE) blk_storage
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic \
+			-device ramfb \
 			-global virtio-mmio.force-legacy=false \
 			-drive file=../disk.img,format=raw,if=none,id=hd \
 			$(QEMU_BLK_ARGS) \
 			$(QEMU_NET_ARGS) \
-			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
+			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235
 
 clean::
 	$(RM) -f *.elf .depend* $

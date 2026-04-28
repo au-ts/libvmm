@@ -1,4 +1,6 @@
 #include <libvmm/libvmm.h>
+#include <sddf/serial/queue.h>
+#include <sddf/serial/config.h>
 
 #define REG_UARTDR  0x0
 #define REG_UARTFR  0x18
@@ -9,6 +11,11 @@ struct pl011_regs {
 };
 
 struct pl011_regs pl011_regs;
+
+extern serial_queue_handle_t serial_rx_queue;
+extern serial_queue_handle_t serial_tx_queue;
+
+extern serial_client_config_t serial_config;
 
 bool pl011_access_read(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data) {
     uint32_t reg = 0;
@@ -37,9 +44,12 @@ bool pl011_access_write(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserCont
     data &= mask;
 
     switch (offset) {
-    case REG_UARTDR:
+    case REG_UARTDR: {
         microkit_dbg_putc(data);
+        // serial_enqueue_batch(&serial_tx_queue, 1, &data);
+        // microkit_notify(serial_config.tx.id);
         break;
+    }
     default:
         // LOG_VMM_ERR("todo offset: 0x%lx\n", offset);
         break;

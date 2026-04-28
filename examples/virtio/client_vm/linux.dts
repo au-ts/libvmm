@@ -27,6 +27,13 @@
 		compatible = "arm,pl011", "arm,primecell";
 	};
 
+	fw-cfg@9020000 {
+		dma-coherent;
+		reg = <0x00 0x9020000 0x00 0x18>;
+		compatible = "qemu,fw-cfg-mmio";
+		status = "disabled";
+	};
+
 	flash@0 {
 		bank-width = <0x04>;
 		reg = <0x00 0x00 0x00 0x4000000 0x00 0x4000000 0x00 0x4000000>;
@@ -50,15 +57,15 @@
 		compatible = "arm,armv8-timer\0arm,armv7-timer";
 	};
 
-    memory@40000000 {
+    memory {
 		reg = <0x00 0x40000000 0x00 0x40000000>;
 		device_type = "memory";
 	};
 
 	chosen {
-		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8";
-		linux,initrd-start = <0x47000000>;
-		linux,initrd-end = <0x47f00000>;
+		bootargs = "loglevel=8 console=hvc0";
+		linux,initrd-start = <0x77000000>;
+		linux,initrd-end = <0x77f00000>;
 	};
 
 	virtio-console {
@@ -77,5 +84,6 @@
 		compatible = "virtio,mmio";
 		reg = <0x00 0xa002000 0x00 0x200>;
 		interrupts = <0x00 44 0x04>;
+		status = "disabled";
 	};
 };

@@ -68,7 +68,7 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
+    uintptr_t kernel_pc = linux_setup_images(0x40000000,
                                              (uintptr_t) _guest_kernel_image,
                                              kernel_size,
                                              (uintptr_t) _guest_dtb_image,
@@ -152,6 +152,19 @@ void init(void)
                                    net_config.mac_addr
                                   );
     assert(success);
+
+// #define RESX 600
+// #define RESY 400
+//     struct QemuRamFBCfg cfg;
+//     qemu_ramfb_make_cfg(&cfg, (void *)DMA_ADDRESS_PADDR, RESX, RESY);
+//     qemu_ramfb_configure(&cfg);
+
+//     uint8_t *fb_address = (uint8_t*)DMA_ADDRESS_VADDR;
+//     for (int i = 0; i < RESY * RESX * 4; i++) {
+//         fb_address[i] = 0xc0;
+//     }
+
+    // fw_cfg_init(0x9020000);
 
     /* Finally start the guest */
     guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);

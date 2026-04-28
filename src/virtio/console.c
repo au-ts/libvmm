@@ -43,7 +43,7 @@ static void virtio_console_features_print(uint32_t features)
 
 static void virtio_console_reset(struct virtio_device *dev)
 {
-    LOG_CONSOLE("operation: reset device\n");
+    LOG_VMM("operation: reset device\n");
 
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
@@ -61,7 +61,7 @@ static void virtio_console_reset(struct virtio_device *dev)
 
 static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
-    LOG_CONSOLE("operation: get device features\n");
+    LOG_VMM("operation: get device features\n");
 
     switch (dev->regs.DeviceFeaturesSel) {
     case 0:
@@ -82,7 +82,7 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
 
 static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32_t features)
 {
-    LOG_CONSOLE("operation: set driver features\n");
+    LOG_VMM("operation: set driver features\n");
     virtio_console_features_print(features);
 
     bool success = false;
@@ -134,6 +134,7 @@ static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t
 
 static void virtio_console_handle_ctrl_rx(struct virtio_device *dev, struct virtio_console_control ctrl)
 {
+    LOG_VMM("console ctrl rx\n");
     struct virtio_queue_handler *vq = &dev->vqs[CTL_RX_QUEUE];
     assert(vq->ready);
 
@@ -163,6 +164,7 @@ static void virtio_console_handle_ctrl_rx(struct virtio_device *dev, struct virt
 
 static bool virtio_console_handle_ctrl_tx(struct virtio_device *dev) {
     LOG_CONSOLE("operation: handle control transmit\n");
+    LOG_VMM("console ctrl tx\n");
 
     assert(dev->regs.QueueSel == CTL_TX_QUEUE);
 
@@ -180,20 +182,26 @@ static bool virtio_console_handle_ctrl_tx(struct virtio_device *dev) {
             assert(desc.len >= sizeof(struct virtio_console_control));
 
             struct virtio_console_control *ctrl = (struct virtio_console_control *)desc.addr;
-            LOG_CONSOLE("ctrl message ID 0x%x, event: 0x%hx, value: 0x%hx\n", ctrl->id, ctrl->event, ctrl->value);
+            LOG_VMM("ctrl message ID 0x%x, event: 0x%hx, value: 0x%hx\n", ctrl->id, ctrl->event, ctrl->value);
 
             if (ctrl->event == VIRTIO_CONSOLE_DEVICE_READY) {
                 virtio_console_handle_ctrl_rx(dev, (struct virtio_console_control){
                     .id = 0,
-                    .event = VIRTIO_CONSOLE_CON_PORT,
+                    .event = VIRTIO_CONSOLE_CONSOLE_PORT,
                     .value = 0,
                 });
                 virtio_console_handle_ctrl_rx(dev, (struct virtio_console_control){
                     .id = 0,
-                    .event = VIRTIO_CONSOLE_PORT_ADD,
+                    .event = VIRTIO_CONSOLE_DEVICE_ADD,
                     .value = 0,
                 });
+                virtio_console_handle_ctrl_rx(dev, (struct virtio_console_control){
+                    .id = 0,
+                    .event = VIRTIO_CONSOLE_PORT_OPEN,
+                    .value = 1,
+                });
             }
+            LOG_VMM("event %d\n", ctrl->event);
         } while (desc.flags & VIRTQ_DESC_F_NEXT);
 
         struct virtq_used_elem used_elem = {vq->virtq.avail->ring[vq->last_idx % vq->virtq.num], 0};
@@ -235,6 +243,8 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     while (virtio_virtq_peek_avail(vq, &desc_head) && !serial_queue_full(console->txq, console->txq->queue->head)) {
         uint64_t payload_len = virtio_desc_chain_payload_len(vq, desc_head);
 
+        LOG_CONSOLE("payload length: %d\n", payload_len);
+
         if (payload_len > console->txq->capacity) {
             // @billn, fix properly by partial TX, bookkeep, then continue once serial virt notifies?
             LOG_CONSOLE_ERR(
@@ -272,6 +282,8 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
         bytes_copied += copy_len;
         serial_update_shared_tail(console->txq, console->txq->queue->tail + copy_len);
 
+        LOG_CONSOLE("copying %d bytes\n", copy_len);
+
         if (copy_twice) {
             /* Need to copy more data after the queue wraps around */
             serial_txq_dest = (char *)(console->txq->data_region
@@ -285,7 +297,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 
         assert(bytes_copied == payload_len);
 
-        LOG_CONSOLE("processed descriptor %u with content: %s\n", desc_head, serial_txq_dest);
+        // LOG_CONSOLE("processed descriptor %u with content: %s\n", desc_head, serial_txq_dest);
 
         virtio_virtq_add_used(vq, desc_head, 0);
         virtio_virtq_pop_avail(vq, &desc_head);

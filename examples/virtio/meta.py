@@ -134,6 +134,24 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
 
+    ### framebuffer
+    fb = MemoryRegion(sdf, "fb", 1024 * 1024 * 8, paddr=0x90000000)
+    dma_ctrl = MemoryRegion(sdf, "dma_ctrl", 0x1000, paddr=0xa0000000)
+    fw_cfg_mr = MemoryRegion(sdf, "fw-cfg", 0x1000, paddr=0x9020000)
+    sdf.add_mr(fw_cfg_mr)
+    sdf.add_mr(fb)
+    sdf.add_mr(dma_ctrl)
+    vmm_client0.add_map(Map(fw_cfg_mr, 0x9020000, "rw", cached=False))
+    vm_client0.add_map(Map(fw_cfg_mr, 0x9020000, "rw", cached=False))
+    vmm_client0.add_map(Map(fb, 0x90000000, "rw", cached=False))
+    vmm_client0.add_map(Map(dma_ctrl, 0xa0000000, "rw", cached=False))
+    ###
+
+    # small_ram = MemoryRegion(sdf, "small-ram", 1024 * 1024 * 128)
+    # sdf.add_mr(small_ram)
+    # vm_client0.add_map(Map(small_ram, 0x40000000, "rwx"))
+    # vmm_client0.add_map(Map(small_ram, 0x40000000, "rw"))
+
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
     assert blk_system.connect()

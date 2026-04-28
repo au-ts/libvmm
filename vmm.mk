@@ -45,6 +45,8 @@ ARCH_INDEP_FILES := src/util/printf.c \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/virtio/util.c \
+		    src/qemu/fw_cfg.c \
+		    src/qemu/ramfb.c \
 		    src/pl011.c \
 		    src/guest.c
 
@@ -71,6 +73,7 @@ libvmm/arch/aarch64/vgic:
 	mkdir -p libvmm/arch/aarch64/vgic/
 	mkdir -p libvmm/util
 	mkdir -p libvmm/virtio
+	mkdir -p libvmm/qemu
 
 libvmm.a: ${OBJECTS}
 	${AR} crv $@ $^
@@ -90,3 +93,4 @@ clobber:: clean
 	rmdir src/arch/aarch64/vgic
 	rmdir src/util
 	rmdir src/virtio
+	rmdir src/qemu

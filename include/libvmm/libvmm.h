@@ -21,6 +21,9 @@
 #include <libvmm/virtio/net.h>
 #include <libvmm/virtio/sound.h>
 
+#include <libvmm/qemu/fw_cfg.h>
+#include <libvmm/qemu/ramfb.h>
+
 #if defined(CONFIG_ARCH_ARM)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
