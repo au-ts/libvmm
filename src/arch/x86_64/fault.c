@@ -169,6 +169,7 @@ bool fault_is_trap_like(int exit_reason)
     switch (exit_reason) {
     case APIC_WRITE:
     case VIRTUALIZED_EOI:
+    case VMX_PREEMPTION_TIMER:
         return true;
     default:
         return false;
