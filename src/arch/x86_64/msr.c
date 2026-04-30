@@ -75,8 +75,29 @@
 #define MSR_CSTAR           0xc0000083 /* compat mode SYSCALL target */
 #define MSR_SYSCALL_MASK    0xc0000084 /* EFLAGS mask for syscall */
 
+static bool msrs_initialised = false;
+static uint32_t apic_base_msr_mask = 0;
+
+bool initialise_msrs(bool bsp)
+{
+    if (bsp) {
+        /* Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
+         * Is a boot strap processor. */
+        apic_base_msr_mask = BIT(8);
+    }
+
+    msrs_initialised = true;
+
+    return true;
+}
+
 bool emulate_rdmsr(seL4_VCPUContext *vctx)
 {
+    if (!msrs_initialised) {
+        LOG_VMM_ERR("MSRs not initialised!\n");
+        return false;
+    }
+
     uint64_t result = 0;
 
     switch (vctx->ecx) {
@@ -85,7 +106,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         break;
     }
     case IA32_TIME_STAMP_COUNTER:
-        result = __rdtsc();
+        result = rdtsc();
         break;
     case MSR_STAR:
     case MSR_LSTAR:
@@ -94,9 +115,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         result = microkit_vcpu_x86_read_msr(GUEST_BOOT_VCPU_ID, vctx->ecx);
         break;
     case IA32_APIC_BASE:
-        // Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
-        //                   enable    is boot cpu
-        result = LAPIC_GPA | BIT(11) | BIT(8);
+        /* Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
+         *                   enable    is boot cpu? */
+        result = LAPIC_GPA | BIT(11) | apic_base_msr_mask;
         break;
     case IA32_SPEC_CTRL:
         // @billn revisit, I think we should use Virtualize IA32_SPEC_CTRL
@@ -115,6 +136,11 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 
 bool emulate_wrmsr(seL4_VCPUContext *vctx)
 {
+    if (!msrs_initialised) {
+        LOG_VMM_ERR("MSRs not initialised!\n");
+        return false;
+    }
+
     uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
 
     LOG_FAULT("handling WRMSR 0x%x, value 0x%lx\n", vctx->ecx, value);

@@ -6,8 +6,19 @@
 #include <string.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/virq.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+
+bool guest_init(arch_guest_init_t init_args)
+{
+    /* Initialise the virtual GIC driver */
+    bool success = virq_controller_init();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+    }
+    return success;
+}
 
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 {

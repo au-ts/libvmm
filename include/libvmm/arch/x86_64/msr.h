@@ -8,5 +8,6 @@
 
 #include <microkit.h>
 
+bool initialise_msrs(bool bsp);
 bool emulate_rdmsr(seL4_VCPUContext *vctx);
 bool emulate_wrmsr(seL4_VCPUContext *vctx);
