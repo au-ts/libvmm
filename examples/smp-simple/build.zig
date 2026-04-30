@@ -188,6 +188,48 @@ pub fn build(b: *std.Build) !void {
         guest_images.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
     }
 
+    const base_initrd: ?std.Build.LazyPath = blk: {
+        if (custom_initrd) |c| {
+            break :blk .{ .src_path = .{ .owner = b, .sub_path = c } };
+        } else if (initrd_image_dep) |dep| {
+            break :blk dep.path("rootfs.cpio.gz");
+        } else {
+            break :blk null;
+        }
+    };
+
+    if (base_initrd) |initrd_path| {
+        const packrootfs_cmd = b.addSystemCommand(&.{"bash"});
+        const home_scripts = [_]std.Build.LazyPath{
+            libvmm_dep.path("tools/linux/util/guest_smp_test_script.sh"),
+        };
+
+        const packrootfs_tool = libvmm_dep.path("tools/packrootfs");
+
+        packrootfs_cmd.addFileArg(packrootfs_tool);
+        packrootfs_cmd.addFileArg(initrd_path);
+
+        _ = packrootfs_cmd.addOutputDirectoryArg("rootfs_staging");
+
+        packrootfs_cmd.addArg("-o");
+        const packed_rootfs = packrootfs_cmd.addOutputFileArg("rootfs.cpio.gz");
+
+        packrootfs_cmd.addArg("--home");
+        for (home_scripts) |s| packrootfs_cmd.addFileArg(s);
+
+        const install_initrd = b.addInstallFileWithDir(packed_rootfs, .prefix, "rootfs.cpio.gz");
+        guest_images.step.dependOn(&install_initrd.step);
+    }
+
+    // Hack to avoid caching of the guest images incbins: https://github.com/ziglang/zig/issues/16919
+    var prng = std.Random.DefaultPrng.init(blk: {
+        var seed: u64 = undefined;
+        try std.posix.getrandom(std.mem.asBytes(&seed));
+        break :blk seed;
+    });
+    const rand = prng.random();
+    const random_arg = b.fmt("-DRANDOM=\"{}\"", .{ rand.int(usize) });
+
     const kernel_image_arg = b.fmt("-DGUEST_KERNEL_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux") });
     const initrd_image_arg = b.fmt("-DGUEST_INITRD_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "rootfs.cpio.gz") });
     const dtb_image_arg = b.fmt("-DGUEST_DTB_IMAGE_PATH=\"{s}\"", .{ b.getInstallPath(.prefix, "linux.dtb") });
@@ -197,6 +239,7 @@ pub fn build(b: *std.Build) !void {
             kernel_image_arg,
             dtb_image_arg,
             initrd_image_arg,
+            random_arg,
             "-x",
             "assembler-with-cpp",
         }
