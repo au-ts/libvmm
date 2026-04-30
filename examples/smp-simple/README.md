@@ -82,4 +82,3 @@ You can view other options by doing:
 ```sh
 zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD> -h
 ```
-
