@@ -5,7 +5,7 @@
 #
 
 BUILD_DIR ?= build
-export MICROKIT_CONFIG ?= debug
+export MICROKIT_CONFIG ?= smp-debug
 
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)

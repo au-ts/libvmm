@@ -66,6 +66,6 @@
         stdout-path = "/soc/bus@ff800000/serial@3000";
         linux,initrd-end = <0x00000000 0x2e000000>;
         linux,initrd-start = <0x00000000 0x2d700000>;
-        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1";
+        bootargs = "console=ttyAML0,115200n8 root=/dev/ram0 rw debug loglevel=8 pci=nomsi earlyprintk=serial";
     };
 };

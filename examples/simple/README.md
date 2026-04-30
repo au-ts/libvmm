@@ -7,7 +7,8 @@
 
 This example is a minimal VMM that supports Linux guests and a basic
 buildroot/BusyBox root file system. This gives a basic command-line with some
-common Linux utilities.
+common Linux utilities, similiar to the "simple" example. The difference
+is that we provision 4 VCPUs for the guest, rather than 1.
 
 The example currently works on the following platforms:
 
@@ -82,4 +83,3 @@ You can view other options by doing:
 ```sh
 zig build -Dsdk=/path/to/sdk -Dboard=<MICROKIT_BOARD> -h
 ```
-

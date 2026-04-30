@@ -34,4 +34,3 @@
         <irq irq="225" id="1" trigger="edge" />
     </protection_domain>
 </system>
-

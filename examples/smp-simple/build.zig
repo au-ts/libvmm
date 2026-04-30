@@ -3,6 +3,8 @@
 const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
+const num_vcpus = 4;
+
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
     odroidc4,
@@ -59,9 +61,9 @@ fn findTarget(board: MicrokitBoard) std.Target.Query {
 }
 
 const ConfigOptions = enum {
-    debug,
-    release,
-    benchmark
+    @"smp-debug",
+    @"smp-release",
+    @"smp-benchmark"
 };
 
 pub fn build(b: *std.Build) !void {
@@ -71,7 +73,7 @@ pub fn build(b: *std.Build) !void {
         return error.MissingMicrokitSdk;
     };
 
-    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.debug;
+    const microkit_config_option = b.option(ConfigOptions, "config", "Microkit config to build for") orelse ConfigOptions.@"smp-debug";
     const microkit_config = @tagName(microkit_config_option);
 
     // Get the Microkit SDK board we want to target
@@ -95,6 +97,9 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .microkit_board_dir = microkit_board_dir,
+        .extra_cflags = &[_][]const u8{
+            b.fmt("-DGUEST_NUM_VCPUS={d}", .{ num_vcpus }),
+        }
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
@@ -153,7 +158,8 @@ pub fn build(b: *std.Build) !void {
             "-Werror",
             "-Wno-unused-function",
             "-mstrict-align",
-            b.fmt("-DBOARD_{s}", .{ microkit_board })
+            b.fmt("-DBOARD_{s}", .{ microkit_board }),
+            b.fmt("-DGUEST_NUM_VCPUS={d}", .{ num_vcpus }),
         }
     });
 
@@ -240,6 +246,8 @@ pub fn build(b: *std.Build) !void {
             "-m",
             "2G",
             "-nographic",
+            "-smp",
+            b.fmt("{d}", .{ num_vcpus }),
         });
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");
