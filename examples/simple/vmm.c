@@ -65,7 +65,7 @@ extern char _guest_kernel_image_end[];
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
 
-#if defined(BOARD_x86_64_generic_vtx)
+#if defined(CONFIG_ARCH_X86_64)
 /* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
 extern char _guest_dsdt_aml[];
 extern char _guest_dsdt_aml_end[];
@@ -96,9 +96,29 @@ void init(void)
         return;
     }
 
-    assert(guest_ram_add_region(GUEST_RAM_START_GPA, (void *)guest_ram_vaddr, GUEST_RAM_SIZE));
+    if (!guest_ram_add_region(GUEST_RAM_START_GPA, (void *)guest_ram_vaddr, GUEST_RAM_SIZE)) {
+        LOG_VMM_ERR("Failed to bookkeep guest RAM region\n");
+        return;
+    }
 
-#if defined(BOARD_x86_64_generic_vtx)
+#if defined(CONFIG_ARCH_X86_64)
+    arch_guest_init_t guest_init_args = (arch_guest_init_t) {
+        .bsp = true,
+        .apic_id = 0,
+        .timer_ch = TIMER_DRV_CH,
+    };
+#elif defined(CONFIG_ARCH_ARM)
+    arch_guest_init_t guest_init_args = (arch_guest_init_t) {
+        .num_vcpus = 1,
+    };
+#endif
+
+    if (!guest_init(guest_init_args)) {
+        LOG_VMM_ERR("Failed to initialise VMM\n");
+        return;
+    }
+
+#if defined(CONFIG_ARCH_X86_64)
     size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
 
     if (!dsdt_aml_size) {
@@ -114,42 +134,15 @@ void init(void)
         return;
     }
 
-    if (!vcpu_set_up_long_mode(linux_setup.pml4_gpa, linux_setup.gdt_gpa, linux_setup.gdt_limit)) {
-        LOG_VMM_ERR("Failed to set up virtual CPU\n");
-        return;
-    }
-
-    /* Set up the virtual PCI bus */
-    assert(pci_x86_init());
-
     /* Pass through COM1 serial port */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, COM1_IO_PORT_ID, COM1_IO_PORT_ADDR, COM1_IO_PORT_SIZE);
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    /* Initialise guest time library */
-    if (!initialise_guest_time(TIMER_DRV_CH)) {
-        LOG_VMM_ERR("cannot initialise guest time keeper.\n");
-        return;
-    }
-
-    /* Initialise CPUID */
-    if (!initialise_cpuid(guest_time_tsc_hz())) {
-        LOG_VMM_ERR("cannot initialise CPUID\n");
-        return;
-    }
-
-    /* Initialise the virtual Local and I/O APICs */
-    //                                          @billn revisit vapic vaddr
-    bool success = virq_controller_init(guest_time_tsc_hz(), 0xfffffffffffffff);
-    if (!success) {
-        LOG_VMM_ERR("Failed to initialise virtual IRQ controller\n");
-        return;
-    }
-
     /* Pass through serial IRQs */
     assert(virq_ioapic_register_passthrough(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN, SERIAL_IRQ_CH));
 
-    guest_start(linux_setup.kernel_entry_gpa, &initial_regs);
+    guest_start_long_mode(linux_setup.kernel_entry_gpa, linux_setup.pml4_gpa, linux_setup.gdt_gpa,
+                          linux_setup.gdt_limit, &initial_regs);
 #else
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     if (!dtb_size) {
@@ -165,13 +158,7 @@ void init(void)
         return;
     }
 
-    arch_guest_init_t args = { .num_vcpus = 1 };
-    bool success = guest_init(args);
-    if (!success) {
-        LOG_VMM_ERR("Failed to initialise guest\n");
-        return;
-    }
-    success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
+    bool success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
     assert(success);
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
@@ -181,7 +168,7 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
-#if defined(BOARD_x86_64_generic_vtx)
+#if defined(CONFIG_ARCH_X86_64)
     case TIMER_DRV_CH: {
         guest_time_handle_timer_ntfn();
         break;
@@ -214,7 +201,7 @@ void notified(microkit_channel ch)
  */
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
 {
-#if defined(BOARD_x86_64_generic_vtx)
+#if defined(CONFIG_ARCH_X86_64)
     fault_handle(child);
     return seL4_True;
 #else

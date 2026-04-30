@@ -6,8 +6,38 @@
 #include <string.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/virq.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+
+/* Global state for managing the guest. */
+guest_t guest;
+
+bool guest_init(arch_guest_init_t init_args)
+{
+    if (init_args.num_vcpus == 0) {
+        LOG_VMM_ERR("number of guest vCPUs must be greater than zero");
+        return false;
+    }
+
+    if (init_args.num_vcpus > GUEST_MAX_NUM_VCPUS) {
+        LOG_VMM_ERR("number of guest vCPUs (%lu) is more than maximum (%lu)", init_args.num_vcpus, GUEST_MAX_NUM_VCPUS);
+        return false;
+    }
+
+    guest.num_vcpus = init_args.num_vcpus;
+    for (int i = 0; i < guest.num_vcpus; i++) {
+        guest.vcpu_on_state[i] = false;
+    }
+
+    /* Initialise the virtual GIC driver */
+    bool success = virq_controller_init();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+    }
+
+    return success;
+}
 
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 {

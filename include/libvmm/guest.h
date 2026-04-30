@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#pragma once
+
 #include <microkit.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -21,6 +23,19 @@
 #define GUEST_MAX_NUM_VCPUS 4UL
 #endif
 
+#if defined(CONFIG_ARCH_X86_64)
+typedef struct arch_guest_init {
+    /* Is Boot Strap Processor? */
+    bool bsp;
+    /* A unique identifier of the processor from the guest's perspective.
+     * We are virtualising xAPIC so it is only 8-bits, but in the future if
+     * we support x2APIC then it will need to be a u32. */
+    uint8_t apic_id;
+    /* Channel to a timer driver to measure the host CPU's TSC frequency
+     * if it cannot be inferred from CPUID. */
+    microkit_channel timer_ch;
+} arch_guest_init_t;
+#elif defined(CONFIG_ARCH_ARM)
 typedef struct guest {
     size_t num_vcpus;
     bool vcpu_on_state[GUEST_MAX_NUM_VCPUS];
@@ -29,6 +44,7 @@ typedef struct guest {
 typedef struct arch_guest_init {
     size_t num_vcpus;
 } arch_guest_init_t;
+#endif
 
 /* Initialise the architecture specific subsystems of the VMM library such as the
  * interrupt controller(s), etc. Note that the VCPU architectural state itself won't be
@@ -40,7 +56,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
 #elif defined(CONFIG_ARCH_X86_64)
-bool guest_start(uintptr_t kernel_rip, seL4_VCPUContext *initial_regs);
+bool guest_start_long_mode(uint64_t kernel_rip, uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit,
+                           seL4_VCPUContext *initial_regs);
 #else
 #error "Unsupported guest architecture"
 #endif
