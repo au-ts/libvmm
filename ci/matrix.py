@@ -87,6 +87,16 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
+    "smp-simple": {
+        "configs": ["smp-debug", "smp-release"],
+        "build_systems": ["make", "zig"],
+        "boards": [
+            "qemu_virt_aarch64",
+            "odroidc4",
+            "maaxboard",
+        ],
+        "tests_exclude": [],
+    },
     "virtio": {
         "configs": ["debug", "release"],
         "build_systems": ["make", "zig"],
@@ -139,7 +149,7 @@ for ex in EXAMPLES.values():
 
 
 class _ExampleMatrixType(TypedDict):
-    configs: list[Literal["debug", "release", "benchmark"]]
+    configs: list[Literal["debug", "release", "benchmark", "smp-debug", "smp-release", "smp-benchmark"]]
     build_systems: list[Literal["make", "zig"]]
     boards: list[_BoardNames]
     tests_exclude: list[dict[str, str]]
