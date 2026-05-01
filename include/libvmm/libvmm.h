@@ -22,4 +22,5 @@
 #if defined(CONFIG_ARCH_ARM)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/smc.h>
 #endif

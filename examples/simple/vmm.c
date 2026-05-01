@@ -70,10 +70,10 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
-    /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init();
+    arch_guest_init_t args = { .num_vcpus = 1 };
+    bool success = guest_init(args);
     if (!success) {
-        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+        LOG_VMM_ERR("Failed to initialise guest\n");
         return;
     }
     success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);

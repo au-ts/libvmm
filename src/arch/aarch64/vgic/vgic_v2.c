@@ -54,6 +54,7 @@
 #include <libvmm/arch/aarch64/vgic/vgic_v2.h>
 #include <libvmm/arch/aarch64/vgic/vdist.h>
 
+extern guest_t guest;
 vgic_t vgic;
 struct gic_dist_map dist;
 
@@ -64,7 +65,7 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->typer = 0x0000fce7; /* RO */
     gic_dist->iidr = 0x0200043b; /* RO */
 
-    for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
+    for (int i = 0; i < guest.num_vcpus; i++) {
         gic_dist->enable_set0[i] = 0x0000ffff; /* 16bit RO */
         gic_dist->enable_clr0[i] = 0x0000ffff; /* 16bit RO */
     }
@@ -88,7 +89,7 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->config[15]      = 0x55555555;
 
     /* Configure per-processor SGI/PPI target registers */
-    for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
+    for (int i = 0; i < guest.num_vcpus; i++) {
         for (int j = 0; j < ARRAY_SIZE(gic_dist->targets0[i]); j++) {
             for (int irq = 0; irq < sizeof(uint32_t); irq++) {
                 gic_dist->targets0[i][j] |= ((1 << i) << (irq * 8));
@@ -115,7 +116,7 @@ void vgic_init()
 {
     memset(&vgic, 0, sizeof(vgic_t));
 
-    for (int vcpu = 0; vcpu < GUEST_NUM_VCPUS; vcpu++) {
+    for (int vcpu = 0; vcpu < GUEST_MAX_NUM_VCPUS; vcpu++) {
         for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
             vgic.vgic_vcpu[vcpu].local_virqs[i].virq = VIRQ_INVALID;
         }

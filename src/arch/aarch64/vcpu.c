@@ -5,9 +5,7 @@
  */
 
 #include <microkit.h>
-#include <libvmm/guest.h>
-#include <libvmm/vcpu.h>
-#include <libvmm/util/util.h>
+#include <libvmm/libvmm.h>
 
 #define SCTLR_EL1_UCI       (1 << 26)     /* Enable EL0 access to DC CVAU, DC CIVAC, DC CVAC,
                                            and IC IVAU in AArch64 state   */
@@ -26,26 +24,26 @@
 #define SCTLR_EL1_NATIVE   (SCTLR_EL1 | SCTLR_EL1_C | SCTLR_EL1_I | SCTLR_EL1_UCI)
 #define SCTLR_DEFAULT      SCTLR_EL1_NATIVE
 
-bool vcpu_on_state[GUEST_NUM_VCPUS];
+extern guest_t guest;
 
 bool vcpu_is_on(size_t vcpu_id)
 {
-    assert(vcpu_id < GUEST_NUM_VCPUS);
-    if (vcpu_id >= GUEST_NUM_VCPUS) {
+    assert(vcpu_id < guest.num_vcpus);
+    if (vcpu_id >= guest.num_vcpus) {
         return false;
     }
 
-    return vcpu_on_state[vcpu_id];
+    return guest.vcpu_on_state[vcpu_id];
 }
 
 void vcpu_set_on(size_t vcpu_id, bool on)
 {
-    assert(vcpu_id < GUEST_NUM_VCPUS);
-    if (vcpu_id >= GUEST_NUM_VCPUS) {
+    assert(vcpu_id < guest.num_vcpus);
+    if (vcpu_id >= guest.num_vcpus) {
         return;
     }
 
-    vcpu_on_state[vcpu_id] = on;
+    guest.vcpu_on_state[vcpu_id] = on;
 }
 
 void vcpu_reset(size_t vcpu_id)
