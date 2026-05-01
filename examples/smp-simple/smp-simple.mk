@@ -5,8 +5,6 @@
 #
 QEMU := qemu-system-aarch64
 
-NUM_VCPUS := 4
-
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
 LIBVMM_TOOLS := $(LIBVMM)/tools
@@ -41,8 +39,7 @@ CFLAGS := \
 	  -I$(SDDF)/include/microkit \
 	  -MD \
 	  -MP \
-	  -target $(TARGET) \
-	  -DGUEST_NUM_VCPUS=$(NUM_VCPUS)
+	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
@@ -114,7 +111,7 @@ qemu: $(IMAGE_FILE)
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
-			-smp $(NUM_VCPUS)
+			-smp 4
 
 clean::
 	$(RM) -f *.elf .depend* $

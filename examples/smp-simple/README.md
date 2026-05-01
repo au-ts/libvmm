@@ -3,11 +3,11 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# A simple VMM for running Linux guests
+# A VMM managing a guest with multiple vCPUs
 
-This example is a minimal VMM that supports Linux guests and a basic
-buildroot/BusyBox root file system. This gives a basic command-line with some
-common Linux utilities.
+This example is the exact same as the [simple example](../simple) except
+that each guest has multiple virtual CPUs instead of just one (defaults
+to 4 vCPUs).
 
 The example currently works on the following platforms:
 
