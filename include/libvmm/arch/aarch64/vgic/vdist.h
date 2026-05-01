@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <libvmm/vcpu.h>
-#include <libvmm/util/util.h>
-#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/libvmm.h>
 
 /* GIC Distributor register access utilities */
 #define GIC_DIST_REGN(offset, reg) ((offset-reg)/sizeof(uint32_t))
 #define RANGE32(a, b) a ... b + (sizeof(uint32_t)-1)
+
+extern guest_t guest;
 
 static inline void set_spi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending)
 {
@@ -570,7 +570,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
             break;
         case GIC_DIST_SGI_TARGET_LIST_OTHERS:
             /* Forward virq to all VCPUs except the requesting VCPU */
-            target_list = (1 << GUEST_NUM_VCPUS) - 1;
+            target_list = (1 << guest.num_vcpus) - 1;
             target_list = target_list & ~(1 << vcpu_id);
             break;
         case GIC_DIST_SGI_TARGET_SELF:
@@ -581,7 +581,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
             LOG_VMM_ERR("Unknown SGIR Target List Filter mode");
             goto ignore_fault;
         }
-        for (int i = 0; i < GUEST_NUM_VCPUS; i++) {
+        for (int i = 0; i < guest.num_vcpus; i++) {
             if ((1 << i) & target_list && vcpu_is_on(i)) {
                 success = vgic_inject_irq(i, virq);
                 assert(success);

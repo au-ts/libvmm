@@ -36,11 +36,16 @@ extern "C" {
                           kernel: usize, kernel_size: usize,
                           dtb_src: usize, dtb_dest: usize, dtb_size: usize,
                           initrd_src: usize, initrd_dest: usize, initrd_size: usize) -> usize;
-    fn virq_controller_init() -> bool;
+    fn guest_init(init_args: arch_guest_init) -> bool;
     fn virq_register_passthrough(vcpu_id: usize, irq: i32, irq_ch: u32) -> bool;
     fn virq_handle_passthrough(irq_ch: u32) -> bool;
     fn guest_start(kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
+}
+
+#[repr(C)]
+struct arch_guest_init {
+    num_vcpus: usize
 }
 
 #[protection_domain]
@@ -64,7 +69,9 @@ fn init() -> VmmHandler {
                                             dtb_addr, GUEST_DTB_VADDR, dtb.len(),
                                             initrd_addr, GUEST_INIT_RAM_DISK_VADDR, initrd.len()
                                          );
-        let success = virq_controller_init();
+        let success = guest_init(arch_guest_init {
+            num_vcpus: 1,
+        });
         assert!(success);
         let success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, UART_CH.index() as u32);
         assert!(success);

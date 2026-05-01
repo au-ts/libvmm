@@ -103,9 +103,8 @@ export fn init() callconv(.c) void {
         log.err("Failed to initialise guest images\n", .{});
         return;
     }
-    // Initialise the virtual interrupt controller
-    if (!c.virq_controller_init()) {
-        log.err("Failed to initialise virtual interrupt controller\n", .{});
+    if (!c.guest_init(.{ .num_vcpus = 1 })) {
+        log.err("Failed to initialise guest\n", .{});
         return;
     }
     // Register the interrupt for the UART with the virtual interrupt controller

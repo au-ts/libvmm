@@ -97,9 +97,6 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
         .microkit_board_dir = microkit_board_dir,
-        .extra_cflags = &[_][]const u8{
-            b.fmt("-DGUEST_NUM_VCPUS={d}", .{ num_vcpus }),
-        }
     });
     const libvmm = libvmm_dep.artifact("vmm");
 
@@ -159,7 +156,6 @@ pub fn build(b: *std.Build) !void {
             "-Wno-unused-function",
             "-mstrict-align",
             b.fmt("-DBOARD_{s}", .{ microkit_board }),
-            b.fmt("-DGUEST_NUM_VCPUS={d}", .{ num_vcpus }),
         }
     });
 
@@ -290,7 +286,7 @@ pub fn build(b: *std.Build) !void {
             "2G",
             "-nographic",
             "-smp",
-            b.fmt("{d}", .{ num_vcpus }),
+            4,
         });
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");

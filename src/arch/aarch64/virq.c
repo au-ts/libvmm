@@ -5,11 +5,10 @@
  */
 
 #include <microkit.h>
-#include <libvmm/guest.h>
-#include <libvmm/virq.h>
-#include <libvmm/util/util.h>
-#include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/libvmm.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
+
+extern guest_t guest;
 
 /* Maps Microkit channel numbers with registered vIRQ */
 int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};
@@ -53,7 +52,7 @@ bool virq_controller_init()
     }
 #endif
 
-    for (int vcpu = 0; vcpu < GUEST_NUM_VCPUS; vcpu++) {
+    for (int vcpu = 0; vcpu < guest.num_vcpus; vcpu++) {
         success = vgic_register_irq(vcpu, PPI_VTIMER_IRQ, &vppi_event_ack, NULL);
         if (!success) {
             LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%lx\n", PPI_VTIMER_IRQ);
