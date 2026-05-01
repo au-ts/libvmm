@@ -38,8 +38,8 @@ all: $(IMAGE_FILE)
 qemu $(IMAGE_FILE) $(REPORT_FILE) clean clobber: $(BUILD_DIR)/Makefile FORCE
 	$(MAKE) -C $(BUILD_DIR) MICROKIT_SDK=$(MICROKIT_SDK) $(notdir $@)
 
-$(BUILD_DIR)/Makefile: simple.mk
+$(BUILD_DIR)/Makefile: smp-simple.mk
 	mkdir -p $(BUILD_DIR)
-	cp simple.mk $@
+	cp smp-simple.mk $@
 
 FORCE:
