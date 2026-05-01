@@ -70,7 +70,7 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
-    arch_guest_init_t args = { .num_vcpus = 1 };
+    arch_guest_init_t args = { .num_vcpus = 4 };
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");

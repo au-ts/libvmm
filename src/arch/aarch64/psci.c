@@ -6,12 +6,8 @@
  */
 
 #include <stdbool.h>
-#include <libvmm/guest.h>
-#include <libvmm/vcpu.h>
-#include <libvmm/util/util.h>
+#include <libvmm/libvmm.h>
 #include <libvmm/arch/aarch64/psci.h>
-#include <libvmm/arch/aarch64/smc.h>
-#include <libvmm/arch/aarch64/fault.h>
 
 /*
  * The PSCI version is represented by a 32-bit unsigned integer.
@@ -33,6 +29,8 @@
 #define PSCI_DISABLED -8
 #define PSCI_INVALID_ADDRESS -9
 
+extern guest_t guest;
+
 bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uint64_t hsr)
 {
     // @ivanv: write a note about what convention we assume, should we be checking
@@ -46,7 +44,7 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
     }
     case PSCI_CPU_ON: {
         size_t target_vcpu = smc_get_arg(regs, 1);
-        if (target_vcpu < GUEST_NUM_VCPUS && target_vcpu >= 0) {
+        if (target_vcpu < guest.num_vcpus && target_vcpu >= 0) {
             /* The guest has given a valid target vCPU */
             if (vcpu_is_on(target_vcpu)) {
                 smc_set_return_value(regs, PSCI_ALREADY_ON);
