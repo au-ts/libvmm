@@ -6,8 +6,19 @@
 #include <string.h>
 #include <microkit.h>
 #include <libvmm/vcpu.h>
+#include <libvmm/virq.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+
+bool guest_init(arch_guest_init_t init_args)
+{
+    /* Initialise the virtual GIC driver */
+    bool success = virq_controller_init();
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+    }
+    return success;
+}
 
 bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
 {
@@ -17,7 +28,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
      * any other kind of guest. However, even though the library is open to supporting other
      * guests, there is no point in prematurely generalising this code.
      */
-    seL4_UserContext regs = {0};
+    seL4_UserContext regs = { 0 };
     regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;

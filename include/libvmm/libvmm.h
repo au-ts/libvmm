@@ -9,6 +9,7 @@
 
 #include <libvmm/config.h>
 #include <libvmm/guest.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/virq.h>
@@ -22,4 +23,11 @@
 #if defined(CONFIG_ARCH_ARM)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
+#elif defined(CONFIG_ARCH_X86)
+#include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/vcpu.h>
+#include <libvmm/arch/x86_64/virq.h>
+#include <libvmm/arch/x86_64/memory_space.h>
+#include <libvmm/arch/x86_64/guest_time.h>
 #endif
