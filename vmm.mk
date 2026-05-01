@@ -66,8 +66,7 @@ VIRTIO_FILES := src/virtio/block.c \
 		    src/virtio/pci.c \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
-		    src/virtio/virtio.c \
-		    src/guest.c
+		    src/virtio/virtio.c
 
 ifeq ($(ARCH),aarch64)
 CFILES := ${AARCH64_FILES} ${VIRTIO_FILES}
