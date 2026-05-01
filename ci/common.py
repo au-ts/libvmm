@@ -68,6 +68,7 @@ def backend_fn(
                 "-machine", "virt,virtualization=on,highmem=off,secure=off",
                 "-cpu", "cortex-a53",
                 "-device", f"loader,file={loader_img.resolve()},addr=0x70000000,cpu-num=0",
+                "-smp", "4",
                 # fmt: on
                 *QEMU_COMMON_FLAGS,
             )

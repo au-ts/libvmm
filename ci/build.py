@@ -51,11 +51,11 @@ def build_zig(args: argparse.Namespace, test_config: common.TestConfig):
     # configurations
     zig_optimize_table = {
         "debug": "Debug",
-        "debug-smp": "Debug",
+        "smp-debug": "Debug",
         "release": "ReleaseSafe",
-        "release-smp": "ReleaseSafe",
+        "smp-release": "ReleaseSafe",
         "benchmark": "ReleaseSafe",
-        "benchmark-smp": "ReleaseSafe",
+        "smp-benchmark": "ReleaseSafe",
     }
     zig_optimize = zig_optimize_table[test_config.config]
 
