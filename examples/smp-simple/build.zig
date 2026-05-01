@@ -3,8 +3,6 @@
 const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
-const num_vcpus = 4;
-
 const MicrokitBoard = enum {
     qemu_virt_aarch64,
     odroidc4,
@@ -286,7 +284,7 @@ pub fn build(b: *std.Build) !void {
             "2G",
             "-nographic",
             "-smp",
-            4,
+            "4",
         });
         qemu_cmd.step.dependOn(b.default_step);
         const simulate_step = b.step("qemu", "Simulate the image using QEMU");
