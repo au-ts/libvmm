@@ -176,12 +176,6 @@ pub fn build(b: *std.Build) !void {
         guest_images.step.dependOn(&b.addInstallFileWithDir(linux_image.path("linux"), .prefix, "linux").step);
     }
 
-    if (custom_initrd) |c| {
-        guest_images.step.dependOn(&b.addInstallFileWithDir(.{ .cwd_relative = c }, .prefix, "rootfs.cpio.gz").step);
-    } else if (initrd_image_dep) |initrd_image| {
-        guest_images.step.dependOn(&b.addInstallFileWithDir(initrd_image.path("rootfs.cpio.gz"), .prefix, "rootfs.cpio.gz").step);
-    }
-
     const base_initrd: ?std.Build.LazyPath = blk: {
         if (custom_initrd) |c| {
             break :blk .{ .src_path = .{ .owner = b, .sub_path = c } };
@@ -198,9 +192,10 @@ pub fn build(b: *std.Build) !void {
             libvmm_dep.path("tools/linux/util/guest_smp_test_script.sh"),
         };
 
-        const packrootfs_tool = libvmm_dep.path("tools/packrootfs");
+        const packrootfs = libvmm_dep.path("tools/packrootfs");
 
-        packrootfs_cmd.addFileArg(packrootfs_tool);
+        packrootfs_cmd.addFileArg(packrootfs);
+        packrootfs_cmd.addFileInput(packrootfs);
         packrootfs_cmd.addFileArg(initrd_path);
 
         _ = packrootfs_cmd.addOutputDirectoryArg("rootfs_staging");
@@ -209,7 +204,10 @@ pub fn build(b: *std.Build) !void {
         const packed_rootfs = packrootfs_cmd.addOutputFileArg("rootfs.cpio.gz");
 
         packrootfs_cmd.addArg("--home");
-        for (home_scripts) |s| packrootfs_cmd.addFileArg(s);
+        for (home_scripts) |s| {
+            packrootfs_cmd.addFileArg(s);
+            packrootfs_cmd.addFileInput(s);
+        }
 
         const install_initrd = b.addInstallFileWithDir(packed_rootfs, .prefix, "rootfs.cpio.gz");
         guest_images.step.dependOn(&install_initrd.step);
