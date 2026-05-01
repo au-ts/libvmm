@@ -11,9 +11,6 @@
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/virtio.h>
 
-/* Prevent the guest from hanging us by passing a descriptor loop */
-#define MAX_WALK_LEN VIRTIO_DEFAULT_QUEUE_SIZE
-
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
     assert(vq_handler->ready);
@@ -23,14 +20,16 @@ uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint1
     uint64_t payload_len = 0;
     uint16_t curr_desc = desc_head;
     while (true) {
+        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
+            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+            return 0;
+        }
+
         payload_len += virtq->desc[curr_desc].len;
         if (!(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT)) {
             break;
         }
-        if (loop_iter_count > MAX_WALK_LEN) {
-            LOG_VMM_ERR("virtio_desc_chain_payload_len(): infinite loop at desc head %u\n", desc_head);
-            return 0;
-        }
+
         curr_desc = virtq->desc[curr_desc].next;
         loop_iter_count++;
     };
@@ -50,6 +49,11 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
     uint16_t curr_desc = desc_head;
     uint64_t loop_iter_count = 0;
     while (true) {
+        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
+            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+            return false;
+        }
+
         struct virtq_desc *desc = &virtq->desc[curr_desc];
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
@@ -67,11 +71,6 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
         if (current_list_byte == end_list_byte) {
             break;
         }
-        if (loop_iter_count > MAX_WALK_LEN) {
-            LOG_VMM_ERR("virtio_read_data_from_desc_chain(): infinite loop at desc head %u\n", desc_head);
-            return 0;
-        }
-
         loop_iter_count++;
         current_desc_start_byte += desc->len;
         curr_desc = virtq->desc[curr_desc].next;
@@ -93,6 +92,11 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
     uint16_t curr_desc = desc_head;
     uint64_t loop_iter_count = 0;
     while (true) {
+        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
+            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+            return false;
+        }
+
         struct virtq_desc *desc = &virtq->desc[curr_desc];
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
@@ -109,10 +113,6 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
         assert(current_list_byte <= end_list_byte);
         if (current_list_byte == end_list_byte) {
             break;
-        }
-        if (loop_iter_count > MAX_WALK_LEN) {
-            LOG_VMM_ERR("virtio_read_data_from_desc_chain(): infinite loop at desc head %u\n", desc_head);
-            return 0;
         }
 
         loop_iter_count++;
@@ -151,13 +151,13 @@ bool virtio_virtq_pop_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
     return available;
 }
 
-void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint32_t bytes_written)
+void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint32_t len)
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
 
     struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
     used_elem->id = desc_head;
-    used_elem->len = bytes_written;
+    used_elem->len = len;
     virtq->used->idx++;
 }
