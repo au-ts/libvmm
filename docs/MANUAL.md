@@ -144,10 +144,8 @@ The rest of the GIC is virtualised in the vGIC driver in libvmm.
 
 ## Multiple vCPUs
 
-There is support for multiple vCPUs (up to 16) on ARM.
-
-To change the number of vCPUs supported, override the value of `GUEST_NUM_VCPUS`
-when compiling libvmm.
+There is support for multiple vCPUs (up to 16) on ARM. The number of vCPUs that
+the VMM will manage is configured when setting up the guest via `guest_init`.
 
 libvmm expects the vCPU IDs to be consecutive, with zero being the boot vCPU ID.
 

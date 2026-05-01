@@ -48,6 +48,7 @@
 #include <libvmm/arch/aarch64/vgic/vgic_v3.h>
 #include <libvmm/arch/aarch64/vgic/vdist.h>
 
+extern guest_t guest;
 vgic_t vgic;
 
 static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t offset, uint64_t fsr,
@@ -56,8 +57,8 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
     size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
-    assert(target_vcpu_id < GUEST_NUM_VCPUS);
-    assert(vcpu_id < GUEST_NUM_VCPUS);
+    assert(target_vcpu_id < guest.num_vcpus);
+    assert(vcpu_id < guest.num_vcpus);
 
     struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers, target_vcpu_id);
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
@@ -107,8 +108,8 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
     size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
-    assert(vcpu_id < GUEST_NUM_VCPUS);
-    assert(target_vcpu_id < GUEST_NUM_VCPUS);
+    assert(vcpu_id < guest.num_vcpus);
+    assert(target_vcpu_id < guest.num_vcpus);
 
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
 
@@ -238,8 +239,8 @@ static void vgic_redist_sgi_ppi_reset(struct gic_redist_sgi_ppi_map *redist_sgi_
 
 // @ivanv: come back to
 struct gic_dist_map dist;
-struct gic_redist_map redist[GUEST_NUM_VCPUS];
-struct gic_redist_sgi_ppi_map redist_sgi_ppi[GUEST_NUM_VCPUS];
+struct gic_redist_map redist[GUEST_MAX_NUM_VCPUS];
+struct gic_redist_sgi_ppi_map redist_sgi_ppi[GUEST_MAX_NUM_VCPUS];
 vgic_reg_t vgic_regs;
 
 void vgic_init()
@@ -248,7 +249,7 @@ void vgic_init()
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
         vgic.vspis[i].virq = VIRQ_INVALID;
     }
-    for (int vcpu = 0; vcpu < GUEST_NUM_VCPUS; vcpu++) {
+    for (int vcpu = 0; vcpu < guest.num_vcpus; vcpu++) {
         for (int i = 0; i < NUM_VCPU_LOCAL_VIRQS; i++) {
             vgic.vgic_vcpu[vcpu].local_virqs[i].virq = VIRQ_INVALID;
         }
@@ -256,7 +257,7 @@ void vgic_init()
             vgic.vgic_vcpu[vcpu].lr_shadow[i].virq = VIRQ_INVALID;
         }
 
-        vgic_redist_reset(&redist[vcpu], vcpu, vcpu == GUEST_NUM_VCPUS - 1);
+        vgic_redist_reset(&redist[vcpu], vcpu, vcpu == guest.num_vcpus - 1);
         vgic_redist_sgi_ppi_reset(&redist_sgi_ppi[vcpu]);
 
         vgic_regs.redist[vcpu] = &redist[vcpu];

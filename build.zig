@@ -46,8 +46,6 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    const extra_cflags = b.option([]const []const u8, "extra_cflags", "Extra C compiler flags") orelse &.{};
-
     const maybe_microkit_board_dir = b.option(LazyPath, "microkit_board_dir", "Path within Microkit SDK for the target board") orelse null;
     if (maybe_microkit_board_dir) |microkit_board_dir| {
         const libmicrokit_include = microkit_board_dir.path(b, "include");
@@ -80,21 +78,14 @@ pub fn build(b: *std.Build) !void {
                 std.posix.exit(1);
             }
         }
-
-        var cflags: std.ArrayList([]const u8) = .{};
-        defer cflags.deinit(b.allocator);
-
-        try cflags.appendSlice(b.allocator,&.{
-            "-Wall",
-            "-Werror",
-            "-Wno-unused-function",
-            "-mstrict-align",
-        });
-        try cflags.appendSlice(b.allocator, extra_cflags);
-
         libvmm.addCSourceFiles(.{
             .files = srcs.items,
-            .flags = cflags.items,
+            .flags = &.{
+                "-Wall",
+                "-Werror",
+                "-Wno-unused-function",
+                "-mstrict-align",
+            }
         });
 
         libvmm.addIncludePath(b.path("include"));

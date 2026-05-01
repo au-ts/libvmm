@@ -94,7 +94,7 @@ typedef struct vgic {
     /* registered global interrupts (SPI) */
     struct virq_handle vspis[NUM_SLOTS_SPI_VIRQ];
     /* vCPU specific interrupt context */
-    vgic_vcpu_t vgic_vcpu[GUEST_NUM_VCPUS];
+    vgic_vcpu_t vgic_vcpu[GUEST_MAX_NUM_VCPUS];
 } vgic_t;
 
 static inline vgic_vcpu_t *get_vgic_vcpu(vgic_t *vgic, int vcpu_id)
