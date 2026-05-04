@@ -87,7 +87,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
-    "smp-simple": {
+    "smp": {
         "configs": ["smp-debug", "smp-release"],
         "build_systems": ["make", "zig"],
         "boards": [

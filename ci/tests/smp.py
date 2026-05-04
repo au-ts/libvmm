@@ -32,8 +32,8 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
-    "smp",
-    ["smp-simple"],
+    "smp: multiple CPUs detected",
+    ["smp"],
     test_fn=test,
     backend_fn=common.backend_fn,
     no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,

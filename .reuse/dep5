@@ -7,7 +7,7 @@ Files:
     flake.lock
     build.zig.zon
     examples/simple/build.zig.zon
-    examples/smp-simple/build.zig.zon
+    examples/smp/build.zig.zon
     examples/virtio/build.zig.zon
     examples/virtio_pci/build.zig.zon
     examples/zig/build.zig.zon
