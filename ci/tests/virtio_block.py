@@ -27,7 +27,9 @@ async def test_virtio_block(backend: HardwareBackend, test_config: common.TestCo
         # Unconditionally unmount and make a fresh file system before running the tests
         await send_input(backend, b"umount /mnt\n")
         await wait_for_output(backend, b"# ")
-        await send_input(backend, b"mkdosfs -F 32 -n virtio-blk /dev/vda")
+        await send_input(backend, b"mkdosfs -F 32 -n virtio-blk /dev/vda\n")
+        await wait_for_output(backend, b"# ")
+        await send_input(backend, b"mount /dev/vda /mnt\n")
         await wait_for_output(backend, b"# ")
         # Now run the tests
         await send_input(backend, b"./blk_integration_tests.sh\n")
