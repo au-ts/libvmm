@@ -11,7 +11,7 @@ LIBVMM_TOOLS := $(LIBVMM)/tools
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
+SYSTEM_FILE := $(SYSTEM_DIR)/smp.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
