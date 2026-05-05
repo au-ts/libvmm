@@ -15,4 +15,10 @@ then
     exit 1
 fi
 
+if ! mount "$BLOCK_DEV" "$MOUNT_POINT";
+then
+    echo "ERROR: failed to mount $BLOCK_DEV"
+    exit 1
+fi
+
 echo "$BLOCK_DEV" successfully mounted at "$MOUNT_POINT"
