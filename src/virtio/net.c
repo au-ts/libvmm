@@ -196,8 +196,8 @@ static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *n
      * read_off = sizeof(struct virtio_net_hdr_mrg_rxbuf)
      * to strip virtio header before copying to sDDF
      */
-    assert(
-        virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
+    assert(virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
+    sddf_buffer.len = packet_len;
 
 #ifdef NETWORK_HW_HAS_CHECKSUM
     /*
@@ -209,7 +209,6 @@ static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *n
     sanitise_packet_for_hw_csum(dest_buf, sddf_buffer.len);
 #endif
 
-    sddf_buffer.len = packet_len;
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we've checked above */
     assert(!error);
