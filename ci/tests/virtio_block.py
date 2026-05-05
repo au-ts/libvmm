@@ -24,6 +24,12 @@ async def test_virtio_block(backend: HardwareBackend, test_config: common.TestCo
         await asyncio.sleep(1)
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
+        # Unconditionally unmount and make a fresh file system before running the tests
+        await send_input(backend, b"umount /mnt\n")
+        await wait_for_output(backend, b"# ")
+        await send_input(backend, b"mkdosfs -F 32 -n virtio-blk /dev/vda")
+        await wait_for_output(backend, b"# ")
+        # Now run the tests
         await send_input(backend, b"./blk_integration_tests.sh\n")
         await wait_for_output(backend, b"All is well in the universe")
         # Run twice to ensure that our virtio block device left the filesystem in a sane state

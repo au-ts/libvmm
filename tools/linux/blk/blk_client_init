@@ -15,14 +15,4 @@ then
     exit 1
 fi
 
-if ! mount "$BLOCK_DEV" "$MOUNT_POINT";
-then
-    echo "WARNING: failed to mount block device, trying to create a FAT32 filesystem."
-    if ! mkdosfs -F 32 -n "virtio_block_dev" "$BLOCK_DEV";
-    then
-        echo "ERROR: cannot create FAT32 filesystem on block device."
-        exit 1
-    fi
-fi
-
 echo "$BLOCK_DEV" successfully mounted at "$MOUNT_POINT"
