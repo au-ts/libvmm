@@ -240,7 +240,7 @@ pub fn build(b: *std.Build) !void {
     exe.addObject(guest_images);
     b.installArtifact(exe);
 
-    const system_description_path = b.fmt("board/{s}/simple.system", .{ microkit_board });
+    const system_description_path = b.fmt("board/{s}/smp.system", .{ microkit_board });
     const final_image_dest = b.getInstallPath(.bin, "./loader.img");
     const microkit_tool_cmd = std.Build.Step.Run.create(b, "run microkit tool");
     microkit_tool_cmd.addFileArg(microkit_tool);
