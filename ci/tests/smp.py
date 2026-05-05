@@ -32,7 +32,7 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
-    "smp: multiple CPUs detected",
+    "smp_detect_multiple_cpus",
     ["smp"],
     test_fn=test,
     backend_fn=common.backend_fn,
