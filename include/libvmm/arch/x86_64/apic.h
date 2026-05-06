@@ -98,8 +98,8 @@ struct ioapic_regs {
     struct ioapic_virq_handle virq_passthrough_map[IOAPIC_NUM_PINS];
 };
 
-uint32_t vapic_read_reg(int offset);
-void vapic_write_reg(int offset, uint32_t value);
+uint32_t lapic_read_reg(int offset);
+void lapic_write_reg(int offset, uint32_t value);
 
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result);
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data);

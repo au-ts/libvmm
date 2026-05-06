@@ -35,18 +35,18 @@ bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
 
     // [1] "12.4.8 Local APIC Version Register"
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
-    vapic_write_reg(REG_LAPIC_REV, (uint32_t)0x10 | (uint32_t)6 << 16);
+    lapic_write_reg(REG_LAPIC_REV, (uint32_t)0x10 | (uint32_t)6 << 16);
     // [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
-    vapic_write_reg(REG_LAPIC_SVR, (uint32_t)0xff); // reset value
+    lapic_write_reg(REG_LAPIC_SVR, (uint32_t)0xff); // reset value
     // [1] "Figure 12-8. Local Vector Table (LVT)"
     // LVT Timer Register
-    vapic_write_reg(REG_LAPIC_TIMER, 0x10000); // reset value, masked.
+    lapic_write_reg(REG_LAPIC_TIMER, 0x10000); // reset value, masked.
     // [1] "Figure 12-8. Local Vector Table (LVT)"
     // "Specifies interrupt delivery when an interrupt is signaled at the LINT0 pin"
-    vapic_write_reg(REG_LAPIC_LVT_LINT0, 0x10000); // reset value
-    vapic_write_reg(REG_LAPIC_LVT_LINT1, 0x10000); // reset value
+    lapic_write_reg(REG_LAPIC_LVT_LINT0, 0x10000); // reset value
+    lapic_write_reg(REG_LAPIC_LVT_LINT1, 0x10000); // reset value
     // [1] "Figure 12-14. Destination Format Register (DFR)"
-    vapic_write_reg(REG_LAPIC_DFR, 0xffffffff); // reset value
+    lapic_write_reg(REG_LAPIC_DFR, 0xffffffff); // reset value
 
     LOG_VMM("initialising I/O APIC\n");
     // [2] default value for the Intel 82093AA IOAPIC.

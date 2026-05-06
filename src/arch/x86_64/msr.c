@@ -11,6 +11,7 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 
 #include <x86intrin.h>
@@ -106,7 +107,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         break;
     }
     case IA32_TIME_STAMP_COUNTER:
-        result = rdtsc();
+        result = guest_time_tsc_now();
         break;
     case MSR_STAR:
     case MSR_LSTAR:

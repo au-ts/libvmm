@@ -48,8 +48,7 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise the virtual Local and I/O APICs */
-    //                                          @billn revisit vapic vaddr
-    bool success = virq_controller_init(guest_time_tsc_hz(), 0xfffffffffffffff);
+    bool success = virq_controller_init(guest_time_tsc_hz(), 0);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controllers\n");
         return false;

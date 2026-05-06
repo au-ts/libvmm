@@ -59,6 +59,21 @@ uint64_t native_scaled_apic_ticks_when_timer_starts;
 bool timeout_handle_valid;
 guest_timeout_handle_t timeout_handle;
 
+uint32_t lapic_read_reg(int offset)
+{
+    assert(offset < 0x1000);
+    // @billn fix hardcoded vaddr
+    return *((volatile uint32_t *)(0x101000ull + offset));
+}
+
+void lapic_write_reg(int offset, uint32_t value)
+{
+    assert(offset < 0x1000);
+    // @billn fix hardcoded vaddr
+    volatile uint32_t *reg = (uint32_t *)(0x101000ull + offset);
+    *reg = value;
+}
+
 static int get_next_pending_irq_vector(void)
 {
     /* Scans IRRs for *a* pending interrupt,
@@ -67,7 +82,7 @@ static int get_next_pending_irq_vector(void)
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
             int irr_reg_off = REG_LAPIC_IRR_0 + (i * 0x10);
-            if (vapic_read_reg(irr_reg_off) & BIT(j)) {
+            if (lapic_read_reg(irr_reg_off) & BIT(j)) {
                 uint8_t candidate_vector = i * 32 + j;
                 return candidate_vector;
             }
@@ -80,7 +95,7 @@ static void debug_print_lapic_pending_irqs(void)
 {
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
         for (int j = 31; j >= 0; j--) {
-            uint32_t irr = vapic_read_reg(REG_LAPIC_IRR_0 + (i * 0x10));
+            uint32_t irr = lapic_read_reg(REG_LAPIC_IRR_0 + (i * 0x10));
             if (irr & BIT(j)) {
                 LOG_VMM("irq vector %d is pending\n", i * 32 + j);
             }
@@ -88,25 +103,10 @@ static void debug_print_lapic_pending_irqs(void)
     }
 }
 
-uint32_t vapic_read_reg(int offset)
-{
-    assert(offset < 0x1000);
-    // @billn fix hardcoded vaddr
-    return *((volatile uint32_t *)(0x101000ull + offset));
-}
-
-void vapic_write_reg(int offset, uint32_t value)
-{
-    assert(offset < 0x1000);
-    // @billn fix hardcoded vaddr
-    volatile uint32_t *reg = (uint32_t *)(0x101000ull + offset);
-    *reg = value;
-}
-
-int lapic_dcr_to_divider(void)
+static int lapic_dcr_to_divider(void)
 {
     /* [1] "Figure 12-10. Divide Configuration Register" */
-    switch (vapic_read_reg(REG_LAPIC_DCR)) {
+    switch (lapic_read_reg(REG_LAPIC_DCR)) {
     case 0:
         return 2;
     case 1:
@@ -124,14 +124,14 @@ int lapic_dcr_to_divider(void)
     case 11:
         return 1;
     default:
-        LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", vapic_read_reg(REG_LAPIC_DCR));
+        LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", lapic_read_reg(REG_LAPIC_DCR));
         assert(false);
     }
 
     return -1;
 }
 
-uint8_t ioapic_pin_to_vector(int ioapic, int pin)
+static uint8_t ioapic_pin_to_vector(int ioapic, int pin)
 {
     assert(ioapic == 0);
     return ioapic_regs.ioredtbl[pin] & 0xff;
@@ -143,10 +143,10 @@ enum lapic_timer_mode {
     LAPIC_TIMER_TSC_DEADLINE,
 };
 
-enum lapic_timer_mode lapic_parse_timer_reg(void)
+static enum lapic_timer_mode lapic_parse_timer_reg(void)
 {
     // [1] "Figure 12-8. Local Vector Table (LVT)"
-    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
+    uint32_t timer_reg = lapic_read_reg(REG_LAPIC_TIMER);
     switch (((timer_reg >> 17) & 0x3)) {
     case 0:
         return LAPIC_TIMER_ONESHOT;
@@ -164,29 +164,127 @@ enum lapic_timer_mode lapic_parse_timer_reg(void)
     return -1;
 }
 
-uint64_t apic_time_now_scaled(void)
+static uint64_t lapic_time_now_scaled(void)
 {
-    return rdtsc() / lapic_dcr_to_divider();
+    return guest_time_tsc_now() / lapic_dcr_to_divider();
+}
+
+static uint32_t lapic_read_curr_count_reg(void)
+{
+    uint32_t result = 0;
+
+    /* [1] "12.5.4 APIC Timer" */
+    if (lapic_read_reg(REG_LAPIC_INIT_CNT) != 0) {
+        uint64_t apic_tick_now_scaled = lapic_time_now_scaled();
+        uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled - native_scaled_apic_ticks_when_timer_starts;
+
+        uint64_t remaining = 0;
+        if (elapsed_scaled_apic_tick < lapic_read_reg(REG_LAPIC_INIT_CNT)) {
+            remaining = lapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_apic_tick;
+        }
+        result = remaining;
+        LOG_APIC("current count read 0x%lx\n", remaining);
+    }
+
+    return result;
+}
+
+static void handle_lapic_timer_nftn(size_t vcpu_id)
+{
+    assert(timeout_handle_valid);
+    guest_time_cancel_timeout(timeout_handle);
+
+    if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
+        /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
+         * APIC Software Disable bit */
+        return;
+    }
+
+    /* Restart timeout if periodic */
+    uint32_t init_count = lapic_read_reg(REG_LAPIC_INIT_CNT);
+    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
+        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
+        LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
+
+        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
+        timeout_handle_valid = true;
+    }
+
+    /* But only inject IRQ if it is not masked */
+    uint32_t timer_reg = lapic_read_reg(REG_LAPIC_TIMER);
+    if (!(timer_reg & BIT(16))) {
+        uint8_t vector = timer_reg & 0xff;
+        assert(inject_lapic_irq(vcpu_id, vector));
+    }
+}
+
+static void lapic_write_init_count_reg(uint32_t data)
+{
+    /* [1] "12.5.4 APIC Timer" */
+    lapic_write_reg(REG_LAPIC_INIT_CNT, data);
+    if (data) {
+        uint32_t timer_reg = lapic_read_reg(REG_LAPIC_TIMER);
+        (void)timer_reg;
+        LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3,
+                    !!(timer_reg & BIT(16)));
+
+        uint64_t delay_ticks = data * lapic_dcr_to_divider();
+        LOG_APIC("setting timeout for 0x%lx ticks\n", data);
+
+        if (timeout_handle_valid) {
+            /* Guest kernel has changed the timeout */
+            guest_time_cancel_timeout(timeout_handle);
+            timeout_handle_valid = false;
+        }
+
+        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
+        timeout_handle_valid = true;
+
+        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+    } else {
+        if (timeout_handle_valid) {
+            /* Guest kernel has cancelled the timeout */
+            guest_time_cancel_timeout(timeout_handle);
+            timeout_handle_valid = false;
+        }
+    }
+}
+
+static void lapic_write_icr_low(uint32_t data)
+{
+    lapic_write_reg(REG_LAPIC_ICR_LOW, data);
+
+    /* [1] "12.6.1 Interrupt Command Register (ICR)"
+        * "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
+        */
+    uint64_t icr = (uint64_t)data | (((uint64_t)lapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
+
+    // @billn sus, handle other types of IPIs
+    uint8_t delivery_mode = ((icr >> 8) & 0x7);
+    uint8_t destination = (icr >> 56) & 0xff;
+    if (delivery_mode == 0 || delivery_mode == 5) {
+        // fixed mode
+        if (destination != 0) {
+            LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
+        }
+        uint8_t vector = icr & 0xff;
+        if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
+            LOG_VMM_ERR("failed to send IPI\n");
+        }
+    } else {
+        LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
+                    delivery_mode, destination);
+    }
 }
 
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
 {
     switch (offset) {
     case REG_LAPIC_CURR_CNT: {
-        /* [1] "12.5.4 APIC Timer" */
-        if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
-            *result = 0;
-        } else {
-            uint64_t apic_tick_now_scaled = apic_time_now_scaled();
-            uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled - native_scaled_apic_ticks_when_timer_starts;
-
-            uint64_t remaining = 0;
-            if (elapsed_scaled_apic_tick < vapic_read_reg(REG_LAPIC_INIT_CNT)) {
-                remaining = vapic_read_reg(REG_LAPIC_INIT_CNT) - elapsed_scaled_apic_tick;
-            }
-            *result = remaining;
-            LOG_APIC("current count read 0x%lx\n", remaining);
-        }
+        *result = lapic_read_curr_count_reg();
         break;
     }
     case REG_LAPIC_CMCI: {
@@ -199,37 +297,6 @@ bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
     }
 
     return true;
-}
-
-static void handle_lapic_timer_nftn(size_t vcpu_id)
-{
-    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
-        /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
-         * APIC Software Disable bit */
-        return;
-    }
-
-    assert(timeout_handle_valid);
-    guest_time_cancel_timeout(timeout_handle);
-
-    /* Restart timeout if periodic */
-    uint32_t init_count = vapic_read_reg(REG_LAPIC_INIT_CNT);
-    if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
-        native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
-        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
-        LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
-
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
-    }
-
-    /* But only inject IRQ if it is not masked */
-    uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
-    if (!(timer_reg & BIT(16))) {
-        uint8_t vector = timer_reg & 0xff;
-        assert(inject_lapic_irq(vcpu_id, vector));
-    }
 }
 
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
@@ -248,60 +315,15 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     case REG_LAPIC_THERMAL:
     case REG_LAPIC_PERF_MON_CNTER:
     case REG_LAPIC_CMCI:
-        vapic_write_reg(offset, data);
+        lapic_write_reg(offset, data);
         break;
 
     case REG_LAPIC_INIT_CNT: {
-        /* [1] "12.5.4 APIC Timer" */
-        uint32_t init_count = data;
-        if (init_count > 0) {
-            uint32_t timer_reg = vapic_read_reg(REG_LAPIC_TIMER);
-            (void)timer_reg;
-            LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3,
-                     !!(timer_reg & BIT(16)));
-
-            uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
-            LOG_APIC("setting timeout for 0x%lx ticks\n", init_count);
-
-            if (timeout_handle_valid) {
-                /* Guest kernel has changed the timeout */
-                guest_time_cancel_timeout(timeout_handle);
-                timeout_handle_valid = false;
-            }
-
-            timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-            assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-            timeout_handle_valid = true;
-
-            native_scaled_apic_ticks_when_timer_starts = apic_time_now_scaled();
-        }
+        lapic_write_init_count_reg(data);
         break;
     }
-
     case REG_LAPIC_ICR_LOW: {
-        /* [1] "12.6.1 Interrupt Command Register (ICR)"
-         * "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-         */
-        uint64_t icr = (uint64_t)data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
-
-        // @billn sus, handle other types of IPIs
-        uint8_t delivery_mode = ((icr >> 8) & 0x7);
-        uint8_t destination = (icr >> 56) & 0xff;
-        if (delivery_mode == 0 || delivery_mode == 5) {
-            // fixed mode
-            if (destination != 0) {
-                LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
-                return true;
-            }
-            uint8_t vector = icr & 0xff;
-            if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
-                LOG_VMM_ERR("failed to send IPI\n");
-                return false;
-            }
-        } else {
-            LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
-                        delivery_mode, destination);
-        }
+        lapic_write_icr_low(data);
         break;
     }
 
@@ -420,7 +442,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
-    if (!(vapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
+    if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
          * APIC Software Disable bit */
         return false;
@@ -433,7 +455,7 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     assert(irr_reg_off <= REG_LAPIC_IRR_7);
 
     /* Mark as pending for injection, let hardware handle the rest */
-    vapic_write_reg(irr_reg_off, vapic_read_reg(irr_reg_off) | BIT(irr_idx));
+    lapic_write_reg(irr_reg_off, lapic_read_reg(irr_reg_off) | BIT(irr_idx));
 
     /* See "26.4.2 Guest Non-Register State" for "Guest interrupt status" layout */
     int highest_vector_pending = get_next_pending_irq_vector();

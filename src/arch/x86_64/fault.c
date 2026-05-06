@@ -406,7 +406,7 @@ bool fault_handle(size_t vcpu_id)
          * "The exit qualification is the page offset of the write access that led to the VM exit."
          */
         uint64_t lapic_reg_offset = qualification;
-        success = lapic_write_fault_handle(lapic_reg_offset, vapic_read_reg(lapic_reg_offset));
+        success = lapic_write_fault_handle(lapic_reg_offset, lapic_read_reg(lapic_reg_offset));
         break;
     }
     case APIC_ACCESS: {
