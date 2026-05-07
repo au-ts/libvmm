@@ -7,14 +7,13 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
+#include <libvmm/arch/aarch64/vgic/virq.h>
 
 extern guest_t guest;
 
 /* Maps Microkit channel numbers with registered vIRQ */
 int virq_passthrough_map[MAX_PASSTHROUGH_IRQ] = {-1};
 
-#define SGI_RESCHEDULE_IRQ  0
-#define SGI_FUNC_CALL       1
 #define PPI_VTIMER_IRQ      27
 
 static void vppi_event_ack(size_t vcpu_id, int irq, void *cookie)
@@ -58,15 +57,12 @@ bool virq_controller_init()
             LOG_VMM_ERR("Failed to register vCPU virtual timer IRQ: 0x%x\n", PPI_VTIMER_IRQ);
             return false;
         }
-        success = vgic_register_irq(vcpu, SGI_RESCHEDULE_IRQ, &sgi_ack, NULL);
-        if (!success) {
-            LOG_VMM_ERR("Failed to register vCPU SGI 0 IRQ");
-            return false;
-        }
-        success = vgic_register_irq(vcpu, SGI_FUNC_CALL, &sgi_ack, NULL);
-        if (!success) {
-            LOG_VMM_ERR("Failed to register vCPU SGI 1 IRQ");
-            return false;
+        for (int i = 0; i < NUM_SGI_VIRQS; i++) {
+            success = vgic_register_irq(vcpu, i, &sgi_ack, NULL);
+            if (!success) {
+                LOG_VMM_ERR("Failed to register vCPU SGI 0x%x IRQ", i);
+                return false;
+            }
         }
     }
 
