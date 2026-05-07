@@ -430,10 +430,9 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
     uint64_t addr = GIC_DIST_PADDR + offset;
     uint32_t mask = fault_get_data_mask(addr, fsr);
     uint32_t reg_offset = 0;
-    uint32_t data;
+    uint32_t data = fault_get_data(regs, fsr) & mask;
     switch (offset) {
     case RANGE32(GIC_DIST_CTLR, GIC_DIST_CTLR):
-        data = fault_get_data(regs, fsr);
         gic_dist->ctlr = data & GIC_DIST_CTLR_MASK;
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
@@ -465,9 +464,6 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         emulate_reg_write_access(regs, addr, fsr, &gic_dist->irq_group[reg_offset]);
         break;
     case RANGE32(GIC_DIST_ISENABLER0, GIC_DIST_ISENABLERN):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
         while (data) {
             int irq;
             irq = CTZ(data);
@@ -477,9 +473,6 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         }
         break;
     case RANGE32(GIC_DIST_ICENABLER0, GIC_DIST_ICENABLERN):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
         while (data) {
             int irq;
             irq = CTZ(data);
@@ -489,9 +482,6 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         }
         break;
     case RANGE32(GIC_DIST_ISPENDR0, GIC_DIST_ISPENDRN):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
         while (data) {
             int irq;
             irq = CTZ(data);
@@ -502,9 +492,6 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         }
         break;
     case RANGE32(GIC_DIST_ICPENDR0, GIC_DIST_ICPENDRN):
-        data = fault_get_data(regs, fsr);
-        /* Mask the data to write */
-        data &= mask;
         while (data) {
             int irq;
             irq = CTZ(data);
@@ -551,8 +538,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
     case RANGE32(0xE00, 0xEFC):
         /* GIC_DIST_NSACR [0xE00 - 0xF00) - Not supported */
         break;
-    case RANGE32(GIC_DIST_SGIR, GIC_DIST_SGIR):
-        data = fault_get_data(regs, fsr);
+    case RANGE32(GIC_DIST_SGIR, GIC_DIST_SGIR): {
         int mode = (data & GIC_DIST_SGI_TARGET_LIST_FILTER_MASK) >> GIC_DIST_SGI_TARGET_LIST_FILTER_SHIFT;
         int virq = (data & GIC_DIST_SGI_INTID_MASK);
         uint16_t target_list = 0;
@@ -584,6 +570,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
             }
         }
         break;
+    }
     case RANGE32(0xF04, 0xF0C):
         /* Reserved */
         break;
