@@ -177,6 +177,8 @@ struct gic_redist_sgi_ppi_map {  /* Starting */
 
 #define GIC_DIST_SGI_INTID_MASK                 0xF
 
+#define GIC_DIST_CTLR_MASK                      GIC_ENABLED
+
 #define GICR_CTLR           0x000
 #define GICR_IIDR           0x004
 #define GICR_TYPER          0x008
@@ -203,17 +205,6 @@ typedef struct {
 static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
 {
     return gic_dist->ctlr & GIC_500_GRP1_NS;
-}
-
-static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
-{
-    /* Enable group 1 non-secure IRQs. */
-    gic_dist->ctlr |= GIC_500_GRP1_NS;
-}
-
-static inline void vgic_dist_disable(struct gic_dist_map *gic_dist)
-{
-    gic_dist->ctlr &= ~(GIC_500_GRP1_NS);
 }
 
 static inline struct gic_dist_map *vgic_get_dist(void *registers)

@@ -434,14 +434,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
     switch (offset) {
     case RANGE32(GIC_DIST_CTLR, GIC_DIST_CTLR):
         data = fault_get_data(regs, fsr);
-        if (data == GIC_ENABLED) {
-            vgic_dist_enable(gic_dist);
-        } else if (data == 0) {
-            vgic_dist_disable(gic_dist);
-        } else {
-            LOG_VMM_ERR("Unknown enable register encoding");
-            // @ivanv: goto ignore fault?
-        }
+        gic_dist->ctlr = data & GIC_DIST_CTLR_MASK;
         break;
     case RANGE32(GIC_DIST_TYPER, GIC_DIST_TYPER):
         /* TYPER provides information about the GIC configuration, we do not do

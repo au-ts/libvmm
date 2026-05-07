@@ -133,6 +133,8 @@ struct gic_dist_map {
 
 #define GIC_DIST_SGI_INTID_MASK                 0xF
 
+#define GIC_DIST_CTLR_MASK                      GIC_ENABLED
+
 bool vgic_inject_irq(size_t vcpu_id, int irq);
 
 typedef struct gic_dist_map vgic_reg_t;
@@ -144,17 +146,7 @@ static inline struct gic_dist_map *vgic_get_dist(void *registers)
 
 static inline bool vgic_dist_is_enabled(struct gic_dist_map *gic_dist)
 {
-    return gic_dist->ctlr == GIC_ENABLED;
-}
-
-static inline void vgic_dist_enable(struct gic_dist_map *gic_dist)
-{
-    gic_dist->ctlr = GIC_ENABLED;
-}
-
-static inline void vgic_dist_disable(struct gic_dist_map *gic_dist)
-{
-    gic_dist->ctlr = 0;
+    return gic_dist->ctlr & GIC_ENABLED;
 }
 
 static inline void set_sgi_ppi_pending(struct gic_dist_map *gic_dist, int irq, bool set_pending, int vcpu_id)
