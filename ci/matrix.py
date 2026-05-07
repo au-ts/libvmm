@@ -87,17 +87,20 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
-    # Disable until https://github.com/au-ts/libvmm/issues/233 is resolved.
-    # "smp": {
-    #     "configs": ["smp-debug", "smp-release"],
-    #     "build_systems": ["make", "zig"],
-    #     "boards": [
-    #         "qemu_virt_aarch64",
-    #         "odroidc4",
-    #         "maaxboard",
-    #     ],
-    #     "tests_exclude": [],
-    # },
+    "smp": {
+        "configs": ["smp-debug", "smp-release"],
+        "build_systems": ["make", "zig"],
+        "boards": [
+            "qemu_virt_aarch64",
+            "odroidc4",
+            "maaxboard",
+        ],
+        # Disable until https://github.com/au-ts/libvmm/issues/233 is resolved.
+        "tests_exclude": [
+            { "config": "smp-debug" },
+            { "config": "smp-release" },
+        ],
+    },
     "virtio": {
         "configs": ["debug", "release"],
         "build_systems": ["make", "zig"],
