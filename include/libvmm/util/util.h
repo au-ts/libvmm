@@ -10,7 +10,11 @@
 #include <microkit.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <libvmm/util/printf.h>
+#include <sddf/util/printf.h>
+
+#ifndef printf
+#define printf sddf_printf
+#endif
 
 #define SEL4_USER_CONTEXT_SIZE (sizeof(seL4_UserContext) / sizeof(seL4_Word))
 
@@ -46,9 +50,6 @@ static void assert_fail(
 #ifndef MAX
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
-
-/* Convenience function to print memory region in hex */
-void print_mem_hex(uintptr_t addr, size_t size);
 
 #ifndef assert
 #ifndef CONFIG_DEBUG_BUILD
