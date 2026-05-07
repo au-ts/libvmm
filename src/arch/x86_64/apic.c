@@ -271,9 +271,7 @@ static void lapic_write_icr_low(uint32_t data)
             LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
         }
         uint8_t vector = icr & 0xff;
-        if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
-            LOG_VMM_ERR("failed to send IPI\n");
-        }
+        inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
     } else {
         LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
                     delivery_mode, destination);
@@ -441,6 +439,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
+
+    if (vector < MIN_VECTOR) {
+        /* Architecturally reserved vector. */
+        return false;
+    }
 
     if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
