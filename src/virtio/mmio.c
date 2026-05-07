@@ -113,7 +113,8 @@ static bool handle_virtio_mmio_reg_read(virtio_device_t *dev, size_t vcpu_id, si
             reg = dev->vqs[dev->regs.QueueSel].ready;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_READY\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_READY\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -176,7 +177,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->num = (unsigned int)data;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -205,7 +207,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_LOW\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_LOW\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -218,7 +221,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
     }
@@ -231,7 +235,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -244,7 +249,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -257,7 +263,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_LOW\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_LOW\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
@@ -270,7 +277,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
             virtq->used = (struct virtq_used *)ptr;
         } else {
             LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
-                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_HIGH\n", dev->regs.QueueSel, dev->num_vqs);
+                        "given when accessing REG_VIRTIO_MMIO_QUEUE_USED_HIGH\n",
+                        dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
