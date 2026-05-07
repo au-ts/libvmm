@@ -133,7 +133,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
         if (payload_len > console->txq->capacity) {
             // @billn, fix properly by partial TX, bookkeep, then continue once serial virt notifies?
             LOG_CONSOLE_ERR(
-                "payload length 0x%lx bytes of desciptor %u is larger than serial TX queue capacity of 0x%lx bytes\n",
+                "payload length 0x%lx bytes of desciptor %u is larger than serial TX queue capacity of 0x%x bytes\n",
                 payload_len, desc_head, console->txq->capacity);
             assert(false);
         }

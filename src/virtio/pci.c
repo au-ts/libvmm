@@ -268,7 +268,7 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t vcpu_id, siz
         reg = 1 << 16;
         break;
     default:
-        LOG_PCI_ERR("read operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
+        LOG_PCI_ERR("read operation is invalid or not implemented at offset 0x%lx of common_cfg\n", offset);
     }
 
     uint32_t mask = fault_get_data_mask(offset, fsr);
@@ -307,7 +307,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             virtq->num = (unsigned int)data;
         } else {
-            LOG_VMM_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_VMM_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_MMIO_QUEUE_NUM\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -326,7 +326,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= data;
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -339,7 +339,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= (uintptr_t)data << 32;
             virtq->desc = (struct virtq_desc *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_MMIO_QUEUE_DESC_HIGH\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -352,7 +352,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= data;
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -365,7 +365,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= (uintptr_t)data << 32;
             virtq->avail = (struct virtq_avail *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -378,7 +378,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= data;
             virtq->used = (struct virtq_used *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
@@ -391,14 +391,14 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t vcpu_id, si
             ptr |= (uintptr_t)data << 32;
             virtq->used = (struct virtq_used *)ptr;
         } else {
-            LOG_PCI_ERR("invalid virtq index 0x%lx (number of virtqs is 0x%lx) "
+            LOG_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                         "given when accessing REG_VIRTIO_PCI_COMMAND_Q_DESC_LO\n",
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
         break;
     default:
-        LOG_PCI_ERR("write operation is invalid or not implemented at offset 0x%x of common_cfg\n", offset);
+        LOG_PCI_ERR("write operation is invalid or not implemented at offset 0x%lx of common_cfg\n", offset);
     }
 
     return success;
@@ -478,7 +478,7 @@ static bool virtio_pci_bar_fault_handle(size_t vcpu_id, size_t offset, size_t fs
         }
     }
     if (i == VIRTIO_PCI_MAX_MEM_BARS) {
-        LOG_PCI_ERR("Fault address 0x%x is not located within any registered memory bars\n",
+        LOG_PCI_ERR("Fault address 0x%lx is not located within any registered memory bars\n",
                     registered_pci_memory_resource.vm_addr + offset);
         return false;
     }

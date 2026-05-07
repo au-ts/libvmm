@@ -93,7 +93,7 @@ void notified(microkit_channel ch)
         break;
     }
     default:
-        printf("Unexpected channel, ch: 0x%lx\n", ch);
+        printf("Unexpected channel, ch: 0x%x\n", ch);
     }
 }
 

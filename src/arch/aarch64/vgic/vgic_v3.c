@@ -86,7 +86,7 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
         reg = gic_redist_sgi_ppi->icfgrn_rw;
         break;
     default:
-        LOG_VMM_ERR("Unknown vgic redist register read offset 0x%x from vcpu %lu for vcpu %lu\n", real_offset, vcpu_id,
+        LOG_VMM_ERR("Unknown vgic redist register read offset 0x%lx from vcpu %lu for vcpu %lu\n", real_offset, vcpu_id,
                     target_vcpu_id);
         assert(false);
         // @ivanv: used to be ignore_fault, double check this is right
@@ -159,7 +159,7 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
                                  &(gic_redist_sgi_ppi->ipriorityrn[(real_offset - GICR_IPRIORITYR0) / 4]));
         break;
     default:
-        LOG_VMM_ERR("Unknown vgic redist register write offset 0x%x from vcpu %lu for vcpu %lu, value: 0x%lx\n",
+        LOG_VMM_ERR("Unknown vgic redist register write offset 0x%lx from vcpu %lu for vcpu %lu, value: 0x%lx\n",
                     real_offset, vcpu_id, target_vcpu_id, fault_get_data(regs, fsr));
         assert(false);
     }

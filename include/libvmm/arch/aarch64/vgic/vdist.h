@@ -185,20 +185,20 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu_id, irq);
     assert(virq_data);
     if (!virq_data) {
-        LOG_VMM_ERR("could not find vIRQ data for vIRQ 0x%lx on vCPU 0x%lx\n", irq, vcpu_id);
+        LOG_VMM_ERR("could not find vIRQ data for vIRQ 0x%x on vCPU 0x%lx\n", irq, vcpu_id);
         return false;
     }
     struct gic_dist_map *dist = vgic_get_dist(vgic->registers);
 
     if (virq_data->virq == VIRQ_INVALID || !vgic_dist_is_enabled(dist) || !is_enabled(vgic, irq, vcpu_id)) {
         if (virq_data->virq == VIRQ_INVALID) {
-            LOG_VMM_ERR("vIRQ data could not be found for IRQ 0x%lx\n", irq);
+            LOG_VMM_ERR("vIRQ data could not be found for IRQ 0x%x\n", irq);
         }
         if (!vgic_dist_is_enabled(dist)) {
-            LOG_VMM_ERR("vGIC distributor is not enabled for IRQ 0x%lx\n", irq);
+            LOG_VMM_ERR("vGIC distributor is not enabled for IRQ 0x%x\n", irq);
         }
         if (!is_enabled(vgic, irq, vcpu_id)) {
-            LOG_VMM_ERR("vIRQ 0x%lx is not enabled\n", irq);
+            LOG_VMM_ERR("vIRQ 0x%x is not enabled\n", irq);
         }
         return false;
     }
@@ -407,7 +407,7 @@ static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t o
         break;
 #endif
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register offset 0x%lx", offset);
         /* Pretend that everything is fine */
         return true;
     }
@@ -614,7 +614,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         break;
 #endif
     default:
-        LOG_VMM_ERR("Unknown register offset 0x%x", offset);
+        LOG_VMM_ERR("Unknown register offset 0x%lx", offset);
         assert(0);
     }
 ignore_fault:
