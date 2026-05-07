@@ -139,7 +139,7 @@ static inline bool virq_spi_add(vgic_t *vgic, struct virq_handle *virq_data)
         }
     }
 
-    LOG_VMM_ERR("Could not add SPI IRQ (0x%lx), ran out of slots.\n", virq_data->virq);
+    LOG_VMM_ERR("Could not add SPI IRQ (0x%x), ran out of slots.\n", virq_data->virq);
     return false;
 }
 
@@ -152,7 +152,7 @@ static inline bool virq_sgi_ppi_add(size_t vcpu_id, vgic_t *vgic, struct virq_ha
     assert((irq >= 0) && (irq < ARRAY_SIZE(vgic_vcpu->local_virqs)));
     struct virq_handle *slot = &vgic_vcpu->local_virqs[irq];
     if (slot->virq != VIRQ_INVALID) {
-        LOG_VMM_ERR("IRQ %d already registered on VCPU %u", virq_data->virq, vcpu_id);
+        LOG_VMM_ERR("IRQ 0x%x already registered on VCPU %lu", virq_data->virq, vcpu_id);
         return false;
     }
     *slot = *virq_data;

@@ -167,7 +167,7 @@ void notified(microkit_channel ch)
     } else if (ch == net_config.rx.id) {
         virtio_net_handle_rx(&virtio_net);
     } else {
-        LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
+        LOG_VMM_ERR("Unexpected channel, ch: 0x%x\n", ch);
     }
 }
 

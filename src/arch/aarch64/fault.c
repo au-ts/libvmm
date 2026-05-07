@@ -104,7 +104,7 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
         mask = ~mask;
         break;
     default:
-        LOG_VMM_ERR("unknown width: 0x%lx, from FSR: 0x%lx, addr: 0x%lx\n",
+        LOG_VMM_ERR("unknown width: 0x%x, from FSR: 0x%lx, addr: 0x%lx\n",
                     fault_get_width(fsr), fsr, addr);
         assert(0);
         return 0;
@@ -292,7 +292,7 @@ bool fault_handle_vppi_event(size_t vcpu_id)
     bool success = vgic_inject_irq(vcpu_id, ppi_irq);
     if (!success) {
         // @ivanv, make a note that when having a lot of printing on it can cause this error
-        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %d\n", ppi_irq, vcpu_id);
+        LOG_VMM_ERR("VPPI IRQ %lu dropped on vCPU %lu\n", ppi_irq, vcpu_id);
         // Acknowledge to unmask it as our guest will not use the interrupt
         microkit_vcpu_arm_ack_vppi(vcpu_id, ppi_irq);
     }
@@ -305,7 +305,7 @@ bool fault_handle_user_exception(size_t vcpu_id)
     // @ivanv: print out VM name/vCPU id when we have multiple VMs
     size_t fault_ip = microkit_mr_get(seL4_UserException_FaultIP);
     size_t number = microkit_mr_get(seL4_UserException_Number);
-    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx from vCPU %d\n", fault_ip, number, vcpu_id);
+    LOG_VMM_ERR("Invalid instruction fault at IP: 0x%lx, number: 0x%lx from vCPU %lu\n", fault_ip, number, vcpu_id);
     /* All we do is dump the TCB registers. */
     tcb_print_regs(vcpu_id);
 

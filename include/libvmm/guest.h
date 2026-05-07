@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define GUEST_BOOT_VCPU_ID 0
+#define GUEST_BOOT_VCPU_ID 0UL
 
 /*
  * This define controls the maximum possible amount of vCPUs libvmm
@@ -17,7 +17,7 @@
  * run-time via the API.
  */
 #ifndef GUEST_MAX_NUM_VCPUS
-#define GUEST_MAX_NUM_VCPUS 4
+#define GUEST_MAX_NUM_VCPUS 4UL
 #endif
 
 typedef struct guest {

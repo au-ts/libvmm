@@ -17,15 +17,15 @@
 #endif
 
 #if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
-#define GIC_DIST_PADDR      0x8000000
+#define GIC_DIST_PADDR      0x8000000UL
 #elif defined(CONFIG_PLAT_ODROIDC4)
-#define GIC_DIST_PADDR      0xffc01000
+#define GIC_DIST_PADDR      0xffc01000UL
 #elif defined(CONFIG_PLAT_MAAXBOARD)
-#define GIC_DIST_PADDR      0x38800000
-#define GIC_REDIST_PADDR    0x38880000
+#define GIC_DIST_PADDR      0x38800000UL
+#define GIC_REDIST_PADDR    0x38880000UL
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_V2
-#define GIC_DIST_PADDR      0xf9010000
+#define GIC_DIST_PADDR      0xf9010000UL
 #else
 #error Need to define GIC addresses
 #endif
