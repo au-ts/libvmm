@@ -34,6 +34,60 @@
       forAllSystems = with nixpkgs.lib; genAttrs (builtins.attrNames microkit-platforms);
     in
     {
+      packages = forAllSystems (
+        system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+          };
+
+          linux-613 = pkgs.fetchFromGitHub {
+            owner = "torvalds";
+            repo = "linux";
+            rev = "v6.13";
+            hash = "sha256-FD22KmTFrIhED5X3rcjPTot1UOq1ir1zouEpRWZkRC0=";
+          };
+
+          linux-518 = pkgs.fetchFromGitHub {
+            owner = "torvalds";
+            repo = "linux";
+            rev = "v5.18";
+            hash = "sha256-EB4nc9eHNAY2bHZVAnTckh/WpUkZN5EUj3rXZFR0E0M=";
+          };
+
+          linux-aarch64-example-simple = (pkgs.pkgsCross.aarch64-multiplatform.callPackage ./tools/linux/linux.nix {}) {
+            version = "5.18";
+            src = linux-518;
+            arch = "arm64";
+            configFile = ./examples/simple/images/linux_config;
+          };
+
+          linux-aarch64-example-virtio = (pkgs.pkgsCross.aarch64-multiplatform.callPackage ./tools/linux/linux.nix {}) {
+            version = "6.13";
+            src = linux-613;
+            arch = "arm64";
+            configFile = ./examples/virtio/client_vm/linux_config;
+          };
+
+          allImages = pkgs.runCommand "all-images" { nativeBuildInputs = with pkgs; [ gnutar gzip ]; }
+            ''
+              mkdir -p $out
+
+              mkdir -p $out/linux-aarch64-example-simple/
+              cp ${linux-aarch64-example-simple}/* $out/linux-aarch64-example-simple/
+
+              mkdir -p $out/linux-aarch64-example-virtio/
+              cp ${linux-aarch64-example-virtio}/* $out/linux-aarch64-example-virtio/
+
+              cd $out
+              for f in linux-*; do tar cf - $f | gzip -9 > `basename $f`.tar.gz; done
+            ''
+          ;
+        in
+        {
+          images = allImages;
+        }
+      );
       devShells = forAllSystems (
         system:
         let

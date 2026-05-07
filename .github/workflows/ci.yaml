@@ -42,6 +42,17 @@ jobs:
           name: MANUAL
           path: docs/MANUAL.pdf
 
+  build_guest_images:
+    name: Build guest images (Nix)
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Setup Nix
+        uses: cachix/install-nix-action@v27
+      - name: Build guest images
+        run: nix build .#images
+
   build_macos_arm64:
     name: Build examples (macOS ARM64)
     runs-on: macos-14
