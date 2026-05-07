@@ -35,7 +35,7 @@ else ifeq ($(ARCH),x86_64)
 	IMAGES += timer_driver.elf
 
 	QEMU := qemu-system-x86_64
-	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel $(KERNEL32) -initrd $(IMAGE_FILE)
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -kernel sel4_32.elf -initrd $(IMAGE_FILE)
 else
 $(error Unsupported ARCH given)
 endif
