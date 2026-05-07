@@ -76,7 +76,7 @@ all: $(IMAGE_FILE)
 
 -include vmm.d
 
-$(IMAGES): libvmm.a libsddf_util_debug.a
+$(IMAGES): vmm.elf
 
 qemu: $(IMAGE_FILE)
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
@@ -106,7 +106,7 @@ $(DTB): $(DTS)
 include $(LIBVMM)/vmm.mk
 include $(SDDF)/util/util.mk
 
-vmm.elf: ${EXAMPLE_DIR}/src/vmm.rs ${LINUX} ${INITRD} $(DTB)
+vmm.elf: ${EXAMPLE_DIR}/src/vmm.rs ${LINUX} ${INITRD} $(DTB) libvmm.a libsddf_util_debug.a
 	cp ${EXAMPLE_DIR}/rust-toolchain.toml .
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)
