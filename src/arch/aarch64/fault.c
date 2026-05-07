@@ -104,8 +104,7 @@ uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
         mask = ~mask;
         break;
     default:
-        LOG_VMM_ERR("unknown width: 0x%x, from FSR: 0x%lx, addr: 0x%lx\n",
-                    fault_get_width(fsr), fsr, addr);
+        LOG_VMM_ERR("unknown width: 0x%x, from FSR: 0x%lx, addr: 0x%lx\n", fault_get_width(fsr), fsr, addr);
         assert(0);
         return 0;
     }
