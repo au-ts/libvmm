@@ -30,6 +30,7 @@ const UART_CH: Channel = Channel::new(1);
 // or even creating your own "Rust-like" bindings for libvmm to make it nicer to use
 // (or closer to feeling like a Rust crate), or both!
 #[link(name = "vmm", kind = "static")]
+#[link(name = "sddf_util_debug", kind = "static")]
 #[link(name = "microkit", kind = "static")]
 extern "C" {
     fn linux_setup_images(ram_start: usize,

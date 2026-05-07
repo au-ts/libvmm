@@ -35,8 +35,7 @@ ifeq ($(findstring ${LIBVMM_DIR}/include,${CFLAGS}),)
 CFLAGS += -I${LIBVMM_DIR}/include
 endif
 
-ARCH_INDEP_FILES := src/util/printf.c \
-		    src/util/util.c \
+ARCH_INDEP_FILES := \
 		    src/virtio/block.c \
 		    src/virtio/console.c \
 		    src/virtio/mmio.c \
