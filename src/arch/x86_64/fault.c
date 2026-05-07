@@ -380,10 +380,13 @@ bool fault_handle(size_t vcpu_id)
         success = emulate_wrmsr(&vctx);
         break;
     case EPT_VIOLATION:
-        decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+        decoded_ins = decode_instruction(vcpu_id, rip);
         if (decoded_ins.type == INSTRUCTION_DECODE_FAIL) {
             success = false;
         } else {
+            /* See "30.2.5 Information for VM Exits Due to Instruction Execution"
+             * Note that for EPT faults the instruction length won't be valid. */
+            ins_len = decoded_ins.len;
             success = handle_ept_fault(&vctx, qualification, decoded_ins);
         }
         break;

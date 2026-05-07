@@ -215,12 +215,12 @@ static char *vctx_idx_to_name(int vctx_idx)
 
 void debug_print_instruction(decoded_instruction_ret_t decode_result)
 {
-    assert(decode_result.raw_len < X86_MAX_INSTRUCTION_LENGTH);
+    assert(decode_result.len <= X86_MAX_INSTRUCTION_LENGTH);
 
     LOG_VMM("debug_print_instruction(): decoder result:\n");
-    LOG_VMM("instruction length: %d\n", decode_result.raw_len);
+    LOG_VMM("instruction length: %d\n", decode_result.len);
     LOG_VMM("raw instruction:\n");
-    for (int i = 0; i < decode_result.raw_len; i++) {
+    for (int i = 0; i < decode_result.len; i++) {
         LOG_VMM("0x%hhx\n", decode_result.raw[i]);
     }
 
@@ -248,69 +248,60 @@ void debug_print_instruction(decoded_instruction_ret_t decode_result)
     }
 }
 
-decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len)
+decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip)
 {
     uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
-    memset(instruction_buf, 0, X86_MAX_INSTRUCTION_LENGTH);
-
     uint64_t rip_gpa;
     size_t bytes_remaining;
     assert(gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining));
 
     // @billn fix lazyness, crashes if the instruction crosses a page boundary
-    assert(bytes_remaining >= instruction_len);
-    assert(instruction_len <= X86_MAX_INSTRUCTION_LENGTH);
+    assert(bytes_remaining >= X86_MAX_INSTRUCTION_LENGTH);
 
+    /* Copy 15 bytes of instruction from guest RAM, the actual number of bytes parsed will be less.
+     * We have to derive the instruction length ourselves, as the silicon won't tell us... */
     void *instruction_vaddr = gpa_to_vaddr_or_crash(rip_gpa, &bytes_remaining);
-    memcpy(instruction_buf, instruction_vaddr, instruction_len);
+    memcpy(instruction_buf, instruction_vaddr, X86_MAX_INSTRUCTION_LENGTH);
 
-    // @billn I really think something more "industrial grade" should be used for a job like this.
-    // Such as https://github.com/zyantific/zydis which is no-malloc and no-libc, but it uses cmake...yuck
-    // But then we introduce a dependency...
     decoded_instruction_ret_t ret = { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
-    memcpy(&ret.raw, instruction_vaddr, instruction_len);
-    ret.raw_len = instruction_len;
 
-    bool opcode_valid = false;
     int parsed_byte = 0;
     bool rex_w = false; // 64-bit operand size
     bool rex_r = false; // 4-bit operand, rather than 3-bit
-    // bool rex_x = false; // 4-bit SIB.index
-    // bool rex_b = false; // 4-bit MODRM.rm field or the SIB.base field
     bool opd_size_override = false;
 
-    for (int i = 0; i < instruction_len; i++) {
-        // scan for REX byte, which is always 0b0100WRXB
+    /* First step is to match any prefixes, since we are mainly concerned with the `mov` instruction.
+     * The only prefixes we care about are the REX and "operand-size override". Since they can appear
+     * in any order, parse them in a loop. */
+    bool parsing_prefix = true;
+    while (parsing_prefix && parsed_byte < X86_MAX_INSTRUCTION_LENGTH) {
         if (instruction_buf[parsed_byte] >> 4 == 4) {
+            /* Match for REX byte, which is always 0b0100WRXB */
             uint8_t rex_byte = instruction_buf[parsed_byte];
             parsed_byte += 1;
-
             rex_w = (rex_byte & BIT(3)) != 0;
             rex_r = (rex_byte & BIT(2)) != 0;
-            // rex_x = (rex_byte & BIT(1)) != 0;
-            // rex_b = (rex_byte & BIT(0)) != 0;
-        }
-
-        // scan for the "operand-size override" prefix, which switch the operand size
-        // from 32 to 16 bits, though the REX prefix have more precendence
-        if (instruction_buf[parsed_byte] == 0x66) {
+        } else if (instruction_buf[parsed_byte] == 0x66) {
+            /* Match for the "operand-size override" prefix, which switch the operand size
+             * from 32 to 16 bits, though the REX prefix have more precendence */
             opd_size_override = true;
             parsed_byte += 1;
+        } else {
+            parsing_prefix = false;
         }
     }
 
-    // match the opcode against a list of known opcodes that we provide decoding logic for.
-    // An opcode can be multi-bytes, first match for 1 byte opcode
+    /* Should still have something left to parse! */
+    assert(parsed_byte < X86_MAX_INSTRUCTION_LENGTH);
+
+    /* Match the opcode against a list of known opcodes that we provide decoding logic for.
+     * An opcode can be multi-bytes, first match for 1 byte opcode */
+    bool opcode_valid = false;
     for (int i = 0; i < NUM_MOV_OPCODES; i++) {
         if (instruction_buf[parsed_byte] == mov_opcodes[i]) {
             opcode_valid = true;
             uint8_t opcode = instruction_buf[parsed_byte];
-
-            // An opcode byte is followed by a ModR/M byte to encode src/dest register.
-            uint8_t modrm = instruction_buf[parsed_byte + 1];
-            // uint8_t mod = modrm >> 6;
-            uint8_t reg = (modrm >> 3) & 0x7;
-            // uint8_t rm = modrm & 0x7;
+            parsed_byte++;
 
             ret.type = INSTRUCTION_MEMORY;
             if (rex_w) {
@@ -336,41 +327,34 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
                 }
             }
             ret.decoded.memory_instruction.zero_extend = false;
-            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
-
             break;
         }
     }
 
-    // no match, now try the 2 bytes movzx opcodes
-    if (instruction_len - parsed_byte >= 3 && !opcode_valid) {
+    /* no match, now try the 2 bytes movzx opcodes */
+    if (!opcode_valid) {
         if (instruction_buf[parsed_byte] == opcode_movzx_byte_from_mem[0]
             && instruction_buf[parsed_byte + 1] == opcode_movzx_byte_from_mem[1]) {
             opcode_valid = true;
-            uint8_t modrm = instruction_buf[parsed_byte + 2];
-            uint8_t reg = (modrm >> 3) & 0x7;
+            parsed_byte += 2;
             ret.type = INSTRUCTION_MEMORY;
             ret.decoded.memory_instruction.access_width = BYTE_ACCESS_WIDTH;
             ret.decoded.memory_instruction.zero_extend = true;
-            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
         } else if (instruction_buf[parsed_byte] == opcode_movzx_word_from_mem[0]
                    && instruction_buf[parsed_byte + 1] == opcode_movzx_word_from_mem[1]) {
             opcode_valid = true;
-            uint8_t modrm = instruction_buf[parsed_byte + 2];
-            uint8_t reg = (modrm >> 3) & 0x7;
+            parsed_byte += 2;
             ret.type = INSTRUCTION_MEMORY;
             ret.decoded.memory_instruction.access_width = WORD_ACCESS_WIDTH;
             ret.decoded.memory_instruction.zero_extend = true;
-            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
         }
     }
 
-    // no match, try the mov immediate instruciton
+    /* no match, try the mov immediate opcode */
     for (int i = 0; i < NUM_MOV_IMM_OPCODES; i++) {
         if (instruction_buf[parsed_byte] == mov_imm_opcodes[i]) {
             opcode_valid = true;
-            // TODO: handle unused variable
-            // uint8_t opcode = instruction_buf[parsed_byte];
+            parsed_byte++;
 
             assert(guest_in_64_bits());
 
@@ -384,25 +368,93 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4
                     ret.decoded.write_imm_instruction.access_width = DWORD_ACCESS_WIDTH;
                 }
             }
-
-            // Not going to bother with checking for mod r/m or sib bytes as the CPU already decoded them for us
-            // just skipping to the immediate
-            int immediate_bytes = mem_access_width_to_bytes(ret);
-            assert(instruction_len > immediate_bytes);
-            memcpy(&(ret.decoded.write_imm_instruction.value), &instruction_buf[instruction_len - immediate_bytes],
-                   immediate_bytes);
-
             break;
         }
     }
 
-    if (!opcode_valid) {
-        LOG_VMM_ERR("uh-oh can't decode instruction, bail\n");
-        for (int i = 0; i < instruction_len; i++) {
-            LOG_VMM_ERR("ins byte 0x%x\n", instruction_buf[i]);
+    if (opcode_valid) {
+        /* Successfully matched against a known opcode, and `parsed_byte` point to the first byte
+         * after the opcode in `instruction_buf`. Now parse the ModR/M, SIB, and Displacement */
+
+        /* "The ModR/M byte encodes a register or an opcode extension, and a register or a memory address"
+         *        6           4           0
+         * +---+---+---+---+---+---+---+---+
+         * |  mod  |    reg    |     rm    |
+         * +---+---+---+---+---+---+---+---+
+         */
+        uint8_t modrm = instruction_buf[parsed_byte];
+        uint8_t mod = (modrm >> 6) & 0x3; /* Addressing mode (register vs memory, and displacement size) */
+        uint8_t reg = (modrm >> 3) & 0x7; /* Register operand, or opcode extension */
+        uint8_t rm = modrm & 0x7; /* Register or memory operand */
+        parsed_byte++;
+
+        /* Save the target register now that we have it */
+        if (ret.type == INSTRUCTION_MEMORY) {
+            ret.decoded.memory_instruction.target_reg = modrm_reg_to_vctx_idx(reg, rex_r);
+        }
+
+        bool has_sib = false;
+        uint8_t sib = 0;
+
+        /* Parse SIB (Scale-Index-Base)
+         * If `mod` != 3 (meaning we are accessing memory, not just a register)
+         * AND `rm` == 4 (binary 100), it's an x86 escape code meaning "a SIB byte follows". */
+        if (mod != 3 && rm == 4) {
+            has_sib = true;
+            sib = instruction_buf[parsed_byte];
+            parsed_byte++; /* consume SIB */
+        }
+
+        /* Calculate Displacement Length
+         * Displacement is a constant byte offset added to the memory address. */
+        int disp_bytes = 0;
+        if (mod == 0) {
+            /* mod == 0 usually means no displacement. However, there are two exceptions:
+             * 1. rm == 5: In 64-bit, this means RIP-relative addressing.
+             * 2. has_sib && base == 5 (sib & 0x7 isolates the SIB base register): Means no base register.
+             * Both of these special cases require a mandatory 32-bit (4-byte) displacement. */
+            if (rm == 5 || (has_sib && (sib & 0x7) == 5)) {
+                disp_bytes = 4;
+            }
+        } else if (mod == 1) {
+            disp_bytes = 1;
+        } else if (mod == 2) {
+            disp_bytes = 4;
+        }
+
+        parsed_byte += disp_bytes;
+
+        /* Parse Immediate (if applicable) */
+        if (ret.type == INSTRUCTION_WRITE_IMM) {
+            int immediate_bytes = mem_access_width_to_bytes(ret);
+            if (immediate_bytes > 4) {
+                /* The 0xC7 opcode (MOV to memory/reg) can write up to 64 bits of data,
+                 * but the instruction encoding limits the actual immediate value to 32 bits maximum. */
+                immediate_bytes = 4;
+            }
+
+            memcpy(&(ret.decoded.write_imm_instruction.value), &instruction_buf[parsed_byte], immediate_bytes);
+
+            /* Manual sign extension if REX.W was used with a 32-bit immediate.
+             * Because the 0xC7 instruction limits immediates to 32 bits (4 bytes) even when
+             * writing to a 64-bit (8 bytes) destination, the CPU sign-extends the value.
+             * We must emulate that behavior here. */
+            if (immediate_bytes == 4 && mem_access_width_to_bytes(ret) == 8) {
+                int32_t signed_imm = (int32_t)ret.decoded.write_imm_instruction.value;
+                ret.decoded.write_imm_instruction.value = (uint64_t)signed_imm;
+            }
+
+            parsed_byte += immediate_bytes;
+        }
+    } else {
+        LOG_VMM_ERR("failed to decode instruction due to an unknown opcode.\n");
+        for (int i = 0; i < X86_MAX_INSTRUCTION_LENGTH; i++) {
+            LOG_VMM_ERR("instruction byte: 0x%x\n", instruction_buf[i]);
         }
         vcpu_print_regs(0);
-        assert(opcode_valid);
     }
+
+    memcpy(&ret.raw, instruction_vaddr, X86_MAX_INSTRUCTION_LENGTH);
+    ret.len = parsed_byte;
     return ret;
 }

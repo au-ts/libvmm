@@ -67,13 +67,13 @@ typedef enum instruction_type {
 typedef struct decoded_instruction_ret {
     /* For debugging purpose */
     char raw[X86_MAX_INSTRUCTION_LENGTH];
-    int raw_len;
+    int len;
 
     instruction_type_t type;
     instruction_data_t decoded;
 } decoded_instruction_ret_t;
 
-decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip, seL4_Word instruction_len);
+decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip);
 
 void debug_print_instruction(decoded_instruction_ret_t decode_result);
 
