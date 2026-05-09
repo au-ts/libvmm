@@ -503,7 +503,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
                 data = hpet_regs.general_capabilities;
             } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%lx\n", offset);
                 return false;
             }
 
@@ -511,7 +511,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             if (mem_access_width_to_bytes(decoded_ins) == 4) {
                 data = hpet_regs.general_capabilities >> 32;
             } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%lx\n", offset);
                 return false;
             }
 
@@ -524,7 +524,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
                 data = main_counter_value();
             } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%lx\n", offset);
                 return false;
             }
 
@@ -536,7 +536,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
         } else if (hpet_fault_on_comparator(offset, &comparator)) {
             return hpet_fault_handle_comparator_read(comparator, &data, decoded_ins);
         } else {
-            LOG_VMM_ERR("Reading unknown HPET register offset 0x%x\n", offset);
+            LOG_VMM_ERR("Reading unknown HPET register offset 0x%lx\n", offset);
             return false;
         }
         assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
@@ -554,7 +554,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             } else if (mem_access_width_to_bytes(decoded_ins) == 8) {
                 hpet_regs.general_config = data;
             } else {
-                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%x\n", offset);
+                LOG_VMM_ERR("Unsupported access width on HPET offset 0x%lx\n", offset);
                 return false;
             }
 
@@ -576,7 +576,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
         } else if (hpet_fault_on_comparator(offset, &comparator)) {
             return hpet_fault_handle_comparator_write(comparator, data, decoded_ins);
         } else {
-            LOG_VMM_ERR("Writing unknown HPET register offset 0x%x\n", offset);
+            LOG_VMM_ERR("Writing unknown HPET register offset 0x%lx\n", offset);
             return false;
         }
     }

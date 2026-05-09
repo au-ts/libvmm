@@ -299,7 +299,7 @@ bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exce
     for (int i = 0; i < pio_exception_handler_index; i++) {
         struct pio_exception_handler *curr = &registered_pio_exception_handlers[i];
         if (!(base >= curr->end || base + size <= curr->base)) {
-            LOG_VMM_ERR("PIO exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+            LOG_VMM_ERR("PIO exception handler [0x%hx..0x%hx), overlaps with another handler [0x%hx..0x%hx)\n", base,
                         base + size, curr->base, curr->end);
             return false;
         }
@@ -328,8 +328,8 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
         if (port_addr >= base && port_addr < end) {
             bool success = callback(0, port_addr - base, qualification, vctx, cookie);
             if (!success) {
-                LOG_VMM_ERR("registered PIO exception handler for region [0x%lx..0x%lx) at address "
-                            "0x%lx failed\n",
+                LOG_VMM_ERR("registered PIO exception handler for region [0x%hx..0x%hx) at address "
+                            "0x%hx failed\n",
                             base, end, port_addr);
             }
 
@@ -447,7 +447,7 @@ bool fault_handle(size_t vcpu_id)
         success = true;
         break;
     default:
-        LOG_VMM_ERR("unhandled fault: 0x%x\n", f_reason);
+        LOG_VMM_ERR("unhandled fault: 0x%lx\n", f_reason);
     };
 
     if (success && f_reason != INTERRUPT_WINDOW) {
@@ -471,7 +471,7 @@ bool fault_handle(size_t vcpu_id)
 
         microkit_vcpu_x86_deferred_resume(rip, VMCS_PCC_DEFAULT, interruption);
     } else if (!success) {
-        LOG_VMM_ERR("failed handling fault: '%s' (0x%x)\n", fault_to_string(f_reason), f_reason);
+        LOG_VMM_ERR("failed handling fault: '%s' (0x%lx)\n", fault_to_string(f_reason), f_reason);
         vcpu_print_regs(vcpu_id);
         LOG_VMM_ERR("VCPU will not be resumed.\n");
     }

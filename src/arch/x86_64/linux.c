@@ -188,7 +188,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
             ram_end_gpa, ram_end_gpa - ram_start_gpa);
 
     /* See [3] for details of operations done in this function. */
-    LOG_VMM("linux_setup_images(): kernel size: %lu MiB (%lu bytes)\n", kernel_size / 1024ull / 1024ull, kernel_size);
+    LOG_VMM("linux_setup_images(): kernel size: %llu MiB (%lu bytes)\n", kernel_size / 1024ull / 1024ull, kernel_size);
 
     struct setup_header *setup_header_src = (struct setup_header *)((char *)kernel_src + IMAGE_SETUP_HEADER_OFFSET);
 
@@ -235,7 +235,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
         return false;
     }
 
-    LOG_VMM("linux_setup_images(): kernel GPA 0x%lx, load size %lu, init size %lu bytes\n", kernel_load_gpa,
+    LOG_VMM("linux_setup_images(): kernel GPA 0x%lx, load size %lu, init size %u bytes\n", kernel_load_gpa,
             kernel_load_size, setup_header.init_size);
 
     /* See "1.10. Loading The Rest of The Kernel" of [1] */
@@ -269,7 +269,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t cmdline_gpa = ROUND_UP(initrd_end_gpa, PAGE_SIZE_4K);
     uint64_t cmdline_len = strlen(cmdline);
     if (cmdline_len > setup_header.cmdline_size) {
-        LOG_VMM_ERR("linux_setup_images(): cmdline length %lu bytes > max %lu bytes\n", cmdline_len,
+        LOG_VMM_ERR("linux_setup_images(): cmdline length %lu bytes > max %u bytes\n", cmdline_len,
                     setup_header.cmdline_size);
         return false;
     }
@@ -290,7 +290,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t bytes_remaining_for_zero_page;
     void *zero_page_dest = gpa_to_vaddr(zero_page_gpa, &bytes_remaining_for_zero_page);
     if (!zero_page_dest || bytes_remaining_for_zero_page < PAGE_SIZE_4K) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for zero page, available %lu < needed %lu\n",
+        LOG_VMM_ERR("linux_setup_images(): out of memory for zero page, available %lu < needed %d\n",
                     bytes_remaining_for_zero_page, PAGE_SIZE_4K);
         return false;
     }
@@ -321,7 +321,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
      * Here we just map 1GiB of memory from the kernel start to be safe, since we only need max of 5 paging objects for 2MiB pages. */
     uint64_t ident_map_start_gpa = ROUND_DOWN(kernel_load_gpa, PAGE_SIZE_2M);
     uint64_t ident_map_end_gpa = MIN(ram_end_gpa, ROUND_UP(kernel_load_gpa + 1024 * 1024 * 1024, PAGE_SIZE_2M));
-    LOG_VMM("linux_setup_images(): Identity page table coverage GPA: [0x%x..0x%x)\n", ident_map_start_gpa,
+    LOG_VMM("linux_setup_images(): Identity page table coverage GPA: [0x%lx..0x%lx)\n", ident_map_start_gpa,
             ident_map_end_gpa);
 
     /* Place the paging objects after the zero page. */
@@ -336,11 +336,11 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     /* Now build and place the GDT after the paging objects. */
     uint64_t gdt_gpa = ROUND_UP(paging_objects_end_gpa, PAGE_SIZE_4K);
     // uint64_t gdt_end_gpa = gdt_gpa + PAGE_SIZE_4K;
-    LOG_VMM("linux_setup_images(): GDT GPA: 0x%x\n", gdt_gpa);
+    LOG_VMM("linux_setup_images(): GDT GPA: 0x%lx\n", gdt_gpa);
     uint64_t bytes_remaining_for_gdt;
     uint64_t *gdt = gpa_to_vaddr(gdt_gpa, &bytes_remaining_for_gdt);
     if (!gdt || bytes_remaining_for_gdt < PAGE_SIZE_4K) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for GDT, available %lu < needed %lu\n",
+        LOG_VMM_ERR("linux_setup_images(): out of memory for GDT, available %lu < needed %d\n",
                     bytes_remaining_for_zero_page, PAGE_SIZE_4K);
         return false;
     }
@@ -358,7 +358,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
         return false;
     }
     uint64_t acpi_end_gpa = acpi_start_gpa + num_bytes_used_for_acpi;
-    LOG_VMM("linux_setup_images(): ACPI RSDP 0x%x, ACPI tables GPA: [0x%x..0x%x)\n", acpi_rsdp_gpa, acpi_start_gpa,
+    LOG_VMM("linux_setup_images(): ACPI RSDP 0x%lx, ACPI tables GPA: [0x%lx..0x%lx)\n", acpi_rsdp_gpa, acpi_start_gpa,
             acpi_end_gpa);
 
     /* Now fill in important bits in the "zero page": the ACPI RDSP and E820 memory table. */

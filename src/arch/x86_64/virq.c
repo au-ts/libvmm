@@ -78,14 +78,14 @@ void virq_ioapic_passthrough_ack(int ioapic, int pin, void *cookie)
 bool virq_ioapic_register(int ioapic, int pin, virq_ioapic_ack_fn_t ack_fn, void *ack_data)
 {
     if (ioapic != 0) {
-        LOG_VMM_ERR("Invalid I/O APIC chip number given '0x%lx' for passthrough virtual I/O APIC #%d IRQ pin 0x%lx\n",
+        LOG_VMM_ERR("Invalid I/O APIC chip number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n",
                     ioapic, ioapic, pin);
         return false;
     }
 
     if (pin >= IOAPIC_NUM_PINS) {
-        LOG_VMM_ERR("Invalid I/O APIC pin number given '0x%lx' for passthrough virtual I/O APIC #%d IRQ pin 0x%lx\n",
-                    pin, ioapic, pin);
+        LOG_VMM_ERR("Invalid I/O APIC pin number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", pin,
+                    ioapic, pin);
         return false;
     }
 
@@ -104,7 +104,7 @@ bool virq_ioapic_register(int ioapic, int pin, virq_ioapic_ack_fn_t ack_fn, void
 bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_ch)
 {
     if (irq_ch >= MICROKIT_MAX_CHANNELS) {
-        LOG_VMM_ERR("Invalid channel number given '0x%lx' for passthrough virtual I/O APIC #%d IRQ pin 0x%lx\n", irq_ch,
+        LOG_VMM_ERR("Invalid channel number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", irq_ch,
                     ioapic, pin);
         return false;
     }
@@ -120,7 +120,7 @@ bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_
 bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
 {
     if (irq_ch >= MICROKIT_MAX_CHANNELS) {
-        LOG_VMM_ERR("attempted to handle invalid passthrough IRQ channel 0x%lx\n", irq_ch);
+        LOG_VMM_ERR("attempted to handle invalid passthrough IRQ channel 0x%x\n", irq_ch);
         return false;
     }
 
@@ -132,6 +132,6 @@ bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
         }
     }
 
-    LOG_VMM_ERR("attempted to handle unregistered passthrough IRQ channel 0x%lx\n", irq_ch);
+    LOG_VMM_ERR("attempted to handle unregistered passthrough IRQ channel 0x%x\n", irq_ch);
     return false;
 }

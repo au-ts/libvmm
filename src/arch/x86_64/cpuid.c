@@ -49,13 +49,13 @@ bool initialise_cpuid(uint64_t tsc_hz)
     cpuid(0x1, 0, &a, &b, &c, &d);
     if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 ECX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_1H_X64_V2_BASELINE_ECX, c);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_V2_BASELINE_ECX, c);
         print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c);
         return false;
     }
     if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 EDX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_1H_X64_V2_BASELINE_EDX, d);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_V2_BASELINE_EDX, d);
         print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d);
         return false;
     }
@@ -63,7 +63,7 @@ bool initialise_cpuid(uint64_t tsc_hz)
     cpuid(0x7, 0, &a, &b, &c, &d);
     if (!check_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x7 EBX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_7H_0_X64_V2_BASELINE_EBX, b);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_7H_0_X64_V2_BASELINE_EBX, b);
         print_missing_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b);
         return false;
     }
@@ -80,14 +80,14 @@ bool initialise_cpuid(uint64_t tsc_hz)
     cpuid(0x80000001, 0, &max_ext_leaf, &b, &c, &d);
     if (!check_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_ECX, c)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x800000001 ECX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_80000001H_X64_V2_BASELINE_ECX, c);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_80000001H_X64_V2_BASELINE_ECX, c);
         print_missing_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_ECX, c);
         return false;
     }
 
     if (!check_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_EDX, d)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x800000001 EDX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%lx\n", CPUID_80000001H_X64_V2_BASELINE_EDX, d);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_80000001H_X64_V2_BASELINE_EDX, d);
         print_missing_baseline_bits(CPUID_80000001H_X64_V2_BASELINE_EDX, d);
         return false;
     }
@@ -277,7 +277,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->edx = 0;
         break;
     default:
-        LOG_VMM_ERR("invalid cpuid eax value: 0x%x, returning zero\n", vctx->eax);
+        LOG_VMM_ERR("invalid cpuid eax value: 0x%lx, returning zero\n", vctx->eax);
         vctx->eax = 0;
         vctx->ebx = 0;
         vctx->ecx = 0;

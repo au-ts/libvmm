@@ -165,7 +165,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
         }
         break;
     default:
-        LOG_VMM("unknown wrmsr 0x%x, value 0x%lx\n", vctx->ecx, value);
+        LOG_VMM("unknown wrmsr 0x%lx, value 0x%lx\n", vctx->ecx, value);
         return false;
     }
 
