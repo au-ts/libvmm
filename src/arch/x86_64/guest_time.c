@@ -132,7 +132,7 @@ static void guest_time_set_timeout(uint64_t tsc_delta)
     microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_PREEMPTION_TIMER_VALUE, vmx_timer_value);
     /* We don't need read-set-write as the kernel does that for us. */
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PIN_EXECUTION_CONTROLS, BIT(6));
-    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, BIT(22));
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_VMX_TIMER_ON);
 }
 
 static void guest_time_schedule_timeout(void)
@@ -229,7 +229,7 @@ void guest_time_handle_timer_ntfn(void)
     /* Turn off the VMX-preemption timer. No need for read-clear-write as the kernel will do that for us,
      * this is only a problem if we set other bits somewhere else in the VMM but we don't right now. */
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PIN_EXECUTION_CONTROLS, 0);
-    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, 0);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_DEFAULT);
 
     guest_time_service_timeouts();
 

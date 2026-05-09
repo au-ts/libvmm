@@ -55,8 +55,10 @@
 #define CPUID_1H_EDX_PAE BIT(6)
 #define CPUID_1H_EDX_CX8 BIT(8)
 #define CPUID_1H_EDX_APIC BIT(9)
+#define CPUID_1H_EDX_MTRR BIT(12)
 #define CPUID_1H_EDX_PGE BIT(13) // PGE/PTE Global Bit
 #define CPUID_1H_EDX_CMOV BIT(15)
+#define CPUID_1H_EDX_PAT BIT(16)
 #define CPUID_1H_EDX_PSE36 BIT(17) // PSE-36: Physical Address Extensions
 #define CPUID_1H_EDX_CLFLUSH BIT(19)
 #define CPUID_1H_EDX_MMX BIT(23)
@@ -125,12 +127,13 @@
  * Thermal Monitor
  * virtual 8086
  * MTRR
- * PAT
  * MCE
  */
 #define CPUID_1H_X64_V2_BASELINE_EDX ( \
     CPUID_1H_EDX_FPU | \
     CPUID_1H_EDX_VME | \
+    CPUID_1H_EDX_PAT | \
+    CPUID_1H_EDX_MTRR | \
     CPUID_1H_EDX_DE | \
     CPUID_1H_EDX_PSE | \
     CPUID_1H_EDX_TSC | \

@@ -32,13 +32,41 @@
 #define IA32_MKTME_KEYID_PARTITIONING (0x87)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_CORE_CAPABILITIES (0xcf)
-#define IA32_MTRRCAP (0xfe)
 #define IA32_MISC_ENABLE (0x1a0)
 #define IA32_MCG_CAP (0x179)
 #define IA32_MCG_STATUS (0x17a)
 #define IA32_PAT (0x277)
-#define IA32_MTRR_DEF_TYPE (0x2ff)
 #define IA32_XSS (0xda0)
+
+#define IA32_MTRRCAP (0xfe)
+#define IA32_MTRR_DEF_TYPE (0x2ff)
+#define IA32_MTRR_PHYSBASE0 (0x200)
+#define IA32_MTRR_PHYSMASK0 (0x201)
+#define IA32_MTRR_PHYSBASE1 (0x202)
+#define IA32_MTRR_PHYSMASK1 (0x203)
+#define IA32_MTRR_PHYSBASE2 (0x204)
+#define IA32_MTRR_PHYSMASK2 (0x205)
+#define IA32_MTRR_PHYSBASE3 (0x206)
+#define IA32_MTRR_PHYSMASK3 (0x207)
+#define IA32_MTRR_PHYSBASE4 (0x208)
+#define IA32_MTRR_PHYSMASK4 (0x209)
+#define IA32_MTRR_PHYSBASE5 (0x20A)
+#define IA32_MTRR_PHYSMASK5 (0x20B)
+#define IA32_MTRR_PHYSBASE6 (0x20C)
+#define IA32_MTRR_PHYSMASK6 (0x20D)
+#define IA32_MTRR_PHYSBASE7 (0x20E)
+#define IA32_MTRR_PHYSMASK7 (0x20F)
+#define IA32_MTRR_FIX64K_00000 (0x250)
+#define IA32_MTRR_FIX16K_80000 (0x258)
+#define IA32_MTRR_FIX16K_A0000 (0x259)
+#define IA32_MTRR_FIX4K_C0000 (0x268)
+#define IA32_MTRR_FIX4K_C8000 (0x269)
+#define IA32_MTRR_FIX4K_D0000 (0x26A)
+#define IA32_MTRR_FIX4K_D8000 (0x26B)
+#define IA32_MTRR_FIX4K_E0000 (0x26C)
+#define IA32_MTRR_FIX4K_E8000 (0x26D)
+#define IA32_MTRR_FIX4K_F0000 (0x26E)
+#define IA32_MTRR_FIX4K_F8000 (0x26F)
 
 #define MSR_RAPL_POWER_UNIT  (0x606)
 #define MSR_PKG_ENERGY_STATUS (0x611)
@@ -76,8 +104,24 @@
 #define MSR_CSTAR           0xc0000083 /* compat mode SYSCALL target */
 #define MSR_SYSCALL_MASK    0xc0000084 /* EFLAGS mask for syscall */
 
+/* MTRRs virtualisation */
+#define MTRR_MAX_VARIABLES 8
+
+struct mtrr_state {
+    uint64_t mtrr_def_type;
+    uint64_t fixed_64k;    /* 0x250 */
+    uint64_t fixed_16k[2]; /* 0x258, 0x259 */
+    uint64_t fixed_4k[8];  /* 0x268 - 0x26F */
+
+    struct {
+        uint64_t base;
+        uint64_t mask;
+    } variable[MTRR_MAX_VARIABLES];
+};
+
 static bool msrs_initialised = false;
 static uint32_t apic_base_msr_mask = 0;
+static struct mtrr_state mtrr_state;
 
 bool initialise_msrs(bool bsp)
 {
@@ -85,6 +129,10 @@ bool initialise_msrs(bool bsp)
         /* Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family)
          * Is a boot strap processor. */
         apic_base_msr_mask = BIT(8);
+
+        /* See "IA32_MTRR_DEF_TYPE MSR"
+         * Enable MTRRs */
+        mtrr_state.mtrr_def_type = BIT(11);
     }
 
     msrs_initialised = true;
@@ -102,10 +150,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     uint64_t result = 0;
 
     switch (vctx->ecx) {
-    case MSR_EFER: {
+    case MSR_EFER:
         result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER);
         break;
-    }
     case IA32_TIME_STAMP_COUNTER:
         result = guest_time_tsc_now();
         break;
@@ -124,6 +171,40 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         // @billn revisit, I think we should use Virtualize IA32_SPEC_CTRL
         // in Tertiary Processor-Based VM-Execution Controls
         break;
+    case IA32_PAT:
+        result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_PAT);
+        break;
+    case IA32_MTRRCAP:
+        /* "Table 2-2. IA-32 Architectural MSRs (Contd.)" "IA32_MTRRCAP (MTRRcap)"
+           "Fixed range MTRRs are supported when set" + WC supported. */
+        result = MTRR_MAX_VARIABLES | BIT(8) | BIT(10);
+        break;
+    case IA32_MTRR_DEF_TYPE:
+        result = mtrr_state.mtrr_def_type;
+        break;
+    case IA32_MTRR_PHYSBASE0 ... IA32_MTRR_PHYSMASK7: {
+        int index = (vctx->ecx - IA32_MTRR_PHYSBASE0) / 2;
+        int is_mask = vctx->ecx % 2;
+        if (is_mask) {
+            result = mtrr_state.variable[index].mask;
+        } else {
+            result = mtrr_state.variable[index].base;
+        }
+        break;
+    }
+    case IA32_MTRR_FIX64K_00000:
+        result = mtrr_state.fixed_64k;
+        break;
+    case IA32_MTRR_FIX16K_80000 ... IA32_MTRR_FIX16K_A0000: {
+        int index = vctx->ecx - IA32_MTRR_FIX16K_80000;
+        result = mtrr_state.fixed_16k[index];
+        break;
+    }
+    case IA32_MTRR_FIX4K_C0000 ... IA32_MTRR_FIX4K_F8000: {
+        int index = vctx->ecx - IA32_MTRR_FIX4K_C0000;
+        result = mtrr_state.fixed_4k[index];
+        break;
+    }
     default:
         return false;
     }
@@ -150,6 +231,35 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     case MSR_EFER:
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, value);
         break;
+    case IA32_PAT:
+        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_PAT, value);
+        break;
+    case IA32_MTRR_DEF_TYPE:
+        mtrr_state.mtrr_def_type = value;
+        break;
+    case IA32_MTRR_PHYSBASE0 ... IA32_MTRR_PHYSMASK7: {
+        int index = (vctx->ecx - IA32_MTRR_PHYSBASE0) / 2;
+        int is_mask = vctx->ecx % 2;
+        if (is_mask) {
+            mtrr_state.variable[index].mask = value;
+        } else {
+            mtrr_state.variable[index].base = value;
+        }
+        break;
+    }
+    case IA32_MTRR_FIX64K_00000:
+        mtrr_state.fixed_64k = value;
+        break;
+    case IA32_MTRR_FIX16K_80000 ... IA32_MTRR_FIX16K_A0000: {
+        int index = vctx->ecx - IA32_MTRR_FIX16K_80000;
+        mtrr_state.fixed_16k[index] = value;
+        break;
+    }
+    case IA32_MTRR_FIX4K_C0000 ... IA32_MTRR_FIX4K_F8000: {
+        int index = vctx->ecx - IA32_MTRR_FIX4K_C0000;
+        mtrr_state.fixed_4k[index] = value;
+        break;
+    }
     case MSR_STAR:
     case MSR_LSTAR:
     case MSR_CSTAR:
