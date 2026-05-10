@@ -72,6 +72,9 @@ bool guest_start_long_mode(uint64_t kernel_rip, uint64_t cr3, uint64_t gdt_gpa, 
     microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, initial_regs);
 
     LOG_VMM("starting guest at 0x%lx\n", kernel_rip);
-    microkit_vcpu_x86_deferred_resume(kernel_rip, VMCS_PCC_DEFAULT, 0);
+    microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, kernel_rip);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, VMCS_PPVC_DEFAULT);
+    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, 0);
+    microkit_vcpu_x86_deferred_resume();
     return true;
 }

@@ -12,6 +12,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 
 #define X86_PAGING_OBJECT_SIZE 0x1000
 
@@ -24,7 +25,7 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
 
     size_t pt_bytes_remaining;
 
-    uint64_t pml4_gpa = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_CR3) & ~0xfff;
+    uint64_t pml4_gpa = vcpu_exit_get_cr3() & ~0xfff;
     uint64_t *pml4 = gpa_to_vaddr_or_crash(pml4_gpa, &pt_bytes_remaining);
     assert(pt_bytes_remaining >= X86_PAGING_OBJECT_SIZE);
     uint64_t pml4_idx = (gva >> (12 + (9 * 3))) & 0x1ff;

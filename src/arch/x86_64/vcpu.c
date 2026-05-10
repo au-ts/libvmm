@@ -10,11 +10,34 @@
 #include <libvmm/vcpu.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
+#include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/util.h>
 #include <sel4/arch/vmenter.h>
+
+struct vcpu_fault_state {
+    bool valid;
+    bool exit_from_ntfn;
+
+    uint64_t original_rip;
+    uint64_t resume_rip;
+    uint64_t ppvc;
+    uint64_t irq;
+
+    uint64_t reason;
+    uint64_t qualification;
+    uint64_t instruction_length;
+    uint64_t gpa;
+    uint64_t rflags;
+    uint64_t interruptability;
+    uint64_t cr3;
+
+    seL4_VCPUContext vctx;
+};
+
+static struct vcpu_fault_state vcpu_fault_state;
 
 /* Document referenced:
  * [1] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
@@ -53,16 +76,16 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
     }
 
     /* Set up VMCS control registers */
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PCC_DEFAULT);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PPVC_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, VMCS_SPC_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, VMCS_VEC_LM_DEFAULT);
 
     /* Check that all the VT-x features we need are supported by the host. */
     uint64_t read_back_ppc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
-    if (!check_baseline_bits(VMCS_PCC_DEFAULT, read_back_ppc)) {
+    if (!check_baseline_bits(VMCS_PPVC_DEFAULT, read_back_ppc)) {
         LOG_VMM_ERR("required Primary Processor-Based VM-Execution Controls features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_PCC_DEFAULT, read_back_ppc);
-        print_missing_baseline_bits(VMCS_PCC_DEFAULT, read_back_ppc);
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_PPVC_DEFAULT, read_back_ppc);
+        print_missing_baseline_bits(VMCS_PPVC_DEFAULT, read_back_ppc);
         return false;
     }
 
@@ -116,6 +139,152 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7); // busy 32-bit TSS
 
     return true;
+}
+
+void vcpu_init_exit_state(bool exit_from_ntfn)
+{
+    /* Prevent state overwriting, if this goes off then you probably called this or didn't call
+     * `vcpu_exit_resume()` at the correct time. */
+    assert(!vcpu_fault_state.valid);
+
+    vcpu_fault_state.original_rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
+    vcpu_fault_state.resume_rip = vcpu_fault_state.original_rip;
+    vcpu_fault_state.ppvc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
+    vcpu_fault_state.irq = microkit_mr_get(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR);
+
+    if (!exit_from_ntfn) {
+        /* These message registers are only valid if a VM Exit was caused by a fault rather
+         * than a notification. */
+        vcpu_fault_state.reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
+        vcpu_fault_state.qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
+        vcpu_fault_state.instruction_length = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+        vcpu_fault_state.gpa = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+        vcpu_fault_state.rflags = microkit_mr_get(SEL4_VMENTER_FAULT_RFLAGS_MR);
+        vcpu_fault_state.interruptability = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_INT_MR);
+        vcpu_fault_state.cr3 = microkit_mr_get(SEL4_VMENTER_FAULT_CR3_MR);
+
+        vcpu_fault_state.vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
+        vcpu_fault_state.vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
+        vcpu_fault_state.vctx.ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
+        vcpu_fault_state.vctx.edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
+        vcpu_fault_state.vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
+        vcpu_fault_state.vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
+        vcpu_fault_state.vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
+        vcpu_fault_state.vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
+        vcpu_fault_state.vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
+        vcpu_fault_state.vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
+        vcpu_fault_state.vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
+        vcpu_fault_state.vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
+        vcpu_fault_state.vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
+        vcpu_fault_state.vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
+        vcpu_fault_state.vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
+    }
+
+    vcpu_fault_state.exit_from_ntfn = exit_from_ntfn;
+    vcpu_fault_state.valid = true;
+}
+
+uint64_t vcpu_exit_get_rip(void)
+{
+    assert(vcpu_fault_state.valid);
+    return vcpu_fault_state.resume_rip;
+}
+
+void vcpu_exit_update_ppvc(uint64_t ppvc)
+{
+    assert(vcpu_fault_state.valid);
+    vcpu_fault_state.ppvc = ppvc;
+}
+
+uint64_t vcpu_exit_get_irq(void)
+{
+    assert(vcpu_fault_state.valid);
+    return vcpu_fault_state.irq;
+}
+
+void vcpu_exit_inject_irq(uint64_t irq)
+{
+    assert(vcpu_fault_state.valid);
+    vcpu_fault_state.irq = irq;
+}
+
+uint64_t vcpu_exit_get_reason(void)
+{
+    assert(vcpu_fault_state.valid);
+
+    /* Shouldn't be called when the VCPU exit is caused by a notification! */
+    assert(!vcpu_fault_state.exit_from_ntfn);
+
+    return vcpu_fault_state.reason;
+}
+
+uint64_t vcpu_exit_get_qualification(void)
+{
+    assert(vcpu_fault_state.valid);
+    assert(!vcpu_fault_state.exit_from_ntfn);
+    return vcpu_fault_state.qualification;
+}
+
+uint64_t vcpu_exit_get_instruction_len(void)
+{
+    assert(vcpu_fault_state.valid);
+    assert(!vcpu_fault_state.exit_from_ntfn);
+    return vcpu_fault_state.instruction_length;
+}
+
+uint64_t vcpu_exit_get_rflags(void)
+{
+    assert(vcpu_fault_state.valid);
+
+    if (vcpu_fault_state.exit_from_ntfn) {
+        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
+    } else {
+        return vcpu_fault_state.rflags;
+    }
+}
+
+uint64_t vcpu_exit_get_interruptability(void)
+{
+    assert(vcpu_fault_state.valid);
+    return vcpu_fault_state.interruptability;
+}
+
+uint64_t vcpu_exit_get_cr3(void)
+{
+    assert(vcpu_fault_state.valid);
+    return vcpu_fault_state.cr3;
+}
+
+seL4_VCPUContext *vcpu_exit_get_context(void)
+{
+    assert(vcpu_fault_state.valid);
+
+    if (vcpu_fault_state.exit_from_ntfn) {
+        return NULL;
+    } else {
+        return &vcpu_fault_state.vctx;
+    }
+}
+
+void vcpu_exit_advance_rip(unsigned rip_additive)
+{
+    assert(vcpu_fault_state.valid);
+    vcpu_fault_state.resume_rip += rip_additive;
+}
+
+void vcpu_exit_resume(void)
+{
+    assert(vcpu_fault_state.valid);
+
+    if (!vcpu_fault_state.exit_from_ntfn) {
+        microkit_vcpu_x86_write_regs(0, &vcpu_fault_state.vctx);
+    }
+
+    microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, vcpu_fault_state.resume_rip);
+    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, vcpu_fault_state.ppvc);
+    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vcpu_fault_state.irq);
+    microkit_vcpu_x86_deferred_resume();
+    vcpu_fault_state.valid = false;
 }
 
 void vcpu_print_regs(size_t vcpu_id)

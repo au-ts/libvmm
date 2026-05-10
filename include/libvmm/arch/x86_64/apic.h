@@ -11,6 +11,17 @@
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/instruction.h>
 
+/* Virtual Local APIC and I/O APIC facility. */
+
+/* Set the level of local APIC virtualisation, currently either full software emulation or hardware accelerated
+ * with Intel APICv.
+ * This is useful when you don't have APICv for whatever reasons, e.g. triple nested virtualisation under WSL2,
+ * or using an older CPU. */
+#define APIC_VIRT_LEVEL_SOFTWARE 1
+#define APIC_VIRT_LEVEL_APICV    2
+
+#define APIC_VIRT_LEVEL APIC_VIRT_LEVEL_SOFTWARE
+
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
  *    Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4
@@ -101,8 +112,19 @@ struct ioapic_regs {
 uint32_t lapic_read_reg(int offset);
 void lapic_write_reg(int offset, uint32_t value);
 
+#if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
+/* Inject a highest priority interrupt that is eligible to be delivered.
+ * Assumes that the vCPU's architectural state allow injection! */
+void lapic_maintenance(void);
+/* Handle an EPT fault on the virtual local APIC. */
+bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
+                        decoded_instruction_ret_t decoded_ins);
+#endif
+
+/* Read and write the virtual local APIC registers directly */
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result);
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data);
+
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                          decoded_instruction_ret_t decoded_ins);
 

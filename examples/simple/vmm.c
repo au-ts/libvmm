@@ -167,6 +167,13 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+#if defined(CONFIG_ARCH_X86_64)
+    /* In our case a VCPU is always running, so if we get notified then it must've mean that a
+     * VCPU was stopped, we need to save the context of the VCPU so that we can resume it again
+     * later, since the IPC buffer maybe clobbered. */
+    vcpu_init_exit_state(true);
+#endif
+
     switch (ch) {
 #if defined(CONFIG_ARCH_X86_64)
     case TIMER_DRV_CH: {
@@ -192,6 +199,10 @@ void notified(microkit_channel ch)
         printf("Unexpected channel, ch: 0x%x\n", ch);
 #endif
     }
+
+#if defined(CONFIG_ARCH_X86_64)
+    vcpu_exit_resume();
+#endif
 }
 
 /*

@@ -19,6 +19,7 @@
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/fpu.h>
 #include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
@@ -170,6 +171,7 @@ bool fault_is_trap_like(int exit_reason)
     case APIC_WRITE:
     case VIRTUALIZED_EOI:
     case VMX_PREEMPTION_TIMER:
+    case INTERRUPT_WINDOW:
         return true;
     default:
         return false;
@@ -243,6 +245,11 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
     } else if (addr >= HPET_GPA && addr < HPET_GPA + HPET_SIZE) {
         LOG_FAULT("handling HPET 0x%lx\n", addr);
         return hpet_fault_handle(vctx, addr - HPET_GPA, qualification, decoded_ins);
+#if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
+    } else if (addr >= LAPIC_GPA && addr < LAPIC_GPA + LAPIC_SIZE) {
+        LOG_FAULT("handling LAPIC 0x%lx\n", addr);
+        return lapic_fault_handle(vctx, addr - LAPIC_GPA, qualification, decoded_ins);
+#endif
     } else {
         LOG_FAULT("handling other EPT 0x%lx\n", addr);
         for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
@@ -345,54 +352,44 @@ bool fault_handle(size_t vcpu_id)
     bool success = false;
     decoded_instruction_ret_t decoded_ins;
 
-    seL4_Word f_reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
-    seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
-    seL4_Word qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
-    seL4_Word rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
+    vcpu_init_exit_state(false);
+
+    seL4_Word f_reason = vcpu_exit_get_reason();
+    seL4_Word qualification = vcpu_exit_get_qualification();
+    seL4_Word rip = vcpu_exit_get_rip();
+    seL4_VCPUContext *vctx = vcpu_exit_get_context();
 
     LOG_FAULT("handling vmexit reason %s\n", fault_to_string(f_reason));
 
-    seL4_VCPUContext vctx;
-    vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
-    vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
-    vctx.ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
-    vctx.edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
-    vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
-    vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
-    vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
-    vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
-    vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
-    vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
-    vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
-    vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
-    vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
-    vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
-    vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
-
     switch (f_reason) {
     case CPUID:
-        success = emulate_cpuid(&vctx);
+        success = emulate_cpuid(vctx);
         break;
     case RDMSR:
-        success = emulate_rdmsr(&vctx);
+        success = emulate_rdmsr(vctx);
         break;
     case WRMSR:
-        success = emulate_wrmsr(&vctx);
+        success = emulate_wrmsr(vctx);
         break;
     case EPT_VIOLATION:
         decoded_ins = decode_instruction(vcpu_id, rip);
         if (decoded_ins.type == INSTRUCTION_DECODE_FAIL) {
             success = false;
         } else {
-            /* See "30.2.5 Information for VM Exits Due to Instruction Execution"
-             * Note that for EPT faults the instruction length won't be valid. */
-            ins_len = decoded_ins.len;
-            success = handle_ept_fault(&vctx, qualification, decoded_ins);
+            success = handle_ept_fault(vctx, qualification, decoded_ins);
         }
         break;
     case IO:
-        success = handle_pio_fault(&vctx, qualification);
+        success = handle_pio_fault(vctx, qualification);
         break;
+    case XSETBV:
+        success = emulate_xsetbv(vctx);
+        break;
+    case VMX_PREEMPTION_TIMER:
+        guest_time_handle_timer_ntfn();
+        success = true;
+        break;
+#if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
     case VIRTUALIZED_EOI: {
         uint8_t eoi_vector = qualification;
         /* If we get here then the guest has ack'ed a passed through I/O APIC irq,
@@ -439,25 +436,30 @@ bool fault_handle(size_t vcpu_id)
         }
         break;
     }
-    case XSETBV:
-        success = emulate_xsetbv(&vctx);
-        break;
-    case VMX_PREEMPTION_TIMER:
-        guest_time_handle_timer_ntfn();
+#else
+    case INTERRUPT_WINDOW:
+        lapic_maintenance();
         success = true;
         break;
+#endif
     default:
         LOG_VMM_ERR("unhandled fault: 0x%lx\n", f_reason);
     };
 
-    if (success && f_reason != INTERRUPT_WINDOW) {
-        microkit_vcpu_x86_write_regs(vcpu_id, &vctx);
-
-        uint64_t resume_rip = rip;
+    if (success) {
+        unsigned rip_additive = 0;
         if (!fault_is_trap_like(f_reason)) {
-            resume_rip += ins_len;
+            if (f_reason == EPT_VIOLATION) {
+                /* Note that for EPT faults the instruction length won't be valid.
+                * See "30.2.5 Information for VM Exits Due to Instruction Execution"
+                */
+                rip_additive = decoded_ins.len;
+            } else {
+                rip_additive = vcpu_exit_get_instruction_len();
+            }
         }
-        microkit_vcpu_x86_deferred_resume(resume_rip, VMCS_PCC_DEFAULT, 0);
+        vcpu_exit_advance_rip(rip_additive);
+        vcpu_exit_resume();
     } else if (!success && (f_reason == RDMSR || f_reason == WRMSR || f_reason == XSETBV)) {
         /* [2] "RDMSR—Read From Model Specific Register":
          * "Specifying a reserved or unimplemented MSR address in ECX will also cause a general protection exception." */
@@ -469,7 +471,9 @@ bool fault_handle(size_t vcpu_id)
         interruption |= BIT(11); // deliver error code
         interruption |= BIT(31); // valid
 
-        microkit_vcpu_x86_deferred_resume(rip, VMCS_PCC_DEFAULT, interruption);
+        vcpu_exit_inject_irq(interruption);
+        /* Don't advance rip */
+        vcpu_exit_resume();
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%lx)\n", fault_to_string(f_reason), f_reason);
         vcpu_print_regs(vcpu_id);
