@@ -6,7 +6,7 @@ from typing import List, Optional
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
-assert version('sdfgen').split(".")[1] == "29", "Unexpected sdfgen version"
+assert version('sdfgen').split(".")[1] == "30", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -262,7 +262,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
     blk_system = Sddf.Blk(sdf, None, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
-    blk_system.add_client(vmm_client0, partition=partition)
+    blk_system.add_client(vmm_client0, partition=partition, data_size=16 * 1024 * 1024)
 
     x86_virtio_blk(blk_driver)
 
