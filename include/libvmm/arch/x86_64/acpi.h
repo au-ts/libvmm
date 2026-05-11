@@ -93,7 +93,7 @@ struct madt_irq_controller {
     uint8_t length;
 } __attribute__((packed));
 
-#define MADT_LAPIC_FLAGS (1 << 0) | (1 << 1)
+#define MADT_LAPIC_FLAGS BIT(0) /* Enabled bit */
 
 struct madt_lapic {
     struct madt_irq_controller entry;
