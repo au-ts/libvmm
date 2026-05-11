@@ -32,6 +32,12 @@
 		};
 	};
 
+	pl011@1000000 {
+		interrupts = <0x00 0x01 0x04>;
+		reg = <0x00 0x1000000 0x00 0x1000>;
+		compatible = "arm,pl011\0arm,primecell";
+	};
+
 	timer {
 		interrupts = <0x01 0x0d 0x104 0x01 0x0e 0x104 0x01 0x0b 0x104 0x01 0x0a 0x104>;
 		always-on;
@@ -44,7 +50,7 @@
 	};
 
 	chosen {
-		bootargs = "console=hvc0 earlycon=hvc0 earlyprintk=serial debug loglevel=8";
+		bootargs = "earlycon=pl011,0x1000000 earlyprintk=serial debug loglevel=8 console=hvc0";
 		linux,initrd-start = <0x47000000>;
 		linux,initrd-end = <0x47f00000>;
 	};

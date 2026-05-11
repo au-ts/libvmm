@@ -151,6 +151,8 @@ void init(void)
                                   );
     assert(success);
 
+    pl011_init(0x1000000);
+
     /* Finally start the guest */
     guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
     LOG_VMM("%s is ready\n", microkit_name);
@@ -159,7 +161,10 @@ void init(void)
 void notified(microkit_channel ch)
 {
     if (ch == serial_config.rx.id) {
-        virtio_console_handle_rx(&virtio_console);
+        // virtio_console_handle_rx(&virtio_console);
+        char c;
+        serial_dequeue(&serial_rx_queue, &c);
+        pl011_handle_rx(c);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
     } else if (ch == blk_config.virt.id) {
