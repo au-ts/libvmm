@@ -181,8 +181,8 @@ void init(void)
     // COM2 passthrough for windbg
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 38, 0x2f8, 8);
 
-    assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
-                                   &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
+    // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
+    //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
 
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
                    net_config.rx.num_buffers);
