@@ -57,6 +57,11 @@ ifdef PARTITION
 export PARTITION_ARG := --partition $(PARTITION)
 endif
 
+PCI_BASE :=
+ifdef PCI_BASE
+export PCI_BASE_ARG := --pci-base $(PCI_BASE)
+endif
+
 all: $(IMAGE_FILE)
 
 qemu $(IMAGE_FILE) $(REPORT_FILE) clean clobber: $(BUILD_DIR)/Makefile FORCE

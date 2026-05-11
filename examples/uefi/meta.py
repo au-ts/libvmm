@@ -46,7 +46,7 @@ BOARDS: List[Board] = [
     ),
 ]
 
-def x86_virtio_net(eth_driver):
+def x86_virtio_net(eth_driver, pci_base):
     hw_net_rings = SystemDescription.MemoryRegion(
         sdf, "hw_net_rings", 0x10000, paddr=0x10000000
     )
@@ -55,7 +55,7 @@ def x86_virtio_net(eth_driver):
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0x380000000000
+        sdf, "virtio_net_regs", 0x4000, paddr=pci_base
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -68,7 +68,7 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_irq(virtio_net_irq)
 
-def x86_virtio_blk(blk_driver):
+def x86_virtio_blk(blk_driver, pci_base):
     blk_requests_mr = SystemDescription.MemoryRegion(
         sdf, "virtio_blk_requests", 65536, paddr=0x1100_0000
     )
@@ -86,7 +86,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0x380000004000
+        sdf, "virtio_blk_regs", 0x4000, paddr=pci_base + 0x4000
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
@@ -108,7 +108,7 @@ def x86_apic(vmm, vm):
     vmm.add_map(Map(guest_vapic_mr, vaddr=0x30_0000_0000, perms="rw"))
     vm.add_map(Map(guest_apic_access_mr, vaddr=0xfee0_0000, perms="rw"))
 
-def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree]):
+def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_dtb: Optional[DeviceTree], pci_base: int):
     # Client VM
     vmm_client0 = ProtectionDomain("CLIENT_VMM", "vmm_x86_64.elf", priority=1)
     vm_client0 = VirtualMachine("client_linux", [VirtualMachine.Vcpu(id=0)])
@@ -243,7 +243,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     client0_net_copier = ProtectionDomain(
         "client0_net_copier", "network_copy.elf", priority=98, budget=20000)
 
-    x86_virtio_net(eth_driver)
+    x86_virtio_net(eth_driver, pci_base)
 
     pds = [
         eth_driver,
@@ -264,7 +264,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
     partition = int(args.partition) if args.partition else board.partition
     blk_system.add_client(vmm_client0, partition=partition, data_size=16 * 1024 * 1024)
 
-    x86_virtio_blk(blk_driver)
+    x86_virtio_blk(blk_driver, pci_base)
 
     pds = [
         blk_driver,
@@ -331,6 +331,7 @@ if __name__ == '__main__':
     parser.add_argument("--output", required=True)
     parser.add_argument("--sdf", required=True)
     parser.add_argument("--partition")
+    parser.add_argument("--pci-base")
 
     args = parser.parse_args()
 
@@ -339,6 +340,12 @@ if __name__ == '__main__':
     sdf = SystemDescription(board.arch, board.paddr_top)
 
     sddf = Sddf(args.sddf)
+
+    if args.pci_base:
+        print(args.pci_base, type(args.pci_base))
+        pci_base = int(args.pci_base, base=16)
+    else:
+        pci_base = 0x380000000000
 
     dtb = None
     client_dtb = None
@@ -352,4 +359,4 @@ if __name__ == '__main__':
         with open(args.client_dtb, "rb") as f:
             client_dtb = DeviceTree(f.read())
 
-    generate(args.sdf, args.output, dtb, client_dtb)
+    generate(args.sdf, args.output, dtb, client_dtb, pci_base)
