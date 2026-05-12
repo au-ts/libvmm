@@ -10,6 +10,26 @@
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
 
+struct vcpu_fault_state {
+    bool valid;
+    bool exit_from_ntfn;
+
+    uint64_t original_rip;
+    uint64_t resume_rip;
+    uint64_t ppvc;
+    uint64_t irq;
+
+    uint64_t reason;
+    uint64_t qualification;
+    uint64_t instruction_length;
+    uint64_t gpa;
+    uint64_t rflags;
+    uint64_t interruptability;
+    uint64_t cr3;
+
+    seL4_VCPUContext vctx;
+};
+
 /* Document referenced:
  * [1] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  *   [1a] Location: "SYSTEM ARCHITECTURE OVERVIEW", page: "Vol. 3A 2-15"

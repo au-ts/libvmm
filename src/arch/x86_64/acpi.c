@@ -60,28 +60,37 @@ static uint8_t acpi_compute_checksum(char *table, int size)
     return 0x100 - acpi_table_sum(table, size);
 }
 
-size_t madt_build(struct madt *madt)
+size_t madt_build(struct madt *madt, unsigned num_vcpus)
 {
+    if (num_vcpus > GUEST_MAX_NUM_VCPUS) {
+        LOG_ACPI_ERR("num_vcpus = %u greater than max = %lu\n", num_vcpus, GUEST_MAX_NUM_VCPUS);
+        return 0;
+    }
+
     memcpy(madt->h.signature, "APIC", 4);
     madt->h.revision = MADT_REVISION;
     memcpy(madt->h.oem_id, ACPI_OEMID, 6);
     memcpy(madt->h.oem_table_id, ACPI_OEMID, 6);
     madt->h.oem_revision = 1;
 
-    madt->h.length = sizeof(struct madt);
+    /* The madt struct statically allocate LAPIC entries for GUEST_MAX_NUM_VCPUS, we will need to reduce
+     * it based on how many actual VCPUs are required by the user. */
+    madt->h.length = sizeof(struct madt) - ((GUEST_MAX_NUM_VCPUS - num_vcpus) * sizeof(struct madt_lapic));
 
     madt->h.creator_id = 1;
     madt->h.creator_revision = 1;
 
-    madt->lapic_entry = (struct madt_lapic) {
-        .entry = {
-            .type = MADT_ENTRY_TYPE_LAPIC,
-            .length = MADT_ENTRY_LAPIC_LENGTH,
-        },
-        .acpi_processor_id = 0,
-        .apic_id = 0,
-        .flags = MADT_LAPIC_FLAGS,
-    };
+    for (int i = 0; i < num_vcpus; i++) {
+        madt->lapic_entries[i] = (struct madt_lapic) {
+            .entry = {
+                .type = MADT_ENTRY_TYPE_LAPIC,
+                .length = MADT_ENTRY_LAPIC_LENGTH,
+            },
+            .acpi_processor_id = i,
+            .apic_id = i,
+            .flags = MADT_LAPIC_FLAGS,
+        };
+    }
 
     madt->ioapic_0_entry = (struct madt_ioapic) {
         .entry = {
@@ -96,6 +105,7 @@ size_t madt_build(struct madt *madt)
 
     // Connect ISA IRQ 0 from the legacy Programmable Interval Timer (PIT)
     // to I/O APIC pin 2, which is where the HPET in legacy replacement code is connected.
+    // This is required for Linux to boot, otherwise it will hang.
     madt->hpet_source_override_entry = (struct madt_ioapic_source_override) {
         .entry = { .type = 2, .length = 10 },
         .bus = 0,
@@ -411,7 +421,8 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa)
     return sizeof(struct xsdp);
 }
 
-uint64_t acpi_build_all(uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t *num_bytes_used)
+uint64_t acpi_build_all(unsigned num_vcpus, uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size,
+                        uint64_t *num_bytes_used)
 {
     /* Make the starting point is naturally aligned */
     uint64_t num_bytes_used_for_acpi = acpi_gpa_start % ACPI_TABLES_ALIGNMENT;
@@ -456,7 +467,10 @@ uint64_t acpi_build_all(uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_
     }
     num_bytes_used_for_acpi += ROUND_UP(sizeof(struct madt), ACPI_TABLES_ALIGNMENT);
 
-    madt_build(madt);
+    if (madt_build(madt, num_vcpus) == 0) {
+        *num_bytes_used = 0;
+        return 0;
+    }
 
     uint64_t hpet_gpa = acpi_gpa_start + num_bytes_used_for_acpi;
     size_t bytes_remaining_for_hpet;

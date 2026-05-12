@@ -21,17 +21,35 @@
 /* [1] "Table 6-1. Exceptions and Interrupts" */
 #define GP_VECTOR 13
 
+typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,
+                                         decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie);
+
+struct ept_exception_handler {
+    uintptr_t base;
+    uintptr_t end;
+    ept_exception_callback_t callback;
+    void *cookie;
+};
+
+#define MAX_EPT_EXCEPTION_HANDLERS 16
+
+typedef bool (*pio_exception_callback_t)(size_t vcpu_id, uint16_t port_offset, size_t qualification,
+                                         seL4_VCPUContext *vctx, void *cookie);
+
+struct pio_exception_handler {
+    uint16_t base;
+    uint16_t end;
+    pio_exception_callback_t callback;
+    void *cookie;
+};
+#define MAX_PIO_EXCEPTION_HANDLERS 16
+
 char *fault_to_string(int exit_reason);
 
 bool fault_handle(size_t vcpu_id);
 
-typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,
-                                         decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie);
-
 bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base);
 bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie);
 
-typedef bool (*pio_exception_callback_t)(size_t vcpu_id, uint16_t port_offset, size_t qualification,
-                                         seL4_VCPUContext *vctx, void *cookie);
 bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exception_callback_t callback,
                                           void *cookie);

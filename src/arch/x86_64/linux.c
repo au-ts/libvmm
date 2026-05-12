@@ -166,9 +166,9 @@ static uintptr_t build_initial_kernel_page_table(uint64_t paging_objects_start_g
     return pml4_gpa;
 }
 
-bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t initrd_src, size_t initrd_size,
-                        void *dsdt_blob, uint64_t dsdt_blob_size, char *cmdline, seL4_VCPUContext *initial_regs,
-                        linux_x86_setup_ret_t *ret)
+bool linux_setup_images(unsigned num_vcpus, uintptr_t kernel_src, size_t kernel_size, uintptr_t initrd_src,
+                        size_t initrd_size, void *dsdt_blob, uint64_t dsdt_blob_size, char *cmdline,
+                        seL4_VCPUContext *initial_regs, linux_x86_setup_ret_t *ret)
 {
     /* Load the Linux kernel, initrd and other important blobs into guest RAM, the layout is mostly arbitrarily decided:
      * Kernel code + data | Safety padding | Initrd | Cmdline | Zero page | Init paging objs | GDT | ACPI tables
@@ -352,7 +352,8 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     /* Now build and place the ACPI tables after the GDT. */
     uint64_t acpi_start_gpa = ROUND_UP(gdt_gpa + PAGE_SIZE_4K, PAGE_SIZE_4K);
     uint64_t num_bytes_used_for_acpi = 0;
-    uint64_t acpi_rsdp_gpa = acpi_build_all(acpi_start_gpa, dsdt_blob, dsdt_blob_size, &num_bytes_used_for_acpi);
+    uint64_t acpi_rsdp_gpa = acpi_build_all(num_vcpus, acpi_start_gpa, dsdt_blob, dsdt_blob_size,
+                                            &num_bytes_used_for_acpi);
     if (!num_bytes_used_for_acpi) {
         LOG_VMM_ERR("linux_setup_images(): could not create ACPI tables\n");
         return false;

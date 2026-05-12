@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <libvmm/guest.h>
 #include <stdint.h>
 
 /* Documents referenced:
@@ -127,12 +128,10 @@ struct madt {
     uint32_t apic_addr;
     uint32_t flags;
 
-    // @billn doing it this way make it hard for user code to add more entries,
-    // but for now it make things way easier as we can just do sizeof(struct madt) as it
-    // is statically sized.
-    struct madt_lapic lapic_entry;
     struct madt_ioapic ioapic_0_entry;
     struct madt_ioapic_source_override hpet_source_override_entry;
+    /* It is important that the lapic entries are last because it is variable sized */
+    struct madt_lapic lapic_entries[GUEST_MAX_NUM_VCPUS];
 } __attribute__((packed));
 
 ////////////////////////////////////////
@@ -296,7 +295,7 @@ struct fadt {
 ////////////////////////////////////////
 
 size_t facs_build(struct facs *facs);
-size_t madt_build(struct madt *madt);
+size_t madt_build(struct madt *madt, unsigned num_vcpus);
 size_t hpet_build(struct hpet *hpet);
 size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa);
 size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs);
@@ -306,4 +305,5 @@ size_t xsdp_build(struct xsdp *xsdp, uint64_t xsdt_gpa);
 // Create all the ACPI tables in guest RAM starting from `acpi_gpa_start`.
 // Returns GPA of the XSDP and the sum of the tables' size in bytes will be written to `num_bytes_used`
 // Returns 0 and `num_bytes_used` will be 0 if out of guest memory
-uint64_t acpi_build_all(uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size, uint64_t *num_bytes_used);
+uint64_t acpi_build_all(unsigned num_vcpus, uint64_t acpi_gpa_start, void *dsdt_blob, uint64_t dsdt_blob_size,
+                        uint64_t *num_bytes_used);

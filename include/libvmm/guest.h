@@ -5,8 +5,6 @@
  */
 #pragma once
 
-#pragma once
-
 #include <microkit.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,10 +25,9 @@
 typedef struct arch_guest_init {
     /* Is Boot Strap Processor? */
     bool bsp;
-    /* A unique identifier of the processor from the guest's perspective.
-     * We are virtualising xAPIC so it is only 8-bits, but in the future if
-     * we support x2APIC then it will need to be a u32. */
-    uint8_t apic_id;
+    unsigned num_vcpus;
+    /* Pointer to a piece of memory to bookkeep global VMM state */
+    void *global_vmm_state_ptr;
     /* Channel to a timer driver to measure the host CPU's TSC frequency
      * if it cannot be inferred from CPUID. */
     microkit_channel timer_ch;

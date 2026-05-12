@@ -17,7 +17,6 @@
  */
 
 #define CACHE_LINE_SIZE 64
-#define NUM_LOGICAL_PROCESSORS 1
 
 /* [1] Table 3-8. Information Returned by CPUID Instruction */
 #define CPUID_0H_EAX_MAX_BASIC_LEAF 0x16
@@ -182,6 +181,6 @@
     CPUID_80000001_EDX_LONG_MODE \
 )
 
-bool initialise_cpuid(uint64_t tsc_hz);
+bool initialise_cpuid(void);
 
 bool emulate_cpuid(seL4_VCPUContext *vctx);

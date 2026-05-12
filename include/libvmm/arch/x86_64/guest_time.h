@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#pragma once
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <microkit.h>
@@ -12,10 +14,20 @@
  * The guest will experience "wall clock" time. That is, guest-visible time sources such as the
  * TSC or HPET's main counter will continue to advance when the VCPU is preempted. */
 
-#define TIMEOUT_HANDLE_INVALID -1
-
 typedef void (*guest_timeout_callback_t)(size_t cookie);
 typedef int guest_timeout_handle_t;
+
+#define TIMEOUT_HANDLE_INVALID -1
+
+typedef struct virtual_timer_time_out {
+    bool valid;
+    uint64_t absolute_expiry_tsc;
+    size_t cookie;
+    guest_timeout_callback_t callback_fn;
+} virtual_timer_time_out_t;
+
+/* Enough for local APIC timer + 3 HPET comparators, increase this if you add more timer devices. */
+#define MAX_CONCURRENT_TIMEOUT 4
 
 /* Initialises the guest time library. */
 bool initialise_guest_time(microkit_channel timer_ch);

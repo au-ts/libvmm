@@ -10,6 +10,8 @@
 #include <libvmm/libvmm.h>
 #include <sddf/timer/client.h>
 
+#define GUEST_NUM_VCPUS 1
+
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
@@ -69,6 +71,8 @@ extern char _guest_initrd_image_end[];
 /* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
 extern char _guest_dsdt_aml[];
 extern char _guest_dsdt_aml_end[];
+
+void *global_vmm_state_vaddr;
 #else
 /* Data for the device tree to be passed to the kernel. */
 extern char _guest_dtb_image[];
@@ -104,12 +108,13 @@ void init(void)
 #if defined(CONFIG_ARCH_X86_64)
     arch_guest_init_t guest_init_args = (arch_guest_init_t) {
         .bsp = true,
-        .apic_id = 0,
+        .num_vcpus = GUEST_NUM_VCPUS,
         .timer_ch = TIMER_DRV_CH,
+        .global_vmm_state_ptr = global_vmm_state_vaddr,
     };
 #elif defined(CONFIG_ARCH_ARM)
     arch_guest_init_t guest_init_args = (arch_guest_init_t) {
-        .num_vcpus = 1,
+        .num_vcpus = GUEST_NUM_VCPUS,
     };
 #endif
 
@@ -128,8 +133,9 @@ void init(void)
 
     seL4_VCPUContext initial_regs;
     linux_x86_setup_ret_t linux_setup;
-    if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
+    if (!linux_setup_images(GUEST_NUM_VCPUS, (uintptr_t)_guest_kernel_image, kernel_size,
+                            (uintptr_t)_guest_initrd_image, initrd_size, _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE,
+                            &initial_regs, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }

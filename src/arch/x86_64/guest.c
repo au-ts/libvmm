@@ -18,11 +18,17 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/vmm_state.h>
 #include <sel4/arch/vmenter.h>
 #endif
 
 bool guest_init(arch_guest_init_t init_args)
 {
+    if (!initialise_local_and_global_vmm_state(init_args.bsp, init_args.global_vmm_state_ptr)) {
+        LOG_VMM_ERR("failed to initialise VMM state.\n");
+        return false;
+    }
+
     /* Set up the virtual PCI bus */
     if (!pci_x86_init()) {
         LOG_VMM_ERR("failed to initialise virtual PCI bus.\n");
@@ -36,7 +42,7 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise CPUID */
-    if (!initialise_cpuid(guest_time_tsc_hz())) {
+    if (!initialise_cpuid()) {
         LOG_VMM_ERR("failed to initialise CPUID\n");
         return false;
     }

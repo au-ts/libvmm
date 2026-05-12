@@ -65,6 +65,6 @@ typedef struct linux_setup_ret {
     uint64_t gdt_limit;
 } linux_x86_setup_ret_t;
 
-bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t initrd_src, size_t initrd_size,
-                        void *dsdt_blob, uint64_t dsdt_blob_size, char *cmdline, seL4_VCPUContext *initial_regs,
-                        linux_x86_setup_ret_t *ret);
+bool linux_setup_images(unsigned num_vcpus, uintptr_t kernel_src, size_t kernel_size, uintptr_t initrd_src,
+                        size_t initrd_size, void *dsdt_blob, uint64_t dsdt_blob_size, char *cmdline,
+                        seL4_VCPUContext *initial_regs, linux_x86_setup_ret_t *ret);

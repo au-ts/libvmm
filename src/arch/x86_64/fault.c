@@ -23,6 +23,7 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
+#include <libvmm/arch/x86_64/vmm_state.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
@@ -31,6 +32,8 @@
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  * [3] https://wiki.osdev.org/Interrupt_Vector_Table
  */
+
+extern struct local_vmm_state local_vmm_state;
 
 /* Exit reasons.
  * From [1]
@@ -178,60 +181,76 @@ bool fault_is_trap_like(int exit_reason)
     }
 }
 
-struct ept_exception_handler {
-    uintptr_t base;
-    uintptr_t end;
-    ept_exception_callback_t callback;
-    void *cookie;
-};
-#define MAX_EPT_EXCEPTION_HANDLERS 16
-static struct ept_exception_handler registered_ept_exception_handlers[MAX_EPT_EXCEPTION_HANDLERS];
-static size_t ept_exception_handler_index = 0;
+struct ept_exception_handler *acquire_ept_exception_handlers(size_t **mutable_len_ret)
+{
+    struct global_mutable_vmm_state *global_vmm_mutable_state = acquire_global_vmm_mutable_state();
+    *mutable_len_ret = &global_vmm_mutable_state->num_ept_exception_handlers;
+    return global_vmm_mutable_state->ept_exception_handlers;
+}
+
+void release_ept_exception_handlers(void)
+{
+}
 
 bool fault_update_ept_exception_handler(uintptr_t base, uintptr_t new_base)
 {
-    for (int i = 0; i < ept_exception_handler_index; i++) {
-        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+    bool success = false;
+    size_t *len;
+    struct ept_exception_handler *ept_exception_handlers = acquire_ept_exception_handlers(&len);
+
+    for (int i = 0; i < *len; i++) {
+        struct ept_exception_handler *curr = &ept_exception_handlers[i];
         if (curr->base == base) {
             curr->base = new_base;
-            return true;
+            success = true;
+            break;
         }
     }
 
-    LOG_VMM("failed to update EPT exception handler, none exists for base 0x%lx\n", base);
+    if (!success) {
+        LOG_VMM("failed to update EPT exception handler, none exists for base 0x%lx\n", base);
+    }
 
-    return false;
+    release_ept_exception_handlers();
+    return success;
 }
 
 bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_exception_callback_t callback, void *cookie)
 {
-    if (ept_exception_handler_index == MAX_EPT_EXCEPTION_HANDLERS - 1) {
-        LOG_VMM_ERR("maximum number of EPT exception handlers registered");
-        return false;
-    }
-
     if (size == 0) {
         LOG_VMM_ERR("registered EPT exception handler with size 0\n");
         return false;
     }
 
-    for (int i = 0; i < ept_exception_handler_index; i++) {
-        struct ept_exception_handler *curr = &registered_ept_exception_handlers[i];
+    size_t *len;
+    struct ept_exception_handler *ept_exception_handlers = acquire_ept_exception_handlers(&len);
+
+    if (*len == MAX_EPT_EXCEPTION_HANDLERS - 1) {
+        LOG_VMM_ERR("maximum number of EPT exception handlers registered");
+        release_ept_exception_handlers();
+        return false;
+    }
+
+    for (int i = 0; i < *len; i++) {
+        struct ept_exception_handler *curr = &ept_exception_handlers[i];
         if (!(base >= curr->end || base + size <= curr->base)) {
             LOG_VMM_ERR("EPT exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
                         base + size, curr->base, curr->end);
+
+            release_ept_exception_handlers();
             return false;
         }
     }
 
-    registered_ept_exception_handlers[ept_exception_handler_index] = (struct ept_exception_handler) {
+    ept_exception_handlers[*len] = (struct ept_exception_handler) {
         .base = base,
         .end = base + size,
         .callback = callback,
         .cookie = cookie,
     };
-    ept_exception_handler_index += 1;
+    *len += 1;
 
+    release_ept_exception_handlers();
     return true;
 }
 
@@ -252,12 +271,17 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
 #endif
     } else {
         LOG_FAULT("handling other EPT 0x%lx\n", addr);
-        for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
-            uintptr_t base = registered_ept_exception_handlers[i].base;
-            uintptr_t end = registered_ept_exception_handlers[i].end;
-            ept_exception_callback_t callback = registered_ept_exception_handlers[i].callback;
-            void *cookie = registered_ept_exception_handlers[i].cookie;
+
+        size_t *len;
+        struct ept_exception_handler *ept_exception_handlers = acquire_ept_exception_handlers(&len);
+
+        for (int i = 0; i < *len; i++) {
+            uintptr_t base = ept_exception_handlers[i].base;
+            uintptr_t end = ept_exception_handlers[i].end;
+            ept_exception_callback_t callback = ept_exception_handlers[i].callback;
+            void *cookie = ept_exception_handlers[i].cookie;
             if (addr >= base && addr < end) {
+                release_ept_exception_handlers();
                 bool success = callback(0, addr - base, qualification, decoded_ins, vctx, cookie);
                 if (!success) {
                     LOG_VMM_ERR("registered EPT exception handler for region [0x%lx..0x%lx) at address "
@@ -269,57 +293,66 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
             }
         }
 
+        release_ept_exception_handlers();
         LOG_VMM_ERR("failed to find EPT handler for address 0x%lx\n", addr);
     }
 
     return false;
 }
 
-struct pio_exception_handler {
-    uint16_t base;
-    uint16_t end;
-    pio_exception_callback_t callback;
-    void *cookie;
-};
-#define MAX_PIO_EXCEPTION_HANDLERS 16
-static struct pio_exception_handler registered_pio_exception_handlers[MAX_PIO_EXCEPTION_HANDLERS];
-static size_t pio_exception_handler_index = 0;
+struct pio_exception_handler *acquire_pio_exception_handlers(size_t **mutable_len_ret)
+{
+    struct global_mutable_vmm_state *global_vmm_mutable_state = acquire_global_vmm_mutable_state();
+    *mutable_len_ret = &global_vmm_mutable_state->num_pio_exception_handlers;
+    return global_vmm_mutable_state->pio_exception_handlers;
+}
+
+void release_pio_exception_handlers(void)
+{
+}
 
 bool fault_register_pio_exception_handler(uint16_t base, uint16_t size, pio_exception_callback_t callback, void *cookie)
 {
-    if (pio_exception_handler_index == MAX_PIO_EXCEPTION_HANDLERS - 1) {
-        LOG_VMM_ERR("maximum number of PIO exception handlers registered");
-        return false;
-    }
-
     if (size == 0) {
         LOG_VMM_ERR("registered PIO exception handler with size 0\n");
         return false;
     }
 
+    size_t *len;
+    struct pio_exception_handler *pio_exception_handlers = acquire_pio_exception_handlers(&len);
+
+    if (*len == MAX_PIO_EXCEPTION_HANDLERS - 1) {
+        release_pio_exception_handlers();
+        LOG_VMM_ERR("maximum number of PIO exception handlers registered");
+        return false;
+    }
+
     uint64_t size_64 = (uint64_t)base + (uint64_t)size;
     if (size_64 > 0xffff) {
+        release_pio_exception_handlers();
         LOG_VMM_ERR("base + size = 0x%lx exceed uint16_t max\n", size_64);
         return false;
     }
 
-    for (int i = 0; i < pio_exception_handler_index; i++) {
-        struct pio_exception_handler *curr = &registered_pio_exception_handlers[i];
+    for (int i = 0; i < *len; i++) {
+        struct pio_exception_handler *curr = &pio_exception_handlers[i];
         if (!(base >= curr->end || base + size <= curr->base)) {
+            release_pio_exception_handlers();
             LOG_VMM_ERR("PIO exception handler [0x%hx..0x%hx), overlaps with another handler [0x%hx..0x%hx)\n", base,
                         base + size, curr->base, curr->end);
             return false;
         }
     }
 
-    registered_pio_exception_handlers[pio_exception_handler_index] = (struct pio_exception_handler) {
+    pio_exception_handlers[*len] = (struct pio_exception_handler) {
         .base = base,
         .end = base + size,
         .callback = callback,
         .cookie = cookie,
     };
-    pio_exception_handler_index += 1;
+    *len += 1;
 
+    release_pio_exception_handlers();
     return true;
 }
 
@@ -327,12 +360,17 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
 {
     uint16_t port_addr = pio_fault_addr(qualification);
 
-    for (int i = 0; i < MAX_PIO_EXCEPTION_HANDLERS; i++) {
-        uint16_t base = registered_pio_exception_handlers[i].base;
-        uint16_t end = registered_pio_exception_handlers[i].end;
-        pio_exception_callback_t callback = registered_pio_exception_handlers[i].callback;
-        void *cookie = registered_pio_exception_handlers[i].cookie;
+    size_t *len;
+    struct pio_exception_handler *pio_exception_handlers = acquire_pio_exception_handlers(&len);
+
+    for (int i = 0; i < *len; i++) {
+        uint16_t base = pio_exception_handlers[i].base;
+        uint16_t end = pio_exception_handlers[i].end;
+        pio_exception_callback_t callback = pio_exception_handlers[i].callback;
+        void *cookie = pio_exception_handlers[i].cookie;
+
         if (port_addr >= base && port_addr < end) {
+            release_pio_exception_handlers();
             bool success = callback(0, port_addr - base, qualification, vctx, cookie);
             if (!success) {
                 LOG_VMM_ERR("registered PIO exception handler for region [0x%hx..0x%hx) at address "
@@ -343,6 +381,7 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
             return success;
         }
     }
+    release_pio_exception_handlers();
 
     return emulate_ioports(vctx, qualification);
 }

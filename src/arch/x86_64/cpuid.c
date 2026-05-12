@@ -10,6 +10,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/vmm_state.h>
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
@@ -17,18 +18,13 @@
  *    Order Number: 325462-080US June 2023
  */
 
+extern struct local_vmm_state local_vmm_state;
+
 /* 4 chars per 32-bit register, 4 registers per leaf, 3 leafs */
 #define CPUID_BRAND_STR_LEN (4 * 4 * 3)
 static const char brand_string[CPUID_BRAND_STR_LEN] = "Trustworthy Systems CPU";
 
-struct cpuid_state {
-    bool valid;
-    uint64_t tsc_hz;
-};
-
-static struct cpuid_state cpuid_state = { .valid = false };
-
-bool initialise_cpuid(uint64_t tsc_hz)
+bool initialise_cpuid(void)
 {
     /* Same idea as vcpu.c, we need to check that all CPU features advertised to the guest are
      * supported by the host CPU. Otherwise guests can crash with undefined opcode. */
@@ -92,16 +88,14 @@ bool initialise_cpuid(uint64_t tsc_hz)
         return false;
     }
 
-    cpuid_state = (struct cpuid_state) {
-        .valid = true,
-        .tsc_hz = tsc_hz,
-    };
+    local_vmm_state.cpuid_validated = true;
     return true;
 }
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
     LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);
+    assert(local_vmm_state.cpuid_validated);
 
     switch (vctx->eax) {
     case 0x0: /* "Basic CPUID Information" */
@@ -111,12 +105,16 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = CPUID_0H_GENUINEINTEL_ECX;
         break;
 
-    case 0x1:
+    case 0x1: {
+        struct global_read_only_vmm_state *global_read_only_vmm_state = get_global_vmm_mutable_state();
+
         vctx->eax = CPUID_1H_EAX;
-        vctx->ebx = CPUID_1H_EBX;
+        vctx->ebx = ((CACHE_LINE_SIZE / 8) << 8) | (global_read_only_vmm_state->num_vcpus << 16);
         vctx->ecx = CPUID_1H_X64_V2_BASELINE_ECX;
         vctx->edx = CPUID_1H_X64_V2_BASELINE_EDX;
+
         break;
+    }
 
     case 0x2: /* "Cache and TLB Information" */
 
@@ -178,15 +176,15 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x15: /* "Time Stamp Counter and Nominal Core Crystal Clock" */
         vctx->eax = 1; /* Making ratio between Crystal and TSC 1-to-1 */
         vctx->ebx = 1;
-        vctx->ecx = cpuid_state.tsc_hz;
+        vctx->ecx = local_vmm_state.tsc_hz;
         vctx->edx = 0;
         break;
 
     case 0x16: /* "Processor Frequency Information Leaf" */
         /* CPU base, max and bus frequency in MHz */
-        vctx->eax = cpuid_state.tsc_hz / 1000000;
-        vctx->ebx = cpuid_state.tsc_hz / 1000000;
-        vctx->ecx = cpuid_state.tsc_hz / 1000000;
+        vctx->eax = local_vmm_state.tsc_hz / 1000000;
+        vctx->ebx = local_vmm_state.tsc_hz / 1000000;
+        vctx->ecx = local_vmm_state.tsc_hz / 1000000;
         vctx->edx = 0;
         break;
 

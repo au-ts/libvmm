@@ -9,6 +9,7 @@
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/linux.h>
+#include <libvmm/arch/x86_64/vmm_state.h>
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
@@ -18,20 +19,28 @@
  *    Order Number: 290566-001 May 1996
  */
 
-uintptr_t vapic_vaddr;
-struct ioapic_regs ioapic_regs;
-uint64_t tsc_hz;
+extern struct local_vmm_state local_vmm_state;
 
-bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
+static struct ioapic_regs *acquire_ioapic_regs(void)
 {
-    tsc_hz = native_tsc_hz;
+    return &acquire_global_vmm_mutable_state()->ioapic_regs;
+}
 
+static void release_ioapic_regs(void)
+{
+    release_global_vmm_mutable_state();
+}
+
+bool virq_controller_init(void *apicv_addr)
+{
     LOG_VMM("initialising IRQ book-keeping structures\n");
-    memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
+
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+
+    memset(ioapic_regs, 0, sizeof(struct ioapic_regs));
 
     LOG_VMM("initialising LAPIC\n");
-
-    vapic_vaddr = guest_vapic_vaddr;
+    local_vmm_state.apicv_addr = apicv_addr;
 
     // [1] "12.4.8 Local APIC Version Register"
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."
@@ -51,7 +60,7 @@ bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
     LOG_VMM("initialising I/O APIC\n");
     // [2] default value for the Intel 82093AA IOAPIC.
     // supports 0x17 indirection entries.
-    ioapic_regs.ioapicver = 0x11 | (IOAPIC_LAST_INDIRECT_INDEX << 16);
+    ioapic_regs->ioapicver = 0x11 | (IOAPIC_LAST_INDIRECT_INDEX << 16);
     // Wire up all the IRQs
     for (int i = 0; i <= IOAPIC_LAST_INDIRECT_INDEX; i++) {
         // fixed intr deivery, all zero
@@ -60,12 +69,13 @@ bool virq_controller_init(uint64_t native_tsc_hz, uintptr_t guest_vapic_vaddr)
         // Interrupt Input Pin Polarity, high active, all zero
         // edge triggered, all zero
         // interrupt mask bit 16, mask all irq:
-        ioapic_regs.ioredtbl[i] |= BIT(16);
+        ioapic_regs->ioredtbl[i] |= BIT(16);
 
-        ioapic_regs.virq_passthrough_map[i].valid = false;
-        ioapic_regs.virq_passthrough_map[i].ch = IOAPIC_IRQ_HANDLE_NO_CH;
+        ioapic_regs->virq_passthrough_map[i].valid = false;
+        ioapic_regs->virq_passthrough_map[i].ch = IOAPIC_IRQ_HANDLE_NO_CH;
     }
 
+    release_ioapic_regs();
     return true;
 }
 
@@ -89,14 +99,19 @@ bool virq_ioapic_register(int ioapic, int pin, virq_ioapic_ack_fn_t ack_fn, void
         return false;
     }
 
-    if (ioapic_regs.virq_passthrough_map[pin].valid) {
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+
+    if (ioapic_regs->virq_passthrough_map[pin].valid) {
+        release_ioapic_regs();
         LOG_VMM_ERR("Pin %d is already registered on virtual I/O APIC\n", pin);
         return false;
     }
 
-    ioapic_regs.virq_passthrough_map[pin].valid = true;
-    ioapic_regs.virq_passthrough_map[pin].ack_fn = ack_fn;
-    ioapic_regs.virq_passthrough_map[pin].ack_data = ack_data;
+    ioapic_regs->virq_passthrough_map[pin].valid = true;
+    ioapic_regs->virq_passthrough_map[pin].ack_fn = ack_fn;
+    ioapic_regs->virq_passthrough_map[pin].ack_data = ack_data;
+
+    release_ioapic_regs();
 
     return true;
 }
@@ -111,7 +126,10 @@ bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_
 
     bool success = virq_ioapic_register(ioapic, pin, virq_ioapic_passthrough_ack, (void *)(uint64_t)irq_ch);
     if (success) {
-        ioapic_regs.virq_passthrough_map[pin].ch = irq_ch;
+        // race condition? ch could be invalid after valid is set.
+        struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+        ioapic_regs->virq_passthrough_map[pin].ch = irq_ch;
+        release_ioapic_regs();
     }
 
     return success;
@@ -124,14 +142,17 @@ bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
         return false;
     }
 
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
-            if (ioapic_regs.virq_passthrough_map[i].ch == irq_ch) {
+        if (ioapic_regs->virq_passthrough_map[i].valid) {
+            if (ioapic_regs->virq_passthrough_map[i].ch == irq_ch) {
+                release_ioapic_regs();
                 return inject_ioapic_irq(0, i);
             }
         }
     }
 
     LOG_VMM_ERR("attempted to handle unregistered passthrough IRQ channel 0x%x\n", irq_ch);
+    release_ioapic_regs();
     return false;
 }

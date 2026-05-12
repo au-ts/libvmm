@@ -13,17 +13,13 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/vmm_state.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>
 #include <sddf/timer/client.h>
 
 /* Implementation of a virtual Local APIC and I/O APIC. */
-
-#if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
-#define LAPIC_REG_BLOCK_SIZE 0x1000
-char lapic_regs[LAPIC_REG_BLOCK_SIZE];
-#endif
 
 // Uncomment this to enable debug logging
 // #define DEBUG_APIC
@@ -57,25 +53,16 @@ char lapic_regs[LAPIC_REG_BLOCK_SIZE];
 #define LOG_APIC(...) do{}while(0)
 #endif
 
-extern uintptr_t vapic_vaddr;
-extern struct ioapic_regs ioapic_regs;
-extern uint64_t tsc_hz;
-
-/* Bookkeeping for the local APIC timer */
-// @billn revisit for multiple vcpus
-uint64_t native_scaled_apic_ticks_when_timer_starts;
-bool timeout_handle_valid;
-guest_timeout_handle_t timeout_handle;
+extern struct local_vmm_state local_vmm_state;
 
 uint32_t lapic_read_reg(int offset)
 {
     assert(offset < 0x1000);
 
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
-    uintptr_t lapic_regs_ptr = (uintptr_t)(&lapic_regs);
+    uintptr_t lapic_regs_ptr = (uintptr_t)(&local_vmm_state.lapic_regs);
 #else
-    // @billn fix hardcoded vaddr
-    uintptr_t lapic_regs_ptr = 0x101000ull;
+    uintptr_t lapic_regs_ptr = (uintptr_t)(local_vmm_state.apicv_addr);
 #endif
 
     return *((volatile uint32_t *)(lapic_regs_ptr + offset));
@@ -86,10 +73,9 @@ void lapic_write_reg(int offset, uint32_t value)
     assert(offset < 0x1000);
 
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
-    uintptr_t lapic_regs_ptr = (uintptr_t)(&lapic_regs);
+    uintptr_t lapic_regs_ptr = (uintptr_t)(&local_vmm_state.lapic_regs);
 #else
-    // @billn fix hardcoded vaddr
-    uintptr_t lapic_regs_ptr = 0x101000ull;
+    uintptr_t lapic_regs_ptr = (uintptr_t)(local_vmm_state.apicv_addr);
 #endif
 
     volatile uint32_t *reg = (uint32_t *)(lapic_regs_ptr + offset);
@@ -152,10 +138,22 @@ static int lapic_dcr_to_divider(void)
     return -1;
 }
 
+static struct ioapic_regs *acquire_ioapic_regs(void)
+{
+    return &acquire_global_vmm_mutable_state()->ioapic_regs;
+}
+
+static void release_ioapic_regs(void)
+{
+    release_global_vmm_mutable_state();
+}
+
 static uint8_t ioapic_pin_to_vector(int ioapic, int pin)
 {
     assert(ioapic == 0);
-    return ioapic_regs.ioredtbl[pin] & 0xff;
+    uint8_t vector = acquire_ioapic_regs()->ioredtbl[pin] & 0xff;
+    release_ioapic_regs();
+    return vector;
 }
 
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
@@ -324,16 +322,27 @@ void lapic_write_eoi(void)
     lapic_write_reg(isr_reg_off, lapic_read_reg(isr_reg_off) & ~BIT(isr_idx));
 
     /* if it is a passed through I/O APIC IRQ, run the ack function */
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+    virq_ioapic_ack_fn_t ack_fn = NULL;
+    int ack_pin;
+    void *ack_data;
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
+        if (ioapic_regs->virq_passthrough_map[i].valid) {
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == done_vector) {
-                if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                    ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                if (ioapic_regs->virq_passthrough_map[i].ack_fn) {
+                    ack_fn = ioapic_regs->virq_passthrough_map[i].ack_fn;
+                    ack_pin = i;
+                    ack_data = ioapic_regs->virq_passthrough_map[i].ack_data;
                 }
                 break;
             }
         }
+    }
+
+    release_ioapic_regs();
+    if (ack_fn) {
+        ack_fn(0, ack_pin, ack_data);
     }
 
     int next_irq_vector = get_next_eligible_irq_vector();
@@ -405,7 +414,8 @@ static uint32_t lapic_read_curr_count_reg(void)
     /* [1] "12.5.4 APIC Timer" */
     if (lapic_read_reg(REG_LAPIC_INIT_CNT) != 0) {
         uint64_t apic_tick_now_scaled = lapic_time_now_scaled();
-        uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled - native_scaled_apic_ticks_when_timer_starts;
+        uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled
+                                          - local_vmm_state.apic_timer_scaled_ticks_when_timer_starts;
 
         uint64_t remaining = 0;
         if (elapsed_scaled_apic_tick < lapic_read_reg(REG_LAPIC_INIT_CNT)) {
@@ -420,8 +430,8 @@ static uint32_t lapic_read_curr_count_reg(void)
 
 static void handle_lapic_timer_nftn(size_t vcpu_id)
 {
-    assert(timeout_handle_valid);
-    guest_time_cancel_timeout(timeout_handle);
+    assert(local_vmm_state.apic_timer_timeout_handle_valid);
+    guest_time_cancel_timeout(local_vmm_state.apic_timer_timeout_handle);
 
     if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
@@ -432,13 +442,14 @@ static void handle_lapic_timer_nftn(size_t vcpu_id)
     /* Restart timeout if periodic */
     uint32_t init_count = lapic_read_reg(REG_LAPIC_INIT_CNT);
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
-        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+        local_vmm_state.apic_timer_scaled_ticks_when_timer_starts = lapic_time_now_scaled();
         uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
         LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
 
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
+        local_vmm_state.apic_timer_timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn,
+                                                                               0);
+        assert(local_vmm_state.apic_timer_timeout_handle != TIMEOUT_HANDLE_INVALID);
+        local_vmm_state.apic_timer_timeout_handle_valid = true;
     }
 
     /* But only inject IRQ if it is not masked */
@@ -461,22 +472,23 @@ static void lapic_write_init_count_reg(uint32_t data)
         uint64_t delay_ticks = data * lapic_dcr_to_divider();
         LOG_APIC("setting timeout for 0x%lx ticks\n", data);
 
-        if (timeout_handle_valid) {
+        if (local_vmm_state.apic_timer_timeout_handle_valid) {
             /* Guest kernel has changed the timeout */
-            guest_time_cancel_timeout(timeout_handle);
-            timeout_handle_valid = false;
+            guest_time_cancel_timeout(local_vmm_state.apic_timer_timeout_handle);
+            local_vmm_state.apic_timer_timeout_handle_valid = false;
         }
 
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
+        local_vmm_state.apic_timer_timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn,
+                                                                               0);
+        assert(local_vmm_state.apic_timer_timeout_handle != TIMEOUT_HANDLE_INVALID);
+        local_vmm_state.apic_timer_timeout_handle_valid = true;
 
-        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+        local_vmm_state.apic_timer_scaled_ticks_when_timer_starts = lapic_time_now_scaled();
     } else {
-        if (timeout_handle_valid) {
+        if (local_vmm_state.apic_timer_timeout_handle_valid) {
             /* Guest kernel has cancelled the timeout */
-            guest_time_cancel_timeout(timeout_handle);
-            timeout_handle_valid = false;
+            guest_time_cancel_timeout(local_vmm_state.apic_timer_timeout_handle);
+            local_vmm_state.apic_timer_timeout_handle_valid = false;
         }
     }
 }
@@ -631,98 +643,119 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
         LOG_APIC("handling I/O APIC write at MMIO offset 0x%lx\n", offset);
     }
 
+    bool success = true;
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+
     if (ept_fault_is_read(qualification)) {
         if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             uint64_t data;
 
-            if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
-                data = ioapic_regs.ioapicid;
-            } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
-                data = ioapic_regs.ioapicver;
-            } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICARB_REG_OFF) {
-                data = ioapic_regs.ioapicarb;
-            } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
-                       && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
+            if (ioapic_regs->selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
+                data = ioapic_regs->ioapicid;
+            } else if (ioapic_regs->selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
+                data = ioapic_regs->ioapicver;
+            } else if (ioapic_regs->selected_reg == REG_IOAPIC_IOAPICARB_REG_OFF) {
+                data = ioapic_regs->ioapicarb;
+            } else if (ioapic_regs->selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
+                       && ioapic_regs->selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
+                int redirection_reg_idx = ((ioapic_regs->selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
                                         / 2;
-                int is_high = ioapic_regs.selected_reg & 0x1;
+                int is_high = ioapic_regs->selected_reg & 0x1;
                 if (is_high) {
-                    data = ioapic_regs.ioredtbl[redirection_reg_idx] >> 32;
+                    data = ioapic_regs->ioredtbl[redirection_reg_idx] >> 32;
                 } else {
-                    data = ioapic_regs.ioredtbl[redirection_reg_idx] & 0xffffffff;
+                    data = ioapic_regs->ioredtbl[redirection_reg_idx] & 0xffffffff;
                 }
 
             } else {
-                LOG_VMM_ERR("Reading unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);
-                return false;
+                LOG_VMM_ERR("Reading unknown I/O APIC register offset 0x%x\n", ioapic_regs->selected_reg);
+                success = false;
             }
 
-            assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
+            if (success) {
+                assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
+            }
         } else {
             LOG_VMM_ERR("Reading unknown I/O APIC MMIO register 0x%lx\n", offset);
-            return false;
+            success = false;
         }
+
+        release_ioapic_regs();
     } else {
         uint64_t data;
         assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
 
         if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
-            ioapic_regs.selected_reg = data & 0xff;
+            ioapic_regs->selected_reg = data & 0xff;
+            release_ioapic_regs();
 
         } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
-            if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
+            if (ioapic_regs->selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
                 LOG_APIC("Written to I/O APIC ID register: 0x%lx\n", data);
-            } else if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
+                release_ioapic_regs();
+            } else if (ioapic_regs->selected_reg == REG_IOAPIC_IOAPICVER_REG_OFF) {
                 LOG_APIC("Written to I/O APIC VER register: 0x%lx\n", data);
-            } else if (ioapic_regs.selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
-                       && ioapic_regs.selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
-                int redirection_reg_idx = ((ioapic_regs.selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
+                release_ioapic_regs();
+            } else if (ioapic_regs->selected_reg >= REG_IOAPIC_IOREDTBL_FIRST_OFF
+                       && ioapic_regs->selected_reg <= REG_IOAPIC_IOREDTBL_LAST_OFF) {
+                int redirection_reg_idx = ((ioapic_regs->selected_reg - REG_IOAPIC_IOREDTBL_FIRST_OFF) & ~((uint64_t)1))
                                         / 2;
-                int is_high = ioapic_regs.selected_reg & 0x1;
+                int is_high = ioapic_regs->selected_reg & 0x1;
 
-                uint64_t old_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
+                uint64_t old_reg = ioapic_regs->ioredtbl[redirection_reg_idx];
 
                 if (is_high) {
                     uint64_t new_high = data << 32;
-                    uint64_t low = ioapic_regs.ioredtbl[redirection_reg_idx] & 0xffffffff;
-                    ioapic_regs.ioredtbl[redirection_reg_idx] = low | new_high;
+                    uint64_t low = ioapic_regs->ioredtbl[redirection_reg_idx] & 0xffffffff;
+                    ioapic_regs->ioredtbl[redirection_reg_idx] = low | new_high;
                 } else {
-                    uint64_t high = (ioapic_regs.ioredtbl[redirection_reg_idx] >> 32) << 32;
+                    uint64_t high = (ioapic_regs->ioredtbl[redirection_reg_idx] >> 32) << 32;
                     uint64_t new_low = data & 0xffffffff;
-                    ioapic_regs.ioredtbl[redirection_reg_idx] = new_low | high;
+                    ioapic_regs->ioredtbl[redirection_reg_idx] = new_low | high;
                 }
 
-                uint64_t new_reg = ioapic_regs.ioredtbl[redirection_reg_idx];
+                uint64_t new_reg = ioapic_regs->ioredtbl[redirection_reg_idx];
 
                 LOG_APIC("ioapic pin %d reprogram 0x%lx, masked %d\n", redirection_reg_idx, new_reg,
-                         !!(ioapic_regs.ioredtbl[redirection_reg_idx] & BIT(16)));
+                         !!(ioapic_regs->ioredtbl[redirection_reg_idx] & BIT(16)));
 
                 // If an I/O APIC IRQ pin goes from masked to unmasked and there are passed through
                 // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
                 // in the virtual I/O APIC, the real IRQ doesn't get stuck in waiting for ACK.
+                virq_ioapic_ack_fn_t ack_fn = NULL;
+                int ack_pin;
+                void *ack_data;
                 if ((old_reg & BIT(16)) && !(new_reg & BIT(16))) {
                     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-                        if (i == redirection_reg_idx) {
-                            if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                                ioapic_regs.virq_passthrough_map[i].ack_fn(
-                                    0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                        if (i == redirection_reg_idx /* pin */) {
+                            if (ioapic_regs->virq_passthrough_map[i].ack_fn) {
+                                ack_fn = ioapic_regs->virq_passthrough_map[i].ack_fn;
+                                ack_pin = i;
+                                ack_data = ioapic_regs->virq_passthrough_map[i].ack_data;
                             }
                             break;
                         }
                     }
                 }
 
+                release_ioapic_regs();
+                if (ack_fn) {
+                    ack_fn(0, ack_pin, ack_data);
+                }
+
             } else {
-                LOG_VMM_ERR("Writing unknown I/O APIC register offset 0x%x\n", ioapic_regs.selected_reg);
-                return false;
+                LOG_VMM_ERR("Writing unknown I/O APIC register offset 0x%x\n", ioapic_regs->selected_reg);
+                release_ioapic_regs();
+                success = false;
             }
         } else {
             LOG_VMM_ERR("Writing unknown I/O APIC MMIO register 0x%lx\n", offset);
-            return false;
+            release_ioapic_regs();
+            success = false;
         }
     }
 
-    return true;
+    return success;
 }
 
 bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
@@ -772,20 +805,23 @@ bool inject_ioapic_irq(int ioapic, int pin)
         return false;
     }
 
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+
     /* Check if the irq line is masked. */
-    if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
+    if (ioapic_regs->ioredtbl[pin] & BIT(16)) {
+        release_ioapic_regs();
         return false;
     }
 
     // @billn sus revisit delivery mode 1 for multiple vcpu
-    uint8_t delivery_mode = (ioapic_regs.ioredtbl[pin] >> 8) & 0x7;
+    uint8_t delivery_mode = (ioapic_regs->ioredtbl[pin] >> 8) & 0x7;
     if (delivery_mode != 0 && delivery_mode != 1) {
         LOG_VMM_ERR("unknown I/O APIC delivery mode for injection on pin %d, mode 0x%x\n", pin, delivery_mode);
         assert(false);
     }
 
     // @billn sus only support edge triggered interrupts right now
-    uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
+    uint8_t level_trigger = (ioapic_regs->ioredtbl[pin] >> 15) & 0x1;
     assert(!level_trigger);
 
     uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
@@ -820,10 +856,12 @@ bool inject_ioapic_irq(int ioapic, int pin)
         }
         default:
             LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
-            return false;
+            assert(false);
         }
     }
 #endif
+
+    release_ioapic_regs();
 
     // @billn need to read cpu id from redirection register, revisit for multi vcpu
     return inject_lapic_irq(0, vector);
@@ -831,12 +869,19 @@ bool inject_ioapic_irq(int ioapic, int pin)
 
 bool ioapic_ack_passthrough_irq(uint8_t vector)
 {
+    virq_ioapic_ack_fn_t ack_fn = NULL;
+    int ack_pin;
+    void *ack_data;
+    struct ioapic_regs *ioapic_regs = acquire_ioapic_regs();
+
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
+        if (ioapic_regs->virq_passthrough_map[i].valid) {
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == vector) {
-                if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                    ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                if (ioapic_regs->virq_passthrough_map[i].ack_fn) {
+                    ack_fn = ioapic_regs->virq_passthrough_map[i].ack_fn;
+                    ack_pin = i;
+                    ack_data = ioapic_regs->virq_passthrough_map[i].ack_data;
 
 #if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
                     /* Now clear the vector's bit in EOI exit bitmap */
@@ -873,14 +918,19 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
                     }
                     default:
                         LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
-                        return false;
+                        assert(false);
                     }
 #endif
-
-                    return true;
+                    break;
                 }
             }
         }
+    }
+
+    release_ioapic_regs();
+    if (ack_fn) {
+        ack_fn(0, ack_pin, ack_data);
+        return true;
     }
 
     return false;
