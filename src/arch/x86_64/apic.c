@@ -331,7 +331,7 @@ void lapic_write_eoi(void)
                 if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
                     ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
                 }
-                return;
+                break;
             }
         }
     }
