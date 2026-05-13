@@ -305,7 +305,7 @@ pub fn build(b: *std.Build) !void {
         const qemu_cmd = b.addSystemCommand(&[_][]const u8{
             "qemu-system-x86_64",
             "-cpu",
-            "Nehalem,+fsgsbase,+pdpe1gb,+pcid,+invpcid,+xsave,+xsaves,+xsaveopt,+vmx,+vme",
+            "host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme",
             "-accel",
             "kvm",
             "-m",
