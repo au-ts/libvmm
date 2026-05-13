@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <libvmm/guest_ram.h>
 
 #define GUEST_BOOT_VCPU_ID 0UL
 
@@ -23,10 +24,16 @@
 typedef struct guest {
     size_t num_vcpus;
     bool vcpu_on_state[GUEST_MAX_NUM_VCPUS];
+
+    size_t guest_ram_regions_len;
+    struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
 } guest_t;
 
 typedef struct arch_guest_init {
     size_t num_vcpus;
+
+    size_t num_guest_ram_regions;
+    struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
 } arch_guest_init_t;
 
 /* Initialise the architecture specific subsystems of the VMM library such as the

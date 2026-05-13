@@ -22,9 +22,27 @@ bool guest_init(arch_guest_init_t init_args)
         return false;
     }
 
+    if (init_args.num_guest_ram_regions == 0) {
+        LOG_VMM_ERR("number of guest RAM regions must be greater than zero");
+        return false;
+    }
+
+    if (init_args.num_guest_ram_regions > GUEST_MAX_RAM_REGIONS) {
+        LOG_VMM_ERR("number of guest RAM regions (%lu) is more than maximum (%d)", init_args.num_guest_ram_regions,
+                    GUEST_MAX_RAM_REGIONS);
+        return false;
+    }
+
     guest.num_vcpus = init_args.num_vcpus;
     for (int i = 0; i < guest.num_vcpus; i++) {
         guest.vcpu_on_state[i] = false;
+    }
+
+    for (int i = 0; i < init_args.num_guest_ram_regions; i++) {
+        if (!guest_ram_add_region(init_args.guest_ram_regions[i])) {
+            LOG_VMM_ERR("failed to bookkeep RAM region\n");
+            return false;
+        }
     }
 
     /* Initialise the virtual GIC driver */
@@ -44,7 +62,7 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
      * any other kind of guest. However, even though the library is open to supporting other
      * guests, there is no point in prematurely generalising this code.
      */
-    seL4_UserContext regs = {0};
+    seL4_UserContext regs = { 0 };
     regs.x0 = dtb;
     regs.spsr = 5; // PMODE_EL1h
     regs.pc = kernel_pc;
