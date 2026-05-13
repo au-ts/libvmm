@@ -46,7 +46,6 @@ const src_x86_64 = [_][]const u8{
     "src/arch/x86_64/instruction.c",
     "src/arch/x86_64/pci.c",
     "src/arch/x86_64/ioports.c",
-    "src/arch/x86_64/util.c",
     "src/arch/x86_64/tsc.c",
     "src/arch/x86_64/guest_time.c",
     "src/arch/x86_64/guest_ram.c",

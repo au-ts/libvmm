@@ -78,6 +78,16 @@ bool guest_init(arch_guest_init_t init_args)
     return true;
 }
 
+bool guest_paging_on(void)
+{
+    return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_CR0) & BIT(31);
+}
+
+bool guest_in_64_bits(void)
+{
+    return guest_paging_on() && (microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER) & BIT(10));
+}
+
 bool guest_start_long_mode(uint64_t kernel_rip, uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit,
                            seL4_VCPUContext *initial_regs)
 {

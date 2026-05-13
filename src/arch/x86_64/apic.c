@@ -12,7 +12,6 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/virq.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>

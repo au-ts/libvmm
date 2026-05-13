@@ -14,7 +14,6 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/fault.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <sel4/arch/vmenter.h>
 
 struct vcpu_fault_state {

@@ -18,7 +18,6 @@
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/fpu.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
@@ -31,6 +30,10 @@
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  * [3] https://wiki.osdev.org/Interrupt_Vector_Table
  */
+
+/* [2] Table 29-7. "Exit Qualification for EPT Violations" */
+#define EPT_VIOLATION_READ_BIT BIT(0)
+#define EPT_VIOLATION_WRITE_BIT BIT(1)
 
 /* Exit reasons.
  * From [1]
@@ -165,7 +168,7 @@ char *fault_to_string(int exit_reason)
     return exit_reason_strs[exit_reason];
 }
 
-bool fault_is_trap_like(int exit_reason)
+static bool fault_is_trap_like(int exit_reason)
 {
     switch (exit_reason) {
     case APIC_WRITE:
@@ -176,6 +179,16 @@ bool fault_is_trap_like(int exit_reason)
     default:
         return false;
     }
+}
+
+bool ept_fault_is_read(seL4_Word qualification)
+{
+    return !!(qualification & EPT_VIOLATION_READ_BIT);
+}
+
+bool ept_fault_is_write(seL4_Word qualification)
+{
+    return !!(qualification & EPT_VIOLATION_WRITE_BIT);
 }
 
 struct ept_exception_handler {

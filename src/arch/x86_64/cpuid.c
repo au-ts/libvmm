@@ -9,7 +9,7 @@
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
-#include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/fault.h>
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual

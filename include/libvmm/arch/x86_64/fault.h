@@ -18,11 +18,20 @@
  *    Order Number: 325462-080US June 2023
  */
 
+// #define DEBUG_FAULT
+#if defined(DEBUG_FAULT)
+#define LOG_FAULT(...) do{ printf("%s|FAULT: ", microkit_name); printf(__VA_ARGS__); }while(0)
+#else
+#define LOG_FAULT(...) do{}while(0)
+#endif
+
 /* [1] "Table 6-1. Exceptions and Interrupts" */
 #define GP_VECTOR 13
 
-char *fault_to_string(int exit_reason);
+bool ept_fault_is_read(seL4_Word qualification);
+bool ept_fault_is_write(seL4_Word qualification);
 
+char *fault_to_string(int exit_reason);
 bool fault_handle(size_t vcpu_id);
 
 typedef bool (*ept_exception_callback_t)(size_t vcpu_id, size_t offset, size_t qualification,

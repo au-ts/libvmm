@@ -10,11 +10,26 @@
 #include <libvmm/guest.h>
 #include <libvmm/guest_ram.h>
 #include <libvmm/util/util.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 
 #define X86_PAGING_OBJECT_SIZE 0x1000
+
+static uint64_t pte_to_gpa(uint64_t pte)
+{
+    assert(pte & 1);
+    return pte & 0xffffffffff000;
+}
+
+static bool pte_present(uint64_t pte)
+{
+    return pte & BIT(0);
+}
+
+static bool pt_page_size(uint64_t pte)
+{
+    return pte & BIT(7);
+}
 
 bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remaining)
 {

@@ -69,6 +69,8 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd);
 void guest_stop();
 bool guest_restart(uintptr_t guest_ram_vaddr, size_t guest_ram_size);
 #elif defined(CONFIG_ARCH_X86_64)
+bool guest_paging_on(void);
+bool guest_in_64_bits(void);
 bool guest_start_long_mode(uint64_t kernel_rip, uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit,
                            seL4_VCPUContext *initial_regs);
 #else

@@ -10,7 +10,7 @@
 #include <libvmm/arch/x86_64/msr.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
-#include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 

@@ -10,7 +10,6 @@
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/vcpu.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/guest.h>
