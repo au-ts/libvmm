@@ -34,12 +34,6 @@ struct linux_image_header {
 // Note that this function assumes that the `kernel` parameter is aligned
 // to at least the alignment of `struct linux_image_header`. The `dtb_src`
 // paramter must be aligned to at least the alignment of `struct dtb_header`.
-uintptr_t linux_setup_images(uintptr_t ram_start,
-                             uintptr_t kernel,
-                             size_t kernel_size,
-                             uintptr_t dtb_src,
-                             uintptr_t dtb_dest,
-                             size_t dtb_size,
-                             uintptr_t initrd_src,
-                             uintptr_t initrd_dest,
-                             size_t initrd_size);
+uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t kernel_size, uintptr_t dtb_src,
+                            uint64_t dtb_dest_gpa, size_t dtb_size, uintptr_t initrd_src, uint64_t initrd_dest_gpa,
+                            size_t initrd_size);
