@@ -344,7 +344,8 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
         }
     }
 
-    return emulate_ioports(vctx, qualification);
+    emulate_ioport_noop_access(vctx, qualification);
+    return true;
 }
 
 bool fault_handle(size_t vcpu_id)

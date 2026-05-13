@@ -15,4 +15,4 @@ bool pio_fault_is_string_op(seL4_Word qualification);
 uint16_t pio_fault_addr(seL4_Word qualification);
 int pio_fault_to_access_width_bytes(seL4_Word qualification);
 
-bool emulate_ioports(seL4_VCPUContext *vctx, uint64_t f_qualification);
+void emulate_ioport_noop_access(seL4_VCPUContext *vctx, uint64_t f_qualification);
