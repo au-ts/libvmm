@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
-#include <libvmm/arch/x86_64/util.h>
 #include <libvmm/arch/x86_64/ioports.h>
 #include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/instruction.h>

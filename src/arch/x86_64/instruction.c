@@ -9,7 +9,7 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/instruction.h>
-#include <libvmm/arch/x86_64/util.h>
+#include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/util/util.h>
 #include <libvmm/guest.h>
 #include <libvmm/guest_ram.h>
