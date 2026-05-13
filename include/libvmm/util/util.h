@@ -68,3 +68,6 @@ static void assert_fail(
 
 #endif
 #endif
+
+/* Returns true if two [x..y) ranges overlap. */
+bool ranges_overlap(uint64_t left_start, uint64_t left_size, uint64_t right_start, uint64_t right_size);
