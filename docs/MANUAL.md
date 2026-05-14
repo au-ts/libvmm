@@ -66,21 +66,23 @@ The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
-[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system),
+[the QEMU example system](../examples/simple/board/qemu_virt_aarch64/simple.system):
 
 ```xml
-<memory_region name="guest_ram" size="0x10_000_000" />
-<memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
+<memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+<memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
 <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
 <protection_domain name="VMM" priority="254">
     <program_image path="vmm.elf" />
     <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
-    <virtual_machine name="linux" id="0">
+    <virtual_machine name="linux" >
+        <vcpu id="0" />
         <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
-        <map mr="uart" vaddr="0x9000000" perms="rw" />
-        <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
+        <map mr="serial" vaddr="0x9000000" perms="rw" cached="false" />
+        <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
     </virtual_machine>
+    <irq irq="33" id="1" />
 </protection_domain>
 ```
 
@@ -91,7 +93,7 @@ interrupts to the guest and restarting the guest.
 
 You will also see that three memory regions (MRs) exist in the system.
 1. `guest_ram` for the guest's RAM region
-2. `uart` for the UART serial device
+2. `serial` for the UART serial device
 3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface
 
 ## Guest RAM region
@@ -272,6 +274,9 @@ The following feature bits are implemented:
 
 * VIRTIO_BLK_F_FLUSH
 * VIRTIO_BLK_F_BLK_SIZE
+* VIRTIO_BLK_F_SIZE_MAX
+* VIRTIO_BLK_F_SEG_MAX
+* VIRTIO_BLK_F_TOPOLOGY
 
 The legacy interface is not supported.
 
