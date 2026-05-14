@@ -38,8 +38,7 @@ know by [opening an issue on the GitHub repository](https://github.com/au-ts/lib
 
 ## Supported architectures and platforms
 
-Currently only AArch64 is supported in libvmm. Support for RISC-V is in progress,
-with x86 to be potentially added in the future.
+Currently only AArch64 and x86-64 are supported in libvmm. Support for RISC-V is in progress.
 
 libvmm aims to be architecture-dependent, but not platform dependent.
 
@@ -49,6 +48,20 @@ are supported and instructions for building and running the example.
 
 If your desired platform is not supported by any examples, please see the section on
 [adding your own platform support](#adding-platform-support).
+
+### x86-64 hardware requirements
+To run the VMM, you will need a host with an Intel 64-bit CPU and VT-x enabled in your BIOS.
+AMD CPUs aren't supported as the seL4 kernel does not implement their virtualisation extension
+at the moment.
+
+Virtualising the VMM on QEMU is supported, though if you are on WSL2, you might see Linux
+complaining:
+```
+[   57.377976] clocksource: timekeeping watchdog on CPU0: hpet wd-wd read-back delay of 602100ns
+[   57.381493] clocksource: wd-tsc-wd read-back delay of 521600ns, clock-skew test skipped!
+```
+This is normal for WSL2 due to the higher overhead of triple nested virtualisation. You
+won't see this problem on bare-metal or QEMU on bare-metal Linux.
 
 # Creating a system using Microkit
 
@@ -65,6 +78,7 @@ where the Makefile will look when you pass the `SYSTEM` argument.
 The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
+### AArch64
 The following is essentially what is in
 [the QEMU example system](../examples/simple/board/qemu_virt_aarch64/simple.system):
 
@@ -96,6 +110,54 @@ You will also see that three memory regions (MRs) exist in the system.
 2. `serial` for the UART serial device
 3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface
 
+### x86-64
+There are more components involved on x86, the following is what is in
+[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system):
+
+```xml
+<memory_region name="hpet_regs" size="0x1000" phys_addr="0xfed00000" />
+<memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+
+<protection_domain name="VMM" priority="0" stack_size="0x2000">
+    <program_image path="vmm.elf" />
+    <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+    <virtual_machine name="linux">
+        <vcpu id="0"/>
+        <map mr="guest_ram" vaddr="0" perms="rwx" cached="true" />
+    </virtual_machine>
+
+    <ioport id="0" addr="0x3f8" size="8" />
+    <irq pin="4" vector="41" id="1" ioapic="0" trigger="edge"/>
+</protection_domain>
+
+<protection_domain name="timer_driver" priority="254" passive="true">
+    <program_image path="timer_driver.elf" />
+    <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
+    <irq pin="2" vector="107" id="0" ioapic="0" trigger="edge" />
+</protection_domain>
+
+<channel>
+    <end pd="timer_driver" id="1" />
+    <end pd="VMM" id="10" notify="false" pp="true" />
+</channel>
+```
+
+The general structure of the protection domain is the same, but the underlying
+implementation detail is different. There is only 1 TCB and 1 VCPU object inside
+the VMM protection domain. The VMM switches between guest and non-guest execution
+mode depends on the current state of the virtual machine.
+
+There is no dedicated memory region for virtualising the APIC, as currently we
+only provide a software emulated one so all the state are kept inside a
+statically allocated structure.
+
+For serial output, we passthrough the host's COM1 port (0x3f8) and IRQ (pin 4)
+to the guest.
+
+You will also see that there is a timer driver for the VMM. This is for the VMM
+to measure the frequency of the CPU's Time Stamp Counter (TSC) in case where it
+cannot be inferred.
+
 ## Guest RAM region
 
 Since the guest does not necessarily know it is being virtualised, it will
@@ -116,14 +178,14 @@ the starting address of the guest's RAM. There is no requirements for the
 VMM virtual address and guest physical address of RAM to match, as the VMM
 will automatically translate them as necessary during the fault handling process.
 
-## UART device region
+## UART device passthrough
 
 The UART device is passed through to the guest so that it can access it without
 trapping into the seL4 kernel/VMM. This is done for performance and simplicity
 so that the VMM does not have to emulate accesses to the UART device. Note that
 this will work since nothing else is concurrently accessing the device.
 
-## GIC virtual CPU interface region
+## ARM GIC virtual CPU interface region
 
 The GIC vCPU interface is used to virtualise the CPU interface for a guest.
 
@@ -151,6 +213,8 @@ libvmm expects the vCPU IDs to be consecutive, with zero being the boot vCPU ID.
 
 When making use of multiple vCPUs make sure that the guest is aware there are
 multiple CPUs enabled (e.g in the Device Tree).
+
+Support for multiple vCPUs on x86 is in progress.
 
 # Passthrough
 
@@ -200,6 +264,8 @@ Note that not all devices encode interrupts the same.
 
 ## Passing through DMA devices
 
+### ARM
+
 Devices which communicate through DMA see the world through host physical
 addresses, however virtual machines will give devices guest physical addresses
 (i.e., host virtual addresses).  In order for DMA passthrough to work, these two
@@ -207,14 +273,22 @@ addresses must be aligned. This can be done by setting the `phys_addr` of the
 guest's RAM to be the same as what you declares as RAM start in the guest DTS.
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" phys_addr="0x20000000" page_size="0x200_000" />
-<protection_domain ...>
-    <virtual_machine ...>
-        <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
-        <!-- ... -->
-    </virtual_machine>
-    <!-- ... -->
-</protection_domain>
 ```
+
+```
+memory@20000000 {
+    reg = <0x00 0x20000000 0x00 0x80000000>;
+    device_type = "memory";
+};
+```
+
+### x86
+
+This is currently unsupported because guest RAM starts from guest physical address zero, and you can't start
+memory regions from zero.
+
+To solve this we need to use the IOMMU (Intel VT-d),
+support for this is being worked on.
 
 # virtIO
 
@@ -312,7 +386,7 @@ BARs are assumed to be 32-bit.
 These limitations exist because for our current use-cases this PCI support is sufficient,
 however the functionality can be extended if needed.
 
-# Adding platform support
+# Adding ARM platform support
 
 The library itself is intended to need minimal changes to add a new platform.
 
