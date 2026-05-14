@@ -102,19 +102,78 @@ static uint64_t get_tsc_frequency(void)
     return tsc_hz;
 }
 
+/* How many time to try to measure the TSC frequency */
+#define MAX_MEASUREMENT_ATTEMPT 10000
+/* How long should the delay loop goes for */
+#define DELAY_LOOP_ITER 100000000
+/* We accept a 1 MHz TSC frequency error */
+#define ACCEPTABLE_TSC_HZ_ERROR 1000000
+/* How many consecutive TSC Hz measurement attempts must be within `ACCEPTABLE_TSC_HZ_ERROR` of each others */
+#define NUM_CONSECUTIVE_MEASURES 5
+
 static uint64_t measure_tsc_frequency(microkit_channel timer_ch)
 {
-    /* Measure TSC frequency */
-    uint64_t unused, tsc_pre, tsc_post;
-    // @billn hack
-    tsc_pre = rdtsc();
-    sddf_timer_set_timeout(timer_ch, NS_IN_S);
-    seL4_Wait(BASE_ENDPOINT_CAP + timer_ch, &unused);
-    tsc_post = rdtsc();
+    /* Since the timestamp from the timer driver is in nanoseconds, we can use that to
+     * measure the TSC frequency with a high degree of accuracy. But we will need to
+     * careful since we maybe preempted at anytime during the measurement process. */
 
-    uint64_t tsc_hz = tsc_post - tsc_pre;
-    LOG_TSC("measured TSC frequency %lu Hz\n", tsc_hz);
-    return tsc_hz;
+    bool measured_ok = false;
+    uint64_t tsc_hz_attempts[NUM_CONSECUTIVE_MEASURES] = { 0 };
+
+    int i = 0;
+    uint64_t tsc_hz, tsc_pre, tsc_post, tsc_delta, ns_pre, ns_post, ns_delta, final_hz;
+    for (; i < MAX_MEASUREMENT_ATTEMPT && !measured_ok; i++) {
+
+        tsc_pre = rdtsc();
+        ns_pre = sddf_timer_time_now(timer_ch);
+
+        volatile int j = 0;
+        while (j < DELAY_LOOP_ITER) {
+            j++;
+        }
+
+        ns_post = sddf_timer_time_now(timer_ch);
+        tsc_post = rdtsc();
+
+        tsc_delta = tsc_post - tsc_pre;
+        ns_delta = ns_post - ns_pre;
+
+        /* NS timestamp is just a 1GHz counter so the math is simple. */
+        tsc_hz = (tsc_delta * 1000000000) / ns_delta;
+
+        tsc_hz_attempts[i % NUM_CONSECUTIVE_MEASURES] = tsc_hz;
+
+        if (i >= NUM_CONSECUTIVE_MEASURES - 1) {
+            uint64_t min_hz = tsc_hz_attempts[0];
+            uint64_t max_hz = tsc_hz_attempts[0];
+            uint64_t sum_hz = 0;
+
+            for (int k = 0; k < NUM_CONSECUTIVE_MEASURES; k++) {
+                uint64_t val = tsc_hz_attempts[k];
+                if (val < min_hz) {
+                    min_hz = val;
+                }
+                if (val > max_hz) {
+                    max_hz = val;
+                }
+                sum_hz += val;
+            }
+
+            if ((max_hz - min_hz) < ACCEPTABLE_TSC_HZ_ERROR) {
+                measured_ok = true;
+                final_hz = sum_hz / NUM_CONSECUTIVE_MEASURES;
+            }
+        }
+    }
+
+    if (measured_ok) {
+        LOG_TSC("measured TSC frequency %lu Hz in %d attempts\n", tsc_hz_attempts[0], i);
+        return final_hz;
+    } else {
+        LOG_VMM_ERR("could not measure TSC frequency to %d Hz error within %d attempts\n", ACCEPTABLE_TSC_HZ_ERROR,
+                    MAX_MEASUREMENT_ATTEMPT);
+        return 0;
+    }
 }
 
 uint64_t get_host_tsc_hz(microkit_channel timer_ch)
@@ -131,7 +190,7 @@ uint64_t get_host_tsc_hz(microkit_channel timer_ch)
     }
 
     if (!tsc_hz) {
-        /* Likely running on QEMU under nested virtualisation. QEMU doesn't enumerate TSC cpuid leafs */
+        /* Likely running on QEMU as nested virtualisation. QEMU doesn't enumerate TSC cpuid leafs */
         tsc_hz = measure_tsc_frequency(timer_ch);
     }
 
