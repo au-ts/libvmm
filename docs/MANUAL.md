@@ -112,11 +112,9 @@ that it has access to its own RAM.
 
 We can see that the region is mapped into the VMM with
 `setvar_vaddr="guest_ram_vaddr"`. The VMM expects that variable to contain
-the starting address of the guest's RAM. With the current implementation of the
-VMM, it expects that the virtual address of the guest RAM that is mapped into
-the VMM as well as the guest physical address of the guest RAM to be the same.
-This is done for simplicity at the moment, but could be changed in the future
-if someone had a strong desire for the two values to not be coupled.
+the starting address of the guest's RAM. There is no requirements for the
+VMM virtual address and guest physical address of RAM to match, as the VMM
+will automatically translate them as necessary during the fault handling process.
 
 ## UART device region
 
@@ -206,7 +204,7 @@ Devices which communicate through DMA see the world through host physical
 addresses, however virtual machines will give devices guest physical addresses
 (i.e., host virtual addresses).  In order for DMA passthrough to work, these two
 addresses must be aligned. This can be done by setting the `phys_addr` of the
-guest's RAM to be the same as its mapped virtual address.
+guest's RAM to be the same as what you declares as RAM start in the guest DTS.
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" phys_addr="0x20000000" page_size="0x200_000" />
 <protection_domain ...>
