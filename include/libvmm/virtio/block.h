@@ -135,8 +135,11 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_SECTOR_SIZE 512
 
 /* Device (backend) implementation */
-#define SDDF_BLK_NUM_HANDLES 1
-#define SDDF_BLK_DEFAULT_HANDLE 0
+#define VIRTIO_BLK_SIZE_MAX BLK_TRANSFER_SIZE
+/* Restrict the guest driver to only send 8x 4K segment per request at any given time.
+This is to prevent internal fragmentation within the data region, leading to a deadlock
+where we can't handle large requests when the free cells in the data region isn't contiguous. */
+#define VIRTIO_BLK_SEG_MAX 8
 // TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
 #define SDDF_MAX_DATA_CELLS 128
@@ -147,10 +150,9 @@ struct virtio_blk_outhdr {
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
 typedef enum {
-    STATE_FLUSHING,
+    STATE_FLUSHING = 1,
     STATE_READING,
     STATE_WRITING_ALIGNED,
-    /* Read-modify-write for sectors not aligned on sDDF block transfer size */
     STATE_RMW_QUEUEING,
     STATE_RMW_READING,
     STATE_RMW_WRITING,
@@ -160,17 +162,23 @@ typedef enum {
  * from a virtio request so that it can be later retrieved when converting a
  * virtio response from sddf response.
  */
+struct reqbk_data_desc {
+    uint64_t gpa;
+    uint64_t size;
+};
+
 typedef struct reqbk {
     bool valid;
     /* Descriptor head of the virtio request */
     uint16_t virtio_desc_head;
+    uint32_t virtio_req_type;
+    uint64_t virtio_sector;
+    uint64_t total_req_size;
     /* For enqueuing sddf req/resp */
-    uintptr_t sddf_data_cell_base;
-    uint16_t sddf_count;
     uint32_t sddf_block_number;
-    uintptr_t sddf_data;
-    /* The size of data contained in virtio request */
-    uint32_t virtio_body_size_bytes;
+    uintptr_t sddf_data_cell_base;
+    uint32_t sddf_data_offset;
+    uint16_t sddf_count;
     request_state_t state;
 } reqbk_t;
 
