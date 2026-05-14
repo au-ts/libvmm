@@ -20,6 +20,9 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
+/* RAM base in guest physical address space depends on what's defined in your DTB. */
+#define GUEST_RAM_START_GPA 0x40000000
+
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -54,6 +57,18 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
+    arch_guest_init_t args = {
+        .num_vcpus = 1,
+        .num_guest_ram_regions = 1,
+        .guest_ram_regions = { (struct guest_ram_region) {
+            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } }
+    };
+    bool success = guest_init(args);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise guest\n");
+        return;
+    }
+
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
                    blk_config.virt.num_buffers);
     /* Want to print out configuration information, so wait until the config is ready. */
@@ -68,25 +83,11 @@ void init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(vmm_config.ram,
-                                             (uintptr_t) _guest_kernel_image,
-                                             kernel_size,
-                                             (uintptr_t) _guest_dtb_image,
-                                             vmm_config.dtb,
-                                             dtb_size,
-                                             (uintptr_t) _guest_initrd_image,
-                                             vmm_config.initrd,
-                                             initrd_size
-                                            );
+    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
+                                             (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
+                                             (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
-
-    arch_guest_init_t args = { .num_vcpus = 1 };
-    bool success = guest_init(args);
-    if (!success) {
-        LOG_VMM_ERR("Failed to initialise the guest\n");
         return;
     }
 
@@ -118,12 +119,10 @@ void init(void)
                       serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(&virtio_console,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].base,
+    success = virtio_mmio_console_init(&virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq,
-                                       &serial_rx_queue, &serial_tx_queue,
-                                       serial_config.tx.id);
+                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq, &serial_rx_queue,
+                                       &serial_tx_queue, serial_config.tx.id);
     assert(success);
 
     /* Initialise virtIO block device */
@@ -140,15 +139,11 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
-    success = virtio_mmio_net_init(&virtio_net,
-                                   vmm_config.virtio_mmio_devices[net_vdev_idx].base,
+    success = virtio_mmio_net_init(&virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
                                    vmm_config.virtio_mmio_devices[net_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[net_vdev_idx].irq,
-                                   &net_rx_queue, &net_tx_queue,
+                                   vmm_config.virtio_mmio_devices[net_vdev_idx].irq, &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                   net_config.rx.id, net_config.tx.id,
-                                   net_config.mac_addr
-                                  );
+                                   net_config.rx.id, net_config.tx.id, net_config.mac_addr);
     assert(success);
 
     /* Finally start the guest */

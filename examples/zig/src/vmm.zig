@@ -12,9 +12,11 @@ const GUEST_BOOT_VCPU_ID = 0;
 // There are the hard-coded addresses that both the VMM and Linux guest need
 // to be aware of. For example the address of the DTB and initial RAM disk are
 // passed to Linux when booting it.
-const GUEST_RAM_VADDR: usize = 0x40000000;
-const GUEST_DTB_VADDR: usize = 0x4f000000;
-const GUEST_INIT_RAM_DISK_VADDR: usize = 0x4d700000;
+const GUEST_RAM_VMM_VADDR: usize = 0x40000000;
+// For ARM, these constants depends on what's defined in your DTB.
+const GUEST_RAM_START_GPA: usize = 0x40000000;
+const GUEST_DTB_GPA: usize = 0x4f000000;
+const GUEST_INIT_RAM_DISK_GPA: usize = 0x4d700000;
 const GUEST_RAM_SIZE: usize = 0x10000000;
 
 // Below we make use of Zig's '@embedFile' builtin functions to easily include
@@ -87,33 +89,46 @@ const SERIAL_IRQ: i32 = 33;
 export fn init() callconv(.c) void {
     // Initialise the VMM, the VCPU(s), and start the guest
     log.info("starting", .{});
+
+    if (!c.guest_init(.{
+        .num_vcpus = 1,
+        .num_guest_ram_regions = 1,
+        .guest_ram_regions = .{
+            .{
+                .gpa_start = GUEST_RAM_START_GPA,
+                .size = GUEST_RAM_SIZE,
+                .vmm_vaddr = @ptrFromInt(GUEST_RAM_VMM_VADDR),
+            },
+        }
+    })) {
+        log.err("Failed to initialise guest\n", .{});
+        return;
+    }
+
     // Place all the binaries in the right locations before starting the guest
     const kernel_pc = c.linux_setup_images(
-                GUEST_RAM_VADDR,
+                GUEST_RAM_START_GPA,
                 @intFromPtr(guest_kernel_image),
                 guest_kernel_image.len,
                 @intFromPtr(guest_dtb_image),
-                GUEST_DTB_VADDR,
+                GUEST_DTB_GPA,
                 guest_dtb_image.len,
                 @intFromPtr(guest_initrd_image),
-                GUEST_INIT_RAM_DISK_VADDR,
+                GUEST_INIT_RAM_DISK_GPA,
                 guest_initrd_image.len
             );
     if (kernel_pc == 0) {
         log.err("Failed to initialise guest images\n", .{});
         return;
     }
-    if (!c.guest_init(.{ .num_vcpus = 1 })) {
-        log.err("Failed to initialise guest\n", .{});
-        return;
-    }
+
     // Register the interrupt for the UART with the virtual interrupt controller
     if (!c.virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH)) {
         log.err("Failed to register serial IRQ\n", .{});
         return;
     }
     // Finally we can start the guest
-    if (!c.guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR)) {
+    if (!c.guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA)) {
         log.err("Failed to start guest\n", .{});
         return;
     }
