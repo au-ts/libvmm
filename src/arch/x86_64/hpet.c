@@ -51,8 +51,6 @@
 #define COUNTER_CLK_PERIOD_SHIFT 32
 // Legacy IRQ replacement capable (replace the old PIT)
 #define LEG_RT_CAP BIT(15)
-// 64-bit main counter
-#define COUNT_SIZE_CAP BIT(13)
 // 3 comparators
 #define NUM_TIM_CAP_VAL 2ul // last index
 #define NUM_TIM_CAP_SHIFT 8
@@ -66,7 +64,6 @@
 // Comparator config register
 #define Tn_32MODE_CNF BIT(8) // if software set this bit, comparator is in 32 bits mode
 #define Tn_VAL_SET_CNF BIT(6) // Software writes 1 to this bit to change the comparator
-#define Tn_SIZE_CAP BIT(5) // 64-bit
 #define Tn_PER_INT_CAP BIT(4) // Periodic capable
 #define Tn_INT_ENB_CNF BIT(2) // irq on
 #define Tn_INT_TYPE_CNF BIT(1) // irq type, 0 = edge, 1 = level
@@ -82,9 +79,9 @@
 struct comparator_regs {
     uint64_t config;
     uint64_t config_mask;
-    uint64_t current_comparator;
-    uint64_t armed_comparator;
-    uint64_t comparator_increment;
+    uint32_t current_comparator;
+    uint32_t armed_comparator;
+    uint32_t comparator_increment;
 
     bool timeout_handle_valid;
     guest_timeout_handle_t timeout_handle;
@@ -97,27 +94,26 @@ struct hpet_regs {
     struct comparator_regs comparators[NUM_TIM_CAP_VAL + 1];
 };
 
-static uint64_t hpet_frozen_counter = 0;
-static uint64_t hpet_counter_offset = 0;
+static uint32_t hpet_frozen_counter = 0;
+static uint32_t hpet_counter_offset = 0;
 
-#define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID | COUNT_SIZE_CAP)
-#define TIM0_CONF_MASK (Tn_SIZE_CAP | Tn_PER_INT_CAP | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM1_CONF_MASK (Tn_SIZE_CAP | (BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
-#define TIM2_CONF_MASK (Tn_SIZE_CAP | (BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define GENERAL_CAP_MASK ((REV_ID | (NUM_TIM_CAP_VAL << NUM_TIM_CAP_SHIFT) | LEG_RT_CAP | (COUNTER_CLK_PERIOD_VAL << COUNTER_CLK_PERIOD_SHIFT)) | VENDOR_ID)
+#define TIM0_CONF_MASK (Tn_PER_INT_CAP | (BIT(TIM0_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM1_CONF_MASK ((BIT(TIM1_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
+#define TIM2_CONF_MASK ((BIT(TIM2_IOAPIC_PIN) << Tn_INT_ROUTE_CAP_SHIFT))
 
 static struct hpet_regs hpet_regs = {
-    // 64-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, and
-    // tick period = 10MHz
+    // 32-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, tick rate = 10MHz
     .general_capabilities = GENERAL_CAP_MASK,
     .comparators[0] = { .config = TIM0_CONF_MASK, .config_mask = TIM0_CONF_MASK, .timeout_handle_valid = false },
     .comparators[1] = { .config = TIM1_CONF_MASK, .config_mask = TIM1_CONF_MASK, .timeout_handle_valid = false },
     .comparators[2] = { .config = TIM2_CONF_MASK, .config_mask = TIM2_CONF_MASK, .timeout_handle_valid = false },
 };
 
-static uint64_t time_now_64(void)
+static uint32_t time_now_32(void)
 {
     // Convert TSC to 10 Mhz
-    return convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), HPET_MAIN_COUNTER_HZ);
+    return convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), HPET_MAIN_COUNTER_HZ) & 0xffffffff;
 }
 
 static bool counter_on(void)
@@ -125,10 +121,10 @@ static bool counter_on(void)
     return (hpet_regs.general_config & ENABLE_CNF);
 }
 
-static uint64_t main_counter_value(void)
+static uint32_t main_counter_value(void)
 {
     if (counter_on()) {
-        return time_now_64() - hpet_counter_offset;
+        return time_now_32() - hpet_counter_offset;
     } else {
         return hpet_frozen_counter;
     }
@@ -136,21 +132,7 @@ static uint64_t main_counter_value(void)
 
 static void reset_main_counter(void)
 {
-    hpet_counter_offset = time_now_64();
-}
-
-static bool timer_n_forced_32(int n)
-{
-    return !!(hpet_regs.comparators[n].config & Tn_32MODE_CNF);
-}
-
-static uint64_t counter_value_in_terms_of_timer(int n)
-{
-    uint64_t counter = main_counter_value();
-    if (timer_n_forced_32(n)) {
-        counter &= 0xffffffff;
-    }
-    return counter;
+    hpet_counter_offset = time_now_32();
 }
 
 static int timer_n_config_reg_mmio_off(int n)
@@ -192,16 +174,9 @@ static bool timer_n_irq_edge_triggered(int n)
     return (hpet_regs.comparators[n].config & Tn_INT_TYPE_CNF) == 0;
 }
 
-uint64_t timer_n_compute_timeout_delta_as_tsc(int n, uint64_t main_counter_val)
+uint64_t timer_n_compute_timeout_delta_as_tsc(int n, uint32_t main_counter_val)
 {
-    uint64_t delay_hpet_ticks = 0;
-
-    if (main_counter_val < hpet_regs.comparators[n].current_comparator) {
-        delay_hpet_ticks = hpet_regs.comparators[n].current_comparator - main_counter_val;
-    } else if (main_counter_val > hpet_regs.comparators[n].current_comparator && timer_n_forced_32(n)) {
-        delay_hpet_ticks = (uint32_t)hpet_regs.comparators[n].current_comparator - (uint32_t)main_counter_val;
-    }
-
+    uint32_t delay_hpet_ticks = hpet_regs.comparators[n].current_comparator - main_counter_val;
     return convert_ticks_by_frequency(delay_hpet_ticks, HPET_MAIN_COUNTER_HZ, guest_time_tsc_hz());
 }
 
@@ -212,7 +187,7 @@ void hpet_handle_timer_ntfn(uint64_t comparator)
     }
 
     if (comparator == 0) {
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
+        uint32_t main_counter_val = main_counter_value();
         if (timer_n_can_interrupt(0)) {
             int ioapic_pin = get_timer_n_ioapic_pin(0);
             if (!inject_ioapic_irq(0, ioapic_pin)) {
@@ -222,9 +197,6 @@ void hpet_handle_timer_ntfn(uint64_t comparator)
         if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment) {
             hpet_regs.comparators[0].current_comparator = main_counter_val
                                                         + hpet_regs.comparators[0].comparator_increment;
-            if (timer_n_forced_32(0)) {
-                hpet_regs.comparators[0].current_comparator &= 0xffffffff;
-            }
 
             uint64_t delay_tsc_ticks = timer_n_compute_timeout_delta_as_tsc(0, main_counter_val);
             if (delay_tsc_ticks) {
@@ -276,7 +248,7 @@ void hpet_maintenance(uint8_t comparator)
     assert(timer_n_irq_edge_triggered(2));
 
     if (comparator == 0) {
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(0);
+        uint32_t main_counter_val = main_counter_value();
 
         if (timer_n_in_periodic_mode(0) && hpet_regs.comparators[0].comparator_increment == 0) {
             // Halted
@@ -285,10 +257,6 @@ void hpet_maintenance(uint8_t comparator)
 
         // No need to update the comparator, as the guest's first write to comparator is already
         // timestamp + time out.
-
-        if (timer_n_forced_32(0)) {
-            hpet_regs.comparators[0].current_comparator &= 0xffffffff;
-        }
 
         LOG_HPET("hpet_maintenance(): timer 0 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(0),
                  timer_n_in_periodic_mode(0), timer_n_forced_32(0));
@@ -320,7 +288,7 @@ void hpet_maintenance(uint8_t comparator)
     }
 
     if (comparator == 1) {
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(1);
+        uint32_t main_counter_val = main_counter_value();
 
         LOG_HPET("hpet_maintenance(): timer 1 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(1),
                  timer_n_in_periodic_mode(1), timer_n_forced_32(1));
@@ -345,7 +313,7 @@ void hpet_maintenance(uint8_t comparator)
     }
 
     if (comparator == 2) {
-        uint64_t main_counter_val = counter_value_in_terms_of_timer(2);
+        uint32_t main_counter_val = main_counter_value();
 
         LOG_HPET("hpet_maintenance(): timer 2 can irq %d, is periodic %d, is 32b %d\n", timer_n_can_interrupt(2),
                  timer_n_in_periodic_mode(2), timer_n_forced_32(2));
@@ -528,7 +496,8 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             }
 
         } else if (offset == MAIN_COUNTER_VALUE_HIGH_MMIO_OFF) {
-            data = main_counter_value() >> 32;
+            /* 32-bit counter */
+            data = 0;
 
         } else if (hpet_fault_on_config(offset, &comparator)) {
             return hpet_fault_handle_config_read(comparator, &data, decoded_ins);
