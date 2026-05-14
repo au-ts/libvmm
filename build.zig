@@ -5,7 +5,8 @@ const std = @import("std");
 const LazyPath = std.Build.LazyPath;
 
 const src = [_][]const u8{
-    "src/guest.c",
+    "src/guest_ram.c",
+    "src/util/util.c",
     "src/virtio/mmio.c",
     "src/virtio/pci.c",
     "src/virtio/block.c",
@@ -20,6 +21,7 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/vgic/vgic_v2.c",
     "src/arch/aarch64/vgic/vgic_v3.c",
     "src/arch/aarch64/vgic/vgic_v3_cpuif.c",
+    "src/arch/aarch64/guest.c",
     "src/arch/aarch64/fault.c",
     "src/arch/aarch64/psci.c",
     "src/arch/aarch64/smc.c",
@@ -28,6 +30,26 @@ const src_aarch64 = [_][]const u8{
     "src/arch/aarch64/tcb.c",
     "src/arch/aarch64/vcpu.c",
     "src/arch/aarch64/cpuif.c",
+};
+
+const src_x86_64 = [_][]const u8{
+    "src/arch/x86_64/guest.c",
+    "src/arch/x86_64/linux.c",
+    "src/arch/x86_64/fault.c",
+    "src/arch/x86_64/vcpu.c",
+    "src/arch/x86_64/virq.c",
+    "src/arch/x86_64/cpuid.c",
+    "src/arch/x86_64/msr.c",
+    "src/arch/x86_64/acpi.c",
+    "src/arch/x86_64/apic.c",
+    "src/arch/x86_64/hpet.c",
+    "src/arch/x86_64/instruction.c",
+    "src/arch/x86_64/pci.c",
+    "src/arch/x86_64/ioports.c",
+    "src/arch/x86_64/tsc.c",
+    "src/arch/x86_64/guest_time.c",
+    "src/arch/x86_64/guest_ram.c",
+    "src/arch/x86_64/fpu.c",
 };
 
 /// Convert the target for Microkit (e.g freestanding AArch64 or RISC-V) to the Linux
@@ -70,21 +92,34 @@ pub fn build(b: *std.Build) !void {
         switch (target.result.cpu.arch) {
             .aarch64 => {
                 try srcs.appendSlice(b.allocator, &src_aarch64);
+
+                libvmm.addCSourceFiles(.{
+                    .files = srcs.items,
+                    .flags = &.{
+                        "-Wall",
+                        "-Werror",
+                        "-Wno-unused-function",
+                        "-mstrict-align",
+                    }
+                });
+            },
+            .x86_64 => {
+                try srcs.appendSlice(b.allocator, &src_x86_64);
+
+                libvmm.addCSourceFiles(.{
+                    .files = srcs.items,
+                    .flags = &.{
+                        "-Wall",
+                        "-Werror",
+                        "-Wno-unused-function",
+                    }
+                });
             },
             else => {
                 std.log.err("Unsupported libvmm architecture given '{s}'", .{ @tagName(target.result.cpu.arch) });
                 std.posix.exit(1);
             }
         }
-        libvmm.addCSourceFiles(.{
-            .files = srcs.items,
-            .flags = &.{
-                "-Wall",
-                "-Werror",
-                "-Wno-unused-function",
-                "-mstrict-align",
-            }
-        });
 
         libvmm.addIncludePath(b.path("include"));
         libvmm.addIncludePath(sddf.path("include"));
