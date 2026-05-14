@@ -66,21 +66,23 @@ The first step before writing code is to have a system description that contains
 a virtual machine and the VMM protection domain (PD).
 
 The following is essentially what is in
-[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system),
+[the QEMU example system](../examples/simple/board/qemu_virt_aarch64/simple.system):
 
 ```xml
-<memory_region name="guest_ram" size="0x10_000_000" />
-<memory_region name="uart" size="0x1_000" phys_addr="0x9000000" />
+<memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+<memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
 <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
 <protection_domain name="VMM" priority="254">
     <program_image path="vmm.elf" />
     <map mr="guest_ram" vaddr="0x40000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
-    <virtual_machine name="linux" id="0">
+    <virtual_machine name="linux" >
+        <vcpu id="0" />
         <map mr="guest_ram" vaddr="0x40000000" perms="rwx" />
-        <map mr="uart" vaddr="0x9000000" perms="rw" />
-        <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" />
+        <map mr="serial" vaddr="0x9000000" perms="rw" cached="false" />
+        <map mr="gic_vcpu" vaddr="0x8010000" perms="rw" cached="false" />
     </virtual_machine>
+    <irq irq="33" id="1" />
 </protection_domain>
 ```
 
@@ -91,7 +93,7 @@ interrupts to the guest and restarting the guest.
 
 You will also see that three memory regions (MRs) exist in the system.
 1. `guest_ram` for the guest's RAM region
-2. `uart` for the UART serial device
+2. `serial` for the UART serial device
 3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface
 
 ## Guest RAM region
@@ -110,11 +112,9 @@ that it has access to its own RAM.
 
 We can see that the region is mapped into the VMM with
 `setvar_vaddr="guest_ram_vaddr"`. The VMM expects that variable to contain
-the starting address of the guest's RAM. With the current implementation of the
-VMM, it expects that the virtual address of the guest RAM that is mapped into
-the VMM as well as the guest physical address of the guest RAM to be the same.
-This is done for simplicity at the moment, but could be changed in the future
-if someone had a strong desire for the two values to not be coupled.
+the starting address of the guest's RAM. There is no requirements for the
+VMM virtual address and guest physical address of RAM to match, as the VMM
+will automatically translate them as necessary during the fault handling process.
 
 ## UART device region
 
@@ -204,7 +204,7 @@ Devices which communicate through DMA see the world through host physical
 addresses, however virtual machines will give devices guest physical addresses
 (i.e., host virtual addresses).  In order for DMA passthrough to work, these two
 addresses must be aligned. This can be done by setting the `phys_addr` of the
-guest's RAM to be the same as its mapped virtual address.
+guest's RAM to be the same as what you declares as RAM start in the guest DTS.
 ```xml
 <memory_region name="guest_ram" size="0x10_000_000" phys_addr="0x20000000" page_size="0x200_000" />
 <protection_domain ...>
@@ -272,6 +272,9 @@ The following feature bits are implemented:
 
 * VIRTIO_BLK_F_FLUSH
 * VIRTIO_BLK_F_BLK_SIZE
+* VIRTIO_BLK_F_SIZE_MAX
+* VIRTIO_BLK_F_SEG_MAX
+* VIRTIO_BLK_F_TOPOLOGY
 
 The legacy interface is not supported.
 

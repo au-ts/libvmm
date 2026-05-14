@@ -43,13 +43,15 @@ ARCH_INDEP_FILES := \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/virtio/virtio.c \
-		    src/guest.c
+			src/util/util.c \
+		    src/guest.c \
+			src/guest_ram.c
 
 CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
 # Enable LLVM UBSAN to trap on detected undefined behaviour
-CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined
+CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined -Wall -Werror -Wno-unused-function
 
 # Generate dependencies automatically
 CFLAGS += -MD

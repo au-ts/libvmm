@@ -122,39 +122,3 @@ struct virtq {
  *  uint16_t avail_event_idx;
  * };
  */
-/* We publish the used event index at the end of the available ring, and vice
- * versa. They are at the end for backwards compatibility. */
-#define virtq_used_event(vr) ((vr)->avail->ring[(vr)->num])
-#define virtq_avail_event(vr) (*(uint16_t *)&(vr)->used->ring[(vr)->num])
-
-static inline void virtq_init(struct virtq *vr, unsigned int num, void *p,
-                              unsigned long align)
-{
-    vr->num = num;
-    vr->desc = p;
-    vr->avail = p + num * sizeof(struct virtq_desc);
-    vr->used = (void *)(((unsigned long)&vr->avail->ring[num] + sizeof(uint16_t)
-                         + align - 1) & ~(align - 1));
-}
-
-static inline unsigned virtq_size(unsigned int num, unsigned long align)
-{
-    return ((sizeof(struct virtq_desc) * num + sizeof(uint16_t) * (3 + num)
-             + align - 1) & ~(align - 1))
-           + sizeof(uint16_t) * 3 + sizeof(struct virtq_used_elem) * num;
-}
-
-/* The following is used with USED_EVENT_IDX and AVAIL_EVENT_IDX */
-/* Assuming a given event_idx value from the other size, if
- * we have just incremented index from old to new_idx,
- * should we trigger an event? */
-static inline int virtq_need_event(uint16_t event_idx, uint16_t new_idx, uint16_t old)
-{
-    /* Note: Xen has similar logic for notification hold-off
-     * in include/xen/interface/io/ring.h with req_event and req_prod
-     * corresponding to event_idx + 1 and new_idx respectively.
-     * Note also that req_event and req_prod in Xen start at 1,
-     * event indexes in virtio start at 0. */
-    return (uint16_t)(new_idx - event_idx - 1) < (uint16_t)(new_idx - old);
-}
-
