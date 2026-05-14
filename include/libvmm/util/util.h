@@ -82,6 +82,8 @@ uint64_t convert_ticks_by_frequency(uint64_t ticks, uint64_t in_freq, uint64_t o
 static inline uint64_t rdtsc(void)
 {
     uint32_t lo, hi;
+    /* rdtsc isn't a serialising instruction so we need a fence to flush the CPU pipeline */
+    __asm__ __volatile__("lfence" ::: "memory");
     __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
     return ((uint64_t)hi << 32) | lo;
 }
