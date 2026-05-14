@@ -28,13 +28,9 @@
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
-        <!--
-            Currently the VMM is expecting the address set to the variable
-            "guest_ram_vaddr" to be the same as the address of where the guest
-            sees RAM from its perspective. In this case the guest physical
-            starting address of RAM is 0x40000000, so we map in the guest RAM
-            at the same address in the VMMs virutal address space.
-        -->
+        <!-- Map guest RAM into the VMM so that we can copy in the Linux kernel and initrd.
+        There is no requirement for the virtual address to match the guest physical address,
+        as they will be translated by the VMM -->
         <map mr="guest_ram" vaddr="0x40000000" perms="rw" />
         <virtual_machine name="linux">
             <vcpu id="0" />

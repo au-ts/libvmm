@@ -16,15 +16,19 @@
  */
 #define GUEST_RAM_SIZE 0x10000000
 
+/* For ARM, these constants depends on what's defined in your DTB. */
 #if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4d000000
+#define GUEST_RAM_START_GPA 0x40000000
+#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x4d000000
 #elif defined(BOARD_odroidc4)
-#define GUEST_DTB_VADDR 0x2f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x2d700000
+#define GUEST_RAM_START_GPA 0x20000000
+#define GUEST_DTB_GPA 0x2f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x2d700000
 #elif defined(BOARD_maaxboard)
-#define GUEST_DTB_VADDR 0x4f000000
-#define GUEST_INIT_RAM_DISK_VADDR 0x4c000000
+#define GUEST_RAM_START_GPA 0x40000000
+#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x4c000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -59,27 +63,35 @@ void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
-    /* Place all the binaries in the right locations before starting the guest */
-    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
-    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(guest_ram_vaddr, (uintptr_t)_guest_kernel_image, kernel_size,
-                                             (uintptr_t)_guest_dtb_image, GUEST_DTB_VADDR, dtb_size,
-                                             (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_VADDR, initrd_size);
-    if (!kernel_pc) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
-    arch_guest_init_t args = { .num_vcpus = 1 };
+
+    arch_guest_init_t args = {
+        .num_vcpus = 1,
+        .num_guest_ram_regions = 1,
+        .guest_ram_regions = { (struct guest_ram_region) {
+            .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } }
+    };
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
         return;
     }
+
+    /* Place all the binaries in the right locations before starting the guest */
+    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
+    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
+    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
+                                             (uintptr_t)_guest_dtb_image, GUEST_DTB_GPA, dtb_size,
+                                             (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_GPA, initrd_size);
+    if (!kernel_pc) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        return;
+    }
+
     success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
     assert(success);
     /* Finally start the guest */
-    guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
+    guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
 }
 
 void notified(microkit_channel ch)
