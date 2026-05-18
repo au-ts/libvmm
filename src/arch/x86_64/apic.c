@@ -243,15 +243,27 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     case REG_LAPIC_ICR_LOW: {
         // Figure 11-12. Interrupt Command Register (ICR)
         // 11-20 Vol. 3A: "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-        uint64_t icr = (uint64_t)data | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
+        uint64_t icr = (uint64_t)(data & 0xffffffff) | (((uint64_t)vapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
         // @billn sus, handle other types of IPIs
         uint8_t delivery_mode = ((icr >> 8) & 0x7);
-        uint8_t destination = (icr >> 56) & 0xff;
+        uint8_t destination_short_hand = (icr >> 18) & 0x3;
         if (delivery_mode == 0 || delivery_mode == 5) {
+            uint8_t destination;
             // fixed mode
-            if (destination != 0) {
-                LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
+            if (destination_short_hand == 0) {
+                destination = (icr >> 56) & 0xff;
+            } else if (destination_short_hand == 3) {
+                LOG_VMM_ERR("unsupported All Excluding Self IPI mode\n");
+                return true;
+            } else {
+                // Self or "all including self" IPI mode
+                // the destination field is just a bitmap
+                destination = 1;
+            }
+
+            if (destination != 1) {
+                LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d for shorthand %u\n", destination, destination_short_hand);
                 return true;
             }
             uint8_t vector = icr & 0xff;
@@ -259,14 +271,13 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
                 LOG_VMM_ERR("failed to send IPI\n");
                 return false;
             } else {
-                LOG_VMM("sent ipi\n");
+                // LOG_VMM("sent ipi\n");
             }
         } else {
-            LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
-                        delivery_mode, destination);
+            LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x\n", delivery_mode);
         }
 
-        LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
+        // LOG_VMM("icr write 0x%lx, current TPL is 0x%x\n", icr, vapic_read_reg(REG_LAPIC_TPR));
         break;
     }
 
