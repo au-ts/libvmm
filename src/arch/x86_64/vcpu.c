@@ -255,7 +255,12 @@ uint64_t vcpu_exit_get_rflags(void)
 uint64_t vcpu_exit_get_interruptability(void)
 {
     assert(vcpu_fault_state.valid);
-    return vcpu_fault_state.interruptability;
+
+    if (vcpu_fault_state.exit_from_ntfn) {
+        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPTABILITY);
+    } else {
+        return vcpu_fault_state.interruptability;
+    }
 }
 
 uint64_t vcpu_exit_get_cr3(void)
