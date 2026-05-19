@@ -167,7 +167,7 @@ static uint64_t measure_tsc_frequency(microkit_channel timer_ch)
     }
 
     if (measured_ok) {
-        LOG_TSC("measured TSC frequency %lu Hz in %d attempts\n", tsc_hz_attempts[0], i);
+        LOG_TSC("measured TSC frequency %lu Hz in %d attempts\n", final_hz, i);
         return final_hz;
     } else {
         LOG_VMM_ERR("could not measure TSC frequency to %d Hz error within %d attempts\n", ACCEPTABLE_TSC_HZ_ERROR,
