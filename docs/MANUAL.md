@@ -69,7 +69,7 @@ The following is essentially what is in
 [the QEMU example system](../examples/simple/board/qemu_virt_aarch64/simple.system):
 
 ```xml
-<memory_region name="guest_ram" size="0x10_000_000" page_size="0x200_000" />
+<memory_region name="guest_ram" size="0x10_000_000" />
 <memory_region name="serial" size="0x1_000" phys_addr="0x9000000" />
 <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0x8040000" />
 
