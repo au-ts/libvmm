@@ -81,8 +81,9 @@ uint64_t convert_ticks_by_frequency(uint64_t ticks, uint64_t in_freq, uint64_t o
 #if defined(CONFIG_ARCH_X86_64)
 static inline uint64_t rdtsc(void)
 {
-    uint32_t lo, hi;
-    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    uint32_t lo, hi, unused;
+    __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi), "=c"(unused));
+    __asm__ __volatile__("lfence" ::: "memory");
     return ((uint64_t)hi << 32) | lo;
 }
 
