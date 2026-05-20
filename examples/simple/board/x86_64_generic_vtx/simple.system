@@ -24,6 +24,8 @@
         <irq pin="4" vector="41" id="1" ioapic="0" trigger="edge"/>
     </protection_domain>
 
+    <!-- The timer driver is needed in cases where we can't calculate the TSC frequency
+    from CPUID. It is not used to virtualise guest timers. -->
     <protection_domain name="timer_driver" priority="254" passive="true">
         <program_image path="timer_driver.elf" />
         <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
