@@ -101,12 +101,19 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ecx = CPUID_0H_GENUINEINTEL_ECX;
         break;
 
-    case 0x1:
+    case 0x1: {
+        /* First read the host cache line size. */
+        uint32_t unused, ebx, clflush_line_size_mask;
+        cpuid(vctx->eax, vctx->ecx, &unused, &ebx, &unused, &unused);
+        /* "CLFLUSH instruction cache line size (second byte of EBX) " */
+        clflush_line_size_mask = ebx & 0x0000ff00;
+
         vctx->eax = CPUID_1H_EAX;
-        vctx->ebx = CPUID_1H_EBX;
+        vctx->ebx = clflush_line_size_mask;
         vctx->ecx = CPUID_1H_X64_V2_BASELINE_ECX;
         vctx->edx = CPUID_1H_X64_V2_BASELINE_EDX;
         break;
+    }
 
     case 0x2: /* "Cache and TLB Information" */
 
