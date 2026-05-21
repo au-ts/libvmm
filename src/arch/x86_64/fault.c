@@ -361,12 +361,12 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
     return true;
 }
 
-bool fault_handle(size_t vcpu_id)
+bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
 {
     bool success = false;
     decoded_instruction_ret_t decoded_ins;
 
-    vcpu_init_exit_state(false);
+    vcpu_cache_exit_state(msginfo);
 
     seL4_Word f_reason = vcpu_exit_get_reason();
     seL4_Word qualification = vcpu_exit_get_qualification();
@@ -472,8 +472,7 @@ bool fault_handle(size_t vcpu_id)
                 rip_additive = vcpu_exit_get_instruction_len();
             }
         }
-        vcpu_exit_advance_rip(rip_additive);
-        vcpu_exit_resume();
+        vcpu_exit_prepare_resume(rip_additive);
     } else if (!success && (f_reason == RDMSR || f_reason == WRMSR || f_reason == XSETBV)) {
         /* [2] "RDMSR—Read From Model Specific Register":
          * "Specifying a reserved or unimplemented MSR address in ECX will also cause a general protection exception." */
@@ -487,7 +486,9 @@ bool fault_handle(size_t vcpu_id)
 
         vcpu_exit_inject_irq(interruption);
         /* Don't advance rip */
-        vcpu_exit_resume();
+        vcpu_exit_prepare_resume(0);
+        /* We still want to resume the VCPU though! */
+        success = true;
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%lx)\n", fault_to_string(f_reason), f_reason);
         vcpu_print_regs(vcpu_id);
