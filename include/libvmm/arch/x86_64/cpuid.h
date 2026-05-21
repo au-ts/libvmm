@@ -16,9 +16,6 @@
  * 3. https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.txt
  */
 
-#define CACHE_LINE_SIZE 64
-#define NUM_LOGICAL_PROCESSORS 1
-
 /* [1] Table 3-8. Information Returned by CPUID Instruction */
 #define CPUID_0H_EAX_MAX_BASIC_LEAF 0x16
 #define CPUID_0H_GENUINEINTEL_EBX 0x756e6547 /* "GenuineIntel" */
@@ -26,7 +23,6 @@
 #define CPUID_0H_GENUINEINTEL_ECX 0x6c65746e
 
 #define CPUID_1H_EAX 0x00050054 /* [3] Intel Core i7-7800X Skylake */
-#define CPUID_1H_EBX ((CACHE_LINE_SIZE / 8) << 8) | (NUM_LOGICAL_PROCESSORS << 16)
 
 /* [1] Table 3-10. More on Feature Information Returned in the ECX Register */
 #define CPUID_1H_ECX_SSE3 BIT(0)
