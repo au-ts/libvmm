@@ -91,7 +91,7 @@ bool initialise_cpuid(void)
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
-    LOG_FAULT("handling CPUID 0x%x\n", vctx->eax);
+    LOG_FAULT("handling CPUID 0x%lx\n", vctx->eax);
 
     switch (vctx->eax) {
     case 0x0: /* "Basic CPUID Information" */

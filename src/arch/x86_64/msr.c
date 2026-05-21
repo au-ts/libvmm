@@ -206,10 +206,11 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         break;
     }
     default:
+        LOG_FAULT("unknown MSR read 0x%lx\n", vctx->eax);
         return false;
     }
 
-    LOG_FAULT("handling RDMSR 0x%x, result 0x%lx\n", vctx->ecx, result);
+    LOG_FAULT("handling RDMSR 0x%lx, result 0x%lx\n", vctx->ecx, result);
 
     vctx->eax = result & 0xffffffff;
     vctx->edx = (result >> 32) & 0xffffffff;
@@ -225,7 +226,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
 
     uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
 
-    LOG_FAULT("handling WRMSR 0x%x, value 0x%lx\n", vctx->ecx, value);
+    LOG_FAULT("handling WRMSR 0x%lx, value 0x%lx\n", vctx->ecx, value);
 
     switch (vctx->ecx) {
     case MSR_EFER:
