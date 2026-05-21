@@ -18,10 +18,8 @@
 
 struct vcpu_fault_state {
     bool valid;
-    bool exit_from_ntfn;
 
-    uint64_t original_rip;
-    uint64_t resume_rip;
+    uint64_t rip;
     uint64_t ppvc;
     uint64_t irq;
 
@@ -150,116 +148,111 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
     return true;
 }
 
-void vcpu_init_exit_state(bool exit_from_ntfn)
+void vcpu_cache_exit_state(microkit_msginfo msginfo)
 {
     /* Prevent state overwriting, if this goes off then you probably called this or didn't call
      * `vcpu_exit_resume()` at the correct time. */
     assert(!vcpu_fault_state.valid);
 
-    vcpu_fault_state.original_rip = microkit_mr_get(SEL4_VMENTER_CALL_EIP_MR);
-    vcpu_fault_state.resume_rip = vcpu_fault_state.original_rip;
-    vcpu_fault_state.ppvc = microkit_mr_get(SEL4_VMENTER_CALL_CONTROL_PPC_MR);
-    vcpu_fault_state.irq = microkit_mr_get(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR);
+    assert(microkit_msginfo_get_count(msginfo) == SEL4_VMENTER_NUM_FAULT_MSGS);
 
-    if (!exit_from_ntfn) {
-        /* These message registers are only valid if a VM Exit was caused by a fault rather
-         * than a notification. */
-        vcpu_fault_state.reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
-        vcpu_fault_state.qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
-        vcpu_fault_state.instruction_length = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
-        vcpu_fault_state.gpa = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
-        vcpu_fault_state.rflags = microkit_mr_get(SEL4_VMENTER_FAULT_RFLAGS_MR);
-        vcpu_fault_state.interruptability = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_INT_MR);
-        vcpu_fault_state.cr3 = microkit_mr_get(SEL4_VMENTER_FAULT_CR3_MR);
+    vcpu_fault_state.rip = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RIP);
+    vcpu_fault_state.ppvc = microkit_vcpu_x86_read_vmcs(0, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
+    vcpu_fault_state.irq = microkit_vcpu_x86_read_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO);
 
-        vcpu_fault_state.vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
-        vcpu_fault_state.vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
-        vcpu_fault_state.vctx.ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
-        vcpu_fault_state.vctx.edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
-        vcpu_fault_state.vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
-        vcpu_fault_state.vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
-        vcpu_fault_state.vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
-        vcpu_fault_state.vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
-        vcpu_fault_state.vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
-        vcpu_fault_state.vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
-        vcpu_fault_state.vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
-        vcpu_fault_state.vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
-        vcpu_fault_state.vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
-        vcpu_fault_state.vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
-        vcpu_fault_state.vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
-    }
+    vcpu_fault_state.reason = microkit_mr_get(SEL4_VMENTER_FAULT_REASON_MR);
+    vcpu_fault_state.qualification = microkit_mr_get(SEL4_VMENTER_FAULT_QUALIFICATION_MR);
+    vcpu_fault_state.instruction_length = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+    vcpu_fault_state.gpa = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+    vcpu_fault_state.rflags = microkit_mr_get(SEL4_VMENTER_FAULT_RFLAGS_MR);
+    vcpu_fault_state.interruptability = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_INT_MR);
+    vcpu_fault_state.cr3 = microkit_mr_get(SEL4_VMENTER_FAULT_CR3_MR);
 
-    vcpu_fault_state.exit_from_ntfn = exit_from_ntfn;
+    vcpu_fault_state.vctx.eax = microkit_mr_get(SEL4_VMENTER_FAULT_EAX);
+    vcpu_fault_state.vctx.ebx = microkit_mr_get(SEL4_VMENTER_FAULT_EBX);
+    vcpu_fault_state.vctx.ecx = microkit_mr_get(SEL4_VMENTER_FAULT_ECX);
+    vcpu_fault_state.vctx.edx = microkit_mr_get(SEL4_VMENTER_FAULT_EDX);
+    vcpu_fault_state.vctx.esi = microkit_mr_get(SEL4_VMENTER_FAULT_ESI);
+    vcpu_fault_state.vctx.edi = microkit_mr_get(SEL4_VMENTER_FAULT_EDI);
+    vcpu_fault_state.vctx.ebp = microkit_mr_get(SEL4_VMENTER_FAULT_EBP);
+    vcpu_fault_state.vctx.r8 = microkit_mr_get(SEL4_VMENTER_FAULT_R8);
+    vcpu_fault_state.vctx.r9 = microkit_mr_get(SEL4_VMENTER_FAULT_R9);
+    vcpu_fault_state.vctx.r10 = microkit_mr_get(SEL4_VMENTER_FAULT_R10);
+    vcpu_fault_state.vctx.r11 = microkit_mr_get(SEL4_VMENTER_FAULT_R11);
+    vcpu_fault_state.vctx.r12 = microkit_mr_get(SEL4_VMENTER_FAULT_R12);
+    vcpu_fault_state.vctx.r13 = microkit_mr_get(SEL4_VMENTER_FAULT_R13);
+    vcpu_fault_state.vctx.r14 = microkit_mr_get(SEL4_VMENTER_FAULT_R14);
+    vcpu_fault_state.vctx.r15 = microkit_mr_get(SEL4_VMENTER_FAULT_R15);
+
     vcpu_fault_state.valid = true;
 }
 
 uint64_t vcpu_exit_get_rip(void)
 {
     assert(vcpu_fault_state.valid);
-    return vcpu_fault_state.resume_rip;
+    return vcpu_fault_state.rip;
 }
 
 void vcpu_exit_update_ppvc(uint64_t ppvc)
 {
-    assert(vcpu_fault_state.valid);
-    vcpu_fault_state.ppvc = ppvc;
+    if (vcpu_fault_state.valid) {
+        vcpu_fault_state.ppvc = ppvc;
+    } else {
+        microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, ppvc);
+    }
 }
 
 uint64_t vcpu_exit_get_irq(void)
 {
-    assert(vcpu_fault_state.valid);
-    return vcpu_fault_state.irq;
+    if (vcpu_fault_state.valid) {
+        return vcpu_fault_state.irq;
+    } else {
+        return microkit_vcpu_x86_read_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO);
+    }
 }
 
 void vcpu_exit_inject_irq(uint64_t irq)
 {
-    assert(vcpu_fault_state.valid);
-    vcpu_fault_state.irq = irq;
+    if (vcpu_fault_state.valid) {
+        vcpu_fault_state.irq = irq;
+    } else {
+        microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, irq);
+    }
 }
 
 uint64_t vcpu_exit_get_reason(void)
 {
     assert(vcpu_fault_state.valid);
-
-    /* Shouldn't be called when the VCPU exit is caused by a notification! */
-    assert(!vcpu_fault_state.exit_from_ntfn);
-
     return vcpu_fault_state.reason;
 }
 
 uint64_t vcpu_exit_get_qualification(void)
 {
     assert(vcpu_fault_state.valid);
-    assert(!vcpu_fault_state.exit_from_ntfn);
     return vcpu_fault_state.qualification;
 }
 
 uint64_t vcpu_exit_get_instruction_len(void)
 {
     assert(vcpu_fault_state.valid);
-    assert(!vcpu_fault_state.exit_from_ntfn);
     return vcpu_fault_state.instruction_length;
 }
 
 uint64_t vcpu_exit_get_rflags(void)
 {
-    assert(vcpu_fault_state.valid);
-
-    if (vcpu_fault_state.exit_from_ntfn) {
-        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
-    } else {
+    if (vcpu_fault_state.valid) {
         return vcpu_fault_state.rflags;
+    } else {
+        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_RFLAGS);
     }
 }
 
 uint64_t vcpu_exit_get_interruptability(void)
 {
-    assert(vcpu_fault_state.valid);
-
-    if (vcpu_fault_state.exit_from_ntfn) {
-        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPTABILITY);
-    } else {
+    if (vcpu_fault_state.valid) {
         return vcpu_fault_state.interruptability;
+    } else {
+        return microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_INTERRUPTABILITY);
     }
 }
 
@@ -272,32 +265,18 @@ uint64_t vcpu_exit_get_cr3(void)
 seL4_VCPUContext *vcpu_exit_get_context(void)
 {
     assert(vcpu_fault_state.valid);
-
-    if (vcpu_fault_state.exit_from_ntfn) {
-        return NULL;
-    } else {
-        return &vcpu_fault_state.vctx;
-    }
+    return &vcpu_fault_state.vctx;
 }
 
-void vcpu_exit_advance_rip(unsigned rip_additive)
-{
-    assert(vcpu_fault_state.valid);
-    vcpu_fault_state.resume_rip += rip_additive;
-}
-
-void vcpu_exit_resume(void)
+void vcpu_exit_prepare_resume(uint64_t rip_additive)
 {
     assert(vcpu_fault_state.valid);
 
-    if (!vcpu_fault_state.exit_from_ntfn) {
-        microkit_vcpu_x86_write_regs(0, &vcpu_fault_state.vctx);
-    }
+    microkit_vcpu_x86_write_regs(0, &vcpu_fault_state.vctx);
+    microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_RIP, vcpu_fault_state.rip + rip_additive);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, vcpu_fault_state.ppvc);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, vcpu_fault_state.irq);
 
-    microkit_mr_set(SEL4_VMENTER_CALL_EIP_MR, vcpu_fault_state.resume_rip);
-    microkit_mr_set(SEL4_VMENTER_CALL_CONTROL_PPC_MR, vcpu_fault_state.ppvc);
-    microkit_mr_set(SEL4_VMENTER_CALL_INTERRUPT_INFO_MR, vcpu_fault_state.irq);
-    microkit_vcpu_x86_deferred_resume();
     vcpu_fault_state.valid = false;
 }
 

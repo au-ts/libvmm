@@ -55,8 +55,11 @@
 
 bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
 
-/* Keep track of the VCPU state when a VM Exit happens. */
-void vcpu_init_exit_state(bool exit_from_ntfn);
+/* Helpers to keep track of the VCPU state when a VM Exit happens. */
+
+/* seL4 writes the VCPU general purpose and control registers on a VM Exit.
+ * So we can cache it and avoid a syscall when we need to read it. */
+void vcpu_cache_exit_state(microkit_msginfo msginfo);
 uint64_t vcpu_exit_get_rip(void);
 void vcpu_exit_update_ppvc(uint64_t ppvc);
 uint64_t vcpu_exit_get_irq(void);
@@ -68,7 +71,6 @@ uint64_t vcpu_exit_get_rflags(void);
 uint64_t vcpu_exit_get_interruptability(void);
 uint64_t vcpu_exit_get_cr3(void);
 seL4_VCPUContext *vcpu_exit_get_context(void);
-void vcpu_exit_advance_rip(unsigned rip_additive);
-void vcpu_exit_resume(void);
+void vcpu_exit_prepare_resume(uint64_t rip_additive);
 
 void vcpu_print_regs(size_t vcpu_id);
