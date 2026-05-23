@@ -78,6 +78,18 @@
             pysdfgen
             ts_ci
           ]);
+
+          microkit-sdk = pkgs.fetchzip {
+            url = "${microkit-url}/microkit-sdk-${microkit-version}-${microkit-platforms.${system}}.tar.gz";
+            hash =
+              {
+                aarch64-darwin = "sha256-UZBEwS3vAQqJe6Xj+13smJRS0RYfoc0uCK7hB8ujbvA=";
+                x86_64-darwin = "sha256-aE2mYToK2ne9vzw6d3YQDzJvhpnI8IHOR9+VqZxwlfY=";
+                aarch64-linux = "sha256-U1hA7Vk/TlSWgV7KiEeG7AkA7t5IR/x89mSE0YHBRNA=";
+                x86_64-linux = "sha256-dxPu2Q01qjKhME6Z6kgG4ASDUe12ytZmh5tCtFva/L0=";
+              }
+              .${system} or (throw "Unsupported system: ${system}");
+          };
         in
         {
             docs = pkgs.mkShell rec {
@@ -93,17 +105,11 @@
 
               microkit-platform = microkit-platforms.${system} or (throw "Unsupported system: ${system}");
 
-              env.MICROKIT_SDK = pkgs.fetchzip {
-                url = "${microkit-url}/microkit-sdk-${microkit-version}-${microkit-platform}.tar.gz";
-                hash =
-                  {
-                    aarch64-darwin = "sha256-UZBEwS3vAQqJe6Xj+13smJRS0RYfoc0uCK7hB8ujbvA=";
-                    x86_64-darwin = "sha256-aE2mYToK2ne9vzw6d3YQDzJvhpnI8IHOR9+VqZxwlfY=";
-                    aarch64-linux = "sha256-U1hA7Vk/TlSWgV7KiEeG7AkA7t5IR/x89mSE0YHBRNA=";
-                    x86_64-linux = "sha256-dxPu2Q01qjKhME6Z6kgG4ASDUe12ytZmh5tCtFva/L0=";
-                  }
-                  .${system} or (throw "Unsupported system: ${system}");
-              };
+              shellHook = ''
+                if [ -z "$MICROKIT_SDK" ]; then
+                  export MICROKIT_SDK=${microkit-sdk}
+                fi
+              '';
 
               nativeBuildInputs = with pkgs; [
                 rust
