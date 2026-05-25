@@ -155,7 +155,7 @@ def generate(sdf_file: str, output_dir: str, dtb: Optional[DeviceTree], client_d
 
     x86_apic(vmm_client0, vm_client0)
 
-    # x86_virtio_gpu_passthrough(vmm_client0, vm_client0)
+    x86_virtio_gpu_passthrough(vmm_client0, vm_client0)
 
     scratch_mr = MemoryRegion(sdf, name="guest_scratch", size=0x10000)
     sdf.add_mr(scratch_mr)

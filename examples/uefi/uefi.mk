@@ -115,6 +115,8 @@ blk_storage:
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 	$(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG) $(PCI_BASE_ARG)
+# a hack to make iommu work until it is added to sdfgen
+	sed -i '\@<program_image path="vmm_x86_64.elf" />@a <iomap mr="guest_ram" pcidev="0:9.0" addr="0" />\n<iomap mr="guest_ram_high" pcidev="0:9.0" addr="0x100000000" />' $(SYSTEM_FILE)
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
