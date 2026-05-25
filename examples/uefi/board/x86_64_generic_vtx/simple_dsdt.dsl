@@ -98,6 +98,15 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     0x0000000000000000, // Translation
                     0x200000  // Length
                 )
+
+                // Prefetchable MMIO window for virtio gpu passthrough in linux
+                QWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
+                    0x0000000000000000, // Granularity
+                    0x7100000000, // Min
+                    0x71000fffff, // Max
+                    0x0000000000000000, // Translation
+                    0x100000  // Length
+                )
             })
         }
     }
@@ -116,6 +125,9 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
                     // Virtio blk:
                     // Device 0x5, function 0, INTA -> GSI 13
                     Package() { 0x0005ffff, 0, GSIC, 0 },
+                    // Virtio GPU passthrough:
+                    // Device 0x7, function 0, INTA -> GSI 11
+                    Package() { 0x0007ffff, 0, GSID, 0 },
                 })
             }
         }
@@ -126,14 +138,14 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Name (_UID, 0xf)  // _UID: Unique ID
             Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000f,
                 }
             })
             Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000f,
                 }
@@ -148,14 +160,14 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Name (_UID, 0x10)  // _UID: Unique ID
             Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000e,
                 }
             })
             Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000e,
                 }
@@ -170,16 +182,38 @@ DefinitionBlock ("", "DSDT", 2, "libvmm", "libvmm", 0x1)
             Name (_UID, 0x11)  // _UID: Unique ID
             Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000d,
                 }
             })
             Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
             {
-                Interrupt (ResourceConsumer, Level, ActiveHigh, Shared, ,, )
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
                 {
                     0x000000d,
+                }
+            })
+            Method (_DIS, 0, NotSerialized) {}  // _DIS: Disable Device
+            Method (_SRS, 1, NotSerialized) {} // _SRS: Set Resource Settings
+        }
+
+        Device (GSID)
+        {
+            Name (_HID, EisaId ("PNP0C0F") /* PCI Interrupt Link Device */)  // _HID: Hardware ID
+            Name (_UID, 0x12)  // _UID: Unique ID
+            Name (_PRS, ResourceTemplate ()  // _PRS: Possible Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
+                {
+                    0x000000b,
+                }
+            })
+            Name (_CRS, ResourceTemplate ()  // _CRS: Current Resource Settings
+            {
+                Interrupt (ResourceConsumer, Level, ActiveLow, Shared, ,, )
+                {
+                    0x000000b,
                 }
             })
             Method (_DIS, 0, NotSerialized) {}  // _DIS: Disable Device
