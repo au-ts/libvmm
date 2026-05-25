@@ -180,6 +180,9 @@ uint64_t tsc_now_scaled(void)
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result)
 {
     switch (offset) {
+    case REG_LAPIC_CMCI:
+        *result = 0;
+        break;
     case REG_LAPIC_CURR_CNT: {
         if (vapic_read_reg(REG_LAPIC_INIT_CNT) == 0) {
             *result = 0;
@@ -219,6 +222,7 @@ bool lapic_write_fault_handle(uint64_t offset, uint32_t data)
     case REG_LAPIC_LDR:
     case REG_LAPIC_THERMAL:
     case REG_LAPIC_PERF_MON_CNTER:
+    case REG_LAPIC_CMCI:
         vapic_write_reg(offset, data);
         break;
 
