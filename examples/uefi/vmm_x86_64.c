@@ -114,11 +114,11 @@ extern char _guest_firmware_image_end[];
 
 uintptr_t guest_ram_vaddr = 0x30000000;
 uint64_t guest_ram_gpa = 0;
-uint64_t guest_ram_size = 0xA0000000; // 2.5 GiB
+uint64_t guest_ram_size = 0x6E000000;
 
 uintptr_t guest_high_ram_vaddr = 0x100000000;
 uint64_t guest_high_ram_gpa = 0x100000000;
-uint64_t guest_high_ram_size = 0x150000000; // 6 GiB
+uint64_t guest_high_ram_size = 0x200000000;
 
 uintptr_t guest_flash_vaddr = 0x2000000;
 uint64_t guest_flash_gpa = 0xffa00000;
@@ -128,8 +128,8 @@ uintptr_t guest_ecam_vaddr = 0x8000000;
 uint64_t guest_ecam_size = 0x10000000;
 
 uintptr_t guest_vapic_vaddr = 0x3000000000;
-uint64_t guest_vapic_paddr = 0x13000000;
-uint64_t guest_apic_access_paddr = 0x13001000;
+uint64_t guest_vapic_paddr = 0x8040000;
+uint64_t guest_apic_access_paddr = 0x8041000;
 
 bool tsc_calibrating = true;
 uint64_t tsc_pre, tsc_post, measured_tsc_hz;
@@ -179,7 +179,7 @@ void init(void)
                                     ps2_sts_cmd_port_size);
 
     // COM2 passthrough for windbg
-    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 38, 0x2f8, 8);
+    // microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, 38, 0x2f8, 8);
 
     // assert(virtio_pci_console_init(&virtio_console, VIRTIO_CONSOLE_PCI_DEVICE_SLOT, VIRTIO_CONSOLE_PCI_IOAPIC_PIN,
     //                                &serial_rx_queue, &serial_tx_queue, serial_config.tx.id));
@@ -261,8 +261,8 @@ void notified(microkit_channel ch)
             // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
             // assert(virq_ioapic_register_passthrough(0, 15, SECD_ATA_IRQ_CH));
 
-            /* COM2 for windbg */
-            assert(virq_ioapic_register_passthrough(0, 3, 7));
+            // /* COM2 for windbg */
+            // assert(virq_ioapic_register_passthrough(0, 3, 7));
 
             /* Start vCPU in *real* mode with paging off */
             guest_start(0xfff0, 0, 0);

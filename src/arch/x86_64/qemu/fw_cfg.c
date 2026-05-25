@@ -11,7 +11,7 @@
 
 // TODO: sort out and rename
 uint64_t fb_vaddr = 0x800000;
-uint64_t fb_paddr = 0x7000000;
+uint64_t fb_paddr = 0x6000000;
 
 /* See references:
  * https://wiki.osdev.org/QEMU_fw_cfg
@@ -319,7 +319,7 @@ static uint32_t fw_cfg_read_u32()
     return (d << 24) | (c << 16) | (b << 8) | a;
 }
 
-uint64_t fw_cfg_dma_cmd_paddr = 0x6000000;
+uint64_t fw_cfg_dma_cmd_paddr = 0x8000000;
 uint64_t fw_cfg_dma_cmd_vaddr = 0xD00000;
 
 static void fw_cfg_dma_write(uint32_t control, uint32_t length, uint64_t address)

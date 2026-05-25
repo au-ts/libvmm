@@ -41,7 +41,10 @@ ifeq ($(strip $(MICROKIT_BOARD)), x86_64_generic_vtx)
 	KERNEL = sel4.elf
 	KERNEL32 := sel4_32.elf
 	QEMU := qemu-system-x86_64
-	QEMU_ARCH_ARGS := -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
+	QEMU_ARCH_ARGS := -machine q35 \
+	                  -device intel-iommu,caching-mode=on \
+					  -device virtio-gpu,addr=0x9.0,iommu_platform=on \
+					  -accel kvm -cpu host,+sse,+sse2,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
 	                  -kernel $(KERNEL32) -initrd $(IMAGE_FILE) \
 					  -device virtio-net-pci,netdev=netdev0,addr=0x2.0 \
 					  -device virtio-blk-pci,drive=drive0,id=virtblk0,num-queues=1,addr=0x3.0
@@ -151,7 +154,7 @@ W10_DISK := /home/dreamliner7879/TS/libvmm_carrells_2026_demo_v2/windows/lionsos
 qemu: $(IMAGE_FILE) blk_storage
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: $(QEMU)"; exit 1; fi
 	taskset -c 0-3 $(QEMU) $(QEMU_ARCH_ARGS) -serial mon:stdio \
-							  -m size=9G \
+							  -m size=11G \
 							  -d guest_errors \
 							  -device ramfb -vga none \
 							  -drive file=$(W10_DISK),format=raw,if=none,id=drive0 \
