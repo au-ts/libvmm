@@ -175,23 +175,22 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                                                      .IoSize = 0x4000,
                                                                      .MemStart = 0xe0000000,
                                                                      .MemSize = 0x200000,
+                                                                     .MemAbove4GStart = 0x7100000000,
+                                                                     .MemAbove4GSize = 0x100000,
+                                                                     .PMemAbove4GStart = 0x7100000000,
+                                                                     .PMemAbove4GSize = 0x100000,
                                                                      .PcieConfigStart = ECAM_GPA,
                                                                      .PcieConfigSize = ECAM_SIZE,
                                                                  } };
 
     // Finish by populating File Dir with everything we built
     fw_cfg_blobs.fw_cfg_file_dir =
-        (struct fw_cfg_file_dir) { .num_files = __builtin_bswap32(NUM_FW_CFG_FILES),
+        (struct fw_cfg_file_dir) { .num_files = __builtin_bswap32(NUM_FW_CFG_FILES), // DISABLED RAMFB!!!
                                    .file_entries = {
                                        {
                                            .name = E820_FWCFG_FILE,
                                            .size = __builtin_bswap32(sizeof(struct fw_cfg_e820_map)),
                                            .select = __builtin_bswap16(FW_CFG_E820),
-                                       },
-                                       {
-                                           .name = FRAMEBFUFER_FWCFG_FILE,
-                                           .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
-                                           .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
                                        },
                                        {
                                            .name = ACPI_BUILD_TABLE_FILE,
@@ -235,6 +234,11 @@ bool uefi_setup_images(uintptr_t ram_start_vmm, uint64_t ram_start_gpa, size_t r
                                            .size = __builtin_bswap32(0),
                                            .select = FW_CFG_CMDLINE_SIZE,
                                        },
+                                    //    {
+                                    //        .name = FRAMEBFUFER_FWCFG_FILE,
+                                    //        .size = __builtin_bswap32(sizeof(struct QemuRamFBCfg)),
+                                    //        .select = __builtin_bswap16(FW_CFG_FRAMEBUFFER),
+                                    //    },
                                    } };
 
     return true;

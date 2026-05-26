@@ -59,6 +59,9 @@ static struct virtio_blk_device virtio_blk;
 #define VIRTIO_BLK_PCI_DEVICE_SLOT 5
 #define VIRTIO_BLK_PCI_IOAPIC_PIN 13
 
+#define VIRTIO_GPU_PCI_DEVICE_SLOT 7
+#define VIRTIO_GPU_PCI_IOAPIC_PIN 11
+
 // @billn sus, use package asm script
 #include "board/x86_64_generic_vtx/simple_dsdt.hex"
 
@@ -174,6 +177,8 @@ void init(void)
     //                                           primary_ata_ctrl_pio_addr, second_ata_cmd_pio_id, second_ata_cmd_pio_addr,
     //                                           second_ata_ctrl_pio_id, second_ata_ctrl_pio_addr));
 
+    assert(pci_x86_passthrough_virtio_gpu());
+
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_data_port_id, ps2_data_port_addr, ps2_data_port_size);
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, ps2_sts_cmd_port_id, ps2_sts_cmd_port_addr,
                                     ps2_sts_cmd_port_size);
@@ -217,6 +222,7 @@ void notified(microkit_channel ch)
 
     if (ch == 8) {
         LOG_VMM("cmos irq why???\n");
+        return;
     }
 
     if (ch == serial_config.rx.id) {
@@ -256,6 +262,8 @@ void notified(microkit_channel ch)
             /* Pass through PS2 IRQs */
             assert(virq_ioapic_register_passthrough(0, 1, FIRST_PS2_IRQ_CH));
             assert(virq_ioapic_register_passthrough(0, 12, SECOND_PS2_IRQ_CH));
+
+            assert(virq_ioapic_register_passthrough(0, VIRTIO_GPU_PCI_IOAPIC_PIN, 50));
 
             // /* Pass through ATA IRQs */
             // assert(virq_ioapic_register_passthrough(0, 14, PRIM_ATA_IRQ_CH));
