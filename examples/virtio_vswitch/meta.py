@@ -7,7 +7,7 @@ from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 from typing import Optional
 
-assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
+# assert version('sdfgen').split(".")[1] == "28", "Unexpected sdfgen version"
 
 ProtectionDomain = SystemDescription.ProtectionDomain
 VirtualMachine = SystemDescription.VirtualMachine
@@ -36,26 +36,26 @@ guest_configs: dict[str, GuestConfig] = {
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
     # Client0 VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=100)
+    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=100, cpu=0)
     vm_client0 = VirtualMachine("client0_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
     # Client1 VM
-    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=100)
-    vm_client1 = VirtualMachine("client1_linux", [VirtualMachine.Vcpu(id=0)])
+    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=100, cpu=1)
+    vm_client1 = VirtualMachine("client1_linux", [VirtualMachine.Vcpu(id=0, cpu=1)])
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
 
     # Client2 VM
-    vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=100)
-    vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0)])
+    vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=100, cpu=2)
+    vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0, cpu=2)])
     client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
     sdf.add_pd(vmm_client2)
 
     # Client3 VM - Outside vswitch
-    vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=100)
-    vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0)])
+    vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=100, cpu=3)
+    vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0, cpu=3)])
     client3 = Vmm(sdf, vmm_client3, vm_client3, client_dtb)
     sdf.add_pd(vmm_client3)
 

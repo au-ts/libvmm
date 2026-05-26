@@ -194,7 +194,7 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 qemu: $(IMAGE_FILE) blk_storage
 	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
 	$(QEMU) -machine virt,virtualization=on,secure=off \
-			-cpu cortex-a53 \
+			-cpu cortex-a53 -smp 4 \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
