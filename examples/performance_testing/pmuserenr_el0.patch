@@ -1,0 +1,13 @@
+diff --git a/arch/arm64/include/asm/assembler.h b/arch/arm64/include/asm/assembler.h
+index 3d8d534a7a77..2b878fe7e602 100644
+--- a/arch/arm64/include/asm/assembler.h
++++ b/arch/arm64/include/asm/assembler.h
+@@ -473,7 +473,7 @@ alternative_endif
+        cmp     \tmpreg, #ID_AA64DFR0_EL1_PMUVer_NI
+        ccmp    \tmpreg, #ID_AA64DFR0_EL1_PMUVer_IMP_DEF, #4, ne
+        b.eq    9000f                           // Skip if no PMU present or IMP_DEF
+-       msr     pmuserenr_el0, xzr              // Disable PMU access from EL0
++       // msr  pmuserenr_el0, xzr              // Disable PMU access from EL0
+ 9000:
+        .endm
+        
