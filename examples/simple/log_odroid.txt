@@ -1,0 +1,475 @@
+co
+^Eco
+[Enter `^Ec?' for help]
+[connecting...up]
+SM1:BL:511f6b:81ca2f;FEAT:A0F83180:20282000;POC:F;RCY:0;EMMC:0;READ:0;0.0;CHK:0;
+bl2_stage_init 0x01
+bl2_stage_init 0x81
+hw id: 0x0000 - pwm id 0x01
+bl2_stage_init 0xc1
+bl2_stage_init 0x02
+
+L0:00000000
+L1:00000703
+L2:00008067
+L3:15000020
+S1:00000000
+B2:20282000
+B1:a0f83180
+
+TE: 144726
+
+BL2 Built : 20:29:41, Jun 18 2019. g12a ga659aac - luan.yuan@droid15-sz
+
+Board ID = 1
+Set cpu clk to 24M
+Set clk81 to 24M
+Use GP1_pll as DSU clk.
+DSU clk: 1200 Mhz
+CPU clk: 1200 MHz
+Set clk81 to 166.6M
+eMMC boot @ 0
+sw8 s
+DDR driver_vesion: LPDDR4_PHY_V_0_1_15 build time: Jun 18 2019 20:29:37
+board id: 1
+Load FIP HDR from eMMC, src: 0x00010200, des: 0xfffd0000, size: 0x00004000, part: 0
+fw parse done
+Load ddrfw from eMMC, src: 0x00060200, des: 0xfffd0000, size: 0x0000c000, part: 0
+Load ddrfw from eMMC, src: 0x00038200, des: 0xfffd0000, size: 0x00004000, part: 0
+PIEI prepare done
+fastboot data load
+00000000
+emmc switch 1 ok
+00000000
+emmc switch 2 ok
+fastboot data verify
+verify result: 255
+Cfg max: 2, cur: 1. Board id: 255. Force loop cfg
+DDR4 probe
+ddr clk to 1320MHz
+Load ddrfw from eMMC, src: 0x00014200, des: 0xfffd0000, size: 0x0000c000, part: 0
+00000000
+emmc switch 0 ok
+
+dmc_version 0001
+Check phy result
+INFO : End of initialization
+INFO : End of read enable training
+INFO : End of fine write leveling
+INFO : End of read dq deskew training
+INFO : End of MPR read delay center optimization
+INFO : End of Write leveling coarse delay
+INFO : End of write delay center optimization
+INFO : End of read delay center optimization
+INFO : End of max read latency training
+INFO : Training has run successfully!
+1D training succeed
+Load ddrfw from eMMC, src: 0x00020200, des: 0xfffd0000, size: 0x0000c000, part: 0
+Check phy result
+INFO : End of initialization
+INFO : End of 2D read delay Voltage center optimization
+INFO : End of 2D write delay Voltage center optimization
+INFO : Training has run successfully!
+
+R0_RxClkDly_Margin==106 ps 9
+R0_TxDqDly_Margi==118 ps 10
+
+
+R1_RxClkDly_Margin==0 ps 0
+R1_TxDqDly_Margi==0 ps 0
+
+ dwc_ddrphy_apb_wr((0<<20)|(2<<16)|(0<<12)|(0xb0):0001 
+
+soc_vref_reg_value 0x 00000052 00000051 00000052 00000051 0000004e 00000050 00000051 0000004f 00000050 0000004e 00000050 00000051 0000004f 00000052 0000004f 00000050 00000051 00000051 00000050 0000004f 0000004f 0000004e 00000050 0000004f 00000050 00000050 00000051 0000004f 0000004f 0000004e 0000004f 0000004f dram_vref_reg_value 0x 00000020
+2D training succeed
+aml_ddr_fw_vesion: LPDDR4_PHY_V_0_1_15 build time: Jun 18 2019 20:29:43
+auto size-- 65535DDR cs0 size: 2048MB
+DDR cs1 size: 2048MB
+DMC_DDR_CTRL: 00700024DDR size: 3928MB
+cs0 DataBus test pass
+cs1 DataBus test pass
+cs0 AddrBus test pass
+cs1 AddrBus test pass
+
+non-sec scramble use zero key
+ddr scramble enabled
+
+100bdlr_step_size ps== 450
+result report
+boot times 0Enable ddr reg access
+00000000
+emmc switch 3 ok
+Authentication key not yet programmed
+get rpmb counter error 0x00000007
+00000000
+emmc switch 0 ok
+Load FIP HDR from eMMC, src: 0x00010200, des: 0x01700000, size: 0x00004000, part: 0
+Load BL3X from eMMC, src: 0x00078200, des: 0x01768000, size: 0x0009c000, part: 0
+bl2z: ptr: 05129330, size: 00001e40
+0.0;M3 CHK:0;cm4_sp_mode 0
+MVN_1=0x00000000
+MVN_2=0x00000000
+[Image: g12a_v1.1.3386-3b31431 2019-05-21 10:41:54 luan.yuan@droid15-sz]
+OPS=0x10
+ring efuse init
+2b 0c 10 00 01 17 1c 00 00 18 36 30 36 58 4b 50 
+[0.017355 Inits done]
+secure task start!
+high task start!
+low task start!
+run into bl31
+NOTICE:  BL31: v1.3(release):4fc40b1
+NOTICE:  BL31: Built : 15:57:33, May 22 2019
+NOTICE:  BL31: G12A normal boot!
+NOTICE:  BL31: BL33 decompress pass
+ERROR:   Error initializing runtime service opteed_fast
+
+<debug_uart>
+
+
+U-Boot 2022.07-armbian (Feb 17 2023 - 22:32:33 +0000) odroid-c4/hc4
+
+Model: Hardkernel ODROID-C4
+SoC:   Amlogic Meson SM1 (S905X3) Revision 2b:c (10:2)
+DRAM:  3.8 GiB
+Core:  388 devices, 27 uclasses, devicetree: separate
+MMC:   sd@ffe05000: 0, mmc@ffe07000: 1
+Loading Environment from nowhere... OK
+In:    serial
+Out:   serial
+Err:   serial
+Board variant: c4
+Net:   eth0: ethernet@ff3f0000
+Hit any key to stop autoboot:  2  
+ 0 
+=> 
+=> setenv autoload no && dhcp && tftpboot 0x20000000 odroidc4-1/local-kernel
+setenv autoload no && dhcp && tftpboot 0x20000000 odroidc4-1/local-kernel
+ethernet@ff3f0000 Waiting for PHY auto negotiation to complete...... done
+Speed: 1000, full duplex
+BOOTP broadcast 1
+BOOTP broadcast 2
+BOOTP broadcast 3
+BOOTP broadcast 4
+BOOTP broadcast 5
+BOOTP broadcast 6
+*** WARNING: Host Name is too long (34 - max: 32) - truncated
+*** WARNING: Host Name is too long (34 - max: 32) - truncated
+DHCP client bound to address 172.16.0.11 (5763 ms)
+Speed: 1000, full duplex
+Using ethernet@ff3f0000 device
+TFTP from server 172.16.0.2; our IP address is 172.16.0.11
+Filename 'odroidc4-1/local-kernel'.
+Load address: 0x20000000
+Loading: *#################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #######################
+	 12.9 MiB/s
+done
+Bytes transferred = 40413932 (268aaec hex)
+=> go 0x20000000
+go 0x20000000
+## Starting application at 0x20000000 ...
+LDR|INFO: altloader for seL4 starting
+LDR|INFO: Flags:                0x0000000000000001
+             seL4 configured as hypervisor
+LDR|INFO: Kernel:      entry:   0x0000008000000000
+LDR|INFO: Root server: physmem: 0x0000000002676000 -- 0x0000000002680000
+LDR|INFO:              virtmem: 0x000000008a000000 -- 0x000000008a00a000
+LDR|INFO:              entry  : 0x000000008a000000
+LDR|INFO: region: 0x00000000   addr: 0x0000000000000000   size: 0x0000000000244000   offset: 0x0000000000000000   type: 0x0000000000000001
+LDR|INFO: region: 0x00000001   addr: 0x0000000002676000   size: 0x0000000000009780   offset: 0x0000000000244000   type: 0x0000000000000001
+LDR|INFO: region: 0x00000002   addr: 0x0000000000244000   size: 0x00000000000a5d28   offset: 0x000000000024d780   type: 0x0000000000000001
+LDR|INFO: region: 0x00000003   addr: 0x00000000002ea000   size: 0x000000000000e54c   offset: 0x00000000002f34a8   type: 0x0000000000000001
+LDR|INFO: region: 0x00000004   addr: 0x00000000002f9000   size: 0x000000000237d000   offset: 0x00000000003019f4   type: 0x0000000000000001
+LDR|INFO: copying region 0x00000000
+LDR|INFO: copying region 0x00000001
+LDR|INFO: copying region 0x00000002
+LDR|INFO: copying region 0x00000003
+LDR|INFO: copying region 0x00000004
+LDR|INFO: CurrentEL=EL2
+LDR|INFO: Resetting CNTVOFF
+LDR|INFO: enabling MMU
+LDR|INFO: jumping to kernel
+Bootstrapping kernel
+available phys memory regions: 2
+  [0..5000000]
+  [5300000..f5800000]
+reserved virt address space regions: 3
+  [8000000000..8000244000]
+  [8000244000..8002676000]
+  [8002676000..8002680000]
+Booting all finished, dropped to user space
+MON|INFO: Microkit Bootstrap
+MON|INFO: bootinfo untyped list matches expected list
+MON|INFO: Number of bootstrap invocations: 0x0000000d
+MON|INFO: Number of system invocations:    0x000024e1
+MON|INFO: completed bootstrap invocations
+MON|INFO: completed system invocations
+VMM|INFO: starting "VMM"
+VMM|INFO: Copying guest kernel image to 0x20000000 (0x21f8a00 bytes)
+VMM|INFO: Copying guest DTB to 0x2f000000 (0xc1c8 bytes)
+VMM|INFO: Copying guest initial RAM disk to 0x2d700000 (0x175e8b bytes)
+VMM|INFO: initialised virtual GICv2 driver
+VMM|INFO: starting guest at 0x20000000, DTB at 0x2f000000, initial RAM disk at 0x2d700000
+[    0.000000] Booting Linux on physical CPU 0x0000000000 [0x411fd050]
+[    0.000000] Linux version 5.18.0 (ivanv@elementarydesktop) (aarch64-none-elf-gcc (GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16)) 10.2.1 20201103, GNU ld (GNU Toolchain for the A-profile Architecture 10.2-2020.11 (arm-10.16)) 2.35.1.20201028) #4 SMP PREEMPT Tue Mar 21 20:09:54 AEDT 2023
+[    0.000000] Machine model: Hardkernel ODROID-C4
+[    0.000000] efi: UEFI not found.
+[    0.000000] OF: reserved mem: invalid alloc-ranges property in 'linux,cma', skipping node.
+[    0.000000] NUMA: No NUMA configuration found
+[    0.000000] NUMA: Faking a node at [mem 0x0000000020000000-0x000000002fffffff]
+[    0.000000] NUMA: NODE_DATA [mem 0x2ff29b40-0x2ff2bfff]
+[    0.000000] Zone ranges:
+[    0.000000]   DMA      [mem 0x0000000020000000-0x000000002fffffff]
+[    0.000000]   DMA32    empty
+[    0.000000]   Normal   empty
+[    0.000000] Movable zone start for each node
+[    0.000000] Early memory node ranges
+[    0.000000]   node   0: [mem 0x0000000020000000-0x000000002fffffff]
+[    0.000000] Initmem setup node 0 [mem 0x0000000020000000-0x000000002fffffff]
+[    0.000000] cma: Reserved 32 MiB at 0x000000002b400000
+[    0.000000] psci: probing for conduit method from DT.
+[    0.000000] psci: PSCIv1.2 detected in firmware.
+[    0.000000] psci: Using standard PSCI v0.2 function IDs
+[    0.000000] psci: Trusted OS migration not required
+[    0.000000] psci: SMC Calling Convention v1.0
+[    0.000000] percpu: Embedded 20 pages/cpu s44520 r8192 d29208 u81920
+[    0.000000] pcpu-alloc: s44520 r8192 d29208 u81920 alloc=20*4096
+[    0.000000] pcpu-alloc: [0] 0 [0] 1 [0] 2 [0] 3 
+[    0.000000] Detected VIPT I-cache on CPU0
+[    0.000000] CPU features: detected: ARM errata 1165522, 1319367, or 1530923
+[    0.000000] Fallback order for Node 0: 0 
+[    0.000000] Built 1 zonelists, mobility grouping on.  Total pages: 64512
+[    0.000000] Policy zone: DMA
+[    0.000000] Kernel command line: console=ttyAML0,115200n8 root=/dev/ram0 nosmp rw debug loglevel=8 pci=nomsi earlyprintk=serial maxcpus=1
+[    0.000000] Unknown kernel command line parameters "earlyprintk=serial", will be passed to user space.
+[    0.000000] Dentry cache hash table entries: 32768 (order: 6, 262144 bytes, linear)
+[    0.000000] Inode-cache hash table entries: 16384 (order: 5, 131072 bytes, linear)
+[    0.000000] mem auto-init: stack:off, heap alloc:off, heap free:off
+[    0.000000] Memory: 179064K/262144K available (15808K kernel code, 3298K rwdata, 8740K rodata, 6784K init, 521K bss, 50312K reserved, 32768K cma-reserved)
+[    0.000000] SLUB: HWalign=64, Order=0-3, MinObjects=0, CPUs=4, Nodes=1
+[    0.000000] rcu: Preemptible hierarchical RCU implementation.
+[    0.000000] rcu: 	RCU event tracing is enabled.
+[    0.000000] rcu: 	RCU restricting CPUs from NR_CPUS=256 to nr_cpu_ids=4.
+[    0.000000] 	Trampoline variant of Tasks RCU enabled.
+[    0.000000] 	Tracing variant of Tasks RCU enabled.
+[    0.000000] rcu: RCU calculated value of scheduler-enlistment delay is 25 jiffies.
+[    0.000000] rcu: Adjusting geometry for rcu_fanout_leaf=16, nr_cpu_ids=4
+[    0.000000] NR_IRQS: 64, nr_irqs: 64, preallocated irqs: 0
+[    0.000000] Root IRQ handler: gic_handle_irq
+[    0.000000] random: get_random_bytes called from start_kernel+0x478/0x66c with crng_init=0
+[    0.000000] arch_timer: cp15 timer(s) running at 24.00MHz (virt).
+[    0.000000] clocksource: arch_sys_counter: mask: 0xffffffffffffff max_cycles: 0x588fe9dc0, max_idle_ns: 440795202592 ns
+[    0.000000] sched_clock: 56 bits at 24MHz, resolution 41ns, wraps every 4398046511097ns
+[    0.000251] Console: colour dummy device 80x25
+[    0.000318] Calibrating delay loop (skipped), value calculated using timer frequency.. 48.00 BogoMIPS (lpj=96000)
+[    0.000333] pid_max: default: 32768 minimum: 301
+[    0.000387] LSM: Security Framework initializing
+[    0.000471] Mount-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[    0.000484] Mountpoint-cache hash table entries: 512 (order: 0, 4096 bytes, linear)
+[    0.001700] cblist_init_generic: Setting adjustable number of callback queues.
+[    0.001719] cblist_init_generic: Setting shift to 2 and lim to 1.
+[    0.001788] cblist_init_generic: Setting shift to 2 and lim to 1.
+[    0.001927] rcu: Hierarchical SRCU implementation.
+[    0.005080] EFI services will not be available.
+[    0.005362] smp: Bringing up secondary CPUs ...
+[    0.005371] smp: Brought up 1 node, 1 CPU
+[    0.005378] SMP: Total of 1 processors activated.
+[    0.005386] CPU features: detected: 32-bit EL0 Support
+[    0.005391] CPU features: detected: 32-bit EL1 Support
+[    0.005398] CPU features: detected: Data cache clean to the PoU not required for I/D coherence
+[    0.005403] CPU features: detected: Common not Private translations
+[    0.005409] CPU features: detected: CRC32 instructions
+[    0.005417] CPU features: detected: RCpc load-acquire (LDAPR)
+[    0.005422] CPU features: detected: LSE atomic instructions
+[    0.005427] CPU features: detected: Privileged Access Never
+[    0.005431] CPU features: detected: RAS Extension Support
+[    0.015260] CPU: All CPU(s) started at EL1
+[    0.015295] alternatives: patching kernel code
+[    0.016572] devtmpfs: initialized
+[    0.024461] KASLR disabled due to lack of seed
+[    0.024613] clocksource: jiffies: mask: 0xffffffff max_cycles: 0xffffffff, max_idle_ns: 7645041785100000 ns
+[    0.024633] futex hash table entries: 1024 (order: 4, 65536 bytes, linear)
+[    0.025388] pinctrl core: initialized pinctrl subsystem
+[    0.026313] DMI not present or invalid.
+[    0.026710] NET: Registered PF_NETLINK/PF_ROUTE protocol family
+[    0.027756] DMA: preallocated 128 KiB GFP_KERNEL pool for atomic allocations
+[    0.027840] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA pool for atomic allocations
+[    0.027922] DMA: preallocated 128 KiB GFP_KERNEL|GFP_DMA32 pool for atomic allocations
+[    0.027971] audit: initializing netlink subsys (disabled)
+[    0.029483] thermal_sys: Registered thermal governor 'step_wise'
+[    0.029490] thermal_sys: Registered thermal governor 'power_allocator'
+[    0.029918] cpuidle: using governor menu
+[    0.030135] hw-breakpoint: found 6 breakpoint and 4 watchpoint registers.
+[    0.030170] ASID allocator initialised with 65536 entries
+[    0.031879] Serial: AMBA PL011 UART driver
+[    0.036605] audit: type=2000 audit(0.024:1): state=initialized audit_enabled=0 res=1
+[    0.054751] platform hdmi-connector: Fixing up cyclic dependency with ff600000.hdmi-tx
+[    0.063679] HugeTLB registered 1.00 GiB page size, pre-allocated 0 pages
+[    0.063698] HugeTLB registered 32.0 MiB page size, pre-allocated 0 pages
+[    0.063705] HugeTLB registered 2.00 MiB page size, pre-allocated 0 pages
+[    0.063712] HugeTLB registered 64.0 KiB page size, pre-allocated 0 pages
+[    0.065135] ACPI: Interpreter disabled.
+[    0.067613] iommu: Default domain type: Translated 
+[    0.067626] iommu: DMA domain TLB invalidation policy: strict mode 
+[    0.067855] SCSI subsystem initialized
+[    0.067990] libata version 3.00 loaded.
+[    0.068177] usbcore: registered new interface driver usbfs
+[    0.068216] usbcore: registered new interface driver hub
+[    0.068249] usbcore: registered new device driver usb
+[    0.069320] pps_core: LinuxPPS API ver. 1 registered
+[    0.069328] pps_core: Software ver. 5.3.6 - Copyright 2005-2007 Rodolfo Giometti <giometti@linux.it>
+[    0.069343] PTP clock support registered
+[    0.069460] EDAC MC: Ver: 3.0.0
+[    0.071039] FPGA manager framework
+[    0.071115] Advanced Linux Sound Architecture Driver Initialized.
+[    0.071713] vgaarb: loaded
+[    0.072046] clocksource: Switched to clocksource arch_sys_counter
+[    0.072234] VFS: Disk quotas dquot_6.6.0
+[    0.072274] VFS: Dquot-cache hash table entries: 512 (order 0, 4096 bytes)
+[    0.072424] pnp: PnP ACPI: disabled
+[    0.077864] NET: Registered PF_INET protocol family
+[    0.078054] IP idents hash table entries: 4096 (order: 3, 32768 bytes, linear)
+[    0.078515] tcp_listen_portaddr_hash hash table entries: 256 (order: 0, 4096 bytes, linear)
+[    0.078543] TCP established hash table entries: 2048 (order: 2, 16384 bytes, linear)
+[    0.078566] TCP bind hash table entries: 2048 (order: 3, 32768 bytes, linear)
+[    0.078595] TCP: Hash tables configured (established 2048 bind 2048)
+[    0.078658] UDP hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.078678] UDP-Lite hash table entries: 256 (order: 1, 8192 bytes, linear)
+[    0.078777] NET: Registered PF_UNIX/PF_LOCAL protocol family
+[    0.079137] RPC: Registered named UNIX socket transport module.
+[    0.079146] RPC: Registered udp transport module.
+[    0.079151] RPC: Registered tcp transport module.
+[    0.079156] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    0.079165] PCI: CLS 0 bytes, default 64
+[    0.079742] kvm [1]: HYP mode not available
+[    0.080620] Initialise system trusted keyrings
+[    0.080908] Unpacking initramfs...
+[    0.084233] workingset: timestamp_bits=42 max_order=16 bucket_order=0
+[    0.093843] squashfs: version 4.0 (2009/01/31) Phillip Lougher
+[    0.100446] NFS: Registering the id_resolver key type
+[    0.100477] Key type id_resolver registered
+[    0.100484] Key type id_legacy registered
+[    0.100554] nfs4filelayout_init: NFSv4 File Layout Driver Registering...
+[    0.100562] nfs4flexfilelayout_init: NFSv4 Flexfile Layout Driver Registering...
+[    0.100724] 9p: Installing v9fs 9p2000 file system support
+[    0.170000] Key type asymmetric registered
+[    0.170023] Asymmetric key parser 'x509' registered
+[    0.170106] Block layer SCSI generic (bsg) driver version 0.4 loaded (major 245)
+[    0.170117] io scheduler mq-deadline registered
+[    0.170123] io scheduler kyber registered
+[    0.174122] irq_meson_gpio: 100 to 8 gpio interrupt mux initialized
+[    0.189629] gpio-447 (usb-hub-reset): hogged as output/high
+[    0.212180] EINJ: ACPI disabled.
+[    0.265343] Serial: 8250/16550 driver, 4 ports, IRQ sharing enabled
+[    0.268548] SuperH (H)SCI(F) driver initialized
+[    0.269212] ff803000.serial: ttyAML0 at MMIO 0xff803000 (irq = 21, base_baud = 1500000) is a meson_uart
+[    0.325986] Freeing initrd memory: 9216K
+[    1.183581] printk: console [ttyAML0] enabled
+[    1.188636] msm_serial: driver initialized
+[    1.198835] loop: module loaded
+[    1.200474] megasas: 07.719.03.00-rc1
+[    1.207321] tun: Universal TUN/TAP device driver, 1.6
+[    1.208410] thunder_xcv, ver 1.0
+[    1.209969] thunder_bgx, ver 1.0
+[    1.213203] nicpf, ver 1.0
+[    1.217329] hns3: Hisilicon Ethernet Network Driver for Hip08 Family - version
+[    1.222985] hns3: Copyright (c) 2017 Huawei Corporation.
+[    1.228293] hclge is initializing
+[    1.231514] e1000: Intel(R) PRO/1000 Network Driver
+[    1.236344] e1000: Copyright (c) 1999-2006 Intel Corporation.
+[    1.242083] e1000e: Intel(R) PRO/1000 Network Driver
+[    1.246952] e1000e: Copyright(c) 1999 - 2015 Intel Corporation.
+[    1.252850] igb: Intel(R) Gigabit Ethernet Network Driver
+[    1.258163] igb: Copyright (c) 2007-2014 Intel Corporation.
+[    1.263713] igbvf: Intel(R) Gigabit Virtual Function Network Driver
+[    1.269893] igbvf: Copyright (c) 2009 - 2012 Intel Corporation.
+[    1.276233] sky2: driver version 1.30
+[    1.280708] VFIO - User Level meta-driver version: 0.3
+[    1.286908] ehci_hcd: USB 2.0 'Enhanced' Host Controller (EHCI) Driver
+[    1.290992] ehci-pci: EHCI PCI platform driver
+[    1.295384] ehci-platform: EHCI generic platform driver
+[    1.300675] ehci-orion: EHCI orion driver
+[    1.304623] ehci-exynos: EHCI Exynos driver
+[    1.308744] ohci_hcd: USB 1.1 'Open' Host Controller (OHCI) Driver
+[    1.314761] ohci-pci: OHCI PCI platform driver
+[    1.319180] ohci-platform: OHCI generic platform driver
+[    1.324463] ohci-exynos: OHCI Exynos driver
+[    1.329133] usbcore: registered new interface driver usb-storage
+[    1.337808] i2c_dev: i2c /dev entries driver
+[    1.348176] sdhci: Secure Digital Host Controller Interface driver
+[    1.348718] sdhci: Copyright(c) Pierre Ossman
+[    1.354069] Synopsys Designware Multimedia Card Interface Driver
+[    1.360402] sdhci-pltfm: SDHCI platform and OF driver helper
+[    1.366836] ledtrig-cpu: registered to indicate activity on CPUs
+[    1.373041] usbcore: registered new interface driver usbhid
+[    1.376089] usbhid: USB HID core driver
+[    1.387347] NET: Registered PF_PACKET protocol family
+[    1.387504] 9pnet: Installing 9P2000 support
+[    1.391119] Key type dns_resolver registered
+[    1.395563] registered taskstats version 1
+[    1.399313] Loading compiled-in X.509 certificates
+[    1.432421] ALSA device list:
+[    1.432455]   No soundcards found.
+[    1.440944] Freeing unused kernel memory: 6784K
+[    1.444123] Run /init as init process
+[    1.444146]   with arguments:
+[    1.446412]     /init
+[    1.448681]   with environment:
+[    1.451759]     HOME=/
+[    1.454105]     TERM=linux
+[    1.456778]     earlyprintk=serial
+Starting syslogd: OK
+Starting klogd: OK
+Running sysctl: OK
+Loading needed modules...
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+Saving 256 bits of non-creditable seed for next boot
+Starting network: OK
+
+Welcome to Buildroot
+odroidc2 login: 

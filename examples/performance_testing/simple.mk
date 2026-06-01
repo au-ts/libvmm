@@ -5,6 +5,7 @@
 #
 
 QEMU := qemu-system-aarch64
+OBJCOPY := aarch64-linux-gnu-objcopy
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
@@ -15,20 +16,31 @@ SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
+BENCH_CONFIG := $(EXAMPLE_DIR)/inject_bench_config.py
+
 SDDF_CUSTOM_LIBC := 1
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
-IMAGES := vmm.elf
+IMAGES := vmm.elf benchmark.elf idle.elf
 
 LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
+	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+else ifeq ($(strip $(MICROKIT_BOARD)), odroidc4)
+	INITRD ?= ec78fdfd660bc9358e4d7dcb73b55d88339ba19d-rootfs.cpio.gz
+else ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
+	INITRD ?= ce255a92feb25d09b5a0336b798523f35c2f8fe0-rootfs.cpio.gz
+else
+$(error Unsupported MICROKIT_BOARD given)
+endif
 
 CFLAGS := \
 	  -mstrict-align \
 	  -ffreestanding \
 	  -g3 -O3 -Wall \
 	  -Wno-unused-function \
+	  -DMICROKIT_CONFIG_$(MICROKIT_CONFIG) \
 	  -DBOARD_$(MICROKIT_BOARD) \
 	  -I$(BOARD_DIR)/include \
 	  -I$(LIBVMM)/include \
@@ -40,7 +52,7 @@ CFLAGS := \
 	  -target $(TARGET)
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util.a --end-group
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -55,9 +67,10 @@ all: loader.img
 
 -include vmm.d
 
-$(IMAGES): libvmm.a libsddf_util_debug.a
+$(IMAGES): libvmm.a libsddf_util.a
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
+	python3 $(BENCH_CONFIG) --objcopy $(OBJCOPY)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) --config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
 ${LINUX}:
@@ -92,15 +105,30 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm.dtb
 include $(LIBVMM)/vmm.mk
 include ${SDDF}/util/util.mk
 
+BENCH_OBJS := benchmark/benchmark.o
+IDLE_OBJS := benchmark/idle.o
+LIBUTIL_DBG := libsddf_util_debug.a
+LIBUTIL := libsddf_util.a
+
+${BENCH_OBJS} ${IDLE_OBJS}: ${CHECK_FLAGS_BOARD_MD5} |benchmark $(SDDF_LIBC_INCLUDE)
+benchmark:
+	mkdir -p benchmark
+
+benchmark.elf: $(BENCH_OBJS) ${LIBUTIL_DBG}
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
+idle.elf: $(IDLE_OBJS) ${LIBUTIL_DBG}
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
+
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
-			-cpu cortex-a53 \
+			-cpu cortex-a53,pmu=on \
 			-serial mon:stdio \
 			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
-			-nographic
-# 			-s -S
+			-nographic \
+ 			-s -S
 
 clean::
 	$(RM) -f *.elf .depend* vm.dts vm.dtb

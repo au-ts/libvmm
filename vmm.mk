@@ -72,6 +72,7 @@ libvmm/arch/aarch64/vgic:
 	mkdir -p libvmm/virtio
 
 libvmm.a: ${OBJECTS}
+	rm -f $@
 	${AR} crv $@ $^
 
 ${OBJECTS}: ${SDDF}/include
