@@ -13,6 +13,8 @@ target remote :1234
 # break vmm.c:notified
 # break vmm.c:init
 break vmm.c:132
+break vmm.c:notified
+break /home/alexkv/thesis/libvmm/include/libvmm/arch/aarch64/vgic/virq.h:219
 
 # Set hardware breakpoints on the Microkit entry points
 # hbreak init

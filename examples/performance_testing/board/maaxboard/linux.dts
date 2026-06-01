@@ -226,12 +226,6 @@
 		};
 	};
 
-	pmu {
-		compatible = "arm,cortex-a53-pmu";
-		interrupts = <0x01 0x07 0x04>;
-		interrupt-parent = <0x07>;
-	};
-
 	psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";

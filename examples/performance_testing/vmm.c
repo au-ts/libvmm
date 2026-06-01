@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
+//#include "sel4/syscall.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -16,15 +17,6 @@
 #include <sddf/benchmark/sel4bench.h>
 #include <sel4/benchmark_utilisation_types.h>
 #include <sel4/sel4.h>
-
-#include <os/sddf.h>
-#include <sddf/serial/queue.h>
-#include <sddf/serial/config.h>
-#include <sddf/util/printf.h>
-
-__attribute__((__section__(".serial_client_config"))) serial_client_config_t config;
-
-serial_queue_handle_t tx_queue_handle;
 
 /*
  * As this is just an example, for simplicity we just make the size of the
@@ -121,34 +113,26 @@ void init(void)
     guest_start(kernel_pc, GUEST_DTB_VADDR, GUEST_INIT_RAM_DISK_VADDR);
 }
 
-#define CYCLES_LOG_SIZE 100
+#define CYCLES_LOG_SIZE 1000
+
+static bool syscall = true;
 
 void notified(microkit_channel ch)
 {   
-    #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-        seL4_BenchmarkNullSyscall();
-    #endif
+    static volatile uint64_t cycle_log[CYCLES_LOG_SIZE];
+    static volatile uint64_t request_count = 0; 
 
-    sddf_printf("hey mate\n");
+
+    if (syscall) {
+        syscall = false;
+        #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+            seL4_BenchmarkNullSyscall();
+        #endif
+    }
 
     volatile uint64_t start_cycles;
     SEL4BENCH_READ_CCNT(start_cycles);
-    // volatile uint64_t pmuserenr;
-    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
-
-    // sel4bench_reset_counters();
-    // // THREAD_MEMORY_RELEASE();
-    // sel4bench_start_counters(benchmark_bf);
-
-    static volatile uint64_t cycle_log[CYCLES_LOG_SIZE];
-    static volatile uint64_t request_count = 0;
-    // volatile uint64_t pmuserenr;
-    // asm volatile("mrs %0, PMUSERENR_EL0" : "=r"(pmuserenr));
-
-    // volatile uint64_t start_cycles;
-    // SEL4BENCH_READ_CCNT(start_cycles);
-
-    // seL4_BenchmarkResetThreadUtilisation(TCB_CAP);
+    
     
     switch (ch) {
     case SERIAL_IRQ_CH: {
@@ -164,15 +148,6 @@ void notified(microkit_channel ch)
 
     volatile uint64_t end_cycles;
     SEL4BENCH_READ_CCNT(end_cycles);
-
-    // sel4bench_get_counters(benchmark_bf, &counter_value);
-    // sel4bench_stop_counters(benchmark_bf);
-
-    // seL4_BenchmarkGetThreadUtilisation(TCB_CAP);
-    
-    // Read the result 
-    // volatile uint64_t *buffer = (uint64_t *)&seL4_GetIPCBuffer()->msg[0];
-    // volatile uint64_t cycles = buffer[BENCHMARK_TCB_UTILISATION];
     
     cycle_log[request_count] = end_cycles - start_cycles;
     request_count++;
@@ -180,24 +155,11 @@ void notified(microkit_channel ch)
     if (request_count >= CYCLES_LOG_SIZE) {
         // asm volatile("nop");
         request_count = 0;
+        printf("\nNotified cycle count\n");
         for (int i = 0; i < CYCLES_LOG_SIZE; i++) {
-            sddf_printf("%d: %lu\n", i, cycle_log[i]);
+            printf("%d: %lu\n", i, cycle_log[i]);
         }
     }
-
-    // volatile uint64_t end_cycles;
-    // SEL4BENCH_READ_CCNT(end_cycles);
-    
-    // total_cycles += (end_cycles - start_cycles);
-    // request_count++;
-
-    // if (request_count % 1000 == 0) {
-    //     printf("VMM|PERF: Avg handling cycles over 1000 IRQs: %lu\n", 
-    //            total_cycles / 1000);
-    //     total_cycles = 0; // Reset
-    // }
-    
-    // printf("Cycle count start: %ld, end: %ld, difference: %ld\n", end_cycle, start_cycle, end_cycle - start_cycle);
 }
 
 /*
@@ -207,6 +169,13 @@ void notified(microkit_channel ch)
  */
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
 {
+    // if (syscall) {
+    //     syscall = false;
+    //     #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+    //         seL4_BenchmarkNullSyscall();
+    //     #endif
+    // }
+
     bool success = fault_handle(child, msginfo);
     if (success) {
         /* Now that we have handled the fault successfully, we reply to it so
