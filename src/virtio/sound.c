@@ -224,7 +224,7 @@ static uint8_t virtio_direction_from_sddf(uint8_t direction)
         return VIRTIO_SND_D_OUTPUT;
     }
     LOG_SOUND_ERR("Unknown direction %u\n", direction);
-    return (uint8_t) -1;
+    return (uint8_t)-1;
 }
 
 static uint32_t virtio_status_from_sddf(sound_status_t status)
@@ -241,7 +241,7 @@ static uint32_t virtio_status_from_sddf(sound_status_t status)
     case SOUND_S_BUSY:
         return VIRTIO_SOUND_S_IO_ERR;
     }
-    return (uint32_t) -1;
+    return (uint32_t)-1;
 }
 
 static void get_pcm_info(struct virtio_snd_pcm_info *dest, const sound_pcm_info_t *src)
@@ -254,16 +254,11 @@ static void get_pcm_info(struct virtio_snd_pcm_info *dest, const sound_pcm_info_
     dest->channels_max = src->channels_max;
 }
 
-static int handle_pcm_info(struct virtio_device *dev,
-                           struct virtq *virtq,
-                           struct virtio_snd_query_info *query_info,
-                           struct virtio_snd_pcm_info *responses,
-                           uint32_t response_count,
-                           uint32_t *bytes_written)
+static int handle_pcm_info(struct virtio_device *dev, struct virtq *virtq, struct virtio_snd_query_info *query_info,
+                           struct virtio_snd_pcm_info *responses, uint32_t response_count, uint32_t *bytes_written)
 {
     if (response_count < query_info->count) {
-        LOG_SOUND_ERR("Control message response descriptor too small (%d < %d)\n",
-                      response_count, query_info->count);
+        LOG_SOUND_ERR("Control message response descriptor too small (%d < %d)\n", response_count, query_info->count);
         return -SOUND_S_BAD_MSG;
     }
 
@@ -285,8 +280,7 @@ static int handle_pcm_info(struct virtio_device *dev,
     return i;
 }
 
-static int handle_pcm_set_params(struct virtio_device *dev,
-                                 uint16_t desc_head,
+static int handle_pcm_set_params(struct virtio_device *dev, uint16_t desc_head,
                                  struct virtio_snd_pcm_set_params *set_params)
 {
     struct virtio_snd_device *state = device_state(dev);
@@ -322,10 +316,7 @@ static int handle_pcm_set_params(struct virtio_device *dev,
     return 0;
 }
 
-static int handle_basic_cmd(struct virtio_device *dev,
-                            uint16_t desc_head,
-                            uint32_t stream_id,
-                            sound_cmd_code_t code)
+static int handle_basic_cmd(struct virtio_device *dev, uint16_t desc_head, uint32_t stream_id, sound_cmd_code_t code)
 {
     struct virtio_snd_device *state = device_state(dev);
 
@@ -359,20 +350,19 @@ static int handle_basic_cmd(struct virtio_device *dev,
 
 static void virtq_enqueue_used(struct virtq *virtq, uint32_t desc_head, uint32_t bytes_written)
 {
-    struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
+    struct virtq_used *used_ring = virtio_get_used_ring(virtq);
+    struct virtq_used_elem *used_elem = &used_ring->ring[used_ring->idx % virtq->num];
     used_elem->id = desc_head;
     used_elem->len = bytes_written;
-    virtq->used->idx++;
+    used_ring->idx++;
 }
 
 // Returns number of bytes written to virtq
-static void handle_control_msg(struct virtio_device *dev,
-                               struct virtq *virtq,
-                               uint16_t desc_head,
-                               bool *notify_driver,
+static void handle_control_msg(struct virtio_device *dev, struct virtq *virtq, uint16_t desc_head, bool *notify_driver,
                                bool *respond)
 {
-    struct virtq_desc *req_desc = &virtq->desc[desc_head];
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
+    struct virtq_desc *req_desc = &desc_ring[desc_head];
     struct virtio_snd_hdr *hdr = (void *)req_desc->addr;
     struct virtio_snd_pcm_hdr *pcm_hdr = (void *)hdr;
 
@@ -385,7 +375,7 @@ static void handle_control_msg(struct virtio_device *dev,
         return;
     }
 
-    struct virtq_desc *status_desc = &virtq->desc[req_desc->next];
+    struct virtq_desc *status_desc = &desc_ring[req_desc->next];
     uint32_t *status_ptr = (void *)status_desc->addr;
 
     int result;
@@ -399,12 +389,9 @@ static void handle_control_msg(struct virtio_device *dev,
             break;
         }
 
-        struct virtq_desc *response_desc = &virtq->desc[status_desc->next];
-        result = handle_pcm_info(dev, virtq,
-                                 (void *)hdr,
-                                 (void *)response_desc->addr,
-                                 response_desc->len / sizeof(struct virtio_snd_pcm_info),
-                                 &bytes_written);
+        struct virtq_desc *response_desc = &desc_ring[status_desc->next];
+        result = handle_pcm_info(dev, virtq, (void *)hdr, (void *)response_desc->addr,
+                                 response_desc->len / sizeof(struct virtio_snd_pcm_info), &bytes_written);
         if (result >= 0) {
             bytes_written += result * sizeof(struct virtio_snd_pcm_info);
         }
@@ -456,15 +443,11 @@ static void handle_control_msg(struct virtio_device *dev,
     *respond = immediate;
 }
 
-static bool perform_xfer(struct virtio_device *dev,
-                         struct virtq *virtq,
-                         struct virtq_desc *desc,
-                         bool transmit,
-                         int stream_id,
-                         int cookie,
-                         int *sent)
+static bool perform_xfer(struct virtio_device *dev, struct virtq *virtq, struct virtq_desc *desc, bool transmit,
+                         int stream_id, int cookie, int *sent)
 {
     struct virtio_snd_device *state = device_state(dev);
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
     uintptr_t buf_offset;
     if (!queue_dequeue_front(&state->free_buffers, &buf_offset)) {
@@ -476,9 +459,7 @@ static bool perform_xfer(struct virtio_device *dev,
     uint32_t pcm_remaining = SOUND_PCM_BUFFER_SIZE;
 
     // Decompose descriptor chain into one or more sDDF requests.
-    for (;
-         desc->flags & VIRTQ_DESC_F_NEXT;
-         desc = &virtq->desc[desc->next]) {
+    for (; desc->flags & VIRTQ_DESC_F_NEXT; desc = &desc_ring[desc->next]) {
         if (!!(desc->flags & VIRTQ_DESC_F_WRITE) == transmit) {
             LOG_SOUND_ERR("Incorrect xfer buffer type\n");
             return false;
@@ -493,8 +474,7 @@ static bool perform_xfer(struct virtio_device *dev,
 
             if (transmit) {
                 void *pcm_buffer = state->data_region + buf_offset;
-                memcpy(pcm_buffer + pcm_transmitted,
-                       (void *)desc->addr + desc_transmitted, to_xfer);
+                memcpy(pcm_buffer + pcm_transmitted, (void *)desc->addr + desc_transmitted, to_xfer);
             }
             desc_transmitted += to_xfer;
             desc_remaining -= to_xfer;
@@ -550,13 +530,11 @@ static bool perform_xfer(struct virtio_device *dev,
     return true;
 }
 
-static void handle_xfer(struct virtio_device *dev,
-                        struct virtq *virtq,
-                        uint16_t desc_head,
-                        bool transmit,
+static void handle_xfer(struct virtio_device *dev, struct virtq *virtq, uint16_t desc_head, bool transmit,
                         bool *notify_driver, bool *respond)
 {
-    struct virtq_desc *req_desc = &virtq->desc[desc_head];
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
+    struct virtq_desc *req_desc = &desc_ring[desc_head];
     struct virtio_snd_pcm_xfer *hdr = (void *)req_desc->addr;
 
     struct virtio_snd_device *state = device_state(dev);
@@ -573,16 +551,13 @@ static void handle_xfer(struct virtio_device *dev,
         return;
     }
 
-    struct virtq_desc *desc = &virtq->desc[req_desc->next];
+    struct virtq_desc *desc = &desc_ring[req_desc->next];
     int sent = 0;
-    bool success = perform_xfer(dev, virtq, desc, transmit,
-                                hdr->stream_id, cookie, &sent);
+    bool success = perform_xfer(dev, virtq, desc, transmit, hdr->stream_id, cookie, &sent);
 
     if (sent == 0) {
         // If we sent zero, respond immediately.
-        for (;
-             desc->flags & VIRTQ_DESC_F_NEXT;
-             desc = &virtq->desc[desc->next]);
+        for (; desc->flags & VIRTQ_DESC_F_NEXT; desc = &desc_ring[desc->next]);
 
         assert(desc->flags & VIRTQ_DESC_F_WRITE);
 
@@ -609,16 +584,16 @@ static void handle_xfer(struct virtio_device *dev,
     *notify_driver = true;
 }
 
-static void handle_virtq(struct virtio_device *dev,
-                         int index, bool *notify_driver, bool *respond)
+static void handle_virtq(struct virtio_device *dev, int index, bool *notify_driver, bool *respond)
 {
     virtio_queue_handler_t *vq = &dev->vqs[index];
     struct virtq *virtq = &vq->virtq;
+    struct virtq_avail *avail_ring = virtio_get_avail_ring(virtq);
 
     uint16_t idx = vq->last_idx;
-    for (; idx != virtq->avail->idx; idx++) {
+    for (; idx != avail_ring->idx; idx++) {
 
-        uint16_t desc_head = virtq->avail->ring[idx % virtq->num];
+        uint16_t desc_head = avail_ring->ring[idx % virtq->num];
 
         switch (index) {
         case CONTROLQ:
@@ -688,14 +663,9 @@ bool virtio_snd_init(struct virtio_snd_device *sound_dev, uintptr_t region_base,
     sound_dev->config.streams = shared_state->streams;
     sound_dev->config.chmaps = 0;
 
-    ialloc_init(&sound_dev->free_requests,
-                sound_dev->free_requests_data,
-                VIRTIO_SND_MAX_REQUESTS);
+    ialloc_init(&sound_dev->free_requests, sound_dev->free_requests_data, VIRTIO_SND_MAX_REQUESTS);
 
-    queue_init(&sound_dev->free_buffers,
-               sizeof(uintptr_t),
-               sound_dev->free_buffers_data,
-               SOUND_PCM_QUEUE_CAPACITY);
+    queue_init(&sound_dev->free_buffers, sizeof(uintptr_t), sound_dev->free_buffers_data, SOUND_PCM_QUEUE_CAPACITY);
 
     sound_dev->shared_state = shared_state;
     sound_dev->cmd_req = queues->cmd_req;
@@ -713,16 +683,13 @@ bool virtio_snd_init(struct virtio_snd_device *sound_dev, uintptr_t region_base,
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-static unsigned copy_rx_data(struct virtq *virtq,
-                             struct virtq_desc *desc,
-                             virtio_snd_request_t *req,
-                             void *pcm, unsigned pcm_len)
+static unsigned copy_rx_data(struct virtq *virtq, struct virtq_desc *desc, virtio_snd_request_t *req, void *pcm,
+                             unsigned pcm_len)
 {
     uint32_t desc_position = 0;
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
-    for (;
-         desc->flags & VIRTQ_DESC_F_NEXT;
-         desc = &virtq->desc[desc->next]) {
+    for (; desc->flags & VIRTQ_DESC_F_NEXT; desc = &desc_ring[desc->next]) {
         if ((desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
             LOG_SOUND_ERR("Expected VIRTQ_DESC_F_WRITE on RX buffer\n");
             req->status = SOUND_S_BAD_MSG;
@@ -755,9 +722,8 @@ static unsigned copy_rx_data(struct virtq *virtq,
             req->status = SOUND_S_BAD_MSG;
         }
         if (desc_position != req->bytes_received) {
-            LOG_SOUND_ERR(
-                "Did not receive enough PCM for RX: desc_position %u, bytes_received %u\n",
-                desc_position, req->bytes_received);
+            LOG_SOUND_ERR("Did not receive enough PCM for RX: desc_position %u, bytes_received %u\n", desc_position,
+                          req->bytes_received);
 
             req->status = SOUND_S_BAD_MSG;
         }
@@ -773,9 +739,7 @@ static unsigned copy_rx_data(struct virtq *virtq,
     return desc_position;
 }
 
-static bool respond_to_request(virtio_snd_request_t *req,
-                               struct virtio_device *dev,
-                               void *pcm, unsigned pcm_len,
+static bool respond_to_request(virtio_snd_request_t *req, struct virtio_device *dev, void *pcm, unsigned pcm_len,
                                void *response, unsigned response_len)
 {
     if (req->ref_count == 0) {
@@ -787,9 +751,10 @@ static bool respond_to_request(virtio_snd_request_t *req,
 
     assert(req->virtq_idx < VIRTIO_SND_NUM_VIRTQ);
     struct virtq *virtq = &dev->vqs[req->virtq_idx].virtq;
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
-    struct virtq_desc *req_desc = &virtq->desc[desc_head];
-    struct virtq_desc *res_desc = &virtq->desc[req_desc->next];
+    struct virtq_desc *req_desc = &desc_ring[desc_head];
+    struct virtq_desc *res_desc = &desc_ring[req_desc->next];
 
     unsigned used;
     if (req->virtq_idx == RXQ) {
@@ -803,9 +768,7 @@ static bool respond_to_request(virtio_snd_request_t *req,
     }
 
     struct virtq_desc *status_desc = res_desc;
-    for (;
-         status_desc->flags & VIRTQ_DESC_F_NEXT;
-         status_desc = &virtq->desc[status_desc->next]);
+    for (; status_desc->flags & VIRTQ_DESC_F_NEXT; status_desc = &desc_ring[status_desc->next]);
 
     if (status_desc == req_desc || (status_desc->flags & VIRTQ_DESC_F_WRITE) == 0) {
         LOG_SOUND_ERR("Message must contain writeable status descriptor\n");
@@ -834,8 +797,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
 
         uint32_t response = virtio_status_from_sddf(req->status);
 
-        bool responded = respond_to_request(req, dev, NULL, 0,
-                                            &response, sizeof(response));
+        bool responded = respond_to_request(req, dev, NULL, 0, &response, sizeof(response));
         if (responded) {
             ialloc_free(&state->free_requests, cmd.cookie);
             respond = true;
@@ -855,9 +817,7 @@ void virtio_snd_notified(struct virtio_snd_device *state)
         response.latency_bytes = pcm.latency_bytes;
 
         void *pcm_buffer = state->data_region + pcm.io_or_offset;
-        bool responded = respond_to_request(req, dev,
-                                            pcm_buffer, pcm.len,
-                                            &response, sizeof(response));
+        bool responded = respond_to_request(req, dev, pcm_buffer, pcm.len, &response, sizeof(response));
         if (responded) {
             ialloc_free(&state->free_requests, pcm.cookie);
             respond = true;

@@ -8,13 +8,51 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/virtio.h>
+
+/* These are incorrect if VIRTIO_F_EVENT_IDX feature is negotitated, but we don't support that for now. */
+static inline size_t virtio_desc_ring_size_bytes(struct virtq *virtq)
+{
+    return virtq->num * sizeof(struct virtq_desc);
+}
+
+static inline size_t virtio_avail_ring_size_bytes(struct virtq *virtq)
+{
+    /* There are 2 u16 before the actual ring. */
+    return 4 + virtq->num * sizeof(uint16_t);
+}
+
+static inline size_t virtio_used_ring_size_bytes(struct virtq *virtq)
+{
+    /* There are 2 u16 before the actual ring. */
+    return 4 + virtq->num * sizeof(struct virtq_used_elem);
+}
+
+struct virtq_desc *virtio_get_desc_ring(struct virtq *virtq)
+{
+    uint64_t desc_ring_gpa = (uint64_t)virtq->desc_gpa;
+    return (struct virtq_desc *)gpa_to_hva(desc_ring_gpa, virtio_desc_ring_size_bytes(virtq));
+}
+
+struct virtq_avail *virtio_get_avail_ring(struct virtq *virtq)
+{
+    uint64_t avail_ring_gpa = (uint64_t)virtq->avail_gpa;
+    return (struct virtq_avail *)gpa_to_hva(avail_ring_gpa, virtio_avail_ring_size_bytes(virtq));
+}
+
+struct virtq_used *virtio_get_used_ring(struct virtq *virtq)
+{
+    uint64_t used_ring_gpa = (uint64_t)virtq->used_gpa;
+    return (struct virtq_used *)gpa_to_hva(used_ring_gpa, virtio_used_ring_size_bytes(virtq));
+}
 
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
     uint64_t loop_iter_count = 0;
     uint64_t payload_len = 0;
@@ -25,12 +63,12 @@ uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint1
             return 0;
         }
 
-        payload_len += virtq->desc[curr_desc].len;
-        if (!(virtq->desc[curr_desc].flags & VIRTQ_DESC_F_NEXT)) {
+        payload_len += desc_ring[curr_desc].len;
+        if (!(desc_ring[curr_desc].flags & VIRTQ_DESC_F_NEXT)) {
             break;
         }
 
-        curr_desc = virtq->desc[curr_desc].next;
+        curr_desc = desc_ring[curr_desc].next;
         loop_iter_count++;
     };
     return payload_len;
@@ -41,6 +79,7 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
     uint64_t current_list_byte = read_off;
     uint64_t end_list_byte = read_off + bytes_to_read;
@@ -54,16 +93,17 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
             return false;
         }
 
-        struct virtq_desc *desc = &virtq->desc[curr_desc];
+        struct virtq_desc *desc = &desc_ring[curr_desc];
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
         if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
             /* This descriptor have what we need, copy it over to `data`. */
             uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
             uint64_t src_gpa = desc->addr + (current_list_byte - current_desc_start_byte);
+            void *src_hva = gpa_to_hva(src_gpa, copy_size);
             char *dest = data + (current_list_byte - read_off);
 
-            memcpy(dest, (char *)src_gpa, copy_size);
+            memcpy(dest, src_hva, copy_size);
             current_list_byte += copy_size;
         }
 
@@ -73,7 +113,7 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
         }
         loop_iter_count++;
         current_desc_start_byte += desc->len;
-        curr_desc = virtq->desc[curr_desc].next;
+        curr_desc = desc_ring[curr_desc].next;
     }
 
     return current_list_byte == end_list_byte;
@@ -84,6 +124,7 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
+    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
     uint64_t current_list_byte = write_off;
     uint64_t end_list_byte = write_off + bytes_to_write;
@@ -97,7 +138,7 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
             return false;
         }
 
-        struct virtq_desc *desc = &virtq->desc[curr_desc];
+        struct virtq_desc *desc = &desc_ring[curr_desc];
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
         if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
@@ -105,8 +146,9 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
             uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
             char *src = data + (current_list_byte - write_off);
             uint64_t dest_gpa = desc->addr + (current_list_byte - current_desc_start_byte);
+            void *dest_hva = gpa_to_hva(dest_gpa, copy_size);
 
-            memcpy((char *)dest_gpa, src, copy_size);
+            memcpy(dest_hva, src, copy_size);
             current_list_byte += copy_size;
         }
 
@@ -117,7 +159,7 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
 
         loop_iter_count++;
         current_desc_start_byte += desc->len;
-        curr_desc = virtq->desc[curr_desc].next;
+        curr_desc = desc_ring[curr_desc].next;
     }
 
     return true;
@@ -127,9 +169,10 @@ bool virtio_virtq_peek_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
+    struct virtq_avail *avail_ring = virtio_get_avail_ring(virtq);
 
-    if (vq_handler->last_idx != virtq->avail->idx) {
-        *ret = virtq->avail->ring[vq_handler->last_idx % virtq->num];
+    if (vq_handler->last_idx != avail_ring->idx) {
+        *ret = avail_ring->ring[vq_handler->last_idx % virtq->num];
         return true;
     }
 
@@ -155,9 +198,10 @@ void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_hea
 {
     assert(vq_handler->ready);
     struct virtq *virtq = &vq_handler->virtq;
+    struct virtq_used *used_ring = virtio_get_used_ring(virtq);
 
-    struct virtq_used_elem *used_elem = &virtq->used->ring[virtq->used->idx % virtq->num];
+    struct virtq_used_elem *used_elem = &used_ring->ring[used_ring->idx % virtq->num];
     used_elem->id = desc_head;
     used_elem->len = len;
-    virtq->used->idx++;
+    used_ring->idx++;
 }
