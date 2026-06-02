@@ -127,7 +127,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     LOG_CONSOLE("processing available buffers from index [0x%lx..0x%lx)\n", vq->last_idx, vq->virtq.avail->idx);
     bool transferred = false;
     uint16_t desc_head;
-    while (virtio_virtq_peek_avail(vq, &desc_head) && !serial_queue_full(console->txq, console->txq->queue->head)) {
+    while (virtio_virtq_peek_avail(vq, &desc_head)) {
         uint64_t payload_len = virtio_desc_chain_payload_len(vq, desc_head);
 
         if (payload_len > console->txq->capacity) {
