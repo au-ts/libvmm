@@ -26,11 +26,10 @@ async def test_virtio_net_wget(
         await asyncio.sleep(1)
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
-        await send_input(backend, b"wget httpbin.org/html\n")
-        await wait_for_output(backend, b"'html' saved")
-        await send_input(backend, b"cat html\n")
-        await wait_for_output(backend, b"<!DOCTYPE html>")
-        await wait_for_output(backend, b"and all of them a care-killing competency.")
+        await send_input(backend, b"http://trustworthy.systems/song\n")
+        await wait_for_output(backend, b"'song' saved")
+        await send_input(backend, b"cat song\n")
+        await wait_for_output(backend, b"Implementation deep and fine.")
 
 
 # export
