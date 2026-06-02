@@ -223,7 +223,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
          * started, so just dequeue all data and early return.
          */
         char c;
-        while (serial_dequeue(console->rxq, &c));
+        while (serial_dequeue(console->rxq, &c) == 0);
         return true;
     }
 
@@ -236,7 +236,7 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
                     desc.addr + desc.len);
         uint32_t bytes_written = 0;
         char c;
-        while (bytes_written < desc.len && !serial_dequeue(console->rxq, &c)) {
+        while (bytes_written < desc.len && serial_dequeue(console->rxq, &c) == 0) {
             assert(virtio_write_data_to_desc_chain(vq, desc_head, 1, bytes_written, &c));
             bytes_written++;
         }
