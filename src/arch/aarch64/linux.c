@@ -54,15 +54,11 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     }
 
     // Check that the kernel image destination is in valid guest RAM, then copy
-    size_t bytes_remaining;
     uint64_t kernel_dest_gpa = ram_start_gpa + image_header.text_offset;
-    void *kernel_dest_vmm = gpa_to_vaddr(kernel_dest_gpa, &bytes_remaining);
-    if (kernel_dest_vmm == NULL) {
-        LOG_VMM_ERR("Linux kernel copy destination 0x%lx not in valid guest RAM\n", kernel_dest_gpa);
-        return 0;
-    }
-    if (bytes_remaining < kernel_size) {
-        LOG_VMM_ERR("Not enough guest RAM to copy Linux kernel\n");
+    void *kernel_dest_hva = gpa_to_hva(kernel_dest_gpa, kernel_size);
+    if (kernel_dest_hva == NULL) {
+        LOG_VMM_ERR("Linux kernel copy destination [0x%lx..0x%lx) not in valid guest RAM\n", kernel_dest_gpa,
+                    kernel_dest_gpa + kernel_size);
         return 0;
     }
 
@@ -74,8 +70,8 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
         LOG_VMM_ERR("Linux requires that guest RAM starting GPA must be 2MiB aligned, got 0x%lx\n", ram_start_gpa);
         return 0;
     }
-    LOG_VMM("Copying guest kernel image to 0x%lx (0x%lx bytes)\n", (uintptr_t)kernel_dest_vmm, kernel_size);
-    memcpy((char *)kernel_dest_vmm, (char *)kernel, kernel_size);
+    LOG_VMM("Copying guest kernel image to 0x%lx (0x%lx bytes)\n", kernel_dest_gpa, kernel_size);
+    memcpy((char *)kernel_dest_hva, (char *)kernel, kernel_size);
 
     // Copy the guest device tree blob into the right location
     // First check that the DTB given is actually a DTB!
@@ -100,31 +96,25 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
         return 0;
     }
 
-    void *dtb_dest_vmm = gpa_to_vaddr(dtb_dest_gpa, &bytes_remaining);
-    if (dtb_dest_vmm == NULL) {
-        LOG_VMM_ERR("DTB copy destination 0x%lx not in valid guest RAM\n", dtb_dest_gpa);
-        return 0;
-    }
-    if (bytes_remaining < dtb_size) {
-        LOG_VMM_ERR("Not enough guest RAM to copy DTB\n");
+    void *dtb_dest_hva = gpa_to_hva(dtb_dest_gpa, dtb_size);
+    if (dtb_dest_hva == NULL) {
+        LOG_VMM_ERR("DTB copy destination [0x%lx..0x%lx) not in valid guest RAM\n", dtb_dest_gpa,
+                    dtb_dest_gpa + kernel_size);
         return 0;
     }
     LOG_VMM("Copying guest DTB to GPA 0x%lx (0x%zx bytes)\n", dtb_dest_gpa, dtb_size);
-    memcpy((char *)dtb_dest_vmm, (char *)dtb_src, dtb_size);
+    memcpy((char *)dtb_dest_hva, (char *)dtb_src, dtb_size);
 
     // Copy the initial RAM disk into the right location
     // @ivanv: add checks for initrd according to Linux docs
-    void *initrd_dest_vmm = gpa_to_vaddr(initrd_dest_gpa, &bytes_remaining);
-    if (initrd_dest_vmm == NULL) {
-        LOG_VMM_ERR("Initrd copy destination 0x%lx not in valid guest RAM\n", initrd_dest_gpa);
+    void *initrd_dest_hva = gpa_to_hva(initrd_dest_gpa, initrd_size);
+    if (initrd_dest_hva == NULL) {
+        LOG_VMM_ERR("Initrd copy destination [0x%lx..0x%lx) not in valid guest RAM\n", initrd_dest_gpa,
+                    initrd_dest_gpa + kernel_size);
         return 0;
     }
-    if (bytes_remaining < initrd_size) {
-        LOG_VMM_ERR("Not enough guest RAM to copy initrd\n");
-        return 0;
-    }
-    LOG_VMM("Copying guest initial RAM disk to GPA 0x%lx (0x%zx bytes)\n", (uintptr_t)initrd_dest_vmm, initrd_size);
-    memcpy((char *)initrd_dest_vmm, (char *)initrd_src, initrd_size);
+    LOG_VMM("Copying guest initial RAM disk to GPA 0x%lx (0x%zx bytes)\n", initrd_dest_gpa, initrd_size);
+    memcpy((char *)initrd_dest_hva, (char *)initrd_src, initrd_size);
 
     return kernel_dest_gpa;
 }

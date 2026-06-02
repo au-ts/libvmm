@@ -23,10 +23,18 @@ struct guest_ram_region {
 /* Tell libvmm valid guest physical RAM region */
 bool guest_ram_add_region(struct guest_ram_region guest_ram_region);
 
-/* Convert guest physical address to the VMM's virtual memory address.
- * `bytes_remaining` will contain the number of bytes to the end of the region. */
-void *gpa_to_vaddr(uint64_t gpa, size_t *bytes_remaining);
-void *gpa_to_vaddr_or_crash(uint64_t gpa, size_t *bytes_remaining);
+/*
+ * GVA: Guest Virtual Address
+ * GPA: Guest Physical Address
+ * HVA: Host Virtual Address (the VMM's virtual memory)
+ * HPA: Host Physical Address
+*/
+
+/* Converts a Guest Physical Address to a Host Virtual Address.
+ * Ensures the entire requested length is contiguous in guest RAM.
+ * Returns NULL on failure.
+ */
+void *gpa_to_hva(uint64_t gpa, size_t size);
 
 /* Returns the list of guest RAM regions registered. The number of regions
  * in the list will be written to `num_regions_ret`. */
