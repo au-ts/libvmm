@@ -55,7 +55,7 @@ struct guest_ram_region *guest_ram_get_regions(int *num_regions)
     return guest.guest_ram_regions;
 }
 
-void *gpa_to_vaddr(uint64_t gpa, size_t *bytes_remaining)
+void *gpa_to_hva(uint64_t gpa, size_t size)
 {
     assert(guest.guest_ram_regions_len);
 
@@ -64,16 +64,11 @@ void *gpa_to_vaddr(uint64_t gpa, size_t *bytes_remaining)
         uint64_t this_region_gpa_end = this_region_gpa_start + guest.guest_ram_regions[i].size;
         if (gpa >= this_region_gpa_start && gpa < this_region_gpa_end) {
             uint64_t offset = gpa - this_region_gpa_start;
-            *bytes_remaining = this_region_gpa_end - gpa;
-            return (void *)((uintptr_t)guest.guest_ram_regions[i].vmm_vaddr + offset);
+            uint64_t bytes_remaining = this_region_gpa_end - gpa;
+            if (size <= bytes_remaining) {
+                return (void *)((uintptr_t)guest.guest_ram_regions[i].vmm_vaddr + offset);
+            }
         }
     }
     return NULL;
-}
-
-void *gpa_to_vaddr_or_crash(uint64_t gpa, size_t *bytes_remaining)
-{
-    void *ret = gpa_to_vaddr(gpa, bytes_remaining);
-    assert(ret);
-    return ret;
 }
