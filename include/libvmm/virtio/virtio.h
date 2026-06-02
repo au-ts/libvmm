@@ -65,6 +65,10 @@ static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
  */
 bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size, size_t virq);
 
+struct virtq_desc *virtio_get_desc_ring(struct virtq *virtq);
+struct virtq_avail *virtio_get_avail_ring(struct virtq *virtq);
+struct virtq_used *virtio_get_used_ring(struct virtq *virtq);
+
 /*
  * Given a descriptor head, walk the descriptor chain and compute the sum of the
  * length of all the desciptor chain's buffers

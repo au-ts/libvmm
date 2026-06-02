@@ -92,10 +92,11 @@ struct virtq_used {
 };
 
 struct virtq {
+    /* queue capacity */
     unsigned int num;
-    struct virtq_desc *desc;
-    struct virtq_avail *avail;
-    struct virtq_used *used;
+    struct virtq_desc *desc_gpa;
+    struct virtq_avail *avail_gpa;
+    struct virtq_used *used_gpa;
 };
 
 /* The standard layout for the ring is a continuous chunk of memory which looks
