@@ -231,12 +231,11 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     uint16_t desc_head;
     while (!serial_queue_empty(console->rxq, console->rxq->queue->head) && virtio_virtq_pop_avail(vq, &desc_head)) {
         transferred = true;
-        struct virtq_desc desc = vq->virtq.desc[desc_head];
-        LOG_CONSOLE("processing descriptor (0x%lx) with buffer [0x%lx..0x%lx)\n", desc_head, desc.addr,
-                    desc.addr + desc.len);
+        uint64_t payload_len = virtio_desc_chain_payload_len(vq, desc_head);
+
         uint32_t bytes_written = 0;
         char c;
-        while (bytes_written < desc.len && serial_dequeue(console->rxq, &c) == 0) {
+        while (bytes_written < payload_len && serial_dequeue(console->rxq, &c) == 0) {
             assert(virtio_write_data_to_desc_chain(vq, desc_head, 1, bytes_written, &c));
             bytes_written++;
         }
