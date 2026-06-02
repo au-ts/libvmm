@@ -158,27 +158,25 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
         }
 
         uint32_t bytes_copied = 0;
+        uint32_t local_tail = console->txq->queue->tail;
 
         /* Copy data until no more to copy or until the queue wraps around */
-        char *serial_txq_dest = (char *)(console->txq->data_region
-                                         + (console->txq->queue->tail % console->txq->capacity));
+        char *serial_txq_dest = (char *)(console->txq->data_region + (local_tail % console->txq->capacity));
         uint32_t copy_len = MIN(payload_len, serial_txq_contiguous_free_len);
         assert(virtio_read_data_from_desc_chain(vq, desc_head, copy_len, bytes_copied, serial_txq_dest));
         bytes_copied += copy_len;
-        serial_update_shared_tail(console->txq, console->txq->queue->tail + copy_len);
 
         if (copy_twice) {
             /* Need to copy more data after the queue wraps around */
             serial_txq_dest = (char *)(console->txq->data_region
-                                       + (console->txq->queue->tail % console->txq->capacity));
+                                       + ((local_tail + bytes_copied) % console->txq->capacity));
             copy_len = payload_len - bytes_copied;
-            assert(copy_len <= serial_queue_contiguous_free(console->txq));
             assert(virtio_read_data_from_desc_chain(vq, desc_head, copy_len, bytes_copied, serial_txq_dest));
             bytes_copied += copy_len;
-            serial_update_shared_tail(console->txq, console->txq->queue->tail + copy_len);
         }
 
         assert(bytes_copied == payload_len);
+        serial_update_shared_tail(console->txq, local_tail + bytes_copied);
 
         LOG_CONSOLE("processed descriptor %u with content: %s\n", desc_head, serial_txq_dest);
 
