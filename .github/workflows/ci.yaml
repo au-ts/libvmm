@@ -21,7 +21,6 @@ env:
   MICROKIT_VERSION: 2.2.0
   MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.2.0/
   SDFGEN_VERSION: 0.29.0
-  ZIG_VERSION: 0.15.1
 
 jobs:
   build_manual:
@@ -59,10 +58,6 @@ jobs:
         run: |
           brew install llvm lld qemu dtc make dosfstools expect
           echo "/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_PATH
-      - name: Install Zig
-        uses: mlugg/setup-zig@v2.0.5
-        with:
-          version: ${{ env.ZIG_VERSION }}
       - name: Setup pyenv
         run: |
           python3.13 -m venv venv

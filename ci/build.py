@@ -39,44 +39,6 @@ def build_make(args: argparse.Namespace, test_config: common.TestConfig):
     )
 
 
-def build_zig(args: argparse.Namespace, test_config: common.TestConfig):
-    build_dir = common.example_build_path(test_config)
-    example_dir = get_example_dir(test_config.example)
-
-    zig_env = os.environ.copy()
-    zig_env["ZIG_GLOBAL_CACHE_DIR"] = str(common.CI_BUILD_DIR / "zig-cache")
-    zig_env["ZIG_LOCAL_CACHE_DIR"] = str(common.CI_BUILD_DIR / "zig-cache")
-
-    # Explicitly handle each config in case of unexpected future Microkit
-    # configurations
-    zig_optimize_table = {
-        "debug": "Debug",
-        "smp-debug": "Debug",
-        "release": "ReleaseSafe",
-        "smp-release": "ReleaseSafe",
-        "benchmark": "ReleaseSafe",
-        "smp-benchmark": "ReleaseSafe",
-    }
-    zig_optimize = zig_optimize_table[test_config.config]
-
-    with contextlib.chdir(example_dir):
-        subprocess.run(
-            [
-                "zig",
-                "build",
-                f"-Dsdk={args.microkit_sdk}",
-                f"-Dboard={test_config.board}",
-                f"-Dconfig={test_config.config}",
-                f"-Doptimize={zig_optimize}",
-                "-p",
-                build_dir,
-                f"-j{args.num_jobs}",
-            ],
-            check=True,
-            env=zig_env,
-        )
-
-
 def build(args: argparse.Namespace, test_config: common.TestConfig):
     log.group_start(
         "building example '%s' for '%s' with microkit config '%s' and '%s'"
@@ -98,8 +60,6 @@ def build(args: argparse.Namespace, test_config: common.TestConfig):
 
     if test_config.build_system == "make":
         build_make(args, test_config)
-    elif test_config.build_system == "zig":
-        build_zig(args, test_config)
     else:
         raise NotImplementedError(f"unknown build system '{test_config.build_system}'")
 

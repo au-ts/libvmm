@@ -21,7 +21,6 @@ in
         gzip
         fakeroot
         cpio
-        zig
       ];
     in crossInputs ++ nativeInputs;
     hardeningDisable = [ "all" ];

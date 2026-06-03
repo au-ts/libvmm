@@ -156,7 +156,6 @@ class TestConfig(TestCase):
     def loader_img(self) -> Path:
         return (
             example_build_path(self)
-            / ("bin" if self.build_system == "zig" else "")
             / "loader.img"
         )
 
