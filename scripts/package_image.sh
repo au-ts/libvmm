@@ -14,10 +14,6 @@ METADATA_PATH=$3
 
 SHASUM=$(shasum "$IMAGE_PATH" | cut -d' ' -f1)
 
-# Clean the image name if it contain dots, a common case is `rootfs.cpio.gz`
-# Because it can interfere with the Zig syntax
-SANITISED_IMG_NAME=$(echo "$IMAGE_NAME" | tr '.' '_')
-
 DIR_NAME="$SHASUM-$IMAGE_NAME"
 TAR_NAME="$DIR_NAME.tar"
 
