@@ -55,6 +55,10 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
         }
 
         struct virtq_desc *desc = &virtq->desc[curr_desc];
+        if (desc->len > UINT64_MAX - current_desc_start_byte) {
+            LOG_VMM_ERR("descriptor length overflow in chain starting at %u\n", desc_head);
+            return false;
+        }
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
         if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
@@ -98,6 +102,10 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
         }
 
         struct virtq_desc *desc = &virtq->desc[curr_desc];
+        if (desc->len > UINT64_MAX - current_desc_start_byte) {
+            LOG_VMM_ERR("descriptor length overflow in chain starting at %u\n", desc_head);
+            return false;
+        }
         uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
 
         if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
