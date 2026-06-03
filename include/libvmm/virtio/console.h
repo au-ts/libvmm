@@ -95,17 +95,14 @@ struct virtio_console_device {
     serial_queue_handle_t *rxq;
     serial_queue_handle_t *txq;
     int tx_ch;
+    int rx_ch;
 };
 
-bool virtio_mmio_console_init(struct virtio_console_device *console,
-                              uintptr_t region_base,
-                              uintptr_t region_size,
-                              size_t virq,
-                              serial_queue_handle_t *rxq,
-                              serial_queue_handle_t *txq,
-                              int tx_ch);
-
-bool virtio_console_handle_rx(struct virtio_console_device *console);
+bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
+                              size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch,
+                              int rx_ch);
 
 bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
-                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch);
+                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch);
+
+bool virtio_console_queue_notify(struct virtio_console_device *console);

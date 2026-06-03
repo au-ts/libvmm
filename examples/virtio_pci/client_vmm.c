@@ -105,7 +105,8 @@ void init(void)
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id);
+    success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id,
+                                      serial_config.rx.id);
     assert(success);
 
     success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
@@ -132,7 +133,7 @@ void init(void)
 void notified(microkit_channel ch)
 {
     if (ch == serial_config.rx.id) {
-        virtio_console_handle_rx(&virtio_console);
+        virtio_console_queue_notify(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
     } else if (ch == blk_config.virt.id) {

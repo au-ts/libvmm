@@ -142,7 +142,7 @@ void notified(microkit_channel ch)
     case SERIAL_VIRT_RX_CH: {
         /* We have received an event from the serial virtualiser, so we
          * call the virtIO console handling */
-        virtio_console_handle_rx(&virtio_console);
+        virtio_console_queue_notify(&virtio_console);
         break;
     }
     case SOUND_DRIVER_CH: {
