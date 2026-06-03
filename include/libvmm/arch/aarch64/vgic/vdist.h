@@ -233,6 +233,9 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     struct virq_handle *virq = vgic_irq_dequeue(vgic, vcpu_id);
     assert(virq->virq != VIRQ_INVALID);
 
+    /* Pushing to the hardware list now, IRQ no longer pending. */
+    set_pending(vgic, virq->virq, false, vcpu_id);
+
 #if defined(GIC_V2)
     int group = 0;
 #elif defined(GIC_V3)
