@@ -7,8 +7,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
-    zig-overlay.url = "github:mitchellh/zig-overlay";
-    zig-overlay.inputs.nixpkgs.follows = "nixpkgs";
     sdfgen.url = "github:au-ts/microkit_sdf_gen/0.29.0";
     sdfgen.inputs.nixpkgs.follows = "nixpkgs";
     rust-overlay = {
@@ -19,7 +17,7 @@
     systems-ci.flake = false;
   };
 
-  outputs = { nixpkgs, zig-overlay, rust-overlay, sdfgen, systems-ci, ... }:
+  outputs = { nixpkgs, rust-overlay, sdfgen, systems-ci, ... }:
     let
       microkit-version = "2.2.0";
       microkit-url = "https://github.com/seL4/microkit/releases/download/2.2.0/";
@@ -42,7 +40,6 @@
           };
 
           llvm = pkgs.llvmPackages_18;
-          zig = zig-overlay.packages.${system}."0.15.1";
           rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
 
           clang-complete = (pkgs.symlinkJoin {
@@ -68,7 +65,7 @@
             '';
           });
 
-          pysdfgen = sdfgen.packages.${system}.pysdfgen.override { zig = zig; pythonPackages = pkgs.python312Packages; };
+          pysdfgen = sdfgen.packages.${system}.pysdfgen.override { pythonPackages = pkgs.python312Packages; };
 
           ts_ci = pkgs.callPackage "${systems-ci}/ts_ci/package.nix" {
             python3Packages = pkgs.python312Packages;
@@ -108,7 +105,6 @@
               nativeBuildInputs = with pkgs; [
                 rust
                 git
-                zig
                 qemu
                 gnumake
                 dosfstools
