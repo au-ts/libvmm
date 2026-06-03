@@ -29,7 +29,7 @@ export VIRTIO_EXAMPLE := $(abspath .)
 
 export TARGET := aarch64-none-elf
 export CC := clang
-export CC_USERLEVEL := zig cc
+export CC_USERLEVEL := clang
 export LD := ld.lld
 export AS := llvm-as
 export AR := llvm-ar

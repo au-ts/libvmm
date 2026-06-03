@@ -42,7 +42,7 @@ BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})
 export VIRTIO_EXAMPLE := $(abspath .)
 
-export CC_USERLEVEL := zig cc
+export CC_USERLEVEL := clang
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF := $(abspath ../../dep/sddf)
 export LIBVMM := $(abspath ../../)

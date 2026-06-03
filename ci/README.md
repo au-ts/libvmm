@@ -142,7 +142,7 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
 # export
 TEST_CASES = matrix.generate_example_test_cases(
     "buildroot_login",
-    ["simple", "rust", "zig"],
+    ["simple", "rust"],
     test_fn=test,
     backend_fn=common.backend_fn,
     no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
@@ -172,8 +172,8 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         "tests_exclude": [
             # anything with config=release is not tested
             { "config": "release" },
-            # any zig builds for the maaxboard are not tested, but still built.
-            { "board": "maaxboard", "build_system": "zig" },
+            # any builds for the maaxboard are not tested, but still built.
+            { "board": "maaxboard" },
         ],
     },
 

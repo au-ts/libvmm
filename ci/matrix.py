@@ -79,7 +79,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
     },
     "simple": {
         "configs": ["debug", "release"],
-        "build_systems": ["make", "zig"],
+        "build_systems": ["make"],
         "boards": [
             "qemu_virt_aarch64",
             "odroidc4",
@@ -89,7 +89,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
     },
     "smp": {
         "configs": ["smp-debug", "smp-release"],
-        "build_systems": ["make", "zig"],
+        "build_systems": ["make"],
         "boards": [
             "qemu_virt_aarch64",
             "odroidc4",
@@ -103,7 +103,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
     },
     "virtio": {
         "configs": ["debug", "release"],
-        "build_systems": ["make", "zig"],
+        "build_systems": ["make"],
         "boards": [
             "qemu_virt_aarch64",
             "maaxboard",
@@ -116,14 +116,6 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         "boards": [
             "qemu_virt_aarch64",
             "maaxboard",
-        ],
-        "tests_exclude": [],
-    },
-    "zig": {
-        "configs": ["debug", "release"],
-        "build_systems": ["zig"],
-        "boards": [
-            "qemu_virt_aarch64",
         ],
         "tests_exclude": [],
     },
@@ -154,6 +146,6 @@ for ex in EXAMPLES.values():
 
 class _ExampleMatrixType(TypedDict):
     configs: list[Literal["debug", "release", "benchmark", "smp-debug", "smp-release", "smp-benchmark"]]
-    build_systems: list[Literal["make", "zig"]]
+    build_systems: list[Literal["make"]]
     boards: list[_BoardNames]
     tests_exclude: list[dict[str, str]]

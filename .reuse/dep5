@@ -5,12 +5,6 @@ Source: https://github.com/au-ts/libvmm
 Files:
     .gitmodules
     flake.lock
-    build.zig.zon
-    examples/simple/build.zig.zon
-    examples/smp/build.zig.zon
-    examples/virtio/build.zig.zon
-    examples/virtio_pci/build.zig.zon
-    examples/zig/build.zig.zon
     examples/rust/Cargo.lock
     examples/rust/.cargo/config
     examples/rust/aarch64-microkit-minimal.json
