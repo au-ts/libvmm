@@ -22,8 +22,6 @@ async def test_virtio_net_wget(
 ):
     async with asyncio.timeout(30):
         await wait_for_output(backend, b"buildroot login: ")
-        # Sleep should not be necessary, see https://github.com/au-ts/libvmm/issues/195
-        await asyncio.sleep(1)
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
         await send_input(backend, b"wget http://trustworthy.systems/song\n")
