@@ -200,16 +200,10 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     return true;
 }
 
-bool virtio_console_handle_rx(struct virtio_console_device *console)
+static bool virtio_console_handle_rx(struct virtio_console_device *console)
 {
     LOG_CONSOLE("operation: handle rx\n");
     assert(console->virtio_device.num_vqs > RX_QUEUE);
-
-    /* Previously if a TX request have payload length:
-     * TX queue free length < payload length <= TX queue capacity
-     * We request the serial virtualiser to notify us once it has consumed data from the TX queue.
-     * So try to reprocess such requests. */
-    virtio_console_handle_tx(&(console->virtio_device));
 
     /* Used to know whether to set the IRQ status. */
     bool transferred = false;
@@ -222,6 +216,12 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
          */
         char c;
         while (serial_dequeue(console->rxq, &c) == 0);
+
+        if (serial_require_consumer_signal(console->rxq)) {
+            serial_cancel_consumer_signal(console->rxq);
+            microkit_notify(console->rx_ch);
+        }
+
         return true;
     }
 
@@ -241,6 +241,11 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
         virtio_virtq_add_used(vq, desc_head, bytes_written);
     }
 
+    if (serial_require_consumer_signal(console->rxq)) {
+        serial_cancel_consumer_signal(console->rxq);
+        microkit_notify(console->rx_ch);
+    }
+
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
@@ -254,18 +259,32 @@ bool virtio_console_handle_rx(struct virtio_console_device *console)
     return true;
 }
 
+bool virtio_console_queue_notify(struct virtio_console_device *console)
+{
+    /* The guest kicked the queue or the serial virtualiser notified us, check if we can TX/RX any data. */
+    bool rx_success = virtio_console_handle_rx(console);
+    bool tx_success = virtio_console_handle_tx(&console->virtio_device);
+    return rx_success && tx_success;
+}
+
+/* @billn revisit type juggling */
+static bool virtio_console_queue_notify_guest(struct virtio_device *dev)
+{
+    return virtio_console_queue_notify((struct virtio_console_device *)dev->device_data);
+}
+
 virtio_device_funs_t functions = {
     .device_reset = virtio_console_reset,
     .get_device_features = virtio_console_get_device_features,
     .set_driver_features = virtio_console_set_driver_features,
     .get_device_config = virtio_console_get_device_config,
     .set_device_config = virtio_console_set_device_config,
-    .queue_notify = virtio_console_handle_tx,
+    .queue_notify = virtio_console_queue_notify_guest,
 };
 
 static struct virtio_device *virtio_console_init(struct virtio_console_device *console, virtio_transport_type_t type,
                                                  size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq,
-                                                 int tx_ch)
+                                                 int tx_ch, int rx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
     dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
@@ -280,22 +299,23 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
     console->rxq = rxq;
     console->txq = txq;
     console->tx_ch = tx_ch;
+    console->rx_ch = rx_ch;
 
     return dev;
 }
 
 bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
-                              size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
+                              size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
-    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_MMIO, virq, rxq, txq, tx_ch);
+    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_MMIO, virq, rxq, txq, tx_ch, rx_ch);
 
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
 bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
-                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch)
+                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
-    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, virq, rxq, txq, tx_ch);
+    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, virq, rxq, txq, tx_ch, rx_ch);
 
     dev->transport.pci.device_id = VIRTIO_PCI_CONSOLE_DEV_ID;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;

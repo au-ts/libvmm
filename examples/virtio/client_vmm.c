@@ -122,7 +122,7 @@ void init(void)
     success = virtio_mmio_console_init(&virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].irq, &serial_rx_queue,
-                                       &serial_tx_queue, serial_config.tx.id);
+                                       &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
     assert(success);
 
     /* Initialise virtIO block device */
@@ -154,7 +154,7 @@ void init(void)
 void notified(microkit_channel ch)
 {
     if (ch == serial_config.rx.id) {
-        virtio_console_handle_rx(&virtio_console);
+        virtio_console_queue_notify(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
     } else if (ch == blk_config.virt.id) {
