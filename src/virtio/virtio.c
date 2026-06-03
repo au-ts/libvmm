@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/virtio.h>
+#include <libvmm/guest_ram.h>
 
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
@@ -63,7 +64,12 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
             uint64_t src_gpa = desc->addr + (current_list_byte - current_desc_start_byte);
             char *dest = data + (current_list_byte - read_off);
 
-            memcpy(dest, (char *)src_gpa, copy_size);
+            char *src_hva = gpa_to_hva(src_gpa, copy_size);
+            if (src_hva == NULL) {
+                LOG_VMM_ERR("invalid guest physical address 0x%lx size 0x%lx\n", src_gpa, copy_size);
+                return false;
+            }
+            memcpy(dest, src_hva, copy_size);
             current_list_byte += copy_size;
         }
 
