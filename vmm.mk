@@ -36,7 +36,6 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/instruction.c \
 			   src/arch/x86_64/ioports.c \
 			   src/arch/x86_64/hpet.c \
-			   src/arch/x86_64/pci.c \
 			   src/arch/x86_64/tsc.c \
 			   src/arch/x86_64/fpu.c \
 			   src/arch/x86_64/guest_ram.c \

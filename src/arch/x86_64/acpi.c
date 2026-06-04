@@ -153,27 +153,6 @@ size_t hpet_build(struct hpet *hpet)
     return sizeof(struct hpet);
 }
 
-size_t mcfg_build(struct mcfg *mcfg)
-{
-    memcpy(mcfg->h.signature, MCFG_SIGNATURE, 4);
-    mcfg->h.length = sizeof(struct mcfg);
-    mcfg->h.revision = MCFG_REVISION;
-    memcpy(mcfg->h.oem_id, ACPI_OEMID, 6);
-    memcpy(mcfg->h.oem_table_id, ACPI_OEMID, 6);
-    mcfg->h.creator_id = 1;
-    mcfg->h.creator_revision = 1;
-
-    mcfg->config_spaces[0].base_address = ECAM_GPA;
-    mcfg->config_spaces[0].pci_segment_group = 0;
-    mcfg->config_spaces[0].start_bus = 0;
-    mcfg->config_spaces[0].end_bus = 0;
-
-    mcfg->h.checksum = acpi_compute_checksum((char *)mcfg, mcfg->h.length);
-    assert(acpi_checksum_ok((char *)mcfg, mcfg->h.length));
-
-    return sizeof(struct mcfg);
-}
-
 static uint16_t pm1_enable_reg = 0;
 static uint16_t pm1_control_reg = 0;
 static uint16_t pm1_status_reg = 0;
@@ -428,8 +407,8 @@ static struct acpi_table_alloc acpi_alloc(struct acpi_builder *builder, uint64_t
 {
     uint64_t bytes_remaining = 0;
     uint64_t gpa = builder->start_gpa + builder->size;
-    void *table_vaddr = gpa_to_vaddr(gpa, &bytes_remaining);
-    if (!table_vaddr || bytes_remaining < size) {
+    void *table_vaddr = gpa_to_hva(gpa, size);
+    if (!table_vaddr) {
         LOG_VMM_ERR("acpi_build_all(): out of memory for %s, available %lu < needed %lu\n", name, bytes_remaining,
                     size);
         return (struct acpi_table_alloc) {

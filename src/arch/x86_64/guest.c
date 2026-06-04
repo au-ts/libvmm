@@ -13,7 +13,6 @@
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/msr.h>
-#include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/linux.h>
@@ -42,12 +41,6 @@ bool guest_init(arch_guest_init_t init_args)
             LOG_VMM_ERR("failed to bookkeep RAM region\n");
             return false;
         }
-    }
-
-    /* Set up the virtual PCI bus */
-    if (!pci_x86_init()) {
-        LOG_VMM_ERR("failed to initialise virtual PCI bus.\n");
-        return false;
     }
 
     /* Initialise guest time library */
