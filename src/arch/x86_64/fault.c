@@ -14,7 +14,6 @@
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/msr.h>
-#include <libvmm/arch/x86_64/pci.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/hpet.h>
 #include <libvmm/arch/x86_64/fpu.h>
