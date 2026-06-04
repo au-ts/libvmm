@@ -143,7 +143,7 @@ void init(void)
                                    vmm_config.virtio_mmio_devices[net_vdev_idx].size,
                                    vmm_config.virtio_mmio_devices[net_vdev_idx].irq, &net_rx_queue, &net_tx_queue,
                                    (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                   net_config.rx.id, net_config.tx.id, net_config.mac_addr);
+                                   net_config.rx.id, net_config.tx.id, net_config.mac_addr.addr);
     assert(success);
 
     /* Finally start the guest */
