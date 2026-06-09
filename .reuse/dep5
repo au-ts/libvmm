@@ -28,6 +28,7 @@ Files:
     examples/virtio/client_vm/rootfs.cpio.gz
     examples/framebuffer/board/odroidc4/linux_vu7c.dts
     examples/framebuffer/board/odroidc4/linux_with_serial.dts
+    examples/wifi_passthrough/board/rpi4b_4gb/rpi_linux_wifi.diff
 Copyright: Linux
 License: GPL-2.0-or-later
 
@@ -35,5 +36,6 @@ Files:
     */buildroot_config
     examples/*/images/rootfs.cpio.gz
     examples/*/board/*/rootfs.cpio.gz
+    examples/wifi_passthrough/board/rpi4b_4gb/rpi_buildroot_wifi.diff
 Copyright: Buildroot
 License: GPL-2.0-or-later
