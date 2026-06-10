@@ -36,6 +36,8 @@ REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
 
+CLIENT_VM_USERLEVEL_INIT := net_client_init
+
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
 CFLAGS += \
