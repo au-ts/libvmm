@@ -9,14 +9,11 @@
 #include <libvmm/libvmm.h>
 #include <sddf/serial/queue.h>
 #include <sddf/serial/config.h>
-#include <sddf/blk/queue.h>
-#include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
 #include <sddf/util/printf.h>
 
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
-__attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
@@ -38,12 +35,7 @@ uintptr_t guest_ram_vaddr;
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
-
 static struct virtio_console_device virtio_console;
-
-/* Virtio Block */
-static blk_queue_handle_t blk_queue;
-static struct virtio_blk_device virtio_blk;
 
 /* Virtio Net */
 net_queue_handle_t net_rx_queue;
@@ -53,7 +45,6 @@ static struct virtio_net_device virtio_net;
 void init(void)
 {
     assert(serial_config_check_magic(&serial_config));
-    assert(blk_config_check_magic(&blk_config));
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
@@ -69,14 +60,6 @@ void init(void)
         return;
     }
 
-    blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
-                   blk_config.virt.num_buffers);
-    /* Want to print out configuration information, so wait until the config is ready. */
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
-
-    /* Busy wait until blk device is ready */
-    while (!blk_storage_is_ready(storage_info));
-
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
     /* Place all the binaries in the right locations before starting the guest */
@@ -91,18 +74,14 @@ void init(void)
         return;
     }
 
-    /* Find the details of VirtIO console, net and block devices from sdfgen */
+    /* Find the details of VirtIO console and network devices from sdfgen */
     int console_vdev_idx = -1;
-    int blk_vdev_idx = -1;
     int net_vdev_idx = -1;
-    assert(vmm_config.num_virtio_mmio_devices == 3);
+    assert(vmm_config.num_virtio_mmio_devices == 2);
     for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
         switch (vmm_config.virtio_mmio_devices[i].type) {
         case VIRTIO_DEVICE_ID_CONSOLE:
             console_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_BLOCK:
-            blk_vdev_idx = i;
             break;
         case VIRTIO_DEVICE_ID_NET:
             net_vdev_idx = i;
@@ -110,7 +89,6 @@ void init(void)
         }
     }
     assert(console_vdev_idx != -1);
-    assert(blk_vdev_idx != -1);
     assert(net_vdev_idx != -1);
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
@@ -123,14 +101,6 @@ void init(void)
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
                                        vmm_config.virtio_mmio_devices[console_vdev_idx].irq, &serial_rx_queue,
                                        &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
-    assert(success);
-
-    /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(&virtio_blk, vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[blk_vdev_idx].irq, (uintptr_t)blk_config.data.vaddr,
-                                   blk_config.data.size, storage_info, &blk_queue, blk_config.virt.num_buffers,
-                                   blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -157,8 +127,6 @@ void notified(microkit_channel ch)
         virtio_console_queue_notify(&virtio_console);
     } else if (ch == serial_config.tx.id || ch == net_config.tx.id) {
         /* Nothing to do */
-    } else if (ch == blk_config.virt.id) {
-        virtio_blk_handle_resp(&virtio_blk);
     } else if (ch == net_config.rx.id) {
         virtio_net_handle_rx(&virtio_net);
     } else {

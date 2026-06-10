@@ -18,18 +18,15 @@ Channel = SystemDescription.Channel
 @dataclass
 class GuestConfig:
     serial: Optional[str] = None
-    blk: Optional[str] = None
     ethernet: Optional[str] = None
 
 guest_configs: dict[str, GuestConfig] = {
         "qemu_virt_aarch64": GuestConfig(
             serial="virtio-console@130000",
-            blk="virtio-blk@150000",
             ethernet="virtio-net@160000",
         ),
         "maaxboard": GuestConfig(
             serial="virtio-console@130000",
-            blk="virtio-blk@150000",
             ethernet="virtio-net@160000",
         ),
 }
@@ -124,47 +121,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=True)
     client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=True)
 
-    # Block subsystem
-    blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
-    blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
-
-    blk_node = dtb.node(board.blk)
-    assert blk_node is not None
-    guest_blk_node = client_dtb.node(guest_configs[board.name].blk)
-    assert guest_blk_node is not None
-
-    blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
-    partition = int(args.partition) if args.partition else board.partition
-    client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    client1.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    client2.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-    client3.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
-
-    pds = [
-        blk_driver,
-        blk_virt
-    ]
-    for pd in pds:
-        sdf.add_pd(pd)
-
-    # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
-    if board.name == "maaxboard":
-        timer_node = dtb.node(board.timer)
-        assert timer_node is not None
-
-        timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=210)
-        timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
-
-        timer_system.add_client(blk_driver)
-        sdf.add_pd(timer_driver)
-
-        assert timer_system.connect()
-        assert timer_system.serialise_config(output_dir)
-
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
-    assert blk_system.connect()
-    assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
 
     # Add ACLs - by default bidirectional
@@ -203,7 +161,6 @@ if __name__ == '__main__':
     parser.add_argument("--board", required=True, choices=[b.name for b in BOARDS])
     parser.add_argument("--output", required=True)
     parser.add_argument("--sdf", required=True)
-    parser.add_argument("--partition")
 
     args = parser.parse_args()
 

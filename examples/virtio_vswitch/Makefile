@@ -25,11 +25,6 @@ ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export GIC_DT_OVERLAY := gic_v3_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
-
-	export BLK_NUM_PART = 1
-	export BLK_SIZE = 512
-	# 16MiB of disk space
-	export BLK_MEM ?= 16777216
 endif
 
 # Allow to user to specify a custom partition
