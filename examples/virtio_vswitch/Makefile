@@ -5,12 +5,16 @@
 #
 
 BUILD_DIR ?= build
-export MICROKIT_CONFIG ?= debug
+export MICROKIT_CONFIG ?= smp-debug
 
 ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
 override MICROKIT_SDK := $(abspath $(MICROKIT_SDK))
+
+ifeq ($(findstring smp-,$(MICROKIT_CONFIG)),)
+$(error MICROKIT_CONFIG must be one of smp-debug, smp-release or smp-benchmark)
+endif
 
 # Both QEMU and Maaxboard uses the same guest device tree as the guest does not
 # need to access any physical device. The only difference is that QEMU is GICv2 while
