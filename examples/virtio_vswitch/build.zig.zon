@@ -1,0 +1,28 @@
+.{
+    .name = .virtio,
+    .version = "0.0.0",
+
+    .dependencies = .{
+        .libvmm = .{
+            .path = "../../"
+        },
+        .sddf = .{
+            .path = "../../dep/sddf",
+        },
+        .linux = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux.tar.gz",
+            .hash = "linux-0.0.0-AAAAAAAy6QB75KyvszBUqWRkeJoqU0ExTN2WZsVCJ25X",
+            .lazy = true
+        },
+        .initrd = .{
+            .url = "https://trustworthy.systems/Downloads/libvmm/images/b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz.tar.gz",
+            .hash = "rootfs_cpio_gz-0.0.0-AAAAAJ3gFwAzvjtmYwUEeK3b6Bp9xUjawwaJxoOvPF9u",
+            .lazy = true
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+    },
+    .fingerprint = 0x3675eff43d65355,
+}

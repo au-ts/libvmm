@@ -1,0 +1,222 @@
+# Copyright 2025, UNSW
+# SPDX-License-Identifier: BSD-2-Clause
+import argparse
+from dataclasses import dataclass
+from board import BOARDS
+from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
+from importlib.metadata import version
+from typing import Optional
+
+assert version('sdfgen').split(".")[1] == "33", "Unexpected sdfgen version"
+
+ProtectionDomain = SystemDescription.ProtectionDomain
+VirtualMachine = SystemDescription.VirtualMachine
+MemoryRegion = SystemDescription.MemoryRegion
+Map = SystemDescription.Map
+Channel = SystemDescription.Channel
+
+@dataclass
+class GuestConfig:
+    serial: Optional[str] = None
+    blk: Optional[str] = None
+    ethernet: Optional[str] = None
+
+guest_configs: dict[str, GuestConfig] = {
+        "qemu_virt_aarch64": GuestConfig(
+            serial="virtio-console@130000",
+            blk="virtio-blk@150000",
+            ethernet="virtio-net@160000",
+        ),
+        "maaxboard": GuestConfig(
+            serial="virtio-console@130000",
+            blk="virtio-blk@150000",
+            ethernet="virtio-net@160000",
+        ),
+}
+
+def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: DeviceTree):
+    # Client0 VM
+    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=96, cpu=0)
+    vm_client0 = VirtualMachine("client0_linux", [VirtualMachine.Vcpu(id=0)])
+    client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
+    sdf.add_pd(vmm_client0)
+
+    # Client1 VM
+    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=96, cpu=1)
+    vm_client1 = VirtualMachine("client1_linux", [VirtualMachine.Vcpu(id=0, cpu=1)])
+    client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
+    sdf.add_pd(vmm_client1)
+
+    # Client2 VM
+    vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=96, cpu=2)
+    vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0, cpu=2)])
+    client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
+    sdf.add_pd(vmm_client2)
+
+    # Client3 VM - Outside vswitch
+    vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=96, cpu=3)
+    vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0, cpu=3)])
+    client3 = Vmm(sdf, vmm_client3, vm_client3, client_dtb)
+    sdf.add_pd(vmm_client3)
+
+    # Serial subsystem
+    serial_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=200)
+    serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=199)
+    # Increase the stack size as running with UBSAN uses more stack space than normal.
+    serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
+                                      priority=199, stack_size=0x2000)
+    serial_node = dtb.node(board.serial)
+    assert serial_node is not None
+    guest_serial_node = client_dtb.node(guest_configs[board.name].serial)
+    assert guest_serial_node is not None
+
+    serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
+                                serial_virt_tx, virt_rx=serial_virt_rx, enable_color=True)
+    client0.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client1.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client2.add_virtio_mmio_console(guest_serial_node, serial_system)
+    client3.add_virtio_mmio_console(guest_serial_node, serial_system)
+
+    pds = [
+        serial_driver,
+        serial_virt_tx,
+        serial_virt_rx,
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
+
+    # Net subsystem
+    net_node = dtb.node(board.ethernet)
+    assert net_node is not None
+    guest_net_node = client_dtb.node(guest_configs[board.name].ethernet)
+    assert guest_net_node is not None
+
+    eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
+                                  priority=101, budget=100, period=400)
+    net_virt_tx = ProtectionDomain("net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000)
+    net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
+    vswitch = ProtectionDomain("net_vswitch", "network_vswitch.elf", priority=98)
+    net_system = Sddf.Net(sdf, net_node, eth_driver, net_virt_tx, net_virt_rx, vswitch=vswitch)
+    client0_net_copier = ProtectionDomain(
+        "client0_net_copier", "network_copy0.elf", priority=97, budget=20000)
+    client1_net_copier = ProtectionDomain(
+        "client1_net_copier", "network_copy1.elf", priority=97, budget=20000)
+    client2_net_copier = ProtectionDomain(
+        "client2_net_copier", "network_copy2.elf", priority=97, budget=20000)
+    client3_net_copier = ProtectionDomain(
+        "client3_net_copier", "network_copy3.elf", priority=97, budget=20000)
+
+    pds = [
+        eth_driver,
+        net_virt_rx,
+        net_virt_tx,
+        client0_net_copier,
+        client1_net_copier,
+        client2_net_copier,
+        client3_net_copier,
+        vswitch,
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
+
+    client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=True)
+    client1.add_virtio_mmio_net(guest_net_node, net_system, copier=client1_net_copier, vswitch=True)
+    client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=True)
+    client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=True)
+
+    # Block subsystem
+    blk_driver = ProtectionDomain("blk_driver", "blk_driver.elf", priority=200)
+    blk_virt = ProtectionDomain("blk_virt", "blk_virt.elf", priority=199, stack_size=0x2000)
+
+    blk_node = dtb.node(board.blk)
+    assert blk_node is not None
+    guest_blk_node = client_dtb.node(guest_configs[board.name].blk)
+    assert guest_blk_node is not None
+
+    blk_system = Sddf.Blk(sdf, blk_node, blk_driver, blk_virt)
+    partition = int(args.partition) if args.partition else board.partition
+    client0.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client1.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client2.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+    client3.add_virtio_mmio_blk(guest_blk_node, blk_system, partition=partition)
+
+    pds = [
+        blk_driver,
+        blk_virt
+    ]
+    for pd in pds:
+        sdf.add_pd(pd)
+
+    # Timer subsystem (Maaxboard specific as its blk driver needs a timer)
+    if board.name == "maaxboard":
+        timer_node = dtb.node(board.timer)
+        assert timer_node is not None
+
+        timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=210)
+        timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
+
+        timer_system.add_client(blk_driver)
+        sdf.add_pd(timer_driver)
+
+        assert timer_system.connect()
+        assert timer_system.serialise_config(output_dir)
+
+    assert serial_system.connect()
+    assert serial_system.serialise_config(output_dir)
+    assert blk_system.connect()
+    assert blk_system.serialise_config(output_dir)
+    assert net_system.connect()
+
+    # Add ACLs - by default bidirectional
+    # 0 <-> 1, 3, V
+    # 1 <-> 0, 3, V
+    # 2 <-> V
+    # 3 <-> 0, 1, V
+    net_system.add_acl_rule(vmm_client0, vmm_client3)
+    net_system.add_acl_rule(vmm_client0, net_virt_tx)
+    net_system.add_acl_rule(vmm_client1, vmm_client0)
+    net_system.add_acl_rule(vmm_client1, net_virt_tx)
+    net_system.add_acl_rule(vmm_client2, net_virt_tx)
+    net_system.add_acl_rule(vmm_client3, vmm_client0)
+    net_system.add_acl_rule(vmm_client3, vmm_client1)
+    net_system.add_acl_rule(vmm_client3, net_virt_tx)
+
+    assert net_system.serialise_config(output_dir)
+    assert client0.connect()
+    assert client0.serialise_config(output_dir)
+    assert client1.connect()
+    assert client1.serialise_config(output_dir)
+    assert client2.connect()
+    assert client2.serialise_config(output_dir)
+    assert client3.connect()
+    assert client3.serialise_config(output_dir)
+
+    with open(f"{output_dir}/{sdf_file}", "w+") as f:
+        f.write(sdf.render())
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dtb", required=True)
+    parser.add_argument("--client-dtb", required=True)
+    parser.add_argument("--sddf", required=True)
+    parser.add_argument("--board", required=True, choices=[b.name for b in BOARDS])
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--sdf", required=True)
+    parser.add_argument("--partition")
+
+    args = parser.parse_args()
+
+    board = next(filter(lambda b: b.name == args.board, BOARDS))
+
+    sdf = SystemDescription(board.arch, board.paddr_top)
+
+    sddf = Sddf(args.sddf)
+
+    with open(args.dtb, "rb") as f:
+        dtb = DeviceTree(f.read())
+
+    with open(args.client_dtb, "rb") as f:
+        client_dtb = DeviceTree(f.read())
+
+    generate(args.sdf, args.output, dtb, client_dtb)
