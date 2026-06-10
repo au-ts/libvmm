@@ -119,6 +119,15 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
+    "virtio_vswitch": {
+        "configs": ["smp-debug", "smp-release"],
+        "build_systems": ["make"],
+        "boards": [
+            "qemu_virt_aarch64",
+            "maaxboard",
+        ],
+        "tests_exclude": [],
+    },
 }
 
 ## Type Hinting + Sanity Checks ##
