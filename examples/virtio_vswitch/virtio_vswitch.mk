@@ -49,12 +49,9 @@ CFLAGS += \
 	  -I$(VIRTIO_EXAMPLE)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a libvmm.a --end-group
+LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
 
 include $(SDDF)/util/util.mk
-ifeq ($(MICROKIT_BOARD), maaxboard)
-include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
-endif
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
 include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
@@ -75,7 +72,7 @@ all: ${IMAGE_FILE}
 
 -include vmm.d
 
-$(IMAGES): libsddf_util_debug.a libvmm.a
+$(IMAGES): libsddf_util_debug.a
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	cp client_vmm.elf client_vmm0.elf
@@ -118,8 +115,8 @@ $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
 		--config $(MICROKIT_CONFIG) -o $(IMAGE_FILE) -r $(REPORT_FILE)
 
-.PHONY: vm_dir
-vm_dir:
+.PHONY: client_vm
+client_vm:
 	mkdir -p client_vm
 
 ${LINUX}:
@@ -142,13 +139,13 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 		--home $(CLIENT_VM_USERLEVEL_HOME)
 
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
-	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
+	$(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |vm_dir
+client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
@@ -160,7 +157,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
+client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
