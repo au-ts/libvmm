@@ -14,10 +14,8 @@ UTIL := $(SDDF)/util
 
 TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER)
 SERIAL_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
-BLK_DRIVER := $(SDDF)/drivers/blk/$(BLK_DRIVER)
 ETH_DRIVER := $(SDDF)/drivers/network/$(ETH_DRIVER)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
-BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
@@ -37,9 +35,6 @@ IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
 include ${SDDF}/tools/make/board/common.mk
-
-CLIENT_VM_USERLEVEL_INIT := blk_client_init
-CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
@@ -63,15 +58,11 @@ endif
 include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
 include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
-include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
-include $(BLK_COMPONENTS)/blk_components.mk
 include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
-include $(LIBVMM_TOOLS)/linux/uio/uio.mk
-include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
-IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
+IMAGES := client_vmm.elf timer_driver.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
 	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf network_vswitch.elf
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
@@ -97,17 +88,6 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	cp network_copy.elf network_copy3.elf
 	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
-ifeq ($(MICROKIT_BOARD), maaxboard)
-	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
-endif
-	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
-	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
-	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM0.data client_vmm0.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM1.data client_vmm1.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM2.data client_vmm2.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM3.data client_vmm3.elf
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
@@ -161,9 +141,6 @@ client_vm/rootfs.cpio.gz: ${INITRD} \
 		--startup $(CLIENT_VM_USERLEVEL_INIT) \
 		--home $(CLIENT_VM_USERLEVEL_HOME)
 
-blk_storage:
-	$(SDDF)/tools/mkvirtdisk $@ $(BLK_NUM_PART) $(BLK_SIZE) $(BLK_MEM) GPT
-
 client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |vm_dir
 	$(LIBVMM)/tools/dtscat $^ > $@
@@ -190,7 +167,7 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o |vm_dir
 .PRECIOUS: client_vm client_vm/vm.dts client_vm/vm.dtb \
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
-qemu: $(IMAGE_FILE) blk_storage
+qemu: $(IMAGE_FILE)
 	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
 	$(QEMU) -machine virt,virtualization=on,secure=off \
 			-cpu cortex-a53 -smp 4 \
@@ -199,8 +176,6 @@ qemu: $(IMAGE_FILE) blk_storage
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
-			-drive file=blk_storage,format=raw,if=none,id=drive0 \
-			-device virtio-blk-device,drive=drive0,id=virtblk0,num-queues=1,bus=virtio-mmio-bus.1 \
 			-device virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0 \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 
