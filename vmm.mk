@@ -62,8 +62,10 @@ ARCH_INDEP_FILES := \
 		    src/virtio/net.c \
 		    src/virtio/sound.c \
 		    src/virtio/virtio.c \
-		    src/util/util.c \
-			src/guest_ram.c
+			src/util/util.c \
+		    src/guest.c \
+			src/guest_ram.c \
+			src/pci.c
 
 ifeq ($(ARCH),aarch64)
 CFILES := ${AARCH64_FILES} ${VIRTIO_FILES}
