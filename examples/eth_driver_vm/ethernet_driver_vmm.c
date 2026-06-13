@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <microkit.h>
+#include <libvmm/libvmm.h>
 #include <libvmm/config.h>
 #include <libvmm/guest.h>
 #include <libvmm/virq.h>
@@ -45,6 +46,12 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+#define GUEST_RAM_SIZE 0x10000000
+
+#define GUEST_RAM_START_GPA 0x20000000
+#define GUEST_DTB_GPA 0x2f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x2d700000
+
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
@@ -82,6 +89,19 @@ void init(void)
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
+
+    arch_guest_init_t args = {
+        .num_vcpus = 1,
+        .num_guest_ram_regions = 1,
+        .guest_ram_regions = { (struct guest_ram_region) {
+            .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } }
+    };
+    bool success = guest_init(args);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise guest\n");
+        return;
+    }
+
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
@@ -95,11 +115,11 @@ void init(void)
     }
 
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init();
-    if (!success) {
-        LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
-        return;
-    }
+    // bool success = virq_controller_init();
+    // if (!success) {
+    //     LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
+    //     return;
+    // }
 
     /* Register pass-through IRQs: Ethernet MAC, PHY and Work IRQs */
     assert(vmm_config.num_irqs == NUM_EXPECTED_PASS_THRU_IRQS);
@@ -216,7 +236,7 @@ void notified(microkit_channel ch)
             LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
         }
     } else if (!virq_handle_passthrough(ch)) {
-        LOG_VMM_ERR("Unexpected channel, ch: 0x%lx\n", ch);
+        LOG_VMM_ERR("Unexpected channel, ch: 0x%x\n", ch);
     }
 }
 
