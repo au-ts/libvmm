@@ -8,9 +8,6 @@ from typing import List, Tuple
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
-# @billn update once https://github.com/au-ts/microkit_sdf_gen/pull/25 is merged
-# assert version("sdfgen").split(".")[1] == "26", "Unexpected sdfgen version"
-
 ProtectionDomain = SystemDescription.ProtectionDomain
 MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
@@ -52,6 +49,7 @@ BOARDS: List[Board] = [
 """
 Below are classes to serialise into custom configuration for the benchmarking component.
 All serialised definitions are little endian and pointers are 64-bit integers.
+Structs are serialised to match 64-bit alignment.
 """
 
 
@@ -73,9 +71,8 @@ class BenchmarkIdleConfig:
             "<qc", self.cycle_counters, self.ch_init.to_bytes(1, "little")
         )
 
-
 class BenchmarkClientConfig:
-    def __init__(self, cycle_counters: int, ch_start: int, ch_stop: int):
+    def __init__(self, ch_start: int, ch_stop: int, cycle_counters: List[int]):
         self.cycle_counters = cycle_counters
         self.ch_start = ch_start
         self.ch_stop = ch_stop
@@ -83,28 +80,70 @@ class BenchmarkClientConfig:
     """
         Matches struct definition:
         {
-            void *;
             uint8_t;
+            uint8_t;
+            uint8_t;
+            void * [];
+        }
+    """
+
+    def serialise(self) -> bytes:
+        # Padded for 64 bit alignment
+        pack_str = "<BBBxxxxx" + "q" * len(self.cycle_counters)
+        return struct.pack(
+            pack_str,
+            self.ch_start,
+            self.ch_stop,
+            len(self.cycle_counters),
+            *self.cycle_counters,
+        )
+
+class BenchmarkConfig:
+    def __init__(
+        self,
+        ch_rx_start: int,
+        ch_tx_start: int,
+        ch_rx_stop: int,
+        ch_tx_stop: int,
+        ch_init: int,
+        core: int,
+        last_core: bool,
+        children: List[Tuple[int, str]],
+        pmu_events: List[int],
+    ):
+        self.ch_rx_start = ch_rx_start
+        self.ch_tx_start = ch_tx_start
+        self.ch_rx_stop = ch_rx_stop
+        self.ch_tx_stop = ch_tx_stop
+        self.ch_init = ch_init
+        self.core = core
+        self.last_core = last_core
+        self.children = children
+        self.pmu_events = pmu_events
+
+    """
+        Matches struct definition:
+        {
+            uint8_t;
+            uint8_t;
+            uint8_t;
+            uint8_t;
+            uint8_t;
+            uint8_t;
+            bool;
+            uint8_t;
+            struct {
+                char [64];
+                uint8_t;
+            } [64];
+            uint8_t [6];
             uint8_t;
         }
     """
 
     def serialise(self) -> bytes:
-        return struct.pack("<qBB", self.cycle_counters, self.ch_start, self.ch_stop)
-
-
-class BenchmarkConfig:
-    def __init__(
-        self, ch_start: int, ch_stop: int, ch_init: int, children: List[Tuple[int, str]]
-    ):
-        self.ch_start = ch_start
-        self.ch_stop = ch_stop
-        self.ch_init = ch_init
-        self.children = children
-
-    def serialise(self) -> bytes:
         child_config_format = "c" * 65
-        pack_str = "<BBBB" + child_config_format * 64
+        pack_str = "<BBBBBB?B" + child_config_format * 64 + "BBBBBBB"
         child_bytes = bytearray()
         for child in self.children:
             c_name = child[1].encode("utf-8")
@@ -117,15 +156,24 @@ class BenchmarkConfig:
 
         child_bytes_list = [x.to_bytes(1, "little") for x in child_bytes]
 
+        num_pmu_events = len(self.pmu_events)
+        assert num_pmu_events <= 6
+        self.pmu_events.extend(0 for i in range(6 - num_pmu_events))
+
         return struct.pack(
             pack_str,
-            self.ch_start,
-            self.ch_stop,
+            self.ch_rx_start,
+            self.ch_tx_start,
+            self.ch_rx_stop,
+            self.ch_tx_stop,
             self.ch_init,
+            self.core,
+            self.last_core,
             len(self.children),
             *child_bytes_list,
+            *self.pmu_events,
+            num_pmu_events,
         )
-
 
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: DeviceTree):
     uart_node = dtb.node(board.serial)
@@ -234,14 +282,19 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     bench_idle_config = BenchmarkIdleConfig(0x5_000_000, bench_idle_ch.pd_a_id)
 
     bench_client_config = BenchmarkClientConfig(
-        0x20_000_000, bench_start_ch.pd_a_id, bench_stop_ch.pd_a_id
+        bench_start_ch.pd_a_id, bench_stop_ch.pd_a_id, [0x20_000_000]
     )
 
     benchmark_config = BenchmarkConfig(
-        bench_start_ch.pd_b_id,
-        bench_stop_ch.pd_b_id,
-        bench_idle_ch.pd_b_id,
+        bench_start_ch.pd_b_id,  
+        0,                       
+        bench_stop_ch.pd_b_id,   
+        0,                       
+        bench_idle_ch.pd_b_id,   
+        0,                        
+        True,                     
         bench_children,
+        [],                       
     )
 
     assert eth_driver_vmm.connect()
