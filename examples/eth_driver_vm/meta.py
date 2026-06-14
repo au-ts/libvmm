@@ -197,7 +197,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx)
 
     eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=10)
-    eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)])
+    eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)], priority=9)
     # one_to_one_ram=True is very important as the network drivers in Linux uses DMA!
     eth_driver_vmm = Vmm(sdf, eth_driver_vmm_pd, eth_driver_vm, driver_vm_dtb, one_to_one_ram=True)
 
