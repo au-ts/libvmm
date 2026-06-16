@@ -62,9 +62,14 @@ extern guest_t guest;
 
 /* Bookkeeping for the local APIC timer */
 // @billn revisit for multiple vcpus
-uint64_t native_scaled_apic_ticks_when_timer_starts;
-bool timeout_handle_valid;
-guest_timeout_handle_t timeout_handle;
+
+struct lapic_state {
+    uint64_t native_scaled_apic_ticks_when_timer_starts;
+    bool timeout_handle_valid;
+    guest_timeout_handle_t timeout_handle;
+};
+
+struct lapic_state lapic_state;
 
 uint32_t lapic_read_reg(int offset)
 {
@@ -404,7 +409,8 @@ static uint32_t lapic_read_curr_count_reg(void)
     /* [1] "12.5.4 APIC Timer" */
     if (lapic_read_reg(REG_LAPIC_INIT_CNT) != 0) {
         uint64_t apic_tick_now_scaled = lapic_time_now_scaled();
-        uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled - native_scaled_apic_ticks_when_timer_starts;
+        uint64_t elapsed_scaled_apic_tick = apic_tick_now_scaled
+                                          - lapic_state.native_scaled_apic_ticks_when_timer_starts;
 
         uint64_t remaining = 0;
         if (elapsed_scaled_apic_tick < lapic_read_reg(REG_LAPIC_INIT_CNT)) {
@@ -419,8 +425,8 @@ static uint32_t lapic_read_curr_count_reg(void)
 
 static void handle_lapic_timer_nftn(size_t vcpu_id)
 {
-    assert(timeout_handle_valid);
-    guest_time_cancel_timeout(timeout_handle);
+    assert(lapic_state.timeout_handle_valid);
+    guest_time_cancel_timeout(lapic_state.timeout_handle);
 
     if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
@@ -431,13 +437,13 @@ static void handle_lapic_timer_nftn(size_t vcpu_id)
     /* Restart timeout if periodic */
     uint32_t init_count = lapic_read_reg(REG_LAPIC_INIT_CNT);
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
-        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+        lapic_state.native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
         uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
         LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
 
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
+        lapic_state.timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(lapic_state.timeout_handle != TIMEOUT_HANDLE_INVALID);
+        lapic_state.timeout_handle_valid = true;
     }
 
     /* But only inject IRQ if it is not masked */
@@ -460,22 +466,22 @@ static void lapic_write_init_count_reg(uint32_t data)
         uint64_t delay_ticks = data * lapic_dcr_to_divider();
         LOG_APIC("setting timeout for 0x%lx ticks\n", data);
 
-        if (timeout_handle_valid) {
+        if (lapic_state.timeout_handle_valid) {
             /* Guest kernel has changed the timeout */
-            guest_time_cancel_timeout(timeout_handle);
-            timeout_handle_valid = false;
+            guest_time_cancel_timeout(lapic_state.timeout_handle);
+            lapic_state.timeout_handle_valid = false;
         }
 
-        timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
-        assert(timeout_handle != TIMEOUT_HANDLE_INVALID);
-        timeout_handle_valid = true;
+        lapic_state.timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
+        assert(lapic_state.timeout_handle != TIMEOUT_HANDLE_INVALID);
+        lapic_state.timeout_handle_valid = true;
 
-        native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
+        lapic_state.native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
     } else {
-        if (timeout_handle_valid) {
+        if (lapic_state.timeout_handle_valid) {
             /* Guest kernel has cancelled the timeout */
-            guest_time_cancel_timeout(timeout_handle);
-            timeout_handle_valid = false;
+            guest_time_cancel_timeout(lapic_state.timeout_handle);
+            lapic_state.timeout_handle_valid = false;
         }
     }
 }
