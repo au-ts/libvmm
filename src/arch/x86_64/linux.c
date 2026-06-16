@@ -19,6 +19,7 @@
  * [3] Linux: arch/x86/include/uapi/asm/e820.h
  * [4] https://wiki.osdev.org/Paging
  * [5] Linux: arch/x86/include/uapi/asm/bootparam.h
+ * [6] https://wiki.osdev.org/Global_Descriptor_Table
  */
 
 #define MINIMUM_BOOT_PROT_MAJOR 2
@@ -62,6 +63,26 @@
 #define PTE_RW_BIT BIT(1)
 #define PTE_PS_BIT BIT(7) // 1 if point to a page instead of paging structure
 #define PTE_ADDR_MASK (0x000ffffffffff000ull)
+
+/* [6] Components of a basic GDT that we builds to boot Linux and allow it to bootstaps it's own GDT. */
+#define GDT_FLAT_BASE_LOW 0ull
+#define GDT_FLAT_BASE_HIGH 0ull
+
+/* (0xFFFFF with 4KB granularity = 4GB flat memory) */
+#define GDT_SEG_LIMIT_LOW 0xffffull // Bits 0-15
+#define GDT_SEG_LIMIT_HIGH 0xf0000000000ull // Bits 48-51
+
+/* Access bytes at bits 40-47 */
+/* 0x9A (10011010) = Present(1)|DPL0(00)|UserSegment(1)|Code(1)|Conforming(0)|Readable(1)|Accessed(0) */
+#define GDT_ACCESS_CODE64 0x9a0000000000ull
+/* 0x92 (10010010) = Present(1)|DPL0(00)|UserSegment(1)|Data(0)|Direction(0)|Writable(1)|Accessed(0) */
+#define GDT_ACCESS_DATA32 0x920000000000ull
+
+/* Flags at bits 52-55 */
+/* 0xA (1010) = Granularity 4KB(1) | 32-bit Default(0) | Long Mode 64-bit(1) | Available(0) */
+#define GDT_ACCESS_FLAGS_CODE64 0x00A0000000000000ull
+/* 0xC (1100) = Granularity 4KB(1) | 32-bit Default(1) | Long Mode 64-bit(0) | Available(0) */
+#define GDT_ACCESS_FLAGS_DATA32 0x00C0000000000000ull
 
 // Assume 2MiB large page
 static bool map_page(uint64_t paging_objects_start_gpa, void *pml4, uint64_t target_gpa, uint64_t *n_pt_created)
@@ -331,8 +352,10 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
         return false;
     }
     gdt[0] = 0;
-    gdt[1] = 0x00AF9A000000FFFFull; // @billn breakdown
-    gdt[2] = 0x00CF92000000FFFFull;
+    gdt[1] = GDT_FLAT_BASE_LOW | GDT_FLAT_BASE_HIGH | GDT_SEG_LIMIT_LOW | GDT_SEG_LIMIT_HIGH | GDT_ACCESS_CODE64
+           | GDT_ACCESS_FLAGS_CODE64;
+    gdt[2] = GDT_FLAT_BASE_LOW | GDT_FLAT_BASE_HIGH | GDT_SEG_LIMIT_LOW | GDT_SEG_LIMIT_HIGH | GDT_ACCESS_DATA32
+           | GDT_ACCESS_FLAGS_DATA32;
     uint64_t gdt_limit = 23; // (8 bytes * 3 entries) - 1 as limit inclusive
 
     /* Now build and place the ACPI tables after the GDT. */
