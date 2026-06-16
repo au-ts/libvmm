@@ -633,22 +633,45 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
             if (reqbk->state == VIRTIO_BLK_REQ_STATE_WRITING_ALIGNED
                 || reqbk->state == VIRTIO_BLK_REQ_STATE_RMW_WRITING) {
                 /* If we get here, we've just finished processing a normal or unaligned write. Now check
-                   which request is queueing on the same sDDF block we touched and process it. */
+                   which requests have been blocked on this request's completion and process them. */
+                int active_write_reqs[SDDF_MAX_QUEUE_CAPACITY];
+                int num_active_write_reqs = 0;
                 for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
-                    if (state->reqsbk[i].state == VIRTIO_BLK_REQ_STATE_RMW_QUEUEING
-                        && do_requests_overlap(&(state->reqsbk[i]), reqbk)) {
+                    if (i != sddf_ret_id
+                        && (state->reqsbk[i].state == VIRTIO_BLK_REQ_STATE_WRITING_ALIGNED
+                            || state->reqsbk[i].state == VIRTIO_BLK_REQ_STATE_RMW_READING
+                            || state->reqsbk[i].state == VIRTIO_BLK_REQ_STATE_RMW_WRITING)) {
+                        active_write_reqs[num_active_write_reqs] = i;
+                        num_active_write_reqs++;
+                    }
+                }
 
-                        state->reqsbk[i].state = VIRTIO_BLK_REQ_STATE_RMW_READING;
-                        uintptr_t next_sddf_offset = state->reqsbk[i].sddf_data_cell_base
-                                                   - ((struct virtio_blk_device *)dev->device_data)->data_region;
+                for (int i = 0; i < SDDF_MAX_QUEUE_CAPACITY; i++) {
+                    if (state->reqsbk[i].state == VIRTIO_BLK_REQ_STATE_RMW_QUEUEING) {
+                        bool i_req_safe_to_dispatch = true;
+                        for (int j = 0; j < num_active_write_reqs; j++) {
+                            if (do_requests_overlap(&state->reqsbk[i], &state->reqsbk[active_write_reqs[j]])) {
 
-                        err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, next_sddf_offset,
-                                              state->reqsbk[i].sddf_block_number, state->reqsbk[i].sddf_count, i);
-                        assert(!err);
+                                i_req_safe_to_dispatch = false;
+                                break;
+                            }
+                        }
 
-                        virt_notify = true;
-                        read_write_modify_inflight = true;
-                        break;
+                        if (i_req_safe_to_dispatch) {
+                            state->reqsbk[i].state = VIRTIO_BLK_REQ_STATE_RMW_READING;
+                            uintptr_t next_sddf_offset = state->reqsbk[i].sddf_data_cell_base
+                                                       - ((struct virtio_blk_device *)dev->device_data)->data_region;
+
+                            err = blk_enqueue_req(&state->queue_h, BLK_REQ_READ, next_sddf_offset,
+                                                  state->reqsbk[i].sddf_block_number, state->reqsbk[i].sddf_count, i);
+                            assert(!err);
+
+                            virt_notify = true;
+                            read_write_modify_inflight = true;
+
+                            active_write_reqs[num_active_write_reqs] = i;
+                            num_active_write_reqs++;
+                        }
                     }
                 }
             }
