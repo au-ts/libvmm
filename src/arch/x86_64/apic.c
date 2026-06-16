@@ -207,49 +207,55 @@ static bool get_highest_vector_in_service(uint8_t *ret)
     return false;
 }
 
+static uint8_t get_ppr(void)
+{
+    /* [1] "Figure 10-19. Processor-Priority Register (PPR)" (Intel SDM Vol 3A) */
+    uint8_t highest_vector_in_service = 0;
+    get_highest_vector_in_service(&highest_vector_in_service);
+
+    uint8_t isrv_class = highest_vector_in_service >> 4;
+    uint8_t tpr = lapic_read_reg(REG_LAPIC_TPR);
+    uint8_t tpr_class = tpr >> 4;
+
+    // If TPR class >= ISRV class, PPR is just the TPR.
+    // Otherwise, PPR takes the ISRV class, and subclass becomes 0.
+    if (tpr_class >= isrv_class) {
+        return tpr;
+    } else {
+        return isrv_class << 4;
+    }
+}
+
 static int get_next_eligible_irq_vector(void)
 {
-    // uint8_t ppr = get_ppr();
+    // The APIC only dispatches if the candidate's priority class is
+    // strictly greater than the PPR's priority class.
+
+    uint8_t ppr_class = get_ppr() >> 4;
 
     // scan IRRs for *a* pending interrupt
     // do it "right-to-left" as the higer vector is higher prio (generally)
     for (int i = LAPIC_NUM_ISR_IRR_TMR_32B - 1; i >= 0; i--) {
+        int irr_reg_off = REG_LAPIC_IRR_0 + (i * IRR_ISR_MULTIPLIER);
+        uint32_t irr_val = lapic_read_reg(irr_reg_off);
+        if (!irr_val) {
+            continue;
+        }
+
         for (int j = 31; j >= 0; j--) {
-            int irr_reg_off = REG_LAPIC_IRR_0 + (i * IRR_ISR_MULTIPLIER);
-            if (lapic_read_reg(irr_reg_off) & BIT(j)) {
-                uint8_t candidate_vector = i * 32 + j;
-                // @billn highly sus, revisit PPR calculation
-                if (candidate_vector >> 4 > lapic_read_reg(REG_LAPIC_TPR) >> 4) {
+            if (irr_val & BIT(j)) {
+                uint8_t candidate_vector = (i * 32) + j;
+                if ((candidate_vector >> 4) > ppr_class) {
                     return candidate_vector;
                 } else {
-                    // highest pending vector is lower than highest eligible priority, so do nothing
+                    // Because we scan highest-to-lowest, if the very highest
+                    // pending interrupt is not eligible, no lower ones will be either.
                     return -1;
                 }
             }
         }
     }
     return -1;
-}
-
-static uint8_t get_ppr(void)
-{
-    uint8_t ppr;
-
-    /* [1] "Figure 12-19. Processor-Priority Register (PPR)" */
-    uint8_t highest_vector_in_service = 0;
-    get_highest_vector_in_service(&highest_vector_in_service);
-    uint8_t highest_priority_in_service = highest_vector_in_service >> 4;
-    uint8_t task_priority_register = lapic_read_reg(REG_LAPIC_TPR);
-    uint8_t task_priority_class = task_priority_register >> 4;
-    uint8_t task_priority_subclass = task_priority_register & 0xf;
-    uint8_t proc_priority_class = MAX(task_priority_class, highest_priority_in_service);
-    uint8_t proc_priority_subclass = 0;
-
-    if (task_priority_class >= highest_priority_in_service) {
-        proc_priority_subclass = task_priority_subclass;
-    }
-    ppr = proc_priority_subclass | (proc_priority_class << 4);
-    return ppr;
 }
 
 static bool vcpu_can_take_irq(size_t vcpu_id)
