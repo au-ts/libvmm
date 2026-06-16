@@ -72,6 +72,19 @@ def backend_fn(
                 # fmt: on
                 *QEMU_COMMON_FLAGS,
             )
+        elif test_config.board == "x86_64_generic_vtx":
+            return QemuBackend(
+                "qemu-system-x86_64",
+                # fmt: off
+                "-accel", "kvm",
+                "-cpu", "host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme",
+                # somewhat of a hack
+                "-kernel", str((loader_img.parent / "sel4_32.elf").resolve()),
+                "-initrd", str(loader_img.resolve()),
+                # fmt: on
+                "-smp", "4",
+                *QEMU_COMMON_FLAGS,
+            )
         else:
             raise NotImplementedError(f"unknown qemu board {test_config.board}")
 
@@ -145,7 +158,7 @@ class TestConfig(TestCase):
 
     def is_qemu(self):
         # TODO: x86_64_generic assumes QEMU for the moment.
-        return self.board.startswith("qemu") or self.board == "x86_64_generic"
+        return self.board.startswith("qemu") or self.board.startswith("x86_64_generic")
 
     def pretty_name(self) -> str:
         return f"{self.test} for {self.example} on {self.board} ({self.config}, built with {self.build_system})"
