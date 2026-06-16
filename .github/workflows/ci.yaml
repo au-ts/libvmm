@@ -56,7 +56,7 @@ jobs:
       - name: Install dependencies (via Homebrew)
         # 'expect' is only a dependency for CI testing
         run: |
-          brew install llvm lld qemu dtc make dosfstools expect
+          brew install llvm lld qemu dtc make dosfstools expect acpica
           echo "/opt/homebrew/opt/llvm/bin:$PATH" >> $GITHUB_PATH
       - name: Setup pyenv
         run: |
