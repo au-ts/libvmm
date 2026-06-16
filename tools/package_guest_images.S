@@ -43,3 +43,11 @@ _guest_initrd_image:
 .incbin GUEST_INITRD_IMAGE_PATH
 _guest_initrd_image_end:
 #endif
+
+#if defined(GUEST_DSDT_AML_PATH)
+.section .guest_dsdt_aml, "aw", @progbits
+.global _guest_dsdt_aml, _guest_dsdt_aml_end
+_guest_dsdt_aml:
+.incbin GUEST_DSDT_AML_PATH
+_guest_dsdt_aml_end:
+#endif

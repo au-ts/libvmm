@@ -124,6 +124,7 @@
                 curl
                 which
                 cpio
+                acpica-tools
               ];
 
               # To avoid Nix adding compiler flags that are not available on a freestanding
