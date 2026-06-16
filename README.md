@@ -26,6 +26,13 @@ For information on the project and how to use it, please see the [manual](docs/M
 To quickly show off the project, we will run the `simple` example. This example is
 intended to simply boot a Linux guest that has serial input and output.
 
+### Hardware requirements
+When targeting x86-64, you can build the library and examples on any macOS/Linux machine,
+but you will only be able to run/virtualise it on a host with an Intel x86-64 CPU and
+VT-x enabled in your BIOS.
+
+There is no hardware requirements when targeting ARM, for more details, please see the [manual](docs/MANUAL.md).
+
 ### Dependencies
 
 * GNU Make
@@ -41,7 +48,7 @@ For all other dependencies, see the below instructions depending on your machine
 #### Ubuntu/Debian (apt):
 
 ```sh
-sudo apt install -y make clang lld llvm qemu-system-arm device-tree-compiler
+sudo apt install -y make clang lld llvm qemu-system-arm qemu-system-x86 device-tree-compiler iasl
 ```
 
 #### macOS (Homebrew):
@@ -57,7 +64,7 @@ less friction on a Linux machine.
 # Note that you should make sure that the LLVM tools are in your path after running
 # the install command. Homebrew does not do it automatically but does print out a
 # message on how to do it.
-brew install make qemu dtc llvm
+brew install make qemu dtc llvm acpica
 ```
 
 #### Nix

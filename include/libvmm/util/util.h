@@ -9,6 +9,7 @@
 
 #include <microkit.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <sddf/util/printf.h>
 
@@ -31,11 +32,7 @@
 #define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR (%s:%u): ", microkit_name, __FUNCTION__, __LINE__); printf(__VA_ARGS__); }while(0)
 
-static void assert_fail(
-    const char  *assertion,
-    const char  *file,
-    unsigned int line,
-    const char  *function)
+static void assert_fail(const char *assertion, const char *file, unsigned int line, const char *function)
 {
     printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
     __builtin_trap();
@@ -69,5 +66,28 @@ static void assert_fail(
 #endif
 #endif
 
+/* Returns true if all set bits in `baseline` are also set in `actual` */
+bool check_baseline_bits(uint64_t baseline, uint64_t actual);
+
+/* Print all bit indexes that are set in `baseline` but not set in `actual` */
+void print_missing_baseline_bits(uint64_t baseline, uint64_t actual);
+
 /* Returns true if two [x..y) ranges overlap. */
 bool ranges_overlap(uint64_t left_start, uint64_t left_size, uint64_t right_start, uint64_t right_size);
+
+/* Converts `ticks` quantity at `in_freq` Hz to equvalent quantity at `out_freq` Hz */
+uint64_t convert_ticks_by_frequency(uint64_t ticks, uint64_t in_freq, uint64_t out_freq);
+
+#if defined(CONFIG_ARCH_X86_64)
+static inline uint64_t rdtsc(void)
+{
+    uint32_t lo, hi;
+    __asm__ __volatile__("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
+static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t *b, uint32_t *c, uint32_t *d)
+{
+    __asm__ __volatile__("cpuid" : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d) : "a"(leaf), "c"(subleaf));
+}
+#endif
