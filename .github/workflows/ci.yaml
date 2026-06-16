@@ -73,6 +73,8 @@ jobs:
   build_linux_x86_64_nix:
     name: Build examples (Linux x86-64 via Nix)
     runs-on: [self-hosted, Linux, X64]
+    outputs:
+      artifact_id: ${{ steps.upload_images.outputs.artifact-id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -91,6 +93,7 @@ jobs:
       - name: Build examples
         run: nix develop --ignore-environment -c bash -c 'source systems-ci/setup.sh && CI=1 ./ci/build.py $MICROKIT_SDK $(nproc)'
       - name: Archive image artifacts
+        id: upload_images
         uses: actions/upload-artifact@v4
         with:
           name: loader-images
@@ -101,24 +104,28 @@ jobs:
 
   run_qemu:
     name: Run (QEMU)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     needs: build_linux_x86_64_nix
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           submodules: true
-      - name: Install dependencies (via apt)
-        run: |
-          sudo apt update
-          sudo apt-get install qemu-system-arm qemu-system-misc qemu-system-x86
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
-      - name: Download images
-        uses: actions/download-artifact@v8
-        with:
-          name: loader-images
-          path: ci_build
+
+      # GitHub seems to limit download speed of artifacts from their runners to self hosted runners.
+      # So applying a workaround from https://github.com/actions/download-artifact/issues/362#issuecomment-3060841829
+      - name: Download images using azcopy
+        run: |
+          artifact_url="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ needs.build_linux_x86_64_nix.outputs.artifact_id }}/zip"
+          signed_url="$(curl -L -I -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o /dev/null -w "%{url_effective}" "$artifact_url")"
+          azcopy copy "$signed_url" "loader-images.zip"
+          unzip -q loader-images.zip -d ci_build
+          rm loader-images.zip
       - name: Run tests
         run: |
           export PATH="$(pwd)/machine_queue":$PATH
