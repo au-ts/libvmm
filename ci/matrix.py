@@ -84,7 +84,8 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "qemu_virt_aarch64",
             "odroidc4",
             "maaxboard",
-            "x86_64_generic_vtx",
+            "qemu_virt_x86_64",
+            "vb_105",
         ],
         "tests_exclude": [],
     },
@@ -136,14 +137,18 @@ _BoardNames = Literal[
     "maaxboard",
     "odroidc4",
     "qemu_virt_aarch64",
-    "x86_64_generic_vtx",
+    # Note that these are not valid Microkit boards but
+    # rather the testing targets, which maps to x86_64_generic_vtx
+    "qemu_virt_x86_64",
+    "vb_105",
 ]
 
 known_board_names = set(MACHINE_QUEUE_BOARDS.keys()) | {
     # simulation boards
     "qemu_virt_aarch64",
     "qemu_virt_riscv64",
-    "x86_64_generic_vtx",
+    "qemu_virt_x86_64",
+    "vb_105",
 }
 assert (
     set(_BoardNames.__args__) <= known_board_names  # type: ignore
