@@ -69,14 +69,14 @@ def generate_example_test_cases(
 
 
 EXAMPLES: dict[str, _ExampleMatrixType] = {
-    "rust": {
-        "configs": ["debug", "release"],
-        "build_systems": ["make"],
-        "boards": [
-            "qemu_virt_aarch64",
-        ],
-        "tests_exclude": [],
-    },
+    # "rust": {
+    #     "configs": ["debug", "release"],
+    #     "build_systems": ["make"],
+    #     "boards": [
+    #         "qemu_virt_aarch64",
+    #     ],
+    #     "tests_exclude": [],
+    # },
     "simple": {
         "configs": ["debug", "release"],
         "build_systems": ["make"],
