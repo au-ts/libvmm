@@ -194,7 +194,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     )
     serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
                                       priority=107, stack_size=0x2000)
-    serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx)
+    serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
 
     eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=10)
     eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)], priority=9)

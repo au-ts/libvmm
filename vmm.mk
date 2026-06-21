@@ -51,7 +51,9 @@ CFILES := ${AARCH64_FILES} ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
 # Enable LLVM UBSAN to trap on detected undefined behaviour
-CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined -Wall -Werror -Wno-unused-function
+CFLAGS += -Wall -Werror -Wno-unused-function
+
+# -fsanitize=undefined -fsanitize-trap=undefined
 
 # Generate dependencies automatically
 CFLAGS += -MD

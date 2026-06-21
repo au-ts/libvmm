@@ -23,4 +23,4 @@ ethtool -K "$NET_INF" tx off rx off && \
 ip link show && ip link set "$NET_INF" up && sleep "$UPLINK_DELAY_SECONDS" && \
 
 
-chmod +x /root/uio_net_driver && /root/uio_net_driver "$NET_INF"
+chmod +x /root/uio_net_driver && /root/uio_net_driver "$NET_INF" >/tmp/uio.log 2>&1 &
