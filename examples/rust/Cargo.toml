@@ -13,8 +13,6 @@ license = "BSD-2-Clause"
 name = "vmm"
 path = "src/vmm.rs"
 
-[dependencies.sel4-microkit]
-# Temporarily use fork of rust-seL4 until all the changes
-# we need are upstreamed
-git = "https://github.com/Ivan-Velickovic/rust-seL4"
-branch = "dev"
+[dependencies]
+sel4-microkit = { git = "https://github.com/seL4/rust-sel4", rev = "c30d0e44fb32c15239049ce402ef2a8c72499aa3" }
+sel4-microkit-base = { git = "https://github.com/seL4/rust-sel4", rev = "c30d0e44fb32c15239049ce402ef2a8c72499aa3", features = ["extern-symbols"] }
