@@ -54,6 +54,7 @@ RUST_MICROKIT_TARGET := aarch64-microkit-minimal
 TARGET_DIR := $(BUILD_DIR)/target
 
 RUST_ENV = \
+	RUSTC_BOOTSTRAP=1 \
 	RUST_TARGET_PATH=$(abspath $(RUST_TARGET_PATH)) \
 	SEL4_INCLUDE_DIRS=$(abspath $(BOARD_DIR)/include) \
 	MICROKIT_BOARD_DIR=$(abspath $(BOARD_DIR)) \
@@ -70,7 +71,7 @@ RUST_OPTIONS := \
 	--manifest-path $(EXAMPLE_DIR)/Cargo.toml \
 	--target $(RUST_MICROKIT_TARGET) \
 	--target-dir $(abspath $(TARGET_DIR)) \
-	--out-dir $(abspath $(BUILD_DIR)) \
+	--artifact-dir $(abspath $(BUILD_DIR)) \
 
 all: $(IMAGE_FILE)
 

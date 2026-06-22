@@ -3,6 +3,6 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 [toolchain]
-channel = "nightly-2024-01-06"
+channel = "1.94.0"
 components = [ "rustfmt", "rust-src", "rustc-dev", "llvm-tools-preview" ]
 
