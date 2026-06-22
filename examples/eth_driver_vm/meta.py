@@ -8,6 +8,13 @@ from typing import List, Tuple
 from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
 from importlib.metadata import version
 
+import sys, os
+
+import json
+import subprocess
+import shutil
+from typing import Callable, Optional
+
 ProtectionDomain = SystemDescription.ProtectionDomain
 MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
@@ -175,7 +182,7 @@ class BenchmarkConfig:
             num_pmu_events,
         )
 
-def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: DeviceTree):
+def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: DeviceTree, pmu_event_ids: List[int],):
     uart_node = dtb.node(board.serial)
     assert uart_node is not None
     guest_serial_node = driver_vm_dtb.node(board.guest_serial)
@@ -185,18 +192,17 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     timer_node = dtb.node(board.timer)
     assert timer_node is not None
 
-    timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=110)
+    timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=110, cpu=0)
     timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
 
-    uart_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=109)
+    uart_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=109,cpu=0)
     serial_virt_tx = ProtectionDomain(
-        "serial_virt_tx", "serial_virt_tx.elf", priority=108
-    )
+        "serial_virt_tx", "serial_virt_tx.elf", priority=108, cpu=0)
     serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
-                                      priority=107, stack_size=0x2000)
+                                      priority=107, stack_size=0x2000,cpu=0)
     serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
 
-    eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=10)
+    eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=10,cpu=0)
     eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)], priority=9)
     # one_to_one_ram=True is very important as the network drivers in Linux uses DMA!
     eth_driver_vmm = Vmm(sdf, eth_driver_vmm_pd, eth_driver_vm, driver_vm_dtb, one_to_one_ram=True)
@@ -209,18 +215,18 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
         eth_driver_vmm.add_passthrough_device(node)
 
     net_virt_tx = ProtectionDomain(
-        "net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000
+        "net_virt_tx", "network_virt_tx.elf", priority=100, budget=20000,cpu=0
     )
-    net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99)
+    net_virt_rx = ProtectionDomain("net_virt_rx", "network_virt_rx.elf", priority=99,cpu=0)
     net_system = Sddf.Net(sdf, ethernet_node, eth_driver_vmm_pd, net_virt_tx, net_virt_rx, driver_vm_system=eth_driver_vmm)
 
-    client0 = ProtectionDomain("client0", "echo0.elf", priority=97, budget=20000)
+    client0 = ProtectionDomain("client0", "echo0.elf", priority=97, budget=20000,cpu=0)
     client0_net_copier = ProtectionDomain(
-        "client0_net_copier", "network_copy0.elf", priority=98, budget=20000
+        "client0_net_copier", "network_copy0.elf", priority=98, budget=20000,cpu=0
     )
-    client1 = ProtectionDomain("client1", "echo1.elf", priority=97, budget=20000)
+    client1 = ProtectionDomain("client1", "echo1.elf", priority=97, budget=20000,cpu=0)
     client1_net_copier = ProtectionDomain(
-        "client1_net_copier", "network_copy1.elf", priority=98, budget=20000
+        "client1_net_copier", "network_copy1.elf", priority=98, budget=20000,cpu=0
     )
 
     serial_system.add_client(client0)
@@ -235,8 +241,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
 
     # Benchmark specific resources
 
-    bench_idle = ProtectionDomain("bench_idle", "idle.elf", priority=1)
-    bench = ProtectionDomain("bench", "benchmark.elf", priority=253)
+    bench_idle = ProtectionDomain("bench_idle", "idle.elf", priority=1,cpu=0)
+    bench = ProtectionDomain("bench", "benchmark.elf", priority=253,cpu=0)
 
     serial_system.add_client(bench)
 
@@ -294,7 +300,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
         0,                        
         True,                     
         bench_children,
-        [],                       
+        pmu_event_ids,                       
     )
 
     assert eth_driver_vmm.connect()
@@ -322,6 +328,17 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     with open(f"{output_dir}/{sdf_file}", "w+") as f:
         f.write(sdf.render())
 
+bench_pmu_events = {
+    "CACHE_L1I_MISS": (0, []),
+    "CACHE_L1D_MISS": (1, []),
+    "TLB_L1I_MISS": (2, []),
+    "TLB_L1D_MISS": (3, []),
+    "EXECUTE_INSTRUCTION": (4, []),
+    "BRANCH_MISPREDICT": (5, []),
+    "CPU_CYCLES": (6, []),
+    "MEM_ACCESS": (7, []),
+    "CHAIN": (8, []),
+}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -331,6 +348,7 @@ if __name__ == "__main__":
     parser.add_argument("--board", required=True, choices=[b.name for b in BOARDS])
     parser.add_argument("--output", required=True)
     parser.add_argument("--sdf", required=True)
+    parser.add_argument("--bench_pmu_events", required=False)
 
     args = parser.parse_args()
 
@@ -345,4 +363,37 @@ if __name__ == "__main__":
     with open(args.dtb_guest, "rb") as f:
         dtb_guest = DeviceTree(f.read())
 
-    generate(args.sdf, args.output, dtb_native, dtb_guest)
+    if args.bench_pmu_events:
+        pmu_events = args.bench_pmu_events.split(",")
+    else:
+        # If benchmarking PMU events are not provided, we use these default events
+        pmu_events = [
+            "EXECUTE_INSTRUCTION",
+            "CHAIN",
+            "MEM_ACCESS",
+            "CHAIN",
+            "CACHE_L1D_MISS",
+            "CHAIN",
+        ]
+
+    assert (
+        len(pmu_events) <= 6
+    ), "Supplied more than 6 benchmarking PMU events to track!"
+    pmu_event_ids = []
+    for i in range(len(pmu_events)):
+        if not i % 2:
+            assert (
+                pmu_events[i] != "CHAIN"
+            ), f"Chaining (overflow counting) can only be used by odd counters (selected counter {i})!"
+
+        assert (
+            pmu_events[i] in bench_pmu_events
+        ), f"Selected PMU event {i} ({pmu_events[i]}) is not supported!"
+
+        assert (
+            args.board not in bench_pmu_events[pmu_events[i]][1]
+        ), f"Selected PMU event {i} ({pmu_events[i]}) is not supported by board {args.board}!"
+
+        pmu_event_ids.append(bench_pmu_events[pmu_events[i]][0])
+
+    generate(args.sdf, args.output, dtb_native, dtb_guest, pmu_event_ids)
