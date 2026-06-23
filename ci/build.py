@@ -25,6 +25,10 @@ def build_make(args: argparse.Namespace, test_config: common.TestConfig):
     build_dir = common.example_build_path(test_config)
     example_dir = get_example_dir(test_config.example)
 
+    microkit_board = test_config.board
+    if "x86" in microkit_board or microkit_board == "vb_105":
+        microkit_board = "x86_64_generic_vtx"
+
     subprocess.run(
         [
             "make",
@@ -32,7 +36,7 @@ def build_make(args: argparse.Namespace, test_config: common.TestConfig):
             f"--directory={example_dir}",
             f"BUILD_DIR={build_dir}",
             f"MICROKIT_SDK={args.microkit_sdk}",
-            f"MICROKIT_BOARD={test_config.board}",
+            f"MICROKIT_BOARD={microkit_board}",
             f"MICROKIT_CONFIG={test_config.config}",
         ],
         check=True,
