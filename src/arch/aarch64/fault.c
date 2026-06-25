@@ -32,7 +32,7 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, size_t regs_size
      * Do not explicitly resume the TCB because we will eventually reply to the
      * fault which will result in the TCB being restarted.
      */
-    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, regs_size, SEL4_USER_CONTEXT_SIZE, regs);
+    int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, regs_size, regs);
     assert(err == seL4_NoError);
 
     return (err == seL4_NoError);
