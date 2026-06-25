@@ -8,6 +8,7 @@
 #include <libvmm/guest_ram.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/aarch64/linux.h>
+#include <sddf/util/cache.h>
 
 uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t kernel_size, uintptr_t dtb_src,
                             uint64_t dtb_dest_gpa, size_t dtb_size, uintptr_t initrd_src, uint64_t initrd_dest_gpa,
@@ -73,6 +74,14 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     LOG_VMM("Copying guest kernel image to 0x%lx (0x%lx bytes)\n", kernel_dest_gpa, kernel_size);
     memcpy((char *)kernel_dest_hva, (char *)kernel, kernel_size);
 
+    // Since we starts Linux with caching off (see SCTLR_EL1_VM in seL4), we need to
+    // flush all of the writes to physical memory. Otherwise, Linux will read garbage when
+    // it starts.
+    // More specifically, ARM have a "most restrictive" rule to derive caching attribute
+    // from stage 1 and 2 translations. Since caching off at stage 1 is more restrictive than
+    // caching on in stage 2 (mapping guest RAM with cache=true), the end result is caching off.
+    cache_clean_and_invalidate((uintptr_t)kernel_dest_hva, (uintptr_t)kernel_dest_hva + kernel_size);
+
     // Copy the guest device tree blob into the right location
     // First check that the DTB given is actually a DTB!
     struct dtb_header dtb_header = {};
@@ -104,6 +113,7 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     }
     LOG_VMM("Copying guest DTB to GPA 0x%lx (0x%zx bytes)\n", dtb_dest_gpa, dtb_size);
     memcpy((char *)dtb_dest_hva, (char *)dtb_src, dtb_size);
+    cache_clean_and_invalidate((uintptr_t)dtb_dest_hva, (uintptr_t)dtb_dest_hva + dtb_size);
 
     // Copy the initial RAM disk into the right location
     // @ivanv: add checks for initrd according to Linux docs
@@ -115,6 +125,7 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     }
     LOG_VMM("Copying guest initial RAM disk to GPA 0x%lx (0x%zx bytes)\n", initrd_dest_gpa, initrd_size);
     memcpy((char *)initrd_dest_hva, (char *)initrd_src, initrd_size);
+    cache_clean_and_invalidate((uintptr_t)initrd_dest_hva, (uintptr_t)initrd_dest_hva + initrd_size);
 
     return kernel_dest_gpa;
 }
