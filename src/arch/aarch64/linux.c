@@ -66,7 +66,7 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     // a 2MB aligned base address anywhere in usable system RAM and called there.
     // In this case, we place the image at the text_offset of the start of the guest's RAM,
     // so we need to make sure that the start of guest RAM is 2MiB aligned.
-    if ((ram_start_gpa & ((1 << 20) - 1)) != 0) {
+    if (ram_start_gpa % 0x200000 != 0) {
         LOG_VMM_ERR("Linux requires that guest RAM starting GPA must be 2MiB aligned, got 0x%lx\n", ram_start_gpa);
         return 0;
     }
