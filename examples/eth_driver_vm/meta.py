@@ -196,8 +196,7 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     timer_system = Sddf.Timer(sdf, timer_node, timer_driver)
 
     uart_driver = ProtectionDomain("serial_driver", "serial_driver.elf", priority=109,cpu=0)
-    serial_virt_tx = ProtectionDomain(
-        "serial_virt_tx", "serial_virt_tx.elf", priority=108, cpu=0)
+    serial_virt_tx = ProtectionDomain("serial_virt_tx", "serial_virt_tx.elf", priority=108, cpu=0)
     serial_virt_rx = ProtectionDomain("serial_virt_rx", "serial_virt_rx.elf",
                                       priority=107, stack_size=0x2000,cpu=0)
     serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
