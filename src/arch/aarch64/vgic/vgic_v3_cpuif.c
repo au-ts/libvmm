@@ -35,11 +35,17 @@ bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
     } else {
         /* Interrupt routed to the PEs specified by Aff3.Aff2.Aff1.<target list>.
            Where the bit number in target specify vCPU ID. */
-        uint16_t target_list = data & 0xffff;
-        for (int i = 0; i < guest.num_vcpus && i < 16; i++) {
-            // @billn revisit: affinity routing for > 16 vCPUs
-            if ((target_list >> i & 0x1) && vcpu_is_on(i)) {
-                assert(vgic_inject_irq(i, intid));
+        uint8_t aff1 = (data >> 16) & 0xff;
+        uint8_t aff2 = (data >> 32) & 0xff;
+        uint8_t aff3 = (data >> 48) & 0xff;
+
+        /* We only support a flat cluster. @billn revisit: affinity routing for > 16 vCPUs */
+        if (!aff1 && !aff2 && !aff3) {
+            uint16_t target_list = data & 0xffff;
+            for (int i = 0; i < guest.num_vcpus && i < 16; i++) {
+                if ((target_list >> i & 0x1) && vcpu_is_on(i)) {
+                    assert(vgic_inject_irq(i, intid));
+                }
             }
         }
     }
