@@ -192,7 +192,7 @@ struct virtio_blk_device {
      * in sDDF memory region */
     fsmalloc_t fsmalloc;
     bitarray_t fsmalloc_avail_bitarr;
-    word_t fsmalloc_avail_bitarr_words[roundup_bits2words64(SDDF_MAX_DATA_CELLS)];
+    uint64_t fsmalloc_avail_bitarr_words[BITS_2_WORDS64(SDDF_MAX_DATA_CELLS)];
     /* Index allocator for sddf request ids */
     ialloc_t ialloc;
     uint32_t ialloc_idxlist[SDDF_MAX_QUEUE_CAPACITY];
