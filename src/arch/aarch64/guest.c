@@ -7,6 +7,15 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 
+/* Document referenced:
+ * https://www.kernel.org/doc/Documentation/arm64/booting.txt
+ */
+
+#define SPSR_PMODE_EL1H 5
+#define SPSR_ASYNC_ABORT_MASK_BIT BIT_LOW(8)
+#define SPSR_IRQ_MASK_BIT BIT_LOW(7)
+#define SPSR_FIQ_MASK_BIT BIT_LOW(6)
+
 /* Global state for managing the guest. */
 guest_t guest;
 
@@ -64,15 +73,21 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
      */
     seL4_UserContext regs = { 0 };
     regs.x0 = dtb;
-    regs.spsr = 5; // PMODE_EL1h
+    /* From referenced document:
+     * Before jumping into the kernel, the following conditions must be met:
+     * - CPU mode
+     * All forms of interrupts must be masked in PSTATE.DAIF (Debug, SError,
+     * IRQ and FIQ).
+     * The CPU must be in either EL2 (RECOMMENDED in order to have access to
+     * the virtualisation extensions) or non-secure EL1.
+     */
+    regs.spsr = SPSR_PMODE_EL1H | SPSR_ASYNC_ABORT_MASK_BIT | SPSR_IRQ_MASK_BIT | SPSR_FIQ_MASK_BIT;
     regs.pc = kernel_pc;
     /* Write out all the TCB registers */
-    seL4_Word err = seL4_TCB_WriteRegisters(
-        BASE_VM_TCB_CAP + GUEST_BOOT_VCPU_ID,
-        false, // We'll explcitly start the guest below rather than in this call
-        0, // No flags
-        SEL4_USER_CONTEXT_SIZE,
-        &regs);
+    seL4_Word err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + GUEST_BOOT_VCPU_ID,
+                                            false, // We'll explcitly start the guest below rather than in this call
+                                            0, // No flags
+                                            SEL4_USER_CONTEXT_SIZE, &regs);
     assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", GUEST_BOOT_VCPU_ID,
