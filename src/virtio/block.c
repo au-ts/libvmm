@@ -264,10 +264,10 @@ static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bo
     dev->regs.InterruptStatus = used_buffer | (config_change << 1);
 }
 
+/* Check if ialloc and req queue are full.
+ * If these all pass then a request without a payload (e.g. flush) can be handled successfully */
 static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_count)
 {
-    /* Check if ialloc is full, if data region is full, if req queue is full.
-       If these all pass then this request can be handled successfully */
     if (ialloc_full(&state->ialloc)) {
         LOG_BLOCK_WARN("Request bookkeeping array is full\n");
         return false;
@@ -275,11 +275,6 @@ static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t
 
     if (blk_queue_full_req(&state->queue_h)) {
         LOG_BLOCK_WARN("Request queue is full\n");
-        return false;
-    }
-
-    if (fsmalloc_full(&state->fsmalloc, sddf_count)) {
-        LOG_BLOCK_WARN("Data region is full\n");
         return false;
     }
 
@@ -407,7 +402,23 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         switch (state->reqsbk[req_id].virtio_req_type) {
         case VIRTIO_BLK_T_IN:
         case VIRTIO_BLK_T_OUT: {
+            bool resources_ok = true;
             if (!sddf_make_req_check(state, state->reqsbk[req_id].sddf_count)) {
+                resources_ok = false;
+            }
+
+            /* Allocate data cells from sddf data region based on sddf_count. This may fail since
+             * there might be fragmentation in the data region or a few requests are using a lot of
+             * space. */
+            if (fsmalloc_alloc(&state->fsmalloc, &state->reqsbk[req_id].sddf_data_cell_base,
+                               state->reqsbk[req_id].sddf_count)
+                == -1) {
+
+                LOG_BLOCK_WARN("Data region is full\n");
+                resources_ok = false;
+            }
+
+            if (!resources_ok) {
                 LOG_BLOCK_WARN("out of resource for request at sector %lu, body bytes %lu, sddf count %u\n",
                                state->reqsbk[req_id].virtio_sector,
                                request_bytes_to_body_bytes(state->reqsbk[req_id].total_req_size),
@@ -419,12 +430,6 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
                 ialloc_free(&state->ialloc, req_id);
                 goto stop_processing;
             }
-
-            /* Allocate data cells from sddf data region based on sddf_count. This should always succeed
-             * because we checked the error conditions in sddf_make_req_check(). */
-            assert(fsmalloc_alloc(&state->fsmalloc, &state->reqsbk[req_id].sddf_data_cell_base,
-                                  state->reqsbk[req_id].sddf_count)
-                   != -1);
 
             uintptr_t sddf_offset = state->reqsbk[req_id].sddf_data_cell_base
                                   - ((struct virtio_blk_device *)dev->device_data)->data_region;
@@ -786,7 +791,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     virtio_blk_config_init(blk_dev);
 
     fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE, num_sddf_cells, &blk_dev->fsmalloc_avail_bitarr,
-                  blk_dev->fsmalloc_avail_bitarr_words, roundup_bits2words64(num_sddf_cells));
+                  blk_dev->fsmalloc_avail_bitarr_words, BITS_2_WORDS64(num_sddf_cells));
 
     ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, num_sddf_cells);
 
