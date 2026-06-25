@@ -14,9 +14,6 @@
 
 /* Document referenced: https://wiki.osdev.org/PCI */
 
-/* Implements a guest-side virtual PCI bus and an interface that virtual PCI devices
- * must implements to expose itself to the guest. */
-
 #define PCI_INVALID_VENDOR_ID 0xffff
 
 /* Should be plenty for now. */
@@ -31,9 +28,8 @@
 #define PCI_CONFIG_SPACE_SIZE 0x1000
 #define PCI_EXPECTED_ECAM_SIZE (PCI_NUM_CONFIG_SPACES * PCI_CONFIG_SPACE_SIZE)
 
-/* Globally how many memory BARs can the virtual PCU bus manage at any given time.
- * Can be increased without any other code changes. */
-#define PCI_MAX_NUM_MEM_BARS 0x10 /* This is be plenty for virtio console+block+network. */
+/* This is hard define in the PCI config space */
+#define PCI_NUM_BARS_PER_CONFIG_SPACE 6
 
 struct pci_capability_header {
     uint8_t cap_id;
@@ -57,7 +53,7 @@ struct pci_config_space {
     uint8_t bist;                // 0x0F: Built-in Self Test
 
     // Base Address Registers (BARs)
-    uint32_t bar[6];              // 0x10-0x27: Base Address Registers
+    uint32_t bar[PCI_NUM_BARS_PER_CONFIG_SPACE]; // 0x10-0x27: Base Address Registers
 
     // Subsystem Information
     uint32_t cardbus_cis_ptr;     // 0x28: CardBus CIS Pointer
@@ -78,9 +74,20 @@ struct pci_config_space {
     uint8_t cap_data[192];       // 0x40
 } __attribute((packed));
 
+_Static_assert(sizeof(struct pci_config_space) == 256, "PCI Config Space size");
+
+struct pci_device_bar {
+    bool valid;
+    uint64_t gpa;
+    uint64_t size;
+    pci_bar_mmio_fault_handler_t callback;
+    void *cookie;
+};
+
 struct pci_device {
     struct pci_config_space config_space;
     bool virq_registered;
+    struct pci_device_bar bars[PCI_NUM_BARS_PER_CONFIG_SPACE];
     /* A simple bump allocator for the capabilities linked list. */
     uint8_t next_available_cap_ptr;
 };
@@ -116,10 +123,9 @@ static uint32_t pci_geo_addr_to_internal_index(uint8_t bus, uint8_t dev, uint8_t
     return (bus * PCI_DEV_PER_BUS) + (dev * PCI_FUNC_PER_DEV) + func;
 }
 
-static struct pci_device *pci_get_device(uint8_t bus, uint8_t dev, uint8_t func)
+static struct pci_device *pci_get_device(pci_dev_handle_t pci_dev_handle)
 {
-    uint32_t config_space_idx = pci_geo_addr_to_internal_index(bus, dev, func);
-    return &pci_bus.ecam.devices[config_space_idx];
+    return &pci_bus.ecam.devices[pci_dev_handle];
 }
 
 static bool pci_ecam_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
@@ -132,43 +138,51 @@ static bool pci_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL
     return true;
 }
 
-static inline bool pci_device_exist_check(uint8_t bus, uint8_t dev, uint8_t func)
+static inline bool pci_device_exist_check(pci_dev_handle_t pci_dev_handle)
 {
-    struct pci_config_space *config_space = &pci_get_device(bus, dev, func)->config_space;
+    if (pci_dev_handle >= PCI_NUM_CONFIG_SPACES) {
+        LOG_PCI_ERR("PCI handle %d is out of bound.\n", pci_dev_handle);
+        return false;
+    }
+
+    struct pci_config_space *config_space = &pci_get_device(pci_dev_handle)->config_space;
     if (config_space->vendor_id != PCI_INVALID_VENDOR_ID) {
-        LOG_PCI_ERR("There is no PCI device at geo addr %u:%u.%u\n", bus, dev, func);
+        LOG_PCI_ERR("PCI handle %d is invalid.\n", pci_dev_handle);
         return false;
     }
     return true;
 }
 
-/* Information about the device during the initial registration process. */
-typedef struct pci_device_register_data {
-    uint16_t vendor_id;
-    uint16_t device_id;
-    uint16_t command;
-    uint16_t status;
-    uint8_t revision_id;
-    uint8_t subclass;
-    uint8_t class_code;
-    uint16_t subsystem_vendor_id;
-    uint16_t subsystem_device_id;
-} pci_device_register_data_t;
-
-/* Create a virtual PCI device on the virtual PCI bus. */
-bool pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_register_data_t *device_data)
+pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_register_data_t *device_data)
 {
-    struct pci_device *pci_device = pci_get_device(bus, dev, func);
+    if (bus >= PCI_NUM_BUS) {
+        LOG_PCI_ERR("PCI bus %u is out of bound\n", bus);
+        return INVALID_PCI_DEVICE_HANDLE;
+    }
+
+    if (dev >= PCI_DEV_PER_BUS) {
+        LOG_PCI_ERR("PCI dev %u is out of bound\n", bus);
+        return INVALID_PCI_DEVICE_HANDLE;
+    }
+
+    if (func >= PCI_FUNC_PER_DEV) {
+        LOG_PCI_ERR("PCI func %u is out of bound\n", bus);
+        return INVALID_PCI_DEVICE_HANDLE;
+    }
+
+    pci_dev_handle_t handle = pci_geo_addr_to_internal_index(bus, dev, func);
+    struct pci_device *pci_device = pci_get_device(handle);
     struct pci_config_space *config_space = &pci_device->config_space;
     if (config_space->vendor_id != PCI_INVALID_VENDOR_ID) {
-        LOG_PCI_ERR("Geo addr %u:%u.%u has already been occupied by PCI device vendor id 0x%x, device id 0x%x\n", bus,
-                    dev, func, config_space->vendor_id, config_space->device_id);
-        return false;
+        LOG_PCI_ERR(
+            "Geo addr %u:%u.%u has already been occupied by PCI device vendor id 0x%x, device id 0x%x, handle %d\n",
+            bus, dev, func, config_space->vendor_id, config_space->device_id, handle);
+        return INVALID_PCI_DEVICE_HANDLE;
     }
 
     if (device_data->vendor_id == PCI_INVALID_VENDOR_ID) {
         LOG_PCI_ERR("Vendor ID cannot be an invalid value\n");
-        return false;
+        return INVALID_PCI_DEVICE_HANDLE;
     }
 
     /* Let be safe even though we don't support deregistering a PCI device. */
@@ -189,24 +203,25 @@ bool pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_regi
 
     pci_device->next_available_cap_ptr = offsetof(struct pci_config_space, cap_data);
     pci_device->virq_registered = false;
+
+    return handle;
 }
 
-/* Register the virtual PCI device IRQ with the virtual IRQ controller. */
-bool pci_register_device_irq(uint8_t bus, uint8_t dev, uint8_t func, int virq, virq_ack_fn_t ack_fn, void *ack_data)
+bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack_fn_t ack_fn, void *ack_data)
 {
-    if (!pci_device_exist_check(bus, dev, func)) {
+    if (!pci_device_exist_check(pci_dev_handle)) {
         return false;
     }
 
-    struct pci_device *pci_device = pci_get_device(bus, dev, func);
+    struct pci_device *pci_device = pci_get_device(pci_dev_handle);
     if (pci_device->virq_registered) {
-        LOG_PCI_ERR("IRQ already registered for PCI dev geo addr %u:%u.%u\n", bus, dev, func);
+        LOG_PCI_ERR("IRQ already registered for PCI dev handle %d\n", pci_dev_handle);
         return false;
     }
 
     bool success = virq_register(GUEST_BOOT_VCPU_ID, virq, ack_fn, ack_data);
     if (pci_device->virq_registered) {
-        LOG_PCI_ERR("Cannot register IRQ for PCI dev geo addr %u:%u.%u\n", bus, dev, func);
+        LOG_PCI_ERR("Cannot register IRQ for PCI dev handle %d\n", pci_dev_handle);
         return false;
     }
 
@@ -214,33 +229,21 @@ bool pci_register_device_irq(uint8_t bus, uint8_t dev, uint8_t func, int virq, v
     return success;
 }
 
-/* Add a capability to a virtual PCI device capability linked list. A PCI device capability looks like this and istightly packed:
-struct pci_capability {
-    struct pci_capability_header {
-        uint8_t cap_id;
-        uint8_t next_ptr;
-    }
-    struct payload {
-        ...
-    }
-}
- * The caller must provide the cap id, payload and its length.
- */
-bool pci_register_device_capability(uint8_t bus, uint8_t dev, uint8_t func, uint8_t cap_id, void *payload,
+bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap_id, void *payload,
                                     uint8_t payload_size)
 {
-    if (!pci_device_exist_check(bus, dev, func)) {
+    if (!pci_device_exist_check(pci_dev_handle)) {
         return false;
     }
 
-    struct pci_device *pci_device = pci_get_device(bus, dev, func);
+    struct pci_device *pci_device = pci_get_device(pci_dev_handle);
     struct pci_config_space *config_space = &pci_device->config_space;
 
     uint16_t remaining_space = sizeof(struct pci_config_space) - pci_device->next_available_cap_ptr;
     uint16_t cap_size = payload_size + sizeof(struct pci_capability_header);
     if (cap_size > remaining_space) {
-        LOG_PCI_ERR("Out of space for registering cap id %u, size %u, for PCI dev geo addr %u:%u.%u\n", cap_id,
-                    cap_size, bus, dev, func);
+        LOG_PCI_ERR("Out of space for registering cap id %u, size %u, for PCI dev handle %d\n", cap_id, cap_size,
+                    pci_dev_handle);
         return false;
     }
 
@@ -270,10 +273,37 @@ bool pci_register_device_capability(uint8_t bus, uint8_t dev, uint8_t func, uint
     return true;
 }
 
-/* Allocate a memory BAR in the virtual PCI bus' MMIO aperature for the given PCI device. */
-bool pci_register_device_mmio_bar(uint8_t bus, uint8_t dev, uint8_t func, )
+bool pci_register_device_mmio_bar(pci_dev_handle_t pci_dev_handle, uint8_t bar_index, uint64_t size,
+                                  pci_bar_mmio_fault_handler_t callback, void *cookie)
+{
+    if (!pci_device_exist_check(pci_dev_handle)) {
+        return false;
+    }
 
-/* Initialise the guest visible virtual PCI bus. */
+    if (bar_index >= PCI_NUM_BARS_PER_CONFIG_SPACE) {
+        LOG_PCI_ERR("bar index %u is out of bound\n", bar_index);
+        return false;
+    }
+
+    struct pci_device *pci_device = pci_get_device(pci_dev_handle);
+    if (pci_device->bars[bar_index].valid) {
+        LOG_PCI_ERR("bar index %u is is already registered for PCI device handle %d\n", bar_index, pci_dev_handle);
+        return false;
+    }
+
+    uint64_t space_remaining_in_aperature = pci_bus.mmio_aperature.gpa + pci_bus.mmio_aperature.size
+                                          - pci_bus.mmio_aperature.watermark;
+    if (space_remaining_in_aperature < size) {
+        LOG_PCI_ERR("out of space in MMIO aperature to register bar index %u, size %lu for PCI device handle %d\n",
+                    bar_index, size, pci_dev_handle);
+        return false;
+    }
+
+    pci_device->bars[bar_index].gpa = pci_bus.mmio_aperature.watermark;
+    // @billn todo contine MMIO bar allocation logic, malipulate watermark, register VM fault handlers etc
+    // create a generic fault handler for registration, give the device struct as the cookie
+}
+
 bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature_gpa, uint64_t mmio_aperature_size)
 {
     if (ecam_size != PCI_EXPECTED_ECAM_SIZE) {
@@ -290,6 +320,8 @@ bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature
 
     pci_bus.ecam.gpa = ecam_gpa;
     pci_bus.ecam.size = ecam_size;
+    pci_bus.mmio_aperature.gpa = mmio_aperature_gpa;
+    pci_bus.mmio_aperature.size = mmio_aperature_size;
 
     for (int i = 0; i < PCI_NUM_CONFIG_SPACES; i++) {
         pci_bus.ecam.devices[i].config_space.vendor_id = PCI_INVALID_VENDOR_ID;
@@ -300,7 +332,9 @@ bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature
         return false;
     }
 
-    /* We don't register fault handlers for the MMIO aperature yet as they will be individually handled later.  */
+    /* We don't register fault handlers for the MMIO aperature yet as they will be individually handled later. */
 
     pci_bus.initialised = true;
+
+    return true;
 }

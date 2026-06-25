@@ -13,6 +13,7 @@
 #include <libvmm/tcb.h>
 #include <libvmm/vcpu.h>
 #include <libvmm/virq.h>
+#include <libvmm/pci.h>
 
 #include <libvmm/virtio/virtio.h>
 #include <libvmm/virtio/block.h>
