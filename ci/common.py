@@ -72,7 +72,7 @@ def backend_fn(
                 # fmt: on
                 *QEMU_COMMON_FLAGS,
             )
-        elif test_config.board == "x86_64_generic_vtx":
+        elif test_config.board == "qemu_virt_x86_64":
             return QemuBackend(
                 "qemu-system-x86_64",
                 # fmt: off
@@ -157,8 +157,7 @@ class TestConfig(TestCase):
     no_output_timeout_s: int
 
     def is_qemu(self):
-        # TODO: x86_64_generic assumes QEMU for the moment.
-        return self.board.startswith("qemu") or self.board.startswith("x86_64_generic")
+        return "qemu" in self.board
 
     def pretty_name(self) -> str:
         return f"{self.test} for {self.example} on {self.board} ({self.config}, built with {self.build_system})"
