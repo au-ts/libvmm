@@ -70,10 +70,22 @@ enum fault_width {
     WIDTH_DOUBLEWORD = 0b11,
 };
 
-static enum fault_width fault_get_width(uint64_t fsr)
+int fault_get_width_bytes(uint64_t fsr)
 {
     if (HSR_IS_SYNDROME_VALID(fsr) && HSR_SYNDROME_WIDTH(fsr) <= WIDTH_DOUBLEWORD) {
-        return (enum fault_width)(HSR_SYNDROME_WIDTH(fsr));
+        switch ((enum fault_width)(HSR_SYNDROME_WIDTH(fsr))) {
+        case WIDTH_BYTE:
+            return 1;
+        case WIDTH_HALFWORD:
+            return 2;
+        case WIDTH_WORD:
+            return 4;
+        case WIDTH_DOUBLEWORD:
+            return 8;
+        default:
+                /* unreachable */
+            assert(false);
+        }
     } else {
         LOG_VMM_ERR("Received invalid FSR: 0x%lx\n", fsr);
         // @ivanv: reviist
@@ -87,24 +99,23 @@ static enum fault_width fault_get_width(uint64_t fsr)
 uint64_t fault_get_data_mask(uint64_t addr, uint64_t fsr)
 {
     uint64_t mask = 0;
-    switch (fault_get_width(fsr)) {
-    case WIDTH_BYTE:
+    switch (fault_get_width_bytes(fsr)) {
+    case 1:
         mask = 0x000000ff;
         assert(!(addr & 0x0));
         break;
-    case WIDTH_HALFWORD:
+    case 2:
         mask = 0x0000ffff;
         assert(!(addr & 0x1));
         break;
-    case WIDTH_WORD:
+    case 4:
         mask = 0xffffffff;
         assert(!(addr & 0x3));
         break;
-    case WIDTH_DOUBLEWORD:
+    case 8:
         mask = ~mask;
         break;
     default:
-        LOG_VMM_ERR("unknown width: 0x%x, from FSR: 0x%lx, addr: 0x%lx\n", fault_get_width(fsr), fsr, addr);
         assert(0);
         return 0;
     }
@@ -380,8 +391,8 @@ bool fault_register_vm_exception_handler(uintptr_t base, size_t size, vm_excepti
     for (int i = 0; i < vm_exception_handler_index; i++) {
         struct vm_exception_handler *curr = &registered_vm_exception_handlers[i];
         if (!(base >= curr->end || base + size <= curr->base)) {
-            LOG_VMM_ERR("VM exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n",
-                        base, base + size, curr->base, curr->end);
+            LOG_VMM_ERR("VM exception handler [0x%lx..0x%lx), overlaps with another handler [0x%lx..0x%lx)\n", base,
+                        base + size, curr->base, curr->end);
             return false;
         }
     }
@@ -407,8 +418,9 @@ static bool fault_handle_registered_vm_exceptions(size_t vcpu_id, uintptr_t addr
         if (addr >= base && addr < end) {
             bool success = callback(vcpu_id, addr - base, fsr, regs, data);
             if (!success) {
-                LOG_VMM_ERR("registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n", base,
-                            end, addr);
+                LOG_VMM_ERR(
+                    "registered virtual memory exception handler for region [0x%lx..0x%lx) at address 0x%lx failed\n",
+                    base, end, addr);
             }
 
             return success;
