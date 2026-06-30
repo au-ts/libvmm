@@ -59,7 +59,6 @@
 #define VIRTIO_PCI_NET_DEV_ID           0x1000
 #define VIRTIO_PCI_BLK_DEV_ID           0x1001
 #define VIRTIO_PCI_CONSOLE_DEV_ID       0x1003
-#define VIRTIO_PCI_NOTIF_OFF_MULTIPLIER 0x2
 #define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
 
 typedef struct virtio_pci_data {
