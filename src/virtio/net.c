@@ -102,6 +102,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
         LOG_NET_ERR("Bad DriverFeaturesSel 0x%x\n", dev->regs.DriverFeaturesSel);
     }
     if (success) {
+        dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
     } else {
         LOG_NET_ERR("failed to set driver features with DriverFeaturesSel 0x%x, features: 0x%x\n",

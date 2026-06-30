@@ -87,6 +87,9 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
     case VIRTIO_PCI_COMMON_DEV_FEATURE_SEL:
         *data = dev->regs.DeviceFeaturesSel;
         break;
+    case VIRTIO_PCI_COMMON_DRI_FEATURE:
+        *data = dev->regs.DriverFeatures;
+        break;
     case VIRTIO_PCI_COMMON_DEV_FEATURE:
         success = dev->funs->get_device_features(dev, data);
         break;
