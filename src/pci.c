@@ -45,11 +45,6 @@
 #define PCI_CFG_OFFSET_BAR5          0x20
 #define PCI_CFG_OFFSET_BAR6          0x24
 
-struct pci_capability_header {
-    uint8_t cap_id;
-    uint8_t next_ptr;
-} __attribute__((packed));
-
 struct pci_bar_memory_bits {
     uint32_t memory_type : 1;    // Bit 0: 0 = Memory space
     uint32_t mem_type : 2;    // Bits 2-1: Memory type
