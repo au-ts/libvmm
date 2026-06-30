@@ -48,24 +48,6 @@
 #define VIRTIO_DEVICE_ID_CONSOLE      3
 #define VIRTIO_DEVICE_ID_SOUND        25
 
-/* Emulated MMIO registers for the virtIO device */
-typedef struct virtio_device_regs {
-    uint32_t DeviceID;
-    uint32_t VendorID;
-
-    uint32_t DeviceFeaturesSel;
-    uint32_t DriverFeaturesSel;
-
-    uint32_t QueueSel;
-    uint32_t QueueNotify;
-
-    uint32_t InterruptStatus;
-
-    uint32_t Status;
-
-    uint32_t ConfigGeneration;
-} virtio_device_regs_t;
-
 typedef struct virtio_mmio_data {
     uint32_t revision;
     uint32_t vendor_id;

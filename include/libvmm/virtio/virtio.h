@@ -61,6 +61,24 @@ typedef struct virtio_emul_funs {
     bool (*queue_notify)(virtio_device_t *dev);
 } virtio_device_funs_t;
 
+/* Emulated common registers for the virtIO device */
+typedef struct virtio_device_regs {
+    uint32_t DeviceID;
+    uint32_t VendorID;
+
+    uint32_t DeviceFeaturesSel;
+    uint32_t DriverFeaturesSel;
+
+    uint32_t QueueSel;
+    uint32_t QueueNotify;
+
+    uint32_t InterruptStatus;
+
+    uint32_t Status;
+
+    uint32_t ConfigGeneration;
+} virtio_device_regs_t;
+
 /* Everything needed at runtime for a virtIO device to function. */
 typedef struct virtio_device {
     virtio_transport_type_t transport_type;
