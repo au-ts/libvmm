@@ -48,32 +48,6 @@
 #define VIRTIO_DEVICE_ID_CONSOLE      3
 #define VIRTIO_DEVICE_ID_SOUND        25
 
-/* handler of a virtqueue */
-// @ivanv: we can pack/bitfield this struct
-typedef struct virtio_queue_handler {
-    struct virtq virtq;
-    /* is this virtq fully initialised? */
-    bool ready;
-    /* the last index that the virtIO device processed */
-    uint16_t last_idx;
-} virtio_queue_handler_t;
-
-struct virtio_device;
-
-// functions provided by the emul (device) layer for the emul (mmio) layer
-typedef struct virtio_emul_funs {
-    void (*device_reset)(struct virtio_device *dev);
-
-    // REG_VIRTIO_MMIO_DEVICE_FEATURES related operations
-    bool (*get_device_features)(struct virtio_device *dev, uint32_t *features);
-    bool (*set_driver_features)(struct virtio_device *dev, uint32_t features);
-
-    // REG_VIRTIO_MMIO_CONFIG related operations
-    bool (*get_device_config)(struct virtio_device *dev, uint32_t offset, uint32_t *ret_val);
-    bool (*set_device_config)(struct virtio_device *dev, uint32_t offset, uint32_t val);
-    bool (*queue_notify)(struct virtio_device *dev);
-} virtio_device_funs_t;
-
 /* Emulated MMIO registers for the virtIO device */
 typedef struct virtio_device_regs {
     uint32_t DeviceID;

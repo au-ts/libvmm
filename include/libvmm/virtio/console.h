@@ -102,7 +102,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t r
                               size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch,
                               int rx_ch);
 
-bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
+bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
                              serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch);
 
 bool virtio_console_queue_notify(struct virtio_console_device *console);

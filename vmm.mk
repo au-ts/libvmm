@@ -56,13 +56,13 @@ CFLAGS += -I${LIBVMM_DIR}/include
 endif
 
 ARCH_INDEP_FILES := \
-		    src/virtio/block.c \
 		    src/virtio/console.c \
-		    src/virtio/pci.c \
-		    src/virtio/net.c \
-		    src/virtio/sound.c \
+			src/virtio/block.c \
+			src/virtio/net.c \
 		    src/virtio/virtio.c \
+			src/virtio/pci.c \
 		    src/util/util.c \
+			src/pci.c \
 			src/guest_ram.c
 
 ifeq ($(ARCH),aarch64)

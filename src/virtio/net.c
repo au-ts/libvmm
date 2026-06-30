@@ -372,9 +372,9 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_ba
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, size_t virq, net_queue_handle_t *rx,
-                         net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch,
-                         microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
+                         net_queue_handle_t *rx, net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
+                         microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_PCI, virq, rx, tx, rx_data, tx_data, rx_ch,
                                                 tx_ch, mac);
@@ -383,10 +383,5 @@ bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint32_t dev_slot, s
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
 
-    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
-    assert(success);
-
-    virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
-
-    return virtio_pci_register_device(dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
 }

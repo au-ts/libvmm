@@ -312,7 +312,7 @@ bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t r
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev_slot, size_t virq,
+bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
                              serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
     struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, virq, rxq, txq, tx_ch, rx_ch);
@@ -321,10 +321,5 @@ bool virtio_pci_console_init(struct virtio_console_device *console, uint32_t dev
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_COMMUNICATION_OTHER;
 
-    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
-    assert(success);
-
-    virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
-
-    return virtio_pci_register_device(dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
 }

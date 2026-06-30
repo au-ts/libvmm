@@ -48,6 +48,8 @@ static void assert_fail(const char *assertion, const char *file, unsigned int li
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+#define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
+
 #ifndef assert
 #ifndef CONFIG_DEBUG_BUILD
 

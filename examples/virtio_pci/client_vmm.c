@@ -41,11 +41,11 @@ serial_queue_handle_t serial_tx_queue;
 
 static struct virtio_console_device virtio_console;
 
-/* /\* Virtio Block *\/ */
+/* Virtio Block */
 static blk_queue_handle_t blk_queue;
 static struct virtio_blk_device virtio_blk;
 
-/* /\* Virtio Net *\/ */
+/* Virtio Net */
 net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
 static struct virtio_net_device virtio_net;
@@ -53,6 +53,11 @@ static struct virtio_net_device virtio_net;
 /* PCI Configuration */
 uintptr_t pci_ecam;
 uintptr_t pci_memory_resource;
+
+#define PCI_ECAM_GPA 0x10000000
+#define PCI_ECAM_SIZE 0x100000
+#define PCI_MMIO_APERATURE_GPA 0x20100000
+#define PCI_MMIO_APERATURE_SIZE 0x0ff00000
 
 void init(void)
 {
@@ -95,21 +100,18 @@ void init(void)
         return;
     }
 
-    success = virtio_pci_ecam_init(0x10000000, 0x10000000, 0x100000);
-    assert(success);
-    success = virtio_pci_register_memory_resource(0x20100000, 0x20100000, 0xFF00000);
-    assert(success);
+    success = pci_bus_init(PCI_ECAM_GPA, PCI_ECAM_SIZE, PCI_MMIO_APERATURE_GPA, PCI_MMIO_APERATURE_SIZE);
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console, 0, 48, &serial_rx_queue, &serial_tx_queue, serial_config.tx.id,
-                                      serial_config.rx.id);
+    success = virtio_pci_console_init(&virtio_console, 0, 0, 48, &serial_rx_queue, &serial_tx_queue,
+                                      serial_config.tx.id, serial_config.rx.id);
     assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
+    success = virtio_pci_blk_init(&virtio_blk, 0, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
                                   storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
 
@@ -120,9 +122,9 @@ void init(void)
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
 
-    success = virtio_pci_net_init(&virtio_net, 2, 50, &net_rx_queue, &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                  net_config.mac_addr.addr);
+    success = virtio_pci_net_init(&virtio_net, 0, 2, 50, &net_rx_queue, &net_tx_queue,
+                                  (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                  net_config.rx.id, net_config.tx.id, net_config.mac_addr.addr);
     assert(success);
 
     /* Finally start the guest */

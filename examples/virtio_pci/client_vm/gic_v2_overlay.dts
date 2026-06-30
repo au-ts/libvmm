@@ -27,7 +27,7 @@
         bus-range = <0x00 0x00>;
 
         /* Register space for ECAM configuration */
-        reg = <0x0 0x10000000 0x0 0x100000>;  /* 256MB ECAM space */
+        reg = <0x0 0x10000000 0x0 0x100000>;  /* 1MB ECAM space */
 
         /* Memory and I/O ranges */
         ranges = <0x02000000 0x0 0x20100000  0x0 0x20100000  0x0 0x0ff00000>;  /* 32-bit memory */
