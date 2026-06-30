@@ -66,12 +66,18 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
-    arch_guest_init_t args = {
-        .num_vcpus = 1,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } }
-    };
+    arch_guest_init_t args = { .num_vcpus = 1,
+                               .num_guest_ram_regions = 1,
+                               .guest_ram_regions = { (struct guest_ram_region) {
+                                   .gpa_start = GUEST_RAM_START_GPA,
+                                   .size = vmm_config.ram_size,
+                                   .vmm_vaddr = (void *)vmm_config.ram } },
+                               .pci_init = (struct guest_pci_init) {
+                                   .ecam_gpa = PCI_ECAM_GPA,
+                                   .ecam_size = PCI_ECAM_SIZE,
+                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
+                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
+                               } };
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
@@ -99,8 +105,6 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
-
-    success = pci_bus_init(PCI_ECAM_GPA, PCI_ECAM_SIZE, PCI_MMIO_APERATURE_GPA, PCI_MMIO_APERATURE_SIZE);
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);

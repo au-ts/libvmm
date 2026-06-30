@@ -24,6 +24,13 @@
 #define GUEST_MAX_NUM_VCPUS 4UL
 #endif
 
+struct guest_pci_init {
+    uint64_t ecam_gpa;
+    uint64_t ecam_size;
+    uint64_t mmio_aperature_gpa;
+    uint64_t mmio_aperature_size;
+};
+
 #if defined(CONFIG_ARCH_X86_64)
 typedef struct guest {
     uint64_t tsc_hz;
@@ -56,6 +63,8 @@ typedef struct arch_guest_init {
 
     size_t num_guest_ram_regions;
     struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
+
+    struct guest_pci_init pci_init;
 } arch_guest_init_t;
 #endif
 
