@@ -130,10 +130,17 @@ static bool virtio_console_set_device_config(struct virtio_device *dev, uint32_t
 static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
-    // @ivanv: we need to check the pre-conditions before doing anything. e.g check
-    // TX_QUEUE is ready?
-    assert(dev->num_vqs > TX_QUEUE);
+
+    if (dev->regs.QueueSel != TX_QUEUE) {
+        return true;
+    }
+
     struct virtio_queue_handler *vq = &dev->vqs[TX_QUEUE];
+    if (!vq->ready) {
+        LOG_VMM_ERR("virtio console TX vq not ready!\n");
+        return true;
+    }
+
     struct virtio_console_device *console = device_state(dev);
 
     /* Transmit all available descriptors possible */
