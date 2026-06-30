@@ -31,13 +31,26 @@ static inline struct virtio_net_device *device_state(struct virtio_device *dev)
     return (struct virtio_net_device *)dev->device_data;
 }
 
+static void virtio_net_regs_init(struct virtio_device *dev)
+{
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+}
+
 static void virtio_net_reset(struct virtio_device *dev)
 {
     LOG_NET("operation: reset\n");
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
         dev->vqs[i].last_idx = 0;
+        dev->vqs[i].virtq.avail_gpa = 0;
+        dev->vqs[i].virtq.used_gpa = 0;
+        dev->vqs[i].virtq.desc_gpa = 0;
+        dev->vqs[i].virtq.num = 0;
     }
+
+    memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
+    virtio_net_regs_init(dev);
 }
 
 static bool driver_ok(struct virtio_device *dev)
@@ -346,8 +359,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+    virtio_net_regs_init(dev);
     dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;
