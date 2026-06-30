@@ -14,8 +14,6 @@
 #define LOG_VIRTIO_PCI_INFO(...) do{ printf("%s|VIRTIO(PCI) INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VIRTIO_PCI_ERR(...) do{ printf("%s|VIRTIO(PCI) ERROR: ", microkit_name); printf(__VA_ARGS__); }while(0)
 
-// @billn pull in bug fixes from windows branch https://github.com/au-ts/libvmm/compare/main...windows
-
 /* This is the default for virtio PCI devices as it allows plenty of space
  * for all the capabilities */
 #define VIRTIO_PCI_DEFAULT_BAR_SIZE 0x4000
@@ -108,8 +106,9 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
         *data = dev->vqs[dev->regs.QueueSel].ready;
         break;
     case VIRTIO_PCI_COMMON_Q_NOTIF_OFF:
-        // proper way?
-        *data = 1 << 16;
+        /* virtIO spec 1.2:
+         * "Note: For example, if notifier_off_multiplier is 0, the device uses the same Queue Notify address for all queues." */
+        *data = 0;
         break;
     default:
         LOG_VIRTIO_PCI_ERR("read operation is invalid or not implemented at offset 0x%lx of common_cfg\n", offset);
@@ -262,7 +261,7 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t offset, uin
 static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t offset, uint32_t data)
 {
     dev->regs.QueueNotify = data;
-    dev->regs.QueueSel = offset / VIRTIO_PCI_NOTIF_OFF_MULTIPLIER;
+    dev->regs.QueueSel = data;
     return dev->funs->queue_notify(dev);
 }
 
@@ -391,7 +390,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
                 .offset = VIRTIO_PCI_NOTIFY_CFG_BAR_OFF,
                 .length = 0x1000,
             },
-        .notify_off_multiplier = VIRTIO_PCI_NOTIF_OFF_MULTIPLIER,
+        .notify_off_multiplier = 0,
     };
     if (!pci_register_device_capability(handle, PCI_CAP_ID_VNDR, &ntfn_cap, sizeof(struct virtio_pci_notify_cap))) {
         return false;
