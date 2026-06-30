@@ -157,10 +157,27 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
     return (struct virtio_blk_device *)dev->device_data;
 }
 
+static void virtio_blk_regs_init(struct virtio_device *dev)
+{
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+}
+
 static inline void virtio_blk_reset(struct virtio_device *dev)
 {
-    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].ready = false;
-    dev->vqs[VIRTIO_BLK_DEFAULT_VIRTQ].last_idx = 0;
+    for (int i = 0; i < dev->num_vqs; i++) {
+        dev->vqs[i].virtq.avail_gpa = 0;
+        dev->vqs[i].virtq.used_gpa = 0;
+        dev->vqs[i].virtq.desc_gpa = 0;
+        dev->vqs[i].last_idx = 0;
+        dev->vqs[i].ready = false;
+    }
+    assert(blk_queue_empty_req(&device_state(dev)->queue_h));
+    assert(blk_queue_empty_resp(&device_state(dev)->queue_h));
+    memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
+    memset(device_state(dev)->reqsbk, 0, sizeof((device_state(dev)->reqsbk)));
+
+    virtio_blk_regs_init(dev);
 }
 
 static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -759,8 +776,8 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
                                              uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+
+    virtio_blk_regs_init(dev);
     dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
