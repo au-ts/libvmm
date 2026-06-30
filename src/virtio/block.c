@@ -808,9 +808,9 @@ bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_ba
     return virtio_mmio_register_device(dev, region_base, region_size, virq);
 }
 
-bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, size_t virq, uintptr_t data_region,
-                         size_t data_region_size, blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
-                         uint32_t queue_capacity, int server_ch)
+bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
+                         uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
+                         blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_PCI, virq, data_region, data_region_size,
                                                 storage_info, queue_h, queue_capacity, server_ch);
@@ -819,10 +819,5 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint32_t dev_slot, s
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
 
-    bool success = virtio_pci_alloc_dev_cfg_space(dev, dev_slot);
-    assert(success);
-
-    virtio_pci_alloc_memory_bar(dev, 0, VIRTIO_PCI_DEFAULT_BAR_SIZE);
-
-    return virtio_pci_register_device(dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
 }
