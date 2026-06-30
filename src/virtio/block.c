@@ -236,6 +236,7 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     }
 
     if (success) {
+        dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
     }
 

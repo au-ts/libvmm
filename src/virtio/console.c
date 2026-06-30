@@ -108,6 +108,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
     }
 
     if (success) {
+        dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
         LOG_CONSOLE("device is feature happy\n");
     }
