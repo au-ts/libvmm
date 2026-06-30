@@ -256,14 +256,6 @@ static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
     return virq_inject(dev->virq);
 }
 
-static inline void virtio_blk_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change)
-{
-    /* Set the reason of the irq.
-       bit 0: used buffer
-       bit 1: configuration change */
-    dev->regs.InterruptStatus = used_buffer | (config_change << 1);
-}
-
 /* Check if ialloc and req queue are full.
  * If these all pass then a request without a payload (e.g. flush) can be handled successfully */
 static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_count)
@@ -549,7 +541,7 @@ static bool virtio_blk_queue_notify(struct virtio_device *dev)
     bool virq_inject_success = true;
     if (!consumption_status) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
-        virtio_blk_set_interrupt_status(dev, true, false);
+        virtio_set_interrupt_status(dev, true, false);
         virq_inject_success = virtio_blk_virq_inject(dev);
     }
 
@@ -719,7 +711,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
      */
     bool virq_inject_success = true;
     if (resp_handled && !read_write_modify_inflight && !virt_notify) {
-        virtio_blk_set_interrupt_status(dev, true, false);
+        virtio_set_interrupt_status(dev, true, false);
         virq_inject_success = virtio_blk_virq_inject(dev);
     }
 

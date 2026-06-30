@@ -403,6 +403,31 @@ bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack
     return success;
 }
 
+bool pci_device_set_irq_status(pci_dev_handle_t pci_dev_handle, bool new_status)
+{
+    if (!pci_bus_initialised_check()) {
+        return false;
+    }
+
+    if (!pci_device_exist_check(pci_dev_handle)) {
+        return false;
+    }
+
+    struct pci_device *pci_device = pci_get_device(pci_dev_handle);
+    if (!pci_device->virq_registered) {
+        LOG_PCI_ERR("IRQ not registered PCI dev handle %d\n", pci_dev_handle);
+        return false;
+    }
+
+    if (new_status) {
+        pci_device->config_space.status |= PCI_STATUS_INTERRUPT;
+    } else {
+        pci_device->config_space.status &= ~PCI_STATUS_INTERRUPT;
+    }
+
+    return true;
+}
+
 bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap_id, void *payload,
                                     uint8_t payload_size)
 {

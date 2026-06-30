@@ -149,3 +149,5 @@ bool virtio_virtq_pop_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret);
  * place it in the used queue
  */
 void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint32_t bytes_written);
+
+void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change);
