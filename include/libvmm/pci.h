@@ -74,6 +74,12 @@ struct pci_capability {
 }
  * The caller must provide the cap id, payload and its length.
  */
+
+struct pci_capability_header {
+    uint8_t cap_id;
+    uint8_t next_ptr;
+} __attribute__((packed));
+
 bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap_id, void *payload,
                                     uint8_t payload_size);
 

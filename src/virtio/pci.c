@@ -345,7 +345,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
 
     /* Create all the virtIO specific capabilities */
     struct virtio_pci_cap common_cfg_cap = (struct virtio_pci_cap) {
-        .cap_len = sizeof(struct virtio_pci_cap) + 2, // @billn sort out, include header legnth
+        .cap_len = sizeof(struct pci_capability_header) + sizeof(struct virtio_pci_cap),
         .cfg_type = VIRTIO_PCI_CAP_COMMON_CFG,
         .bar = 0,
         .id = 0,
@@ -357,7 +357,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
     }
 
     struct virtio_pci_cap isr_cap = (struct virtio_pci_cap) {
-        .cap_len = sizeof(struct virtio_pci_cap) + 2,
+        .cap_len = sizeof(struct pci_capability_header) + sizeof(struct virtio_pci_cap),
         .cfg_type = VIRTIO_PCI_CAP_ISR_CFG,
         .bar = 0,
         .id = 0,
@@ -369,7 +369,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
     }
 
     struct virtio_pci_cap device_cfg_cap = (struct virtio_pci_cap) {
-        .cap_len = sizeof(struct virtio_pci_cap) + 2,
+        .cap_len = sizeof(struct pci_capability_header) + sizeof(struct virtio_pci_cap),
         .cfg_type = VIRTIO_PCI_CAP_DEVICE_CFG,
         .bar = 0,
         .id = 0,
@@ -383,7 +383,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
     struct virtio_pci_notify_cap ntfn_cap = (struct virtio_pci_notify_cap) {
         .cap =
             (struct virtio_pci_cap) {
-                .cap_len = sizeof(struct virtio_pci_notify_cap) + 2,
+                .cap_len = sizeof(struct pci_capability_header) + sizeof(struct virtio_pci_notify_cap),
                 .cfg_type = VIRTIO_PCI_CAP_NOTIFY_CFG,
                 .bar = 0,
                 .id = 0,
