@@ -196,7 +196,8 @@ static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *n
      * read_off = sizeof(struct virtio_net_hdr_mrg_rxbuf)
      * to strip virtio header before copying to sDDF
      */
-    assert(virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
+    assert(
+        virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
     sddf_buffer.len = packet_len;
 
 #ifdef NETWORK_HW_HAS_CHECKSUM
@@ -231,11 +232,15 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         LOG_NET_ERR("Driver not ready\n");
         return false;
     }
-    if (dev->regs.QueueSel != VIRTIO_NET_TX_VIRTQ) {
-        LOG_NET_ERR("Invalid queue\n");
-        return false;
+    if (dev->regs.QueueSel == VIRTIO_NET_RX_VIRTQ) {
+        if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
+            LOG_NET_ERR("RX virtq not ready\n");
+            return false;
+        }
+        virtio_net_handle_rx(device_state(dev));
+        return true;
     }
-    if (!dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
+    if (dev->regs.QueueSel == VIRTIO_NET_TX_VIRTQ && !dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
         LOG_NET_ERR("TX virtq not ready\n");
         return false;
     }
