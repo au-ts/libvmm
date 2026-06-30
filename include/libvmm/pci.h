@@ -58,8 +58,8 @@ pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci
 /* Register the virtual PCI device IRQ with the virtual IRQ controller. */
 bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack_fn_t ack_fn, void *ack_data);
 
-/* Inject an IRQ into the guest from the given virtual PCI device. The IRQ must be registered first. */
-bool pci_inject_device_irq(pci_dev_handle_t pci_dev_handle);
+/* Set the device's IRQ status register in its configuration space. */
+bool pci_device_set_irq_status(pci_dev_handle_t pci_dev_handle, bool new_status);
 
 /* Add a capability to a virtual PCI device capability linked list. A PCI device capability
  * looks like this and is tightly packed:
