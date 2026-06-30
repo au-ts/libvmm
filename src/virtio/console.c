@@ -41,6 +41,12 @@ static void virtio_console_features_print(uint32_t features)
                 BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
 }
 
+static void virtio_console_regs_init(struct virtio_device *dev)
+{
+    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+}
+
 static void virtio_console_reset(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: reset device\n");
@@ -48,7 +54,14 @@ static void virtio_console_reset(struct virtio_device *dev)
     for (int i = 0; i < dev->num_vqs; i++) {
         dev->vqs[i].ready = false;
         dev->vqs[i].last_idx = 0;
+        dev->vqs[i].virtq.avail_gpa = 0;
+        dev->vqs[i].virtq.used_gpa = 0;
+        dev->vqs[i].virtq.desc_gpa = 0;
+        dev->vqs[i].virtq.num = 0;
     }
+
+    memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
+    virtio_console_regs_init(dev);
 }
 
 static bool virtio_console_get_device_features(struct virtio_device *dev, uint32_t *features)
@@ -287,14 +300,14 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
                                                  int tx_ch, int rx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+
     dev->transport_type = type;
     dev->funs = &functions;
     dev->vqs = console->vqs;
     dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
     dev->virq = virq;
     dev->device_data = console;
+    virtio_console_regs_init(dev);
 
     console->rxq = rxq;
     console->txq = txq;
