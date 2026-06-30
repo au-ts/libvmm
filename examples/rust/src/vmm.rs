@@ -67,10 +67,19 @@ pub struct guest_ram_region {
 }
 
 #[repr(C)]
+pub struct guest_pci_init {
+    pub ecam_gpa: usize,
+    pub ecam_size: usize,
+    pub mmio_aperature_gpa: usize,
+    pub mmio_aperature_size: usize,
+}
+
+#[repr(C)]
 pub struct arch_guest_init {
     pub num_vcpus: usize,
     pub num_guest_ram_regions: usize,
     pub guest_ram_regions: [guest_ram_region; GUEST_MAX_RAM_REGIONS],
+    pub pci_init: guest_pci_init,
 }
 
 #[protection_domain]
@@ -97,6 +106,12 @@ fn init() -> VmmHandler {
                 size: GUEST_RAM_SIZE,
                 vmm_vaddr: GUEST_RAM_VMM_VADDR as *mut _,
             }],
+            pci_init: guest_pci_init {
+                ecam_gpa: 0,
+                ecam_size: 0,
+                mmio_aperature_gpa: 0,
+                mmio_aperature_size: 0,
+            }
         });
         assert!(success);
 
