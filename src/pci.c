@@ -170,6 +170,14 @@ static inline bool pci_device_exist_check(pci_dev_handle_t pci_dev_handle)
     return true;
 }
 
+static inline bool pci_bus_initialised_check(void)
+{
+    if (!pci_bus.initialised) {
+        LOG_PCI_ERR("PCI bus not initialised!\n");
+    }
+    return pci_bus.initialised;
+}
+
 static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *cookie)
 {
     pci_dev_handle_t handle = (pci_dev_handle_t)(((uint64_t)(cookie)) << 3) >> 3;
@@ -315,6 +323,10 @@ static bool pci_ecam_fault_handle(size_t vcpu_id, size_t ecam_offset, size_t fsr
 
 pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_register_data_t *device_data)
 {
+    if (!pci_bus_initialised_check()) {
+        return false;
+    }
+
     if (bus >= PCI_NUM_BUS) {
         LOG_PCI_ERR("PCI bus %u is out of bound\n", bus);
         return INVALID_PCI_DEVICE_HANDLE;
@@ -368,6 +380,10 @@ pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci
 
 bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack_fn_t ack_fn, void *ack_data)
 {
+    if (!pci_bus_initialised_check()) {
+        return false;
+    }
+
     if (!pci_device_exist_check(pci_dev_handle)) {
         return false;
     }
@@ -395,6 +411,10 @@ bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack
 bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap_id, void *payload,
                                     uint8_t payload_size)
 {
+    if (!pci_bus_initialised_check()) {
+        return false;
+    }
+
     if (!pci_device_exist_check(pci_dev_handle)) {
         return false;
     }
@@ -439,6 +459,10 @@ bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap
 bool pci_register_device_mmio_bar(pci_dev_handle_t pci_dev_handle, uint8_t bar_index, uint64_t size,
                                   pci_bar_mmio_fault_handler_t callback, void *cookie)
 {
+    if (!pci_bus_initialised_check()) {
+        return false;
+    }
+
     if (!pci_device_exist_check(pci_dev_handle)) {
         return false;
     }
