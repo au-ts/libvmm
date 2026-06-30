@@ -317,7 +317,7 @@ bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci
 {
     struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, virq, rxq, txq, tx_ch, rx_ch);
 
-    dev->transport.pci.device_id = VIRTIO_PCI_CONSOLE_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_CONSOLE;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_COMMUNICATION_OTHER;
 

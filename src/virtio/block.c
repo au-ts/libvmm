@@ -815,7 +815,7 @@ bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint16_t pci_bus, ui
     struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_PCI, virq, data_region, data_region_size,
                                                 storage_info, queue_h, queue_capacity, server_ch);
 
-    dev->transport.pci.device_id = VIRTIO_PCI_BLK_DEV_ID;
+    dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
 

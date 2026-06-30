@@ -12,7 +12,7 @@
 #include <libvmm/util/util.h>
 
 /* PCI REVISION */
-#define VIRTIO_PCI_REVISION 0
+#define VIRTIO_PCI_REVISION 1
 
 /* Common configuration */
 #define VIRTIO_PCI_CAP_COMMON_CFG 1
@@ -55,11 +55,9 @@
 #define VIRTIO_PCI_COMMON_ADM_Q_NUM             0x3e
 #define VIRTIO_PCI_COMMON_END                   0x40
 
-#define VIRTIO_PCI_VENDOR_ID            0x1AF4
-#define VIRTIO_PCI_NET_DEV_ID           0x1000
-#define VIRTIO_PCI_BLK_DEV_ID           0x1001
-#define VIRTIO_PCI_CONSOLE_DEV_ID       0x1003
-#define VIRTIO_PCI_QUEUE_NUM_MAX        0x2
+#define VIRTIO_PCI_VENDOR_ID             0x1AF4
+#define VIRTIO_PCI_MODERN_BASE_DEVICE_ID 0x1040 // "non-transitional"
+#define VIRTIO_PCI_QUEUE_NUM_MAX         0x2
 
 typedef struct virtio_pci_data {
     uint32_t device_id;
