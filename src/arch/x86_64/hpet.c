@@ -386,7 +386,7 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%lx\n", offset);
             return false;
         }
-        assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
     } else {
         uint64_t data;
         assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));

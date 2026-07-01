@@ -83,4 +83,4 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
                         uint64_t *ret);
 
 bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
-                       uint64_t data);
+                       uint64_t offset, uint64_t data);
