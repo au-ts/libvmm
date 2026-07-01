@@ -53,6 +53,17 @@ typedef struct virtio_mmio_data {
     uint32_t vendor_id;
 } virtio_mmio_data_t;
 
+typedef struct virtio_device virtio_device_t;
+
+/*
+ * Registers a new virtIO device at a given guest-physical region.
+ *
+ * Assumes the virtio_device_t *dev struct passed has been populated
+ * and virtual IRQ associated with the device has been registered.
+ */
+bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size,
+                                 irq_routing_info_t irq_routing_info);
+
 /**
  * Handles MMIO Device Register Layout I/O for VirtIO MMIO
  *

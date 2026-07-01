@@ -5,7 +5,7 @@
 #![no_main]
 #![feature(never_type)]
 
-use core::ffi::c_void;
+use core::ffi::{c_int, c_void};
 use core::include_bytes;
 
 use sel4_microkit::{
@@ -51,7 +51,7 @@ extern "C" {
         initrd_dest: usize,
         initrd_size: usize,
     ) -> usize;
-    fn virq_register_passthrough(vcpu_id: usize, irq: i32, irq_ch: u32) -> bool;
+    fn virq_register_passthrough(irq_routing_info: irq_routing_info_t, irq_ch: u32) -> bool;
     fn virq_handle_passthrough(irq_ch: u32) -> bool;
     fn guest_start(kernel_pc: usize, dtb: usize, initrd: usize) -> bool;
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
@@ -80,6 +80,39 @@ pub struct arch_guest_init {
     pub num_guest_ram_regions: usize,
     pub guest_ram_regions: [guest_ram_region; GUEST_MAX_RAM_REGIONS],
     pub pci_init: guest_pci_init,
+}
+
+#[repr(C)]
+pub enum irq_type {
+    IrqTypeInvalid = 0,
+    IrqTypeArmGic = 1,
+    IrqTypeX86Ioapic = 2,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct arm_gic {
+    pub vcpu_id: c_int,
+    pub intid: u32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct x86_ioapic {
+    pub chip: u8,
+    pub pin: u8,
+}
+
+#[repr(C)]
+pub union irq_hw_union {
+    pub arm_gic: arm_gic,
+    pub x86_ioapic: x86_ioapic,
+}
+
+#[repr(C)]
+pub struct irq_routing_info_t {
+    pub ty: irq_type,
+    pub hw: irq_hw_union,
 }
 
 #[protection_domain]
@@ -111,7 +144,7 @@ fn init() -> VmmHandler {
                 ecam_size: 0,
                 mmio_aperature_gpa: 0,
                 mmio_aperature_size: 0,
-            }
+            },
         });
         assert!(success);
 
@@ -128,8 +161,18 @@ fn init() -> VmmHandler {
         );
         assert!(guest_pc != 0);
 
-        let success =
-            virq_register_passthrough(GUEST_BOOT_VCPU_ID, UART_IRQ as i32, UART_CH.index() as u32);
+        let success = virq_register_passthrough(
+            irq_routing_info_t {
+                ty: irq_type::IrqTypeArmGic,
+                hw: irq_hw_union {
+                    arm_gic: arm_gic {
+                        vcpu_id: GUEST_BOOT_VCPU_ID as i32,
+                        intid: UART_IRQ as u32,
+                    },
+                },
+            },
+            UART_CH.index() as u32,
+        );
         assert!(success);
         guest_start(guest_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
     }

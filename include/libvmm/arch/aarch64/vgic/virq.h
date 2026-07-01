@@ -51,7 +51,8 @@ struct virq_handle {
 static inline void virq_ack(size_t vcpu_id, struct virq_handle *irq)
 {
     if (irq->ack_fn) {
-        irq->ack_fn(vcpu_id, irq->virq, irq->ack_data);
+        /* Need to recreate the generic route structure from the ARM GIC specific stuff for the ACK func */
+        irq->ack_fn(ARM_GIC_IRQ_ROUTE(vcpu_id, irq->virq), irq->ack_data);
     }
 }
 

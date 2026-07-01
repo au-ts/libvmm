@@ -145,10 +145,8 @@ static bool virtio_net_set_device_config(struct virtio_device *dev, uint32_t off
 
 static bool virtio_net_respond(struct virtio_device *dev)
 {
-    dev->regs.InterruptStatus = BIT_LOW(0);
-    bool success = virq_inject(dev->virq);
-    assert(success);
-
+    virtio_set_interrupt_status(dev, true, false);
+    bool success = virq_inject(dev->irq_routing_info);
     return success;
 }
 
@@ -356,9 +354,10 @@ static virtio_device_funs_t functions = {
 };
 
 static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, virtio_transport_type_t type,
-                                             size_t virq, net_queue_handle_t *rx, net_queue_handle_t *tx,
-                                             uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch,
-                                             microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+                                             irq_routing_info_t irq_routing_info, net_queue_handle_t *rx,
+                                             net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
+                                             microkit_channel rx_ch, microkit_channel tx_ch,
+                                             uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
@@ -367,7 +366,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
     dev->funs = &functions;
     dev->vqs = net_dev->vqs;
     dev->num_vqs = VIRTIO_NET_NUM_VIRTQ;
-    dev->virq = virq;
+    dev->irq_routing_info = irq_routing_info;
     dev->device_data = net_dev;
 
     memcpy(net_dev->config.mac, mac, VIRTIO_NET_CONFIG_MAC_SZ);
@@ -382,26 +381,28 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
     return dev;
 }
 
-bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
-                          net_queue_handle_t *rx, net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
-                          microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size,
+                          irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
+                          uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch, microkit_channel tx_ch,
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
-    struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_MMIO, virq, rx, tx, rx_data, tx_data, rx_ch,
-                                                tx_ch, mac);
+    struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_MMIO, irq_routing_info, rx, tx, rx_data,
+                                                tx_data, rx_ch, tx_ch, mac);
 
-    return virtio_mmio_register_device(dev, region_base, region_size, virq);
+    return virtio_mmio_register_device(dev, region_base, region_size, irq_routing_info);
 }
 
-bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
-                         net_queue_handle_t *rx, net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
-                         microkit_channel rx_ch, microkit_channel tx_ch, uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint16_t pci_bus, uint16_t pci_dev,
+                         irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
+                         uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch, microkit_channel tx_ch,
+                         uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
 {
-    struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_PCI, virq, rx, tx, rx_data, tx_data, rx_ch,
-                                                tx_ch, mac);
+    struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_PCI, irq_routing_info, rx, tx, rx_data,
+                                                tx_data, rx_ch, tx_ch, mac);
 
     dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_NET;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_NETWORK_ETHERNET;
 
-    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, irq_routing_info);
 }

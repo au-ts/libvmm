@@ -269,11 +269,6 @@ static inline bool virtio_blk_set_device_config(struct virtio_device *dev, uint3
     return true;
 }
 
-static inline bool virtio_blk_virq_inject(struct virtio_device *dev)
-{
-    return virq_inject(dev->virq);
-}
-
 /* Check if ialloc and req queue are full.
  * If these all pass then a request without a payload (e.g. flush) can be handled successfully */
 static inline bool sddf_make_req_check(struct virtio_blk_device *state, uint16_t sddf_count)
@@ -560,7 +555,7 @@ static bool virtio_blk_queue_notify(struct virtio_device *dev)
     if (!consumption_status) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
         virtio_set_interrupt_status(dev, true, false);
-        virq_inject_success = virtio_blk_virq_inject(dev);
+        virq_inject_success = virq_inject(dev->irq_routing_info);
     }
 
     struct virtio_blk_device *state = device_state(dev);
@@ -730,7 +725,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
     bool virq_inject_success = true;
     if (resp_handled && !read_write_modify_inflight && !virt_notify) {
         virtio_set_interrupt_status(dev, true, false);
-        virq_inject_success = virtio_blk_virq_inject(dev);
+        virq_inject_success = virq_inject(dev->irq_routing_info);
     }
 
     if (virt_notify) {
@@ -772,9 +767,9 @@ static virtio_device_funs_t functions = {
 };
 
 static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, virtio_transport_type_t type,
-                                             size_t virq, uintptr_t data_region, size_t data_region_size,
-                                             blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h,
-                                             uint32_t queue_capacity, int server_ch)
+                                             irq_routing_info_t irq_routing_info, uintptr_t data_region,
+                                             size_t data_region_size, blk_storage_info_t *storage_info,
+                                             blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
 {
     struct virtio_device *dev = &blk_dev->virtio_device;
 
@@ -783,7 +778,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     dev->funs = &functions;
     dev->vqs = blk_dev->vqs;
     dev->num_vqs = VIRTIO_BLK_NUM_VIRTQ;
-    dev->virq = virq;
+    dev->irq_routing_info = irq_routing_info;
     dev->device_data = blk_dev;
 
     blk_dev->storage_info = storage_info;
@@ -808,26 +803,28 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     return dev;
 }
 
-bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_base, uintptr_t region_size, size_t virq,
-                          uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
-                          blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
+bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_base, uintptr_t region_size,
+                          irq_routing_info_t irq_routing_info, uintptr_t data_region, size_t data_region_size,
+                          blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h, uint32_t queue_capacity,
+                          int server_ch)
 {
-    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_MMIO, virq, data_region, data_region_size,
-                                                storage_info, queue_h, queue_capacity, server_ch);
+    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_MMIO, irq_routing_info, data_region,
+                                                data_region_size, storage_info, queue_h, queue_capacity, server_ch);
 
-    return virtio_mmio_register_device(dev, region_base, region_size, virq);
+    return virtio_mmio_register_device(dev, region_base, region_size, irq_routing_info);
 }
 
-bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
-                         uintptr_t data_region, size_t data_region_size, blk_storage_info_t *storage_info,
-                         blk_queue_handle_t *queue_h, uint32_t queue_capacity, int server_ch)
+bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint16_t pci_bus, uint16_t pci_dev,
+                         irq_routing_info_t irq_routing_info, uintptr_t data_region, size_t data_region_size,
+                         blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h, uint32_t queue_capacity,
+                         int server_ch)
 {
-    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_PCI, virq, data_region, data_region_size,
-                                                storage_info, queue_h, queue_capacity, server_ch);
+    struct virtio_device *dev = virtio_blk_init(blk_dev, VIRTIO_TRANSPORT_PCI, irq_routing_info, data_region,
+                                                data_region_size, storage_info, queue_h, queue_capacity, server_ch);
 
     dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_BLOCK;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_STORAGE_SCSI;
 
-    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, irq_routing_info);
 }

@@ -319,7 +319,8 @@ bool virtio_pci_bar_fault_handle(pci_dev_handle_t pci_dev_handle, uint64_t bar_o
     return success;
 }
 
-bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t pci_dev, int virq)
+bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t pci_dev,
+                                irq_routing_info_t irq_routing_info)
 {
     assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
 
@@ -341,7 +342,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
     }
 
     /* When the guest ACKs the IRQ there is nothing to do */
-    if (!pci_register_device_irq(handle, virq, NULL, NULL)) {
+    if (!pci_register_device_irq(handle, irq_routing_info, NULL, NULL)) {
         return false;
     }
 

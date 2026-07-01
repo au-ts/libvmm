@@ -91,7 +91,7 @@ typedef struct virtio_device {
     /* Length of the vqs list */
     size_t num_vqs;
     /* Virtual IRQ associated with this virtIO device */
-    size_t virq;
+    irq_routing_info_t irq_routing_info;
     /* Device specific data such as sDDF queues */
     void *device_data;
     /* True if we are happy with what the driver requires */
@@ -103,14 +103,6 @@ static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
     assert(dev->regs.QueueSel < dev->num_vqs);
     return &dev->vqs[dev->regs.QueueSel].virtq;
 }
-
-/*
- * Registers a new virtIO device at a given guest-physical region.
- *
- * Assumes the virtio_device_t *dev struct passed has been populated
- * and virtual IRQ associated with the device has been registered.
- */
-bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size, size_t virq);
 
 struct virtq_desc *virtio_get_desc_ring(struct virtq *virtq);
 struct virtq_avail *virtio_get_avail_ring(struct virtq *virtq);

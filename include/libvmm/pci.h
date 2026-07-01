@@ -56,7 +56,8 @@ typedef int pci_dev_handle_t;
 pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_register_data_t *device_data);
 
 /* Register the virtual PCI device IRQ with the virtual IRQ controller. */
-bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack_fn_t ack_fn, void *ack_data);
+bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn,
+                             void *ack_data);
 
 /* Set the device's IRQ status register in its configuration space. */
 bool pci_device_set_irq_status(pci_dev_handle_t pci_dev_handle, bool new_status);

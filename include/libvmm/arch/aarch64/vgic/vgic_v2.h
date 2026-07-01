@@ -135,8 +135,6 @@ struct gic_dist_map {
 
 #define GIC_DIST_CTLR_MASK                      GIC_ENABLED
 
-bool vgic_inject_irq(size_t vcpu_id, int irq);
-
 typedef struct gic_dist_map vgic_reg_t;
 
 static inline struct gic_dist_map *vgic_get_dist(void *registers)

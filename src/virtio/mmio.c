@@ -225,8 +225,8 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
                         dev->regs.QueueSel, dev->num_vqs);
             success = false;
         }
+        break;
     }
-    break;
     case REG_RANGE(REG_VIRTIO_MMIO_QUEUE_AVAIL_LOW, REG_VIRTIO_MMIO_QUEUE_AVAIL_HIGH): {
         if (dev->regs.QueueSel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
@@ -296,7 +296,7 @@ static bool handle_virtio_mmio_reg_write(virtio_device_t *dev, size_t vcpu_id, s
 
 bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *data)
 {
-    virtio_device_t *dev = (virtio_device_t *) data;
+    virtio_device_t *dev = (virtio_device_t *)data;
     assert(dev);
     if (fault_is_read(fsr)) {
         return handle_virtio_mmio_reg_read(dev, vcpu_id, offset, fsr, regs);
@@ -309,29 +309,33 @@ bool virtio_mmio_fault_handle(size_t vcpu_id, size_t offset, size_t fsr, seL4_Us
  * If the guest acknowledges the virtual IRQ associated with the virtIO
  * device, there is nothing that we need to do.
  */
-static void virtio_virq_default_ack(size_t vcpu_id, int irq, void *cookie) {}
+static void virtio_virq_default_ack(irq_routing_info_t irq_routing_info, void *cookie)
+{
+}
 
-bool virtio_mmio_register_device(virtio_device_t *dev,
-                                 uintptr_t region_base,
-                                 uintptr_t region_size,
-                                 size_t virq)
+bool virtio_mmio_irq_inject(virtio_device_t *dev)
+{
+    /* @billn, this whole MMIO thing should be refactored into two distinct bus + device layer like PCI. */
+    return virq_inject(dev->irq_routing_info);
+}
+
+bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size,
+                                 irq_routing_info_t irq_routing_info)
 {
     bool success;
     assert(dev->transport_type == VIRTIO_TRANSPORT_MMIO);
-    success = fault_register_vm_exception_handler(region_base,
-                                                  region_size,
-                                                  &virtio_mmio_fault_handle,
-                                                  dev);
+    success = fault_register_vm_exception_handler(region_base, region_size, &virtio_mmio_fault_handle, dev);
     if (!success) {
         LOG_VMM_ERR("Could not register virtual memory fault handler for "
-                    "virtIO region [0x%lx..0x%lx)\n", region_base, region_base + region_size);
+                    "virtIO region [0x%lx..0x%lx)\n",
+                    region_base, region_base + region_size);
         return false;
     }
 
     /* Register the virtual IRQ that will be used to communicate from the device
      * to the guest. This assumes that the interrupt controller is already setup. */
     // @ivanv: we should check that (on AArch64) the virq is an SPI.
-    success = virq_register(GUEST_BOOT_VCPU_ID, virq, &virtio_virq_default_ack, NULL);
+    success = virq_register(irq_routing_info, &virtio_virq_default_ack, NULL);
     assert(success);
 
     return success;

@@ -28,7 +28,6 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vcpu.h>
-#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
 #endif
