@@ -6,8 +6,8 @@
 #include <string.h>
 #include <libvmm/util/util.h>
 #include <sddf/util/util.h>
+#include <libvmm/virq.h>
 #include <libvmm/arch/x86_64/apic.h>
-#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/arch/x86_64/linux.h>
 
 /* Documents referenced:
@@ -59,62 +59,94 @@ bool virq_controller_init(uintptr_t guest_vapic_vaddr)
         // interrupt mask bit 16, mask all irq:
         ioapic_regs.ioredtbl[i] |= BIT(16);
 
-        ioapic_regs.virq_passthrough_map[i].valid = false;
-        ioapic_regs.virq_passthrough_map[i].ch = IOAPIC_IRQ_HANDLE_NO_CH;
+        ioapic_regs.virq_handle_map[i].valid = false;
+        ioapic_regs.virq_handle_map[i].ch = IOAPIC_IRQ_HANDLE_NO_CH;
     }
 
     return true;
 }
 
-void virq_ioapic_passthrough_ack(int ioapic, int pin, void *cookie)
+static bool irq_type_check(irq_routing_info_t irq_routing_info)
 {
-    /* We are down-casting to microkit_channel so must first cast to size_t */
-    microkit_irq_ack((microkit_channel)(size_t)cookie);
+    if (irq_routing_info.type != IRQ_TYPE_X86_IOAPIC) {
+        LOG_VMM_ERR("expected irq type %d for x86, but got %d", IRQ_TYPE_X86_IOAPIC, irq_routing_info.type);
+        return false;
+    }
+    return true;
 }
 
-bool virq_ioapic_register(int ioapic, int pin, virq_ioapic_ack_fn_t ack_fn, void *ack_data)
+bool virq_inject(irq_routing_info_t irq_routing_info)
 {
-    if (ioapic != 0) {
+    if (!irq_type_check(irq_routing_info)) {
+        return false;
+    }
+    return inject_ioapic_irq(IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info),
+                             IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info));
+}
+
+bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data)
+{
+    if (!irq_type_check(irq_routing_info)) {
+        return false;
+    }
+
+    uint8_t chip = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    uint8_t pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+
+    if (chip != 0) {
         LOG_VMM_ERR("Invalid I/O APIC chip number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n",
-                    ioapic, ioapic, pin);
+                    chip, chip, pin);
         return false;
     }
 
     if (pin >= IOAPIC_NUM_PINS) {
         LOG_VMM_ERR("Invalid I/O APIC pin number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", pin,
-                    ioapic, pin);
+                    chip, pin);
         return false;
     }
 
-    if (ioapic_regs.virq_passthrough_map[pin].valid) {
-        LOG_VMM_ERR("Pin %d is already registered on virtual I/O APIC\n", pin);
+    if (ioapic_regs.virq_handle_map[pin].valid) {
+        LOG_VMM_ERR("Pin %d is already registered on virtual I/O APIC %d\n", pin, chip);
         return false;
     }
 
-    ioapic_regs.virq_passthrough_map[pin].valid = true;
-    ioapic_regs.virq_passthrough_map[pin].ack_fn = ack_fn;
-    ioapic_regs.virq_passthrough_map[pin].ack_data = ack_data;
+    ioapic_regs.virq_handle_map[pin].valid = true;
+    ioapic_regs.virq_handle_map[pin].ack_fn = ack_fn;
+    ioapic_regs.virq_handle_map[pin].ack_data = ack_data;
 
     return true;
 }
 
-bool virq_ioapic_register_passthrough(int ioapic, int pin, microkit_channel irq_ch)
+void virq_ioapic_passthrough_ack(irq_routing_info_t irq_routing_info, void *cookie)
 {
-    if (irq_ch >= MICROKIT_MAX_CHANNELS) {
-        LOG_VMM_ERR("Invalid channel number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", irq_ch,
-                    ioapic, pin);
+    /* We are down-casting to microkit_channel so must first cast to size_t */
+    microkit_irq_ack((microkit_channel)(size_t)cookie);
+}
+
+bool virq_register_passthrough(irq_routing_info_t irq_routing_info, microkit_channel irq_ch)
+{
+    if (!irq_type_check(irq_routing_info)) {
         return false;
     }
 
-    bool success = virq_ioapic_register(ioapic, pin, virq_ioapic_passthrough_ack, (void *)(uint64_t)irq_ch);
+    uint8_t chip = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    uint8_t pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+    if (irq_ch >= MICROKIT_MAX_CHANNELS) {
+        LOG_VMM_ERR("Invalid channel number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", irq_ch,
+                    chip, pin);
+        return false;
+    }
+
+    bool success = virq_register(irq_routing_info, &virq_ioapic_passthrough_ack, (void *)(size_t)irq_ch);
     if (success) {
-        ioapic_regs.virq_passthrough_map[pin].ch = irq_ch;
+        LOG_VMM("Register passthrough I/O APIC IRQ chip %u, pin %u (IRQ channel: 0x%x)\n", chip, pin, irq_ch);
+        ioapic_regs.virq_handle_map[pin].ch = irq_ch;
     }
 
     return success;
 }
 
-bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
+bool virq_handle_passthrough(microkit_channel irq_ch)
 {
     if (irq_ch >= MICROKIT_MAX_CHANNELS) {
         LOG_VMM_ERR("attempted to handle invalid passthrough IRQ channel 0x%x\n", irq_ch);
@@ -122,9 +154,9 @@ bool virq_ioapic_handle_passthrough(microkit_channel irq_ch)
     }
 
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
-            if (ioapic_regs.virq_passthrough_map[i].ch == irq_ch) {
-                return inject_ioapic_irq(0, i);
+        if (ioapic_regs.virq_handle_map[i].valid) {
+            if (ioapic_regs.virq_handle_map[i].ch == irq_ch) {
+                return virq_inject(X86_IOAPIC_IRQ_ROUTE(0, i));
             }
         }
     }

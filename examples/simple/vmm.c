@@ -133,7 +133,7 @@ void init(void)
     microkit_irq_ack(SERIAL_IRQ_CH);
 
     /* Pass through serial IRQs */
-    assert(virq_ioapic_register_passthrough(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN, SERIAL_IRQ_CH));
+    assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
 
     guest_start_long_mode(linux_setup.kernel_entry_gpa, linux_setup.pml4_gpa, linux_setup.gdt_gpa,
                           linux_setup.gdt_limit, &initial_regs);
@@ -152,7 +152,7 @@ void init(void)
         return;
     }
 
-    success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
+    success = virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH);
     assert(success);
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
@@ -167,24 +167,16 @@ void notified(microkit_channel ch)
         guest_time_handle_timer_ntfn();
         break;
     }
-    case SERIAL_IRQ_CH: {
-        bool success = virq_ioapic_handle_passthrough(ch);
-        if (!success) {
-            LOG_VMM_ERR("I/O APIC IRQ pin %d dropped\n", COM1_IOAPIC_PIN);
-        }
-        break;
-    }
-#else
+#endif
     case SERIAL_IRQ_CH: {
         bool success = virq_handle_passthrough(ch);
         if (!success) {
-            LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
+            LOG_VMM_ERR("Serial IRQ dropped\n");
         }
         break;
     }
     default:
         printf("Unexpected channel, ch: 0x%x\n", ch);
-#endif
     }
 }
 

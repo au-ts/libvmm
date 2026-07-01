@@ -8,8 +8,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sel4/sel4.h>
-#include <libvmm/arch/x86_64/virq.h>
-#include <libvmm/arch/x86_64/instruction.h>
+#include <libvmm/libvmm.h>
 
 /* Virtual Local APIC and I/O APIC facility. */
 
@@ -94,7 +93,7 @@
 struct ioapic_virq_handle {
     bool valid;
     int ch;
-    virq_ioapic_ack_fn_t ack_fn;
+    virq_ack_fn_t ack_fn;
     void *ack_data;
 };
 
@@ -106,7 +105,7 @@ struct ioapic_regs {
     uint32_t ioapicarb;
     uint64_t ioredtbl[IOAPIC_NUM_PINS];
 
-    struct ioapic_virq_handle virq_passthrough_map[IOAPIC_NUM_PINS];
+    struct ioapic_virq_handle virq_handle_map[IOAPIC_NUM_PINS];
 };
 
 uint32_t lapic_read_reg(int offset);
@@ -125,9 +124,9 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result);
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data);
 
+bool inject_ioapic_irq(int ioapic, int pin);
+
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                          decoded_instruction_ret_t decoded_ins);
 
-bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
-bool inject_ioapic_irq(int ioapic, int pin);
 bool ioapic_ack_passthrough_irq(uint8_t vector);

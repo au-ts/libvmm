@@ -11,7 +11,6 @@
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/vmcs.h>
-#include <libvmm/arch/x86_64/virq.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 #include <sddf/util/util.h>
@@ -70,6 +69,8 @@ struct lapic_state {
 };
 
 struct lapic_state lapic_state;
+
+bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
 
 uint32_t lapic_read_reg(int offset)
 {
@@ -335,11 +336,12 @@ void lapic_write_eoi(void)
 
     /* if it is a passed through I/O APIC IRQ, run the ack function */
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
+        if (ioapic_regs.virq_handle_map[i].valid) {
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == done_vector) {
-                if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                    ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                if (ioapic_regs.virq_handle_map[i].ack_fn) {
+                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                                                          ioapic_regs.virq_handle_map[i].ack_data);
                 }
                 break;
             }
@@ -714,9 +716,9 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 if ((old_reg & BIT(16)) && !(new_reg & BIT(16))) {
                     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
                         if (i == redirection_reg_idx) {
-                            if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                                ioapic_regs.virq_passthrough_map[i].ack_fn(
-                                    0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                            if (ioapic_regs.virq_handle_map[i].ack_fn) {
+                                ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                                                                      ioapic_regs.virq_handle_map[i].ack_data);
                             }
                             break;
                         }
@@ -805,7 +807,7 @@ bool inject_ioapic_irq(int ioapic, int pin)
     /* For any passed through interrupts:
      * When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
      */
-    if (ioapic_regs.virq_passthrough_map[pin].valid) {
+    if (ioapic_regs.virq_handle_map[pin].valid) {
         int eoi_bitmap_n = vector / 64;
         int n_bitmap_i = vector % 64;
         switch (eoi_bitmap_n) {
@@ -843,11 +845,12 @@ bool inject_ioapic_irq(int ioapic, int pin)
 bool ioapic_ack_passthrough_irq(uint8_t vector)
 {
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
-        if (ioapic_regs.virq_passthrough_map[i].valid) {
+        if (ioapic_regs.virq_handle_map[i].valid) {
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == vector) {
-                if (ioapic_regs.virq_passthrough_map[i].ack_fn) {
-                    ioapic_regs.virq_passthrough_map[i].ack_fn(0, i, ioapic_regs.virq_passthrough_map[i].ack_data);
+                if (ioapic_regs.virq_handle_map[i].ack_fn) {
+                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                                                          ioapic_regs.virq_handle_map[i].ack_data);
 
 #if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
                     /* Now clear the vector's bit in EOI exit bitmap */

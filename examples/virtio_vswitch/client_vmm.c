@@ -97,10 +97,11 @@ void init(void)
                       serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(&virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-                                       vmm_config.virtio_mmio_devices[console_vdev_idx].irq, &serial_rx_queue,
-                                       &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
+    success = virtio_mmio_console_init(
+        &virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
+        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
+        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[console_vdev_idx].irq), &serial_rx_queue,
+        &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -109,11 +110,12 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
-    success = virtio_mmio_net_init(&virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
-                                   vmm_config.virtio_mmio_devices[net_vdev_idx].size,
-                                   vmm_config.virtio_mmio_devices[net_vdev_idx].irq, &net_rx_queue, &net_tx_queue,
-                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                   net_config.rx.id, net_config.tx.id, net_config.mac_addr.addr);
+    success = virtio_mmio_net_init(
+        &virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
+        vmm_config.virtio_mmio_devices[net_vdev_idx].size,
+        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[net_vdev_idx].irq), &net_rx_queue,
+        &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
+        net_config.tx.id, net_config.mac_addr.addr);
     assert(success);
 
     /* Finally start the guest */

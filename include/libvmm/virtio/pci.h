@@ -125,4 +125,5 @@ typedef struct virtio_device virtio_device_t;
  * Assumes the virtio_device_t *dev struct passed has been populated
  * and virtual IRQ associated with the device has been registered.
  */
-bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t pci_dev, int virq);
+bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t pci_dev,
+                                irq_routing_info_t irq_routing_info);

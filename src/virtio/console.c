@@ -209,12 +209,10 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
-        dev->regs.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(dev->virq);
-        assert(success);
+        virtio_set_interrupt_status(dev, true, false);
+        bool success = virq_inject(dev->irq_routing_info);
 
         microkit_notify(console->tx_ch);
-
         return success;
     }
 
@@ -270,10 +268,8 @@ static bool virtio_console_handle_rx(struct virtio_console_device *console)
     /* While unlikely, it is possible that we could not consume any of the
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
-        console->virtio_device.regs.InterruptStatus = BIT_LOW(0);
-        bool success = virq_inject(console->virtio_device.virq);
-        assert(success);
-
+        virtio_set_interrupt_status(&console->virtio_device, true, false);
+        bool success = virq_inject(console->virtio_device.irq_routing_info);
         return success;
     }
 
@@ -304,8 +300,8 @@ virtio_device_funs_t functions = {
 };
 
 static struct virtio_device *virtio_console_init(struct virtio_console_device *console, virtio_transport_type_t type,
-                                                 size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq,
-                                                 int tx_ch, int rx_ch)
+                                                 irq_routing_info_t irq_routing_info, serial_queue_handle_t *rxq,
+                                                 serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
     struct virtio_device *dev = &console->virtio_device;
 
@@ -313,7 +309,7 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
     dev->funs = &functions;
     dev->vqs = console->vqs;
     dev->num_vqs = VIRTIO_CONSOLE_NUM_VIRTQ;
-    dev->virq = virq;
+    dev->irq_routing_info = irq_routing_info;
     dev->device_data = console;
     virtio_console_regs_init(dev);
 
@@ -326,21 +322,25 @@ static struct virtio_device *virtio_console_init(struct virtio_console_device *c
 }
 
 bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
-                              size_t virq, serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch)
+                              irq_routing_info_t irq_routing_info, serial_queue_handle_t *rxq,
+                              serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
-    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_MMIO, virq, rxq, txq, tx_ch, rx_ch);
+    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_MMIO, irq_routing_info, rxq, txq, tx_ch,
+                                                    rx_ch);
 
-    return virtio_mmio_register_device(dev, region_base, region_size, virq);
+    return virtio_mmio_register_device(dev, region_base, region_size, irq_routing_info);
 }
 
-bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci_bus, uint16_t pci_dev, size_t virq,
-                             serial_queue_handle_t *rxq, serial_queue_handle_t *txq, int tx_ch, int rx_ch)
+bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci_bus, uint16_t pci_dev,
+                             irq_routing_info_t irq_routing_info, serial_queue_handle_t *rxq,
+                             serial_queue_handle_t *txq, int tx_ch, int rx_ch)
 {
-    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, virq, rxq, txq, tx_ch, rx_ch);
+    struct virtio_device *dev = virtio_console_init(console, VIRTIO_TRANSPORT_PCI, irq_routing_info, rxq, txq, tx_ch,
+                                                    rx_ch);
 
     dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_CONSOLE;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
     dev->transport.pci.device_class = PCI_CLASS_COMMUNICATION_OTHER;
 
-    return virtio_pci_register_device(dev, pci_bus, pci_dev, virq);
+    return virtio_pci_register_device(dev, pci_bus, pci_dev, irq_routing_info);
 }

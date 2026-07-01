@@ -111,12 +111,13 @@ void init(void)
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console, 0, 0, 48, &serial_rx_queue, &serial_tx_queue,
-                                      serial_config.tx.id, serial_config.rx.id);
+    success = virtio_pci_console_init(&virtio_console, 0, 0, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 48),
+                                      &serial_rx_queue, &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
     assert(success);
 
-    success = virtio_pci_blk_init(&virtio_blk, 0, 1, 49, (uintptr_t)blk_config.data.vaddr, blk_config.data.size,
-                                  storage_info, &blk_queue, blk_config.virt.num_buffers, blk_config.virt.id);
+    success = virtio_pci_blk_init(&virtio_blk, 0, 1, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 49),
+                                  (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
+                                  blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -126,9 +127,10 @@ void init(void)
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
 
-    success = virtio_pci_net_init(&virtio_net, 0, 2, 50, &net_rx_queue, &net_tx_queue,
-                                  (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
-                                  net_config.rx.id, net_config.tx.id, net_config.mac_addr.addr);
+    success = virtio_pci_net_init(&virtio_net, 0, 2, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 50), &net_rx_queue,
+                                  &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
+                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
+                                  net_config.mac_addr.addr);
     assert(success);
 
     /* Finally start the guest */

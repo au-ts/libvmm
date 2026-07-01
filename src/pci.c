@@ -106,6 +106,7 @@ struct pci_device {
     uint32_t sticky_cmd_bits;
     struct pci_config_space config_space;
     bool virq_registered;
+    irq_routing_info_t irq_routing_info;
     /* NOTE that 64 bit BARs consume 2 slots! */
     struct pci_device_bar bars[PCI_NUM_BARS_PER_CONFIG_SPACE];
     /* A simple bump allocator for the capabilities linked list. */
@@ -135,9 +136,9 @@ struct pci_bus {
 static struct pci_bus pci_bus;
 
 // Translate PCI Geographic Address, represented as Bus:Device.Function, to an index to `config_spaces`.
-static uint32_t pci_geo_addr_to_internal_index(uint8_t bus, uint8_t dev, uint8_t func)
+static pci_dev_handle_t pci_geo_addr_to_internal_index(uint8_t bus, uint8_t dev, uint8_t func)
 {
-    return (bus * PCI_DEV_PER_BUS) + (dev * PCI_FUNC_PER_DEV) + func;
+    return (pci_dev_handle_t)((bus * PCI_DEV_PER_BUS) + (dev * PCI_FUNC_PER_DEV) + func);
 }
 
 static struct pci_device *pci_get_device(pci_dev_handle_t pci_dev_handle)
@@ -373,7 +374,8 @@ pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci
     return handle;
 }
 
-bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack_fn_t ack_fn, void *ack_data)
+bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn,
+                             void *ack_data)
 {
     if (!pci_bus_initialised_check()) {
         return false;
@@ -389,15 +391,27 @@ bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, int virq, virq_ack
         return false;
     }
 
-    bool success = virq_register(GUEST_BOOT_VCPU_ID, virq, ack_fn, ack_data);
+    bool success = virq_register(irq_routing_info, ack_fn, ack_data);
     if (!success) {
         LOG_PCI_ERR("Cannot register IRQ for PCI dev handle %d\n", pci_dev_handle);
         return false;
     }
 
-    /* Always use dev's first interrupt pin specified in interrupt-map */
+    /* Always use dev's first interrupt pin specified in interrupt-map (INTA) */
+    pci_device->irq_routing_info = irq_routing_info;
     pci_device->config_space.interrupt_pin = 0x1;
-    pci_device->config_space.interrupt_line = virq;
+
+    switch (irq_routing_info.type) {
+    case IRQ_TYPE_ARM_GIC:
+        pci_device->config_space.interrupt_line = irq_routing_info.hw.arm_gic.intid;
+        break;
+    case IRQ_TYPE_X86_IOAPIC:
+        /* @billn revisit for multiple I/O APIC and MSI */
+        pci_device->config_space.interrupt_line = irq_routing_info.hw.x86_ioapic.pin;
+        break;
+    default:
+        assert(0);
+    }
 
     pci_device->virq_registered = success;
     return success;
