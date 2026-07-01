@@ -9,6 +9,11 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 
+#if defined(CONFIG_ARCH_X86)
+#include <libvmm/arch/x86_64/ioports.h>
+#include <libvmm/arch/x86_64/pci.h>
+#endif
+
 #define LOG_PCI_INFO(...) do{ printf("%s|%s INFO: ", microkit_name, __func__); printf(__VA_ARGS__); }while(0)
 #define LOG_PCI_ERR(...) do{ printf("%s|%s ERROR: ", microkit_name, __func__); printf(__VA_ARGS__); }while(0)
 
@@ -44,6 +49,8 @@
 #define PCI_CFG_OFFSET_BAR4          0x1C
 #define PCI_CFG_OFFSET_BAR5          0x20
 #define PCI_CFG_OFFSET_BAR6          0x24
+
+#define PCI_HEADER_TYPE_MULTIFUNCTION 0x80
 
 struct pci_bar_memory_bits {
     uint32_t memory_type : 1;    // Bit 0: 0 = Memory space
@@ -131,6 +138,10 @@ struct pci_bus {
     bool initialised;
     struct pci_ecam ecam;
     struct pci_mmio_aperature mmio_aperature;
+
+#if defined(CONFIG_ARCH_X86)
+    uint32_t pio_addr_value;
+#endif
 };
 
 static struct pci_bus pci_bus;
@@ -174,7 +185,12 @@ static inline bool pci_bus_initialised_check(void)
     return pci_bus.initialised;
 }
 
+#if defined(CONFIG_ARCH_ARM)
 static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL4_UserContext *regs, void *cookie)
+#elif defined(CONFIG_ARCH_X86)
+static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t qualification,
+                                  decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie)
+#endif
 {
     pci_dev_handle_t handle = (pci_dev_handle_t)(((uint64_t)(cookie)) << 3) >> 3;
     if (!pci_device_exist_check(handle)) {
@@ -185,32 +201,120 @@ static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t fsr, seL
     uint8_t bar_idx = ((uint64_t)cookie) >> 61;
     assert(bar_idx < PCI_NUM_BARS_PER_CONFIG_SPACE);
 
-    seL4_Word data = 0;
+    bool is_read;
+    int access_width_bytes;
+    uint64_t data = 0;
 
 #if defined(CONFIG_ARCH_ARM)
-    bool is_read = fault_is_read(fsr);
-    int width_bytes = fault_get_width_bytes(fsr);
-    if (!is_read) {
-        data = fault_get_data(regs, fsr);
-    }
-#else
-    bool is_read = false; //@billn fix
-    int width_bytes = 0;
+    is_read = fault_is_read(fsr);
+    access_width_bytes = fault_get_width_bytes(fsr);
+#elif defined(CONFIG_ARCH_X86)
+    is_read = ept_fault_is_read(qualification);
+    access_width_bytes = mem_access_width_to_bytes(decoded_ins);
 #endif
 
-    bool success = pci_device->bars[bar_idx].callback(handle, offset, is_read, width_bytes, &data,
+    if (!is_read) {
+#if defined(CONFIG_ARCH_ARM)
+        data = fault_get_data(regs, fsr);
+#elif defined(CONFIG_ARCH_X86)
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+#endif
+    }
+
+    bool success = pci_device->bars[bar_idx].callback(handle, offset, is_read, access_width_bytes, &data,
                                                       pci_device->bars[bar_idx].cookie);
 
-#if defined(CONFIG_ARCH_ARM)
     if (success && is_read) {
+#if defined(CONFIG_ARCH_ARM)
         fault_emulate_write(regs, offset, fsr, data);
-    }
+#elif defined(CONFIG_ARCH_X86)
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
 #endif
+    }
 
     return success;
 }
 
-static bool pci_ecam_fault_handle(size_t vcpu_id, size_t ecam_offset, size_t fsr, seL4_UserContext *regs, void *cookie)
+static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int access_width_bytes,
+                                    int config_space_offset, uint64_t *data)
+{
+    struct pci_device *pci_device = pci_get_device(handle);
+    struct pci_config_space *config_space = &pci_device->config_space;
+
+    if (is_read) {
+        /* The PCI config space is in 32-bit words, so just read it like this, then let the arch
+         * specific layer perform the shifting. */
+        uint32_t *reg = (uint32_t *)config_space;
+        *data = (uint32_t)reg[config_space_offset / 4];
+    } else {
+        switch (config_space_offset) {
+        case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
+            config_space->command = (uint16_t)*data & pci_device->sticky_cmd_bits;
+            break;
+        }
+        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
+            uint8_t dev_bar_id = (config_space_offset - PCI_CFG_OFFSET_BAR1) / 0x4;
+            assert(dev_bar_id < PCI_NUM_BARS_PER_CONFIG_SPACE);
+
+            // @billn handle 64-bit BARs
+            // Memory negotiation process:
+            //     1. The driver writes all 1s to the BAR register.
+            //     2. The device writes the size mask ~(size - 1) to the BAR register.
+            //     3. The driver writes the original value (all 0s in our code) back
+            //         to the BAR register. (no action from the device)
+            //     4. The driver allocates memory from the memory resources, and writes
+            //         the allocated address to the BAR register.
+            //     5. The device parse the memory address and bookkeep it.
+            if (pci_device->bars[dev_bar_id].size) {
+                if (*data == 0xFFFFFFFF) {
+                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
+                    bar->base_address = (~(pci_device->bars[dev_bar_id].size - 1)) >> 4;
+                } else if (*data != 0x0) {
+                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
+                    uint32_t guest_allocated_addr = *data & 0xFFFFFFF0;   // Ignore control bits
+                    bar->base_address = guest_allocated_addr >> 4;       // 16-byte aligned
+                    pci_device->bars[dev_bar_id].gpa = guest_allocated_addr;
+
+                    /* We just need 3 bits to represent the BAR index (0-5), so we can stuff it
+                     * to the top bits of the handle. */
+                    uint64_t cookie = handle;
+                    /* Make sure the top 3 bits aren't used. */
+                    assert((cookie & (BIT(63) | BIT(62) | BIT(61))) == 0);
+                    uint64_t bar_idx_mask = (uint64_t)dev_bar_id << 61;
+                    cookie |= bar_idx_mask;
+
+                    bool register_ok;
+#if defined(CONFIG_ARCH_ARM)
+                    register_ok = fault_register_vm_exception_handler(guest_allocated_addr,
+                                                                      pci_device->bars[dev_bar_id].size,
+                                                                      &pci_bar_fault_handler, (void *)cookie);
+#elif defined(CONFIG_ARCH_X86)
+                    register_ok = fault_register_ept_exception_handler(guest_allocated_addr,
+                                                                       pci_device->bars[dev_bar_id].size,
+                                                                       &pci_bar_fault_handler, (void *)cookie);
+#endif
+                    if (!register_ok) {
+
+                        LOG_VMM_ERR("Could not register MMIO fault handler for BAR %d of PCI device handle %d\n",
+                                    dev_bar_id, handle);
+                        return false;
+                    }
+                }
+            }
+            break;
+        }
+        }
+    }
+    return true;
+}
+
+#if defined(CONFIG_ARCH_ARM)
+static bool pci_ecam_memory_fault_handle(size_t vcpu_id, size_t ecam_offset, size_t fsr, seL4_UserContext *regs,
+                                         void *cookie)
+#elif defined(CONFIG_ARCH_X86)
+static bool pci_ecam_memory_fault_handle(size_t qualification, size_t ecam_offset,
+                                         decoded_instruction_ret_t decoded_ins, seL4_VCPUContext *vctx, void *cookie)
+#endif
 {
     uint16_t bus = ecam_offset >> 20;
     uint16_t dev = (ecam_offset >> 15) & 0x1F;
@@ -228,94 +332,113 @@ static bool pci_ecam_fault_handle(size_t vcpu_id, size_t ecam_offset, size_t fsr
     }
 
     pci_dev_handle_t handle = pci_geo_addr_to_internal_index(bus, dev, func);
-
     /* We don't need to check if the device is registered, because in that case we already initialised
      * vendor ID to PCI_INVALID_VENDOR_ID. */
-    struct pci_device *pci_device = pci_get_device(handle);
-    struct pci_config_space *config_space = &pci_device->config_space;
+
+    bool is_read;
+    int access_width_bytes;
+    uint64_t data = 0;
 
 #if defined(CONFIG_ARCH_ARM)
-    bool is_read = fault_is_read(fsr);
-#else
-    bool is_read = false; // @Billn fix
+    is_read = fault_is_read(fsr);
+    access_width_bytes = fault_get_width_bytes(fsr);
+#elif defined(CONFIG_ARCH_X86)
+    is_read = ept_fault_is_read(qualification);
+    access_width_bytes = mem_access_width_to_bytes(decoded_ins);
 #endif
 
-    if (is_read) {
-        uint32_t data = 0;
-        uint32_t *reg = (uint32_t *)config_space;
-        data = reg[offset / 4];
+    if (!is_read) {
+#if defined(CONFIG_ARCH_ARM)
+        data = fault_get_data(regs, fsr);
+#elif defined(CONFIG_ARCH_X86)
+        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+#endif
+    }
 
+    bool success = pci_ecam_emulate_access(handle, is_read, access_width_bytes, offset, &data);
+
+    if (success && is_read) {
 #if defined(CONFIG_ARCH_ARM)
         fault_emulate_write(regs, offset, fsr, data);
-#else
-        (void)data;
-        (void)reg;
+#elif defined(CONFIG_ARCH_X86)
+        assert(mem_read_set_data(decoded_ins, qualification, vctx, ecam_offset, data));
 #endif
-    } else {
-#if defined(CONFIG_ARCH_ARM)
-        uint32_t data = fault_get_data(regs, fsr);
-#else
-        uint32_t data = 0;
-#endif
-
-        switch (offset) {
-        case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
-            config_space->command = data & pci_device->sticky_cmd_bits;
-            break;
-        }
-        case REG_RANGE(PCI_CFG_OFFSET_STATUS, PCI_CFG_OFFSET_BAR1): {
-            config_space->status = data;
-            break;
-        }
-        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
-            uint8_t dev_bar_id = (offset - PCI_CFG_OFFSET_BAR1) / 0x4;
-            assert(dev_bar_id < PCI_NUM_BARS_PER_CONFIG_SPACE);
-
-            // @billn handle 64-bit BARs
-            // Memory negotiation process:
-            //     1. The driver writes all 1s to the BAR register.
-            //     2. The device writes the size mask ~(size - 1) to the BAR register.
-            //     3. The driver writes the original value (all 0s in our code) back
-            //         to the BAR register. (no action from the device)
-            //     4. The driver allocates memory from the memory resources, and writes
-            //         the allocated address to the BAR register.
-            //     5. The device parse the memory address and bookkeep it.
-            if (pci_device->bars[dev_bar_id].size) {
-                if (data == 0xFFFFFFFF) {
-                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
-                    bar->base_address = (~(pci_device->bars[dev_bar_id].size - 1)) >> 4;
-                } else if (data != 0x0) {
-                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
-                    uint32_t guest_allocated_addr = data & 0xFFFFFFF0;   // Ignore control bits
-                    bar->base_address = guest_allocated_addr >> 4;       // 16-byte aligned
-                    pci_device->bars[dev_bar_id].gpa = guest_allocated_addr;
-
-                    /* We just need 3 bits to represent the BAR index (0-5), so we can stuff it
-                     * to the top bits of the handle. */
-                    uint64_t cookie = handle;
-                    /* Make sure the top 3 bits aren't used. */
-                    assert((cookie & (BIT(63) | BIT(62) | BIT(61))) == 0);
-                    uint64_t bar_idx_mask = (uint64_t)dev_bar_id << 61;
-                    cookie |= bar_idx_mask;
-
-#if defined(CONFIG_ARCH_ARM)
-                    if (!fault_register_vm_exception_handler(guest_allocated_addr, pci_device->bars[dev_bar_id].size,
-                                                             &pci_bar_fault_handler, (void *)cookie)) {
-                        LOG_VMM_ERR("Could not register MMIO fault handler for BAR %d of PCI device %d:%d.%d\n",
-                                    dev_bar_id, bus, dev, func);
-                        return false;
-                    }
-#else
-
-#endif
-                }
-            }
-            break;
-        }
-        }
     }
+
+    return success;
+}
+
+#if defined(CONFIG_ARCH_X86)
+static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
+                                        seL4_VCPUContext *vctx, void *cookie)
+{
+    if (pio_fault_is_read(qualification)) {
+        assert(pio_fault_addr(qualification) == PCI_CONFIG_ADDRESS_START_PORT);
+        vctx->eax = pci_bus.pio_addr_value;
+    } else {
+        pci_bus.pio_addr_value = vctx->eax;
+    }
+
     return true;
 }
+
+static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
+                                      seL4_VCPUContext *vctx, void *cookie)
+{
+    assert(!pio_fault_is_string_op(qualification));
+
+    if (!pci_pio_addr_reg_enable(pci_bus.pio_addr_value)) {
+        emulate_ioport_noop_access(vctx, qualification);
+        return true;
+    }
+
+    uint8_t bus = pci_pio_addr_reg_bus(pci_bus.pio_addr_value);
+    uint8_t dev = pci_pio_addr_reg_dev(pci_bus.pio_addr_value);
+    uint8_t func = pci_pio_addr_reg_func(pci_bus.pio_addr_value);
+    if (bus >= PCI_NUM_BUS) {
+        emulate_ioport_noop_access(vctx, qualification);
+        return true;
+    }
+    if (dev >= PCI_DEV_PER_BUS) {
+        emulate_ioport_noop_access(vctx, qualification);
+        return true;
+    }
+    if (func >= PCI_FUNC_PER_DEV) {
+        emulate_ioport_noop_access(vctx, qualification);
+        return true;
+    }
+
+    uint8_t config_space_off = pci_pio_addr_reg_offset(pci_bus.pio_addr_value) + port_offset;
+    int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
+
+    /* Let's make sure that the access does not cross a 32 bits boundary. */
+    if (config_space_off % 4) {
+        if (config_space_off + access_width_bytes > ROUND_UP(config_space_off, 4)) {
+            LOG_PCI_ERR("access crosses 32 bit boundary!\n");
+        }
+    }
+
+    bool success;
+    pci_dev_handle_t handle = pci_geo_addr_to_internal_index(bus, dev, func);
+    if (pio_fault_is_read(qualification)) {
+        success = pci_ecam_emulate_access(handle, pio_fault_is_read(qualification), access_width_bytes,
+                                          config_space_off, &vctx->eax);
+
+        vctx->eax >>= (config_space_off - ROUND_DOWN(config_space_off, 4)) * 8;
+
+        if (access_width_bytes == 1) {
+            vctx->eax &= 0xff;
+        } else if (access_width_bytes == 2) {
+            vctx->eax &= 0xffff;
+        }
+    } else {
+        success = pci_ecam_emulate_access(handle, pio_fault_is_read(qualification), access_width_bytes,
+                                          config_space_off, &vctx->eax);
+    }
+
+    return success;
+}
+#endif
 
 pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci_device_register_data_t *device_data)
 {
@@ -370,6 +493,19 @@ pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci
     pci_device->virq_registered = false;
 
     pci_device->sticky_cmd_bits = device_data->command;
+
+    /* Set the multifunction bit if applicable. */
+    if (func > 0) {
+        for (int f = 0; f < PCI_FUNC_PER_DEV; f++) {
+            handle = pci_geo_addr_to_internal_index(bus, dev, f);
+            pci_device = pci_get_device(handle);
+            config_space = &pci_device->config_space;
+
+            if (config_space->vendor_id != PCI_INVALID_VENDOR_ID) {
+                config_space->header_type = PCI_HEADER_TYPE_MULTIFUNCTION;
+            }
+        }
+    }
 
     return handle;
 }
@@ -527,10 +663,13 @@ bool pci_register_device_mmio_bar(pci_dev_handle_t pci_dev_handle, uint8_t bar_i
 
 bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature_gpa, uint64_t mmio_aperature_size)
 {
+    /* x86 does not need ECAM for PCI */
+#if !defined(CONFIG_ARCH_X86)
     if (ecam_size != PCI_EXPECTED_ECAM_SIZE) {
         LOG_PCI_ERR("`ecam_size` = 0x%x does not equal expected 0x%x!\n", ecam_size, PCI_EXPECTED_ECAM_SIZE);
         return false;
     }
+#endif
 
     if (mmio_aperature_size == 0) {
         LOG_PCI_ERR("mmio_aperature_size cannot be zero.\n");
@@ -549,12 +688,22 @@ bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature
     }
 
 #if defined(CONFIG_ARCH_ARM)
-    if (!fault_register_vm_exception_handler(ecam_gpa, ecam_size, &pci_ecam_fault_handle, NULL)) {
+    if (!fault_register_vm_exception_handler(ecam_gpa, ecam_size, &pci_ecam_memory_fault_handle, NULL)) {
         LOG_PCI_ERR("Could not register virtual memory fault handler for PCI ECAM area!\n");
         return false;
     }
-#else
-
+#elif defined(CONFIG_ARCH_X86)
+    /* Don't care about ECAM on x86 for now, just do the PIO access mechanism #1 */
+    if (!fault_register_pio_exception_handler(PCI_CONFIG_ADDRESS_START_PORT, PCI_CONFIG_ADDRESS_PORT_SIZE,
+                                              pci_pio_select_fault_handle, NULL)) {
+        LOG_PCI_ERR("Could not register PIO fault handler for PCI mech #1 select register!\n");
+        return false;
+    }
+    if (!fault_register_pio_exception_handler(PCI_CONFIG_DATA_START_PORT, PCI_CONFIG_DATA_PORT_SIZE,
+                                              pci_pio_data_fault_handle, NULL)) {
+        LOG_PCI_ERR("Could not register PIO fault handler for PCI mech #1 data register!\n");
+        return false;
+    }
 #endif
 
     /* We don't register fault handlers for the MMIO aperature yet as they will be individually handled later. */

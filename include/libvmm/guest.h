@@ -48,6 +48,8 @@ typedef struct arch_guest_init {
 
     size_t num_guest_ram_regions;
     struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
+
+    struct guest_pci_init pci_init;
 } arch_guest_init_t;
 #elif defined(CONFIG_ARCH_ARM)
 typedef struct guest {

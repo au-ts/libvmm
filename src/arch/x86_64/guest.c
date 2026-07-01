@@ -17,6 +17,7 @@
 #include <libvmm/arch/x86_64/vmcs.h>
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/i440fx.h>
 #include <sel4/arch/vmenter.h>
 #endif
 
@@ -62,10 +63,18 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise the virtual Local and I/O APICs */
-    bool success = virq_controller_init(0);
-    if (!success) {
+    if (!virq_controller_init(0)) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controllers\n");
         return false;
+    }
+
+    /* Initialise PCI bus, x86 does not need ECAM for PCI. */
+    if (init_args.pci_init.mmio_aperature_size) {
+        if (!pci_bus_init(init_args.pci_init.ecam_gpa, init_args.pci_init.ecam_size,
+                          init_args.pci_init.mmio_aperature_gpa, init_args.pci_init.mmio_aperature_size)) {
+            LOG_VMM_ERR("Failed to initialise virtual PCI bus\n");
+            return false;
+        }
     }
 
     return true;
