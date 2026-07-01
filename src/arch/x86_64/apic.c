@@ -364,7 +364,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
         uint32_t data;
         success = lapic_read_fault_handle(offset, &data);
         if (success) {
-            assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
+            assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
         }
     } else {
         uint64_t data;
@@ -668,7 +668,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 return false;
             }
 
-            assert(mem_read_set_data(decoded_ins, qualification, vctx, data));
+            assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
         } else {
             LOG_VMM_ERR("Reading unknown I/O APIC MMIO register 0x%lx\n", offset);
             return false;

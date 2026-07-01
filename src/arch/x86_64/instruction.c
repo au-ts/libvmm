@@ -114,7 +114,7 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
 }
 
 bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_qualification, seL4_VCPUContext *vctx,
-                       uint64_t data)
+                       uint64_t offset, uint64_t data)
 {
     if (ept_fault_is_write(ept_fault_qualification)) {
         LOG_VMM_ERR("mem_read_set_data() got a write fault\n");
@@ -125,7 +125,42 @@ bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_q
         return false;
     }
 
+    /* Does similar things to ARM's fault_emulate_write() */
+    int access_width_bytes = mem_access_width_to_bytes(decoded_ins);
     uint64_t *vctx_raw = (uint64_t *)vctx;
+    uint64_t current_reg_val = vctx_raw[decoded_ins.decoded.memory_instruction.target_reg];
+
+    uint8_t shift = (offset & 0x3) * 8;
+    uint64_t shifted_data = data >> shift;
+
+    bool zero_extend = decoded_ins.decoded.memory_instruction.zero_extend;
+
+    /* Merge the data into the CPU register preserving upper bits as required by x86 */
+    switch (access_width_bytes) {
+    case 1:
+        if (zero_extend) {
+            current_reg_val = shifted_data & 0xff;
+        } else {
+            current_reg_val = (current_reg_val & ~0xFFULL) | (shifted_data & 0xFF);
+        }
+        break;
+    case 2:
+        if (zero_extend) {
+            current_reg_val = shifted_data & 0xFFFF;
+        } else {
+            current_reg_val = (current_reg_val & ~0xFFFFULL) | (shifted_data & 0xFFFF);
+        }
+        break;
+    case 4:
+        /* Quirk: On x86_64, writing to a 32-bit register always zero-extends
+         * to the full 64-bit register. We never preserve the upper 32 bits. */
+        current_reg_val = shifted_data & 0xFFFFFFFFULL;
+        break;
+    case 8:
+        current_reg_val = shifted_data;
+        break;
+    }
+
     vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
     return true;
 }
