@@ -75,6 +75,11 @@ bool guest_init(arch_guest_init_t init_args)
             LOG_VMM_ERR("Failed to initialise virtual PCI bus\n");
             return false;
         }
+
+        if (!register_i440fx_on_pci_bus()) {
+            LOG_VMM_ERR("Failed to register chipset on PCI bus\n");
+            return false;
+        }
     }
 
     return true;
