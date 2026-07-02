@@ -41,16 +41,17 @@ There is no hardware requirements when targeting ARM, for more details, please s
 * QEMU
 * Microkit SDK (version 2.2.0)
 
-For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.2.0).
-
 <!-- @billn remove for Microkit 2.3.0 -->
-For the x86-64 VM, you will need an experimental version of the Microkit SDK. It is based on
-the main branch of Microkit, but have changes needed for the x86 VM that have not made it into
-a release. You can download the experimental SDK here:
-- [Linux ARM64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.63+31ee14b-linux-aarch64.tar.gz)
-- [Linux x86-64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.63+31ee14b-linux-x86-64.tar.gz)
-- [macOS ARM64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.63+31ee14b-macos-aarch64.tar.gz)
-- [macOS x86-64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.63+31ee14b-macos-x86-64.tar.gz)
+For the Microkit SDK, you can download it here:
+
+- [Linux ARM64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.85+b4f0370-linux-aarch64.tar.gz)
+- [Linux x86-64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.85+b4f0370-linux-x86-64.tar.gz)
+- [macOS ARM64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.85+b4f0370-macos-aarch64.tar.gz)
+- [macOS x86-64](https://trustworthy.systems/Downloads/microkit/microkit-sdk-2.2.0-dev.85+b4f0370-macos-x86-64.tar.gz)
+
+This SDK is based on the main branch of Microkit, but have changes
+needed for the x86 VM and other bug fixes that have not made it into
+a release.
 
 For all other dependencies, see the below instructions depending on your machine.
 

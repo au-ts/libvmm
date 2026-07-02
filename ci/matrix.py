@@ -96,11 +96,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "odroidc4",
             "maaxboard",
         ],
-        # Disable until https://github.com/au-ts/libvmm/issues/233 is resolved.
-        "tests_exclude": [
-            { "config": "smp-debug" },
-            { "config": "smp-release" },
-        ],
+        "tests_exclude": [],
     },
     "virtio": {
         "configs": ["debug", "release"],

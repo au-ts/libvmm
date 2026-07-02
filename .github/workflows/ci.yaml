@@ -18,7 +18,7 @@ on:
     - cron: '37 7 * * 5'
 
 env:
-  MICROKIT_VERSION: 2.2.0-dev.63+31ee14b
+  MICROKIT_VERSION: 2.2.0-dev.85+b4f0370
   MICROKIT_URL: https://trustworthy.systems/Downloads/microkit/
   SDFGEN_VERSION: 0.33.0
 
