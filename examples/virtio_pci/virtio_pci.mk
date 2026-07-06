@@ -20,7 +20,7 @@ SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
-CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
+CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm/aarch64
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
