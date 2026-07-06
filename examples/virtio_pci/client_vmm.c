@@ -14,50 +14,27 @@
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
 #include <sddf/util/printf.h>
+#include "guest_arch_init.h"
 
+/* Data from sdfgen */
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
-/* RAM base in guest physical address space depends on what's defined in your DTB. */
-#define GUEST_RAM_START_GPA 0x40000000
-
-/* Data for the guest's kernel image. */
-extern char _guest_kernel_image[];
-extern char _guest_kernel_image_end[];
-/* Data for the device tree to be passed to the kernel. */
-extern char _guest_dtb_image[];
-extern char _guest_dtb_image_end[];
-/* Data for the initial RAM disk to be passed to the kernel. */
-extern char _guest_initrd_image[];
-extern char _guest_initrd_image_end[];
-/* Microkit will set this variable to the start of the guest RAM memory region. */
-uintptr_t guest_ram_vaddr;
-
-/* Virtio Console */
+/* sDDF data */
 serial_queue_handle_t serial_rx_queue;
 serial_queue_handle_t serial_tx_queue;
 
-static struct virtio_console_device virtio_console;
+blk_queue_handle_t blk_queue;
 
-/* Virtio Block */
-static blk_queue_handle_t blk_queue;
-static struct virtio_blk_device virtio_blk;
-
-/* Virtio Net */
 net_queue_handle_t net_rx_queue;
 net_queue_handle_t net_tx_queue;
-static struct virtio_net_device virtio_net;
 
-/* PCI Configuration */
-uintptr_t pci_ecam;
-uintptr_t pci_memory_resource;
-
-#define PCI_ECAM_GPA 0x10000000
-#define PCI_ECAM_SIZE 0x100000
-#define PCI_MMIO_APERATURE_GPA 0x20100000
-#define PCI_MMIO_APERATURE_SIZE 0x0ff00000
+/* Bookkeeping structures for virtio devices */
+struct virtio_console_device virtio_console;
+struct virtio_blk_device virtio_blk;
+struct virtio_net_device virtio_net;
 
 void init(void)
 {
@@ -66,75 +43,45 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
-    arch_guest_init_t args = { .num_vcpus = 1,
-                               .num_guest_ram_regions = 1,
-                               .guest_ram_regions = { (struct guest_ram_region) {
-                                   .gpa_start = GUEST_RAM_START_GPA,
-                                   .size = vmm_config.ram_size,
-                                   .vmm_vaddr = (void *)vmm_config.ram } },
-                               .pci_init = (struct guest_pci_init) {
-                                   .ecam_gpa = PCI_ECAM_GPA,
-                                   .ecam_size = PCI_ECAM_SIZE,
-                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
-                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
-                               } };
-    bool success = guest_init(args);
+    /* Initialise the VMM and the VCPU */
+    LOG_VMM("starting \"%s\"\n", microkit_name);
+
+    bool success = guest_arch_init();
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
         return;
     }
 
+    /* Initialise sDDF Block subsystem. */
     blk_queue_init(&blk_queue, blk_config.virt.req_queue.vaddr, blk_config.virt.resp_queue.vaddr,
                    blk_config.virt.num_buffers);
-    /* Want to print out configuration information, so wait until the config is ready. */
-    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
-
     /* Busy wait until blk device is ready */
+    blk_storage_info_t *storage_info = blk_config.virt.storage_info.vaddr;
     while (!blk_storage_is_ready(storage_info));
 
-    /* Initialise the VMM and the VCPU */
-    LOG_VMM("starting \"%s\"\n", microkit_name);
-    /* Place all the binaries in the right locations before starting the guest */
-    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
-    size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
-    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
-    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
-                                             (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
-                                             (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
-    if (!kernel_pc) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
-        return;
-    }
-
+    /* Initialise sDDF Serial subsystem. */
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
-    success = virtio_pci_console_init(&virtio_console, 0, 0, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 48),
-                                      &serial_rx_queue, &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
-    assert(success);
-
-    success = virtio_pci_blk_init(&virtio_blk, 0, 1, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 49),
-                                  (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
-                                  blk_config.virt.num_buffers, blk_config.virt.id);
-    assert(success);
-
-    /* Initialise virtIO net device */
+    /* Initialise sDDF Network subsystem. */
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
                    net_config.rx.num_buffers);
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
 
-    success = virtio_pci_net_init(&virtio_net, 0, 2, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 50), &net_rx_queue,
-                                  &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr,
-                                  (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id, net_config.tx.id,
-                                  net_config.mac_addr.addr);
-    assert(success);
+    if (!virtio_arch_init()) {
+        LOG_VMM_ERR("Failed to initialise virtIO devices\n");
+        return;
+    }
 
     /* Finally start the guest */
-    guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
+    if (!guest_arch_start()) {
+        LOG_VMM_ERR("Failed to start guest\n");
+        return;
+    }
     LOG_VMM("%s is ready\n", microkit_name);
 }
 
