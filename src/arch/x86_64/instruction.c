@@ -161,7 +161,7 @@ bool mem_read_set_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_q
         break;
     }
 
-    vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
+    vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = shifted_data;
     return true;
 }
 
