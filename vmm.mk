@@ -70,6 +70,8 @@ ifeq ($(ARCH),aarch64)
 CFILES := ${AARCH64_FILES} ${VIRTIO_FILES}
 else ifeq ($(ARCH),x86_64)
 CFILES := ${X86_64_FILES}
+else
+$(error Unsupported architecture $(ARCH))
 endif
 
 CFILES += ${ARCH_INDEP_FILES}
