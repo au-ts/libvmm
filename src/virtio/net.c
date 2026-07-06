@@ -77,7 +77,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
         break;
     default:
         *features = 0;
-        LOG_NET_ERR("Unimplemented DeviceFeaturesSel 0x%x\n", dev->regs.DeviceFeaturesSel);
+        break;
     }
     return true;
 }
@@ -97,16 +97,11 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     case 1:
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
-
-    default:
-        LOG_NET_ERR("Bad DriverFeaturesSel 0x%x\n", dev->regs.DriverFeaturesSel);
     }
+
     if (success) {
         dev->regs.DriverFeatures = features;
         dev->features_happy = 1;
-    } else {
-        LOG_NET_ERR("failed to set driver features with DriverFeaturesSel 0x%x, features: 0x%x\n",
-                    dev->regs.DriverFeaturesSel, features);
     }
     return success;
 }

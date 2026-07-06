@@ -76,9 +76,8 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
         *features = BIT_HIGH(VIRTIO_F_VERSION_1);
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DeviceFeaturesSel to 0x%x, which doesn't make sense\n",
-                        dev->regs.DeviceFeaturesSel);
-        return false;
+        *features = 0;
+        return true;
     }
 
     return true;
@@ -102,9 +101,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
         success = (features == BIT_HIGH(VIRTIO_F_VERSION_1));
         break;
     default:
-        LOG_CONSOLE_ERR("driver sets DriverFeaturesSel to 0x%x, which doesn't make sense\n",
-                        dev->regs.DriverFeaturesSel);
-        return false;
+        success = true;
     }
 
     if (success) {
