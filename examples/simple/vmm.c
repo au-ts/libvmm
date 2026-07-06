@@ -83,6 +83,7 @@ void init(void)
     LOG_VMM("starting \"%s\"\n", microkit_name);
 
     arch_guest_init_t args = {
+        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
 #if defined(CONFIG_ARCH_X86_64)
         .bsp = true,
         .timer_ch = TIMER_DRV_CH,

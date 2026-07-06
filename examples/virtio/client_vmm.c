@@ -61,7 +61,8 @@ void init(void)
         .num_vcpus = 1,
         .num_guest_ram_regions = 1,
         .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } }
+            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } },
+        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
     };
     bool success = guest_init(args);
     if (!success) {
