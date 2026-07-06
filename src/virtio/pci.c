@@ -404,5 +404,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
         return false;
     }
 
+    dev->transport.pci.pci_handle = handle;
+
     return true;
 }
