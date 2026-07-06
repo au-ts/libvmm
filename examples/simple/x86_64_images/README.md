@@ -26,7 +26,7 @@ command in userspace: `zcat /proc/config.gz`.
 
 ```sh
 git clone --depth 1 --branch v6.19 https://github.com/torvalds/linux.git
-cp x86_64_defconfig linux/.config
+cp linux_config linux/.config
 make -C linux ARCH=x86_64 all -j$(nproc)
 ```
 
