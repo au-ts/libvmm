@@ -163,12 +163,6 @@ void init(void)
 void notified(microkit_channel ch)
 {
     switch (ch) {
-#if defined(CONFIG_ARCH_X86_64)
-    case TIMER_DRV_CH: {
-        guest_time_handle_timer_ntfn();
-        break;
-    }
-#endif
     case SERIAL_IRQ_CH: {
         bool success = virq_handle_passthrough(ch);
         if (!success) {
