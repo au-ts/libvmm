@@ -21,22 +21,19 @@ ifeq ($(strip $(MICROKIT_BOARD)), maaxboard)
 	export GIC_DT_OVERLAY := gic_v3_overlay.dts
 else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
-
-	export BLK_NUM_PART = 1
-	export BLK_SIZE = 512
-	# 16MiB of disk space
-	export BLK_MEM ?= 16777216
 endif
+
+# create a virtual disk image for QEMU targets
+export BLK_NUM_PART = 1
+export BLK_SIZE = 512
+# 16MiB of disk space
+export BLK_MEM ?= 16777216
 
 # Allow to user to specify a custom partition
 PARTITION :=
 ifdef PARTITION
 export PARTITION_ARG := --partition $(PARTITION)
 endif
-
-# All platforms use the same Linux and initrd images.
-export LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-export INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
 BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})

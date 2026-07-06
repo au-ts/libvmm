@@ -20,7 +20,7 @@ SERIAL_COMPONENTS := $(SDDF)/serial/components
 BLK_COMPONENTS := $(SDDF)/blk/components
 NET_COMPONENTS := $(SDDF)/network/components
 
-CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm/aarch64
+CLIENT_VM = $(VIRTIO_EXAMPLE)/client_vm/$(ARCH)
 CLIENT_DTB := client_vm/vm.dtb
 METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
 
@@ -29,9 +29,10 @@ SDDF_CUSTOM_LIBC := 1
 TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
-	maaxboard
+	maaxboard \
+	x86_64_generic_vtx
 
-SYSTEM_FILE := virtio.system
+SYSTEM_FILE := virtio_pci.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
@@ -39,6 +40,15 @@ include ${SDDF}/tools/make/board/common.mk
 
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
+
+ifeq ($(ARCH),aarch64)
+	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
+	INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
+else ifeq ($(ARCH),x86_64)
+
+else
+$(error Unsupported architecture $(ARCH))
+endif
 
 vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
 
@@ -83,8 +93,13 @@ all: ${IMAGE_FILE}
 
 $(IMAGES): libsddf_util_debug.a
 
+ifeq ($(ARCH),x86_64)
+$(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+else
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+endif
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
@@ -147,6 +162,9 @@ client_vm/vm.dtb: client_vm/vm.dts
 client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+client_vm/guest_arch_init.o: $(CLIENT_VM)/guest_arch_init.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
 	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
@@ -156,7 +174,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
+client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
