@@ -83,6 +83,7 @@ def backend_fn(
                 "-initrd", str(loader_img.resolve()),
                 # fmt: on
                 "-smp", "4",
+                "-vga", "none",
                 *QEMU_COMMON_FLAGS,
             )
         else:
@@ -109,7 +110,7 @@ def virtio_backend_fn(test_config: TestConfig, loader_img: Path) -> HardwareBack
             capture_output=True,
         )
 
-        if test_config.board == "x86_64_generic":
+        if "x86_64_generic" in test_config.board:
             virtio_blk_device = "virtio-blk-pci,drive=hd,addr=0x3.0"
             virtio_net_device = "virtio-net-pci,netdev=netdev0,addr=0x2.0"
         else:
