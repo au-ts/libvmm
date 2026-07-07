@@ -173,10 +173,10 @@ client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 	$(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(LIBVMM)/tools/dtscat $^ > $@
 
-client_vm/vm.dtb: client_vm/vm.dts
+client_vm/vm.dtb: client_vm/vm.dts |client_vm
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vm_dsdt.aml: $(CLIENT_VM)/virtio_pci_dsdt.dsl
+client_vm/vm_dsdt.aml: $(CLIENT_VM)/virtio_pci_dsdt.dsl |client_vm
 	$(IASL) -p $@ $^
 
 client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
