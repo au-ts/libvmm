@@ -78,10 +78,16 @@ bool virq_controller_init(uintptr_t guest_vapic_vaddr);
 #endif
 
 /*
- * Inject an IRQ into the guest according to the routing information.
- * Note that this API requires that the IRQ has been registered (with virq_register).
+ * Inject an edge-triggered IRQ (a discrete message or pulse).
+ * Use this for MSI/MSI-X, edge-triggered timers, or IPIs.
  */
 bool virq_inject(irq_routing_info_t irq_routing_info);
+
+/*
+ * Set the state of a level-sensitive IRQ line.
+ * Use this for legacy PCI INTx, level-triggered timers.
+ */
+bool virq_set_level(irq_routing_info_t irq_routing_info, bool level);
 
 bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data);
 

@@ -105,6 +105,9 @@ struct ioapic_regs {
     uint32_t ioapicarb;
     uint64_t ioredtbl[IOAPIC_NUM_PINS];
 
+    /* is the pin "electrically" asserted. */
+    bool pin_asserted[IOAPIC_NUM_PINS];
+
     struct ioapic_virq_handle virq_handle_map[IOAPIC_NUM_PINS];
 };
 
@@ -124,7 +127,7 @@ bool lapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word quali
 bool lapic_read_fault_handle(uint64_t offset, uint32_t *result);
 bool lapic_write_fault_handle(uint64_t offset, uint32_t data);
 
-bool inject_ioapic_irq(int ioapic, int pin);
+bool ioapic_assert_pin(int ioapic, int pin, bool assert);
 
 bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualification,
                          decoded_instruction_ret_t decoded_ins);

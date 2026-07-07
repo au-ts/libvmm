@@ -80,8 +80,24 @@ bool virq_inject(irq_routing_info_t irq_routing_info)
     if (!irq_type_check(irq_routing_info)) {
         return false;
     }
-    return inject_ioapic_irq(IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info),
-                             IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info));
+
+    int ioapic = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    int pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+
+    bool success = ioapic_assert_pin(ioapic, pin, true);
+    ioapic_assert_pin(ioapic, pin, false); // simulate edge triggered.
+    return success;
+}
+
+bool virq_set_level(irq_routing_info_t irq_routing_info, bool level)
+{
+    if (!irq_type_check(irq_routing_info)) {
+        return false;
+    }
+
+    int ioapic = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    int pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+    return ioapic_assert_pin(ioapic, pin, level);
 }
 
 bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data)

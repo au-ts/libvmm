@@ -70,7 +70,8 @@ struct lapic_state {
 
 struct lapic_state lapic_state;
 
-bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
+static bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
+static bool inject_ioapic_irq(int ioapic, int pin);
 
 uint32_t lapic_read_reg(int offset)
 {
@@ -272,7 +273,7 @@ static bool vcpu_can_take_irq(size_t vcpu_id)
     return true;
 }
 
-void lapic_write_tpr(uint8_t tpr)
+static void lapic_write_tpr(uint8_t tpr)
 {
     uint8_t old_tpr = lapic_read_reg(REG_LAPIC_TPR);
     lapic_write_reg(REG_LAPIC_TPR, tpr);
@@ -321,7 +322,7 @@ void lapic_maintenance(void)
     vcpu_exit_inject_irq(vm_entry_interruption);
 }
 
-void lapic_write_eoi(void)
+static void lapic_write_eoi(void)
 {
     uint8_t done_vector;
     if (!get_highest_vector_in_service(&done_vector)) {
@@ -334,11 +335,21 @@ void lapic_write_eoi(void)
     int isr_reg_off = REG_LAPIC_ISR_0 + (isr_n * IRR_ISR_MULTIPLIER);
     lapic_write_reg(isr_reg_off, lapic_read_reg(isr_reg_off) & ~BIT(isr_idx));
 
-    /* if it is a passed through I/O APIC IRQ, run the ack function */
     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
         if (ioapic_regs.virq_handle_map[i].valid) {
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == done_vector) {
+                /* if level triggered then re-inject if the I/O APIC line is still asserted. */
+                if (ioapic_regs.ioredtbl[i] & BIT(15)) {
+                    /* clear the Remote IRR bit */
+                    ioapic_regs.ioredtbl[i] &= ~BIT(14);
+
+                    if (ioapic_regs.pin_asserted[i]) {
+                        inject_ioapic_irq(0, i);
+                    }
+                }
+
+                /* if it is a passed through I/O APIC IRQ, run the ack function */
                 if (ioapic_regs.virq_handle_map[i].ack_fn) {
                     ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
                                                           ioapic_regs.virq_handle_map[i].ack_data);
@@ -738,7 +749,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     return true;
 }
 
-bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
+static bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
 {
     assert(vcpu_id == 0);
 
@@ -775,16 +786,8 @@ bool inject_lapic_irq(size_t vcpu_id, uint8_t vector)
     return true;
 }
 
-bool inject_ioapic_irq(int ioapic, int pin)
+static bool inject_ioapic_irq(int ioapic, int pin)
 {
-    /* Only 1 chip right now, which is a direct map to the dual 8259. */
-    assert(ioapic == 0);
-
-    if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
-        LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
-        return false;
-    }
-
     /* Check if the irq line is masked. */
     if (ioapic_regs.ioredtbl[pin] & BIT(16)) {
         return false;
@@ -797,9 +800,16 @@ bool inject_ioapic_irq(int ioapic, int pin)
         assert(false);
     }
 
-    // @billn sus only support edge triggered interrupts right now
-    uint8_t level_trigger = (ioapic_regs.ioredtbl[pin] >> 15) & 0x1;
-    assert(!level_trigger);
+    if (ioapic_regs.ioredtbl[pin] & BIT(15)) {
+        /* is the local APIC already processing this interrupt (remote IRR bit set)? */
+        if (ioapic_regs.ioredtbl[pin] & BIT(14)) {
+            /* no need to reinject, the guest is currently servicing the interrupt */
+            return true;
+        } else {
+            /* need to reinject, the interrupt is now inflight */
+            ioapic_regs.ioredtbl[pin] |= BIT(14);
+        }
+    }
 
     uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
 
@@ -840,6 +850,32 @@ bool inject_ioapic_irq(int ioapic, int pin)
 
     // @billn need to read cpu id from redirection register, revisit for multi vcpu
     return inject_lapic_irq(0, vector);
+}
+
+bool ioapic_assert_pin(int ioapic, int pin, bool assert)
+{
+    /* Only 1 chip right now, which is a direct map to the dual 8259. */
+    assert(ioapic == 0);
+
+    if (pin >= IOAPIC_LAST_INDIRECT_INDEX) {
+        LOG_VMM_ERR("trying to inject IRQ to out of bound I/O APIC pin %d\n", pin);
+        return false;
+    }
+
+    if (!ioapic_regs.virq_handle_map[pin].valid) {
+        LOG_VMM_ERR("cannot inject unregistered IOAPIC IRQ chip %u pin %u\n", ioapic, pin);
+        return false;
+    }
+
+    ioapic_regs.pin_asserted[pin] = assert;
+
+    if (assert == true) {
+        // Only attempt to inject if the line is transitioning to high,
+        // or if we need to re-evaluate.
+        return inject_ioapic_irq(ioapic, pin);
+    }
+
+    return true;
 }
 
 bool ioapic_ack_passthrough_irq(uint8_t vector)
@@ -890,6 +926,16 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
                         return false;
                     }
 #endif
+
+                    /* if level triggered then re-inject if the I/O APIC line is still asserted. */
+                    if (ioapic_regs.ioredtbl[i] & BIT(15)) {
+                        /* clear the Remote IRR bit */
+                        ioapic_regs.ioredtbl[i] &= ~BIT(14);
+
+                        if (ioapic_regs.pin_asserted[i]) {
+                            return inject_ioapic_irq(0, i);
+                        }
+                    }
 
                     return true;
                 }
