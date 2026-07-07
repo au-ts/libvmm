@@ -150,9 +150,14 @@ static uint8_t get_timer_n_ioapic_pin(int n)
     return (hpet_regs.comparators[n].config >> 9) & 0x1f; // Tn_INT_ROUTE_CNF
 }
 
+static bool timer_n_irq_on(int n)
+{
+    return !!(hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
+}
+
 static bool timer_n_can_interrupt(int n)
 {
-    return counter_on() && !!(hpet_regs.comparators[n].config & Tn_INT_ENB_CNF);
+    return counter_on() && timer_n_irq_on(n);
 }
 
 static bool timer_n_in_periodic_mode(int n)
@@ -183,7 +188,8 @@ void hpet_handle_timer_ntfn(uint64_t comparator)
 
     if (timer_n_can_interrupt(comparator)) {
         int ioapic_pin = get_timer_n_ioapic_pin(comparator);
-        inject_ioapic_irq(comparator, ioapic_pin);
+        /* Ignore error because the irq can be masked by the guest */
+        virq_inject(X86_IOAPIC_IRQ_ROUTE(0, ioapic_pin));
     }
 
     /* Comparator 0 is periodic capable. */
@@ -290,6 +296,7 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
 {
     assert(comparator <= NUM_TIM_CAP_VAL);
     bool periodic_old = timer_n_in_periodic_mode(comparator);
+    bool irq_en_old = timer_n_irq_on(comparator);
 
     struct comparator_regs *regs = &hpet_regs.comparators[comparator];
 
@@ -307,9 +314,14 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
     regs->config |= regs->config_mask;
 
     bool periodic_new = timer_n_in_periodic_mode(comparator);
+    bool irq_en_new = timer_n_irq_on(comparator);
 
     if (periodic_old && !periodic_new) {
         assert(comparator == 0);
+    }
+
+    if (!irq_en_old && irq_en_new) {
+        return virq_register(X86_IOAPIC_IRQ_ROUTE(0, get_timer_n_ioapic_pin(comparator)), NULL, NULL);
     }
 
     return true;
