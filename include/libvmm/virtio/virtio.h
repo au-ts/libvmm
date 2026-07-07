@@ -143,4 +143,8 @@ bool virtio_virtq_pop_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret);
  */
 void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint32_t bytes_written);
 
+/* Set the device's interrupt status, then deassert the virtual interrupt line if needed. */
 void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bool config_change);
+
+/* Inject an interrupt into the guest according to the device's transport type. */
+bool virtio_inject_interrupt(struct virtio_device *dev);

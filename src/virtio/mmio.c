@@ -313,12 +313,6 @@ static void virtio_virq_default_ack(irq_routing_info_t irq_routing_info, void *c
 {
 }
 
-bool virtio_mmio_irq_inject(virtio_device_t *dev)
-{
-    /* @billn, this whole MMIO thing should be refactored into two distinct bus + device layer like PCI. */
-    return virq_inject(dev->irq_routing_info);
-}
-
 bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, uintptr_t region_size,
                                  irq_routing_info_t irq_routing_info)
 {
