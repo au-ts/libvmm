@@ -88,6 +88,15 @@ bool virq_inject(irq_routing_info_t irq_routing_info)
     return vgic_inject_irq(IRQ_ROUTE_TO_ARM_CPUID(irq_routing_info), IRQ_ROUTE_TO_ARM_INTID(irq_routing_info));
 }
 
+bool virq_set_level(irq_routing_info_t irq_routing_info, bool level)
+{
+    if (level) {
+        return vgic_inject_irq(IRQ_ROUTE_TO_ARM_CPUID(irq_routing_info), IRQ_ROUTE_TO_ARM_INTID(irq_routing_info));
+    } else {
+        return true;
+    }
+}
+
 bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data)
 {
     if (!irq_type_check(irq_routing_info)) {
