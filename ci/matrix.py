@@ -75,7 +75,11 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         "boards": [
             "qemu_virt_aarch64",
         ],
-        "tests_exclude": [],
+        # disabled due to https://github.com/seL4/microkit/pull/532 breaking rust-sel4
+        "tests_exclude": [
+            { "config": "debug" },
+            { "config": "release" },
+        ],
     },
     "simple": {
         "configs": ["debug", "release"],
