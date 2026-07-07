@@ -207,7 +207,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
         virtio_set_interrupt_status(dev, true, false);
-        bool success = virq_inject(dev->irq_routing_info);
+        bool success = virtio_inject_interrupt(dev);
 
         microkit_notify(console->tx_ch);
         return success;
@@ -266,7 +266,7 @@ static bool virtio_console_handle_rx(struct virtio_console_device *console)
      * available data. In this case we do not set the IRQ status. */
     if (transferred) {
         virtio_set_interrupt_status(&console->virtio_device, true, false);
-        bool success = virq_inject(console->virtio_device.irq_routing_info);
+        bool success = virtio_inject_interrupt(&console->virtio_device);
         return success;
     }
 

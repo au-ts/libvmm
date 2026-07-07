@@ -225,5 +225,23 @@ void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bo
          * virtIO spec 4.1.4.5.1 Device Requirements: ISR status capability
          */
         assert(pci_device_set_irq_status(dev->transport.pci.pci_handle, dev->regs.InterruptStatus != 0));
+        /* Since PCI INTx IRQ is level triggered we must deassert the line. */
+        if (!dev->regs.InterruptStatus) {
+            virq_set_level(dev->irq_routing_info, false);
+        }
+    }
+}
+
+bool virtio_inject_interrupt(struct virtio_device *dev)
+{
+    switch (dev->transport_type) {
+    case VIRTIO_TRANSPORT_PCI:
+        /* PCI INTx IRQ is level triggered. */
+        return virq_set_level(dev->irq_routing_info, true);
+    case VIRTIO_TRANSPORT_MMIO:
+        return virq_inject(dev->irq_routing_info);
+    default:
+        assert(0);
+        return false;
     }
 }

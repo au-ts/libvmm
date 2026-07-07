@@ -555,7 +555,7 @@ static bool virtio_blk_queue_notify(struct virtio_device *dev)
     if (!consumption_status) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
         virtio_set_interrupt_status(dev, true, false);
-        virq_inject_success = virq_inject(dev->irq_routing_info);
+        virq_inject_success = virtio_inject_interrupt(dev);
     }
 
     struct virtio_blk_device *state = device_state(dev);
@@ -725,7 +725,7 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
     bool virq_inject_success = true;
     if (resp_handled && !read_write_modify_inflight && !virt_notify) {
         virtio_set_interrupt_status(dev, true, false);
-        virq_inject_success = virq_inject(dev->irq_routing_info);
+        virq_inject_success = virtio_inject_interrupt(dev);
     }
 
     if (virt_notify) {

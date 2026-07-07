@@ -141,7 +141,7 @@ static bool virtio_net_set_device_config(struct virtio_device *dev, uint32_t off
 static bool virtio_net_respond(struct virtio_device *dev)
 {
     virtio_set_interrupt_status(dev, true, false);
-    bool success = virq_inject(dev->irq_routing_info);
+    bool success = virtio_inject_interrupt(dev);
     return success;
 }
 
