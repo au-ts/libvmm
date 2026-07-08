@@ -33,7 +33,7 @@ def x86_virtio_net(eth_driver):
         sdf, "hw_net_rings", 0x10000, paddr=VIRTIO_NET_VQUEUES_PADDR
     )
     sdf.add_mr(hw_net_rings)
-    hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
+    hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw", cached=False)
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
@@ -61,7 +61,7 @@ def x86_virtio_blk(blk_driver):
         sdf, "virtio_requests", 0x10000, paddr=VIRTIO_BLK_VQUEUES_PADDR
     )
     sdf.add_mr(blk_requests_mr)
-    blk_requests_map = SystemDescription.Map(blk_requests_mr, 0x2020_0000, "rw")
+    blk_requests_map = SystemDescription.Map(blk_requests_mr, 0x2020_0000, "rw", cached=False)
     blk_driver.add_map(blk_requests_map)
 
     blk_virtio_metadata_mr = SystemDescription.MemoryRegion(
