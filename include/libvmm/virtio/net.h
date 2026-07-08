@@ -225,10 +225,12 @@ struct virtio_net_device {
     microkit_channel rx_ch;
 };
 
+#if !defined(CONFIG_ARCH_X86)
 bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size,
                           irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
                           uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch, microkit_channel tx_ch,
                           uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ]);
+#endif
 
 bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint16_t pci_bus, uint16_t pci_dev,
                          irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
