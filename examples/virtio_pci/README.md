@@ -14,7 +14,15 @@ example's [README](../virtio/README.md).
 The main differences between this example and the virtIO example
 is the PCI node in the guest Device Tree and the use of different
 APIs to setup virtIO PCI devices in the client VMM. In addition,
-it supports QEMU x86_64 target.
+it supports QEMU x86_64 target (use `x86_64_generic_vtx` board).
+
+## x86_64 Hardware Requirements
+
+QEMU's Tiny Code Generator (TCG) does not emulate Intel's
+virtualisation extension on x86_64. Whereas for ARM it does.
+Hence to run this example on QEMU, you will need an x86_64 Intel CPU
+with virtualisation (VT-x) turned on in your BIOS, a Linux install
+and KVM enabled.
 
 ## QEMU x86_64 troubleshooting
 
