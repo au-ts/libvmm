@@ -16,16 +16,27 @@ Channel = SystemDescription.Channel
 
 
 # @billn very hacky, resolve properly once PCI driver is merged in sDDF
+# these need to match what the driver hardcoded
+VIRTIO_NET_VQUEUES_PADDR = 0x7A00_0000
+VIRTIO_BLK_VQUEUES_PADDR = 0x5FDF_0000
+VIRTIO_BLK_DATA_PADDR = 0x5FFF_0000
+# these need to match what QEMU sets up, check readme for more info
+VIRTIO_NET_PCI_BAR_PADDR = 0xFEBF_8000
+VIRTIO_NET_PCI_IRQ = 10
+VIRTIO_BLK_PCI_BAR_PADDR = 0xFEBF_C000
+VIRTIO_BLK_PCI_IRQ = 11
+
+
 def x86_virtio_net(eth_driver):
     hw_net_rings = SystemDescription.MemoryRegion(
-        sdf, "hw_net_rings", 0x10000, paddr=0x7A00_0000
+        sdf, "hw_net_rings", 0x10000, paddr=VIRTIO_NET_VQUEUES_PADDR
     )
     sdf.add_mr(hw_net_rings)
     hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw")
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_net_regs", 0x4000, paddr=0xFEBF_8000
+        sdf, "virtio_net_regs", 0x4000, paddr=VIRTIO_NET_PCI_BAR_PADDR
     )
     sdf.add_mr(virtio_net_regs)
     virtio_net_regs_map = SystemDescription.Map(
@@ -33,20 +44,22 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_map(virtio_net_regs_map)
 
-    virtio_net_irq = SystemDescription.IrqIoapic(ioapic_id=0, pin=10, vector=1, id=16)
+    virtio_net_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0, pin=VIRTIO_NET_PCI_IRQ, vector=1, id=16
+    )
     eth_driver.add_irq(virtio_net_irq)
 
 
 def x86_virtio_blk(blk_driver):
     blk_requests_mr = SystemDescription.MemoryRegion(
-        sdf, "virtio_requests", 0x10000, paddr=0x5FDF_0000
+        sdf, "virtio_requests", 0x10000, paddr=VIRTIO_BLK_VQUEUES_PADDR
     )
     sdf.add_mr(blk_requests_mr)
     blk_requests_map = SystemDescription.Map(blk_requests_mr, 0x2020_0000, "rw")
     blk_driver.add_map(blk_requests_map)
 
     blk_virtio_metadata_mr = SystemDescription.MemoryRegion(
-        sdf, "virtio_metadata", 0x10000, paddr=0x5FFF_0000
+        sdf, "virtio_metadata", 0x10000, paddr=VIRTIO_BLK_DATA_PADDR
     )
     sdf.add_mr(blk_virtio_metadata_mr)
     blk_virtio_metadata_map = SystemDescription.Map(
@@ -55,7 +68,7 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_map(blk_virtio_metadata_map)
 
     virtio_blk_regs = SystemDescription.MemoryRegion(
-        sdf, "virtio_blk_regs", 0x4000, paddr=0xFEBF_C000
+        sdf, "virtio_blk_regs", 0x4000, paddr=VIRTIO_BLK_PCI_BAR_PADDR
     )
     sdf.add_mr(virtio_blk_regs)
     virtio_blk_regs_map = SystemDescription.Map(
@@ -63,7 +76,9 @@ def x86_virtio_blk(blk_driver):
     )
     blk_driver.add_map(virtio_blk_regs_map)
 
-    virtio_blk_irq = SystemDescription.IrqIoapic(ioapic_id=0, pin=11, vector=2, id=17)
+    virtio_blk_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0, pin=VIRTIO_BLK_PCI_IRQ, vector=2, id=17
+    )
     blk_driver.add_irq(virtio_blk_irq)
 
 
