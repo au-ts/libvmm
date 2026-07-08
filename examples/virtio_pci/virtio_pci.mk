@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 PYTHON ?= python3
+IASL ?= iasl
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
@@ -43,9 +44,17 @@ CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $
 
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD := b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
-else ifeq ($(ARCH),x86_64)
+	INITRD ?= b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
 
+	QEMU_ARCH_ARGS := -machine virt,virtualization=on,secure=off \
+					  -cpu cortex-a53 \
+					  -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
+else ifeq ($(ARCH),x86_64)
+	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
+	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
+					  -kernel sel4_32.elf -initrd $(IMAGE_FILE) -vga none
 else
 $(error Unsupported architecture $(ARCH))
 endif
@@ -56,6 +65,7 @@ CFLAGS += \
 	  -Wall \
 	  -Wno-unused-function \
 	  -DBOARD_$(MICROKIT_BOARD) \
+	  -DSDDF_VIRTIO_PCI_TRANSPORT_SKIP_BUS_CHECK \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
@@ -104,6 +114,9 @@ endif
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
 	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
+else ifeq ($(ARCH),x86_64)
+	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM.data client_vmm.elf
 endif
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
@@ -134,7 +147,11 @@ ${LINUX}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
+ifeq ($(ARCH),aarch64)
 	cp linux_download_dir/${LINUX}/linux ${LINUX}
+else ifeq ($(ARCH),x86_64)
+	cp linux_download_dir/${LINUX}/bzImage ${LINUX}
+endif
 
 ${INITRD}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz
@@ -159,20 +176,34 @@ client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
+client_vm/vm_dsdt.aml: $(CLIENT_VM)/virtio_pci_dsdt.dsl
+	$(IASL) -p $@ $^
+
 client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/guest_arch_init.o: $(CLIENT_VM)/guest_arch_init.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
+ifeq ($(ARCH),aarch64)
+client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S ${LINUX} $(CHECK_FLAGS_BOARD_MD5) \
+	                client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
+else ifeq ($(ARCH),x86_64)
+client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S ${LINUX} $(CHECK_FLAGS_BOARD_MD5) \
+	                client_vm/vm_dsdt.aml client_vm/rootfs.cpio.gz
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_DSDT_AML_PATH=\"client_vm/vm_dsdt.aml\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
+					-target $(TARGET) \
+					$(LIBVMM)/tools/package_guest_images.S -o $@
+endif
 
 client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
@@ -182,11 +213,9 @@ client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o l
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE) blk_storage
-	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
-	$(QEMU) -machine virt,virtualization=on,secure=off \
-			-cpu cortex-a53 \
+	[ "${MICROKIT_BOARD}" = "qemu_virt_aarch64" ] || [ "${MICROKIT_BOARD}" = "x86_64_generic_vtx" ]
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
