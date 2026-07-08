@@ -13,6 +13,7 @@ VirtualMachine = SystemDescription.VirtualMachine
 MemoryRegion = SystemDescription.MemoryRegion
 Map = SystemDescription.Map
 Channel = SystemDescription.Channel
+IrqIoapic = SystemDescription.IrqIoapic
 
 
 # @billn very hacky, resolve properly once PCI driver is merged in sDDF
@@ -44,8 +45,13 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_map(virtio_net_regs_map)
 
-    virtio_net_irq = SystemDescription.IrqIoapic(
-        ioapic_id=0, pin=VIRTIO_NET_PCI_IRQ, vector=1, id=16
+    virtio_net_irq = IrqIoapic(
+        ioapic_id=0,
+        pin=VIRTIO_NET_PCI_IRQ,
+        vector=1,
+        id=16,
+        trigger=IrqIoapic.Trigger.LEVEL,
+        polarity=IrqIoapic.Polarity.ACTIVELOW,
     )
     eth_driver.add_irq(virtio_net_irq)
 
@@ -76,8 +82,13 @@ def x86_virtio_blk(blk_driver):
     )
     blk_driver.add_map(virtio_blk_regs_map)
 
-    virtio_blk_irq = SystemDescription.IrqIoapic(
-        ioapic_id=0, pin=VIRTIO_BLK_PCI_IRQ, vector=2, id=17
+    virtio_blk_irq = IrqIoapic(
+        ioapic_id=0,
+        pin=VIRTIO_BLK_PCI_IRQ,
+        vector=2,
+        id=17,
+        trigger=IrqIoapic.Trigger.LEVEL,
+        polarity=IrqIoapic.Polarity.ACTIVELOW,
     )
     blk_driver.add_irq(virtio_blk_irq)
 
