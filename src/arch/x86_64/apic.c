@@ -731,6 +731,12 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                                 ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
                                                                       ioapic_regs.virq_handle_map[i].ack_data);
                             }
+
+                            /* Attempt reinjection as well */
+                            if (ioapic_regs.pin_asserted[i]) {
+                                inject_ioapic_irq(0, i);
+                            }
+
                             break;
                         }
                     }
