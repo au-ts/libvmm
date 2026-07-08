@@ -98,9 +98,11 @@ struct virtio_console_device {
     int rx_ch;
 };
 
+#if !defined(CONFIG_ARCH_X86)
 bool virtio_mmio_console_init(struct virtio_console_device *console, uintptr_t region_base, uintptr_t region_size,
                               irq_routing_info_t irq_routing_info, serial_queue_handle_t *rxq,
                               serial_queue_handle_t *txq, int tx_ch, int rx_ch);
+#endif
 
 bool virtio_pci_console_init(struct virtio_console_device *console, uint16_t pci_bus, uint16_t pci_dev,
                              irq_routing_info_t irq_routing_info, serial_queue_handle_t *rxq,

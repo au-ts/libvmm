@@ -205,10 +205,12 @@ struct virtio_blk_device {
     int server_ch;
 };
 
+#if !defined(CONFIG_ARCH_X86)
 bool virtio_mmio_blk_init(struct virtio_blk_device *blk_dev, uintptr_t region_base, uintptr_t region_size,
                           irq_routing_info_t irq_routing_info, uintptr_t data_region, size_t data_region_size,
                           blk_storage_info_t *storage_info, blk_queue_handle_t *queue_h, uint32_t queue_capacity,
                           int server_ch);
+#endif
 
 bool virtio_pci_blk_init(struct virtio_blk_device *blk_dev, uint16_t pci_bus, uint16_t pci_dev,
                          irq_routing_info_t irq_routing_info, uintptr_t data_region, size_t data_region_size,
