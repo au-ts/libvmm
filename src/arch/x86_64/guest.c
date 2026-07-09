@@ -18,6 +18,7 @@
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
 #include <libvmm/arch/x86_64/i440fx.h>
+#include <libvmm/arch/x86_64/cmos.h>
 #include <sel4/arch/vmenter.h>
 #endif
 
@@ -65,6 +66,12 @@ bool guest_init(arch_guest_init_t init_args)
     /* Initialise the virtual Local and I/O APICs */
     if (!virq_controller_init(0)) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controllers\n");
+        return false;
+    }
+
+    /* Initialise the CMOS */
+    if (!fault_register_pio_exception_handler(CMOS_PORT_ADDR, CMOS_PORT_SIZE, cmos_fault_handle, NULL)) {
+        LOG_VMM_ERR("Failed to register PIO handler for CMOS\n");
         return false;
     }
 
