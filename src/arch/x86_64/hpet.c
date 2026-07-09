@@ -182,6 +182,8 @@ void hpet_handle_timer_ntfn(uint64_t comparator)
 {
     assert(comparator <= NUM_TIM_CAP_VAL);
 
+    hpet_regs.comparators[comparator].timeout_handle_valid = false;
+
     if (!counter_on()) {
         return;
     }
