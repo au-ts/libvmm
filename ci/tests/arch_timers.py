@@ -21,7 +21,7 @@ from ci import common, matrix
 # check that Linux is happy with our virtualisation job.
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
     async with asyncio.timeout(30):
-        if "x86" in test_config.board:
+        if common.is_x86_board(test_config.board):
             # HPET detected?
             await wait_for_output(backend, b"clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff")
             # TSC-early detected?

@@ -100,6 +100,7 @@ jobs:
           path: |
             ci_build/**/loader.img
             ci_build/**/sel4_32.elf
+            ci_build/**/sel4.elf
           if-no-files-found: error
 
   run_qemu:
