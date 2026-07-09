@@ -446,6 +446,7 @@ static void handle_lapic_timer_nftn(size_t vcpu_id)
 {
     assert(lapic_state.timeout_handle_valid);
     guest_time_cancel_timeout(lapic_state.timeout_handle);
+    lapic_state.timeout_handle_valid = false;
 
     if (!(lapic_read_reg(REG_LAPIC_SVR) & BIT(8))) {
         /* [1] "Figure 12-23. Spurious-Interrupt Vector Register (SVR)"
