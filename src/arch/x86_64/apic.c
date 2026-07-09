@@ -351,7 +351,7 @@ static void lapic_write_eoi(void)
 
                 /* if it is a passed through I/O APIC IRQ, run the ack function */
                 if (ioapic_regs.virq_handle_map[i].ack_fn) {
-                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, i),
                                                           ioapic_regs.virq_handle_map[i].ack_data);
                 }
                 break;
