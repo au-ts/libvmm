@@ -41,76 +41,107 @@ static struct vcpu_fault_state vcpu_fault_state;
  *     Order Number: 325462-080US June 2023
  */
 
-bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
+static bool vcpu_set_up_vm_exec_controls(uint64_t primary, uint64_t secondary)
 {
-    /* Set up control registers */
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0, CR0_DEFAULT);
+    /* Enable VT-x features we need by writing to VMCS control registers */
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, primary);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, secondary);
+
+    /* Then check that all of them are supported by the host. */
+    uint64_t read_back_ppc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
+    if (!check_baseline_bits(primary, read_back_ppc)) {
+        LOG_VMM_ERR("required Primary Processor-Based VM-Execution Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", primary, read_back_ppc);
+        print_missing_baseline_bits(primary, read_back_ppc);
+        return false;
+    }
+
+    uint64_t read_back_spc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS);
+    if (!check_baseline_bits(secondary, read_back_spc)) {
+        LOG_VMM_ERR("required Secondary Processor-Based VM-Execution Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", secondary, read_back_spc);
+        print_missing_baseline_bits(secondary, read_back_spc);
+        return false;
+    }
+
+    return true;
+}
+
+static bool vcpu_set_up_control_registers(uint64_t cr0, uint64_t cr3, uint64_t cr4)
+{
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0, cr0);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR3, cr3);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, CR4_DEFAULT);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4, cr4);
     /* Prevent guest from turning off VM mode */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, CR4_EN_MASK);
+
+    /* Check that all CR0 and CR4 features we need are supported by the host.
+     * We perform this check because seL4 will clear any unsupported feature bits. */
+    uint64_t read_back_cr0 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0);
+    if (!check_baseline_bits(cr0, read_back_cr0)) {
+        LOG_VMM_ERR("required Control Register 0 (CR0) features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", cr0, read_back_cr0);
+        print_missing_baseline_bits(cr0, read_back_cr0);
+        return false;
+    }
+
+    uint64_t read_back_cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
+    if (!check_baseline_bits(cr4, read_back_cr4)) {
+        LOG_VMM_ERR("required Control Register 4 (CR4) features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", cr4, read_back_cr4);
+        print_missing_baseline_bits(cr4, read_back_cr4);
+        return false;
+    }
+
+    return true;
+}
+
+static bool vcpu_set_up_context_switching(uint64_t entry_controls, uint64_t exit_controls)
+{
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, entry_controls);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EXIT_CONTROLS, exit_controls);
+
+    uint64_t read_back_venc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
+    if (!check_baseline_bits(entry_controls, read_back_venc)) {
+        LOG_VMM_ERR("required VM-Entry Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", entry_controls, read_back_venc);
+        print_missing_baseline_bits(entry_controls, read_back_venc);
+        return false;
+    }
+
+    uint64_t read_back_vexc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EXIT_CONTROLS);
+    if (!check_baseline_bits(exit_controls, read_back_vexc)) {
+        LOG_VMM_ERR("required VM-Exit Controls features not supported.\n");
+        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", exit_controls, read_back_vexc);
+        print_missing_baseline_bits(exit_controls, read_back_vexc);
+        return false;
+    }
+
+    return true;
+}
+
+bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
+{
+    if (!vcpu_set_up_vm_exec_controls(VMCS_PPVC_DEFAULT, VMCS_SPC_DEFAULT)) {
+        LOG_VMM_ERR("failed to setup VM-Execution Controls\n");
+        return false;
+    }
+
+    if (!vcpu_set_up_control_registers(CR0_DEFAULT, cr3, CR4_DEFAULT)) {
+        LOG_VMM_ERR("failed to setup Control Registers\n");
+        return false;
+    }
+
+    if (!vcpu_set_up_context_switching(VMCS_VENC_LM_DEFAULT, VMCS_VEXC_DEFAULT)) {
+        LOG_VMM_ERR("failed to setup Entry and Exit Controls\n");
+        return false;
+    }
+
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_LM_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, RFLAGS_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, gdt_gpa);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_LIMIT, gdt_limit);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_PAT, PAT_RESET_VALUE);
-
-    /* Check that all CR0 and CR4 features we need are supported by the host.
-     * We perform this check because seL4 will clear any unsupported feature bits. */
-    uint64_t read_back_cr0 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0);
-    if (!check_baseline_bits(CR0_DEFAULT, read_back_cr0)) {
-        LOG_VMM_ERR("required Control Register 0 (CR0) features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", CR0_DEFAULT, read_back_cr0);
-        print_missing_baseline_bits(CR0_DEFAULT, read_back_cr0);
-        return false;
-    }
-
-    uint64_t read_back_cr4 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR4);
-    if (!check_baseline_bits(CR4_DEFAULT, read_back_cr4)) {
-        LOG_VMM_ERR("required Control Register 4 (CR4) features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", CR4_DEFAULT, read_back_cr4);
-        print_missing_baseline_bits(CR4_DEFAULT, read_back_cr4);
-        return false;
-    }
-
-    /* Enable VT-x features we need by writing to VMCS control registers */
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PPVC_DEFAULT);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS, VMCS_SPC_DEFAULT);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS, VMCS_VENC_LM_DEFAULT);
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_DEFAULT);
-
-    /* Then check that all of them are supported by the host. */
-    uint64_t read_back_ppc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS);
-    if (!check_baseline_bits(VMCS_PPVC_DEFAULT, read_back_ppc)) {
-        LOG_VMM_ERR("required Primary Processor-Based VM-Execution Controls features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_PPVC_DEFAULT, read_back_ppc);
-        print_missing_baseline_bits(VMCS_PPVC_DEFAULT, read_back_ppc);
-        return false;
-    }
-
-    uint64_t read_back_spc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_SECONDARY_PROCESSOR_CONTROLS);
-    if (!check_baseline_bits(VMCS_SPC_DEFAULT, read_back_spc)) {
-        LOG_VMM_ERR("required Secondary Processor-Based VM-Execution Controls features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_SPC_DEFAULT, read_back_spc);
-        print_missing_baseline_bits(VMCS_SPC_DEFAULT, read_back_spc);
-        return false;
-    }
-
-    uint64_t read_back_venc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_CONTROLS);
-    if (!check_baseline_bits(VMCS_VENC_LM_DEFAULT, read_back_venc)) {
-        LOG_VMM_ERR("required VM-Entry Controls features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_VENC_LM_DEFAULT, read_back_venc);
-        print_missing_baseline_bits(VMCS_VENC_LM_DEFAULT, read_back_venc);
-        return false;
-    }
-
-    uint64_t read_back_vexc = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EXIT_CONTROLS);
-    if (!check_baseline_bits(VMCS_VEXC_DEFAULT, read_back_vexc)) {
-        LOG_VMM_ERR("required VM-Exit Controls features not supported.\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, bits sticked: 0x%lx\n", VMCS_VEXC_DEFAULT, read_back_vexc);
-        print_missing_baseline_bits(VMCS_VEXC_DEFAULT, read_back_vexc);
-        return false;
-    }
 
     /* These aren't useful in long mode so we just leave them in a sane default enough to boot a guest kernel. */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_BASE, 0);
