@@ -1,0 +1,136 @@
+/*
+ * Copyright 2023, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <microkit.h>
+#include <libvmm/libvmm.h>
+
+/*
+ * As this is just an example, for simplicity we just make the size of the
+ * guest's "RAM" the same for all platforms. For just booting Linux with a
+ * simple user-space, 0x10000000 bytes (256MB) is plenty.
+ */
+#define GUEST_RAM_SIZE 0x10000000
+
+#define TIMER_DRV_CH 10
+#define GUEST_RAM_START_GPA LOW_RAM_START_GPA
+#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+
+#define SERIAL_IRQ_CH 1
+
+#define COM1_IOAPIC_CHIP 0
+#define COM1_IOAPIC_PIN 4
+#define COM1_IO_PORT_ID 0
+#define COM1_IO_PORT_ADDR 0x3F8
+#define COM1_IO_PORT_SIZE 8
+
+/* Data for the guest's kernel image. */
+extern char _guest_kernel_image[];
+extern char _guest_kernel_image_end[];
+/* Data for the initial RAM disk to be passed to the kernel. */
+extern char _guest_initrd_image[];
+extern char _guest_initrd_image_end[];
+/* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
+extern char _guest_dsdt_aml[];
+extern char _guest_dsdt_aml_end[];
+/* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
+extern char _guest_firmware[];
+extern char _guest_firmware_end[];
+
+/* Microkit will set this variable to the start of the guest RAM memory region. */
+uintptr_t guest_ram_vaddr;
+
+void init(void)
+{
+    /* Initialise the VMM, the VCPU(s), and start the guest */
+    LOG_VMM("starting \"%s\"\n", microkit_name);
+
+    arch_guest_init_t args = {
+        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
+        .bsp = true,
+        .timer_ch = TIMER_DRV_CH,
+        .num_guest_ram_regions = 1,
+        .guest_ram_regions = { (struct guest_ram_region) {
+            .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } }
+    };
+    bool success = guest_init(args);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise guest\n");
+        return;
+    }
+
+    /* Place all the binaries in the right locations before starting the guest */
+    size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
+    size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+
+    if (!kernel_size) {
+        LOG_VMM_ERR("Kernel image is empty\n");
+        return;
+    }
+    if (!initrd_size) {
+        LOG_VMM_ERR("Initial ramdisk image is empty\n");
+        return;
+    }
+
+    size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
+
+    if (!dsdt_aml_size) {
+        LOG_VMM_ERR("DSDT AML image is empty\n");
+        return;
+    }
+
+    seL4_VCPUContext initial_regs;
+    linux_x86_setup_ret_t linux_setup;
+    if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
+                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
+        LOG_VMM_ERR("Failed to initialise guest images\n");
+        return;
+    }
+
+    /* Pass through COM1 serial port */
+    microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, COM1_IO_PORT_ID, COM1_IO_PORT_ADDR, COM1_IO_PORT_SIZE);
+    microkit_irq_ack(SERIAL_IRQ_CH);
+
+    /* Pass through serial IRQs */
+    assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
+
+    guest_start_long_mode(linux_setup.kernel_entry_gpa, linux_setup.pml4_gpa, linux_setup.gdt_gpa,
+                          linux_setup.gdt_limit, &initial_regs);
+}
+
+void notified(microkit_channel ch)
+{
+    switch (ch) {
+    case SERIAL_IRQ_CH: {
+        bool success = virq_handle_passthrough(ch);
+        if (!success) {
+            LOG_VMM_ERR("Serial IRQ dropped\n");
+        }
+        break;
+    }
+    default:
+        printf("Unexpected channel, ch: 0x%x\n", ch);
+    }
+}
+
+/*
+ * The primary purpose of the VMM after initialisation is to act as a fault-handler.
+ * Whenever our guest causes an exception, it gets delivered to this entry point for
+ * the VMM to handle.
+ */
+seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo)
+{
+    bool success = fault_handle(child, msginfo);
+    if (success) {
+        /* Now that we have handled the fault successfully, we reply to it so
+         * that the guest can resume execution. */
+        *reply_msginfo = microkit_msginfo_new(0, 0);
+        return seL4_True;
+    }
+
+    return seL4_False;
+}
