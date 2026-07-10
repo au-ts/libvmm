@@ -391,6 +391,20 @@ BARs are assumed to be 32-bit.
 These limitations exist because for our current use-cases this PCI support is sufficient,
 however the functionality can be extended if needed.
 
+## Architectural support
+
+### ARM
+
+Both MMIO and PCI virtIO devices are supported on ARM. Currently we provide examples for
+QEMU and the Avnet MaaXBoard, as we have corresponding serial, ethernet and block drivers
+in sDDF for those platforms.
+
+### x86
+
+Only PCI virtIO devices are supported on x86. Currently, only QEMU target are supported
+due to a lack of x86 drivers in sDDF. We are currently working adding more x86 drivers
+in sDDF which will unlock more hardware support.
+
 # Adding ARM platform support
 
 The library itself is intended to need minimal changes to add a new platform.
