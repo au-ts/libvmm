@@ -54,14 +54,14 @@ To run the VMM, you will need a host with an Intel 64-bit CPU and VT-x enabled i
 AMD CPUs aren't supported as the seL4 kernel does not implement their virtualisation extension
 at the moment.
 
-Virtualising the VMM on QEMU is supported, though if you are on WSL2, you might see Linux
+Virtualising the VMM on QEMU is supported, though if you are on QEMU, you might see Linux
 complaining:
 ```
 [   57.377976] clocksource: timekeeping watchdog on CPU0: hpet wd-wd read-back delay of 602100ns
 [   57.381493] clocksource: wd-tsc-wd read-back delay of 521600ns, clock-skew test skipped!
 ```
-This is normal for WSL2 due to the higher overhead of triple nested virtualisation. You
-won't see this problem on bare-metal or QEMU on bare-metal Linux.
+This is normal for QEMU due to the higher overhead of nested virtualisation. You
+won't see this problem on bare-metal.
 
 # Creating a system using Microkit
 
@@ -106,13 +106,14 @@ TCB registers and vCPU registers for initialising the guest, delivering virtual
 interrupts to the guest and restarting the guest.
 
 You will also see that three memory regions (MRs) exist in the system.
-1. `guest_ram` for the guest's RAM region
+1. `guest_ram` for the guest's RAM region. Mapped at Guest Physical Address (GPA)
+`0x40000000` under `<virtual_machine name="linux" >`
 2. `serial` for the UART serial device
 3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface
 
 ### x86-64
 There are more components involved on x86, the following is what is in
-[the QEMU example system](../board/qemu_virt_aarch64/systems/simple.system):
+[the QEMU example system](../../examples/simple/board/x86_64_generic_vtx/simple.system):
 
 ```xml
 <memory_region name="hpet_regs" size="0x1000" phys_addr="0xfed00000" />
@@ -149,7 +150,8 @@ mode depends on the current state of the virtual machine.
 
 There is no dedicated memory region for virtualising the APIC, as currently we
 only provide a software emulated one so all the state are kept inside a
-statically allocated structure.
+statically allocated structure. Support for Intel APICv hardware acceleration
+is currently being worked on.
 
 For serial output, we passthrough the host's COM1 port (0x3f8) and IRQ (pin 4)
 to the guest.
@@ -178,12 +180,24 @@ the starting address of the guest's RAM. There is no requirements for the
 VMM virtual address and guest physical address of RAM to match, as the VMM
 will automatically translate them as necessary during the fault handling process.
 
+### ARM discovery
+
+The Guest Physical Address (GPA) and size of guest RAM must match what you
+declared in the device tree.
+
+### x86 discovery
+
+There must be a guest RAM region starting from GPA 0. All of the guest RAM
+regions you declared via the `guest_init()` API will be made available to the
+guest via an E820 table.
+
 ## UART device passthrough
 
-The UART device is passed through to the guest so that it can access it without
-trapping into the seL4 kernel/VMM. This is done for performance and simplicity
-so that the VMM does not have to emulate accesses to the UART device. Note that
-this will work since nothing else is concurrently accessing the device.
+On most examples, the UART device is passed through to the guest so that it can
+access it without trapping into the seL4 kernel/VMM. This is done for performance
+and simplicity so that the VMM does not have to emulate accesses to the UART
+device. Note that this will work since nothing else is concurrently accessing
+the device.
 
 ## ARM GIC virtual CPU interface region
 
@@ -285,7 +299,7 @@ memory@20000000 {
 ### x86
 
 This is currently unsupported because guest RAM starts from guest physical address zero, and you can't start
-memory regions from zero.
+memory regions from host physical address zero.
 
 To solve this we need to use the IOMMU (Intel VT-d),
 support for this is being worked on.
@@ -302,7 +316,6 @@ and implements the following devices:
 
 * Console
 * Block
-* Sound
 * Network
 
 These devices can be registered on either MMIO or PCI buses, which is transparent to
@@ -320,7 +333,7 @@ platform or architecture that libvmm is being used on.
 Below is an example architecture where a guest is making use of a virtIO console device.
 
 You can also find a working example making use of virtIO devices with libvmm in the repository
-at `examples/virtio`.
+at `examples/virtio` or `examples/virtio_pci`.
 
 ![Example of virtIO console being used](./assets/virtio_console_example.svg){.class width=500}
 
@@ -354,14 +367,6 @@ The legacy interface is not supported.
 
 The block device communicates with a hardware block device via a sDDF block virtualiser.
 
-### Sound
-
-The sound device makes use of the 'sound' device class in sDDF.
-
-There are no feature bits to implement. The legacy interface is not supported.
-
-The sound device communicates with a hardware sound device via a sDDF sound virtualiser.
-
 ### Network
 
 The network device makes use of the 'net' device class in sDDF.
@@ -371,7 +376,7 @@ The device supports `VIRTIO_NET_F_MAC`. No other features are available.
 The legacy interface is not supported.
 
 The network device communicates with a hardware network card via a pair of sDDF RX and TX
-net virtualisers. In the future, this communication may be done through
+net virtualisers. This communication may be done through
 intermediary components such as a virtual network switch (VSwitch).
 
 ## PCI support
@@ -458,14 +463,9 @@ then the GIC emulation will need to be changed before your platform can be suppo
 
 ## Add platform to VMM source code
 
-<!-- @ivanv: These instructions could be improved -->
-
-Lastly, there are some platform-specific values that the VMM needs to know.
-There are two files that need to be changed:
-
-* `vmm.c`
-* Linux expects the device tree to contain the location of the initial RAM disk,
-  see the `chosen` node of `board/qemu_virt_aarch64/overlay.dts` for an example.
+The VMM library code need to know the physical address of the GIC distributor
+(and redistributor for GICv3 platforms). This needs to be defined in
+[vgic.h](../include/libvmm/arch/aarch64/vgic/vgic.h).
 
 ## Getting the guest image to boot
 
