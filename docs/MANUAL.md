@@ -563,8 +563,8 @@ you will find the corresponding driver source code.
 To create a virtual machine with libvmm, you must first initialise the
 library itself, and the archiecture specific subsystems within the library,
 such as the virtual interrupt controller. This is accomplished by calling
-`guest_init()` with a `arch_guest_init_t` object in your Microkit PD
-s `init()` entrypoint. The structure of this object is
+`guest_init()` with a `arch_guest_init_t` object in your Microkit PD's
+`init()` entrypoint. The structure of this object is
 architecture specific and provide details about your setup to the
 library. See [guest.h](../include/libvmm/guest.h) for more details.
 
