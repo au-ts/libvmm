@@ -557,3 +557,46 @@ has a compatible field such as `compatible = "amlogic,meson-gx-uart"`.
 
 By searching for the value of the compatible field in the Linux source code (e.g `grep -ri 'amlogic,meson-gx-uart'`),
 you will find the corresponding driver source code.
+
+# API Overview
+
+To create a virtual machine with libvmm, you must first initialise the
+library itself, and the archiecture specific subsystems within the library,
+such as the virtual interrupt controller. This is accomplished by calling
+`guest_init()` with a `arch_guest_init_t` object in your Microkit PD
+s `init()` entrypoint. The structure of this object is
+architecture specific and provide details about your setup to the
+library. See [guest.h](../include/libvmm/guest.h) for more details.
+
+Once the library is initialised, you can load your guest's Operating
+System (OS). We provide an architecture-specific helper function
+`linux_setup_images()` for you to easily load a Linux kernel and
+initial ramdisk image according to the Linux boot protocol.
+
+You are free to load other OSes or bootloaders according to their
+protocol. You can convert a destination Guest Physical Address
+to a Host (Hypervisor) Virtual Address for copying by calling
+`gpa_to_hva()`. See [guest_ram.h](../include/libvmm/guest_ram.h)
+for more details on this operation.
+
+Once the library is initialised and the guest OS loaded, the virtual
+machine is ready to start. Before you start the VM, you will need to
+grant the VM access to any passthrough devices if applicable. For example,
+by calling `microkit_vcpu_x86_enable_ioport()` on x86 specifically, and
+making sure that the device's MMIO registers are mapped into guest RAM
+at the expected Guest Physical Address and their interrupts registered with
+`virq_register_passthrough()` generally.
+
+If you passed through a device and they are capable of raising an interrupt,
+it is crucial that you call `virq_handle_passthrough()` in the `notified()`
+Microkit entrypoint so that the interrupt get delivered to the guest.
+
+To start the VM, call the appropriate start function from
+[guest.h](../include/libvmm/guest.h) and return from the `init()` Microkit
+entrypoint.
+
+Faults from the VM are delivered to the `fault()` Microkit entrypoint.
+Call `fault_handle()` to handle the fault and return from `fault()` to
+resume the VM. On x86, metadata of the faults are passed via message
+registers. It's crucial that you do not attempt to write to the message
+registers before `fault_handle()` is called.
