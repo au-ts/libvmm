@@ -67,7 +67,8 @@ ARCH_INDEP_FILES := \
 		    src/util/util.c \
 			src/pci.c \
 			src/guest_ram.c \
-			src/uefi/table_loader.c
+			src/uefi/table_loader.c \
+			src/uefi/fw_cfg.c
 
 ifeq ($(ARCH),aarch64)
 CFILES := ${AARCH64_FILES} ${VIRTIO_FILES}

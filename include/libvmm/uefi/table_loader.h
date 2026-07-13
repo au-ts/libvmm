@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <microkit.h>
+#include <libvmm/uefi/fw_cfg.h>
 
 /* This inferface is used to pass commands to the UEFI firmware in the guest for:
  * - allocating buffers and filling them from QEMU Fw Cfg files,
@@ -22,7 +23,6 @@
  * - calculate ACPI checksums of part of the buffer. */
 
 /* The types and the documentation reflects the SeaBIOS interface. */
-#define QEMU_FW_CFG_FNAME_SIZE 56
 #define QEMU_LOADER_FNAME_SIZE QEMU_FW_CFG_FNAME_SIZE
 
 typedef enum {
