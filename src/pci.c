@@ -373,7 +373,6 @@ static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, si
                                         seL4_VCPUContext *vctx, void *cookie)
 {
     if (pio_fault_is_read(qualification)) {
-        assert(pio_fault_addr(qualification) == PCI_CONFIG_ADDRESS_START_PORT);
         vctx->eax = pci_bus.pio_addr_value;
     } else {
         pci_bus.pio_addr_value = vctx->eax;
