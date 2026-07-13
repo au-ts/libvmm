@@ -356,7 +356,7 @@ static bool handle_pio_fault(seL4_VCPUContext *vctx, seL4_Word qualification)
         }
     }
 
-    emulate_ioport_noop_access(vctx, qualification);
+    emulate_ioport_noop_access(qualification, vctx);
     return true;
 }
 
