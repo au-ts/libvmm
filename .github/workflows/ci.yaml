@@ -120,7 +120,7 @@ jobs:
             test_args: 'virtio_block'
             artifact_suffix: 'virtio-block'
           - test_name: 'boot'
-            test_args: 'arch_timers,buildroot_login'
+            test_args: 'arch_timers,buildroot_login,uefi_firmware_boot'
             artifact_suffix: 'boot'
     steps:
       - name: Checkout repository

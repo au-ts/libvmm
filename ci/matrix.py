@@ -92,6 +92,14 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
+    "uefi": {
+        "configs": ["debug", "release"],
+        "build_systems": ["make"],
+        "boards": [
+            "x86_64_generic_vtx",
+        ],
+        "tests_exclude": [],
+    },
     "smp": {
         "configs": ["smp-debug", "smp-release"],
         "build_systems": ["make"],
