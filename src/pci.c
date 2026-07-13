@@ -388,7 +388,7 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
     assert(!pio_fault_is_string_op(qualification));
 
     if (!pci_pio_addr_reg_enable(pci_bus.pio_addr_value)) {
-        emulate_ioport_noop_access(vctx, qualification);
+        emulate_ioport_noop_access(qualification, vctx);
         return true;
     }
 
@@ -396,15 +396,15 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
     uint8_t dev = pci_pio_addr_reg_dev(pci_bus.pio_addr_value);
     uint8_t func = pci_pio_addr_reg_func(pci_bus.pio_addr_value);
     if (bus >= PCI_NUM_BUS) {
-        emulate_ioport_noop_access(vctx, qualification);
+        emulate_ioport_noop_access(qualification, vctx);
         return true;
     }
     if (dev >= PCI_DEV_PER_BUS) {
-        emulate_ioport_noop_access(vctx, qualification);
+        emulate_ioport_noop_access(qualification, vctx);
         return true;
     }
     if (func >= PCI_FUNC_PER_DEV) {
-        emulate_ioport_noop_access(vctx, qualification);
+        emulate_ioport_noop_access(qualification, vctx);
         return true;
     }
 

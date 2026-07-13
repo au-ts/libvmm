@@ -68,28 +68,54 @@ uint16_t pio_fault_addr(seL4_Word qualification)
     return (qualification >> PIO_VIOLATION_ADDR_SHIFT) & PIO_VIOLATION_ADDR_MASK;
 }
 
-void emulate_ioport_noop_access(seL4_VCPUContext *vctx, uint64_t f_qualification)
+void pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t data)
 {
-    uint64_t is_read = pio_fault_is_read(f_qualification);
-    uint64_t is_string = pio_fault_is_string_op(f_qualification);
+    assert(pio_fault_is_read(qualification));
+    /* We need to preserve the upper bits */
+    switch (pio_fault_to_access_width_bytes(qualification)) {
+    case 1:
+        vctx->eax = (vctx->eax & ~0xFFULL) | (data & 0xFFULL);
+        break;
+    case 2:
+        vctx->eax = (vctx->eax & ~0xFFFFULL) | (data & 0xFFFFULL);
+        break;
+    case 4:
+        /* In long mode this will zero extend. */
+        vctx->eax = data;
+        break;
+    default:
+        LOG_VMM_ERR("unreachable!\n");
+        assert(false);
+    }
+}
+
+uint32_t pio_get_write_data(uint64_t qualification, seL4_VCPUContext *vctx)
+{
+    assert(!pio_fault_is_read(qualification));
+    /* We need to preserve the upper bits */
+    switch (pio_fault_to_access_width_bytes(qualification)) {
+    case 1:
+        return vctx->eax & 0xFFULL;
+    case 2:
+        return vctx->eax & 0xFFFFULL;
+    case 4:
+        return vctx->eax & 0xFFFFFFFFULL;
+    default:
+        LOG_VMM_ERR("unreachable!\n");
+        assert(false);
+        return 0;
+    }
+}
+
+void emulate_ioport_noop_access(uint64_t qualification, seL4_VCPUContext *vctx)
+{
+    uint64_t is_read = pio_fault_is_read(qualification);
+    uint64_t is_string = pio_fault_is_string_op(qualification);
 
     assert(!is_string);
 
     if (is_read) {
         /* An invalid read of port I/O returns all 1s. */
-        switch (pio_fault_to_access_width_bytes(f_qualification)) {
-        case 1:
-            vctx->eax = 0xff;
-            break;
-        case 2:
-            vctx->eax = 0xffff;
-            break;
-        case 4:
-            vctx->eax = 0xffffffff;
-            break;
-        default:
-            LOG_VMM_ERR("unreachable!\n");
-            assert(false);
-        }
+        pio_emulate_read(qualification, vctx, 0xFFFFFFFF);
     }
 }
