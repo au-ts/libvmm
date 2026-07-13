@@ -21,7 +21,7 @@ mkdir "$DIR_NAME"
 cp "$IMAGE_PATH" "$DIR_NAME"
 if [ "$METADATA_PATH" ];
 then
-    cp "$METADATA_PATH" "$DIR_NAME"
+    cp -r "$METADATA_PATH" "$DIR_NAME"
 fi
 
 tar cf "$TAR_NAME" "$DIR_NAME"
