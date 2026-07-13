@@ -22,6 +22,7 @@ IMAGES := vmm.elf
 ifeq ($(ARCH),x86_64)
 	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
 	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	OVMF ?= e657295c9fc77db4b2045fc0e5145cfb03010ffa-OVMF.fd
 
 # -march=x86-64-v2 so that we get extra optimisations without AVX, since seL4 doesnt't enable it by default
 	ARCH_FLAGS := -target x86_64-unknown-elf -march=x86-64-v2
@@ -80,6 +81,12 @@ ${INITRD}:
 	tar xf $@.tar.gz -C initrd_download_dir
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
+${OVMF}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${OVMF}.tar.gz -o $@.tar.gz
+	mkdir -p ovmf_download_dir
+	tar xf $@.tar.gz -C ovmf_download_dir
+	cp ovmf_download_dir/${OVMF}/OVMF.fd ${OVMF}
+
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts
 	$(LIBVMM)/tools/dtscat $^ > $@
 
@@ -92,11 +99,12 @@ vm_dsdt.aml: $(SYSTEM_DIR)/uefi_dsdt.dsl
 vmm.o: $(EXAMPLE_DIR)/vmm.c $(CHECK_FLAGS_BOARD_MD5)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) vm_dsdt.aml
+images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) $(INITRD) ${OVMF} vm_dsdt.aml
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"${INITRD}\" \
 					-DGUEST_DSDT_AML_PATH=\"vm_dsdt.aml\" \
+					-DGUEST_FIRMWARE_PATH=\"${OVMF}\" \
 					$(ARCH_FLAGS) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
