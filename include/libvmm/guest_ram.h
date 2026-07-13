@@ -11,8 +11,8 @@
 #include <microkit.h>
 #include <libvmm/util/util.h>
 
-/* Enough for now */
-#define GUEST_MAX_RAM_REGIONS 1
+/* Enough for main guest RAM + Flash regions */
+#define GUEST_MAX_RAM_REGIONS 2
 
 struct guest_ram_region {
     uint64_t gpa_start;
