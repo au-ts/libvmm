@@ -51,3 +51,11 @@ _guest_dsdt_aml:
 .incbin GUEST_DSDT_AML_PATH
 _guest_dsdt_aml_end:
 #endif
+
+#if defined(GUEST_FIRMWARE_PATH)
+.section .guest_firmware, "aw", @progbits
+.global _guest_firmware, _guest_firmware_end
+_guest_firmware:
+.incbin GUEST_FIRMWARE_PATH
+_guest_firmware_end:
+#endif
