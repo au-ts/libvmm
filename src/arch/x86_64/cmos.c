@@ -57,10 +57,9 @@ static struct cmos_state cmos_state = (struct cmos_state) {
 static bool handle_select_port(size_t qualification, seL4_VCPUContext *vctx)
 {
     if (pio_fault_is_read(qualification)) {
-        uint64_t old_eax = vctx->eax;
-        vctx->eax = (((old_eax >> 8)) << 8) | cmos_state.select_reg;
+        pio_emulate_read(qualification, vctx, cmos_state.select_reg);
     } else {
-        cmos_state.select_reg = vctx->eax;
+        cmos_state.select_reg = pio_get_write_data(qualification, vctx);
     }
     return true;
 }
@@ -140,16 +139,15 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             result = 0;
             break;
         }
-        uint64_t old_eax = vctx->eax;
-        vctx->eax = (((old_eax >> 8)) << 8) | result;
+        pio_emulate_read(qualification, vctx, result);
     } else {
         switch (selected_cmos_port()) {
         case CMOS_STS_A:
-            cmos_state.status_a = vctx->eax & 0xff;
+            cmos_state.status_a = pio_get_write_data(qualification, vctx);
             break;
         case CMOS_STS_B: {
             uint8_t old_sts_b = cmos_state.status_b;
-            cmos_state.status_b = vctx->eax & 0xff;
+            cmos_state.status_b = pio_get_write_data(qualification, vctx);
             uint8_t new_sts_b = cmos_state.status_b;
             if (!(old_sts_b & BIT(CMOS_STS_B_UIE)) && (new_sts_b & BIT(CMOS_STS_B_UIE))) {
                 LOG_VMM_ERR("rtc update ended interrupt unimplemented\n");
@@ -159,7 +157,8 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             break;
         }
         default:
-            LOG_VMM_ERR("write to unimplemented CMOS reg 0x%x, data 0x%lx\n", selected_cmos_port(), vctx->eax);
+            LOG_VMM_ERR("write to unimplemented CMOS reg 0x%x, data 0x%x\n", selected_cmos_port(),
+                        pio_get_write_data(qualification, vctx));
         }
     }
 
