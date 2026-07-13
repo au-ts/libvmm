@@ -39,8 +39,8 @@ bool guest_ram_add_region(struct guest_ram_region guest_ram_region)
         if (ranges_overlap(this_gpa_start, this_gpa_end, other_start, other_end)) {
             LOG_VMM_ERR("guest_ram_add_region(): region [0x%lx..0x%lx) overlaps with existing region [0x%lx..0x%lx)\n",
                         this_gpa_start, this_gpa_end, other_start, other_end);
+            return false;
         }
-        return false;
     }
 
     memcpy(&guest.guest_ram_regions[guest.guest_ram_regions_len], &guest_ram_region, sizeof(struct guest_ram_region));
