@@ -116,8 +116,23 @@ bool guest_start_long_mode(uint64_t kernel_rip, uint64_t cr3, uint64_t gdt_gpa, 
        is resumed. */
     microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, initial_regs);
 
-    LOG_VMM("starting guest at 0x%lx\n", kernel_rip);
+    LOG_VMM("starting guest in long mode at 0x%lx\n", kernel_rip);
     microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_RIP, kernel_rip);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PPVC_DEFAULT);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, 0);
+    microkit_vcpu_x86_on();
+    return true;
+}
+
+bool guest_start_reset_state(void)
+{
+    if (!vcpu_set_up_reset_state()) {
+        LOG_VMM_ERR("Failed to set up virtual CPU\n");
+        return false;
+    }
+
+    LOG_VMM("starting guest in architecturally reset state at 0x%x\n", X86_RESET_IP);
+    microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_RIP, X86_RESET_IP);
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PRIMARY_PROCESSOR_CONTROLS, VMCS_PPVC_DEFAULT);
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_INTERRUPTION_INFO, 0);
     microkit_vcpu_x86_on();
