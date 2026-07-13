@@ -197,6 +197,7 @@
 /* [2] "Definitions of Secondary Processor-Based VM-Execution Controls" */
 #define VMCS_SPC_ENABLE_VAPIC             BIT(0)
 #define VMCS_SPC_ENABLE_VPID              BIT(5)
+#define VMCS_SPC_UNRESTRICTED_GUEST       BIT(7)
 #define VMCS_SPC_ENABLE_APIC_REG_VIRT     BIT(8)
 #define VMCS_SPC_ENABLE_VIRT_IRQ_DELIVERY BIT(9)
 #define VMCS_SPC_ENABLE_XSAVES            BIT(20)
@@ -214,6 +215,8 @@
 
 /* Long mode default */
 #define VMCS_VENC_LM_DEFAULT (VMCS_VENC_ENABLE_IA32E | VMCS_VENC_LOAD_IA32_EFER | VMCS_VENC_LOAD_IA32_PAT)
+/* Reset default */
+#define VMCS_VENC_RESET (VMCS_VENC_LOAD_IA32_EFER | VMCS_VENC_LOAD_IA32_PAT)
 
 /* [2] "Definitions of Primary VM-Exit Controls" */
 #define VMCS_VEXC_SAVE_PAT       BIT(18)

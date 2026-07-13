@@ -127,7 +127,7 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
         return false;
     }
 
-    if (!vcpu_set_up_control_registers(CR0_DEFAULT, cr3, CR4_DEFAULT)) {
+    if (!vcpu_set_up_control_registers(CR0_LONG_MODE, cr3, CR4_DEFAULT)) {
         LOG_VMM_ERR("failed to setup Control Registers\n");
         return false;
     }
@@ -174,7 +174,90 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, BIT(16)); // not present
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, BIT(16)); // not present
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, BIT(16)); // not present
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xb | 1 << 7); // busy 32-bit TSS
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 0xB | BIT(7)); // busy 32-bit TSS
+
+    return true;
+}
+
+bool vcpu_set_up_reset_state(void)
+{
+    /* See "IA-32 and Intel® 64 Processor States Following Power-up, Reset, or INIT" in Intel SDM."
+     * for the source and meaning of all values used in this function. */
+
+    uint64_t vmcs_spc = VMCS_SPC_DEFAULT | VMCS_SPC_UNRESTRICTED_GUEST;
+    if (!vcpu_set_up_vm_exec_controls(VMCS_PPVC_DEFAULT, vmcs_spc)) {
+        LOG_VMM_ERR("failed to setup VM-Execution Controls\n");
+        return false;
+    }
+
+    if (!vcpu_set_up_control_registers(CR0_RESET, 0, 0)) {
+        LOG_VMM_ERR("failed to setup Control Registers\n");
+        return false;
+    }
+
+    if (!vcpu_set_up_context_switching(VMCS_VENC_RESET, VMCS_VEXC_DEFAULT)) {
+        LOG_VMM_ERR("failed to setup Entry and Exit Controls\n");
+        return false;
+    }
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0x2);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, 0);
+
+    /* See "Format of Access Rights" and "Checks on Guest Segment Registers" */
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_SELECTOR, 0xf000);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_BASE, 0xffff0000);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_LIMIT, 0xffff);
+    //                                                                          type | S | P
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_ACCESS_RIGHTS, 11 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_LIMIT, 0xffff);
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_SS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_LIMIT, 0xffff);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_DS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_LIMIT, 0xffff);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_ES_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_LIMIT, 0xffff);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_FS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_LIMIT, 0xffff);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GS_ACCESS_RIGHTS, 3 | BIT(4) | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_LIMIT, 0xffff);
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_IDTR_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_IDTR_LIMIT, 0xffff);
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_LIMIT, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_LDTR_ACCESS_RIGHTS, 2 | BIT(7));
+
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_SELECTOR, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_BASE, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_LIMIT, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_TR_ACCESS_RIGHTS, 11 | BIT(7));
+
+    /* EDX = 000n06xxH,
+     * "Where “n” is the Extended Model Value for the respective processor, and “xx” = don’t care." */
+    seL4_VCPUContext vctx;
+    memset(&vctx, 0, sizeof(seL4_VCPUContext));
+    vctx.edx = 0x00050600; /* Matches cpuid.h */
+    microkit_vcpu_x86_write_regs(GUEST_BOOT_VCPU_ID, &vctx);
 
     return true;
 }

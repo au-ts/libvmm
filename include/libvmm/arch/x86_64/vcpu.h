@@ -22,9 +22,13 @@
  * Consult [1a] for more details
  */
 #define CR0_PG BIT(31) /* Paging On */
+#define CR0_CD BIT(30) /* Cache Disable */
+#define CR0_NW BIT(29) /* Not Write-through */
+#define CR0_ET BIT(4)  /* Hardcoded to 1 */
 #define CR0_PE BIT(0)  /* Protection Enable */
 
-#define CR0_DEFAULT (CR0_PG | CR0_PE)
+#define CR0_LONG_MODE (CR0_PG | CR0_PE | CR0_ET)
+#define CR0_RESET (CR0_CD | CR0_NW | CR0_ET)
 
 /* "CR4 — Contains a group of flags that enable several architectural extensions, and indicate
  *  operating system or executive support for specific processor capabilities."
@@ -53,7 +57,13 @@
  */
 #define RFLAGS_DEFAULT BIT(1)
 
+/* Sets up the vCPU for entry in long mode. */
 bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
+
+#define X86_RESET_IP 0xfff0
+
+/* Sets up the vCPU in architecturally reset state, i.e. real mode, paging + caching off, IP = 0xFFF0. */
+bool vcpu_set_up_reset_state(void);
 
 /* Helpers to keep track of the VCPU state when a VM Exit happens. */
 
