@@ -9,15 +9,9 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 
-/*
- * As this is just an example, for simplicity we just make the size of the
- * guest's "RAM" the same for all platforms. For just booting Linux with a
- * simple user-space, 0x10000000 bytes (256MB) is plenty.
- */
-#define GUEST_RAM_SIZE 0x10000000
-
 #define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
+#define GUEST_FLASH_START_GPA 0xffa00000 /* Correspond to SDF */
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 
 #define SERIAL_IRQ_CH 1
@@ -37,26 +31,38 @@ extern char _guest_initrd_image_end[];
 /* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
 extern char _guest_dsdt_aml[];
 extern char _guest_dsdt_aml_end[];
-/* Data for the guest's ACPI Differentiated System Description Table (DSDT). */
+/* Data for the guest's UEFI firmware. */
 extern char _guest_firmware[];
 extern char _guest_firmware_end[];
 
-/* Microkit will set this variable to the start of the guest RAM memory region. */
+/* Microkit will set this variable to the start of the guest RAM memory and flash regions. */
 uintptr_t guest_ram_vaddr;
+uint64_t guest_ram_size;
+uintptr_t guest_flash_vaddr;
+uint64_t guest_flash_size;
+
+/* OVMF expects a standard PC PCI bus, so we just make a small aperature at an arbitrary guest
+ * RAM location. */
+#define PCI_MMIO_APERATURE_GPA 0xE0000000
+#define PCI_MMIO_APERATURE_SIZE 0x200000
 
 void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
 
-    arch_guest_init_t args = {
-        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
-        .bsp = true,
-        .timer_ch = TIMER_DRV_CH,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } }
-    };
+    arch_guest_init_t args = { .pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
+                               .pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
+                               .bsp = true,
+                               .timer_ch = TIMER_DRV_CH,
+                               .num_guest_ram_regions = 2,
+                               .guest_ram_regions = {
+                                   (struct guest_ram_region) { .gpa_start = GUEST_RAM_START_GPA,
+                                                               .size = guest_ram_size,
+                                                               .vmm_vaddr = (void *)guest_ram_vaddr },
+                                   (struct guest_ram_region) { .gpa_start = GUEST_FLASH_START_GPA,
+                                                               .size = guest_flash_size,
+                                                               .vmm_vaddr = (void *)guest_flash_vaddr } } };
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
@@ -66,6 +72,8 @@ void init(void)
     /* Place all the binaries in the right locations before starting the guest */
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+    size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
+    size_t firmware_size = _guest_firmware_end - _guest_firmware;
 
     if (!kernel_size) {
         LOG_VMM_ERR("Kernel image is empty\n");
@@ -75,18 +83,16 @@ void init(void)
         LOG_VMM_ERR("Initial ramdisk image is empty\n");
         return;
     }
-
-    size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
-
     if (!dsdt_aml_size) {
         LOG_VMM_ERR("DSDT AML image is empty\n");
         return;
     }
+    if (!firmware_size) {
+        LOG_VMM_ERR("Firmware image is empty\n");
+        return;
+    }
 
-    seL4_VCPUContext initial_regs;
-    linux_x86_setup_ret_t linux_setup;
-    if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
+    if (!uefi_setup_images((uintptr_t)_guest_firmware, firmware_size, GUEST_FLASH_START_GPA, guest_flash_size)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
@@ -98,8 +104,7 @@ void init(void)
     /* Pass through serial IRQs */
     assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
 
-    guest_start_long_mode(linux_setup.kernel_entry_gpa, linux_setup.pml4_gpa, linux_setup.gdt_gpa,
-                          linux_setup.gdt_limit, &initial_regs);
+    guest_start_reset_state();
 }
 
 void notified(microkit_channel ch)
