@@ -173,9 +173,9 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 
     if (port_offset == 0) {
         if (pio_fault_is_read(qualification)) {
-            vctx->eax = pm1_control_reg;
+            pio_emulate_read(qualification, vctx, pm1_control_reg);
         } else {
-            pm1_control_reg = vctx->eax & 0xffff;
+            pm1_control_reg = pio_get_write_data(qualification, vctx);
         }
 
     } else {
@@ -194,9 +194,9 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 
     if (port_offset == 2) {
         if (pio_fault_is_read(qualification)) {
-            vctx->eax = pm1_enable_reg;
+            pio_emulate_read(qualification, vctx, pm1_enable_reg);
         } else {
-            pm1_enable_reg = vctx->eax;
+            pm1_enable_reg = pio_get_write_data(qualification, vctx);
             if (acpi_pm_timer_can_irq()) {
                 LOG_ACPI_INFO("ACPI PM Timer Overflow IRQ ON!\n");
                 assert(false);
@@ -204,10 +204,10 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
         }
     } else if (port_offset == 0) {
         if (pio_fault_is_read(qualification)) {
-            vctx->eax = pm1_status_reg;
+            pio_emulate_read(qualification, vctx, pm1_status_reg);
         } else {
             // @billn sus implement proper set to clear
-            pm1_status_reg = vctx->eax;
+            pm1_status_reg = pio_get_write_data(qualification, vctx);
         }
     } else {
         return false;
@@ -224,7 +224,8 @@ bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
     assert(access_width_bytes == 4);
     assert(pio_fault_is_read(qualification));
 
-    vctx->eax = convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), ACPI_PMT_FREQ_HZ);
+    uint32_t result = convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), ACPI_PMT_FREQ_HZ);
+    pio_emulate_read(qualification, vctx, result);
 
     return true;
 }
@@ -237,7 +238,7 @@ bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t quali
     assert(access_width_bytes == 1);
     assert(pio_fault_is_write(qualification));
 
-    uint8_t cmd = vctx->eax & 0xff;
+    uint8_t cmd = pio_get_write_data(qualification, vctx);
     if (cmd == ACPI_ENABLE) {
         pm1_control_reg |= BIT(0);
     } else if (cmd == ACPI_DISABLE) {

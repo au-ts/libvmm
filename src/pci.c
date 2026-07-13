@@ -373,9 +373,9 @@ static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, si
                                         seL4_VCPUContext *vctx, void *cookie)
 {
     if (pio_fault_is_read(qualification)) {
-        vctx->eax = pci_bus.pio_addr_value;
+        pio_emulate_read(qualification, vctx, pci_bus.pio_addr_value);
     } else {
-        pci_bus.pio_addr_value = vctx->eax;
+        pci_bus.pio_addr_value = pio_get_write_data(qualification, vctx);
     }
 
     return true;
@@ -420,19 +420,19 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
     bool success;
     pci_dev_handle_t handle = pci_geo_addr_to_internal_index(bus, dev, func);
     if (pio_fault_is_read(qualification)) {
+        uint64_t result = 0;
         success = pci_ecam_emulate_access(handle, pio_fault_is_read(qualification), access_width_bytes,
-                                          config_space_off, &vctx->eax);
+                                          config_space_off, &result);
 
-        vctx->eax >>= (config_space_off - ROUND_DOWN(config_space_off, 4)) * 8;
+        /* pci_ecam_emulate_access() reads in multiple of 32-bit, so we must shift the answer to get
+         * the correct data. */
+        result >>= (config_space_off - ROUND_DOWN(config_space_off, 4)) * 8;
 
-        if (access_width_bytes == 1) {
-            vctx->eax &= 0xff;
-        } else if (access_width_bytes == 2) {
-            vctx->eax &= 0xffff;
-        }
+        pio_emulate_read(qualification, vctx, result);
     } else {
+        uint64_t data = pio_get_write_data(qualification, vctx);
         success = pci_ecam_emulate_access(handle, pio_fault_is_read(qualification), access_width_bytes,
-                                          config_space_off, &vctx->eax);
+                                          config_space_off, &data);
     }
 
     return success;
