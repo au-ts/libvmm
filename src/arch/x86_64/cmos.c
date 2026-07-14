@@ -103,6 +103,19 @@ static uint8_t cmos_hours(void)
     return (cmos_absolute_seconds() / 3600) % 24;
 }
 
+static uint8_t binary_to_bcd(uint8_t binary)
+{
+    return ((binary / 10) << 4) | (binary % 10);
+}
+
+static uint8_t binary_to_cmos_value(uint8_t binary)
+{
+    if (!(cmos_state.registers[CMOS_REG_STS_B] & BIT(CMOS_STS_B_DM))) {
+        return binary_to_bcd(binary);
+    }
+    return binary;
+}
+
 static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
 {
     if (pio_fault_is_read(qualification)) {
@@ -112,13 +125,13 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             /* We need the latch to protect against cases where the minutes or hours
              * overflows while the guest is reading the time. */
             cmos_update_latched_time();
-            result = cmos_seconds();
+            result = binary_to_cmos_value(cmos_seconds());
             break;
         case CMOS_REG_MINUTES:
-            result = cmos_minutes();
+            result = binary_to_cmos_value(cmos_minutes());
             break;
         case CMOS_REG_HOURS:
-            result = cmos_hours();
+            result = binary_to_cmos_value(cmos_hours());
             break;
         case CMOS_REG_SECONDS_ALARM:
         case CMOS_REG_MINUTES_ALARM:
@@ -127,13 +140,13 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             result = 0;
             break;
         case CMOS_REG_DAY_OF_MONTH:
-            result = 0x29; /* seL4 day (https://sel4.discourse.group/t/happy-sel4-day-2025/999) */
+            result = binary_to_cmos_value(29); /* seL4 day (https://sel4.discourse.group/t/happy-sel4-day-2025/999) */
             break;
         case CMOS_REG_MONTH:
-            result = 0x7;
+            result = binary_to_cmos_value(7);
             break;
         case CMOS_REG_YEAR:
-            result = 0x26;
+            result = binary_to_cmos_value(26);
             break;
         default:
             result = cmos_state.registers[selected_cmos_port()];
@@ -184,7 +197,7 @@ bool initialise_cmos(void)
     memset(&cmos_state, 0, sizeof(struct cmos_state));
 
     cmos_state.registers[CMOS_REG_STS_A] = 0x26; /* Sane default: 32.768 kHz time base */
-    cmos_state.registers[CMOS_REG_STS_B] = BIT(CMOS_STS_B_DM) | BIT(CMOS_STS_B_24);
+    cmos_state.registers[CMOS_REG_STS_B] = BIT(CMOS_STS_B_24);
     cmos_state.registers[CMOS_REG_STS_D] = BIT(CMOS_STS_D_VRT);
 
     bool success = fault_register_pio_exception_handler(CMOS_PORT_ADDR, CMOS_PORT_SIZE, cmos_fault_handle, NULL);
