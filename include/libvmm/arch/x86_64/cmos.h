@@ -9,8 +9,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define CMOS_PORT_ADDR 0x70
-#define CMOS_PORT_SIZE 0x2
+bool initialise_cmos(void);
 
-bool cmos_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
-                       void *cookie);
+bool cmos_set_ram_byte(uint8_t offset, uint8_t value);

@@ -17,7 +17,11 @@
 /* Documents referenced:
  * https://web.stanford.edu/class/cs140/projects/pintos/specs/mc146818a.pdf
  * https://wiki.osdev.org/CMOS
+ * https://bochs.sourceforge.io/doc/docbook/development/cmos-map.html
  */
+
+#define CMOS_PORT_ADDR 0x70
+#define CMOS_PORT_SIZE 0x2
 
 #define CMOS_REG_SECONDS 0x0
 #define CMOS_REG_SECONDS_ALARM 0x1
@@ -29,9 +33,12 @@
 #define CMOS_REG_DAY_OF_MONTH 0x7
 #define CMOS_REG_MONTH 0x8
 #define CMOS_REG_YEAR 0x9
-#define CMOS_STS_A 0xA
-#define CMOS_STS_B 0xB
-#define CMOS_STS_C 0xC
+#define CMOS_REG_STS_A 0xA
+#define CMOS_REG_STS_B 0xB
+#define CMOS_REG_STS_C 0xC
+#define CMOS_REG_STS_D 0xD
+#define CMOS_REG_RAM_START 0xE
+#define CMOS_NUM_REGS 0x80
 
 #define CMOS_STS_B_UIE 4 /* Update-ended Interrupt Enable */
 #define CMOS_STS_B_DM 2 /* Binary format. */
@@ -40,19 +47,19 @@
 #define CMOS_STS_C_UF 4 /* Update-ended Interrupt Flag */
 #define CMOS_STS_C_IRQF 7 /* IRQ flag */
 
+#define CMOS_STS_D_VRT 7 /* RAM and time are valid */
+
 #define CMOS_IRQ_PIN 8
 
 struct cmos_state {
+    bool initialised;
     uint64_t latched_abs_seconds;
     uint8_t select_reg;
-    uint8_t status_a;
-    uint8_t status_b;
+
+    uint8_t registers[CMOS_NUM_REGS];
 };
 
-static struct cmos_state cmos_state = (struct cmos_state) {
-    .status_a = 0x26, /* Sane default: 32.768 kHz time base */
-    .status_b = BIT(CMOS_STS_B_DM) | BIT(CMOS_STS_B_24),
-};
+static struct cmos_state cmos_state;
 
 static bool handle_select_port(size_t qualification, seL4_VCPUContext *vctx)
 {
@@ -116,7 +123,7 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
         case CMOS_REG_SECONDS_ALARM:
         case CMOS_REG_MINUTES_ALARM:
         case CMOS_REG_HOURS_ALARM:
-        case CMOS_STS_C:
+        case CMOS_REG_STS_C:
             result = 0;
             break;
         case CMOS_REG_DAY_OF_MONTH:
@@ -128,37 +135,32 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
         case CMOS_REG_YEAR:
             result = 0x26;
             break;
-        case CMOS_STS_A:
-            result = cmos_state.status_a;
-            break;
-        case CMOS_STS_B:
-            result = cmos_state.status_b;
-            break;
         default:
-            LOG_VMM_ERR("read from unimplemented CMOS reg 0x%x\n", selected_cmos_port());
-            result = 0;
+            result = cmos_state.registers[selected_cmos_port()];
             break;
         }
         pio_emulate_read(qualification, vctx, result);
     } else {
         switch (selected_cmos_port()) {
-        case CMOS_STS_A:
-            cmos_state.status_a = pio_get_write_data(qualification, vctx);
+        case CMOS_REG_STS_D:
             break;
-        case CMOS_STS_B: {
-            uint8_t old_sts_b = cmos_state.status_b;
-            cmos_state.status_b = pio_get_write_data(qualification, vctx);
-            uint8_t new_sts_b = cmos_state.status_b;
+        case CMOS_REG_SECONDS_ALARM:
+        case CMOS_REG_MINUTES_ALARM:
+        case CMOS_REG_HOURS_ALARM:
+            LOG_VMM_ERR("CMOS alarm is unimplemented\n");
+            break;
+        case CMOS_REG_STS_B: {
+            uint8_t old_sts_b = cmos_state.registers[CMOS_REG_STS_B];
+            cmos_state.registers[CMOS_REG_STS_B] = pio_get_write_data(qualification, vctx);
+            uint8_t new_sts_b = cmos_state.registers[CMOS_REG_STS_B];
             if (!(old_sts_b & BIT(CMOS_STS_B_UIE)) && (new_sts_b & BIT(CMOS_STS_B_UIE))) {
                 LOG_VMM_ERR("rtc update ended interrupt unimplemented\n");
                 return false;
             }
-
             break;
         }
         default:
-            LOG_VMM_ERR("write to unimplemented CMOS reg 0x%x, data 0x%x\n", selected_cmos_port(),
-                        pio_get_write_data(qualification, vctx));
+            cmos_state.registers[selected_cmos_port()] = pio_get_write_data(qualification, vctx);
         }
     }
 
@@ -175,4 +177,36 @@ bool cmos_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualificatio
         LOG_VMM_ERR("unknown port offset for CMOS: 0x%x\n", port_offset);
         return false;
     }
+}
+
+bool initialise_cmos(void)
+{
+    memset(&cmos_state, 0, sizeof(struct cmos_state));
+
+    cmos_state.registers[CMOS_REG_STS_A] = 0x26; /* Sane default: 32.768 kHz time base */
+    cmos_state.registers[CMOS_REG_STS_B] = BIT(CMOS_STS_B_DM) | BIT(CMOS_STS_B_24);
+    cmos_state.registers[CMOS_REG_STS_D] = BIT(CMOS_STS_D_VRT);
+
+    bool success = fault_register_pio_exception_handler(CMOS_PORT_ADDR, CMOS_PORT_SIZE, cmos_fault_handle, NULL);
+    if (success) {
+        cmos_state.initialised = true;
+    }
+    return success;
+}
+
+bool cmos_set_ram_byte(uint8_t offset, uint8_t value)
+{
+    if (!cmos_state.initialised) {
+        LOG_VMM_ERR("CMOS not initialised\n");
+        return false;
+    }
+
+    if (offset < CMOS_REG_RAM_START || offset >= CMOS_NUM_REGS) {
+        LOG_VMM_ERR("CMOS offset 0x%x is not valid\n", offset);
+        return false;
+    }
+
+    cmos_state.registers[offset] = value;
+
+    return true;
 }
