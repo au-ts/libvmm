@@ -29,7 +29,7 @@ Unlike the other examples, this one uses a metaprogram (`meta.py`) with
 the [sdfgen](https://github.com/au-ts/microkit_sdf_gen) tooling to generate the
 System Description File (SDF) and other necessary artefacts. Previously,
 SDFs were written manually, along with C headers for sDDF-specific configurations,
-but this approach was tedious and error-prone. Wit this tooling, we can describe
+but this approach was tedious and error-prone. With this tooling, we can describe
 the system at a higher level, automating the generation of system-specific data.
 
 ## Dependencies
@@ -37,13 +37,16 @@ the system at a higher level, automating the generation of system-specific data.
 In addition to the dependencies outlined in the top-level README, the following
 dependencies are needed:
 * mkfs.fat
+* gdisk
 * sdfgen (for generating the System Description File with a metaprogram).
+
+Ensure mkfs.fat is in your `$PATH`
 
 ### Linux
 
 On apt based Linux distributions run the following commands:
 ```sh
-sudo apt-get install dosfstools
+sudo apt-get install dosfstools gdisk
 pip3 install sdfgen==0.33.0
 ```
 
