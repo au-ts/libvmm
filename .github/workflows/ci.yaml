@@ -102,13 +102,26 @@ jobs:
             ci_build/**/sel4_32.elf
           if-no-files-found: error
 
-  run_qemu:
-    name: Run (QEMU)
+  run_qemu_tests:
+    name: Run ${{ matrix.test_name }} tests (QEMU)
     runs-on: [self-hosted, Linux, X64]
     needs: build_linux_x86_64_nix
     permissions:
       actions: read
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - test_name: 'virtIO Network'
+            test_args: 'virtio_network_download,virtio_network_ping'
+            artifact_suffix: 'virtio-net'
+          - test_name: 'virtIO Block'
+            test_args: 'virtio_block'
+            artifact_suffix: 'virtio-block'
+          - test_name: 'boot'
+            test_args: 'arch_timers,buildroot_login'
+            artifact_suffix: 'boot'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -129,12 +142,12 @@ jobs:
       - name: Run tests
         run: |
           export PATH="$(pwd)/machine_queue":$PATH
-          exec ./ci/run.py --only-qemu
+          exec ./ci/run.py --only-qemu --tests ${{ matrix.test_args }}
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-logs-qemu
+          name: ci-logs-qemu-${{ matrix.artifact_suffix }}
           path: ci_logs
           if-no-files-found: error
 
