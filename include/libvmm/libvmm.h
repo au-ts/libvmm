@@ -27,6 +27,7 @@
 #elif defined(CONFIG_ARCH_X86)
 #include <libvmm/arch/x86_64/linux.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/cmos.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
