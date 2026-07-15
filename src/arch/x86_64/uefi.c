@@ -10,6 +10,9 @@
 #include <libvmm/guest_ram.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
+#include <libvmm/arch/x86_64/uefi.h>
+#include <libvmm/arch/x86_64/e820.h>
+#include <libvmm/uefi/fw_cfg.h>
 #include <sddf/util/util.h>
 
 /* Document referenced:
@@ -47,6 +50,12 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uint64_t flash_gpa,
 
     /* Places the firmware at the reset vector, see referenced document for more details. */
     memcpy(dest, (void *)firm_src, firm_size);
+
+    /* Initialise the fw cfg device to give the E820 memory map, ACPI tables and other important
+     * things to OVMF. */
+    if (!initialise_fw_cfg()) {
+        return false;
+    }
 
     return true;
 }
