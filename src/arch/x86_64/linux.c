@@ -399,6 +399,22 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
         .type = E820_RAM,
     };
 
+    /* Populate E820 table with remaining guest RAM regions if available. */
+    for (int i = 1; i < num_guest_ram_regions; i++) {
+        if (*e820_entries == E820_MAX_ENTRIES_ZEROPAGE) {
+            /* Extremely unlikely unless you have a hundred different guest RAM region. */
+            LOG_VMM("linux_setup_images(): WARNING, ran out of zero page E820 entries for guest RAM region.\n");
+            return true;
+        }
+
+        e820_table[*e820_entries] = (struct boot_e820_entry) {
+            .addr = guest_ram_regions[i].gpa_start,
+            .size = guest_ram_regions[i].size,
+            .type = E820_RAM,
+        };
+        *e820_entries = *e820_entries + 1;
+    }
+
     /* Linux boot ABI expects physical address of zero page to be in RSI.
      * See [1] "1.15. 64-bit Boot Protocol" */
     memset(initial_regs, 0, sizeof(seL4_VCPUContext));
