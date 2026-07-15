@@ -56,6 +56,8 @@
  * We don't use anything here during boot to mask all IRQs, but the 2nd bit must always be set as 1. See [1d]
  */
 #define RFLAGS_DEFAULT BIT(1)
+/* Direction flag */
+#define RFLAGS_DF BIT(10)
 
 /* Sets up the vCPU for entry in long mode. */
 bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit);
