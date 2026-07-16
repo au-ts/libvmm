@@ -49,7 +49,7 @@ bool table_loader_allocate(qemu_loader_entry_t *entry, char *file_name, uint32_t
 }
 
 bool table_loader_add_pointer(qemu_loader_entry_t *entry, char *dest_file, char *src_file, void *dest_blob,
-                              uint32_t patch_offset, uint8_t patch_size, uint32_t src_offset)
+                              size_t blob_size, uint32_t patch_offset, uint8_t patch_size, uint32_t src_offset)
 {
     if (!entry) {
         LOG_VMM_ERR("entry is NULL!\n");
@@ -68,6 +68,12 @@ bool table_loader_add_pointer(qemu_loader_entry_t *entry, char *dest_file, char 
 
     if (!dest_blob) {
         LOG_VMM_ERR("dest_blob is NULL!\n");
+        return false;
+    }
+
+    if (patch_offset + patch_size > blob_size) {
+        LOG_VMM_ERR("patch_offset + patch size (%u) is out of bound! Blob size is %zu\n", patch_offset + patch_size,
+                    blob_size);
         return false;
     }
 
@@ -91,8 +97,8 @@ bool table_loader_add_pointer(qemu_loader_entry_t *entry, char *dest_file, char 
     }
 }
 
-bool table_loader_add_checksum(qemu_loader_entry_t *entry, char *file_name, void *blob, uint32_t start_offset,
-                               uint32_t length, uint32_t checksum_offset)
+bool table_loader_add_checksum(qemu_loader_entry_t *entry, char *file_name, void *blob, size_t blob_size,
+                               uint32_t start_offset, uint32_t length, uint32_t checksum_offset)
 {
     if (!entry) {
         LOG_VMM_ERR("entry is NULL!\n");
@@ -114,7 +120,15 @@ bool table_loader_add_checksum(qemu_loader_entry_t *entry, char *file_name, void
         return false;
     }
 
-    // @billn check file name length, need to update sddf to include strnlen or something like taht
+    if (start_offset + length > blob_size) {
+        LOG_VMM_ERR("start_offset + length (%u) is out of bound! Blob size is %zu\n", start_offset + length, blob_size);
+        return false;
+    }
+
+    if (checksum_offset >= blob_size) {
+        LOG_VMM_ERR("checksum_offset (%u) is out of bound! Blob size is %zu\n", checksum_offset, blob_size);
+        return false;
+    }
 
     memset(entry, 0, sizeof(qemu_loader_entry_t));
 

@@ -113,10 +113,10 @@ bool table_loader_allocate(qemu_loader_entry_t *entry, char *file_name, uint32_t
  * Make a qemu_loader_cmd_add_pointer command
  */
 bool table_loader_add_pointer(qemu_loader_entry_t *entry, char *dest_file, char *src_file, void *dest_blob,
-                              uint32_t patch_offset, uint8_t patch_size, uint32_t src_offset);
+                              size_t blob_size, uint32_t patch_offset, uint8_t patch_size, uint32_t src_offset);
 
 /*
  * Make a qemu_loader_cmd_add_checksum command
  */
-bool table_loader_add_checksum(qemu_loader_entry_t *entry, char *file_name, void *blob, uint32_t start_offset,
-                               uint32_t length, uint32_t checksum_offset);
+bool table_loader_add_checksum(qemu_loader_entry_t *entry, char *file_name, void *blob, size_t blob_size,
+                               uint32_t start_offset, uint32_t length, uint32_t checksum_offset);
