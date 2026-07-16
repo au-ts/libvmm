@@ -202,6 +202,7 @@ bool vcpu_set_up_reset_state(void)
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0x2);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, 0);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_PAT, PAT_RESET_VALUE);
 
     /* See "Format of Access Rights" and "Checks on Guest Segment Registers" */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CS_SELECTOR, 0xf000);
