@@ -183,30 +183,33 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         char *dest_file = ACPI_XSDP_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_xsdp;
+        size_t blob_size = sizeof(struct xsdp);
         uint32_t patch_offset = offsetof(struct xsdp, xsdt_gpa);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, xsdt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *file_name = ACPI_XSDP_FWCFG_FILENAME;
         void *blob = (void *)&uefi_xsdp;
+        size_t blob_size = sizeof(struct xsdp);
         uint32_t start_offset = 0;
         uint32_t length = offsetof(struct xsdp, length); /* Checksum up only the legacy part */
         uint32_t checksum_offset = offsetof(struct xsdp, checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, start_offset, length,
+        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
                                          checksum_offset));
         num_cmd++;
     }
     {
         char *file_name = ACPI_XSDP_FWCFG_FILENAME;
         void *blob = (void *)&uefi_xsdp;
+        size_t blob_size = sizeof(struct xsdp);
         uint32_t start_offset = 0;
         uint32_t length = sizeof(struct xsdp);
         uint32_t checksum_offset = offsetof(struct xsdp, ext_checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, start_offset, length,
+        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
                                          checksum_offset));
         num_cmd++;
     }
@@ -216,31 +219,34 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         char *dest_file = ACPI_TABLES_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, fadt.X_FirmwareControl);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, facs);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *dest_file = ACPI_TABLES_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, fadt.X_Dsdt);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, dsdt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *file_name = ACPI_TABLES_FWCFG_FILENAME;
         void *blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t start_offset = offsetof(struct uefi_acpi_tables, fadt);
         uint32_t length = sizeof(struct fadt);
         uint32_t checksum_offset = offsetof(struct uefi_acpi_tables, fadt.h.checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, start_offset, length,
+        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
                                          checksum_offset));
         num_cmd++;
     }
@@ -250,42 +256,46 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         char *dest_file = ACPI_TABLES_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[0]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, fadt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *dest_file = ACPI_TABLES_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[1]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, hpet);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *dest_file = ACPI_TABLES_FWCFG_FILENAME;
         char *src_file = ACPI_TABLES_FWCFG_FILENAME;
         void *dest_blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[2]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, madt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, patch_offset,
-                                        patch_size, src_offset));
+        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                        patch_offset, patch_size, src_offset));
         num_cmd++;
     }
     {
         char *file_name = ACPI_TABLES_FWCFG_FILENAME;
         void *blob = (void *)&uefi_acpi_tables;
+        size_t blob_size = sizeof(struct uefi_acpi_tables);
         uint32_t start_offset = offsetof(struct uefi_acpi_tables, xsdt);
         uint32_t length = sizeof(struct xsdt);
         uint32_t checksum_offset = offsetof(struct uefi_acpi_tables, xsdt.h.checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, start_offset, length,
+        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
                                          checksum_offset));
         num_cmd++;
     }
