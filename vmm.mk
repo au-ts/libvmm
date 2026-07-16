@@ -66,7 +66,8 @@ ARCH_INDEP_FILES := \
 			src/virtio/pci.c \
 		    src/util/util.c \
 			src/pci.c \
-			src/guest_ram.c
+			src/guest_ram.c \
+			src/uefi/table_loader.c
 
 ifeq ($(ARCH),aarch64)
 CFILES := ${AARCH64_FILES} ${VIRTIO_FILES}
@@ -100,10 +101,11 @@ directories:
 ifeq ($(ARCH),aarch64)
 	mkdir -p libvmm/arch/aarch64/vgic/
 else ifeq ($(ARCH),x86_64)
-	mkdir -p libvmm/arch/x86_64/qemu/
+	mkdir -p libvmm/arch/x86_64/
 endif
 	mkdir -p libvmm/util
 	mkdir -p libvmm/virtio
+	mkdir -p libvmm/uefi
 
 libvmm.a: ${OBJECTS}
 	${AR} crv $@ $^
