@@ -48,12 +48,6 @@
 
 #define QEMU_FW_CFG_FNAME_SIZE 56
 
-/* Essential fw_cfg blobs for OVMF in QEMU_FW_CFG_ITEM_FILE_DIR */
-/* https://github.com/tianocore/edk2/blob/b03a21a63e3bd001f52c527e5a57feddb53a690b/OvmfPkg/Library/PlatformInitLib/MemDetect.c#L401 */
-#define E820_FWCFG_FILENAME "etc/e820"
-/* https://github.com/tianocore/edk2/blob/f49f209c4f4c8b817d290f78e785099e8c51589f/OvmfPkg/Library/AcpiPlatformLib/QemuFwCfgAcpi.c#L1121 */
-#define TABLE_LOADER_FWCFG_FILENAME "etc/table-loader"
-
 /* Initialise the fw cfg interface and the architecture specific access handler. */
 bool initialise_fw_cfg(void);
 
