@@ -94,7 +94,13 @@ void init(void)
 
     if (!uefi_setup_images((uintptr_t)_guest_firmware, firmware_size, (uintptr_t)_guest_dsdt_aml, dsdt_aml_size,
                            GUEST_FLASH_START_GPA, guest_flash_size)) {
-        LOG_VMM_ERR("Failed to initialise guest images\n");
+        LOG_VMM_ERR("Failed to initialise UEFI firmware\n");
+        return;
+    }
+
+    if (!uefi_add_linux_boot((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
+                             (char *)GUEST_CMDLINE)) {
+        LOG_VMM_ERR("Failed to initialise UEFI firmware\n");
         return;
     }
 
