@@ -49,6 +49,7 @@
 #define PCI_CFG_OFFSET_BAR4          0x1C
 #define PCI_CFG_OFFSET_BAR5          0x20
 #define PCI_CFG_OFFSET_BAR6          0x24
+#define PCI_CFG_OFFSET_CAP_DATA      0x40
 
 #define PCI_HEADER_TYPE_MULTIFUNCTION 0x80
 
@@ -303,6 +304,10 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
             }
             break;
         }
+        case REG_RANGE(PCI_CFG_OFFSET_CAP_DATA, sizeof(struct pci_config_space)): {
+            memcpy((uint8_t *)config_space + config_space_offset, data, access_width_bytes);
+            break;
+        }
         }
     }
     return true;
@@ -488,7 +493,7 @@ pci_dev_handle_t pci_register_device(uint8_t bus, uint8_t dev, uint8_t func, pci
     config_space->subsystem_vendor_id = device_data->subsystem_vendor_id;
     config_space->subsystem_device_id = device_data->subsystem_device_id;
 
-    pci_device->next_available_cap_ptr = offsetof(struct pci_config_space, cap_data);
+    pci_device->next_available_cap_ptr = PCI_CFG_OFFSET_CAP_DATA;
     pci_device->virq_registered = false;
 
     pci_device->sticky_cmd_bits = device_data->command;
