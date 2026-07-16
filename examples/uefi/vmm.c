@@ -92,7 +92,8 @@ void init(void)
         return;
     }
 
-    if (!uefi_setup_images((uintptr_t)_guest_firmware, firmware_size, GUEST_FLASH_START_GPA, guest_flash_size)) {
+    if (!uefi_setup_images((uintptr_t)_guest_firmware, firmware_size, (uintptr_t)_guest_dsdt_aml, dsdt_aml_size,
+                           GUEST_FLASH_START_GPA, guest_flash_size)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
