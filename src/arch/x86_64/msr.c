@@ -205,6 +205,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         result = mtrr_state.fixed_4k[index];
         break;
     }
+    case IA32_PLATFORM_ID:
+        result = 0;
+        break;
     default:
         LOG_FAULT("unknown MSR read 0x%lx\n", vctx->ecx);
         return false;
