@@ -206,7 +206,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
         break;
     }
     default:
-        LOG_FAULT("unknown MSR read 0x%lx\n", vctx->eax);
+        LOG_FAULT("unknown MSR read 0x%lx\n", vctx->ecx);
         return false;
     }
 
