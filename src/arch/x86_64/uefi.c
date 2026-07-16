@@ -52,6 +52,12 @@ static struct uefi_acpi_tables uefi_acpi_tables;
 #define UEFI_MAX_NUM_TABLE_LOADER_CMD 16
 static qemu_loader_entry_t uefi_table_loader[UEFI_MAX_NUM_TABLE_LOADER_CMD];
 
+/* Same idea but for Linux cmdline, we want our own copy to be absolutely sure that it is NULL terminated. */
+#define COMMAND_LINE_SIZE (2048)
+#define COMMAND_LINE_BUF_SIZE (COMMAND_LINE_SIZE + 1)
+static char uefi_linux_cmdline[COMMAND_LINE_BUF_SIZE] = { 0 };
+static uint32_t uefi_linux_cmdline_size = 0;
+
 bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src, size_t dsdt_size, uint64_t flash_gpa,
                        size_t flash_size)
 {
@@ -289,6 +295,83 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
     if (!fw_cfg_add_named_file(TABLE_LOADER_FWCFG_FILENAME, strlen(TABLE_LOADER_FWCFG_FILENAME),
                                (uint8_t *)&uefi_table_loader, sizeof(qemu_loader_entry_t) * num_cmd)) {
         LOG_VMM_ERR("Failed to add '%s' file to fw cfg\n", TABLE_LOADER_FWCFG_FILENAME);
+        return false;
+    }
+
+    return true;
+}
+
+bool uefi_add_linux_boot(uintptr_t kernel_src, size_t kernel_size, uintptr_t initrd_src, size_t initrd_size,
+                         char *cmdline)
+{
+    /* See https://github.com/tianocore/edk2/blob/edk2-stable202605/OvmfPkg/QemuKernelLoaderFsDxe/QemuKernelLoaderFsDxe.c
+     * for more details on the operations in this function. */
+
+    if (!kernel_src) {
+        LOG_VMM_ERR("Kernel source is NULL\n");
+        return false;
+    }
+
+    if (!kernel_size) {
+        LOG_VMM_ERR("Kernel size is zero\n");
+        return false;
+    }
+
+    if (!initrd_src) {
+        LOG_VMM_ERR("Initrd source is NULL\n");
+        return false;
+    }
+
+    if (!initrd_size) {
+        LOG_VMM_ERR("Initrd size is zero\n");
+        return false;
+    }
+
+    if (!cmdline) {
+        LOG_VMM_ERR("Cmdline source is NULL\n");
+        return false;
+    }
+
+    size_t cmdline_size = strlen(cmdline);
+    if (cmdline_size > COMMAND_LINE_SIZE) {
+        LOG_VMM_ERR("Cmdline too long\n");
+        return false;
+    }
+    memcpy(uefi_linux_cmdline, cmdline, cmdline_size);
+    uefi_linux_cmdline_size = cmdline_size + 1;
+
+    char *kernel_file_name = "etc/boot/kernel";
+    bool success = fw_cfg_add_named_file(kernel_file_name, strlen(kernel_file_name), (void *)kernel_src, kernel_size);
+    if (!success) {
+        LOG_VMM_ERR("Failed to add kernel file to fw cfg\n");
+        return false;
+    }
+
+    char *initrd_file_name = "etc/boot/initrd";
+    success = fw_cfg_add_named_file(initrd_file_name, strlen(initrd_file_name), (void *)initrd_src, initrd_size);
+    if (!success) {
+        LOG_VMM_ERR("Failed to add initrd file to fw cfg\n");
+        return false;
+    }
+
+    char *cmdline_file_name = "etc/boot/cmdline";
+    success = fw_cfg_add_named_file(cmdline_file_name, strlen(cmdline_file_name), (void *)uefi_linux_cmdline,
+                                    uefi_linux_cmdline_size);
+    if (!success) {
+        LOG_VMM_ERR("Failed to add cmdline file to fw cfg\n");
+        return false;
+    }
+
+    /* OVMF quirk: the cmdline is loaded via legacy keyed fw cfg file rather than the named file. */
+    success = fw_cfg_add_file(QEMU_FW_CFG_ITEM_COMMAND_LINE_DATA, (void *)uefi_linux_cmdline, uefi_linux_cmdline_size);
+    if (!success) {
+        LOG_VMM_ERR("Failed to add legacy cmdline file to fw cfg\n");
+        return false;
+    }
+
+    success = fw_cfg_add_file(QEMU_FW_CFG_ITEM_COMMAND_LINE_SIZE, (void *)&uefi_linux_cmdline_size, sizeof(uint32_t));
+    if (!success) {
+        LOG_VMM_ERR("Failed to add legacy cmdline file to fw cfg\n");
         return false;
     }
 

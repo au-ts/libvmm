@@ -36,7 +36,7 @@ struct fw_cfg_file {        /* an individual file entry, 64 bytes total */
     char name[QEMU_FW_CFG_FNAME_SIZE]; /* fw_cfg item name, NUL-terminated ascii */
 } __attribute__((packed));
 
-#define MAX_FW_CFG_NAMED_FILES 4 /* Can be increased safely if necessary. */
+#define MAX_FW_CFG_NAMED_FILES 8 /* Can be increased safely if necessary. */
 
 struct fw_cfg_files {       /* the entire file directory fw_cfg item */
     uint32_t count_be;      /* number of entries, in big-endian format */
