@@ -21,6 +21,7 @@
 #include <libvmm/arch/x86_64/instruction.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
+#include <libvmm/arch/x86_64/cr_access.h>
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
@@ -401,6 +402,9 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     case VMX_PREEMPTION_TIMER:
         guest_time_handle_timer_ntfn();
         success = true;
+        break;
+    case CONTROL_REGISTER:
+        success = handle_cr_access(vctx, qualification);
         break;
 #if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
     case VIRTUALIZED_EOI: {
