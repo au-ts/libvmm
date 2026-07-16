@@ -43,7 +43,7 @@ struct fw_cfg_files {       /* the entire file directory fw_cfg item */
     struct fw_cfg_file f[MAX_FW_CFG_NAMED_FILES]; /* array of file entries */
 } __attribute__((packed));
 
-#define MAX_SELECT_KEY (QEMU_FW_CFG_FILE_FIRST + MAX_FW_CFG_NAMED_FILES) /* Inclusive */
+#define MAX_SELECT_KEY (QEMU_FW_CFG_FILE_FIRST + MAX_FW_CFG_NAMED_FILES) /* Exclusive */
 
 struct fw_cfg_file_bookkeep {
     uint8_t *data;
@@ -89,7 +89,7 @@ static bool qemu_fw_cfg_select_handler(size_t vcpu_id, uint16_t port_offset, siz
         fw_cfg_state.selected_index = 0;
         fw_cfg_state.selected_size = 0;
 
-        if (fw_cfg_state.selected <= MAX_SELECT_KEY) {
+        if (fw_cfg_state.selected < MAX_SELECT_KEY) {
             fw_cfg_state.selected_data = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].data;
             fw_cfg_state.selected_size = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].size;
         }
