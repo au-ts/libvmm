@@ -41,7 +41,8 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/i440fx.c \
 			   src/arch/x86_64/guest_ram.c \
 			   src/arch/x86_64/guest_time.c \
-			   src/arch/x86_64/cmos.c
+			   src/arch/x86_64/cmos.c \
+			   src/arch/x86_64/cr_access.c
 
 # VIRTIO MMIO and PCI depends on sddf
 ifeq ($(strip $(SDDF)),)
