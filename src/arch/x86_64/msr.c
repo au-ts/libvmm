@@ -271,6 +271,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
         microkit_vcpu_x86_write_msr(GUEST_BOOT_VCPU_ID, vctx->ecx, value);
         return true;
     case IA32_PRED_CMD:
+    case IA32_SPEC_CTRL:
         // @billn revisit, security concerns same as IA32_SPEC_CTRL, as they are used for speculative exec controls
         break;
     case IA32_XSS:
