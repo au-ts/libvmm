@@ -52,7 +52,7 @@ struct fw_cfg_files {       /* the entire file directory fw_cfg item */
     struct fw_cfg_file f[MAX_FW_CFG_NAMED_FILES]; /* array of file entries */
 } __attribute__((packed));
 
-#define MAX_SELECT_KEY (QEMU_FW_CFG_ITEM_FILE_DIR + MAX_FW_CFG_NAMED_FILES) /* Inclusive */
+#define MAX_SELECT_KEY (QEMU_FW_CFG_FILE_FIRST + MAX_FW_CFG_NAMED_FILES) /* Inclusive */
 
 struct fw_cfg_file_bookkeep {
     uint8_t *data;
