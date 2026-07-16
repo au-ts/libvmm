@@ -43,7 +43,8 @@
 #define QEMU_FW_CFG_ITEM_KERNEL_SETUP_ADDRESS 0x0016
 #define QEMU_FW_CFG_ITEM_KERNEL_SETUP_SIZE    0x0017
 #define QEMU_FW_CFG_ITEM_KERNEL_SETUP_DATA    0x0018
-#define QEMU_FW_CFG_ITEM_FILE_DIR             0x0019
+#define QEMU_FW_CFG_ITEM_FILE_DIR             0x0019 /* Also number of unamed selector keys */
+#define QEMU_FW_CFG_FILE_FIRST                0x0020
 
 #define QEMU_FW_CFG_FNAME_SIZE 56
 
@@ -53,11 +54,9 @@ bool initialise_fw_cfg(void);
 /* Add a named file to the fw cfg device, args are little endian. The function will
  * convert endianess internally according to the fw cfg spec.
  *
- * Named files have selector key above and including `QEMU_FW_CFG_ITEM_FILE_DIR` + 1.
- *
  * This function will copy `name` to an internal data structure, but it expect `data`
  * to be valid for the lifetime of the VMM. */
-bool add_fw_cfg_named_file(uint16_t select_key, char *name, size_t name_len, uint8_t *data, size_t data_size);
+bool add_fw_cfg_named_file(char *name, size_t name_len, uint8_t *data, size_t data_size);
 
 /* Add a legacy file to the fw cfg device, args are little endian. The function will
  * convert endianess internally according to the fw cfg spec.

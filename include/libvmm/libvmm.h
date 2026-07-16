@@ -20,6 +20,8 @@
 #include <libvmm/virtio/net.h>
 // #include <libvmm/virtio/sound.h>
 
+#include <libvmm/uefi/fw_cfg.h>
+
 #if defined(CONFIG_ARCH_ARM)
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
