@@ -495,6 +495,7 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     } else if (!success) {
         LOG_VMM_ERR("failed handling fault: '%s' (0x%lx)\n", fault_to_string(f_reason), f_reason);
         vcpu_print_regs(vcpu_id);
+        vcpu_print_instruction(vcpu_id);
         LOG_VMM_ERR("VCPU will not be resumed.\n");
     }
 

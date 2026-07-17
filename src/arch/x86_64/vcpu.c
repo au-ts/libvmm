@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <libvmm/vcpu.h>
+#include <libvmm/guest_ram.h>
 #include <libvmm/guest.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
@@ -493,4 +494,17 @@ void vcpu_print_regs(size_t vcpu_id)
     LOG_VMM("    r14 = 0x%lx\n", r14);
     LOG_VMM("    r15 = 0x%lx\n", r15);
     LOG_VMM("=========================\n");
+}
+
+void vcpu_print_instruction(size_t vcpu_id)
+{
+    seL4_Word ins_len = microkit_mr_get(SEL4_VMENTER_FAULT_INSTRUCTION_LEN_MR);
+    seL4_Word rip = microkit_vcpu_x86_read_vmcs(vcpu_id, VMX_GUEST_RIP);
+
+    LOG_VMM("faulting instruction:\n");
+    for (int i = 0; i < ins_len; i++) {
+        uint64_t gpa, unused;
+        assert(gva_to_gpa(vcpu_id, rip + i, &gpa, &unused));
+        LOG_VMM("0x%x\n", *((unsigned char *)gpa_to_hva(gpa, 1)));
+    }
 }
