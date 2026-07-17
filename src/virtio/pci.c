@@ -102,6 +102,9 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
     case VIRTIO_PCI_COMMON_CFG_GENERATION:
         *data = dev->regs.ConfigGeneration;
         break;
+    case VIRTIO_PCI_COMMON_Q_SELECT:
+        *data = dev->regs.QueueSel;
+        break;
     case VIRTIO_PCI_COMMON_Q_SIZE:
         *data = VIRTIO_DEFAULT_QUEUE_SIZE;
         break;
