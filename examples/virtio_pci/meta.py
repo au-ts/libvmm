@@ -233,11 +233,6 @@ def generate(
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
 
-    ############ VIRTIO PCI ############
-    config_space = MemoryRegion(sdf, name="ecam", size=0x100000)
-    sdf.add_mr(config_space)
-    vmm_client0.add_map(Map(config_space, vaddr=0x10000000, perms="rw"))
-
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
     assert blk_system.connect()
