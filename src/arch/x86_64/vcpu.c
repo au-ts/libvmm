@@ -101,8 +101,11 @@ static bool vcpu_set_up_control_registers(uint64_t cr0, uint64_t cr3, uint64_t c
      * By setting CR0.NE in VMX_CONTROL_CR0_MASK, we force a VM-exit (Control Register Access)
      * whenever the guest attempts to alter CR0, allowing us to safely intercept the write,
      * enforce the hardware requirement (NE=1) in the real VMX_GUEST_CR0.
+     *
+     * We must also set CR0_PG as there are side effects when the guest turns OFF paging.
+     * See handle_cr_access() of cr_access.c for more details.
      */
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR0_MASK, CR0_NE);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR0_MASK, CR0_NE | CR0_PG);
 
     /* Check that all CR0 and CR4 features we need are supported by the host.
      * We perform this check because seL4 will clear any unsupported feature bits. */

@@ -162,6 +162,27 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
 
             microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_CR0, guest_requested_cr0 | CR0_NE);
             microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_CR0_READ_SHADOW, guest_requested_cr0);
+
+            /* On real hardware, setting THEN clearing CR0.PG have side effects. We must emulate
+             * this on software or we will get invalid state on VM resume.
+             * See section "Switching Out of IA-32e Mode Operation" of [1]:
+             * "Deactivate IA-32e mode by clearing CR0.PG = 0. This causes the processor to set IA32_EFER.LMA = 0." */
+            seL4_Word efer = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_EFER);
+            seL4_Word entry_ctrl = microkit_vcpu_x86_read_vmcs(0, VMX_CONTROL_ENTRY_CONTROLS);
+
+            if (!(guest_requested_cr0 & CR0_PG)) {
+                /* If we are in long mode then we must drop out of long mode. */
+                if (efer & IA32_EFER_LMA) {
+                    microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_EFER, efer & ~IA32_EFER_LMA);
+                    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_CONTROLS, entry_ctrl & ~VMCS_VENC_ENABLE_IA32E);
+                }
+            } else {
+                /* If paging is enabled, check if we should enter long mode. */
+                if (efer & IA32_EFER_LME) {
+                    microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_EFER, efer | IA32_EFER_LMA);
+                    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_ENTRY_CONTROLS, entry_ctrl | VMCS_VENC_ENABLE_IA32E);
+                }
+            }
             return true;
         } else if (get_access_type(qualification) == MOV_FROM_CR) {
             /* It is architecturally impossible to get a VM Exit for CR0 read.
