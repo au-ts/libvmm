@@ -224,7 +224,7 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
-        success = (features == device_features);
+        success = (device_features & features) == features;
         break;
     /* features bits 32 to 63 */
     case 1:
