@@ -223,8 +223,11 @@ static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t qualific
 #endif
     }
 
-    bool success = pci_device->bars[bar_idx].callback(handle, offset, is_read, access_width_bytes, &data,
-                                                      pci_device->bars[bar_idx].cookie);
+    bool success = true;
+    if (pci_device->bars[bar_idx].callback) {
+        success = pci_device->bars[bar_idx].callback(handle, offset, is_read, access_width_bytes, &data,
+                                                     pci_device->bars[bar_idx].cookie);
+    }
 
     if (success && is_read) {
 #if defined(CONFIG_ARCH_ARM)
