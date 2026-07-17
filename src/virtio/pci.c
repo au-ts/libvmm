@@ -333,7 +333,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
         .subclass = PCI_SUB_CLASS(dev->transport.pci.device_class),
         .class_code = PCI_CLASS_CODE(dev->transport.pci.device_class),
         .subsystem_vendor_id = dev->regs.VendorID,
-        .subsystem_device_id = dev->regs.DeviceID,
+        .subsystem_device_id = dev->transport.pci.device_id,
     };
 
     pci_dev_handle_t handle = pci_register_device(pci_bus, pci_dev, 0, &device_data);
