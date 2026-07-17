@@ -58,6 +58,7 @@
 #define VIRTIO_PCI_VENDOR_ID             0x1AF4
 #define VIRTIO_PCI_MODERN_BASE_DEVICE_ID 0x1040 // "non-transitional"
 #define VIRTIO_PCI_QUEUE_NUM_MAX         0x2
+#define VIRTIO_PCI_QUEUE_SIZE            0x100
 
 typedef struct virtio_pci_data {
     uint32_t device_id;
