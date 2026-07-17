@@ -89,3 +89,4 @@ seL4_VCPUContext *vcpu_exit_get_context(void);
 void vcpu_exit_prepare_resume(uint64_t rip_additive);
 
 void vcpu_print_regs(size_t vcpu_id);
+void vcpu_print_instruction(size_t vcpu_id);
