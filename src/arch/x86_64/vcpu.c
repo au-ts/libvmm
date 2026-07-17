@@ -75,6 +75,35 @@ static bool vcpu_set_up_control_registers(uint64_t cr0, uint64_t cr3, uint64_t c
     /* Prevent guest from turning off VM mode */
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR4_MASK, CR4_EN_MASK);
 
+    /* From [1]:
+     * "The first processors to support VMX operation require that the following
+     * bits be 1 in VMX operation: CR0.PE, CR0.NE, CR0.PG, and CR4.VMXE. The
+     * restrictions on CR0.PE and CR0.PG imply that VMX operation is supported
+     * only in paged protected mode (including IA-32e mode). Therefore, guest
+     * software cannot be run in unpaged protected mode or in real-address mode.
+     *
+     * Later processors support a VM-execution control called “unrestricted guest”
+     * (see Section 25.6.2). If this control is 1, CR0.PE and CR0.PG may be 0 in
+     * VMX non-root operation (even if the capability MSR IA32_VMX_CR0_FIXED0
+     * reports otherwise).1 Such processors allow guest software to run in
+     * unpaged protected mode or in real-address mode"
+     *
+     * Then from [1]:
+     * "MOV to CR0. The MOV to CR0 instruction causes a VM exit unless the value
+     * of its source operand matches, for the position of each bit set in the CR0
+     * guest/host mask, the corresponding bit in the CR0 read shadow. (If every bit
+     * is clear in the CR0 guest/host mask, MOV to CR0 cannot cause a VM exit.)"
+     *
+     * Therefore, because the hardware requires CR0.NE to be 1 at all times during
+     * VMX operation, letting the guest write directly to this bit will raise #GP
+     * inside the guest and can cause a triple fault if the guest attempts to clear it.
+     *
+     * By setting CR0.NE in VMX_CONTROL_CR0_MASK, we force a VM-exit (Control Register Access)
+     * whenever the guest attempts to alter CR0, allowing us to safely intercept the write,
+     * enforce the hardware requirement (NE=1) in the real VMX_GUEST_CR0.
+     */
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR0_MASK, CR0_NE);
+
     /* Check that all CR0 and CR4 features we need are supported by the host.
      * We perform this check because seL4 will clear any unsupported feature bits. */
     uint64_t read_back_cr0 = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_CR0);

@@ -24,6 +24,7 @@
 #define CR0_PG BIT(31) /* Paging On */
 #define CR0_CD BIT(30) /* Cache Disable */
 #define CR0_NW BIT(29) /* Not Write-through */
+#define CR0_NE BIT(5)  /* Numeric Error */
 #define CR0_ET BIT(4)  /* Hardcoded to 1 */
 #define CR0_PE BIT(0)  /* Protection Enable */
 

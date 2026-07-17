@@ -9,6 +9,7 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/apic.h>
 #include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
@@ -154,7 +155,20 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
         }
     }
 #endif
+    case 0: {
+        if (get_access_type(qualification) == MOV_TO_CR) {
+            /* See "vcpu_set_up_control_registers()" in vcpu.c for an explainer on why we do this. */
+            uint64_t guest_requested_cr0 = get_write_operand(vctx, qualification);
 
+            microkit_vcpu_x86_write_vmcs(0, VMX_GUEST_CR0, guest_requested_cr0 | CR0_NE);
+            microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_CR0_READ_SHADOW, guest_requested_cr0);
+            return true;
+        } else if (get_access_type(qualification) == MOV_FROM_CR) {
+            /* It is architecturally impossible to get a VM Exit for CR0 read.
+             * See "26.1.3 Instructions That Cause VM Exits Conditionally" of [1] */
+            assert(false);
+        }
+    }
     default:
         LOG_VMM_ERR("unhandled CR%d access, access type %d\n", get_cr_number(qualification),
                     get_access_type(qualification));
