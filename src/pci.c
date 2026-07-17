@@ -694,6 +694,18 @@ bool pci_register_device_mmio_bar(pci_dev_handle_t pci_dev_handle, uint8_t bar_i
     return true;
 }
 
+bool pci_bus_get_mmio_aperature(uint64_t *mmio_aperature_gpa, uint64_t *mmio_aperature_size)
+{
+    if (!pci_bus.initialised) {
+        LOG_VMM_ERR("virtual PCI not yet initialised\n");
+        return false;
+    }
+
+    *mmio_aperature_gpa = pci_bus.mmio_aperature.gpa;
+    *mmio_aperature_size = pci_bus.mmio_aperature.size;
+    return true;
+}
+
 bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature_gpa, uint64_t mmio_aperature_size)
 {
     /* x86 does not need ECAM for PCI */
