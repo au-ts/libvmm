@@ -49,6 +49,7 @@
 #define PCI_CFG_OFFSET_BAR4          0x1C
 #define PCI_CFG_OFFSET_BAR5          0x20
 #define PCI_CFG_OFFSET_BAR6          0x24
+#define PCI_CFG_OFFSET_CARDBUS       0x28
 #define PCI_CFG_OFFSET_CAP_DATA      0x40
 
 #define PCI_HEADER_TYPE_MULTIFUNCTION 0x80
@@ -253,8 +254,8 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
             config_space->command = (uint16_t)*data & pci_device->sticky_cmd_bits;
             break;
         }
-        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_BAR2): {
-            uint8_t dev_bar_id = (config_space_offset - PCI_CFG_OFFSET_BAR1) / 0x4;
+        case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_CARDBUS): {
+            uint8_t dev_bar_id = (config_space_offset - PCI_CFG_OFFSET_BAR1) / sizeof(uint32_t);
             assert(dev_bar_id < PCI_NUM_BARS_PER_CONFIG_SPACE);
 
             // @billn handle 64-bit BARs
