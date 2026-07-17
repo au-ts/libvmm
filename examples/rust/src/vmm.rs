@@ -57,7 +57,7 @@ extern "C" {
     fn fault_handle(vcpu_id: usize, msginfo: MessageInfo) -> bool;
 }
 
-pub const GUEST_MAX_RAM_REGIONS: usize = 1;
+pub const GUEST_MAX_RAM_REGIONS: usize = 3;
 
 #[repr(C)]
 pub struct guest_ram_region {
@@ -134,11 +134,23 @@ fn init() -> VmmHandler {
         let success = guest_init(arch_guest_init {
             num_vcpus: 1,
             num_guest_ram_regions: 1,
-            guest_ram_regions: [guest_ram_region {
-                gpa_start: GUEST_RAM_START_GPA,
-                size: GUEST_RAM_SIZE,
-                vmm_vaddr: GUEST_RAM_VMM_VADDR as *mut _,
-            }],
+            guest_ram_regions: [
+                guest_ram_region {
+                    gpa_start: GUEST_RAM_START_GPA,
+                    size: GUEST_RAM_SIZE,
+                    vmm_vaddr: GUEST_RAM_VMM_VADDR as *mut _,
+                },
+                guest_ram_region {
+                    gpa_start: 0,
+                    size: 0,
+                    vmm_vaddr: 0 as *mut _,
+                },
+                guest_ram_region {
+                    gpa_start: 0,
+                    size: 0,
+                    vmm_vaddr: 0 as *mut _,
+                },
+            ],
             pci_init: guest_pci_init {
                 ecam_gpa: 0,
                 ecam_size: 0,
