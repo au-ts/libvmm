@@ -103,6 +103,14 @@ bool guest_arch_init(void)
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     size_t dsdt_aml_size = _guest_dsdt_aml_end - _guest_dsdt_aml;
 
+    if (!kernel_size) {
+        LOG_VMM_ERR("Kernel image is empty\n");
+        return false;
+    }
+    if (!initrd_size) {
+        LOG_VMM_ERR("Initial ramdisk image is empty\n");
+        return false;
+    }
     if (!dsdt_aml_size) {
         LOG_VMM_ERR("DSDT AML image is empty\n");
         return false;

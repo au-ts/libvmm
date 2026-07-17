@@ -78,6 +78,20 @@ bool guest_arch_init(void)
     size_t kernel_size = _guest_kernel_image_end - _guest_kernel_image;
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
+
+    if (!kernel_size) {
+        LOG_VMM_ERR("Kernel image is empty\n");
+        return false;
+    }
+    if (!initrd_size) {
+        LOG_VMM_ERR("Initial ramdisk image is empty\n");
+        return false;
+    }
+    if (!dtb_size) {
+        LOG_VMM_ERR("DTB image is empty\n");
+        return false;
+    }
+
     kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
                                    (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
                                    (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
