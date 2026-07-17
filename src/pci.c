@@ -261,19 +261,48 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
             // Memory negotiation process:
             //     1. The driver writes all 1s to the BAR register.
             //     2. The device writes the size mask ~(size - 1) to the BAR register.
-            //     3. The driver writes the original value (all 0s in our code) back
-            //         to the BAR register. (no action from the device)
-            //     4. The driver allocates memory from the memory resources, and writes
-            //         the allocated address to the BAR register.
-            //     5. The device parse the memory address and bookkeep it.
+            //     3. The driver writes the requested address to the BAR register.
+            //     4. The driver allocates memory from the memory resources.
             if (pci_device->bars[dev_bar_id].size) {
+                struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
                 if (*data == 0xFFFFFFFF) {
-                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
                     bar->base_address = (~(pci_device->bars[dev_bar_id].size - 1)) >> 4;
-                } else if (*data != 0x0) {
-                    struct pci_bar_memory_bits *bar = &config_space->bars[dev_bar_id];
+                } else {
                     uint32_t guest_allocated_addr = *data & 0xFFFFFFF0;   // Ignore control bits
-                    bar->base_address = guest_allocated_addr >> 4;       // 16-byte aligned
+
+                    if (!guest_allocated_addr) {
+                        bar->base_address = 0;
+                        pci_device->bars[dev_bar_id].gpa = 0;
+
+                        /* TODO remove ept/vm exception handler */
+                        return true;
+                    }
+
+                    if (guest_allocated_addr < pci_bus.mmio_aperature.gpa) {
+                        LOG_VMM_ERR("guest attempted to allocate BAR %d at GPA 0%x below MMIO aperature\n", dev_bar_id,
+                                    guest_allocated_addr);
+                        return true;
+                    }
+                    if (guest_allocated_addr + pci_device->bars[dev_bar_id].size
+                        > pci_bus.mmio_aperature.gpa + pci_bus.mmio_aperature.size) {
+                        LOG_VMM_ERR("guest attempted to allocate BAR %d at GPA 0%x above MMIO aperature\n", dev_bar_id,
+                                    guest_allocated_addr);
+                        return true;
+                    }
+
+                    bar->base_address = guest_allocated_addr >> 4; // 16-byte aligned
+
+                    if (guest_allocated_addr == (uint32_t)pci_device->bars[dev_bar_id].gpa) {
+                        /* Guest negotiated the same GPA, no need to do anything. */
+                        return true;
+                    }
+
+                    if (pci_device->bars[dev_bar_id].gpa
+                        && (guest_allocated_addr != (uint32_t)pci_device->bars[dev_bar_id].gpa)) {
+                        LOG_VMM_ERR("relocating a PCI MMIO BAR is unimplemented\n");
+                        return false;
+                    }
+
                     pci_device->bars[dev_bar_id].gpa = guest_allocated_addr;
 
                     /* We just need 3 bits to represent the BAR index (0-5), so we can stuff it
@@ -284,7 +313,7 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
                     uint64_t bar_idx_mask = (uint64_t)dev_bar_id << 61;
                     cookie |= bar_idx_mask;
 
-                    bool register_ok;
+                    bool register_ok = false;
 #if defined(CONFIG_ARCH_ARM)
                     register_ok = fault_register_vm_exception_handler(guest_allocated_addr,
                                                                       pci_device->bars[dev_bar_id].size,
