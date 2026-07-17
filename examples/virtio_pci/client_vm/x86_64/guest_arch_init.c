@@ -16,8 +16,6 @@
 #include <sddf/network/config.h>
 #include <sddf/timer/config.h>
 
-// @billn remove all serial stuff once virtio console works
-
 /* Device slot of the virtio console device on bus 0.
  * Host bridge = 0, ISA bridge = 1 so we must avoid these.
  * Then on Intel, the integrated graphics is conventionally on slot 2 as well...
