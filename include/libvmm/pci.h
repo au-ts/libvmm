@@ -34,6 +34,8 @@
  * via the DTS on ARM or DSDT on x86. */
 bool pci_bus_init(uint64_t ecam_gpa, uint32_t ecam_size, uint64_t mmio_aperature_gpa, uint64_t mmio_aperature_size);
 
+bool pci_bus_get_mmio_aperature(uint64_t *mmio_aperature_gpa, uint64_t *mmio_aperature_size);
+
 /* Information about the device during the initial registration process. */
 typedef struct pci_device_register_data {
     uint16_t vendor_id;
