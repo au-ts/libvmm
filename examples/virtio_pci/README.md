@@ -40,7 +40,7 @@ If you encounter this crash, you must manually retrieve the correct
 physical addresses from QEMU and update your configuration.
 
 1. Access the QEMU Monitor
-While your QEMU instance is running, press Ctrl + A, release
+While your QEMU instance is running, press Ctrl + a, release
 both keys, and then press c. You will be dropped into the QEMU
 monitor prompt:
 
