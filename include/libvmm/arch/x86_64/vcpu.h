@@ -48,10 +48,12 @@
  * Note: "IA-32e" is just Intel's name for long mode.
  * Consult [1c] for more details
  */
-#define IA32_EFER_LME (BIT(8) | BIT(10)) /* Enable IA-32e mode operation */
+
+#define IA32_EFER_LME BIT(8)  /* Long mode active */
+#define IA32_EFER_LMA BIT(10) /* Enable IA-32e mode operation */
 
 /* Long mode default */
-#define IA32_EFER_LM_DEFAULT (IA32_EFER_LME)
+#define IA32_EFER_LM_DEFAULT (IA32_EFER_LME | IA32_EFER_LMA)
 
 /* The 32-bit EFLAGS/RFLAGS register contains a group of status flags, a control flag, and a group of system flags.
  * We don't use anything here during boot to mask all IRQs, but the 2nd bit must always be set as 1. See [1d]
