@@ -119,6 +119,7 @@
  *
  */
 
+#define VIRTIO_BLK_DEV_ID "libvmm"
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
 /* Uncomment this to enable debug logging */
@@ -373,6 +374,7 @@ bool decode_virtio_block_request(virtio_queue_handler_t *vq_handler, uint16_t de
     return true;
 }
 
+/* Returns true if there are responses ready for the guest */
 static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_consumed)
 {
     int err = 0;
@@ -383,9 +385,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
 
     struct virtio_blk_device *state = device_state(dev);
 
-    /* If any request has to be dropped due to any number of reasons, such as an invalid req, this becomes
-     * true */
-    bool has_dropped = false;
+    bool have_responses = false;
     int nums_consumed = 0;
 
     LOG_BLOCK("------------- handle_client_requests start loop -------------\n");
@@ -529,6 +529,19 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             assert(virtio_virtq_pop_avail(vq, &desc_head));
             break;
         }
+        case VIRTIO_BLK_T_GET_ID: {
+            LOG_BLOCK("Request type is VIRTIO_BLK_T_GET_ID\n");
+            uint32_t body_bytes = request_bytes_to_body_bytes(state->reqsbk[req_id].total_req_size);
+            uint64_t bytes_to_write = MIN(body_bytes, sizeof(VIRTIO_BLK_DEV_ID));
+            assert(virtio_write_data_to_desc_chain(vq, state->reqsbk[req_id].virtio_desc_head, bytes_to_write,
+                                                   sizeof(struct virtio_blk_outhdr), VIRTIO_BLK_DEV_ID));
+            nums_consumed += 1;
+            assert(virtio_virtq_pop_avail(vq, &desc_head));
+            virtio_virtq_add_used(vq, desc_head, 0);
+            virtio_blk_set_req_success(vq, &state->reqsbk[req_id]);
+            have_responses = true;
+            break;
+        }
         default: {
             LOG_BLOCK_ERR("Handling VirtIO block request, but virtIO request type is "
                           "not recognised: %d\n",
@@ -537,7 +550,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             virtio_virtq_add_used(vq, state->reqsbk[req_id].virtio_desc_head, 0);
             ialloc_free(&state->ialloc, req_id);
             state->reqsbk[req_id].state = VIRTIO_BLK_REQ_STATE_INVALID;
-            has_dropped = true;
+            have_responses = true;
             break;
         }
         }
@@ -546,17 +559,17 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
 stop_processing:
     *num_reqs_consumed = nums_consumed;
 
-    return !has_dropped;
+    return have_responses;
 }
 
 static bool virtio_blk_queue_notify(struct virtio_device *dev)
 {
     int nums_consumed = 0;
     LOG_BLOCK("virtio_blk_queue_notify calling handle_client_requests\n");
-    bool consumption_status = handle_client_requests(dev, &nums_consumed);
+    bool have_responses = handle_client_requests(dev, &nums_consumed);
 
     bool virq_inject_success = true;
-    if (!consumption_status) {
+    if (have_responses) {
         LOG_BLOCK("virtio_blk_queue_notify dropped requests\n");
         virtio_set_interrupt_status(dev, true, false);
         virq_inject_success = virtio_inject_interrupt(dev);
