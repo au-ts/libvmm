@@ -355,10 +355,6 @@ bool decode_virtio_block_request(virtio_queue_handler_t *vq_handler, uint16_t de
     uint32_t sddf_block_number = (header.sector * VIRTIO_BLK_SECTOR_SIZE) / BLK_TRANSFER_SIZE;
 
     uint32_t body_size_bytes = request_bytes_to_body_bytes(payload_len);
-    /* Quick sanity check, the body must be of multiple sector size, if it is not then something is
-       wrong with the decoding process or the guest was malicious. The former is more likely so
-       we will keep the assert for now to catch such issue for further investigations. */
-    assert(body_size_bytes % VIRTIO_BLK_SECTOR_SIZE == 0);
 
     /* Offset within the data cells for reading/writing virtio data */
     uint32_t data_offset = ((header.sector * VIRTIO_BLK_SECTOR_SIZE) % BLK_TRANSFER_SIZE);
@@ -407,6 +403,14 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         switch (state->reqsbk[req_id].virtio_req_type) {
         case VIRTIO_BLK_T_IN:
         case VIRTIO_BLK_T_OUT: {
+            /* Quick sanity check, the body must be of multiple sector size,
+             * if it is not then something is wrong with the decoding process
+             * or the guest was malicious. The former is more likely so we
+             * will keep the assert for now to catch such issue for further
+             * investigations. */
+            uint32_t body_size_bytes = request_bytes_to_body_bytes(state->reqsbk[req_id].total_req_size);
+            assert(body_size_bytes % VIRTIO_BLK_SECTOR_SIZE == 0);
+
             bool resources_ok = true;
             if (!sddf_make_req_check(state, state->reqsbk[req_id].sddf_count)) {
                 resources_ok = false;
