@@ -126,6 +126,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x7: /* "Structured Extended Feature Flags Enumeration" */
         if (vctx->ecx == 0) {
             vctx->ebx = CPUID_7H_0_X64_V2_BASELINE_EBX;
+        } else {
+            vctx->ebx = 0;
         }
         vctx->eax = 0;
         vctx->ecx = 0;
