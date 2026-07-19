@@ -141,12 +141,15 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
     switch (get_cr_number(qualification)) {
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
     case 8: {
+        /* CR8 is the high bits of the TPR https://wiki.osdev.org/CPU_Registers_x86-64#CR8 */
         if (get_access_type(qualification) == MOV_TO_CR) {
-            return lapic_write_fault_handle(REG_LAPIC_TPR, get_write_operand(vctx, qualification));
+            uint8_t cr8 = get_write_operand(vctx, qualification);
+            uint8_t tpr = (cr8 & 0xF) << 4;
+            return lapic_write_fault_handle(REG_LAPIC_TPR, tpr);
         } else if (get_access_type(qualification) == MOV_FROM_CR) {
             uint32_t data;
             bool success = lapic_read_fault_handle(REG_LAPIC_TPR, &data);
-            write_to_read_operand(vctx, qualification, data);
+            write_to_read_operand(vctx, qualification, (data >> 4) & 0xF);
             return success;
         }
     }
