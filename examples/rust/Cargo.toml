@@ -14,5 +14,5 @@ name = "vmm"
 path = "src/vmm.rs"
 
 [dependencies]
-sel4-microkit = { git = "https://github.com/seL4/rust-sel4", rev = "c30d0e44fb32c15239049ce402ef2a8c72499aa3" }
-sel4-microkit-base = { git = "https://github.com/seL4/rust-sel4", rev = "c30d0e44fb32c15239049ce402ef2a8c72499aa3", features = ["extern-symbols"] }
+sel4-microkit = { git = "https://github.com/seL4/rust-sel4", rev = "4edc3cdeada177b5d23e84ab06487cdd1fac0462" }
+sel4-microkit-base = { git = "https://github.com/seL4/rust-sel4", rev = "4edc3cdeada177b5d23e84ab06487cdd1fac0462", features = ["extern-symbols"] }
