@@ -336,7 +336,7 @@ bool decode_virtio_block_request(virtio_queue_handler_t *vq_handler, uint16_t de
 
     LOG_BLOCK("decode_virtio_block_request(): decoding desc head %u\n", desc_head);
     uint64_t payload_len = virtio_desc_chain_payload_len(vq_handler, desc_head);
-    if (payload_len < sizeof(struct virtio_blk_outhdr)) {
+    if (payload_len < sizeof(struct virtio_blk_outhdr) + 1) {
         /* Malicious guest driver */
         LOG_BLOCK_ERR("decode_virtio_block_request(): desc head %u, payload length %lu bytes too short\n", desc_head,
                       payload_len);
