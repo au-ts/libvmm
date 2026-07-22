@@ -657,7 +657,11 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
     }
 
     if (ept_fault_is_read(qualification)) {
-        if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
+        if (offset == REG_IOAPIC_IOREGSEL_MMIO_OFF) {
+            uint64_t data = ioapic_regs.selected_reg;
+            assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
+
+        } else if (offset == REG_IOAPIC_IOWIN_MMIO_OFF) {
             uint64_t data;
 
             if (ioapic_regs.selected_reg == REG_IOAPIC_IOAPICID_REG_OFF) {
