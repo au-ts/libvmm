@@ -180,6 +180,9 @@ typedef struct reqbk {
     uintptr_t sddf_data_cell_base;
     uint32_t sddf_data_offset;
     uint16_t sddf_count;
+    /* What is the current progress of this virtio request? */
+    uint64_t bytes_completed;
+    uint64_t bytes_remaining;
 } reqbk_t;
 
 struct virtio_blk_device {
