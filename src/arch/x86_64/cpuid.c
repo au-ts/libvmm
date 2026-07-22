@@ -10,6 +10,8 @@
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/cpuid.h>
 #include <libvmm/arch/x86_64/fault.h>
+#include <libvmm/arch/x86_64/vmcs.h>
+#include <libvmm/arch/x86_64/vcpu.h>
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
@@ -112,6 +114,14 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
         vctx->ebx = clflush_line_size_mask;
         vctx->ecx = CPUID_1H_X64_V2_BASELINE_ECX;
         vctx->edx = CPUID_1H_X64_V2_BASELINE_EDX;
+
+        /* "A value of 1 indicates that the OS has set CR4.OSXSAVE[bit 18]
+         * to enable XSETBV/XGETBV instructions to access XCR0 and to support
+         * processor extended state management using XSAVE/XRSTOR." */
+        uint64_t cr4 = microkit_vcpu_x86_read_vmcs(0, VMX_GUEST_CR4);
+        if (cr4 & CR4_OSXSAVE) {
+            vctx->ecx |= CPUID_1H_ECX_OSXSAVE;
+        }
         break;
     }
 
