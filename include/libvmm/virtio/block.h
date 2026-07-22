@@ -150,7 +150,7 @@ where we can't handle large requests when the free cells in the data region isn'
 #define VIRTIO_BLK_DEFAULT_VIRTQ 0
 
 typedef enum {
-    VIRTIO_BLK_REQ_STATE_INVALID = 0,
+    VIRTIO_BLK_REQ_STATE_INVALID = 1,
     VIRTIO_BLK_REQ_STATE_FLUSHING,
     VIRTIO_BLK_REQ_STATE_READING,
     VIRTIO_BLK_REQ_STATE_WRITING_ALIGNED,
@@ -176,12 +176,13 @@ typedef struct reqbk {
     uint64_t virtio_sector;
     uint64_t total_req_size;
     /* For enqueuing sddf req/resp */
-    uint32_t sddf_block_number;
     uintptr_t sddf_data_cell_base;
-    uint32_t sddf_data_offset;
-    uint16_t sddf_count;
-    /* What is the current progress of this virtio request? */
+    uint64_t sddf_data_offset;
+    uint16_t sddf_count_in_flight;
+    /* What is the current progress of this virtio request?
+     * The sum of these == request_bytes_to_body_bytes(total_req_size) */
     uint64_t bytes_completed;
+    uint64_t bytes_in_flight;
     uint64_t bytes_remaining;
 } reqbk_t;
 
