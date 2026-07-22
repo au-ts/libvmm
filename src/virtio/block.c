@@ -91,6 +91,12 @@
  * to dispatch RMW for the first request, wait asynchronously for that to finish. Then dispatch
  * RMW for the second request.
  *
+ * When the guest did not negotiate VIRTIO_BLK_F_SIZE_MAX or VIRTIO_BLK_F_SEG_MAX, it is possible
+ * that it will give us a request with a data size that exceeds our sDDF block data region size.
+ * Meaning we will never be able to satisfy the request and leading to the guest deadlocking. To
+ * solve this problem the device will divide the request up into multiple smaller chunk and process
+ * them sequentially, then only consider the request completed when it have finished with all the chunks.
+ *
  * Therefore each virtio block request has an attached state machine. A request can be in one of the
  * following states at any given time:
  * 1. Flushing
@@ -121,6 +127,11 @@
 
 #define VIRTIO_BLK_DEV_ID "libvmm"
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
+
+/* If we need to split up the guest's request into multiple chunks for reason explained above then
+ * make the chunk equal to a quarter of the data region. This is arbitrarily chosen, can be increased
+ * or decreased safely up to the data region size. */
+#define CHUNK_SIZE_BYTES ((SDDF_MAX_DATA_CELLS / 4) * BLK_TRANSFER_SIZE)
 
 #define LOG_BLOCK_WARN(...)               \
     do                                   \
@@ -244,23 +255,6 @@ static inline bool virtio_blk_set_device_config(struct virtio_device *dev, uint3
     return true;
 }
 
-/* Check if ialloc and req queue are full.
- * If these all pass then a request without a payload (e.g. flush) can be handled successfully */
-static inline bool sddf_make_req_check(struct virtio_blk_device *state)
-{
-    if (ialloc_full(&state->ialloc)) {
-        LOG_BLOCK_WARN("Request bookkeeping array is full\n");
-        return false;
-    }
-
-    if (blk_queue_full_req(&state->queue_h)) {
-        LOG_BLOCK_WARN("Request queue is full\n");
-        return false;
-    }
-
-    return true;
-}
-
 /* What is the number of bytes that the guest want to read from/write to the disk? */
 static uint64_t reqbk_to_body_bytes(reqbk_t *reqbk)
 {
@@ -361,7 +355,6 @@ bool decode_virtio_block_request(virtio_queue_handler_t *vq_handler, uint16_t de
 
     ret->virtio_req_type = header.type;
     ret->virtio_sector = header.sector;
-    ret->sddf_data_offset = reqbk_to_sddf_data_offset(ret);
     ret->bytes_remaining = reqbk_to_body_bytes(ret);
 
     return true;
@@ -380,42 +373,32 @@ static bool dispatch_request(struct virtio_device *dev, reqbk_t *reqbk, uint32_t
     struct virtio_blk_device *state = device_state(dev);
 
     bool resources_ok = true;
-    if (!sddf_make_req_check(state)) {
-        /* One of the bookkeeping array is full, give up for now, resources will
-         * become available later. */
-        resources_ok = false;
-    }
 
     /* Allocate data cells from sddf data region for the entire request. This may fail since
      * there might be fragmentation in the data region or a few requests are using a lot of
-     * space. */
+     * space.
+     *
+     * But if the entire request can't fit in the data region then we will have to split it up.
+     *
+     * We check against `reqbk_to_body_bytes(reqbk)` rather than reqbk->bytes_remaining here
+     * because this will be called again in `virtio_blk_handle_resp` and the situation might
+     * change such that the remaining chunks will be under SDDF_MAX_DATA_CELLS. But we might
+     * not have enough resources for them and fail. We cannot fail in `virtio_blk_handle_resp`
+     * so once the request is chunked it stays chunked. */
     uint64_t proposed_bytes = reqbk->bytes_remaining;
     uint64_t sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
+    if (reqbk_to_sddf_num_blocks(reqbk, reqbk_to_body_bytes(reqbk)) > SDDF_MAX_DATA_CELLS) {
+        proposed_bytes = MIN(CHUNK_SIZE_BYTES, reqbk->bytes_remaining);
+        sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
+    }
+
     if (fsmalloc_alloc(&state->fsmalloc, &reqbk->sddf_data_cell_base, sddf_num_blocks) == -1) {
+        /* Data region is full. Eventually we will be able to service this request.
+         * We should only get here if this is a fresh request and this function was called from
+         * handle_client_requests(). */
+        assert(reqbk->bytes_completed == 0);
         LOG_BLOCK_WARN("Data region is full\n");
         resources_ok = false;
-
-        // /* Hmm data region is full. Eventually we will be able to service this request. But
-        //     * if the request is larger than the sDDF Block data region then we will never be
-        //     * able to and would deadlock the guest. This is a realistic scenario as OVMF doesn't
-        //     * negotiate VIRTIO_BLK_F_SIZE_MAX and VIRTIO_BLK_F_SEG_MAX which is annoying.
-        //     *
-        //     * Lets try salvaging the situation by splitting the request up and service the
-        //     * request block by block. This is ok for the firmware since performance
-        //     * isn't critical. Once the guest OS boots properly their better driver will take over
-        //     * and negotiate the features. */
-
-        // if (fsmalloc_alloc(&state->fsmalloc, &state->reqsbk[req_id].sddf_data_cell_base, 1) == -1) {
-        //     /* Can't really do anything, give up. */
-        //     LOG_BLOCK_WARN("Data region is full\n");
-        //     resources_ok = false;
-        // } else {
-        //     LOG_VMM("splitting up %s request sector %u, body size %u\n",
-        //             state->reqsbk[req_id].virtio_req_type == VIRTIO_BLK_T_IN ? "Read" : "Write",
-        //             state->reqsbk[req_id].virtio_sector, state->reqsbk[req_id].sddf_block_number,
-        //             request_bytes_to_body_bytes(state->reqsbk[req_id].total_req_size));
-        //     state->reqsbk[req_id].sddf_count = 1;
-        // }
     }
 
     if (!resources_ok) {
@@ -427,6 +410,7 @@ static bool dispatch_request(struct virtio_device *dev, reqbk_t *reqbk, uint32_t
     uintptr_t sddf_offset = reqbk->sddf_data_cell_base - ((struct virtio_blk_device *)dev->device_data)->data_region;
     uint64_t sddf_block = reqbk_to_sddf_block_num(reqbk);
 
+    reqbk->sddf_data_offset = reqbk_to_sddf_data_offset(reqbk);
     reqbk->sddf_count_in_flight = sddf_num_blocks;
     reqbk->bytes_remaining -= proposed_bytes;
     reqbk->bytes_in_flight += proposed_bytes;
@@ -489,7 +473,6 @@ static bool dispatch_request(struct virtio_device *dev, reqbk_t *reqbk, uint32_t
 /* Returns true if there are responses ready for the guest */
 static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_consumed)
 {
-    int err = 0;
     /* If multiqueue feature bit negotiated, should read which queue from
        dev->QueueNotify, but for now we just assume it's the one and only default
        queue */
@@ -504,8 +487,11 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
     while (virtio_virtq_peek_avail(vq, &desc_head)) {
         /* Generate sddf request id and bookkeep the request */
         uint32_t req_id;
-        err = ialloc_alloc(&state->ialloc, &req_id);
-        if (err == -1) {
+        if (ialloc_alloc(&state->ialloc, &req_id) == -1) {
+            goto stop_processing;
+        }
+        if (blk_queue_full_req(&state->queue_h)) {
+            ialloc_free(&state->ialloc, req_id);
             goto stop_processing;
         }
         memset(&state->reqsbk[req_id], 0, sizeof(reqbk_t));
@@ -535,15 +521,10 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             }
         }
         case VIRTIO_BLK_T_FLUSH: {
-            if (!sddf_make_req_check(state)) {
-                state->reqsbk[req_id].state = VIRTIO_BLK_REQ_STATE_INVALID;
-                ialloc_free(&state->ialloc, req_id);
-                goto stop_processing;
-            }
-
             state->reqsbk[req_id].state = VIRTIO_BLK_REQ_STATE_FLUSHING;
 
-            err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
+            int err = blk_enqueue_req(&state->queue_h, BLK_REQ_FLUSH, 0, 0, 0, req_id);
+            assert(!err);
             nums_consumed += 1;
             assert(virtio_virtq_pop_avail(vq, &desc_head));
             break;
@@ -679,9 +660,23 @@ bool virtio_blk_handle_resp(struct virtio_blk_device *state)
 
             assert(reqbk->bytes_completed + reqbk->bytes_in_flight + reqbk->bytes_remaining
                    == reqbk_to_body_bytes(reqbk));
-
-            assert(!reqbk->bytes_remaining);
             assert(!reqbk->bytes_in_flight);
+            /* If we get here then the current chunk in the request have been completed in full.
+             * Process the next chunk if we still have work to do for this request. */
+            if (reqbk->bytes_remaining) {
+                fsmalloc_free(&state->fsmalloc, reqbk->sddf_data_cell_base, reqbk->sddf_count_in_flight);
+                reqbk->sddf_data_cell_base = 0;
+                reqbk->sddf_count_in_flight = 0;
+
+                /* This should not fail since we have freed resources of the previous chunk and all the
+                 * chunks are the same size if a request is chunked.
+                 * i.e. fsmalloc_free have already made contiguous free hole for the next chunk. */
+                assert(dispatch_request(dev, reqbk, sddf_ret_id));
+                virt_notify = true;
+
+                /* Skip over to the next request, this request have not finished yet. */
+                continue;
+            }
 
             if (reqbk->state == VIRTIO_BLK_REQ_STATE_WRITING_ALIGNED
                 || reqbk->state == VIRTIO_BLK_REQ_STATE_RMW_WRITING) {
