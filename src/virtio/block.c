@@ -839,7 +839,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE, num_sddf_cells, &blk_dev->fsmalloc_avail_bitarr,
                   blk_dev->fsmalloc_avail_bitarr_words, BITS_2_WORDS64(num_sddf_cells));
 
-    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, num_sddf_cells);
+    ialloc_init(&blk_dev->ialloc, blk_dev->ialloc_idxlist, SDDF_MAX_QUEUE_CAPACITY);
 
     return dev;
 }
