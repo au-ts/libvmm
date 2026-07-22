@@ -518,7 +518,9 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
         /* Generate sddf request id and bookkeep the request */
         uint32_t req_id;
         err = ialloc_alloc(&state->ialloc, &req_id);
-        assert(!err);
+        if (err == -1) {
+            goto stop_processing;
+        }
         assert(state->reqsbk[req_id].state == VIRTIO_BLK_REQ_STATE_INVALID);
 
         LOG_BLOCK("----- Begin processing request at descriptor head %u -----\n", desc_head);
