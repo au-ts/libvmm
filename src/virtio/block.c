@@ -538,6 +538,7 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
             assert(virtio_virtq_pop_avail(vq, &desc_head));
             virtio_virtq_add_used(vq, desc_head, 0);
             virtio_blk_set_req_success(vq, &state->reqsbk[req_id]);
+            ialloc_free(&state->ialloc, req_id);
             have_responses = true;
             break;
         }
