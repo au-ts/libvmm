@@ -254,7 +254,7 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
     } else {
         switch (config_space_offset) {
         case REG_RANGE(PCI_CFG_OFFSET_COMMAND, PCI_CFG_OFFSET_STATUS): {
-            config_space->command = (uint16_t)*data & pci_device->sticky_cmd_bits;
+            config_space->command = (uint16_t)*data | pci_device->sticky_cmd_bits;
             break;
         }
         case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_CARDBUS): {
