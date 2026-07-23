@@ -60,6 +60,7 @@ static void virtio_console_reset(struct virtio_device *dev)
         dev->vqs[i].virtq.num = 0;
     }
 
+    virtio_set_interrupt_status(dev, false, false);
     memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
     virtio_console_regs_init(dev);
 }
