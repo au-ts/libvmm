@@ -43,7 +43,7 @@ char lapic_regs[LAPIC_REG_BLOCK_SIZE];
  */
 
 /* [1] "12.5.2 Valid Interrupt Vectors" */
-#define MIN_VECTOR 32
+#define MIN_VECTOR 16
 
 #define LAPIC_NUM_ISR_IRR_TMR_32B 8
 #define MAX_VECTOR (LAPIC_NUM_ISR_IRR_TMR_32B * 32)
