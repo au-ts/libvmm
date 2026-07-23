@@ -169,6 +169,7 @@ static inline void virtio_blk_reset(struct virtio_device *dev)
     }
     assert(blk_queue_empty_req(&device_state(dev)->queue_h));
     assert(blk_queue_empty_resp(&device_state(dev)->queue_h));
+    virtio_set_interrupt_status(dev, false, false);
     memset(&dev->regs, 0, sizeof(virtio_device_regs_t));
     memset(device_state(dev)->reqsbk, 0, sizeof((device_state(dev)->reqsbk)));
 
