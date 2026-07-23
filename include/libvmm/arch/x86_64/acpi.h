@@ -291,6 +291,10 @@ struct fadt {
     struct address_structure X_PMTimerBlock;
     struct address_structure X_GPE0Block;
     struct address_structure X_GPE1Block;
+
+    struct address_structure SleepControlReg;
+    struct address_structure SleepStatusReg;
+    uint64_t HypervisorVendorIdentity;
 } __attribute__((packed));
 
 ////////////////////////////////////////
