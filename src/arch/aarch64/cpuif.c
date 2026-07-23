@@ -64,6 +64,17 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
         .opc2 = 5,
         .read_fn = NULL,
         .write_fn = icc_sgi1r_el1_write,
+    },
+    {
+        /* Page 12-281 */
+        .name = "ICC_SRE_EL1",
+        .opc0 = 3,
+        .opc1 = 0,
+        .crn = 12,
+        .crm = 12,
+        .opc2 = 5,
+        .read_fn = icc_sre_el1_read,
+        .write_fn = NULL,
     }
 #endif
 };
@@ -88,6 +99,12 @@ static uint64_t sysreg_fault_get_data(seL4_UserContext *regs, uint64_t hsr)
     return data;
 }
 
+static void sysreg_fault_set_data(seL4_UserContext *regs, uint64_t hsr, uint64_t data)
+{
+    int rt = sysreg_fault_get_rt(hsr);
+    *decode_rt(rt, regs) = data;
+}
+
 bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs)
 {
     uint32_t iss = hsr & ISS_MASK_FROM_HSR;
@@ -97,24 +114,31 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     uint8_t crn = (iss >> ISS_SYSREG_CRN_SHIFT) & ISS_SYSREG_CRN_MASK;
     uint8_t crm = (iss >> ISS_SYSREG_CRM_SHIFT) & ISS_SYSREG_CRM_MASK;
     bool is_read = (iss >> ISS_SYSREG_IS_READ_BIT) & 0x1;
-    uint64_t data = sysreg_fault_get_data(regs, hsr);
+    bool success = false;
 
     for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
         if (cpuif_reginfo[i].opc0 == op0 && cpuif_reginfo[i].opc1 == op1 && cpuif_reginfo[i].crn == crn
             && cpuif_reginfo[i].crm == crm && cpuif_reginfo[i].opc2 == op2) {
             /* Check access rights */
-            if (is_read) {
-                assert(cpuif_reginfo[i].read_fn);
-                return cpuif_reginfo[i].read_fn(vcpu_id, regs);
-            } else {
-                assert(cpuif_reginfo[i].write_fn);
-                return cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
+            if (is_read && cpuif_reginfo[i].read_fn) {
+                uint64_t data;
+                success = cpuif_reginfo[i].read_fn(vcpu_id, regs, &data);
+                sysreg_fault_set_data(regs, hsr, data);
+            } else if (!is_read && cpuif_reginfo[i].write_fn) {
+                uint64_t data = sysreg_fault_get_data(regs, hsr);
+                success = cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
             }
+
+            break;
         }
     }
 
-    LOG_VMM("trapped sysreg 64 exception with unimplemented instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is "
-            "read %u\n",
-            op0, op2, op1, crn, crm, is_read);
+    if (success) {
+        return fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
+    } else {
+        LOG_VMM("failed to handle sysreg 64 exception with instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is "
+                "read %u\n",
+                op0, op2, op1, crn, crm, is_read);
+    }
     return false;
 }

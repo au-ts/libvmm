@@ -50,7 +50,16 @@ bool icc_sgi1r_el1_write(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
         }
     }
 
-    return fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
+    return true;
+}
+
+bool icc_sre_el1_read(size_t vcpu_id, seL4_UserContext *regs, uint64_t *data)
+{
+    uint64_t value = BIT(0) | /* "The System register interface for the current Security state is enabled." */
+                     BIT(1) | /* "FIQ bypass disabled." */
+                     BIT(2);  /* "IRQ bypass disabled." */
+    *data = value;
+    return true;
 }
 
 #endif
