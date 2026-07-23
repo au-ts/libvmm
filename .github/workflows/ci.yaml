@@ -18,8 +18,8 @@ on:
     - cron: '37 7 * * 5'
 
 env:
-  MICROKIT_VERSION: 2.2.0-dev.93+ceb65aa
-  MICROKIT_URL: https://trustworthy.systems/Downloads/microkit/
+  MICROKIT_VERSION: 2.3.0
+  MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.3.0/
   SDFGEN_VERSION: 0.33.0
 
 jobs:
