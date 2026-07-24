@@ -76,6 +76,7 @@ struct comparator_regs {
 
     bool timeout_handle_valid;
     guest_timeout_handle_t timeout_handle;
+    bool irq_registered;
 };
 
 struct hpet_regs {
@@ -96,9 +97,18 @@ static uint32_t hpet_counter_offset = 0;
 static struct hpet_regs hpet_regs = {
     // 32-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, tick rate = 10MHz
     .general_capabilities = GENERAL_CAP_MASK,
-    .comparators[0] = { .config = TIM0_CONF_MASK, .config_mask = TIM0_CONF_MASK, .timeout_handle_valid = false },
-    .comparators[1] = { .config = TIM1_CONF_MASK, .config_mask = TIM1_CONF_MASK, .timeout_handle_valid = false },
-    .comparators[2] = { .config = TIM2_CONF_MASK, .config_mask = TIM2_CONF_MASK, .timeout_handle_valid = false },
+    .comparators[0] = { .config = TIM0_CONF_MASK,
+                        .config_mask = TIM0_CONF_MASK,
+                        .timeout_handle_valid = false,
+                        .irq_registered = false },
+    .comparators[1] = { .config = TIM1_CONF_MASK,
+                        .config_mask = TIM1_CONF_MASK,
+                        .timeout_handle_valid = false,
+                        .irq_registered = false },
+    .comparators[2] = { .config = TIM2_CONF_MASK,
+                        .config_mask = TIM2_CONF_MASK,
+                        .timeout_handle_valid = false,
+                        .irq_registered = false },
 };
 
 static uint32_t time_now_32(void)
@@ -323,7 +333,14 @@ static bool hpet_fault_handle_config_write(uint8_t comparator, uint64_t data, de
     }
 
     if (!irq_en_old && irq_en_new) {
-        return virq_register(X86_IOAPIC_IRQ_ROUTE(0, get_timer_n_ioapic_pin(comparator)), NULL, NULL);
+        if (regs->irq_registered) {
+            virq_deregister(X86_IOAPIC_IRQ_ROUTE(0, get_timer_n_ioapic_pin(comparator)));
+        }
+        virq_register(X86_IOAPIC_IRQ_ROUTE(0, get_timer_n_ioapic_pin(comparator)), NULL, NULL);
+        regs->irq_registered = true;
+    } else if (irq_en_old && !irq_en_new && regs->irq_registered) {
+        virq_deregister(X86_IOAPIC_IRQ_ROUTE(0, get_timer_n_ioapic_pin(comparator)));
+        regs->irq_registered = false;
     }
 
     return true;
