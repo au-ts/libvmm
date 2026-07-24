@@ -75,6 +75,25 @@ static bool irq_type_check(irq_routing_info_t irq_routing_info)
     return true;
 }
 
+static bool irq_range_check(irq_routing_info_t irq_routing_info)
+{
+    uint8_t chip = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    uint8_t pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+
+    if (chip != 0) {
+        LOG_VMM_ERR("Invalid I/O APIC chip number given '0x%x' for virtual I/O APIC #%d IRQ pin 0x%x\n", chip, chip,
+                    pin);
+        return false;
+    }
+
+    if (pin >= IOAPIC_NUM_PINS) {
+        LOG_VMM_ERR("Invalid I/O APIC pin number given '0x%x' for virtual I/O APIC #%d IRQ pin 0x%x\n", pin, chip, pin);
+        return false;
+    }
+
+    return true;
+}
+
 bool virq_inject(irq_routing_info_t irq_routing_info)
 {
     if (!irq_type_check(irq_routing_info)) {
@@ -102,25 +121,12 @@ bool virq_set_level(irq_routing_info_t irq_routing_info, bool level)
 
 bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data)
 {
-    if (!irq_type_check(irq_routing_info)) {
+    if (!irq_type_check(irq_routing_info) || !irq_range_check(irq_routing_info)) {
         return false;
     }
 
     uint8_t chip = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
     uint8_t pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
-
-    if (chip != 0) {
-        LOG_VMM_ERR("Invalid I/O APIC chip number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n",
-                    chip, chip, pin);
-        return false;
-    }
-
-    if (pin >= IOAPIC_NUM_PINS) {
-        LOG_VMM_ERR("Invalid I/O APIC pin number given '0x%x' for passthrough virtual I/O APIC #%d IRQ pin 0x%x\n", pin,
-                    chip, pin);
-        return false;
-    }
-
     if (ioapic_regs.virq_handle_map[pin].valid) {
         LOG_VMM_ERR("Pin %d is already registered on virtual I/O APIC %d\n", pin, chip);
         return false;
@@ -129,6 +135,26 @@ bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, vo
     ioapic_regs.virq_handle_map[pin].valid = true;
     ioapic_regs.virq_handle_map[pin].ack_fn = ack_fn;
     ioapic_regs.virq_handle_map[pin].ack_data = ack_data;
+
+    return true;
+}
+
+bool virq_deregister(irq_routing_info_t irq_routing_info)
+{
+    if (!irq_type_check(irq_routing_info) || !irq_range_check(irq_routing_info)) {
+        return false;
+    }
+
+    uint8_t chip = IRQ_ROUTE_TO_X86_IOAPIC_CHIP(irq_routing_info);
+    uint8_t pin = IRQ_ROUTE_TO_X86_IOAPIC_PIN(irq_routing_info);
+    if (!ioapic_regs.virq_handle_map[pin].valid) {
+        LOG_VMM_ERR("Pin %d is already deregistered on virtual I/O APIC %d\n", pin, chip);
+        return false;
+    }
+
+    ioapic_regs.virq_handle_map[pin].valid = false;
+    ioapic_regs.virq_handle_map[pin].ack_fn = NULL;
+    ioapic_regs.virq_handle_map[pin].ack_data = NULL;
 
     return true;
 }
