@@ -89,7 +89,12 @@ bool virq_inject(irq_routing_info_t irq_routing_info);
  */
 bool virq_set_level(irq_routing_info_t irq_routing_info, bool level);
 
+/* Register or deregister an IRQ with the virtual IRQ controller.
+ * An IRQ must be registered before they can be injected into the guest. */
 bool virq_register(irq_routing_info_t irq_routing_info, virq_ack_fn_t ack_fn, void *ack_data);
+#if defined(CONFIG_ARCH_X86)
+bool virq_deregister(irq_routing_info_t irq_routing_info);
+#endif
 
 /*
  * These two APIs are convenient for when you want to directly passthrough an IRQ from
