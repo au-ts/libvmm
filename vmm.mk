@@ -82,8 +82,12 @@ endif
 CFILES += ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
-# Enable LLVM UBSAN to trap on detected undefined behaviour
-CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined -Wall -Werror -Wno-unused-function
+CFLAGS += -Wall -Werror -Wno-unused-function
+
+# Enable LLVM UBSAN to trap on detected undefined behaviour for debug configurations
+ifneq ($(findstring debug,$(MICROKIT_CONFIG)),)
+    CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined
+endif
 
 # Generate dependencies automatically
 CFLAGS += -MD -Wall -Werror -Wno-unused-function
