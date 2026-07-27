@@ -507,38 +507,60 @@ static void lapic_write_icr_low(uint32_t data)
     lapic_write_reg(REG_LAPIC_ICR_LOW, data);
 
     /* [1] "12.6.1 Interrupt Command Register (ICR)"
-        * "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
-        */
+     * "The act of writing to the low doubleword of the ICR causes the IPI to be sent."
+     */
     uint64_t icr = (uint64_t)data | (((uint64_t)lapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
     uint8_t delivery_mode = ((icr >> 8) & 0x7);
+    uint8_t dest_mode = ((icr >> 11) & 0x1); /* 0 = Physical, 1 = Logical */
     uint8_t destination_short_hand = (icr >> 18) & 0x3;
-    if (delivery_mode == 0 || delivery_mode == 5) {
-        uint8_t destination;
-        if (destination_short_hand == 0) {
-            /* Fixed mode */
-            destination = (icr >> 56) & 0xff;
-        } else if (destination_short_hand == 3) {
-            LOG_VMM_ERR("unsupported All Excluding Self IPI mode\n");
-            return;
-        } else {
-            /* Self or "all including self" IPI mode,
-             * the destination field is just a bitmap.
-             * Hardcode 1 VCPU for now since that is all
-             * we support */
-            destination = 1;
-        }
 
-        if (destination != 1) {
-            LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d for shorthand %u\n", destination,
-                        destination_short_hand);
+    int target_vcpu = -1;
+
+    if (destination_short_hand == 0) {
+        /* No shorthand: destination is determined by bits 56-63 */
+        uint8_t dest_field = (icr >> 56) & 0xff;
+
+        if (dest_mode == 0) {
+            /* Physical Mode: dest_field is the exact APIC ID */
+            /* Assuming our 1-vCPU BSP has APIC ID 0 */
+            if (dest_field == 0) {
+                target_vcpu = 0;
+            }
+        } else {
+            /* Logical Mode: dest_field is a bitmask */
+            /* Assuming Flat Model, bit 0 corresponds to APIC ID 0 */
+            if (dest_field & 0x01) {
+                target_vcpu = 0;
+            }
         }
+    } else if (destination_short_hand == 3) {
+        LOG_VMM_ERR("unsupported All Excluding Self IPI mode\n");
+        return;
+    } else {
+        /* Self (1) or All-including-self (2) IPI mode */
+        /* Since we only support 1 vCPU, it always targets vCPU 0 */
+        target_vcpu = 0;
+    }
+
+    if (target_vcpu != 0) {
+        LOG_VMM_ERR("dropping IPI: unroutable destination field 0x%lx (mode: %s, shorthand: %u)\n", (icr >> 56) & 0xff,
+                    dest_mode ? "Logical" : "Physical", destination_short_hand);
+        return;
+    }
+
+    if (delivery_mode == 0) {
+        /* Fixed Delivery */
         uint8_t vector = icr & 0xff;
         if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
-            LOG_VMM_ERR("failed to send IPI\n");
+            LOG_VMM_ERR("failed to send Fixed IPI\n");
         }
+    } else if (delivery_mode == 4) {
+        LOG_VMM_ERR("NMI IPI delivery requested (not yet implemented)\n");
+    } else if (delivery_mode == 5) {
+        LOG_VMM_ERR("INIT IPI delivery requested (not yet implemented)\n");
     } else {
-        LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x\n", delivery_mode);
+        LOG_VMM_ERR("LAPIC received request for unknown delivery mode 0x%x\n", delivery_mode);
     }
 }
 
