@@ -18,17 +18,24 @@
  *    Order Number: 290566-001 May 1996
  */
 
-uintptr_t vapic_vaddr;
+uintptr_t guest_apicv_hva;
 struct ioapic_regs ioapic_regs;
 
-bool virq_controller_init(uintptr_t guest_vapic_vaddr)
+bool virq_controller_init(uintptr_t apicv_hva)
 {
     LOG_VMM("initialising IRQ book-keeping structures\n");
     memset(&ioapic_regs, 0, sizeof(struct ioapic_regs));
 
     LOG_VMM("initialising LAPIC\n");
 
-    vapic_vaddr = guest_vapic_vaddr;
+#if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
+    if (!apicv_hva) {
+        LOG_VMM_ERR("apicv_hva can't be NULL");
+        return false;
+    }
+
+    guest_apicv_hva = apicv_hva;
+#endif
 
     // [1] "12.4.8 Local APIC Version Register"
     // "For processors based on the Nehalem microarchitecture (which has 7 LVT entries) and onward, the value returned is 6."

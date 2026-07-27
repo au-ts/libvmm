@@ -435,16 +435,16 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         if (access_type == 0) {
             uint32_t data;
             success = lapic_read_fault_handle(offset, &data);
-            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            decoded_ins = decode_instruction(vcpu_id, rip);
             assert(decoded_ins.type == INSTRUCTION_MEMORY);
-            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            uint64_t *vctx_raw = (uint64_t *)vctx;
             vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
         } else if (access_type == 1) {
-            decoded_ins = decode_instruction(vcpu_id, rip, ins_len);
+            decoded_ins = decode_instruction(vcpu_id, rip);
             assert(decoded_ins.type == INSTRUCTION_MEMORY);
             // TODO: probably do not have this assert
             assert(mem_access_width_to_bytes(decoded_ins) == 4);
-            uint64_t *vctx_raw = (uint64_t *)&vctx;
+            uint64_t *vctx_raw = (uint64_t *)vctx;
             // TODO: probably use wrapper for getting write value.
             success = lapic_write_fault_handle(offset, vctx_raw[decoded_ins.decoded.memory_instruction.target_reg]);
         } else {

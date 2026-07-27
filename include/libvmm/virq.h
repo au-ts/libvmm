@@ -73,8 +73,10 @@ bool virq_controller_init();
 #elif defined(CONFIG_ARCH_X86)
 /*
  * Initialise the virtual LAPIC and I/O APIC.
+ * When APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV, you need to pass the HVA of the "Virtual APIC" page,
+ * consult the Intel SDM for more details.
  */
-bool virq_controller_init(uintptr_t guest_vapic_vaddr);
+bool virq_controller_init(uintptr_t apicv_hva);
 #endif
 
 /*

@@ -64,7 +64,7 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise the virtual Local and I/O APICs */
-    if (!virq_controller_init(0)) {
+    if (!virq_controller_init(init_args.apicv_hva)) {
         LOG_VMM_ERR("Failed to initialise virtual IRQ controllers\n");
         return false;
     }
