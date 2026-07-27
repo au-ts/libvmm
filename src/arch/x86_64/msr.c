@@ -232,6 +232,26 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     LOG_FAULT("handling WRMSR 0x%lx, value 0x%lx\n", vctx->ecx, value);
 
     switch (vctx->ecx) {
+    case IA32_APIC_BASE:
+        /* Make sure that the guest isn't transitioning our virtual APIC into an invalid state.
+         * See Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family) for bit definitions. */
+        if (value & BIT(10)) {
+            LOG_VMM_ERR("guest tried to enable x2APIC via IA32_APIC_BASE\n");
+            return false;
+        }
+
+        uint64_t requested_apic_base = value & ~0xFFFull;
+        if (requested_apic_base != LAPIC_GPA) {
+            LOG_VMM_ERR("Guest tried to relocate APIC base to 0x%lx\n", requested_apic_base);
+            return false;
+        }
+
+        if (!(value & BIT(11))) {
+            LOG_VMM_ERR("Guest tried to globally disable the APIC (not supported)\n");
+            return false;
+        }
+
+        break;
     case MSR_EFER:
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, value);
         break;
