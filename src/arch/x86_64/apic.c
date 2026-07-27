@@ -515,19 +515,34 @@ static void lapic_write_icr_low(uint32_t data)
         */
     uint64_t icr = (uint64_t)data | (((uint64_t)lapic_read_reg(REG_LAPIC_ICR_HIGH)) << 32);
 
-    // @billn sus, handle other types of IPIs
     uint8_t delivery_mode = ((icr >> 8) & 0x7);
-    uint8_t destination = (icr >> 56) & 0xff;
+    uint8_t destination_short_hand = (icr >> 18) & 0x3;
     if (delivery_mode == 0 || delivery_mode == 5) {
-        // fixed mode
-        if (destination != 0) {
-            LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d\n", destination);
+        uint8_t destination;
+        if (destination_short_hand == 0) {
+            /* Fixed mode */
+            destination = (icr >> 56) & 0xff;
+        } else if (destination_short_hand == 3) {
+            LOG_VMM_ERR("unsupported All Excluding Self IPI mode\n");
+            return;
+        } else {
+            /* Self or "all including self" IPI mode,
+             * the destination field is just a bitmap.
+             * Hardcode 1 VCPU for now since that is all
+             * we support */
+            destination = 1;
+        }
+
+        if (destination != 1) {
+            LOG_VMM_ERR("trying to send IPI to unknown APIC ID %d for shorthand %u\n", destination,
+                        destination_short_hand);
         }
         uint8_t vector = icr & 0xff;
-        inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector);
+        if (!inject_lapic_irq(GUEST_BOOT_VCPU_ID, vector)) {
+            LOG_VMM_ERR("failed to send IPI\n");
+        }
     } else {
-        LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x, destination 0x%x\n",
-                    delivery_mode, destination);
+        LOG_VMM_ERR("LAPIC received requuest to send IPI of unknown delivery mode 0x%x\n", delivery_mode);
     }
 }
 
