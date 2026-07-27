@@ -42,7 +42,8 @@ uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
 
 /* OVMF expects a standard PC PCI bus, so we just make a small aperature at an arbitrary guest
- * RAM location. */
+ * RAM location to trigger libvmm to build a virtual PCI bus. But otherwise this example doesn't
+ * use the virtual PCI unless you extend it to do so. */
 #define PCI_MMIO_APERATURE_GPA 0xE0000000
 #define PCI_MMIO_APERATURE_SIZE 0x200000
 
