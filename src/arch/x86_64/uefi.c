@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <libvmm/guest.h>
 #include <libvmm/guest_ram.h>
 #include <libvmm/pci.h>
 #include <libvmm/util/util.h>
@@ -18,6 +19,8 @@
 #include <libvmm/uefi/table_loader.h>
 #include <libvmm/uefi/hardware_info.h>
 #include <sddf/util/util.h>
+
+extern guest_t guest;
 
 /* Document referenced:
  * https://github.com/tianocore/edk2/blob/edk2-stable202605/OvmfPkg/README */
@@ -104,6 +107,12 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         return false;
     }
 
+    uint64_t mmio_aperature_gpa, mmio_aperature_size;
+    if (!pci_bus_get_mmio_aperature(&mmio_aperature_gpa, &mmio_aperature_size)) {
+        LOG_VMM_ERR("Virtual PCI bus must be initialised for UEFI\n");
+        return false;
+    }
+
     void *dest = gpa_to_hva(flash_gpa + (flash_size - firm_size), firm_size);
     if (!dest) {
         LOG_VMM_ERR(
@@ -138,9 +147,6 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
     }
 
     /* Metadata about our virtual PCI bus */
-    uint64_t mmio_aperature_gpa, mmio_aperature_size;
-    assert(pci_bus_get_mmio_aperature(&mmio_aperature_gpa, &mmio_aperature_size));
-
     uefi_hw_info_pci.header = (struct hw_info_header) {
         .type = HW_INFO_TYPE_HOST_BRIDGE,
         .size = sizeof(struct host_bridge_info),
