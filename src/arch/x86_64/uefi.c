@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <libvmm/guest_ram.h>
+#include <libvmm/pci.h>
 #include <libvmm/util/util.h>
 #include <libvmm/arch/x86_64/vcpu.h>
 #include <libvmm/arch/x86_64/uefi.h>
@@ -15,6 +16,7 @@
 #include <libvmm/arch/x86_64/acpi.h>
 #include <libvmm/uefi/fw_cfg.h>
 #include <libvmm/uefi/table_loader.h>
+#include <libvmm/uefi/hardware_info.h>
 #include <sddf/util/util.h>
 
 /* Document referenced:
@@ -28,6 +30,8 @@
 /* These are defined in OVMF but only on loongarch, we will reuse them for the table loader */
 #define ACPI_XSDP_FWCFG_FILENAME "etc/acpi/rsdp"
 #define ACPI_TABLES_FWCFG_FILENAME "etc/acpi/tables"
+/* https://github.com/tianocore/edk2/blob/b03a21a63e3bd001f52c527e5a57feddb53a690b/OvmfPkg/Library/PciHostBridgeUtilityLib/PciHostBridgeUtilityLib.c#L468 */
+#define HW_INFO_FWCFG_FILENAME "etc/hardware-info"
 
 /* Backing storage for the E820 table we need to provide to the firmware, static since
  * the fw_cfg code expects the lifetime of the buffer to be equal to the lifetime of the VMM.
@@ -57,6 +61,9 @@ static qemu_loader_entry_t uefi_table_loader[UEFI_MAX_NUM_TABLE_LOADER_CMD];
 #define COMMAND_LINE_BUF_SIZE (COMMAND_LINE_SIZE + 1)
 static char uefi_linux_cmdline[COMMAND_LINE_BUF_SIZE] = { 0 };
 static uint32_t uefi_linux_cmdline_size = 0;
+
+/* Same but for the PCI metadata structure. */
+struct hw_info_pci_host_bridge uefi_hw_info_pci;
 
 bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src, size_t dsdt_size, uint64_t flash_gpa,
                        size_t flash_size)
@@ -127,6 +134,33 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
     if (!fw_cfg_add_named_file(E820_FWCFG_FILENAME, strlen(E820_FWCFG_FILENAME), (uint8_t *)&uefi_e820,
                                sizeof(struct boot_e820_entry) * num_guest_ram_regions)) {
         LOG_VMM_ERR("Failed to add '%s' file to fw cfg\n", E820_FWCFG_FILENAME);
+        return false;
+    }
+
+    /* Metadata about our virtual PCI bus */
+    uint64_t mmio_aperature_gpa, mmio_aperature_size;
+    assert(pci_bus_get_mmio_aperature(&mmio_aperature_gpa, &mmio_aperature_size));
+
+    uefi_hw_info_pci.header = (struct hw_info_header) {
+        .type = HW_INFO_TYPE_HOST_BRIDGE,
+        .size = sizeof(struct host_bridge_info),
+    };
+    uefi_hw_info_pci.body = (struct host_bridge_info) {
+        .flags.bits.combine_mem_pmem = 1,
+        .flags.bits.dma_above_4g = 1,
+        .flags.bits.no_extended_config_space = 1,
+        .attributes = EFI_PCI_ATTRIBUTE_ISA_MOTHERBOARD_IO | EFI_PCI_ATTRIBUTE_ISA_IO | EFI_PCI_ATTRIBUTE_ISA_IO_16,
+        .io_start = 0,
+        .io_size = 0,
+        .mem_start = mmio_aperature_gpa,
+        .mem_size = mmio_aperature_size,
+        .pcie_config_start = 0,
+        .pcie_config_size = 0,
+    };
+
+    if (!fw_cfg_add_named_file(HW_INFO_FWCFG_FILENAME, strlen(HW_INFO_FWCFG_FILENAME), (uint8_t *)&uefi_hw_info_pci,
+                               sizeof(struct hw_info_pci_host_bridge))) {
+        LOG_VMM_ERR("Failed to add '%s' file to fw cfg\n", HW_INFO_FWCFG_FILENAME);
         return false;
     }
 
