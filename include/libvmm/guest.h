@@ -46,6 +46,9 @@ typedef struct arch_guest_init {
      * if it cannot be inferred from CPUID. */
     microkit_channel timer_ch;
 
+    /* HVA to the "virtual APIC" page for Intel APICv operation. */
+    uintptr_t apicv_hva;
+
     size_t num_guest_ram_regions;
     struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
 

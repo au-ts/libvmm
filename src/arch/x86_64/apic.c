@@ -55,9 +55,8 @@ char lapic_regs[LAPIC_REG_BLOCK_SIZE];
 #define LOG_APIC(...) do{}while(0)
 #endif
 
-extern uintptr_t vapic_vaddr;
+extern uintptr_t guest_apicv_hva;
 extern struct ioapic_regs ioapic_regs;
-extern guest_t guest;
 
 /* Bookkeeping for the local APIC timer */
 // @billn revisit for multiple vcpus
@@ -80,8 +79,7 @@ uint32_t lapic_read_reg(int offset)
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
     uintptr_t lapic_regs_ptr = (uintptr_t)(&lapic_regs);
 #else
-    // @billn fix hardcoded vaddr
-    uintptr_t lapic_regs_ptr = 0x101000ull;
+    uintptr_t lapic_regs_ptr = guest_apicv_hva;
 #endif
 
     return *((volatile uint32_t *)(lapic_regs_ptr + offset));
@@ -94,8 +92,7 @@ void lapic_write_reg(int offset, uint32_t value)
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
     uintptr_t lapic_regs_ptr = (uintptr_t)(&lapic_regs);
 #else
-    // @billn fix hardcoded vaddr
-    uintptr_t lapic_regs_ptr = 0x101000ull;
+    uintptr_t lapic_regs_ptr = guest_apicv_hva;
 #endif
 
     volatile uint32_t *reg = (uint32_t *)(lapic_regs_ptr + offset);
@@ -299,7 +296,6 @@ void lapic_maintenance(void)
     if (is_irq_in_service(vector)) {
         /* selected interrupt already in service, remains queued until guest issues EOI
          * so we don't loose it. */
-        // @billn sus, might break level trigger
         vcpu_exit_update_ppvc(VMCS_PPVC_DEFAULT);
         return;
     }
@@ -726,9 +722,9 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                 LOG_APIC("ioapic pin %d reprogram 0x%lx, masked %d\n", redirection_reg_idx, new_reg,
                          !!(ioapic_regs.ioredtbl[redirection_reg_idx] & BIT(16)));
 
-                // If an I/O APIC IRQ pin goes from masked to unmasked and there are passed through
-                // IRQ on that pin, ack it so that if HW triggered an IRQ before the guest unmask the line
-                // in the virtual I/O APIC, the real IRQ doesn't get stuck in waiting for ACK.
+                // If an I/O APIC IRQ pin goes from masked to unmasked and there
+                // is an ack fn registered on that pin, run the ack function to make sure
+                // that nothing get stucked.
                 if ((old_reg & BIT(16)) && !(new_reg & BIT(16))) {
                     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
                         if (i == redirection_reg_idx) {
@@ -811,6 +807,7 @@ static bool inject_ioapic_irq(int ioapic, int pin)
         assert(false);
     }
 
+    /* is this pin level triggered? */
     if (ioapic_regs.ioredtbl[pin] & BIT(15)) {
         /* is the local APIC already processing this interrupt (remote IRR bit set)? */
         if (ioapic_regs.ioredtbl[pin] & BIT(14)) {
@@ -825,10 +822,12 @@ static bool inject_ioapic_irq(int ioapic, int pin)
     uint8_t vector = ioapic_pin_to_vector(ioapic, pin);
 
 #if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
-    /* For any passed through interrupts:
-     * When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func
+    /* For any interrupt with an ACK function:
+     * When the guest EOIs the interrupt, we must trigger a vmexit to run the ack func.
+     * The same applies if it is a level triggered interrupt, since we must re-evaluate if
+     * the interrupt needs to be injected.
      */
-    if (ioapic_regs.virq_handle_map[pin].valid) {
+    if (ioapic_regs.virq_handle_map[pin].ack_fn || ioapic_regs.ioredtbl[pin] & BIT(15)) {
         int eoi_bitmap_n = vector / 64;
         int n_bitmap_i = vector % 64;
         switch (eoi_bitmap_n) {
@@ -898,58 +897,54 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
                 if (ioapic_regs.virq_handle_map[i].ack_fn) {
                     ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
                                                           ioapic_regs.virq_handle_map[i].ack_data);
+                }
 
 #if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
-                    /* Now clear the vector's bit in EOI exit bitmap */
-                    int eoi_bitmap_n = vector / 64;
-                    int n_bitmap_i = vector % 64;
-                    switch (eoi_bitmap_n) {
-                    case 0: {
-                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
-                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_0);
-                        bitmap &= ~BIT(n_bitmap_i);
-                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0, bitmap);
-                        break;
-                    }
-                    case 1: {
-                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
-                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_1);
-                        bitmap &= ~BIT(n_bitmap_i);
-                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1, bitmap);
-                        break;
-                    }
-                    case 2: {
-                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
-                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_2);
-                        bitmap &= ~BIT(n_bitmap_i);
-                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2, bitmap);
-                        break;
-                    }
-                    case 3: {
-                        uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID,
-                                                                      VMX_CONTROL_EOI_EXIT_BITMAP_3);
-                        bitmap &= ~BIT(n_bitmap_i);
-                        microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3, bitmap);
-                        break;
-                    }
-                    default:
-                        LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
-                        return false;
-                    }
+                /* Now clear the vector's bit in EOI exit bitmap */
+                int eoi_bitmap_n = vector / 64;
+                int n_bitmap_i = vector % 64;
+                switch (eoi_bitmap_n) {
+                case 0: {
+                    uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0);
+                    bitmap &= ~BIT(n_bitmap_i);
+                    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_0, bitmap);
+                    break;
+                }
+                case 1: {
+                    uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1);
+                    bitmap &= ~BIT(n_bitmap_i);
+                    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_1, bitmap);
+                    break;
+                }
+                case 2: {
+                    uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2);
+                    bitmap &= ~BIT(n_bitmap_i);
+                    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_2, bitmap);
+                    break;
+                }
+                case 3: {
+                    uint64_t bitmap = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3);
+                    bitmap &= ~BIT(n_bitmap_i);
+                    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_EOI_EXIT_BITMAP_3, bitmap);
+                    break;
+                }
+                default:
+                    LOG_VMM_ERR("impossible: eoi_bitmap_n %d > 3\n", eoi_bitmap_n);
+                    return false;
+                }
 #endif
 
-                    /* if level triggered then re-inject if the I/O APIC line is still asserted. */
-                    if (ioapic_regs.ioredtbl[i] & BIT(15)) {
-                        /* clear the Remote IRR bit */
-                        ioapic_regs.ioredtbl[i] &= ~BIT(14);
+                /* if level triggered then re-inject if the I/O APIC line is still asserted. */
+                if (ioapic_regs.ioredtbl[i] & BIT(15)) {
+                    /* clear the Remote IRR bit */
+                    ioapic_regs.ioredtbl[i] &= ~BIT(14);
 
-                        if (ioapic_regs.pin_asserted[i]) {
-                            return inject_ioapic_irq(0, i);
-                        }
+                    if (ioapic_regs.pin_asserted[i]) {
+                        return inject_ioapic_irq(0, i);
                     }
-
-                    return true;
                 }
+
+                return true;
             }
         }
     }
