@@ -410,9 +410,13 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             data = 0;
 
         } else if (hpet_fault_on_config(offset, &comparator)) {
-            return hpet_fault_handle_config_read(comparator, &data, decoded_ins);
+            if (!hpet_fault_handle_config_read(comparator, &data, decoded_ins)) {
+                return false;
+            }
         } else if (hpet_fault_on_comparator(offset, &comparator)) {
-            return hpet_fault_handle_comparator_read(comparator, &data, decoded_ins);
+            if (!hpet_fault_handle_comparator_read(comparator, &data, decoded_ins)) {
+                return false;
+            }
         } else {
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%lx\n", offset);
             return false;
