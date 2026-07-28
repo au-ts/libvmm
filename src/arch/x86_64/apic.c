@@ -454,7 +454,7 @@ static void handle_lapic_timer_nftn(size_t vcpu_id)
     uint32_t init_count = lapic_read_reg(REG_LAPIC_INIT_CNT);
     if (lapic_parse_timer_reg() == LAPIC_TIMER_PERIODIC && init_count > 0) {
         lapic_state.native_scaled_apic_ticks_when_timer_starts = lapic_time_now_scaled();
-        uint64_t delay_ticks = init_count * lapic_dcr_to_divider();
+        uint64_t delay_ticks = (uint64_t)init_count * (uint64_t)lapic_dcr_to_divider();
         LOG_APIC("restarting periodic timeout for 0x%lx ticks\n", delay_ticks);
 
         lapic_state.timeout_handle = guest_time_request_timeout(delay_ticks, &handle_lapic_timer_nftn, 0);
@@ -479,7 +479,7 @@ static void lapic_write_init_count_reg(uint32_t data)
         (void)timer_reg;
         LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3, !!(timer_reg & BIT(16)));
 
-        uint64_t delay_ticks = data * lapic_dcr_to_divider();
+        uint64_t delay_ticks = (uint64_t)data * (uint64_t)lapic_dcr_to_divider();
         LOG_APIC("setting timeout for 0x%lx ticks\n", data);
 
         if (lapic_state.timeout_handle_valid) {
