@@ -100,6 +100,7 @@ jobs:
           path: |
             ci_build/**/loader.img
             ci_build/**/sel4_32.elf
+            ci_build/**/sel4.elf
           if-no-files-found: error
 
   run_qemu_tests:
@@ -128,7 +129,13 @@ jobs:
         with:
           submodules: true
       - name: Setup systems-ci
-        uses: au-ts/systems-ci@main
+        uses: actions/checkout@v4
+        with:
+          repository: au-ts/systems-ci
+          ref: x86
+          path: systems-ci
+      - name: Run TS CI setup script
+        run: ./systems-ci/setup.sh
 
       # GitHub seems to limit download speed of artifacts from their runners to self hosted runners.
       # So applying a workaround from https://github.com/actions/download-artifact/issues/362#issuecomment-3060841829
@@ -183,7 +190,13 @@ jobs:
           name: loader-images
           path: ci_build
       - name: Setup systems-ci
-        uses: au-ts/systems-ci@main
+        uses: actions/checkout@v4
+        with:
+          repository: au-ts/systems-ci
+          ref: x86
+          path: systems-ci
+      - name: Run TS CI setup script
+        run: ./systems-ci/setup.sh
       - name: Setup machine queue SSH key
         run: .github/setup_ssh_key.sh
         env:

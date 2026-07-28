@@ -46,6 +46,17 @@ def example_build_path(test_config: TestConfig):
     )
 
 
+def is_x86_board(board: str):
+    if "x86" in board:
+        return True
+    elif "skylake" in board:
+        return True
+    elif board == "vb_105":
+        return True
+    else:
+        return False
+
+
 def backend_fn(
     test_config: TestCase,
     loader_img: Path,
@@ -72,7 +83,7 @@ def backend_fn(
                 # fmt: on
                 *QEMU_COMMON_FLAGS,
             )
-        elif test_config.board == "x86_64_generic_vtx":
+        elif test_config.board == "qemu_virt_x86_64":
             return QemuBackend(
                 "qemu-system-x86_64",
                 # fmt: off
@@ -110,7 +121,7 @@ def virtio_backend_fn(test_config: TestConfig, loader_img: Path) -> HardwareBack
             capture_output=True,
         )
 
-        if "x86_64_generic" in test_config.board:
+        if "x86" in test_config.board:
             virtio_blk_device = "virtio-blk-pci,drive=hd,addr=0x3.0"
             virtio_net_device = "virtio-net-pci,netdev=netdev0,addr=0x2.0"
         else:
@@ -158,8 +169,7 @@ class TestConfig(TestCase):
     no_output_timeout_s: int
 
     def is_qemu(self):
-        # TODO: x86_64_generic assumes QEMU for the moment.
-        return self.board.startswith("qemu") or self.board.startswith("x86_64_generic")
+        return "qemu" in self.board
 
     def pretty_name(self) -> str:
         return f"{self.test} for {self.example} on {self.board} ({self.config}, built with {self.build_system})"
