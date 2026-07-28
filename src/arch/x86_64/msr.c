@@ -27,11 +27,7 @@
 #define IA32_PLATFORM_ID (0x17)
 #define IA32_SPEC_CTRL (0x48)
 #define IA32_PRED_CMD (0x49)
-#define IA32_PPIN_CTL (0x4e)
-#define IA32_BIOS_UPDT_TRIG (0x79)
-#define IA32_MKTME_KEYID_PARTITIONING (0x87)
 #define IA32_BIOS_SIGN_ID (0x8b)
-#define IA32_CORE_CAPABILITIES (0xcf)
 #define IA32_MISC_ENABLE (0x1a0)
 #define IA32_MCG_CAP (0x179)
 #define IA32_MCG_STATUS (0x17a)
@@ -68,34 +64,8 @@
 #define IA32_MTRR_FIX4K_F0000 (0x26E)
 #define IA32_MTRR_FIX4K_F8000 (0x26F)
 
-#define MSR_RAPL_POWER_UNIT  (0x606)
-#define MSR_PKG_ENERGY_STATUS (0x611)
-#define MSR_PP0_ENERGY_STATUS (0x639)
-#define MSR_DRAM_ENERGY_STATUS (0x619)
-#define MSR_PP1_ENERGY_STATUS (0x641)
-#define MSR_PLATFORM_ENERGY_COUNTER (0x64d)
-#define MSR_PPERF (0x64e)
-#define MSR_SMI_COUNT (0x34)
-#define MSR_CORE_C3_RESIDENCY (0x3fc)
-#define MSR_CORE_C6_RESIDENCY (0x3fd)
-#define MSR_CORE_C7_RESIDENCY (0x3fe)
-#define MSR_PKG_C2_RESIDENCY (0x60d)
-#define MSR_PKG_C2_RESIDENCY_ALT (0x3f8)
-#define MSR_PKG_C4_RESIDENCY (0x3f9)
-#define MSR_PKG_C6_RESIDENCY (0x3fa)
-#define MSR_OS_MAILBOX_INTERFACE		0xB0
-#define MSR_OS_MAILBOX_DATA			0xB1
-
-// @billn seems to be some sort of fencing instruction control
-// https://gruss.cc/files/msrtemplating.pdf
-#define MSR_UNKNOWN1 (0xc0011029)
-
 #define IA32_APIC_BASE (0x1b)
 #define IA32_FEATURE_CONTROL (0x3a)
-#define MISC_FEATURE_ENABLES (0x140)
-#define MSR_PLATFORM_INFO (0xce)
-
-#define MSR_TEST_CTRL (0x33)
 
 /* x86-64 specific MSRs */
 #define MSR_EFER            0xc0000080 /* extended feature register */
