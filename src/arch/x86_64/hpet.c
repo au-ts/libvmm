@@ -182,8 +182,15 @@ static bool timer_n_irq_edge_triggered(int n)
 
 uint64_t timer_n_compute_timeout_delta_as_tsc(int n, uint32_t main_counter_val)
 {
-    uint32_t delay_hpet_ticks = hpet_regs.comparators[n].current_comparator - main_counter_val;
-    return convert_ticks_by_frequency(delay_hpet_ticks, HPET_MAIN_COUNTER_HZ, guest_time_tsc_hz());
+    /* It is valid for main counter value to be greater than the current comparator because the VMM
+     * might not be scheduled for enough time. So we need to guard against subtraction underflow. */
+    int32_t delta = (int32_t)(hpet_regs.comparators[n].current_comparator - main_counter_val);
+    if (delta <= 0) {
+        /* Deadline in the past. hpet_maintenance will deal with the problem. */
+        return 0;
+    } else {
+        return convert_ticks_by_frequency(delta, HPET_MAIN_COUNTER_HZ, guest_time_tsc_hz());
+    }
 }
 
 void hpet_maintenance(uint8_t comparator);
@@ -229,19 +236,17 @@ void hpet_maintenance(uint8_t comparator)
     uint32_t main_counter_val = main_counter_value();
     uint64_t delay_tsc_ticks = timer_n_compute_timeout_delta_as_tsc(comparator, main_counter_val);
 
-    if (delay_tsc_ticks) {
-        if (hpet_regs.comparators[comparator].timeout_handle_valid) {
-            guest_time_cancel_timeout(hpet_regs.comparators[comparator].timeout_handle);
-            hpet_regs.comparators[comparator].timeout_handle_valid = false;
-        }
-
-        hpet_regs.comparators[comparator].timeout_handle = guest_time_request_timeout(
-            delay_tsc_ticks, &hpet_handle_timer_ntfn, comparator);
-        assert(hpet_regs.comparators[comparator].timeout_handle != TIMEOUT_HANDLE_INVALID);
-        hpet_regs.comparators[comparator].timeout_handle_valid = true;
-
-        hpet_regs.comparators[comparator].armed_comparator = hpet_regs.comparators[comparator].current_comparator;
+    if (hpet_regs.comparators[comparator].timeout_handle_valid) {
+        guest_time_cancel_timeout(hpet_regs.comparators[comparator].timeout_handle);
+        hpet_regs.comparators[comparator].timeout_handle_valid = false;
     }
+
+    hpet_regs.comparators[comparator].timeout_handle = guest_time_request_timeout(delay_tsc_ticks,
+                                                                                  &hpet_handle_timer_ntfn, comparator);
+    assert(hpet_regs.comparators[comparator].timeout_handle != TIMEOUT_HANDLE_INVALID);
+    hpet_regs.comparators[comparator].timeout_handle_valid = true;
+
+    hpet_regs.comparators[comparator].armed_comparator = hpet_regs.comparators[comparator].current_comparator;
 }
 
 static bool hpet_fault_on_config(uint64_t offset, uint8_t *comparator)
