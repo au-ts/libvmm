@@ -97,15 +97,15 @@ static uint32_t hpet_counter_offset = 0;
 static struct hpet_regs hpet_regs = {
     // 32-bit main counter, 3 comparators (only 1 periodic capable), legacy IRQ routing capable, tick rate = 10MHz
     .general_capabilities = GENERAL_CAP_MASK,
-    .comparators[0] = { .config = TIM0_CONF_MASK,
+    .comparators[0] = { .config = TIM0_CONF_MASK | (TIM0_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT),
                         .config_mask = TIM0_CONF_MASK,
                         .timeout_handle_valid = false,
                         .irq_registered = false },
-    .comparators[1] = { .config = TIM1_CONF_MASK,
+    .comparators[1] = { .config = TIM1_CONF_MASK | (TIM1_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT),
                         .config_mask = TIM1_CONF_MASK,
                         .timeout_handle_valid = false,
                         .irq_registered = false },
-    .comparators[2] = { .config = TIM2_CONF_MASK,
+    .comparators[2] = { .config = TIM2_CONF_MASK | (TIM2_IOAPIC_PIN << Tn_INT_ROUTE_CNF_SHIFT),
                         .config_mask = TIM2_CONF_MASK,
                         .timeout_handle_valid = false,
                         .irq_registered = false },
