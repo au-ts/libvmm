@@ -14,6 +14,7 @@
 #include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/mtrr.h>
+#include <libvmm/arch/x86_64/machine_check.h>
 
 #include <x86intrin.h>
 
@@ -30,8 +31,6 @@
 #define IA32_PRED_CMD (0x49)
 #define IA32_BIOS_SIGN_ID (0x8b)
 #define IA32_MISC_ENABLE (0x1a0)
-#define IA32_MCG_CAP (0x179)
-#define IA32_MCG_STATUS (0x17a)
 #define IA32_PAT (0x277)
 #define IA32_XSS (0xda0)
 
@@ -74,6 +73,8 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
 
     if (msr_is_mtrr(vctx->ecx, true)) {
         assert(handle_mtrr_msr_read(vctx->ecx, &result));
+    } else if (msr_is_machine_check(vctx->ecx, true)) {
+        assert(handle_machine_check_msr_read(vctx->ecx, &result));
     } else {
         switch (vctx->ecx) {
         case MSR_EFER:
@@ -129,6 +130,8 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
 
     if (msr_is_mtrr(vctx->ecx, false)) {
         assert(handle_mtrr_msr_write(vctx->ecx, value));
+    } else if (msr_is_machine_check(vctx->ecx, false)) {
+        assert(handle_machine_check_msr_write(vctx->ecx, value));
     } else {
         switch (vctx->ecx) {
         case IA32_APIC_BASE:

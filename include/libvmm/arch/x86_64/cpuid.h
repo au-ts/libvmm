@@ -49,10 +49,12 @@
 #define CPUID_1H_EDX_TSC BIT(4)
 #define CPUID_1H_EDX_MSR BIT(5)
 #define CPUID_1H_EDX_PAE BIT(6)
+#define CPUID_1H_EDX_MCE BIT(7)
 #define CPUID_1H_EDX_CX8 BIT(8)
 #define CPUID_1H_EDX_APIC BIT(9)
 #define CPUID_1H_EDX_MTRR BIT(12)
 #define CPUID_1H_EDX_PGE BIT(13) // PGE/PTE Global Bit
+#define CPUID_1H_EDX_MCA BIT(14)
 #define CPUID_1H_EDX_CMOV BIT(15)
 #define CPUID_1H_EDX_PAT BIT(16)
 #define CPUID_1H_EDX_PSE36 BIT(17) // PSE-36: Physical Address Extensions
@@ -141,7 +143,9 @@
     CPUID_1H_EDX_FXSR | \
     CPUID_1H_EDX_SSE1 | \
     CPUID_1H_EDX_SSE2 | \
-    CPUID_1H_EDX_SELF_SNOOP \
+    CPUID_1H_EDX_SELF_SNOOP | \
+    CPUID_1H_EDX_MCE | \
+    CPUID_1H_EDX_MCA \
 )
 
 /* No:
