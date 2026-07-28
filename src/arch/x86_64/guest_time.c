@@ -217,7 +217,7 @@ bool guest_time_cancel_timeout(guest_timeout_handle_t handle)
 {
     guest_time_user_error_check();
 
-    if (handle >= MAX_CONCURRENT_TIMEOUT) {
+    if (handle >= MAX_CONCURRENT_TIMEOUT || handle == TIMEOUT_HANDLE_INVALID) {
         return false;
     }
     if (!guest_timekeeping.timeouts[handle].valid) {
