@@ -182,6 +182,85 @@ class BenchmarkConfig:
             num_pmu_events,
         )
 
+BENCH_VM_MAGIC = b"BVMC\x01"
+
+class BenchmarkVmConfig:
+    """
+        Matches struct definition in benchmark.c:
+        {
+            uint64_t results_vaddr;
+            char magic[5];
+            uint8_t ch_start;
+            uint8_t ch_stop;
+            uint8_t ch_done;
+            uint8_t vcpu_id;
+            char vm_name[64];
+            /* 7 bytes tail padding to 8-byte alignment */
+        }
+    """
+
+    def __init__(self, results_vaddr: int, ch_start: int, ch_stop: int,
+                 ch_done: int, vcpu_id: int, vm_name: str):
+        self.results_vaddr = results_vaddr
+        self.ch_start = ch_start
+        self.ch_stop = ch_stop
+        self.ch_done = ch_done
+        self.vcpu_id = vcpu_id
+        self.vm_name = vm_name
+
+    def serialise(self) -> bytes:
+        name = self.vm_name.encode("utf-8")
+        assert len(name) < 64, "vm_name too long for 64-byte field"
+        # Pack the struct using https://docs.python.org/3/library/struct.html
+        data = struct.pack(
+            "<Q5sBBBB64s7x",
+            self.results_vaddr,
+            BENCH_VM_MAGIC,
+            self.ch_start,
+            self.ch_stop,
+            self.ch_done,
+            self.vcpu_id,
+            name,
+        )
+        assert len(data) == 88
+        return data
+
+
+class BenchmarkVmmConfig:
+    """
+        Matches struct definition in eth_driver_vmm.c
+        {
+            uint64_t results_vaddr;
+            char magic[5];
+            uint8_t ch_start;
+            uint8_t ch_stop;
+            uint8_t ch_done;
+            uint8_t vcpu_id;
+            /* 7 bytes tail padding to 8-byte alignment */
+        }
+    """
+
+    def __init__(self, results_vaddr: int, ch_start: int, ch_stop: int,
+                 ch_done: int, vcpu_id: int):
+        self.results_vaddr = results_vaddr
+        self.ch_start = ch_start
+        self.ch_stop = ch_stop
+        self.ch_done = ch_done
+        self.vcpu_id = vcpu_id
+
+    def serialise(self) -> bytes:
+        data = struct.pack(
+            "<Q5sBBBB7x",
+            self.results_vaddr,
+            BENCH_VM_MAGIC,
+            self.ch_start,
+            self.ch_stop,
+            self.ch_done,
+            self.vcpu_id,
+        )
+        assert len(data) == 24
+        return data
+
 def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: DeviceTree, pmu_event_ids: List[int],):
     uart_node = dtb.node(board.serial)
     assert uart_node is not None
@@ -201,10 +280,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
                                       priority=107, stack_size=0x2000,cpu=0)
     serial_system = Sddf.Serial(sdf, uart_node, uart_driver, serial_virt_tx, virt_rx=serial_virt_rx, enable_color=False)
 
-    eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=10,cpu=0)
-    eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)], priority=9)
+    eth_driver_vmm_pd = ProtectionDomain("net_driver_vm", "eth_driver_vmm.elf", priority=106,cpu=0)
+    eth_driver_vm = VirtualMachine("linux", [VirtualMachine.Vcpu(id=0)], priority=105)
     # one_to_one_ram=True is very important as the network drivers in Linux uses DMA!
     eth_driver_vmm = Vmm(sdf, eth_driver_vmm_pd, eth_driver_vm, driver_vm_dtb, one_to_one_ram=True)
+
+    timer_system.add_client(eth_driver_vmm_pd)
 
     eth_driver_vmm.add_virtio_mmio_console(guest_serial_node, serial_system)
 
@@ -239,7 +320,6 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     client1_lib_sddf_lwip = Sddf.Lwip(sdf, net_system, client1)
 
     # Benchmark specific resources
-
     bench_idle = ProtectionDomain("bench_idle", "idle.elf", priority=1,cpu=0)
     bench = ProtectionDomain("bench", "benchmark.elf", priority=253,cpu=0)
 
@@ -259,8 +339,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
         timer_driver,
     ]
     pds = [
-        bench_idle,
         bench,
+        bench_idle,
     ]
     bench_children = []
     for pd in benchmark_pds:
@@ -302,6 +382,40 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
         pmu_event_ids,                       
     )
 
+    # Vm benchmark resources
+    bench_vm_start_ch = Channel(bench, eth_driver_vmm_pd)
+    bench_vm_stop_ch  = Channel(bench, eth_driver_vmm_pd)
+    bench_vm_done_ch  = Channel(bench, eth_driver_vmm_pd)
+    for ch in (bench_vm_start_ch, bench_vm_stop_ch, bench_vm_done_ch):
+        sdf.add_channel(ch)
+
+    vm_results_mr = MemoryRegion(sdf, "bench_vm_results", 0x1000)
+    sdf.add_mr(vm_results_mr)
+
+    vmm_vaddr = eth_driver_vmm_pd.get_map_vaddr(vm_results_mr)
+    eth_driver_vmm_pd.add_map(Map(vm_results_mr, vmm_vaddr, perms="rw"))
+
+    bench_vaddr = bench.get_map_vaddr(vm_results_mr)
+    bench.add_map(Map(vm_results_mr, bench_vaddr, perms="r"))
+
+    
+    bench_vm_config = BenchmarkVmConfig(
+        bench_vaddr,
+        bench_vm_start_ch.pd_a_id,
+        bench_vm_stop_ch.pd_a_id,
+        bench_vm_done_ch.pd_a_id,
+        0,
+        "linux",
+    )
+
+    bench_vmm_config = BenchmarkVmmConfig(
+        vmm_vaddr,
+        bench_vm_start_ch.pd_b_id,
+        bench_vm_stop_ch.pd_b_id,
+        bench_vm_done_ch.pd_b_id,
+        0,
+    )
+
     assert eth_driver_vmm.connect()
     assert serial_system.connect()
     assert net_system.connect()
@@ -314,6 +428,12 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     assert timer_system.serialise_config(output_dir)
     assert client0_lib_sddf_lwip.serialise_config(output_dir)
     assert client1_lib_sddf_lwip.serialise_config(output_dir)
+
+    with open(f"{output_dir}/benchmark_vm_bench.data", "wb+") as f:
+        f.write(bench_data.serialise())
+
+    with open(f"{output_dir}/benchmark_vm_vmm.data", "wb+") as f:
+        f.write(vmm_data.serialise())
 
     with open(f"{output_dir}/benchmark_config.data", "wb+") as f:
         f.write(benchmark_config.serialise())

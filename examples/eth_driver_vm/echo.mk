@@ -225,6 +225,8 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(NET_DRIVER_VM_DTB)
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data eth_driver_vmm.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data eth_driver_vmm.elf
 
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_net_driver_vm.data eth_driver_vmm.elf
+
 	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy0.elf
@@ -237,6 +239,8 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(NET_DRIVER_VM_DTB)
 	$(OBJCOPY) --update-section .net_client_config=net_client_client1.data echo1.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_client1.data echo1.elf
 	$(OBJCOPY) --update-section .serial_client_config=serial_client_bench.data benchmark.elf
+	$(OBJCOPY) --update-section .benchmark_vm_config=benchmark_vm_vmm.data eth_driver_vmm.elf
+	$(OBJCOPY) --update-section .benchmark_vm_config=benchmark_vm_bench.data benchmark.elf
 	$(OBJCOPY) --update-section .benchmark_config=benchmark_config.data benchmark.elf
 	$(OBJCOPY) --update-section .benchmark_client_config=benchmark_client_config.data echo0.elf
 	$(OBJCOPY) --update-section .benchmark_config=benchmark_idle_config.data idle.elf

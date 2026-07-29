@@ -23,6 +23,7 @@
 #include <sddf/util/printf.h>
 
 #include <sddf/timer/config.h>
+#include <sel4/benchmark_utilisation_types.h>
 
 #include <uio/net.h>
 #include <expect.h>
@@ -37,6 +38,22 @@ __attribute__((__section__(".net_virt_rx_config"))) net_virt_rx_config_t net_rx_
 __attribute__((__section__(".net_virt_tx_config"))) net_virt_tx_config_t net_tx_config;
 
 __attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
+
+#define BENCH_VM_MAGIC_LEN 5
+
+typedef struct {
+    uint64_t results_vaddr;
+    char magic[BENCH_VM_MAGIC_LEN];
+    uint8_t ch_start;
+    uint8_t ch_stop;
+    uint8_t ch_done;
+    uint8_t vcpu_id;
+    char _pad[7];
+} benchmark_vm_config_t;  
+
+__attribute__((__section__(".benchmark_vm_config"))) benchmark_vm_config_t bench_vm_config;
+
+uintptr_t bench_vm_results;
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -228,6 +245,20 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+    if (ch == bench_vm_config.ch_start) {
+        seL4_BenchmarkResetThreadUtilisation(BASE_VM_TCB_CAP + bench_vm_config.vcpu_id);
+        return;
+    } else if (ch == bench_vm_config.ch_stop) {
+        seL4_BenchmarkGetThreadUtilisation(BASE_VM_TCB_CAP + bench_vm_config.vcpu_id);
+        uint64_t *ipc = (uint64_t *)&seL4_GetIPCBuffer()->msg[0];
+        uint64_t *out = (uint64_t *)(uintptr_t)bench_vm_config.results_vaddr;
+        out[0] = ipc[BENCHMARK_TCB_UTILISATION];
+        out[1] = ipc[BENCHMARK_TCB_KERNEL_UTILISATION];
+        out[2] = ipc[BENCHMARK_TCB_NUMBER_SCHEDULES];
+        out[3] = ipc[BENCHMARK_TCB_NUMBER_KERNEL_ENTRIES];
+        microkit_notify(bench_vm_config.ch_done);
+        return;
+    }
 
     // From timer driver
     if (ch == timer_config.driver_id) {
