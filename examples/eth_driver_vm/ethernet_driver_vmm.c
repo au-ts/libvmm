@@ -22,6 +22,8 @@
 #include <sddf/network/config.h>
 #include <sddf/util/printf.h>
 
+#include <sddf/timer/config.h>
+
 #include <uio/net.h>
 #include <expect.h>
 
@@ -33,6 +35,8 @@ __attribute__((__section__(".net_driver_config"))) net_driver_config_t net_drv_c
 // A bit dubious but I'm not sure how to *cleanly* fix
 __attribute__((__section__(".net_virt_rx_config"))) net_virt_rx_config_t net_rx_config;
 __attribute__((__section__(".net_virt_tx_config"))) net_virt_tx_config_t net_tx_config;
+
+__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
 
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
@@ -86,6 +90,7 @@ void init(void)
     assert(net_config_check_magic(&net_drv_config));
     assert(net_config_check_magic(&net_rx_config));
     assert(net_config_check_magic(&net_tx_config));
+    assert(timer_config_check_magic(&timer_config));
 
     /* Initialise the VMM and the VCPU */
     LOG_VMM("starting \"%s\"\n", microkit_name);
@@ -223,20 +228,28 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
-    if (ch == serial_config.rx.id) {
-        virtio_console_handle_rx(&virtio_console);
-    } else if (ch == serial_config.tx.id) {
-        // Nothing to do
-    } else if (ch == net_drv_config.virt_tx.id) {
-        if (!virq_inject(uio_tx_irq_num)) {
-            LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
-        }
-    } else if (ch == net_drv_config.virt_rx.id) {
-        if (!virq_inject(uio_rx_irq_num)) {
-            LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
-        }
-    } else if (!virq_handle_passthrough(ch)) {
-        LOG_VMM_ERR("Unexpected channel, ch: 0x%x\n", ch);
+
+    // From timer driver
+    if (ch == timer_config.driver_id) {
+        // LOG_VMM("Timer driver notification recieved\n");
+        guest_time_handle_timer_ntfn();
+    } else {
+        if (ch == serial_config.rx.id) {
+            virtio_console_handle_rx(&virtio_console);
+        } else if (ch == serial_config.tx.id) {
+            // Nothing to do
+        } else if (ch == net_drv_config.virt_tx.id) {
+            if (!virq_inject(uio_tx_irq_num)) {
+                LOG_VMM_ERR("failed to inject TX UIO IRQ\n");
+            }
+        } else if (ch == net_drv_config.virt_rx.id) {
+            if (!virq_inject(uio_rx_irq_num)) {
+                LOG_VMM_ERR("failed to inject RX UIO IRQ\n");
+            }
+        } else if (!virq_handle_passthrough(ch)) {
+            LOG_VMM_ERR("Unexpected channel, ch: 0x%x\n", ch);
+        }   
+        guest_wfi_resume_if_suspended(0);
     }
 }
 
