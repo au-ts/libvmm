@@ -339,8 +339,8 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
         timer_driver,
     ]
     pds = [
-        bench,
         bench_idle,
+        bench,
     ]
     bench_children = []
     for pd in benchmark_pds:
@@ -392,7 +392,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     vm_results_mr = MemoryRegion(sdf, "bench_vm_results", 0x1000)
     sdf.add_mr(vm_results_mr)
 
-    vmm_vaddr = eth_driver_vmm_pd.get_map_vaddr(vm_results_mr)
+    # vmm_vaddr = eth_driver_vmm_pd.get_map_vaddr(vm_results_mr)
+    # net_driver_vm's guest RAM occupies 0x20000000..0x30000000 but get map vaddr
+    # doesnt know this as eth_driver_vmm.serialise_config(output_dir) hasnt run
+    vmm_vaddr = 0x6_000_000
     eth_driver_vmm_pd.add_map(Map(vm_results_mr, vmm_vaddr, perms="rw"))
 
     bench_vaddr = bench.get_map_vaddr(vm_results_mr)
@@ -430,10 +433,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, driver_vm_dtb: Dev
     assert client1_lib_sddf_lwip.serialise_config(output_dir)
 
     with open(f"{output_dir}/benchmark_vm_bench.data", "wb+") as f:
-        f.write(bench_data.serialise())
+        f.write(bench_vm_config.serialise())
 
     with open(f"{output_dir}/benchmark_vm_vmm.data", "wb+") as f:
-        f.write(vmm_data.serialise())
+        f.write(bench_vmm_config.serialise())
 
     with open(f"{output_dir}/benchmark_config.data", "wb+") as f:
         f.write(benchmark_config.serialise())
