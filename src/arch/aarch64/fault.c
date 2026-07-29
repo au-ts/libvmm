@@ -12,6 +12,8 @@
 #include <libvmm/arch/aarch64/hsr.h>
 #include <libvmm/arch/aarch64/smc.h>
 #include <libvmm/arch/aarch64/fault.h>
+#include <libvmm/arch/aarch64/guest_time.h>
+#include <libvmm/arch/aarch64/wfi.h>
 #include <libvmm/arch/aarch64/vgic/vgic.h>
 
 #include <sddf/benchmark/sel4bench.h>
@@ -275,8 +277,7 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
-        // If we get a WFI exception, we just do nothing in the VMM.
-        return true;
+        return guest_wfi_handle(vcpu_id, hsr, &regs);
     case HSR_SYSREG_64_EXCEPTION:
         return handle_sysreg_64_fault(vcpu_id, hsr, &regs);
     default:

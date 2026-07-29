@@ -13,6 +13,8 @@ AARCH64_FILES := src/arch/aarch64/fault.c \
 		 src/arch/aarch64/cpuif.c \
 		 src/arch/aarch64/psci.c \
 		 src/arch/aarch64/smc.c \
+		 src/arch/aarch64/guest_time.c \
+		 src/arch/aarch64/wfi.c \
 		 src/arch/aarch64/tcb.c \
 		 src/arch/aarch64/vcpu.c \
 		 src/arch/aarch64/virq.c \

@@ -23,4 +23,6 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <libvmm/arch/aarch64/fault.h>
 #include <libvmm/arch/aarch64/smc.h>
+#include <libvmm/arch/aarch64/wfi.h>
+#include <libvmm/arch/aarch64/guest_time.h>
 #endif

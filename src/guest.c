@@ -7,6 +7,10 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 
+#include <sddf/timer/config.h>
+
+extern timer_client_config_t timer_config;
+
 /* Global state for managing the guest. */
 guest_t guest;
 
@@ -50,6 +54,11 @@ bool guest_init(arch_guest_init_t init_args)
     if (!success) {
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
     }
+
+    /* Initialise timekeeping and wfi support */
+    guest_time_init(timer_config.driver_id);
+
+    guest_wfi_init();
 
     return success;
 }
