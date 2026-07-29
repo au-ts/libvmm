@@ -10,6 +10,7 @@ zig-out/
 *.dtb
 rust/target/
 .cache
+.clangd
 compile_commands.json
 *.orig
 __pycache__/
