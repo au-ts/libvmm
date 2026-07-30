@@ -420,6 +420,9 @@ int main(int argc, char **argv)
     LOG_NET("*** Setting up TX/RX UIO IRQs for VMM -> guest notifications\n");
     uio_net_rx_irq = open_uio(UIO_NET_RX_IRQ_DEVICE);
     uio_net_tx_irq = open_uio(UIO_NET_TX_IRQ_DEVICE);
+    // Only want the interrupts to be non blocking so we can clear them
+    fcntl(uio_net_rx_irq, F_SETFL, fcntl(uio_net_rx_irq, F_GETFL) | O_NONBLOCK);
+    fcntl(uio_net_tx_irq, F_SETFL, fcntl(uio_net_tx_irq, F_GETFL) | O_NONBLOCK);
     uio_interrupt_ack(uio_net_rx_irq);
     uio_interrupt_ack(uio_net_tx_irq);
 
@@ -461,12 +464,18 @@ int main(int argc, char **argv)
                 rx_process();
             } else if (events[i].data.fd == uio_net_tx_irq) {
                 // Got virt TX ntfn from VMM, send it thru the raw socket
-                tx_process();
+                // drain all pending; clears epoll-readable state
+                uint32_t count;
+                while (read(uio_net_tx_irq, &count, sizeof(count)) == sizeof(count));
                 uio_interrupt_ack(uio_net_tx_irq);
+                tx_process();
             } else if (events[i].data.fd == uio_net_rx_irq) {
                 // Got RX virt ntfn from VMM, the free RX queue got filled!
-                rx_process();
+                // drain all pending; clears epoll-readable state
+                uint32_t count;
+                while (read(uio_net_rx_irq, &count, sizeof(count)) == sizeof(count));
                 uio_interrupt_ack(uio_net_rx_irq);
+                rx_process();
             } else {
                 LOG_NET_WARN("epoll_wait() returned event on unknown fd %d\n", events[i].data.fd);
             }
