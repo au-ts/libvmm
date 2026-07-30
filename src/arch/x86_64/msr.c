@@ -36,6 +36,7 @@
 
 #define IA32_APIC_BASE (0x1b)
 #define IA32_FEATURE_CONTROL (0x3a)
+#define IA32_TSC_ADJUST (0x3b)
 
 /* x86-64 specific MSRs */
 #define MSR_EFER            0xc0000080 /* extended feature register */
@@ -102,6 +103,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
             result = microkit_vcpu_x86_read_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_PAT);
             break;
         case IA32_PLATFORM_ID:
+        case IA32_TSC_ADJUST:
             result = 0;
             break;
         default:
