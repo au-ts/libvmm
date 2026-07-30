@@ -245,6 +245,7 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
     if (ch == bench_vm_config.ch_start) {
         seL4_BenchmarkResetThreadUtilisation(BASE_VM_TCB_CAP + bench_vm_config.vcpu_id);
         return;
@@ -259,6 +260,7 @@ void notified(microkit_channel ch)
         microkit_notify(bench_vm_config.ch_done);
         return;
     }
+#endif
 
     // From timer driver
     if (ch == timer_config.driver_id) {
