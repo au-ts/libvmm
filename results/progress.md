@@ -8,11 +8,19 @@ This thesis aims to improve the virtualisation performance of Microkit based sys
 - Optimise: To propose and evaluate candidate optimisations and quantify their effect on end-to-end I/O latency and throughput
 
 # Current progress
-Benchmarking is taking a lot longer than I expected. I don't want to get to the end and just have results and no improvements, so I need to start being smart about where to focus my time. It would be good to have a meeting with Bill, Gernot and Peter to discuss this.
+Recently I have 
+- Implemeted a unoptimised single vCPU wfi. This lets the guest sleep and allows the idle benchmark to run
+- Added vm benchmark support. 
+    - The vmm takes measurements and forwards them to the benchmark pd
+    - Also running a simple script to read /proc/stat inside the vm to check user vs guest
 
-I have completed cases 1 (odroid and maaxboard) and 2 (odroid), and have data that can be used for 3.
+The results and figures can be fold in this folder
 
-Do I now go more in detail on 2, get the maaxboard working or start 4 and 5?
+# Next steps
+Implementing WFI did not provide performance benifits but showed the guest is saturating at ~25mbps. 
+
+1. Go through the UIO driver carefully to check any gotchas
+2. Run a client and see if there is this performance degredation
 
 # Timeline
 Will update after the meeting with the team.
