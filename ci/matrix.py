@@ -85,6 +85,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "odroidc4",
             "maaxboard",
             "x86_64_generic_vtx",
+            "zcu102",
         ],
         "tests_exclude": [],
     },

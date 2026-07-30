@@ -14,7 +14,11 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
+#if defined(BOARD_zcu102)
+#define GUEST_RAM_SIZE 0x20000000
+#else
 #define GUEST_RAM_SIZE 0x10000000
+#endif
 
 /* For ARM, these constants depends on what's defined in your DTB. */
 #if defined(BOARD_qemu_virt_aarch64)
@@ -33,6 +37,10 @@
 #define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#elif defined(BOARD_zcu102)
+#define GUEST_RAM_START_GPA     0x800000000
+#define GUEST_DTB_GPA           0x810000000
+#define GUEST_INIT_RAM_DISK_GPA 0x810010000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -53,6 +61,8 @@
 #define COM1_IO_PORT_ID 0
 #define COM1_IO_PORT_ADDR 0x3F8
 #define COM1_IO_PORT_SIZE 8
+#elif defined(BOARD_zcu102)
+#define SERIAL_IRQ 53
 #else
 #error Need to define serial interrupt
 #endif
@@ -152,6 +162,15 @@ void init(void)
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
+
+#if defined(BOARD_zcu102)
+    /* Initialise the SMC SIP Handler */
+    success = smc_register_sip_handler(smc_sip_forward);
+    if (!success) {
+        LOG_VMM_ERR("Failed to initialise SMC SIP Handler\n");
+        return;
+    }
+#endif
 
     success = virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH);
     assert(success);
