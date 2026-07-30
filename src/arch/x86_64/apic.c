@@ -766,7 +766,7 @@ bool ioapic_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qual
                     for (int i = 0; i < IOAPIC_NUM_PINS; i++) {
                         if (i == redirection_reg_idx) {
                             if (ioapic_regs.virq_handle_map[i].ack_fn) {
-                                ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                                ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, i),
                                                                       ioapic_regs.virq_handle_map[i].ack_data);
                             }
 
@@ -932,7 +932,7 @@ bool ioapic_ack_passthrough_irq(uint8_t vector)
             uint8_t candidate_vector = ioapic_pin_to_vector(0, i);
             if (candidate_vector == vector) {
                 if (ioapic_regs.virq_handle_map[i].ack_fn) {
-                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, 1),
+                    ioapic_regs.virq_handle_map[i].ack_fn(X86_IOAPIC_IRQ_ROUTE(0, i),
                                                           ioapic_regs.virq_handle_map[i].ack_data);
                 }
 
