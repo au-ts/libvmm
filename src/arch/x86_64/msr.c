@@ -105,12 +105,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
             result = 0;
             break;
         default:
-            LOG_FAULT("unknown MSR read 0x%lx\n", vctx->ecx);
             return false;
         }
     }
-
-    LOG_FAULT("handling RDMSR 0x%lx, result 0x%lx\n", vctx->ecx, result);
 
     vctx->eax = result & 0xffffffff;
     vctx->edx = (result >> 32) & 0xffffffff;
@@ -125,8 +122,6 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     }
 
     uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
-
-    LOG_FAULT("handling WRMSR 0x%lx, value 0x%lx\n", vctx->ecx, value);
 
     if (msr_is_mtrr(vctx->ecx, false)) {
         assert(handle_mtrr_msr_write(vctx->ecx, value));
@@ -176,7 +171,6 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
             }
             break;
         default:
-            LOG_VMM("unknown wrmsr 0x%lx, value 0x%lx\n", vctx->ecx, value);
             return false;
         }
     }
