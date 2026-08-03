@@ -18,13 +18,6 @@
  *    Order Number: 325462-080US June 2023
  */
 
-// #define DEBUG_FAULT
-#if defined(DEBUG_FAULT)
-#define LOG_FAULT(...) do{ printf("%s|FAULT: ", microkit_name); printf(__VA_ARGS__); }while(0)
-#else
-#define LOG_FAULT(...) do{}while(0)
-#endif
-
 /* [1] "Table 6-1. Exceptions and Interrupts" */
 #define GP_VECTOR 13
 

@@ -25,6 +25,10 @@
 #include <libvmm/guest.h>
 #include <sel4/arch/vmenter.h>
 
+/* Uncomment to print out summary of VM Exit reasons every 100000 exit */
+// #define VM_EXIT_TRACKING
+#define VM_EXIT_PRINT_MULTIPLE 100000
+
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
@@ -161,6 +165,11 @@ static char *exit_reason_strs[] = { "Exception or non-maskable interrupt (NMI)",
 _Static_assert(sizeof(exit_reason_strs) / sizeof(char *) == NUM_EXIT_REASONS,
                "Exit reason strings table is not correct length");
 
+#ifdef VM_EXIT_TRACKING
+uint64_t vm_exit_count[NUM_EXIT_REASONS] = { 0 };
+uint64_t vm_exit_total = 0;
+#endif
+
 char *fault_to_string(int exit_reason)
 {
     assert(exit_reason < NUM_EXIT_REASONS);
@@ -253,18 +262,14 @@ static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, de
     uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
 
     if (addr >= IOAPIC_GPA && addr < IOAPIC_GPA + IOAPIC_SIZE) {
-        LOG_FAULT("handling IO APIC 0x%lx\n", addr);
         return ioapic_fault_handle(vctx, addr - IOAPIC_GPA, qualification, decoded_ins);
     } else if (addr >= HPET_GPA && addr < HPET_GPA + HPET_SIZE) {
-        LOG_FAULT("handling HPET 0x%lx\n", addr);
         return hpet_fault_handle(vctx, addr - HPET_GPA, qualification, decoded_ins);
 #if APIC_VIRT_LEVEL < APIC_VIRT_LEVEL_APICV
     } else if (addr >= LAPIC_GPA && addr < LAPIC_GPA + LAPIC_SIZE) {
-        LOG_FAULT("handling LAPIC 0x%lx\n", addr);
         return lapic_fault_handle(vctx, addr - LAPIC_GPA, qualification, decoded_ins);
 #endif
     } else {
-        LOG_FAULT("handling other EPT 0x%lx\n", addr);
         for (int i = 0; i < MAX_EPT_EXCEPTION_HANDLERS; i++) {
             uintptr_t base = registered_ept_exception_handlers[i].base;
             uintptr_t end = registered_ept_exception_handlers[i].end;
@@ -373,8 +378,6 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     seL4_Word rip = vcpu_exit_get_rip();
     seL4_VCPUContext *vctx = vcpu_exit_get_context();
 
-    LOG_FAULT("handling vmexit reason %s\n", fault_to_string(f_reason));
-
     switch (f_reason) {
     case CPUID:
         success = emulate_cpuid(vctx);
@@ -462,6 +465,19 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     default:
         LOG_VMM_ERR("unhandled fault: 0x%lx\n", f_reason);
     };
+
+#ifdef VM_EXIT_TRACKING
+    vm_exit_count[f_reason] += 1;
+    vm_exit_total += 1;
+    if (vm_exit_total % VM_EXIT_PRINT_MULTIPLE == 0) {
+        LOG_VMM("VM Exit total %lu, count by type:\n", vm_exit_total);
+        for (int i = 0; i < NUM_EXIT_REASONS; i++) {
+            if (vm_exit_count[i]) {
+                LOG_VMM("%s: %lu\n", fault_to_string(i), vm_exit_count[i]);
+            }
+        }
+    }
+#endif
 
     if (success) {
         unsigned rip_additive = 0;

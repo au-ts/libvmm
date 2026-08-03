@@ -93,8 +93,6 @@ bool initialise_cpuid(void)
 
 bool emulate_cpuid(seL4_VCPUContext *vctx)
 {
-    LOG_FAULT("handling CPUID 0x%lx\n", vctx->eax);
-
     switch (vctx->eax) {
     case 0x0: /* "Basic CPUID Information" */
         vctx->eax = CPUID_0H_EAX_MAX_BASIC_LEAF;
