@@ -29,11 +29,18 @@
 // #define VM_EXIT_TRACKING
 #define VM_EXIT_PRINT_MULTIPLE 100000
 
+/* Uncomment to print every time the VMM injects a General Protection
+ * fault into the guest. Useful to debug Triple Faults. */
+// #define LOG_GP
+
 /* Documents referenced:
  * [1] seL4: include/arch/x86/arch/object/vcpu.h
  * [2] Title: Intel® 64 and IA-32 Architectures Software Developer’s Manual Combined Volumes: 1, 2A, 2B, 2C, 2D, 3A, 3B, 3C, 3D, and 4 Order Number: 325462-080US June 2023
  * [3] https://wiki.osdev.org/Interrupt_Vector_Table
  */
+
+/* [2] "Table 6-1. Exceptions and Interrupts" */
+#define GP_VECTOR 13
 
 /* [2] Table 29-7. "Exit Qualification for EPT Violations" */
 #define EPT_VIOLATION_READ_BIT BIT(0)
@@ -493,6 +500,10 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         }
         vcpu_exit_prepare_resume(rip_additive);
     } else if (!success && (f_reason == RDMSR || f_reason == WRMSR || f_reason == XSETBV)) {
+#ifdef LOG_GP
+        LOG_VMM("injecting GP due to failure in handling %s\n", fault_to_string(f_reason));
+#endif
+
         /* [2] "RDMSR—Read From Model Specific Register":
          * "Specifying a reserved or unimplemented MSR address in ECX will also cause a general protection exception." */
         microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_ENTRY_EXCEPTION_ERROR_CODE, 0);
