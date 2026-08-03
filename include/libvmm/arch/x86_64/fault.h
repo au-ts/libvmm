@@ -18,9 +18,6 @@
  *    Order Number: 325462-080US June 2023
  */
 
-/* [1] "Table 6-1. Exceptions and Interrupts" */
-#define GP_VECTOR 13
-
 bool ept_fault_is_read(seL4_Word qualification);
 bool ept_fault_is_write(seL4_Word qualification);
 
