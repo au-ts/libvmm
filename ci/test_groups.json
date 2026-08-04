@@ -1,0 +1,19 @@
+{
+    "groups": [
+        {
+            "test_name": "virtIO Network",
+            "test_args": "virtio_network_download,virtio_network_ping",
+            "artifact_suffix": "virtio-net"
+        },
+        {
+            "test_name": "virtIO Block",
+            "test_args": "virtio_block",
+            "artifact_suffix": "virtio-block"
+        },
+        {
+            "test_name": "boot",
+            "test_args": "arch_timers,buildroot_login,uefi_firmware_boot,smp_detect_multiple_cpus",
+            "artifact_suffix": "boot"
+        }
+    ]
+}

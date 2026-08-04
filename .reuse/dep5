@@ -8,6 +8,7 @@ Files:
     examples/rust/Cargo.lock
     examples/rust/.cargo/config.toml
     examples/rust/aarch64-microkit-minimal.json
+    ci/test_groups.json
 Copyright: UNSW
 License: BSD-2-Clause
 
