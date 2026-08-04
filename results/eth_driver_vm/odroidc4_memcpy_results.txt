@@ -1,0 +1,1223 @@
+[11:54.16] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against latency-check ...
+[11:54.16] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against latency-check ...
+[11:54.16] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against latency-check ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |latency-check|wait|...
+[11:54.16] dbg: latency-check does not match wait
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against latency-check ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |latency-check|nfsstone|...
+[11:54.16] dbg: latency-check does not match nfsstone
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against latency-check ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |latency-check|nfs_latency|...
+[11:54.16] dbg: latency-check does not match nfs_latency
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against latency-check ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |latency-check|latency-check|...
+[11:54.16] dbg: Test loaded
+[main] setting up target 172.16.3.61
+[11:54.16] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against cpu_target_lukem ...
+[11:54.16] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against cpu_target_lukem ...
+[11:54.16] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|wait|...
+[11:54.16] dbg: cpu_target_lukem does not match wait
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|nfsstone|...
+[11:54.16] dbg: cpu_target_lukem does not match nfsstone
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|nfs_latency|...
+[11:54.16] dbg: cpu_target_lukem does not match nfs_latency
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|latency-check|...
+[11:54.16] dbg: cpu_target_lukem does not match latency-check
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatency.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|latency|...
+[11:54.16] dbg: cpu_target_lukem does not match latency
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy_target.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|dummy_target|...
+[11:54.16] dbg: cpu_target_lukem does not match dummy_target
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|dummy|...
+[11:54.16] dbg: cpu_target_lukem does not match dummy
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdiscard.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|discard|...
+[11:54.16] dbg: cpu_target_lukem does not match discard
+[11:54.16] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libcpu_target_lukem.so against cpu_target_lukem ...
+[11:54.16] dbg: Checking for header ...
+[11:54.16] dbg: Checking magic number ...
+[11:54.16] dbg: Checking test name |cpu_target_lukem|cpu_target_lukem|...
+[11:54.16] dbg: Test loaded
+[IpbenchTestTarget:__init__] : client 172.16.3.61
+[connect] start | hostname 172.16.3.61 | port 1237 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD cpu_target_lukem
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : SETUP args::""
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb01
+[IpbenchTestClient:__init__] : client vb01 port 8036 test_port 1235 test_args socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb01 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb02
+[IpbenchTestClient:__init__] : client vb02 port 8036 test_port 1235 test_args socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb02 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb03
+[IpbenchTestClient:__init__] : client vb03 port 8036 test_port 1235 test_args socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb03 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb04
+[IpbenchTestClient:__init__] : client vb04 port 8036 test_port 1235 test_args socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb04 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=5000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : START
+[main] client vb01 start
+[send_command] : START
+[main] client vb02 start
+[send_command] : START
+[main] client vb03 start
+[send_command] : START
+[main] client vb04 start
+[send_command] : START
+[unmarshall] client vb01 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb01 content-length: 400072
+[unmarshall] client vb01 len(128) < 400072
+[unmarshall] got 127360 new bytes 
+[unmarshall] client vb01 len(127488) < 400072
+[unmarshall] got 69120 new bytes 
+[unmarshall] client vb01 len(196608) < 400072
+[unmarshall] got 203464 new bytes 
+[11:57.12] dbg: [unmarshall] data for client 0 "" [len 400072] [invalid]
+[11:57.12] dbg: Latency unmarshall arguments.
+[11:57.12] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb02 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb02 content-length: 400072
+[unmarshall] client vb02 len(201) < 400072
+[unmarshall] got 91944 new bytes 
+[unmarshall] client vb02 len(92145) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb02 len(93593) < 400072
+[unmarshall] got 55024 new bytes 
+[unmarshall] client vb02 len(148617) < 400072
+[unmarshall] got 25784 new bytes 
+[unmarshall] client vb02 len(174401) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb02 len(175849) < 400072
+[unmarshall] got 33584 new bytes 
+[unmarshall] client vb02 len(209433) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb02 len(210881) < 400072
+[unmarshall] got 46336 new bytes 
+[unmarshall] client vb02 len(257217) < 400072
+[unmarshall] got 69504 new bytes 
+[unmarshall] client vb02 len(326721) < 400072
+[unmarshall] got 73351 new bytes 
+[11:57.12] dbg: [unmarshall] data for client 1 "" [len 400072] [invalid]
+[11:57.12] dbg: Latency unmarshall arguments.
+[11:57.12] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb03 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb03 content-length: 400072
+[unmarshall] client vb03 len(201) < 400072
+[unmarshall] got 92536 new bytes 
+[unmarshall] client vb03 len(92737) < 400072
+[unmarshall] got 26064 new bytes 
+[unmarshall] client vb03 len(118801) < 400072
+[unmarshall] got 26064 new bytes 
+[unmarshall] client vb03 len(144865) < 400072
+[unmarshall] got 26064 new bytes 
+[unmarshall] client vb03 len(170929) < 400072
+[unmarshall] got 27512 new bytes 
+[unmarshall] client vb03 len(198441) < 400072
+[unmarshall] got 55024 new bytes 
+[unmarshall] client vb03 len(253465) < 400072
+[unmarshall] got 30408 new bytes 
+[unmarshall] client vb03 len(283873) < 400072
+[unmarshall] got 28960 new bytes 
+[unmarshall] client vb03 len(312833) < 400072
+[unmarshall] got 87239 new bytes 
+[11:57.12] dbg: [unmarshall] data for client 2 "" [len 400072] [invalid]
+[11:57.12] dbg: Latency unmarshall arguments.
+[11:57.12] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb04 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb04 content-length: 400072
+[unmarshall] client vb04 len(201) < 400072
+[unmarshall] got 96464 new bytes 
+[unmarshall] client vb04 len(96665) < 400072
+[unmarshall] got 65160 new bytes 
+[unmarshall] client vb04 len(161825) < 400072
+[unmarshall] got 17784 new bytes 
+[unmarshall] client vb04 len(179609) < 400072
+[unmarshall] got 59288 new bytes 
+[unmarshall] client vb04 len(238897) < 400072
+[unmarshall] got 34752 new bytes 
+[unmarshall] client vb04 len(273649) < 400072
+[unmarshall] got 126423 new bytes 
+[11:57.12] dbg: [unmarshall] data for client 3 "" [len 400072] [invalid]
+[11:57.12] dbg: Latency unmarshall arguments.
+[11:57.12] dbg: Unmarshalling 50000 samples
+[send_command] : STOP
+[unmarshall] client 172.16.3.61 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client 172.16.3.61 content-length: 26
+[11:57.12] dbg: [unmarshall] data for target ",88469805288,165812023766" [len 26] [invalid]
+[11:57.12] dbg: [cpu_target_lukem_unmarhsall] start
+[11:57.12] dbg: [cpu_target_lukem_unmarshall] cpu usage ,88469805288,165812023766
+[11:57.12] dbg: Latency begin output function
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[11:57.12] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against latency-check ...
+[11:57.12] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against latency-check ...
+[11:57.12] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against latency-check ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |latency-check|wait|...
+[11:57.12] dbg: latency-check does not match wait
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against latency-check ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |latency-check|nfsstone|...
+[11:57.12] dbg: latency-check does not match nfsstone
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against latency-check ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |latency-check|nfs_latency|...
+[11:57.12] dbg: latency-check does not match nfs_latency
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against latency-check ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |latency-check|latency-check|...
+[11:57.12] dbg: Test loaded
+[main] setting up target 172.16.3.61
+[11:57.12] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against cpu_target_lukem ...
+[11:57.12] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against cpu_target_lukem ...
+[11:57.12] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|wait|...
+[11:57.12] dbg: cpu_target_lukem does not match wait
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|nfsstone|...
+[11:57.12] dbg: cpu_target_lukem does not match nfsstone
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|nfs_latency|...
+[11:57.12] dbg: cpu_target_lukem does not match nfs_latency
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|latency-check|...
+[11:57.12] dbg: cpu_target_lukem does not match latency-check
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatency.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|latency|...
+[11:57.12] dbg: cpu_target_lukem does not match latency
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy_target.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|dummy_target|...
+[11:57.12] dbg: cpu_target_lukem does not match dummy_target
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|dummy|...
+[11:57.12] dbg: cpu_target_lukem does not match dummy
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdiscard.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|discard|...
+[11:57.12] dbg: cpu_target_lukem does not match discard
+[11:57.12] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libcpu_target_lukem.so against cpu_target_lukem ...
+[11:57.12] dbg: Checking for header ...
+[11:57.12] dbg: Checking magic number ...
+[11:57.12] dbg: Checking test name |cpu_target_lukem|cpu_target_lukem|...
+[11:57.12] dbg: Test loaded
+[IpbenchTestTarget:__init__] : client 172.16.3.61
+[connect] start | hostname 172.16.3.61 | port 1237 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD cpu_target_lukem
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : SETUP args::""
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb01
+[IpbenchTestClient:__init__] : client vb01 port 8036 test_port 1235 test_args socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb01 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb02
+[IpbenchTestClient:__init__] : client vb02 port 8036 test_port 1235 test_args socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb02 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb03
+[IpbenchTestClient:__init__] : client vb03 port 8036 test_port 1235 test_args socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb03 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb04
+[IpbenchTestClient:__init__] : client vb04 port 8036 test_port 1235 test_args socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb04 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=12500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : START
+[main] client vb01 start
+[send_command] : START
+[main] client vb02 start
+[send_command] : START
+[main] client vb03 start
+[send_command] : START
+[main] client vb04 start
+[send_command] : START
+[unmarshall] client vb01 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb01 content-length: 400072
+[unmarshall] client vb01 len(201) < 400072
+[unmarshall] got 127799 new bytes 
+[unmarshall] client vb01 len(128000) < 400072
+[unmarshall] got 68608 new bytes 
+[unmarshall] client vb01 len(196608) < 400072
+[unmarshall] got 94720 new bytes 
+[unmarshall] client vb01 len(291328) < 400072
+[unmarshall] got 108744 new bytes 
+[11:58.58] dbg: [unmarshall] data for client 0 "" [len 400072] [invalid]
+[11:58.58] dbg: Latency unmarshall arguments.
+[11:58.58] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb02 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb02 content-length: 400072
+[unmarshall] client vb02 len(201) < 400072
+[unmarshall] got 97056 new bytes 
+[unmarshall] client vb02 len(97257) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb02 len(120425) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb02 len(143593) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb02 len(166761) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb02 len(189929) < 400072
+[unmarshall] got 104256 new bytes 
+[unmarshall] client vb02 len(294185) < 400072
+[unmarshall] got 27512 new bytes 
+[unmarshall] client vb02 len(321697) < 400072
+[unmarshall] got 78375 new bytes 
+[11:58.58] dbg: [unmarshall] data for client 1 "" [len 400072] [invalid]
+[11:58.58] dbg: Latency unmarshall arguments.
+[11:58.58] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb03 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb03 content-length: 400072
+[unmarshall] client vb03 len(201) < 400072
+[unmarshall] got 91944 new bytes 
+[unmarshall] client vb03 len(92145) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb03 len(93593) < 400072
+[unmarshall] got 55024 new bytes 
+[unmarshall] client vb03 len(148617) < 400072
+[unmarshall] got 22888 new bytes 
+[unmarshall] client vb03 len(171505) < 400072
+[unmarshall] got 2896 new bytes 
+[unmarshall] client vb03 len(174401) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb03 len(175849) < 400072
+[unmarshall] got 35032 new bytes 
+[unmarshall] client vb03 len(210881) < 400072
+[unmarshall] got 47784 new bytes 
+[unmarshall] client vb03 len(258665) < 400072
+[unmarshall] got 27512 new bytes 
+[unmarshall] client vb03 len(286177) < 400072
+[unmarshall] got 40544 new bytes 
+[unmarshall] client vb03 len(326721) < 400072
+[unmarshall] got 47784 new bytes 
+[unmarshall] client vb03 len(374505) < 400072
+[unmarshall] got 25567 new bytes 
+[11:58.58] dbg: [unmarshall] data for client 2 "" [len 400072] [invalid]
+[11:58.58] dbg: Latency unmarshall arguments.
+[11:58.58] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb04 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb04 content-length: 400072
+[unmarshall] client vb04 len(201) < 400072
+[unmarshall] got 95024 new bytes 
+[unmarshall] client vb04 len(95225) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb04 len(96673) < 400072
+[unmarshall] got 49232 new bytes 
+[unmarshall] client vb04 len(145905) < 400072
+[unmarshall] got 33024 new bytes 
+[unmarshall] client vb04 len(178929) < 400072
+[unmarshall] got 58520 new bytes 
+[unmarshall] client vb04 len(237449) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb04 len(293921) < 400072
+[unmarshall] got 60816 new bytes 
+[unmarshall] client vb04 len(354737) < 400072
+[unmarshall] got 45335 new bytes 
+[11:58.58] dbg: [unmarshall] data for client 3 "" [len 400072] [invalid]
+[11:58.58] dbg: Latency unmarshall arguments.
+[11:58.58] dbg: Unmarshalling 50000 samples
+[send_command] : STOP
+[unmarshall] client 172.16.3.61 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client 172.16.3.61 content-length: 25
+[11:58.58] dbg: [unmarshall] data for target ",14212730235,81016078597" [len 25] [invalid]
+[11:58.58] dbg: [cpu_target_lukem_unmarhsall] start
+[11:58.58] dbg: [cpu_target_lukem_unmarshall] cpu usage ,14212730235,81016078597
+[11:58.58] dbg: Latency begin output function
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[11:58.58] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against latency-check ...
+[11:58.58] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against latency-check ...
+[11:58.58] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against latency-check ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |latency-check|wait|...
+[11:58.58] dbg: latency-check does not match wait
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against latency-check ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |latency-check|nfsstone|...
+[11:58.58] dbg: latency-check does not match nfsstone
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against latency-check ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |latency-check|nfs_latency|...
+[11:58.58] dbg: latency-check does not match nfs_latency
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against latency-check ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |latency-check|latency-check|...
+[11:58.58] dbg: Test loaded
+[main] setting up target 172.16.3.61
+[11:58.58] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against cpu_target_lukem ...
+[11:58.58] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against cpu_target_lukem ...
+[11:58.58] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|wait|...
+[11:58.58] dbg: cpu_target_lukem does not match wait
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|nfsstone|...
+[11:58.58] dbg: cpu_target_lukem does not match nfsstone
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|nfs_latency|...
+[11:58.58] dbg: cpu_target_lukem does not match nfs_latency
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|latency-check|...
+[11:58.58] dbg: cpu_target_lukem does not match latency-check
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatency.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|latency|...
+[11:58.58] dbg: cpu_target_lukem does not match latency
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy_target.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|dummy_target|...
+[11:58.58] dbg: cpu_target_lukem does not match dummy_target
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|dummy|...
+[11:58.58] dbg: cpu_target_lukem does not match dummy
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdiscard.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|discard|...
+[11:58.58] dbg: cpu_target_lukem does not match discard
+[11:58.58] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libcpu_target_lukem.so against cpu_target_lukem ...
+[11:58.58] dbg: Checking for header ...
+[11:58.58] dbg: Checking magic number ...
+[11:58.58] dbg: Checking test name |cpu_target_lukem|cpu_target_lukem|...
+[11:58.58] dbg: Test loaded
+[IpbenchTestTarget:__init__] : client 172.16.3.61
+[connect] start | hostname 172.16.3.61 | port 1237 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD cpu_target_lukem
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : SETUP args::""
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb01
+[IpbenchTestClient:__init__] : client vb01 port 8036 test_port 1235 test_args socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb01 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb02
+[IpbenchTestClient:__init__] : client vb02 port 8036 test_port 1235 test_args socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb02 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb03
+[IpbenchTestClient:__init__] : client vb03 port 8036 test_port 1235 test_args socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb03 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb04
+[IpbenchTestClient:__init__] : client vb04 port 8036 test_port 1235 test_args socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb04 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=25000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : START
+[main] client vb01 start
+[send_command] : START
+[main] client vb02 start
+[send_command] : START
+[main] client vb03 start
+[send_command] : START
+[main] client vb04 start
+[send_command] : START
+[unmarshall] client vb01 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb01 content-length: 400072
+[unmarshall] client vb01 len(201) < 400072
+[unmarshall] got 127799 new bytes 
+[unmarshall] client vb01 len(128000) < 400072
+[unmarshall] got 68608 new bytes 
+[unmarshall] client vb01 len(196608) < 400072
+[unmarshall] got 94720 new bytes 
+[unmarshall] client vb01 len(291328) < 400072
+[unmarshall] got 108744 new bytes 
+[12:00.20] dbg: [unmarshall] data for client 0 "" [len 400072] [invalid]
+[12:00.20] dbg: Latency unmarshall arguments.
+[12:00.20] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb02 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb02 content-length: 400072
+[unmarshall] client vb02 len(201) < 400072
+[unmarshall] got 91944 new bytes 
+[unmarshall] client vb02 len(92145) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb02 len(93593) < 400072
+[unmarshall] got 82256 new bytes 
+[unmarshall] client vb02 len(175849) < 400072
+[unmarshall] got 35032 new bytes 
+[unmarshall] client vb02 len(210881) < 400072
+[unmarshall] got 101360 new bytes 
+[unmarshall] client vb02 len(312241) < 400072
+[unmarshall] got 87831 new bytes 
+[12:00.20] dbg: [unmarshall] data for client 1 "" [len 400072] [invalid]
+[12:00.20] dbg: Latency unmarshall arguments.
+[12:00.20] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb03 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb03 content-length: 400072
+[unmarshall] client vb03 len(201) < 400072
+[unmarshall] got 97056 new bytes 
+[unmarshall] client vb03 len(97257) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb03 len(120425) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb03 len(143593) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb03 len(166761) < 400072
+[unmarshall] got 23168 new bytes 
+[unmarshall] client vb03 len(189929) < 400072
+[unmarshall] got 26064 new bytes 
+[unmarshall] client vb03 len(215993) < 400072
+[unmarshall] got 24616 new bytes 
+[unmarshall] client vb03 len(240609) < 400072
+[unmarshall] got 26064 new bytes 
+[unmarshall] client vb03 len(266673) < 400072
+[unmarshall] got 112944 new bytes 
+[unmarshall] client vb03 len(379617) < 400072
+[unmarshall] got 20455 new bytes 
+[12:00.20] dbg: [unmarshall] data for client 2 "" [len 400072] [invalid]
+[12:00.20] dbg: Latency unmarshall arguments.
+[12:00.20] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb04 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb04 content-length: 400072
+[unmarshall] client vb04 len(201) < 400072
+[unmarshall] got 96464 new bytes 
+[unmarshall] client vb04 len(96665) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb04 len(153137) < 400072
+[unmarshall] got 26472 new bytes 
+[unmarshall] client vb04 len(179609) < 400072
+[unmarshall] got 43440 new bytes 
+[unmarshall] client vb04 len(223049) < 400072
+[unmarshall] got 41584 new bytes 
+[unmarshall] client vb04 len(264633) < 400072
+[unmarshall] got 50680 new bytes 
+[unmarshall] client vb04 len(315313) < 400072
+[unmarshall] got 84759 new bytes 
+[12:00.20] dbg: [unmarshall] data for client 3 "" [len 400072] [invalid]
+[12:00.20] dbg: Latency unmarshall arguments.
+[12:00.20] dbg: Unmarshalling 50000 samples
+[send_command] : STOP
+[unmarshall] client 172.16.3.61 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client 172.16.3.61 content-length: 23
+[12:00.20] dbg: [unmarshall] data for target ",397019605,52636824200" [len 23] [invalid]
+[12:00.20] dbg: [cpu_target_lukem_unmarhsall] start
+[12:00.20] dbg: [cpu_target_lukem_unmarshall] cpu usage ,397019605,52636824200
+[12:00.20] dbg: Latency begin output function
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[12:00.20] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against latency-check ...
+[12:00.20] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against latency-check ...
+[12:00.20] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against latency-check ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |latency-check|wait|...
+[12:00.20] dbg: latency-check does not match wait
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against latency-check ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |latency-check|nfsstone|...
+[12:00.20] dbg: latency-check does not match nfsstone
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against latency-check ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |latency-check|nfs_latency|...
+[12:00.20] dbg: latency-check does not match nfs_latency
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against latency-check ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |latency-check|latency-check|...
+[12:00.20] dbg: Test loaded
+[main] setting up target 172.16.3.61
+[12:00.20] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against cpu_target_lukem ...
+[12:00.20] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against cpu_target_lukem ...
+[12:00.20] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|wait|...
+[12:00.20] dbg: cpu_target_lukem does not match wait
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|nfsstone|...
+[12:00.20] dbg: cpu_target_lukem does not match nfsstone
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|nfs_latency|...
+[12:00.20] dbg: cpu_target_lukem does not match nfs_latency
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|latency-check|...
+[12:00.20] dbg: cpu_target_lukem does not match latency-check
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatency.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|latency|...
+[12:00.20] dbg: cpu_target_lukem does not match latency
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy_target.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|dummy_target|...
+[12:00.20] dbg: cpu_target_lukem does not match dummy_target
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|dummy|...
+[12:00.20] dbg: cpu_target_lukem does not match dummy
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdiscard.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|discard|...
+[12:00.20] dbg: cpu_target_lukem does not match discard
+[12:00.20] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libcpu_target_lukem.so against cpu_target_lukem ...
+[12:00.20] dbg: Checking for header ...
+[12:00.20] dbg: Checking magic number ...
+[12:00.20] dbg: Checking test name |cpu_target_lukem|cpu_target_lukem|...
+[12:00.20] dbg: Test loaded
+[IpbenchTestTarget:__init__] : client 172.16.3.61
+[connect] start | hostname 172.16.3.61 | port 1237 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD cpu_target_lukem
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : SETUP args::""
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb01
+[IpbenchTestClient:__init__] : client vb01 port 8036 test_port 1235 test_args socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb01 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb02
+[IpbenchTestClient:__init__] : client vb02 port 8036 test_port 1235 test_args socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb02 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb03
+[IpbenchTestClient:__init__] : client vb03 port 8036 test_port 1235 test_args socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb03 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb04
+[IpbenchTestClient:__init__] : client vb04 port 8036 test_port 1235 test_args socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb04 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=37500000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : START
+[main] client vb01 start
+[send_command] : START
+[main] client vb02 start
+[send_command] : START
+[main] client vb03 start
+[send_command] : START
+[main] client vb04 start
+[send_command] : START
+[unmarshall] client vb01 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb01 content-length: 400072
+[unmarshall] client vb01 len(128) < 400072
+[unmarshall] got 126848 new bytes 
+[unmarshall] client vb01 len(126976) < 400072
+[unmarshall] got 65536 new bytes 
+[unmarshall] client vb01 len(192512) < 400072
+[unmarshall] got 207560 new bytes 
+[12:01.34] dbg: [unmarshall] data for client 0 "" [len 400072] [invalid]
+[12:01.34] dbg: Latency unmarshall arguments.
+[12:01.34] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb02 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb02 content-length: 400072
+[unmarshall] client vb02 len(201) < 400072
+[unmarshall] got 97064 new bytes 
+[unmarshall] client vb02 len(97265) < 400072
+[unmarshall] got 57920 new bytes 
+[unmarshall] client vb02 len(155185) < 400072
+[unmarshall] got 25024 new bytes 
+[unmarshall] client vb02 len(180209) < 400072
+[unmarshall] got 57920 new bytes 
+[unmarshall] client vb02 len(238129) < 400072
+[unmarshall] got 62264 new bytes 
+[unmarshall] client vb02 len(300393) < 400072
+[unmarshall] got 99679 new bytes 
+[12:01.34] dbg: [unmarshall] data for client 1 "" [len 400072] [invalid]
+[12:01.34] dbg: Latency unmarshall arguments.
+[12:01.34] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb03 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb03 content-length: 400072
+[unmarshall] client vb03 len(201) < 400072
+[unmarshall] got 91944 new bytes 
+[unmarshall] client vb03 len(92145) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb03 len(93593) < 400072
+[unmarshall] got 55024 new bytes 
+[unmarshall] client vb03 len(148617) < 400072
+[unmarshall] got 27232 new bytes 
+[unmarshall] client vb03 len(175849) < 400072
+[unmarshall] got 35032 new bytes 
+[unmarshall] client vb03 len(210881) < 400072
+[unmarshall] got 62264 new bytes 
+[unmarshall] client vb03 len(273145) < 400072
+[unmarshall] got 41992 new bytes 
+[unmarshall] client vb03 len(315137) < 400072
+[unmarshall] got 66608 new bytes 
+[unmarshall] client vb03 len(381745) < 400072
+[unmarshall] got 18327 new bytes 
+[12:01.34] dbg: [unmarshall] data for client 2 "" [len 400072] [invalid]
+[12:01.34] dbg: Latency unmarshall arguments.
+[12:01.34] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb04 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb04 content-length: 400072
+[unmarshall] client vb04 len(201) < 400072
+[unmarshall] got 96464 new bytes 
+[unmarshall] client vb04 len(96665) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb04 len(153137) < 400072
+[unmarshall] got 69912 new bytes 
+[unmarshall] client vb04 len(223049) < 400072
+[unmarshall] got 92264 new bytes 
+[unmarshall] client vb04 len(315313) < 400072
+[unmarshall] got 84759 new bytes 
+[12:01.34] dbg: [unmarshall] data for client 3 "" [len 400072] [invalid]
+[12:01.34] dbg: Latency unmarshall arguments.
+[12:01.34] dbg: Unmarshalling 50000 samples
+[send_command] : STOP
+[unmarshall] client 172.16.3.61 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client 172.16.3.61 content-length: 23
+[12:01.34] dbg: [unmarshall] data for target ",503708003,43363344388" [len 23] [invalid]
+[12:01.34] dbg: [cpu_target_lukem_unmarhsall] start
+[12:01.34] dbg: [cpu_target_lukem_unmarshall] cpu usage ,503708003,43363344388
+[12:01.34] dbg: Latency begin output function
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[12:01.34] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against latency-check ...
+[12:01.34] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against latency-check ...
+[12:01.34] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against latency-check ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |latency-check|wait|...
+[12:01.34] dbg: latency-check does not match wait
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against latency-check ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |latency-check|nfsstone|...
+[12:01.34] dbg: latency-check does not match nfsstone
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against latency-check ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |latency-check|nfs_latency|...
+[12:01.34] dbg: latency-check does not match nfs_latency
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against latency-check ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |latency-check|latency-check|...
+[12:01.34] dbg: Test loaded
+[main] setting up target 172.16.3.61
+[12:01.34] dbg: Finding plugins in /usr/lib/x86_64-linux-gnu/ipbench
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so against cpu_target_lukem ...
+[12:01.34] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_target.so: undefined symbol: target_wrap_setup_controller
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so against cpu_target_lukem ...
+[12:01.34] dbg: /usr/lib/x86_64-linux-gnu/ipbench/libwrapper_client.so: undefined symbol: client_wrap_setup_controller
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libwait.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|wait|...
+[12:01.34] dbg: cpu_target_lukem does not match wait
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfsstones.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|nfsstone|...
+[12:01.34] dbg: cpu_target_lukem does not match nfsstone
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libnfs_latency.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|nfs_latency|...
+[12:01.34] dbg: cpu_target_lukem does not match nfs_latency
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatencycheck.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|latency-check|...
+[12:01.34] dbg: cpu_target_lukem does not match latency-check
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/liblatency.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|latency|...
+[12:01.34] dbg: cpu_target_lukem does not match latency
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy_target.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|dummy_target|...
+[12:01.34] dbg: cpu_target_lukem does not match dummy_target
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdummy.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|dummy|...
+[12:01.34] dbg: cpu_target_lukem does not match dummy
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libdiscard.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|discard|...
+[12:01.34] dbg: cpu_target_lukem does not match discard
+[12:01.34] dbg: Checking /usr/lib/x86_64-linux-gnu/ipbench/libcpu_target_lukem.so against cpu_target_lukem ...
+[12:01.34] dbg: Checking for header ...
+[12:01.34] dbg: Checking magic number ...
+[12:01.34] dbg: Checking test name |cpu_target_lukem|cpu_target_lukem|...
+[12:01.34] dbg: Test loaded
+[IpbenchTestTarget:__init__] : client 172.16.3.61
+[connect] start | hostname 172.16.3.61 | port 1237 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD cpu_target_lukem
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : SETUP args::""
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb01
+[IpbenchTestClient:__init__] : client vb01 port 8036 test_port 1235 test_args socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb01 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb02
+[IpbenchTestClient:__init__] : client vb02 port 8036 test_port 1235 test_args socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb02 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb03
+[IpbenchTestClient:__init__] : client vb03 port 8036 test_port 1235 test_args socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb03 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[main] setting up client vb04
+[IpbenchTestClient:__init__] : client vb04 port 8036 test_port 1235 test_args socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[connect] start | hostname vb04 | port 8036 | 
+[parse_return_code] :  code=100|str=IPBENCH V1.0|msg=|
+[send_command] : HELLO
+[parse_return_code] :  code=200|str=OK|msg=Ready to go|
+[send_command] : LOAD latency-check
+[parse_return_code] :  code=200|str=OK|msg=|
+[Setup]: target: 172.16.3.61
+[Setup]: port: 1235
+[Setup]: args: socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000
+[send_command] : SETUP target::172.16.3.61||port::1235||args::"socktype=udp,bps=50000000,size=1472,warmup=10,cooldown=10,samples=50000"
+[parse_return_code] :  code=200|str=OK|msg=|
+[send_command] : START
+[main] client vb01 start
+[send_command] : START
+[main] client vb02 start
+[send_command] : START
+[main] client vb03 start
+[send_command] : START
+[main] client vb04 start
+[send_command] : START
+[unmarshall] client vb01 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb01 content-length: 400072
+[unmarshall] client vb01 len(128) < 400072
+[unmarshall] got 127360 new bytes 
+[unmarshall] client vb01 len(127488) < 400072
+[unmarshall] got 69120 new bytes 
+[unmarshall] client vb01 len(196608) < 400072
+[unmarshall] got 203464 new bytes 
+[12:02.47] dbg: [unmarshall] data for client 0 "" [len 400072] [invalid]
+[12:02.47] dbg: Latency unmarshall arguments.
+[12:02.47] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb02 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb02 content-length: 400072
+[unmarshall] client vb02 len(201) < 400072
+[unmarshall] got 96552 new bytes 
+[unmarshall] client vb02 len(96753) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb02 len(153225) < 400072
+[unmarshall] got 26472 new bytes 
+[unmarshall] client vb02 len(179697) < 400072
+[unmarshall] got 7240 new bytes 
+[unmarshall] client vb02 len(186937) < 400072
+[unmarshall] got 49232 new bytes 
+[unmarshall] client vb02 len(236169) < 400072
+[unmarshall] got 62264 new bytes 
+[unmarshall] client vb02 len(298433) < 400072
+[unmarshall] got 39032 new bytes 
+[unmarshall] client vb02 len(337465) < 400072
+[unmarshall] got 62607 new bytes 
+[12:02.48] dbg: [unmarshall] data for client 1 "" [len 400072] [invalid]
+[12:02.48] dbg: Latency unmarshall arguments.
+[12:02.48] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb03 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb03 content-length: 400072
+[unmarshall] client vb03 len(201) < 400072
+[unmarshall] got 92880 new bytes 
+[unmarshall] client vb03 len(93081) < 400072
+[unmarshall] got 1448 new bytes 
+[unmarshall] client vb03 len(94529) < 400072
+[unmarshall] got 55024 new bytes 
+[unmarshall] client vb03 len(149553) < 400072
+[unmarshall] got 27232 new bytes 
+[unmarshall] client vb03 len(176785) < 400072
+[unmarshall] got 57768 new bytes 
+[unmarshall] client vb03 len(234553) < 400072
+[unmarshall] got 108600 new bytes 
+[unmarshall] client vb03 len(343153) < 400072
+[unmarshall] got 56919 new bytes 
+[12:02.48] dbg: [unmarshall] data for client 2 "" [len 400072] [invalid]
+[12:02.48] dbg: Latency unmarshall arguments.
+[12:02.48] dbg: Unmarshalling 50000 samples
+[unmarshall] client vb04 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client vb04 content-length: 400072
+[unmarshall] client vb04 len(201) < 400072
+[unmarshall] got 96464 new bytes 
+[unmarshall] client vb04 len(96665) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb04 len(153137) < 400072
+[unmarshall] got 26472 new bytes 
+[unmarshall] client vb04 len(179609) < 400072
+[unmarshall] got 56472 new bytes 
+[unmarshall] client vb04 len(236081) < 400072
+[unmarshall] got 62264 new bytes 
+[unmarshall] client vb04 len(298345) < 400072
+[unmarshall] got 52128 new bytes 
+[unmarshall] client vb04 len(350473) < 400072
+[unmarshall] got 49599 new bytes 
+[12:02.48] dbg: [unmarshall] data for client 3 "" [len 400072] [invalid]
+[12:02.48] dbg: Latency unmarshall arguments.
+[12:02.48] dbg: Unmarshalling 50000 samples
+[send_command] : STOP
+[unmarshall] client 172.16.3.61 unmarshall 
+[parse_return_code] :  code=220|str=VALID DATA|msg=Data to follow|
+[unmarshall] client 172.16.3.61 content-length: 23
+[12:02.48] dbg: [unmarshall] data for target ",393147438,42410213560" [len 23] [invalid]
+[12:02.48] dbg: [cpu_target_lukem_unmarhsall] start
+[12:02.48] dbg: [cpu_target_lukem_unmarshall] cpu usage ,393147438,42410213560
+[12:02.48] dbg: Latency begin output function
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+[send_command] : QUIT
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+Running benchmarks for:
+    throughputs: 20000000, 50000000, 100000000, 150000000, 200000000
+    packet sizes: 1472
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+ 20000000,20000251,20000251,1472,430,673,16360,360.03,675,0,88469805288,165812023766
+
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+ 50000000,50000069,50000069,1472,416,715,19437,499.02,697,0,14212730235,81016078597
+
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+ 100000000,99999239,99999739,1472,493,878,25251,686.75,821,0,397019605,52636824200
+
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+ 150000000,149871548,149999687,1472,951,2159,37819,1725.40,2022,0,503708003,43363344388
+
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+ 200000000,157264800,199998818,1472,7570,31805,67714,15532.03,28121,0,393147438,42410213560
+
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+b'100 IPBENCH V1.0\n'
+Result Summary:
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles
+20000000,20000251,20000251,1472,430,673,16360,360.03,675,0,88469805288,165812023766
+50000000,50000069,50000069,1472,416,715,19437,499.02,697,0,14212730235,81016078597
+100000000,99999239,99999739,1472,493,878,25251,686.75,821,0,397019605,52636824200
+150000000,149871548,149999687,1472,951,2159,37819,1725.40,2022,0,503708003,43363344388
+200000000,157264800,199998818,1472,7570,31805,67714,15532.03,28121,0,393147438,42410213560
+

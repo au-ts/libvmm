@@ -1,0 +1,3690 @@
+co
+^Eco
+[Enter `^Ec?' for help]
+[connecting...up]
+SM1:BL:511f6b:81ca2f;FEAT:A0F83180:20282000;POC:F;RCY:0;EMMC:0;READ:0;0.0;CHK:0;
+bl2_stage_init 0x01
+bl2_stage_init 0x81
+hw id: 0x0000 - pwm id 0x01
+bl2_stage_init 0xc1
+bl2_stage_init 0x02
+
+L0:00000000
+L1:00000703
+L2:00008067
+L3:15000020
+S1:00000000
+B2:20282000
+B1:a0f83180
+
+TE: 140048
+
+BL2 Built : 20:29:41, Jun 18 2019. g12a ga659aac - luan.yuan@droid15-sz
+
+Board ID = 1
+Set cpu clk to 24M
+Set clk81 to 24M
+Use GP1_pll as DSU clk.
+DSU clk: 1200 Mhz
+CPU clk: 1200 MHz
+Set clk81 to 166.6M
+eMMC boot @ 0
+sw8 s
+DDR driver_vesion: LPDDR4_PHY_V_0_1_15 build time: Jun 18 2019 20:29:37
+board id: 1
+Load FIP HDR from eMMC, src: 0x00010200, des: 0xfffd0000, size: 0x00004000, part: 0
+fw parse done
+Load ddrfw from eMMC, src: 0x00060200, des: 0xfffd0000, size: 0x0000c000, part: 0
+Load ddrfw from eMMC, src: 0x00038200, des: 0xfffd0000, size: 0x00004000, part: 0
+PIEI prepare done
+fastboot data load
+00000000
+emmc switch 1 ok
+00000000
+emmc switch 2 ok
+fastboot data verify
+verify result: 255
+Cfg max: 2, cur: 1. Board id: 255. Force loop cfg
+DDR4 probe
+ddr clk to 1320MHz
+Load ddrfw from eMMC, src: 0x00014200, des: 0xfffd0000, size: 0x0000c000, part: 0
+00000000
+emmc switch 0 ok
+
+dmc_version 0001
+Check phy result
+INFO : End of initialization
+INFO : End of read enable training
+INFO : End of fine write leveling
+INFO : End of read dq deskew training
+INFO : End of MPR read delay center optimization
+INFO : End of Write leveling coarse delay
+INFO : End of write delay center optimization
+INFO : End of read delay center optimization
+INFO : End of max read latency training
+INFO : Training has run successfully!
+1D training succeed
+Load ddrfw from eMMC, src: 0x00020200, des: 0xfffd0000, size: 0x0000c000, part: 0
+Check phy result
+INFO : End of initialization
+INFO : End of 2D read delay Voltage center optimization
+INFO : End of 2D write delay Voltage center optimization
+INFO : Training has run successfully!
+
+R0_RxClkDly_Margin==118 ps 10
+R0_TxDqDly_Margi==118 ps 10
+
+
+R1_RxClkDly_Margin==0 ps 0
+R1_TxDqDly_Margi==0 ps 0
+
+ dwc_ddrphy_apb_wr((0<<20)|(2<<16)|(0<<12)|(0xb0):0001 
+
+soc_vref_reg_value 0x 00000051 00000051 00000051 00000051 0000004f 00000051 00000050 0000004f 00000051 0000004f 00000050 00000051 0000004f 00000052 00000050 00000051 00000051 00000051 00000050 0000004e 00000050 0000004f 00000051 0000004f 00000050 00000050 00000051 00000050 0000004f 0000004e 0000004f 0000004f dram_vref_reg_value 0x 00000021
+2D training succeed
+aml_ddr_fw_vesion: LPDDR4_PHY_V_0_1_15 build time: Jun 18 2019 20:29:43
+auto size-- 65535DDR cs0 size: 2048MB
+DDR cs1 size: 2048MB
+DMC_DDR_CTRL: 00700024DDR size: 3928MB
+cs0 DataBus test pass
+cs1 DataBus test pass
+cs0 AddrBus test pass
+cs1 AddrBus test pass
+
+non-sec scramble use zero key
+ddr scramble enabled
+
+100bdlr_step_size ps== 456
+result report
+boot times 0Enable ddr reg access
+00000000
+emmc switch 3 ok
+Authentication key not yet programmed
+get rpmb counter error 0x00000007
+00000000
+emmc switch 0 ok
+Load FIP HDR from eMMC, src: 0x00010200, des: 0x01700000, size: 0x00004000, part: 0
+Load BL3X from eMMC, src: 0x00078200, des: 0x01768000, size: 0x0009c000, part: 0
+bl2z: ptr: 05129330, size: 00001e40
+0.0;M3 CHK:0;cm4_sp_mode 0
+MVN_1=0x00000000
+MVN_2=0x00000000
+[Image: g12a_v1.1.3386-3b31431 2019-05-21 10:41:54 luan.yuan@droid15-sz]
+OPS=0x10
+ring efuse init
+2b 0c 10 00 01 17 1c 00 00 18 36 30 36 58 4b 50 
+[0.017354 Inits done]
+secure task start!
+high task start!
+low task start!
+run into bl31
+NOTICE:  BL31: v1.3(release):4fc40b1
+NOTICE:  BL31: Built : 15:57:33, May 22 2019
+NOTICE:  BL31: G12A normal boot!
+NOTICE:  BL31: BL33 decompress pass
+ERROR:   Error initializing runtime service opteed_fast
+
+<debug_uart>
+
+
+U-Boot 2022.07-armbian (Feb 17 2023 - 22:32:33 +0000) odroid-c4/hc4
+
+Model: Hardkernel ODROID-C4
+SoC:   Amlogic Meson SM1 (S905X3) Revision 2b:c (10:2)
+DRAM:  3.8 GiB
+Core:  388 devices, 27 uclasses, devicetree: separate
+MMC:   sd@ffe05000: 0, mmc@ffe07000: 1
+Loading Environment from nowhere... OK
+In:    serial
+Out:   serial
+Err:   serial
+Board variant: c4
+Net:   eth0: ethernet@ff3f0000
+Hit any key to stop autoboot:  2  
+ 0 
+=> 
+=> setenv autoload no && dhcp && tftpboot 0x20000000 odroidc4-1/local-kernel
+setenv autoload no && dhcp && tftpboot 0x20000000 odroidc4-1/local-kernel
+ethernet@ff3f0000 Waiting for PHY auto negotiation to complete...... done
+Speed: 1000, full duplex
+BOOTP broadcast 1
+BOOTP broadcast 2
+BOOTP broadcast 3
+BOOTP broadcast 4
+BOOTP broadcast 5
+BOOTP broadcast 6
+*** WARNING: Host Name is too long (34 - max: 32) - truncated
+*** WARNING: Host Name is too long (34 - max: 32) - truncated
+DHCP client bound to address 172.16.0.11 (5762 ms)
+Speed: 1000, full duplex
+Using ethernet@ff3f0000 device
+TFTP from server 172.16.0.2; our IP address is 172.16.0.11
+Filename 'odroidc4-1/local-kernel'.
+Load address: 0x20000000
+Loading: *##################T #T ##############################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################################
+	 #################################################
+	 1.9 MiB/s
+done
+Bytes transferred = 24565204 (176d5d4 hex)
+=> go 0x20000000
+go 0x20000000
+## Starting application at 0x20000000 ...
+Begin input
+BENCH|LOG: VM utilisation tracking enabled for "linux" (vcpu 0)
+BENCH|LOG: ENABLE_BENCHMARKING defined
+BENCH|LOG: ENABLE_PMU_EVENTS defined. Tracking PMU events:
+0. Instructions (64-bit counter)
+1. Data memory access (64-bit counter)
+2. L1 d-cache misses (64-bit counter)
+BENCH|LOG: CONFIG_BENCHMARK_TRACK_UTILISATION defined
+[    0.095919]  cs_system_cfg: CoreSight Configuration manager initialised
+[    0.096828] NET: Registered PF_PACKET protocol family
+[    0.145690] meson8b-dwmac ff3f0000.ethernet: IRQ eth_wake_irq not found
+[    0.145890] meson8b-dwmac ff3f0000.ethernet: IRQ eth_lpi not found
+[    0.145996] meson8b-dwmac ff3f0000.ethernet: IRQ sfty not found
+[    0.150287] meson8b-dwmac ff3f0000.ethernet: PTP uses main clock
+[    0.151159] meson8b-dwmac ff3f0000.ethernet: User ID: 0x11, Synopsys ID: 0x37
+[    0.151315] meson8b-dwmac ff3f0000.ethernet: 	DWMAC1000
+[    0.151407] meson8b-dwmac ff3f0000.ethernet: DMA HW capability register supported
+[    0.151518] meson8b-dwmac ff3f0000.ethernet: RX Checksum Offload Engine supported
+[    0.151630] meson8b-dwmac ff3f0000.ethernet: COE Type 2
+[    0.151717] meson8b-dwmac ff3f0000.ethernet: TX Checksum insertion supported
+[    0.151828] meson8b-dwmac ff3f0000.ethernet: Wake-Up On Lan supported
+[    0.151928] meson8b-dwmac ff3f0000.ethernet: Normal descriptors
+[    0.152027] meson8b-dwmac ff3f0000.ethernet: Ring mode enabled
+[    0.152125] meson8b-dwmac ff3f0000.ethernet: Enable RX Mitigation via HW Watchdog Timer
+[    0.152238] meson8b-dwmac ff3f0000.ethernet: device MAC address 00:1e:06:4a:35:e7
+[    0.159288] mdio_bus mdio_mux-0.0:00: ignoring dependency for device, assuming no driver
+[    0.339464] clk: Not disabling unused clocks
+[    0.341985] Freeing initrd memory: 9216K
+[    0.342980] Freeing unused kernel memory: 1984K
+[    0.343408] Run /init as init process
+[    0.343492]   with arguments:
+[    0.343564]     /init
+[    0.343621]   with environment:
+[    0.343691]     HOME=/
+[    0.343749]     TERM=linux
+Saving 256 bits of non-creditable seed for next boot
+Starting syslogd: OK
+Starting klogd: OK
+Running sysctl: OK
+Loading needed modules...
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+modprobe: can't change directory to '/lib/modules': No such file or directory
+Starting network: OK
+Starting dhcpcd...
+no such user dhcpcd
+dhcpcd-10.2.4 starting
+no interfaces have a carrier
+[    0.548632] meson8b-dwmac ff3f0000.ethernet eth0: Register MEM_TYPE_PAGE_POOL RxQ-0
+Starting crond: OK
+ethtool -K eth0 gso off
+[    0.638280] meson8b-dwmac ff3f0000.ethernet eth0: PHY [mdio_mux-0.0:00] driver [RTL8211F Gigabit Ethernet] (irq=POLL)
+[    0.653604] meson8b-dwmac ff3f0000.ethernet eth0: No Safety Features support found
+[    0.653760] meson8b-dwmac ff3f0000.ethernet eth0: PTP not supported by HW
+[    0.656442] meson8b-dwmac ff3f0000.ethernet eth0: configuring for phy/rgmii link mode
+
+Welcome to Buildroot
+odroidc4_libvmm login: ethtool -K eth0 gro off
+ethtool -K eth0 tx off rx off
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: eth0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq qlen 1000
+    link/ether 00:1e:06:4a:35:e7 brd ff:ff:ff:ff:ff:ff
+[    4.778226] meson8b-dwmac ff3f0000.ethernet eth0: Link is Up - 1Gbps/Full - flow control off
+[    6.810159] random: crng init done
+[   10.710248] meson8b-dwmac ff3f0000.ethernet eth0: entered promiscuous mode
+DHCP request finished, IP address for netif client1 is: 172.16.2.17
+DHCP request finished, IP address for netif client0 is: 172.16.2.18
+root
+# cat > cpu.sh << 'EOF'
+erval="${1:-5}"
+
+snap() { a> #!/bin/sh
+$> interval="${1:-5}"
+' /proc/stat; }
+
+pr> 
+> snap() { awk '/^cpu /{print $2,$3,$4,$5,$6,$7,$8,$9,$10,$11}' /proc/stat; }
+10)-$i
+    usr=d[1]-d[9]; > 
+> prev=$(snap)
+ idle=d[4];
+    steal=d[8]> while true; do
+o>   sleep "$interval"
+]+steal+guest>   cur=$(snap)
+intf "use>   echo "$prev $cur" | awk '{
+>     for(i=1;i<=10;i++) d[i]=$(i+10)-$i
+e/t>     usr=d[1]-d[9]; nice=d[2]-d[10]; sys=d[3]; idle=d[4];
+>     steal=d[8]; guest=d[9]+d[10];
+>     tot=usr+nice+sys+d[4]+d[5]+d[6]+d[7]+steal+guest; if(tot==0)tot=1
+>     printf "user   %.1f%%\n", 100*usr/tot
+>     printf "system %.1f%%\n", 100*sys/tot
+>     printf "idle   %.1f%%\n", 100*idle/tot
+>   }'
+>   prev=$cur
+> done
+> EOF
+# 
+# chmod +x cpu.sh
+# ./cpu.sh 10
+user   0.1%
+system 0.1%
+idle   99.6%
+user   0.2%
+system 0.3%
+idle   99.2%
+Utilization connection established!
+user   0.1%
+system 0.3%
+idle   99.2%
+user   0.1%
+system 0.3%
+idle   99.3%
+user   0.2%
+system 0.6%
+idle   98.9%
+user   0.2%
+system 0.2%
+idle   99.3%
+client0 measurement starting...
+user   13.8%
+system 2.9%
+idle   81.5%
+user   35.0%
+system 6.6%
+idle   53.9%
+user   35.0%
+system 6.6%
+idle   54.3%
+user   35.2%
+system 6.0%
+idle   54.6%
+user   34.9%
+system 6.7%
+idle   54.2%
+user   35.4%
+system 5.7%
+idle   54.4%
+user   34.9%
+system 6.2%
+idle   54.3%
+user   36.2%
+system 7.0%
+idle   52.0%
+user   35.4%
+system 7.5%
+idle   52.2%
+user   35.8%
+system 6.8%
+idle   52.7%
+user   35.6%
+system 7.1%
+idle   52.4%
+user   37.1%
+system 7.4%
+idle   50.3%
+user   35.6%
+system 6.9%
+idle   52.4%
+user   35.8%
+system 6.9%
+idle   52.3%
+user   35.5%
+system 7.2%
+idle   52.5%
+user   35.0%
+system 7.5%
+idle   52.4%
+user   35.7%
+system 7.0%
+idle   52.1%
+user   35.1%
+system 9.7%
+idle   49.0%
+user   36.2%
+system 8.9%
+idle   48.8%
+user   36.3%
+system 8.7%
+idle   48.9%
+user   36.4%
+system 8.8%
+idle   48.6%
+user   35.9%
+system 8.8%
+idle   48.9%
+user   36.3%
+system 9.0%
+idle   48.4%
+user   36.0%
+system 8.9%
+idle   49.1%
+user   35.6%
+system 7.2%
+idle   52.1%
+user   35.8%
+system 6.7%
+idle   52.5%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 178042454388
+Data memory access: 89872596038
+L1 d-cache misses: 299109426
+}
+Total utilisation details: 
+{
+KernelUtilisation: 20596186831
+KernelEntries: 12973570
+NumberSchedules: 7590562
+TotalUtilisation: 307143077148
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 315963
+KernelEntries: 160
+NumberSchedules: 158
+TotalUtilisation: 1015589
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 555767
+KernelEntries: 315
+NumberSchedules: 315
+TotalUtilisation: 1012746
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 12985107792
+KernelEntries: 8547856
+NumberSchedules: 3537364
+TotalUtilisation: 17823524290
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 728932635
+KernelEntries: 330360
+NumberSchedules: 330360
+TotalUtilisation: 1846007202
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 712528900
+KernelEntries: 549971
+NumberSchedules: 363624
+TotalUtilisation: 1883724430
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 357742147
+KernelEntries: 181176
+NumberSchedules: 180344
+TotalUtilisation: 2365709769
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 293683490
+KernelEntries: 344927
+NumberSchedules: 177622
+TotalUtilisation: 1142641448
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 20142129
+KernelEntries: 16447
+NumberSchedules: 16404
+TotalUtilisation: 76612916
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 12061778
+KernelEntries: 11899
+NumberSchedules: 6739
+TotalUtilisation: 35436486
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 411183080
+KernelEntries: 491578
+NumberSchedules: 478763
+TotalUtilisation: 1550163194
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4783194688
+KernelEntries: 2288397
+NumberSchedules: 2288384
+TotalUtilisation: 146006160903
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   3.9%
+system 1.1%
+idle   94.1%
+user   0.2%
+system 0.1%
+idle   99.4%
+user   0.1%
+system 0.4%
+idle   99.4%
+client0 measurement starting...
+user   1.2%
+system 0.5%
+idle   98.1%
+user   38.4%
+system 7.4%
+idle   48.6%
+user   38.9%
+system 7.4%
+idle   48.1%
+user   38.4%
+system 8.2%
+idle   47.9%
+user   39.0%
+system 7.7%
+idle   47.9%
+user   39.0%
+system 8.0%
+idle   47.5%
+user   39.3%
+system 7.4%
+idle   47.7%
+user   38.8%
+system 7.9%
+idle   47.9%
+user   38.6%
+system 7.8%
+idle   48.2%
+user   38.3%
+system 8.2%
+idle   48.2%
+user   38.9%
+system 6.6%
+idle   49.7%
+user   38.6%
+system 6.1%
+idle   50.9%
+user   39.1%
+system 6.4%
+idle   49.6%
+user   38.8%
+system 7.1%
+idle   48.9%
+user   38.8%
+system 7.5%
+idle   48.5%
+user   39.0%
+system 8.0%
+idle   47.6%
+user   39.3%
+system 8.4%
+idle   46.8%
+user   39.2%
+system 7.8%
+idle   47.6%
+user   38.5%
+system 8.4%
+idle   47.8%
+user   39.3%
+system 7.7%
+idle   47.9%
+user   38.7%
+system 8.4%
+idle   47.7%
+user   39.3%
+system 7.8%
+idle   47.5%
+user   38.5%
+system 8.6%
+idle   47.6%
+user   38.7%
+system 8.4%
+idle   47.5%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 160307018319
+Data memory access: 79578147449
+L1 d-cache misses: 279700522
+}
+Total utilisation details: 
+{
+KernelUtilisation: 19026185776
+KernelEntries: 11951406
+NumberSchedules: 6971199
+TotalUtilisation: 281431565042
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 288344
+KernelEntries: 145
+NumberSchedules: 145
+TotalUtilisation: 942325
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 511046
+KernelEntries: 292
+NumberSchedules: 291
+TotalUtilisation: 931974
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 12001475272
+KernelEntries: 7879448
+NumberSchedules: 3245606
+TotalUtilisation: 16471513666
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 699391352
+KernelEntries: 316645
+NumberSchedules: 316645
+TotalUtilisation: 1784320069
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 644864616
+KernelEntries: 504713
+NumberSchedules: 333899
+TotalUtilisation: 1764255006
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 340764952
+KernelEntries: 171854
+NumberSchedules: 170991
+TotalUtilisation: 2306372432
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 269068292
+KernelEntries: 322023
+NumberSchedules: 163393
+TotalUtilisation: 1105499507
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 16601565
+KernelEntries: 13942
+NumberSchedules: 13890
+TotalUtilisation: 63689519
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 9353140
+KernelEntries: 8901
+NumberSchedules: 5262
+TotalUtilisation: 27651390
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 371773527
+KernelEntries: 443112
+NumberSchedules: 430752
+TotalUtilisation: 1401802630
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4450917756
+KernelEntries: 2128035
+NumberSchedules: 2128028
+TotalUtilisation: 143927569802
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   13.5%
+system 2.8%
+idle   81.7%
+user   0.1%
+system 0.2%
+idle   99.3%
+user   0.0%
+system 0.2%
+idle   99.5%
+user   0.1%
+system 0.1%
+idle   99.8%
+client0 measurement starting...
+user   33.3%
+system 4.8%
+idle   58.1%
+user   42.4%
+system 6.2%
+idle   46.9%
+user   41.4%
+system 7.1%
+idle   47.0%
+user   41.4%
+system 6.9%
+idle   47.4%
+user   41.4%
+system 7.0%
+idle   47.4%
+user   42.1%
+system 6.2%
+idle   47.3%
+user   42.0%
+system 6.4%
+idle   47.3%
+user   41.1%
+system 7.0%
+idle   47.8%
+user   41.9%
+system 6.4%
+idle   47.7%
+user   42.1%
+system 6.1%
+idle   47.6%
+user   41.6%
+system 6.8%
+idle   47.2%
+user   41.9%
+system 6.3%
+idle   47.5%
+user   42.9%
+system 6.7%
+idle   45.9%
+user   42.1%
+system 6.4%
+idle   47.2%
+user   41.7%
+system 6.5%
+idle   47.7%
+user   42.3%
+system 6.0%
+idle   47.3%
+user   41.7%
+system 6.8%
+idle   47.2%
+user   41.0%
+system 7.4%
+idle   47.3%
+user   41.2%
+system 6.9%
+idle   47.7%
+user   41.6%
+system 7.0%
+idle   47.3%
+user   42.1%
+system 6.7%
+idle   46.6%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 153364321214
+Data memory access: 75829189976
+L1 d-cache misses: 212574433
+}
+Total utilisation details: 
+{
+KernelUtilisation: 13828126909
+KernelEntries: 8612018
+NumberSchedules: 5076123
+TotalUtilisation: 260053064490
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 254160
+KernelEntries: 129
+NumberSchedules: 128
+TotalUtilisation: 831509
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 458594
+KernelEntries: 254
+NumberSchedules: 254
+TotalUtilisation: 838179
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 8648867162
+KernelEntries: 5617018
+NumberSchedules: 2333668
+TotalUtilisation: 11879757476
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 493239501
+KernelEntries: 220491
+NumberSchedules: 220491
+TotalUtilisation: 1397242869
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 463768009
+KernelEntries: 359040
+NumberSchedules: 235703
+TotalUtilisation: 1402287603
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 241223238
+KernelEntries: 123937
+NumberSchedules: 122883
+TotalUtilisation: 1944988589
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 188869915
+KernelEntries: 227368
+NumberSchedules: 114058
+TotalUtilisation: 922837595
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 17034454
+KernelEntries: 13902
+NumberSchedules: 13842
+TotalUtilisation: 66800701
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 11091242
+KernelEntries: 10541
+NumberSchedules: 6178
+TotalUtilisation: 32719750
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 272416115
+KernelEntries: 320939
+NumberSchedules: 310528
+TotalUtilisation: 1018702013
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3290316091
+KernelEntries: 1570720
+NumberSchedules: 1570710
+TotalUtilisation: 135191907832
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   33.7%
+system 4.8%
+idle   57.7%
+user   0.2%
+system 0.2%
+idle   99.4%
+user   0.2%
+system 0.2%
+idle   99.3%
+user   0.0%
+system 0.2%
+idle   99.6%
+client0 measurement starting...
+user   15.4%
+system 2.9%
+idle   79.8%
+user   45.2%
+system 7.5%
+idle   42.1%
+user   45.0%
+system 7.9%
+idle   42.1%
+user   46.1%
+system 6.7%
+idle   42.1%
+user   45.3%
+system 7.5%
+idle   42.1%
+user   44.9%
+system 8.1%
+idle   41.9%
+user   45.4%
+system 7.2%
+idle   42.6%
+user   45.9%
+system 6.6%
+idle   42.4%
+user   45.3%
+system 7.1%
+idle   42.4%
+user   45.6%
+system 7.0%
+idle   42.2%
+user   46.2%
+system 6.5%
+idle   41.9%
+user   45.6%
+system 7.6%
+idle   41.2%
+user   45.2%
+system 7.8%
+idle   41.5%
+user   45.7%
+system 6.7%
+idle   42.9%
+user   44.8%
+system 7.2%
+idle   43.5%
+user   45.1%
+system 7.2%
+idle   43.4%
+user   45.2%
+system 6.8%
+idle   43.4%
+user   45.3%
+system 7.2%
+idle   42.8%
+user   46.1%
+system 6.5%
+idle   42.7%
+user   45.3%
+system 7.2%
+idle   42.8%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 137440891594
+Data memory access: 66454111774
+L1 d-cache misses: 219954600
+}
+Total utilisation details: 
+{
+KernelUtilisation: 14333999967
+KernelEntries: 8905530
+NumberSchedules: 5241777
+TotalUtilisation: 241897798611
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 251803
+KernelEntries: 123
+NumberSchedules: 122
+TotalUtilisation: 800788
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 433195
+KernelEntries: 243
+NumberSchedules: 242
+TotalUtilisation: 792573
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 8992034128
+KernelEntries: 5835451
+NumberSchedules: 2427107
+TotalUtilisation: 12345805593
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 498247798
+KernelEntries: 222964
+NumberSchedules: 222964
+TotalUtilisation: 1411303689
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 480020110
+KernelEntries: 370189
+NumberSchedules: 242498
+TotalUtilisation: 1434087918
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 243734515
+KernelEntries: 123981
+NumberSchedules: 122671
+TotalUtilisation: 1962570973
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 196601318
+KernelEntries: 231376
+NumberSchedules: 118021
+TotalUtilisation: 942267089
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 14972708
+KernelEntries: 12360
+NumberSchedules: 12297
+TotalUtilisation: 58902889
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 9026776
+KernelEntries: 8554
+NumberSchedules: 5014
+TotalUtilisation: 26907069
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 275944491
+KernelEntries: 324964
+NumberSchedules: 315523
+TotalUtilisation: 1037755357
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3437847895
+KernelEntries: 1646008
+NumberSchedules: 1646000
+TotalUtilisation: 136979454242
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   33.3%
+system 4.7%
+idle   58.5%
+user   0.3%
+system 0.2%
+idle   99.3%
+user   0.1%
+system 0.4%
+idle   99.2%
+user   0.1%
+system 0.3%
+idle   99.4%
+client0 measurement starting...
+user   19.5%
+system 3.9%
+idle   73.8%
+user   49.5%
+system 7.1%
+idle   37.8%
+user   48.6%
+system 7.7%
+idle   38.6%
+user   49.1%
+system 7.1%
+idle   38.6%
+user   49.3%
+system 6.9%
+idle   38.7%
+user   48.6%
+system 7.5%
+idle   38.9%
+user   49.2%
+system 6.9%
+idle   38.9%
+user   49.3%
+system 6.8%
+idle   38.9%
+user   49.2%
+system 7.1%
+idle   38.5%
+user   48.4%
+system 7.7%
+idle   38.7%
+user   49.0%
+system 7.0%
+idle   38.7%
+user   49.2%
+system 7.1%
+idle   38.5%
+user   48.7%
+system 7.3%
+idle   38.7%
+user   49.4%
+system 7.0%
+idle   38.5%
+user   48.3%
+system 7.7%
+idle   38.8%
+user   48.7%
+system 7.9%
+idle   38.4%
+user   49.2%
+system 7.0%
+idle   38.7%
+user   49.3%
+system 7.1%
+idle   38.5%
+user   48.8%
+system 7.8%
+idle   38.3%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 124380020611
+Data memory access: 58695745585
+L1 d-cache misses: 222754594
+}
+Total utilisation details: 
+{
+KernelUtilisation: 14366072388
+KernelEntries: 8988316
+NumberSchedules: 5271875
+TotalUtilisation: 226165077469
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 221634
+KernelEntries: 115
+NumberSchedules: 115
+TotalUtilisation: 726222
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 389283
+KernelEntries: 231
+NumberSchedules: 231
+TotalUtilisation: 708332
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 9048825224
+KernelEntries: 5932434
+NumberSchedules: 2465783
+TotalUtilisation: 12428198706
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 501844143
+KernelEntries: 224724
+NumberSchedules: 224724
+TotalUtilisation: 1419694204
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 486033447
+KernelEntries: 361338
+NumberSchedules: 239291
+TotalUtilisation: 1436354277
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 241963356
+KernelEntries: 123410
+NumberSchedules: 123290
+TotalUtilisation: 1970193122
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 198564218
+KernelEntries: 230551
+NumberSchedules: 116173
+TotalUtilisation: 947501575
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 14970343
+KernelEntries: 12222
+NumberSchedules: 12145
+TotalUtilisation: 60027541
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 10180515
+KernelEntries: 9529
+NumberSchedules: 5595
+TotalUtilisation: 30098563
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 301967929
+KernelEntries: 358259
+NumberSchedules: 349032
+TotalUtilisation: 1130396686
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3335029137
+KernelEntries: 1584431
+NumberSchedules: 1584423
+TotalUtilisation: 138182006905
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   18.7%
+system 2.8%
+idle   76.3%
+user   0.1%
+system 0.3%
+idle   99.2%
+user   0.0%
+system 0.1%
+idle   99.9%
+user   0.0%
+system 0.1%
+idle   99.9%
+client0 measurement starting...
+user   40.9%
+system 6.4%
+idle   47.5%
+user   53.4%
+system 8.1%
+idle   31.6%
+user   53.3%
+system 8.1%
+idle   31.6%
+user   52.8%
+system 8.9%
+idle   31.5%
+user   52.6%
+system 9.3%
+idle   31.3%
+user   52.3%
+system 9.9%
+idle   30.8%
+user   52.8%
+system 9.6%
+idle   30.7%
+user   53.1%
+system 9.0%
+idle   31.1%
+user   52.9%
+system 8.3%
+idle   32.5%
+user   52.4%
+system 9.8%
+idle   31.1%
+user   53.4%
+system 9.8%
+idle   29.5%
+user   53.3%
+system 10.4%
+idle   28.8%
+user   52.9%
+system 10.9%
+idle   28.9%
+user   53.2%
+system 10.7%
+idle   28.8%
+user   53.3%
+system 10.7%
+idle   28.6%
+user   52.9%
+system 11.1%
+idle   28.6%
+user   53.1%
+system 9.8%
+idle   30.1%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 106332499568
+Data memory access: 47812879234
+L1 d-cache misses: 268234838
+}
+Total utilisation details: 
+{
+KernelUtilisation: 18020448809
+KernelEntries: 11327151
+NumberSchedules: 6596296
+TotalUtilisation: 212693890370
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 210134
+KernelEntries: 106
+NumberSchedules: 104
+TotalUtilisation: 686898
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 366116
+KernelEntries: 208
+NumberSchedules: 207
+TotalUtilisation: 666138
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 11411183952
+KernelEntries: 7523660
+NumberSchedules: 3111222
+TotalUtilisation: 15657664786
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 590733417
+KernelEntries: 265637
+NumberSchedules: 265637
+TotalUtilisation: 1598418404
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 673442380
+KernelEntries: 511799
+NumberSchedules: 338819
+TotalUtilisation: 1806747659
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 288322699
+KernelEntries: 144197
+NumberSchedules: 143521
+TotalUtilisation: 2152060160
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 272830319
+KernelEntries: 299433
+NumberSchedules: 166374
+TotalUtilisation: 1121322552
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 12541329
+KernelEntries: 10547
+NumberSchedules: 10496
+TotalUtilisation: 50442709
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 7979176
+KernelEntries: 7203
+NumberSchedules: 4472
+TotalUtilisation: 24073149
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 355169888
+KernelEntries: 422070
+NumberSchedules: 413159
+TotalUtilisation: 1345708741
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4221408760
+KernelEntries: 2023861
+NumberSchedules: 2023854
+TotalUtilisation: 145502289372
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   46.1%
+system 9.1%
+idle   38.9%
+user   0.2%
+system 0.4%
+idle   99.2%
+user   0.1%
+system 0.1%
+idle   99.5%
+user   0.1%
+system 0.3%
+idle   99.3%
+client0 measurement starting...
+user   14.6%
+system 2.4%
+idle   81.4%
+user   56.3%
+system 8.1%
+idle   30.0%
+user   56.3%
+system 8.1%
+idle   29.9%
+user   55.9%
+system 8.9%
+idle   29.5%
+user   55.7%
+system 9.2%
+idle   28.9%
+user   55.8%
+system 9.2%
+idle   28.9%
+user   55.9%
+system 9.1%
+idle   28.7%
+user   55.5%
+system 9.6%
+idle   28.6%
+user   55.6%
+system 9.1%
+idle   29.2%
+user   55.3%
+system 9.7%
+idle   28.8%
+user   55.9%
+system 9.1%
+idle   28.8%
+user   55.9%
+system 9.1%
+idle   28.6%
+user   55.8%
+system 9.1%
+idle   29.0%
+user   56.1%
+system 8.6%
+idle   29.2%
+user   56.4%
+system 9.0%
+idle   28.5%
+user   55.9%
+system 9.3%
+idle   28.4%
+user   56.2%
+system 9.5%
+idle   27.5%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 103781046983
+Data memory access: 46519371734
+L1 d-cache misses: 223470032
+}
+Total utilisation details: 
+{
+KernelUtilisation: 14564492845
+KernelEntries: 9011891
+NumberSchedules: 5289365
+TotalUtilisation: 201140944406
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 209487
+KernelEntries: 105
+NumberSchedules: 104
+TotalUtilisation: 678185
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 367830
+KernelEntries: 207
+NumberSchedules: 206
+TotalUtilisation: 668620
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 9175113294
+KernelEntries: 5939892
+NumberSchedules: 2471171
+TotalUtilisation: 12594132432
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 509372501
+KernelEntries: 227766
+NumberSchedules: 227766
+TotalUtilisation: 1436340190
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 482408111
+KernelEntries: 372778
+NumberSchedules: 243748
+TotalUtilisation: 1447260562
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 245157636
+KernelEntries: 122929
+NumberSchedules: 122865
+TotalUtilisation: 1991376348
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 199135579
+KernelEntries: 234058
+NumberSchedules: 119238
+TotalUtilisation: 962760068
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 11219461
+KernelEntries: 9592
+NumberSchedules: 9552
+TotalUtilisation: 45073487
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 6516730
+KernelEntries: 5860
+NumberSchedules: 3661
+TotalUtilisation: 19755125
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 272212565
+KernelEntries: 321112
+NumberSchedules: 313468
+TotalUtilisation: 1031362758
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3520163549
+KernelEntries: 1685684
+NumberSchedules: 1685677
+TotalUtilisation: 139918911320
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   22.9%
+system 4.1%
+idle   70.2%
+user   0.1%
+system 0.1%
+idle   99.8%
+user   0.1%
+system 0.0%
+idle   99.9%
+user   0.0%
+system 0.1%
+idle   99.9%
+client0 measurement starting...
+user   43.4%
+system 8.4%
+idle   42.2%
+user   60.8%
+system 12.0%
+idle   18.8%
+user   60.3%
+system 12.6%
+idle   18.8%
+user   60.3%
+system 12.7%
+idle   18.6%
+user   61.0%
+system 11.9%
+idle   18.7%
+user   60.8%
+system 12.3%
+idle   18.7%
+user   60.7%
+system 12.2%
+idle   18.8%
+user   60.5%
+system 12.3%
+idle   18.8%
+user   60.1%
+system 12.9%
+idle   18.7%
+user   60.4%
+system 12.5%
+idle   19.0%
+user   60.8%
+system 12.1%
+idle   18.6%
+user   61.0%
+system 12.1%
+idle   18.2%
+user   60.8%
+system 12.3%
+idle   18.2%
+user   61.0%
+system 12.4%
+idle   18.0%
+user   61.4%
+system 11.8%
+idle   17.9%
+user   60.3%
+system 12.9%
+idle   17.8%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 84908880108
+Data memory access: 35029806349
+L1 d-cache misses: 289092176
+}
+Total utilisation details: 
+{
+KernelUtilisation: 19965900830
+KernelEntries: 12424038
+NumberSchedules: 7242587
+TotalUtilisation: 190594153296
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 196041
+KernelEntries: 97
+NumberSchedules: 97
+TotalUtilisation: 649372
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 346156
+KernelEntries: 195
+NumberSchedules: 194
+TotalUtilisation: 630036
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 12623878622
+KernelEntries: 8230732
+NumberSchedules: 3406709
+TotalUtilisation: 17319463640
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 753367755
+KernelEntries: 340775
+NumberSchedules: 340775
+TotalUtilisation: 1898255185
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 664998943
+KernelEntries: 526150
+NumberSchedules: 349680
+TotalUtilisation: 1831415702
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 362949689
+KernelEntries: 178617
+NumberSchedules: 177432
+TotalUtilisation: 2432227333
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 287418549
+KernelEntries: 342446
+NumberSchedules: 171905
+TotalUtilisation: 1169311956
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 10205064
+KernelEntries: 8770
+NumberSchedules: 8718
+TotalUtilisation: 43368981
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 7419046
+KernelEntries: 6198
+NumberSchedules: 4358
+TotalUtilisation: 22931595
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 360457824
+KernelEntries: 426026
+NumberSchedules: 418700
+TotalUtilisation: 1381427792
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4781083157
+KernelEntries: 2296401
+NumberSchedules: 2296387
+TotalUtilisation: 149865094713
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   5.7%
+system 1.7%
+idle   91.5%
+user   0.0%
+system 0.2%
+idle   99.7%
+user   0.1%
+system 0.0%
+idle   99.9%
+client0 measurement starting...
+user   3.0%
+system 0.6%
+idle   96.0%
+user   63.6%
+system 9.2%
+idle   20.3%
+user   63.6%
+system 11.5%
+idle   16.9%
+user   63.4%
+system 11.8%
+idle   16.7%
+user   64.0%
+system 11.4%
+idle   16.4%
+user   63.7%
+system 10.8%
+idle   17.6%
+user   63.8%
+system 11.9%
+idle   15.5%
+user   64.0%
+system 12.9%
+idle   13.6%
+user   63.4%
+system 14.1%
+idle   12.9%
+user   64.2%
+system 13.5%
+idle   12.8%
+user   64.9%
+system 12.9%
+idle   12.7%
+user   64.2%
+system 13.4%
+idle   12.9%
+user   63.6%
+system 11.6%
+idle   16.5%
+user   63.7%
+system 9.5%
+idle   19.8%
+user   63.3%
+system 10.0%
+idle   19.7%
+user   63.4%
+system 10.4%
+idle   19.1%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 81557397000
+Data memory access: 33137529366
+L1 d-cache misses: 262902193
+}
+Total utilisation details: 
+{
+KernelUtilisation: 17650225776
+KernelEntries: 10984658
+NumberSchedules: 6395842
+TotalUtilisation: 181468188461
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 193095
+KernelEntries: 98
+NumberSchedules: 98
+TotalUtilisation: 638613
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 339251
+KernelEntries: 195
+NumberSchedules: 195
+TotalUtilisation: 625800
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 11195056786
+KernelEntries: 7301968
+NumberSchedules: 3022769
+TotalUtilisation: 15356943994
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 604589607
+KernelEntries: 271596
+NumberSchedules: 271596
+TotalUtilisation: 1623023117
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 610028997
+KernelEntries: 476309
+NumberSchedules: 311046
+TotalUtilisation: 1705827619
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 297959352
+KernelEntries: 146632
+NumberSchedules: 145607
+TotalUtilisation: 2203383266
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 255456521
+KernelEntries: 288198
+NumberSchedules: 153867
+TotalUtilisation: 1094162073
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 8514249
+KernelEntries: 7611
+NumberSchedules: 7567
+TotalUtilisation: 35418913
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 5086886
+KernelEntries: 3956
+NumberSchedules: 2978
+TotalUtilisation: 15990924
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 323915602
+KernelEntries: 385633
+NumberSchedules: 377665
+TotalUtilisation: 1238508450
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4240920944
+KernelEntries: 2038599
+NumberSchedules: 2038590
+TotalUtilisation: 147191225823
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   0.3%
+system 0.1%
+idle   99.4%
+user   0.1%
+system 0.1%
+idle   99.8%
+user   0.2%
+system 0.4%
+idle   99.1%
+client0 measurement starting...
+user   9.3%
+system 2.0%
+idle   87.3%
+user   67.3%
+system 12.6%
+idle   11.6%
+user   67.0%
+system 12.9%
+idle   11.6%
+user   67.9%
+system 11.8%
+idle   11.6%
+user   67.9%
+system 12.1%
+idle   11.4%
+user   67.6%
+system 12.0%
+idle   11.9%
+user   67.5%
+system 12.3%
+idle   11.7%
+user   67.7%
+system 12.2%
+idle   11.5%
+user   68.5%
+system 11.5%
+idle   11.5%
+user   68.3%
+system 11.4%
+idle   11.6%
+user   68.1%
+system 11.9%
+idle   11.5%
+user   67.4%
+system 12.9%
+idle   10.9%
+user   67.2%
+system 13.1%
+idle   10.7%
+user   67.0%
+system 13.2%
+idle   10.7%
+user   67.9%
+system 12.6%
+idle   10.6%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 74699066111
+Data memory access: 29015987072
+L1 d-cache misses: 265224903
+}
+Total utilisation details: 
+{
+KernelUtilisation: 17644374020
+KernelEntries: 10967213
+NumberSchedules: 6366645
+TotalUtilisation: 173249912815
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 182961
+KernelEntries: 92
+NumberSchedules: 91
+TotalUtilisation: 606963
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 319028
+KernelEntries: 182
+NumberSchedules: 182
+TotalUtilisation: 591375
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 11187014637
+KernelEntries: 7286490
+NumberSchedules: 2999712
+TotalUtilisation: 15346201076
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 567052845
+KernelEntries: 254515
+NumberSchedules: 254515
+TotalUtilisation: 1562738887
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 676162402
+KernelEntries: 525748
+NumberSchedules: 349369
+TotalUtilisation: 1830977356
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 292713690
+KernelEntries: 142276
+NumberSchedules: 140868
+TotalUtilisation: 2166030028
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 278830387
+KernelEntries: 297037
+NumberSchedules: 172123
+TotalUtilisation: 1142979475
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 8815195
+KernelEntries: 6889
+NumberSchedules: 6817
+TotalUtilisation: 35100223
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 5993273
+KernelEntries: 4352
+NumberSchedules: 3569
+TotalUtilisation: 19236762
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 323102707
+KernelEntries: 384377
+NumberSchedules: 374151
+TotalUtilisation: 1239924663
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 4251214331
+KernelEntries: 2035407
+NumberSchedules: 2035399
+TotalUtilisation: 148339605662
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   14.5%
+system 3.2%
+idle   80.2%
+user   0.1%
+system 0.2%
+idle   99.5%
+user   0.2%
+system 0.2%
+idle   99.3%
+user   0.3%
+system 0.3%
+idle   99.1%
+client0 measurement starting...
+user   64.6%
+system 10.0%
+idle   18.3%
+user   70.0%
+system 12.8%
+idle   9.1%
+user   69.7%
+system 13.1%
+idle   9.1%
+user   69.8%
+system 12.8%
+idle   9.1%
+user   69.9%
+system 12.8%
+idle   9.1%
+user   69.7%
+system 13.1%
+idle   9.0%
+user   69.8%
+system 12.9%
+idle   9.2%
+user   70.5%
+system 11.9%
+idle   9.3%
+user   68.9%
+system 13.4%
+idle   9.4%
+user   69.6%
+system 12.9%
+idle   9.3%
+user   70.1%
+system 12.4%
+idle   9.2%
+user   71.0%
+system 11.6%
+idle   9.1%
+user   71.1%
+system 11.6%
+idle   9.1%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 73075749281
+Data memory access: 28188801715
+L1 d-cache misses: 234240617
+}
+Total utilisation details: 
+{
+KernelUtilisation: 15407605916
+KernelEntries: 9525488
+NumberSchedules: 5533932
+TotalUtilisation: 165605193896
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 153080
+KernelEntries: 79
+NumberSchedules: 79
+TotalUtilisation: 511883
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 273689
+KernelEntries: 159
+NumberSchedules: 158
+TotalUtilisation: 508037
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 9737580754
+KernelEntries: 6300714
+NumberSchedules: 2592783
+TotalUtilisation: 13346773813
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 512201280
+KernelEntries: 227867
+NumberSchedules: 227867
+TotalUtilisation: 1453335762
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 585202899
+KernelEntries: 465816
+NumberSchedules: 302644
+TotalUtilisation: 1653968814
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 248377135
+KernelEntries: 120572
+NumberSchedules: 119212
+TotalUtilisation: 2034914462
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 239002055
+KernelEntries: 260921
+NumberSchedules: 148498
+TotalUtilisation: 1056366686
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 1300906
+KernelEntries: 1282
+NumberSchedules: 1224
+TotalUtilisation: 8201701
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 5052843
+KernelEntries: 3270
+NumberSchedules: 3141
+TotalUtilisation: 17028410
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 253289625
+KernelEntries: 299394
+NumberSchedules: 292915
+TotalUtilisation: 987696390
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3819332103
+KernelEntries: 1841879
+NumberSchedules: 1841875
+TotalUtilisation: 144631130868
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   57.5%
+system 10.6%
+idle   25.1%
+user   0.2%
+system 0.3%
+idle   99.2%
+user   0.0%
+system 0.2%
+idle   99.7%
+user   0.1%
+system 0.1%
+idle   99.8%
+client0 measurement starting...
+user   24.2%
+system 3.5%
+idle   69.8%
+user   73.7%
+system 11.0%
+idle   8.3%
+user   73.6%
+system 11.3%
+idle   8.2%
+user   74.5%
+system 10.1%
+idle   8.2%
+user   73.0%
+system 11.9%
+idle   8.1%
+user   73.8%
+system 10.8%
+idle   8.3%
+user   72.0%
+system 12.7%
+idle   8.3%
+user   73.2%
+system 11.7%
+idle   8.2%
+user   73.0%
+system 11.7%
+idle   8.3%
+user   73.2%
+system 11.5%
+idle   8.3%
+user   72.5%
+system 12.2%
+idle   8.2%
+user   72.9%
+system 11.9%
+idle   8.2%
+user   73.3%
+system 11.3%
+idle   8.3%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 72551450907
+Data memory access: 27970480364
+L1 d-cache misses: 204265448
+}
+Total utilisation details: 
+{
+KernelUtilisation: 12988523402
+KernelEntries: 7938616
+NumberSchedules: 4636721
+TotalUtilisation: 159085154509
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 160279
+KernelEntries: 81
+NumberSchedules: 80
+TotalUtilisation: 525283
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 281057
+KernelEntries: 159
+NumberSchedules: 159
+TotalUtilisation: 516211
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 8177401611
+KernelEntries: 5223121
+NumberSchedules: 2156136
+TotalUtilisation: 11208227977
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 491127208
+KernelEntries: 219423
+NumberSchedules: 219423
+TotalUtilisation: 1406221248
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 445766802
+KernelEntries: 356308
+NumberSchedules: 236789
+TotalUtilisation: 1397217945
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 243072546
+KernelEntries: 117760
+NumberSchedules: 116452
+TotalUtilisation: 1986603137
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 191757578
+KernelEntries: 225507
+NumberSchedules: 116465
+TotalUtilisation: 956729315
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 739829
+KernelEntries: 844
+NumberSchedules: 794
+TotalUtilisation: 5770300
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 4340839
+KernelEntries: 2682
+NumberSchedules: 2618
+TotalUtilisation: 14740132
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 211955702
+KernelEntries: 246352
+NumberSchedules: 241429
+TotalUtilisation: 823768976
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 3221537180
+KernelEntries: 1545918
+NumberSchedules: 1545914
+TotalUtilisation: 140773674546
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   63.3%
+system 9.1%
+idle   21.6%
+user   0.1%
+system 0.1%
+idle   99.8%
+user   0.2%
+system 0.1%
+idle   99.5%
+user   0.1%
+system 0.4%
+idle   99.2%
+client0 measurement starting...
+user   20.7%
+system 3.1%
+idle   73.9%
+user   74.8%
+system 11.6%
+idle   6.7%
+user   75.0%
+system 11.4%
+idle   6.6%
+user   75.1%
+system 11.3%
+idle   6.7%
+user   75.8%
+system 10.6%
+idle   6.7%
+user   76.0%
+system 10.3%
+idle   6.8%
+user   76.1%
+system 10.3%
+idle   6.7%
+user   76.6%
+system 9.9%
+idle   6.9%
+user   75.6%
+system 10.7%
+idle   7.1%
+user   76.1%
+system 10.4%
+idle   7.2%
+user   76.2%
+system 10.1%
+idle   7.2%
+user   76.1%
+system 10.2%
+idle   7.2%
+user   76.2%
+system 10.1%
+idle   7.2%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 72009165398
+Data memory access: 27732295957
+L1 d-cache misses: 173509186
+}
+Total utilisation details: 
+{
+KernelUtilisation: 10565742332
+KernelEntries: 6418013
+NumberSchedules: 3775517
+TotalUtilisation: 152966178794
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 161896
+KernelEntries: 81
+NumberSchedules: 79
+TotalUtilisation: 524129
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 280995
+KernelEntries: 158
+NumberSchedules: 158
+TotalUtilisation: 524754
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 6642310785
+KernelEntries: 4217980
+NumberSchedules: 1756092
+TotalUtilisation: 9109078197
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 280845606
+KernelEntries: 119944
+NumberSchedules: 119944
+TotalUtilisation: 1016073494
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 433244907
+KernelEntries: 331878
+NumberSchedules: 216836
+TotalUtilisation: 1336554364
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 139276028
+KernelEntries: 67488
+NumberSchedules: 66228
+TotalUtilisation: 1627728945
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 168027588
+KernelEntries: 165926
+NumberSchedules: 106702
+TotalUtilisation: 896838811
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 531817
+KernelEntries: 616
+NumberSchedules: 574
+TotalUtilisation: 4519073
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 3372248
+KernelEntries: 1967
+NumberSchedules: 1908
+TotalUtilisation: 11397145
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 164016926
+KernelEntries: 191667
+NumberSchedules: 186694
+TotalUtilisation: 644094423
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 2733311943
+KernelEntries: 1319856
+NumberSchedules: 1319849
+TotalUtilisation: 137809772147
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   29.8%
+system 4.1%
+idle   63.6%
+user   0.0%
+system 0.1%
+idle   99.8%
+user   0.1%
+system 0.2%
+idle   99.6%
+user   0.2%
+system 0.3%
+idle   99.0%
+client0 measurement starting...
+user   58.2%
+system 6.8%
+idle   30.2%
+user   78.8%
+system 9.1%
+idle   5.7%
+user   79.3%
+system 8.6%
+idle   5.7%
+user   77.9%
+system 9.9%
+idle   5.6%
+user   78.7%
+system 9.3%
+idle   5.6%
+user   78.3%
+system 9.8%
+idle   5.4%
+user   78.0%
+system 10.1%
+idle   5.5%
+user   78.5%
+system 9.6%
+idle   5.5%
+user   78.4%
+system 9.4%
+idle   5.6%
+user   78.2%
+system 9.9%
+idle   5.5%
+user   78.3%
+system 9.9%
+idle   5.4%
+user   78.7%
+system 9.3%
+idle   5.5%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 71386797016
+Data memory access: 27454684022
+L1 d-cache misses: 145906624
+}
+Total utilisation details: 
+{
+KernelUtilisation: 8417543496
+KernelEntries: 4981340
+NumberSchedules: 2992940
+TotalUtilisation: 147334813387
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 147805
+KernelEntries: 75
+NumberSchedules: 73
+TotalUtilisation: 476905
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 255435
+KernelEntries: 148
+NumberSchedules: 147
+TotalUtilisation: 467059
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 5273495489
+KernelEntries: 3250583
+NumberSchedules: 1387783
+TotalUtilisation: 7228309289
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 232600216
+KernelEntries: 99256
+NumberSchedules: 99256
+TotalUtilisation: 918784692
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 264457964
+KernelEntries: 202219
+NumberSchedules: 132453
+TotalUtilisation: 1019193588
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 118602121
+KernelEntries: 57959
+NumberSchedules: 56750
+TotalUtilisation: 1538443042
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 106941421
+KernelEntries: 113859
+NumberSchedules: 64687
+TotalUtilisation: 767564295
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 504729
+KernelEntries: 566
+NumberSchedules: 518
+TotalUtilisation: 5096869
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 3819639
+KernelEntries: 2150
+NumberSchedules: 2069
+TotalUtilisation: 13292543
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 120146998
+KernelEntries: 137661
+NumberSchedules: 132347
+TotalUtilisation: 465820243
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 2296182551
+KernelEntries: 1116430
+NumberSchedules: 1116422
+TotalUtilisation: 134923445420
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   36.9%
+system 4.4%
+idle   55.6%
+user   0.0%
+system 0.1%
+idle   99.6%
+user   0.1%
+system 0.3%
+idle   99.5%
+user   0.1%
+system 0.0%
+idle   99.8%
+client0 measurement starting...
+user   55.0%
+system 5.6%
+idle   35.6%
+user   81.2%
+system 8.5%
+idle   4.4%
+user   81.5%
+system 8.4%
+idle   4.4%
+user   81.2%
+system 8.6%
+idle   4.3%
+user   81.2%
+system 8.5%
+idle   4.4%
+user   81.4%
+system 8.4%
+idle   4.4%
+user   81.5%
+system 8.3%
+idle   4.5%
+user   81.3%
+system 8.4%
+idle   4.5%
+user   81.6%
+system 8.2%
+idle   4.5%
+user   81.8%
+system 8.1%
+idle   4.8%
+user   81.8%
+system 8.2%
+idle   4.8%
+user   82.2%
+system 7.6%
+idle   4.8%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 71092062454
+Data memory access: 27324628412
+L1 d-cache misses: 118896141
+}
+Total utilisation details: 
+{
+KernelUtilisation: 6459758473
+KernelEntries: 3794639
+NumberSchedules: 2306903
+TotalUtilisation: 142261947776
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 149244
+KernelEntries: 74
+NumberSchedules: 74
+TotalUtilisation: 482948
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 262633
+KernelEntries: 148
+NumberSchedules: 146
+TotalUtilisation: 482732
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 4012323162
+KernelEntries: 2457719
+NumberSchedules: 1063464
+TotalUtilisation: 5501629966
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 136277868
+KernelEntries: 55142
+NumberSchedules: 55142
+TotalUtilisation: 732955315
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 210977706
+KernelEntries: 156109
+NumberSchedules: 101402
+TotalUtilisation: 903587014
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 66555473
+KernelEntries: 33656
+NumberSchedules: 32518
+TotalUtilisation: 1346039905
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 81837914
+KernelEntries: 76758
+NumberSchedules: 49597
+TotalUtilisation: 714452736
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 984795
+KernelEntries: 1027
+NumberSchedules: 997
+TotalUtilisation: 5488710
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 2026603
+KernelEntries: 1045
+NumberSchedules: 999
+TotalUtilisation: 7152149
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 109886786
+KernelEntries: 111406
+NumberSchedules: 101012
+TotalUtilisation: 376399888
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1838115776
+KernelEntries: 901106
+NumberSchedules: 901102
+TotalUtilisation: 132168406989
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   9.0%
+system 1.2%
+idle   89.0%
+user   0.2%
+system 0.4%
+idle   99.2%
+user   0.1%
+system 0.2%
+idle   99.4%
+client0 measurement starting...
+user   2.8%
+system 0.6%
+idle   96.3%
+user   84.1%
+system 7.2%
+idle   3.3%
+user   84.2%
+system 7.2%
+idle   3.3%
+user   83.9%
+system 7.5%
+idle   3.4%
+user   83.3%
+system 8.1%
+idle   3.2%
+user   84.4%
+system 7.1%
+idle   3.3%
+user   83.3%
+system 8.1%
+idle   3.2%
+user   84.2%
+system 7.2%
+idle   2.9%
+user   83.8%
+system 7.5%
+idle   3.0%
+user   83.6%
+system 7.7%
+idle   3.0%
+user   83.5%
+system 7.7%
+idle   3.0%
+user   83.8%
+system 7.3%
+idle   3.1%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 70698198990
+Data memory access: 27146165561
+L1 d-cache misses: 91085172
+}
+Total utilisation details: 
+{
+KernelUtilisation: 4681446712
+KernelEntries: 2651556
+NumberSchedules: 1697561
+TotalUtilisation: 137580752475
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 150579
+KernelEntries: 75
+NumberSchedules: 74
+TotalUtilisation: 487390
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 267841
+KernelEntries: 148
+NumberSchedules: 147
+TotalUtilisation: 495102
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2883062717
+KernelEntries: 1694379
+NumberSchedules: 782651
+TotalUtilisation: 3953480985
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 53350615
+KernelEntries: 18581
+NumberSchedules: 18581
+TotalUtilisation: 547302826
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 94176516
+KernelEntries: 64158
+NumberSchedules: 42722
+TotalUtilisation: 672659387
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 34186644
+KernelEntries: 18883
+NumberSchedules: 17785
+TotalUtilisation: 1215921886
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 36293639
+KernelEntries: 29499
+NumberSchedules: 20583
+TotalUtilisation: 632739400
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 437805
+KernelEntries: 459
+NumberSchedules: 428
+TotalUtilisation: 3545620
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 1304183
+KernelEntries: 609
+NumberSchedules: 568
+TotalUtilisation: 5155990
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 77466755
+KernelEntries: 67298
+NumberSchedules: 56554
+TotalUtilisation: 226872618
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1500404385
+KernelEntries: 757033
+NumberSchedules: 757033
+TotalUtilisation: 129830277235
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   30.8%
+system 2.6%
+idle   64.6%
+user   0.0%
+system 0.1%
+idle   99.9%
+user   0.0%
+system 0.2%
+idle   99.7%
+user   0.3%
+system 0.4%
+idle   99.3%
+client0 measurement starting...
+user   66.8%
+system 5.5%
+idle   24.0%
+user   86.3%
+system 6.3%
+idle   2.5%
+user   86.4%
+system 6.4%
+idle   2.5%
+user   85.8%
+system 6.8%
+idle   2.5%
+user   86.6%
+system 6.2%
+idle   2.5%
+user   86.0%
+system 6.7%
+idle   2.5%
+user   85.6%
+system 6.8%
+idle   2.6%
+user   85.9%
+system 6.4%
+idle   2.6%
+user   86.5%
+system 5.8%
+idle   2.6%
+user   85.3%
+system 7.2%
+idle   2.6%
+user   85.4%
+system 7.1%
+idle   2.6%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 70793191908
+Data memory access: 27203830614
+L1 d-cache misses: 76157653
+}
+Total utilisation details: 
+{
+KernelUtilisation: 3632718617
+KernelEntries: 2003653
+NumberSchedules: 1314986
+TotalUtilisation: 135166541966
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 141291
+KernelEntries: 68
+NumberSchedules: 67
+TotalUtilisation: 449864
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 240407
+KernelEntries: 134
+NumberSchedules: 134
+TotalUtilisation: 447866
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2217593146
+KernelEntries: 1266935
+NumberSchedules: 598109
+TotalUtilisation: 3037129850
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 35445831
+KernelEntries: 11657
+NumberSchedules: 11657
+TotalUtilisation: 493677711
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 49627658
+KernelEntries: 30883
+NumberSchedules: 20539
+TotalUtilisation: 580203248
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 18775819
+KernelEntries: 11407
+NumberSchedules: 10423
+TotalUtilisation: 1149690764
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 18903190
+KernelEntries: 15016
+NumberSchedules: 9707
+TotalUtilisation: 607209041
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 469793
+KernelEntries: 484
+NumberSchedules: 460
+TotalUtilisation: 2575335
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 510385
+KernelEntries: 239
+NumberSchedules: 210
+TotalUtilisation: 2165143
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 40176900
+KernelEntries: 32824
+NumberSchedules: 29673
+TotalUtilisation: 124677104
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1249115349
+KernelEntries: 632762
+NumberSchedules: 632762
+TotalUtilisation: 128457514596
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   31.0%
+system 3.5%
+idle   62.9%
+user   0.1%
+system 0.2%
+idle   99.4%
+user   0.1%
+system 0.4%
+idle   99.3%
+user   0.3%
+system 0.2%
+idle   99.1%
+client0 measurement starting...
+user   61.9%
+system 5.5%
+idle   28.8%
+user   85.6%
+system 6.4%
+idle   2.7%
+user   85.1%
+system 6.9%
+idle   2.7%
+user   85.1%
+system 7.0%
+idle   2.6%
+user   85.3%
+system 6.9%
+idle   2.6%
+user   84.6%
+system 7.7%
+idle   2.6%
+user   86.1%
+system 6.6%
+idle   2.5%
+user   86.8%
+system 6.2%
+idle   2.6%
+user   86.2%
+system 7.1%
+idle   2.5%
+user   87.0%
+system 6.2%
+idle   2.5%
+user   86.6%
+system 6.7%
+idle   2.5%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 71352460938
+Data memory access: 27509678938
+L1 d-cache misses: 77210362
+}
+Total utilisation details: 
+{
+KernelUtilisation: 3518031888
+KernelEntries: 1930910
+NumberSchedules: 1264576
+TotalUtilisation: 135848307801
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 128857
+KernelEntries: 67
+NumberSchedules: 67
+TotalUtilisation: 430628
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 230798
+KernelEntries: 134
+NumberSchedules: 134
+TotalUtilisation: 429088
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2140142974
+KernelEntries: 1217055
+NumberSchedules: 571484
+TotalUtilisation: 2933906032
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 35230858
+KernelEntries: 11462
+NumberSchedules: 11462
+TotalUtilisation: 493513263
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 54940743
+KernelEntries: 34719
+NumberSchedules: 22642
+TotalUtilisation: 592807564
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 21127409
+KernelEntries: 12472
+NumberSchedules: 11513
+TotalUtilisation: 1163688903
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 20482027
+KernelEntries: 16131
+NumberSchedules: 10831
+TotalUtilisation: 612365214
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 568209
+KernelEntries: 563
+NumberSchedules: 529
+TotalUtilisation: 3769978
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 943972
+KernelEntries: 443
+NumberSchedules: 395
+TotalUtilisation: 3991649
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 38662464
+KernelEntries: 32711
+NumberSchedules: 30366
+TotalUtilisation: 124145249
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1202058821
+KernelEntries: 602633
+NumberSchedules: 602632
+TotalUtilisation: 128633032210
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   36.7%
+system 3.1%
+idle   57.9%
+user   0.3%
+system 0.3%
+idle   99.2%
+user   0.2%
+system 0.2%
+idle   99.3%
+user   0.1%
+system 0.2%
+idle   99.5%
+client0 measurement starting...
+user   53.7%
+system 4.3%
+idle   38.7%
+user   85.8%
+system 6.6%
+idle   2.5%
+user   86.3%
+system 6.3%
+idle   2.5%
+user   85.2%
+system 7.3%
+idle   2.5%
+user   86.2%
+system 6.5%
+idle   2.6%
+user   87.0%
+system 6.0%
+idle   2.5%
+user   86.9%
+system 6.1%
+idle   2.6%
+user   86.2%
+system 6.8%
+idle   2.6%
+user   86.7%
+system 6.3%
+idle   2.6%
+user   87.6%
+system 5.6%
+idle   2.5%
+user   87.0%
+system 6.1%
+idle   2.6%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 72105803033
+Data memory access: 27919808139
+L1 d-cache misses: 77090687
+}
+Total utilisation details: 
+{
+KernelUtilisation: 3510437415
+KernelEntries: 1941521
+NumberSchedules: 1265575
+TotalUtilisation: 136734902034
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 147083
+KernelEntries: 68
+NumberSchedules: 68
+TotalUtilisation: 463583
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 250263
+KernelEntries: 135
+NumberSchedules: 134
+TotalUtilisation: 455270
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2135405835
+KernelEntries: 1224283
+NumberSchedules: 571529
+TotalUtilisation: 2928004600
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 41412474
+KernelEntries: 14786
+NumberSchedules: 14786
+TotalUtilisation: 505638050
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 53897807
+KernelEntries: 35273
+NumberSchedules: 22515
+TotalUtilisation: 591454258
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 24362639
+KernelEntries: 14139
+NumberSchedules: 13171
+TotalUtilisation: 1181280428
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 20503967
+KernelEntries: 17406
+NumberSchedules: 10654
+TotalUtilisation: 614774912
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 812046
+KernelEntries: 735
+NumberSchedules: 707
+TotalUtilisation: 3823957
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 731938
+KernelEntries: 488
+NumberSchedules: 336
+TotalUtilisation: 2766882
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 41402655
+KernelEntries: 35912
+NumberSchedules: 33378
+TotalUtilisation: 133317016
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1185518740
+KernelEntries: 594108
+NumberSchedules: 594108
+TotalUtilisation: 128720235672
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   43.1%
+system 4.9%
+idle   48.3%
+user   0.0%
+system 0.4%
+idle   99.3%
+user   0.1%
+system 0.3%
+idle   99.2%
+user   0.1%
+system 0.0%
+idle   99.8%
+client0 measurement starting...
+user   38.9%
+system 3.0%
+idle   55.8%
+user   85.1%
+system 7.1%
+idle   2.6%
+user   85.4%
+system 6.7%
+idle   2.5%
+user   84.6%
+system 7.3%
+idle   2.6%
+user   84.4%
+system 7.6%
+idle   2.6%
+user   85.4%
+system 6.6%
+idle   2.6%
+user   84.8%
+system 7.1%
+idle   2.6%
+user   84.8%
+system 7.2%
+idle   2.6%
+user   84.4%
+system 7.5%
+idle   2.6%
+user   85.6%
+system 6.4%
+idle   2.6%
+user   85.0%
+system 6.7%
+idle   2.7%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 71286165512
+Data memory access: 27458036264
+L1 d-cache misses: 81832867
+}
+Total utilisation details: 
+{
+KernelUtilisation: 3986449651
+KernelEntries: 2201296
+NumberSchedules: 1439022
+TotalUtilisation: 136951120059
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 138573
+KernelEntries: 68
+NumberSchedules: 68
+TotalUtilisation: 443210
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 241597
+KernelEntries: 135
+NumberSchedules: 134
+TotalUtilisation: 441491
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2452328194
+KernelEntries: 1401861
+NumberSchedules: 660956
+TotalUtilisation: 3356419852
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 35532342
+KernelEntries: 11541
+NumberSchedules: 11541
+TotalUtilisation: 491925613
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 57470755
+KernelEntries: 37057
+NumberSchedules: 23769
+TotalUtilisation: 594811609
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 22696434
+KernelEntries: 13220
+NumberSchedules: 12290
+TotalUtilisation: 1171072612
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 20615603
+KernelEntries: 16523
+NumberSchedules: 11296
+TotalUtilisation: 612387708
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 502601
+KernelEntries: 526
+NumberSchedules: 504
+TotalUtilisation: 2584751
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 471242
+KernelEntries: 230
+NumberSchedules: 200
+TotalUtilisation: 1954623
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 38420083
+KernelEntries: 33437
+NumberSchedules: 31565
+TotalUtilisation: 126036961
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1354759336
+KernelEntries: 684418
+NumberSchedules: 684418
+TotalUtilisation: 129505880510
+}
+---
+BENCHMARK: end output
+Utilization connection established!
+user   68.5%
+system 6.5%
+idle   20.2%
+user   0.0%
+system 0.2%
+idle   99.8%
+user   0.2%
+system 0.1%
+idle   99.4%
+user   0.2%
+system 0.2%
+idle   99.3%
+client0 measurement starting...
+user   22.0%
+system 2.3%
+idle   74.1%
+user   83.8%
+system 8.0%
+idle   2.6%
+user   85.0%
+system 6.9%
+idle   2.6%
+user   84.1%
+system 7.7%
+idle   2.6%
+user   85.6%
+system 6.4%
+idle   2.5%
+user   85.5%
+system 6.7%
+idle   2.5%
+user   85.6%
+system 6.7%
+idle   2.5%
+user   86.1%
+system 6.6%
+idle   2.6%
+user   85.7%
+system 6.9%
+idle   2.7%
+user   85.8%
+system 6.9%
+idle   2.6%
+user   85.8%
+system 7.1%
+idle   2.6%
+user   82.7%
+system 7.8%
+idle   4.2%
+client0 measurement finished 
+BENCHMARK: begin output
+---
+{CORE 0: 
+Instructions: 71043515514
+Data memory access: 27270342048
+L1 d-cache misses: 79924085
+}
+Total utilisation details: 
+{
+KernelUtilisation: 3761813503
+KernelEntries: 2074498
+NumberSchedules: 1353173
+TotalUtilisation: 136220921519
+}
+Utilisation details for PD: serial_driver (0)
+{
+KernelUtilisation: 152861
+KernelEntries: 75
+NumberSchedules: 73
+TotalUtilisation: 490481
+}
+Utilisation details for PD: serial_virt_tx (1)
+{
+KernelUtilisation: 268179
+KernelEntries: 148
+NumberSchedules: 147
+TotalUtilisation: 489289
+}
+Utilisation details for PD: serial_virt_rx (2)
+{
+KernelUtilisation: 0
+KernelEntries: 0
+NumberSchedules: 0
+TotalUtilisation: 0
+}
+Utilisation details for PD: net_driver_vm (3)
+{
+KernelUtilisation: 2300922082
+KernelEntries: 1314937
+NumberSchedules: 616006
+TotalUtilisation: 3152402711
+}
+Utilisation details for PD: net_virt_tx (4)
+{
+KernelUtilisation: 36832980
+KernelEntries: 12251
+NumberSchedules: 12251
+TotalUtilisation: 496912114
+}
+Utilisation details for PD: net_virt_rx (5)
+{
+KernelUtilisation: 57939697
+KernelEntries: 38041
+NumberSchedules: 24261
+TotalUtilisation: 599104702
+}
+Utilisation details for PD: client0 (6)
+{
+KernelUtilisation: 24261475
+KernelEntries: 13836
+NumberSchedules: 12900
+TotalUtilisation: 1179105560
+}
+Utilisation details for PD: client0_net_copier (7)
+{
+KernelUtilisation: 21422727
+KernelEntries: 17468
+NumberSchedules: 11736
+TotalUtilisation: 616233299
+}
+Utilisation details for PD: client1 (8)
+{
+KernelUtilisation: 490558
+KernelEntries: 487
+NumberSchedules: 462
+TotalUtilisation: 2655433
+}
+Utilisation details for PD: client1_net_copier (9)
+{
+KernelUtilisation: 569426
+KernelEntries: 269
+NumberSchedules: 236
+TotalUtilisation: 2310103
+}
+Utilisation details for PD: timer_driver (10)
+{
+KernelUtilisation: 38637713
+KernelEntries: 32954
+NumberSchedules: 31068
+TotalUtilisation: 126279947
+}
+Utilisation details for VM: linux (vcpu 0)
+{
+KernelUtilisation: 1279310647
+KernelEntries: 643254
+NumberSchedules: 643254
+TotalUtilisation: 129537462897
+}
+---
+BENCHMARK: end output
+user   1.2%
+system 0.4%
+idle   98.2%
+user   0.0%
+system 0.1%
+idle   99.8%
+user   0.0%
+system 0.1%
+idle   99.9%
+user   0.1%
+system 0.2%
+idle   99.5%
+user   0.2%
+system 0.4%
+idle   99.1%
+user   0.3%
+system 0.3%
+idle   99.1%
+

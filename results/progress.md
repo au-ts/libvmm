@@ -14,13 +14,23 @@ Recently I have
     - The vmm takes measurements and forwards them to the benchmark pd
     - Also running a simple script to read /proc/stat inside the vm to check user vs guest
 
-The results and figures can be fold in this folder
+- Modified the UIO driver to clear the interrupts preventing it from hitting a bug and using 100% CPU (uio_blocking, half MTU size) 
+90a6ea00324a0d29f8f853d91f0c30122ce62abd
+
+- Added caching to the data path of the UIO driver (odroidc4_memcpy_packets/util/ressults)
+
+- Converted byte copy loops to memcpy (odroidc4_memcpy_packets/util/ressults)
+
+- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown)
+
+The results and figures can be fold in this folder (odroidc4_memcpy_packets/util/ressults)
 
 # Next steps
-Implementing WFI did not provide performance benifits but showed the guest is saturating at ~25mbps. 
 
-1. Go through the UIO driver carefully to check any gotchas
-2. Run a client and see if there is this performance degredation
+- Move to zerocopy in userland
+
+- Look into Terry's AF_XDP suggestion
+
 
 # Timeline
 Will update after the meeting with the team.

@@ -1,0 +1,2 @@
+Requested_Throughput,Receive_Throughput,Send_Throughput,Packet_Size,Minimum_RTT,Average_RTT,Maximum_RTT,Stdev_RTT,Median_RTT,Bad_Packets,Idle_Cycles,Total_Cycles,CPU_Util
+20000000,19999754,19999754,1472,928,1407,10282,256.91,1414,0,3231281802,141812997943,0.9772
