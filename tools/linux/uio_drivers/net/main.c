@@ -280,10 +280,10 @@ static void tx_process(void)
         isb_barrier(); uint64_t c0 = rdcnt(); isb_barrier();
         const char *tx_frame = (char *)((uintptr_t)tx_data + tx_data_offset);
         // Write TX frame into temp buff
-        for (int i = 0; i < tx_buffer.len; i++) {
-            frame[i] = tx_frame[i];
-        }
-        // memcpy(frame, tx_frame, tx_buffer.len);
+        // for (int i = 0; i < tx_buffer.len; i++) {
+        //     frame[i] = tx_frame[i];
+        // }
+        memcpy(frame, tx_frame, tx_buffer.len);
         isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
         acc_tx_copy += c1 - c0;
 
@@ -353,7 +353,7 @@ static void rx_process(void)
 
         // Write frame out to temp buffer
         isb_barrier(); uint64_t r0 = rdcnt(); isb_barrier();
-        int num_bytes = recv(sock_fd, frame, sizeof(frame) , 0);
+        int num_bytes = recv(sock_fd, buf_in_sddf_rx_data, sizeof(frame) , 0);
         isb_barrier(); uint64_t r1 = rdcnt(); isb_barrier();
         acc_recv += r1 - r0;
 
@@ -364,15 +364,15 @@ static void rx_process(void)
         }
 
         // Convert DMA addr from virtualiser to offset then mem copy
-        uintptr_t offset = buffer.io_or_offset - driver_config.rx_data_paddr;
-        char *buf_in_sddf_rx_data = (char *)((uintptr_t)rx_data + offset);
-        isb_barrier(); uint64_t c0 = rdcnt(); isb_barrier();
-        for (uint64_t i = 0; i < num_bytes; i++) {
-            buf_in_sddf_rx_data[i] = frame[i];
-        }
+        // uintptr_t offset = buffer.io_or_offset - driver_config.rx_data_paddr;
+        // char *buf_in_sddf_rx_data = (char *)((uintptr_t)rx_data + offset);
+        // isb_barrier(); uint64_t c0 = rdcnt(); isb_barrier();
+        // for (uint64_t i = 0; i < num_bytes; i++) {
+        //     buf_in_sddf_rx_data[i] = frame[i];
+        // }
         // memcpy(buf_in_sddf_rx_data, frame, num_bytes);
-        isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
-        acc_rx_copy += c1 - c0;
+        // isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
+        // acc_rx_copy += c1 - c0;
         pkt_count++; 
 
         // Enqueue it to the active queue
@@ -392,7 +392,7 @@ static void rx_process(void)
         fprintf(logf, "recv=%llu rxcopy=0 txcopy=%llu sendto=%llu\n",
             (acc_recv    * 1000000000ull / f) / pkt_count,
             (acc_rx_copy * 1000000000ull / f) / pkt_count,
-            (acc_tx_copy * 1000000000ull / f) / pkt_count,
+            // (acc_tx_copy * 1000000000ull / f) / pkt_count,
             (acc_sendto  * 1000000000ull / f) / pkt_count);
         fflush(logf);
         acc_recv = acc_rx_copy = acc_tx_copy = acc_sendto = pkt_count = 0;
