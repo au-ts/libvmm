@@ -277,15 +277,15 @@ static void tx_process(void)
             exit(EXIT_FAILURE);
         }
 
-        isb_barrier(); uint64_t c0 = rdcnt(); isb_barrier();
+        // isb_barrier(); uint64_t c0 = rdcnt(); isb_barrier();
         const char *tx_frame = (char *)((uintptr_t)tx_data + tx_data_offset);
         // Write TX frame into temp buff
         // for (int i = 0; i < tx_buffer.len; i++) {
         //     frame[i] = tx_frame[i];
         // }
-        memcpy(frame, tx_frame, tx_buffer.len);
-        isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
-        acc_tx_copy += c1 - c0;
+        // memcpy(frame, tx_frame, tx_buffer.len);
+        // isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
+        // acc_tx_copy += c1 - c0;
 
         // Blocking send!
         struct sockaddr_ll sa;
@@ -296,7 +296,7 @@ static void tx_process(void)
         sa.sll_halen = ETH_ALEN;
 
         isb_barrier(); uint64_t s0 = rdcnt(); isb_barrier();
-        int sent_bytes = sendto(sock_fd, frame, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
+        int sent_bytes = sendto(sock_fd, tx_frame, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
         isb_barrier(); uint64_t s1 = rdcnt(); isb_barrier();
         acc_sendto += s1 - s0;
         if (sent_bytes != tx_buffer.len) {

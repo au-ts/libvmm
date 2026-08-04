@@ -15,13 +15,17 @@ Recently I have
     - Also running a simple script to read /proc/stat inside the vm to check user vs guest
 
 - Modified the UIO driver to clear the interrupts preventing it from hitting a bug and using 100% CPU (uio_blocking, half MTU size) 
-90a6ea00324a0d29f8f853d91f0c30122ce62abd
+libvmm: 90a6ea00324a0d29f8f853d91f0c30122ce62abd
 
 - Added caching to the data path of the UIO driver (odroidc4_memcpy_packets/util/ressults)
+libvmm: 8ad9a647545927059a1877da8b182c9075b1c095
 
 - Converted byte copy loops to memcpy (odroidc4_memcpy_packets/util/ressults)
+libvmm: b5edab3426d80b638bd38b59f614f254d9438640, sdfgen: 87eaa510b8347cc515ac2dad8a02ffbff0a489a4, uio_cached linux patch
 
-- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown)
+- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown) compared to uio_blocking
+
+- Move to zerocopy in userland
 
 The results and figures can be fold in this folder (odroidc4_memcpy_packets/util/ressults)
 

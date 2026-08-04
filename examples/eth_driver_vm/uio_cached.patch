@@ -1,0 +1,13 @@
+diff --git a/drivers/uio/uio_pdrv_genirq.c b/drivers/uio/uio_pdrv_genirq.c
+index 2ec7d25e8264..9d0d4ed6bab5 100644
+--- a/drivers/uio/uio_pdrv_genirq.c
++++ b/drivers/uio/uio_pdrv_genirq.c
+@@ -201,7 +201,7 @@ static int uio_pdrv_genirq_probe(struct platform_device *pdev)
+ 			break;
+ 		}
+ 
+-		uiomem->memtype = UIO_MEM_PHYS;
++		uiomem->memtype = UIO_MEM_IOVA;
+ 		uiomem->addr = r->start & PAGE_MASK;
+ 		uiomem->offs = r->start & ~PAGE_MASK;
+ 		uiomem->size = (uiomem->offs + resource_size(r)
