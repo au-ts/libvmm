@@ -75,11 +75,19 @@ jobs:
     runs-on: [self-hosted, Linux, X64]
     outputs:
       artifact_id: ${{ steps.upload_images.outputs.artifact-id }}
+      test_groups: ${{ steps.test_groups.outputs.groups }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           submodules: 'true'
+      # Reshapes ci/test_groups.json into the {"include": [...]} form that
+      # strategy.matrix expects. Both the QEMU and hardware jobs consume this,
+      # so test groups are only ever defined in that one file.
+      - name: Define test groups
+        id: test_groups
+        run: |
+          echo "groups=$(jq -c '{include: .groups}' ci/test_groups.json)" >> "$GITHUB_OUTPUT"
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
         with:
@@ -111,17 +119,7 @@ jobs:
       contents: read
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - test_name: 'virtIO Network'
-            test_args: 'virtio_network_download,virtio_network_ping'
-            artifact_suffix: 'virtio-net'
-          - test_name: 'virtIO Block'
-            test_args: 'virtio_block'
-            artifact_suffix: 'virtio-block'
-          - test_name: 'boot'
-            test_args: 'arch_timers,buildroot_login,uefi_firmware_boot,smp_detect_multiple_cpus'
-            artifact_suffix: 'boot'
+      matrix: ${{ fromJSON(needs.build_linux_x86_64_nix.outputs.test_groups) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -152,7 +150,7 @@ jobs:
           if-no-files-found: error
 
   run_hardware:
-    name: Run (hardware)
+    name: Run ${{ matrix.test_name }} tests (Hardware)
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'au-ts' &&
               (
@@ -166,8 +164,13 @@ jobs:
               )
          }}
     needs: build_linux_x86_64_nix
+    strategy:
+      fail-fast: false
+      # We 2x of each: Odroid C4, MaaXBoard, ZCU102
+      max-parallel: 2
+      matrix: ${{ fromJSON(needs.build_linux_x86_64_nix.outputs.test_groups) }}
     concurrency:
-      group: ${{ github.workflow }}-sddf-hardware-tests-${{ github.event.number }}-${{ strategy.job-index }}
+      group: ${{ github.workflow }}-sddf-hardware-tests-${{ github.event.number }}-${{ matrix.artifact_suffix }}
       cancel-in-progress: true
     steps:
       - name: Checkout sDDF repository
@@ -193,11 +196,11 @@ jobs:
           export PATH="$(pwd)/machine_queue":$PATH
           # GitHub Actions is broken
           # https://github.com/ringerc/github-actions-signal-handling-demo#why-child-process-tasks-dont-get-a-chance-to-clean-up-on-job-cancel
-          exec ./ci/run.py --no-only-qemu
+          exec ./ci/run.py --no-only-qemu --tests ${{ matrix.test_args }}
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-logs-hardware
+          name: ci-logs-hardware-${{ matrix.artifact_suffix }}
           path: ci_logs
           if-no-files-found: error
