@@ -23,17 +23,24 @@ libvmm: 8ad9a647545927059a1877da8b182c9075b1c095
 - Converted byte copy loops to memcpy (odroidc4_memcpy_packets/util/ressults)
 libvmm: b5edab3426d80b638bd38b59f614f254d9438640, sdfgen: 87eaa510b8347cc515ac2dad8a02ffbff0a489a4, uio_cached linux patch
 
-- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown) compared to uio_blocking
-
 - Move to zerocopy in userland
+
+- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown) compared to uio_blocking
 
 The results and figures can be fold in this folder (odroidc4_memcpy_packets/util/ressults)
 
 # Next steps
 
-- Move to zerocopy in userland
+Optimise driver VM
+- Look into Terry's AF_XDP suggestion. 
+- Linux benchmarks to compare
+- Bring up the maaxboard for the driver vm
 
-- Look into Terry's AF_XDP suggestion
+Client VM
+- Client VM to compare against Martins and Pinto
+- Client native to compare
+
+
 
 
 # Timeline
