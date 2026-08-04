@@ -104,6 +104,9 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
             break;
         case IA32_PLATFORM_ID:
         case IA32_TSC_ADJUST:
+        case IA32_MISC_ENABLE:
+        case IA32_FEATURE_CONTROL:
+        case IA32_BIOS_SIGN_ID:
             result = 0;
             break;
         default:
@@ -166,6 +169,11 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
         case IA32_PRED_CMD:
         case IA32_SPEC_CTRL:
             // @billn revisit, security concerns same as IA32_SPEC_CTRL, as they are used for speculative exec controls
+            break;
+        case IA32_MISC_ENABLE:
+        case IA32_FEATURE_CONTROL:
+        case IA32_BIOS_SIGN_ID:
+            // @billn revisit
             break;
         case IA32_XSS:
             if (value != 0) {
