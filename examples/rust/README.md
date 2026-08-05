@@ -30,7 +30,7 @@ make MICROKIT_SDK=/path/to/sdk
 ```
 
 By default the build system fetches the Linux kernel and initrd images from
-Trustworthy Systems' website on-demand. To override this anduse your own images,
+Trustworthy Systems' website on-demand. To override this and use your own images,
 specify `LINUX` and/or `INITRD`. For example:
 
 ```sh

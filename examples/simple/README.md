@@ -41,7 +41,7 @@ This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
 By default the build system fetches the Linux kernel and initrd images from
-Trustworthy Systems' website on-demand. To override this anduse your own images,
+Trustworthy Systems' website on-demand. To override this and use your own images,
 specify `LINUX` and/or `INITRD`. For example:
 
 ```sh
@@ -50,10 +50,16 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/l
 
 ## x86_64 Hardware Requirements
 
-You will need an x86_64 Intel CPU with virtualisation (VT-x) turned
-on in your BIOS.
+### QEMU
 
-The same applies for QEMU virtualisation, since QEMU's Tiny Code
-Generator (TCG) does not emulate Intel's virtualisation extension
-on x86_64. Whereas for ARM it does. Hence to run this example on
-QEMU, you will need a Linux install and KVM enabled.
+QEMU's Tiny Code Generator (TCG) emulates ARM's virtualisation extensions, but
+not x86's. To run this example you therefore need:
+
+- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS,
+- a Linux host, and
+- KVM enabled.
+
+### Hardware
+
+To run this example on hardware, you need:
+- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS,
