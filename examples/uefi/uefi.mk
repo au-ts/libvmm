@@ -22,7 +22,7 @@ IMAGES := vmm.elf
 ifeq ($(ARCH),x86_64)
 	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
 	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
-	OVMF ?= e657295c9fc77db4b2045fc0e5145cfb03010ffa-OVMF.fd
+	OVMF ?= a80a6dbe981a74c48d237c30885dbfa07f9c6225-OVMF.fd
 
 # -march=x86-64-v2 so that we get extra optimisations without AVX, since seL4 doesnt't enable it by default
 	ARCH_FLAGS := -target x86_64-unknown-elf -march=x86-64-v2

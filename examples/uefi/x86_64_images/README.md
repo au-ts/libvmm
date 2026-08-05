@@ -41,7 +41,12 @@ gEfiMdeModulePkgTokenSpaceGuid.PcdSerialBaudRate     | 115200
 gEfiMdeModulePkgTokenSpaceGuid.PcdSerialUseMmio      | FALSE
 ```
 
-4. Build:
+4. If you intend to deploy the VM with video capability, you can replace the
+TianoCore logo on the boot splash screen with one of your own. Our prebuilt
+image ships with the LionsOS logo. To use a custom logo, overwrite
+MdeModulePkg/Logo/Logo.bmp with an uncompressed 8-bit RGB bitmap with no alpha channel.
+
+5. Build:
 ```
 make -C BaseTools
 ./OvmfPkg/build.sh -a X64 -b DEBUG -p OvmfPkg/OvmfPkgX64.dsc -D DEBUG_ON_SERIAL_PORT
