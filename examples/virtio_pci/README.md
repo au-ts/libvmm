@@ -18,41 +18,76 @@ it supports QEMU x86_64 target (use `x86_64_generic_vtx` board).
 
 ## x86_64 Hardware Requirements
 
-QEMU's Tiny Code Generator (TCG) does not emulate Intel's
-virtualisation extension on x86_64. Whereas for ARM it does.
-Hence to run this example on QEMU, you will need an x86_64 Intel CPU
-with virtualisation (VT-x) turned on in your BIOS, a Linux install
-and KVM enabled.
+### QEMU
+
+QEMU's Tiny Code Generator (TCG) emulates ARM's virtualisation extensions, but
+not x86's. To run this example you therefore need:
+
+- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS,
+- a Linux host, and
+- KVM enabled.
 
 ## QEMU x86_64 troubleshooting
 
-We use native sDDF virtIO Block and Network drivers for storage
-and networking. However, these drivers temporarily rely on
-hardcoded physical addresses for their device registers. Because
-sDDF does not yet have merged ACPI and PCI drivers to handle
-dynamic mapping, the drivers will crash if your QEMU instance
-places the registers at unexpected addresses.
+We use native sDDF VirtIO block and network drivers for storage and networking.
+These drivers currently rely on hardcoded physical addresses for their device
+registers, because sDDF does not yet have merged ACPI and PCI drivers to handle
+dynamic mapping. As a result, the drivers crash if your QEMU instance places the
+registers at addresses they do not expect. This limitation will disappear once
+the ACPI and PCI drivers are merged into sDDF.
 
-(Note: This limitation will be resolved once the ACPI and PCI
-drivers are merged into sDDF.)
+The crash looks like this:
+```
+MON|INFO: Microkit Monitor started!
+TIMER DRIVER|ERROR: Invariant TSC not supported, expect performance degradation.
+MON|INFO: PD 'timer_driver' is now passive!
+BLK DRIVER|ERROR: driver does not support device capacity smaller than 0x1000 bytes (device has capacity of 0x0 bytes)
+Failed assertion 'false' at /home/dreamliner7879/TS/libvmm_x86/dep/sddf/drivers/blk/virtio/pci/..//block.c:292 in function virtio_blk_init
+MON|ERROR: received message 0x00000003  badge: 0x0000000000000006  tcb cap: 0x000000000000000f
+MON|ERROR: faulting PD: blk_driver
+Registers:
+rip : 0x0000000000204607
+rsp : 0x00007fffffffcf90
+rflags : 0x0000000000010202
+rax : 0x000000000000008b
+rbx : 0x0000000000000000
+rcx : 0xffffffffffffffff
+rdx : 0x000000000000008b
+rsi : 0x00007fffffffcf7f
+rdi : 0x0000000000000000
+rbp : 0x00007fffffffcf90
+r8 : 0x0000000000000000
+r9 : 0x0000000000000000
+r10 : 0x00000000002030d8
+r11 : 0x000000000000008b
+r12 : 0x0000000000000000
+r13 : 0x0000000000000000
+r14 : 0x0000000000000000
+r15 : 0x0000000000000000
+fs_base : 0x0000000000000000
+gs_base : 0x0000000000000000
+MON|ERROR: UserException
+<<seL4(CPU 0) [receiveIPC/153 T0xffffff8001132800 "tcb_monitor" @2001a4]: Reply object already has unexecuted reply!>>
+```
 
-If you encounter this crash, you must manually retrieve the correct
-physical addresses from QEMU and update your configuration.
+If you hit this crash, retrieve the correct physical addresses from QEMU and
+update your configuration by hand, as follows.
 
-1. Access the QEMU Monitor
-While your QEMU instance is running, press Ctrl + a, release
-both keys, and then press c. You will be dropped into the QEMU
-monitor prompt:
+### 1. Open the QEMU monitor
+
+While QEMU is running, press <kbd>Ctrl</kbd> + <kbd>a</kbd>, in the terminal,
+release both keys, then press <kbd>c</kbd>.
+You will be dropped at the QEMU monitor prompt:
 
 ```
 QEMU 11.0.2 monitor - type 'help' for more information
 (qemu)
 ```
 
-2. Retrieve PCI Information
-At the prompt, type info pci to list the connected devices
-and their memory allocations. You will see an output similar
-to this:
+### 2. Retrieve the PCI information
+
+At the prompt, type `info pci` to list the connected devices and their memory
+allocations. The output will look something like this:
 
 ```
 (qemu) info pci
@@ -94,10 +129,15 @@ to this:
 (qemu)
 ```
 
-3. Update meta.py
-Locate the Ethernet controller and SCSI controller sections in the
-output. For both devices, find the line that reads BAR4: 64 bit
-prefetchable memory at....
+### 3. Update `meta.py`
 
-Take these memory addresses, replace the existing values at the
-top of meta.py, and everything will function normally.
+In the Ethernet controller and SCSI controller entries, find the line reading
+`BAR4: 64 bit prefetchable memory at ...`. Replace `VIRTIO_NET_PCI_BAR_PADDR` and
+`VIRTIO_BLK_PCI_BAR_PADDR` with the addresses your QEMU instance allocated. Check
+that `VIRTIO_NET_PCI_IRQ` and `VIRTIO_BLK_PCI_IRQ` match the output too.
+
+Then, in the display controller entry, find the lines reading
+`BAR0: 32 bit prefetchable memory at ...` and `BAR2: 32 bit memory at ...`. BAR0
+is the framebuffer and BAR2 is the video registers, so replace
+`BOCHS_DISPLAY_FB_BAR_PADDR` with BAR0 and `BOCHS_DISPLAY_REGS_BAR_PADDR` with
+BAR2.
