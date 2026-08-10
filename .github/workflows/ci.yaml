@@ -151,7 +151,7 @@ jobs:
 
   run_hardware:
     name: Run ${{ matrix.test_name }} tests (Hardware)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
     if: ${{ github.repository_owner == 'au-ts' &&
               (
                 (github.event_name == 'schedule') ||
@@ -180,11 +180,16 @@ jobs:
         with:
           repository: seL4/machine_queue
           path: machine_queue
-      - name: Download images
-        uses: actions/download-artifact@v8
-        with:
-          name: loader-images
-          path: ci_build
+
+      # GitHub seems to limit download speed of artifacts from their runners to self hosted runners.
+      # So applying a workaround from https://github.com/actions/download-artifact/issues/362#issuecomment-3060841829
+      - name: Download images using azcopy
+        run: |
+          artifact_url="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ needs.build_linux_x86_64_nix.outputs.artifact_id }}/zip"
+          signed_url="$(curl -L -I -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o /dev/null -w "%{url_effective}" "$artifact_url")"
+          azcopy copy "$signed_url" "loader-images.zip"
+          unzip -q loader-images.zip -d ci_build
+          rm loader-images.zip
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
       - name: Setup machine queue SSH key
