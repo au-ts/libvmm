@@ -21,8 +21,8 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
 IMAGES := vmm.elf
 
-LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
 
 VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/util/guest_smp_test_script.sh
 
@@ -70,7 +70,7 @@ ${LINUX}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${LINUX}.tar.gz -o $@.tar.gz
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
-	cp linux_download_dir/${LINUX}/linux ${LINUX}
+	cp linux_download_dir/${LINUX}/Image ${LINUX}
 
 ${INITRD}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz

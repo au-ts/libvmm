@@ -35,8 +35,8 @@ export PARTITION_ARG := --partition $(PARTITION)
 endif
 
 # All platforms use the same Linux and initrd images.
-export LINUX ?= a3f4bf9e2eb24fa8fc0d3d8cd02e4d8097062e8b-linux
-export INITRD ?= b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
+export LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+export INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
 
 BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})

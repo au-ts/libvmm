@@ -10,8 +10,8 @@ $(error MICROKIT_SDK must be specified)
 endif
 
 # Download the Linux kernel and initrd from Trustworthy Systems website
-LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
 
 # Specify that we use bash for all shell commands
 # TODO: do we need this?
@@ -93,7 +93,7 @@ ${LINUX}:
 	tar -xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/linux_download_dir
 # This eval step is to propagate the image's absolute path into RUST_OPTIONS
 # so that src/vmm.rs can include_bytes! the correct file.
-	$(eval LINUX=$(BUILD_DIR)/linux_download_dir/${LINUX}/linux)
+	$(eval LINUX=$(BUILD_DIR)/linux_download_dir/${LINUX}/Image)
 
 ${INITRD}:
 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $(BUILD_DIR)/$@.tar.gz

@@ -125,7 +125,7 @@ ${LINUX}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
-	cp linux_download_dir/${LINUX}/linux ${LINUX}
+	cp linux_download_dir/${LINUX}/Image ${LINUX}
 
 ${INITRD}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz

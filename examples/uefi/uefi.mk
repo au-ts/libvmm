@@ -20,8 +20,8 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 IMAGES := vmm.elf
 
 ifeq ($(ARCH),x86_64)
-	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
-	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	LINUX ?= ad68a1c839149465454d059b32fb2a3593404268-linux
+	INITRD ?= a0b53ecb5c7d68a1c89b843d3ad07508ba9af9a3-rootfs.cpio.gz
 	OVMF ?= a80a6dbe981a74c48d237c30885dbfa07f9c6225-OVMF.fd
 
 # -march=x86-64-v2 so that we get extra optimisations without AVX, since seL4 doesnt't enable it by default

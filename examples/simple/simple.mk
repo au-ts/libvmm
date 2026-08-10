@@ -20,15 +20,15 @@ vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 IMAGES := vmm.elf
 
 ifeq ($(ARCH),aarch64)
-	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD ?= 6dcd1debf64e6d69b178cd0f46b8c4ae7cebe2a5-rootfs.cpio.gz
+	LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+	INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
 	ARCH_FLAGS := -target aarch64-none-elf -mstrict-align
 
 	QEMU := qemu-system-aarch64
 	QEMU_ARCH_ARGS := -machine virt,virtualization=on -cpu cortex-a53 -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
 else ifeq ($(ARCH),x86_64)
-	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
-	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	LINUX ?= ad68a1c839149465454d059b32fb2a3593404268-linux
+	INITRD ?= a0b53ecb5c7d68a1c89b843d3ad07508ba9af9a3-rootfs.cpio.gz
 
 # -march=x86-64-v2 so that we get extra optimisations without AVX, since seL4 doesnt't enable it by default
 	ARCH_FLAGS := -target x86_64-unknown-elf -march=x86-64-v2
@@ -80,7 +80,7 @@ ${LINUX}:
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
 ifeq ($(ARCH),aarch64)
-	cp linux_download_dir/${LINUX}/linux ${LINUX}
+	cp linux_download_dir/${LINUX}/Image ${LINUX}
 else ifeq ($(ARCH),x86_64)
 	cp linux_download_dir/${LINUX}/bzImage ${LINUX}
 endif

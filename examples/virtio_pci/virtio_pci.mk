@@ -43,15 +43,15 @@ CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
 ifeq ($(ARCH),aarch64)
-	LINUX ?= 85000f3f42a882e4476e57003d53f2bbec8262b0-linux
-	INITRD ?= b6a276df6a0e39f76bc8950e975daa2888ad83df-rootfs.cpio.gz
+	LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+	INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
 
 	QEMU_ARCH_ARGS := -machine virt,virtualization=on,secure=off \
 					  -cpu cortex-a53 \
 					  -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
 else ifeq ($(ARCH),x86_64)
-	LINUX ?= be4206493bcc7234a8713319b7c6280fa04f9c5a-bzImage
-	INITRD ?= d887a642236a92610a9537ab9f4a4aa1a966ad3a-rootfs.cpio.gz
+	LINUX ?= ad68a1c839149465454d059b32fb2a3593404268-linux
+	INITRD ?= a0b53ecb5c7d68a1c89b843d3ad07508ba9af9a3-rootfs.cpio.gz
 
 	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme \
 					  -kernel sel4_32.elf -initrd $(IMAGE_FILE) -vga none
@@ -148,7 +148,7 @@ ${LINUX}:
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
 ifeq ($(ARCH),aarch64)
-	cp linux_download_dir/${LINUX}/linux ${LINUX}
+	cp linux_download_dir/${LINUX}/Image ${LINUX}
 else ifeq ($(ARCH),x86_64)
 	cp linux_download_dir/${LINUX}/bzImage ${LINUX}
 endif

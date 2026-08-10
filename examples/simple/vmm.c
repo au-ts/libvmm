@@ -14,11 +14,7 @@
  * guest's "RAM" the same for all platforms. For just booting Linux with a
  * simple user-space, 0x10000000 bytes (256MB) is plenty.
  */
-#if defined(BOARD_zcu102)
-#define GUEST_RAM_SIZE 0x20000000
-#else
 #define GUEST_RAM_SIZE 0x10000000
-#endif
 
 /* For ARM, these constants depends on what's defined in your DTB. */
 #if defined(BOARD_qemu_virt_aarch64)
@@ -28,7 +24,7 @@
 #elif defined(BOARD_odroidc4)
 #define GUEST_RAM_START_GPA 0x20000000
 #define GUEST_DTB_GPA 0x2f000000
-#define GUEST_INIT_RAM_DISK_GPA 0x2d700000
+#define GUEST_INIT_RAM_DISK_GPA 0x2d000000
 #elif defined(BOARD_maaxboard)
 #define GUEST_RAM_START_GPA 0x40000000
 #define GUEST_DTB_GPA 0x4f000000
@@ -39,8 +35,8 @@
 #define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
 #elif defined(BOARD_zcu102)
 #define GUEST_RAM_START_GPA     0x800000000
-#define GUEST_DTB_GPA           0x810000000
-#define GUEST_INIT_RAM_DISK_GPA 0x810010000
+#define GUEST_DTB_GPA           0x80E000000
+#define GUEST_INIT_RAM_DISK_GPA 0x80D000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
