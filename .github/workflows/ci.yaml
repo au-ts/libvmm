@@ -170,7 +170,7 @@ jobs:
       max-parallel: 2
       matrix: ${{ fromJSON(needs.build_linux_x86_64_nix.outputs.test_groups) }}
     concurrency:
-      group: ${{ github.workflow }}-sddf-hardware-tests-${{ github.event.number }}-${{ matrix.artifact_suffix }}
+      group: ${{ github.workflow }}-libvmm-hardware-tests-${{ github.event.number }}-${{ matrix.artifact_suffix }}
       cancel-in-progress: true
     steps:
       - name: Checkout sDDF repository
