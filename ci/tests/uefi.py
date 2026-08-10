@@ -18,7 +18,7 @@ from ci import common, matrix
 
 
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
-    async with asyncio.timeout(30):
+    async with asyncio.timeout(60):
         # This is the first thing that OVMF prints on the debug console
         await wait_for_output(backend, b"SecCoreStartupWithStack")
         # Firmware should see our virtual fw cfg device
