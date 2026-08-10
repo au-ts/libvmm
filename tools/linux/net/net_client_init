@@ -6,3 +6,6 @@
 
 ip link set eth0 up
 udhcpc
+
+# Set the time via NTP so that HTTPS works
+ntpd -q -n -p 0.pool.ntp.org
