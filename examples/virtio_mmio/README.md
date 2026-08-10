@@ -3,7 +3,7 @@
      SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 
-# Using multiple virtIO devices with a Linux guest
+# Using multiple virtIO MMIO devices with a Linux guest
 
 This example shows off the virtIO support that libvmm provides using the
 [seL4 Device Driver Framework (sDDF)](https://github.com/au-ts/sddf) to talk to
@@ -16,7 +16,10 @@ This example makes use of the following virtIO devices emulated by libvmm:
 * network
 
 All of the virtIO devices are emulated with their corresponding native drivers
-from sDDF.
+from sDDF. The guest will interact with the virtIO devices via MMIO.
+
+On ARM, this is accomplished by adding virtIO devices nodes into the device tree,
+so that Linux knows where the device is in guest-physical address space.
 
 The example currently works on the following platforms:
 
@@ -55,6 +58,8 @@ If you get error: `externally-managed-environment` when installing via pip, inst
 pip3 install --break-system-packages sdfgen==0.33.0
 ```
 
+This is sound because the `sdfgen` package does not have any dependencies.
+
 ### macOS
 
 On macOS, you can install the dependencies via Homebrew:
@@ -67,6 +72,8 @@ If you get error: `externally-managed-environment` when installing via pip, inst
 ```sh
 pip3 install --break-system-packages sdfgen==0.33.0
 ```
+
+This is sound because the `sdfgen` package does not have any dependencies.
 
 ### Nix
 
