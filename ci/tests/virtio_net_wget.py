@@ -24,7 +24,7 @@ async def test_virtio_net_wget(
         await wait_for_output(backend, b"buildroot login: ")
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
-        await send_input(backend, b"wget http://trustworthy.systems/song\n")
+        await send_input(backend, b"wget https://trustworthy.systems/song\n")
         await wait_for_output(backend, b"'song' saved")
         await send_input(backend, b"cat song\n")
         await wait_for_output(backend, b"Implementation deep and fine.")
@@ -32,7 +32,7 @@ async def test_virtio_net_wget(
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
-    "virtio_network_download",
+    "virtio_network_https_download",
     ["virtio_mmio", "virtio_pci"],
     test_fn=test_virtio_net_wget,
     backend_fn=common.virtio_backend_fn,
