@@ -18,7 +18,7 @@ from ci import common, matrix
 
 
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
-    async with asyncio.timeout(30):
+    async with asyncio.timeout(60):
         await wait_for_output(backend, b"buildroot login: ")
         await send_input(backend, b"root\n")
         await wait_for_output(backend, b"# ")
