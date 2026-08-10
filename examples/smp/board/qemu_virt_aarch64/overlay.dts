@@ -20,6 +20,6 @@
         bootargs = "debug loglevel=8";
         linux,stdout-path = "/pl011@9000000";
         linux,initrd-start = <0x4d000000>;
-        linux,initrd-end = <0x4d800000>;
+        linux,initrd-end = <0x4e000000>;
     };
 };

@@ -16,7 +16,7 @@ const GUEST_RAM_VMM_VADDR: usize = 0x40000000;
 /* For ARM, these constants depends on what's defined in your DTB. */
 const GUEST_RAM_START_GPA: usize = 0x40000000;
 const GUEST_DTB_GPA: usize = 0x4f000000;
-const GUEST_INIT_RAM_DISK_GPA: usize = 0x4d700000;
+const GUEST_INIT_RAM_DISK_GPA: usize = 0x4d000000;
 const GUEST_RAM_SIZE: usize = 0x10000000;
 const GUEST_BOOT_VCPU_ID: usize = 0;
 
