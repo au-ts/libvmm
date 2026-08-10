@@ -107,7 +107,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
-    "virtio": {
+    "virtio_mmio": {
         "configs": ["debug", "release"],
         "build_systems": ["make"],
         "boards": [

@@ -42,7 +42,7 @@ async def test_virtio_block(backend: HardwareBackend, test_config: common.TestCo
 # export
 TEST_CASES = matrix.generate_example_test_cases(
     "virtio_block",
-    ["virtio", "virtio_pci"],
+    ["virtio_mmio", "virtio_pci"],
     test_fn=test_virtio_block,
     backend_fn=common.virtio_backend_fn,
     no_output_timeout_s=matrix.NO_OUTPUT_DEFAULT_TIMEOUT_S,
