@@ -84,7 +84,6 @@ include $(BLK_COMPONENTS)/blk_components.mk
 include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
 include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
-include $(LIBVMM_TOOLS)/linux/uio/uio.mk
 include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
