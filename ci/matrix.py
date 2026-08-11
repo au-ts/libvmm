@@ -126,7 +126,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
-    "virtio_vswitch": {
+    "vswitch": {
         "configs": ["smp-debug", "smp-release"],
         "build_systems": ["make"],
         "boards": [
