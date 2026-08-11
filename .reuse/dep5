@@ -9,6 +9,7 @@ Files:
     examples/rust/.cargo/config.toml
     examples/rust/aarch64-microkit-minimal.json
     ci/test_groups.json
+    examples/vswitch/docs/*.png
 Copyright: UNSW
 License: BSD-2-Clause
 
