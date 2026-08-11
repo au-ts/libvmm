@@ -48,6 +48,10 @@ specify `LINUX` and/or `INITRD`. For example:
 make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd qemu
 ```
 
+## Running
+
+The username to login is `root`. There is no password required.
+
 ## x86_64 Hardware Requirements
 
 ### QEMU

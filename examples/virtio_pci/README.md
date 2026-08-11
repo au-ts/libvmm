@@ -101,7 +101,7 @@ Where `<BOARD>` is one of:
 * `maaxboard`
 * `x86_64_generic_vtx`
 
-Other configuration options can be passed to the Makefile such as `CONFIG`
+Other configuration options can be passed to the Makefile such as `MICROKIT_CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
 
 By default the build system fetches the Linux kernel and initrd images from
@@ -121,6 +121,8 @@ This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
 ## Running
+
+The username to login is `root`. There is no password required.
 
 ### virtIO console
 

@@ -43,6 +43,12 @@ specify `FIRMWARE`, `LINUX` and/or `INITRD`. For example:
 make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd FIRMWARE=/path/to/firmware qemu
 ```
 
+## Running
+
+The firmware will take a couple of seconds to startup.
+
+The username to login is `root`. There is no password required.
+
 ## x86_64 Hardware Requirements
 
 ### QEMU

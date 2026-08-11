@@ -39,6 +39,8 @@ make MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd
 
 ## Running the example
 
+The username to login is `root`. There is no password required.
+
 You can build and run the example in a single command with:
 ```sh
 make MICROKIT_SDK=/path/to/sdk qemu
