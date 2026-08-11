@@ -82,6 +82,7 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
         break;
     case RANGE32(GICR_IGROUPR0, GICR_IGROUPR0):
         reg = gic_redist_sgi_ppi->igroupr0;
+        break;
     case RANGE32(GICR_ICFGR1, GICR_ICFGR1):
         reg = gic_redist_sgi_ppi->icfgrn_rw;
         break;
