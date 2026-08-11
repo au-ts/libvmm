@@ -64,15 +64,13 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
                                       priority=199, stack_size=0x2000)
     serial_node = dtb.node(board.serial)
     assert serial_node is not None
-    guest_serial_node = client_dtb.node(guest_configs[board.name].serial)
-    assert guest_serial_node is not None
 
     serial_system = Sddf.Serial(sdf, serial_node, serial_driver,
                                 serial_virt_tx, virt_rx=serial_virt_rx, enable_color=True)
-    client0.add_virtio_mmio_console(guest_serial_node, serial_system)
-    client1.add_virtio_mmio_console(guest_serial_node, serial_system)
-    client2.add_virtio_mmio_console(guest_serial_node, serial_system)
-    client3.add_virtio_mmio_console(guest_serial_node, serial_system)
+    serial_system.add_client(vmm_client0)
+    serial_system.add_client(vmm_client1)
+    serial_system.add_client(vmm_client2)
+    serial_system.add_client(vmm_client3)
 
     pds = [
         serial_driver,
@@ -85,8 +83,6 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     # Net subsystem
     net_node = dtb.node(board.ethernet)
     assert net_node is not None
-    guest_net_node = client_dtb.node(guest_configs[board.name].ethernet)
-    assert guest_net_node is not None
 
     eth_driver = ProtectionDomain("eth_driver", "eth_driver.elf",
                                   priority=101, budget=100, period=400)
@@ -116,10 +112,10 @@ def generate(sdf_file: str, output_dir: str, dtb: DeviceTree, client_dtb: Device
     for pd in pds:
         sdf.add_pd(pd)
 
-    client0.add_virtio_mmio_net(guest_net_node, net_system, copier=client0_net_copier, vswitch=True)
-    client1.add_virtio_mmio_net(guest_net_node, net_system, copier=client1_net_copier, vswitch=True)
-    client2.add_virtio_mmio_net(guest_net_node, net_system, copier=client2_net_copier, vswitch=True)
-    client3.add_virtio_mmio_net(guest_net_node, net_system, copier=client3_net_copier, vswitch=True)
+    net_system.add_client_with_copier(vmm_client0, copier=client0_net_copier, vswitch=True)
+    net_system.add_client_with_copier(vmm_client1, copier=client1_net_copier, vswitch=True)
+    net_system.add_client_with_copier(vmm_client2, copier=client2_net_copier, vswitch=True)
+    net_system.add_client_with_copier(vmm_client3, copier=client3_net_copier, vswitch=True)
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)

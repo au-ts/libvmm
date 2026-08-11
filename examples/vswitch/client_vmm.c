@@ -20,6 +20,13 @@ __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 /* RAM base in guest physical address space depends on what's defined in your DTB. */
 #define GUEST_RAM_START_GPA 0x40000000
 
+/* These GPAs depends on what's defined in your guest DTB. */
+#define GUEST_RAM_START_GPA 0x40000000
+#define PCI_ECAM_GPA 0x10000000
+#define PCI_ECAM_SIZE 0x100000
+#define PCI_MMIO_APERATURE_GPA 0x20100000
+#define PCI_MMIO_APERATURE_SIZE 0x0ff00000
+
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -48,13 +55,18 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
-    arch_guest_init_t args = {
-        .num_vcpus = 1,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } },
-        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
-    };
+    arch_guest_init_t args = { .num_vcpus = 1,
+                               .num_guest_ram_regions = 1,
+                               .guest_ram_regions = { (struct guest_ram_region) {
+                                   .gpa_start = GUEST_RAM_START_GPA,
+                                   .size = vmm_config.ram_size,
+                                   .vmm_vaddr = (void *)vmm_config.ram } },
+                               .pci_init = (struct guest_pci_init) {
+                                   .ecam_gpa = PCI_ECAM_GPA,
+                                   .ecam_size = PCI_ECAM_SIZE,
+                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
+                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
+                               } };
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
@@ -75,35 +87,17 @@ void init(void)
         return;
     }
 
-    /* Find the details of VirtIO console and network devices from sdfgen */
-    int console_vdev_idx = -1;
-    int net_vdev_idx = -1;
-    assert(vmm_config.num_virtio_mmio_devices == 2);
-    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
-        switch (vmm_config.virtio_mmio_devices[i].type) {
-        case VIRTIO_DEVICE_ID_CONSOLE:
-            console_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_NET:
-            net_vdev_idx = i;
-            break;
-        }
-    }
-    assert(console_vdev_idx != -1);
-    assert(net_vdev_idx != -1);
-
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
     serial_queue_init(&serial_tx_queue, serial_config.tx.queue.vaddr, serial_config.tx.data.size,
                       serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(
-        &virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
-        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[console_vdev_idx].irq), &serial_rx_queue,
-        &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
-    assert(success);
+    if (!virtio_pci_console_init(&virtio_console, 0, 0, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 48), &serial_rx_queue,
+                                 &serial_tx_queue, serial_config.tx.id, serial_config.rx.id)) {
+        LOG_VMM_ERR("Failed to initialise virtIO PCI Console device\n");
+        return;
+    }
 
     /* Initialise virtIO net device */
     net_queue_init(&net_rx_queue, net_config.rx.free_queue.vaddr, net_config.rx.active_queue.vaddr,
@@ -111,13 +105,12 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
-    success = virtio_mmio_net_init(
-        &virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
-        vmm_config.virtio_mmio_devices[net_vdev_idx].size,
-        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[net_vdev_idx].irq), &net_rx_queue,
-        &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-        net_config.tx.id, net_config.mac_addr.addr);
-    assert(success);
+    if (!virtio_pci_net_init(&virtio_net, 0, 2, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 50), &net_rx_queue, &net_tx_queue,
+                             (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
+                             net_config.tx.id, net_config.mac_addr.addr)) {
+        LOG_VMM_ERR("Failed to initialise virtIO PCI Network device\n");
+        return;
+    }
 
     /* Finally start the guest */
     guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
