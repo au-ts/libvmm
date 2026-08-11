@@ -27,21 +27,10 @@ else ifeq ($(strip $(MICROKIT_BOARD)), qemu_virt_aarch64)
 	export GIC_DT_OVERLAY := gic_v2_overlay.dts
 endif
 
-# Allow to user to specify a custom partition
-PARTITION :=
-ifdef PARTITION
-export PARTITION_ARG := --partition $(PARTITION)
-endif
-
-# All platforms use the same Linux and initrd images.
-export LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
-export INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
-
 BUILD_DIR ?= build
 export BUILD_DIR := $(abspath ${BUILD_DIR})
-export VIRTIO_EXAMPLE := $(abspath .)
+export VSWITCH_EXAMPLE := $(abspath .)
 
-export CC_USERLEVEL := zig cc
 export MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 export SDDF := $(abspath ../../dep/sddf)
 export LIBVMM := $(abspath ../../)
