@@ -54,8 +54,8 @@ all: $(IMAGE_FILE)
 qemu $(IMAGE_FILE) $(REPORT_FILE) clean clobber: $(BUILD_DIR)/Makefile FORCE
 	$(MAKE) -C $(BUILD_DIR) MICROKIT_SDK=$(MICROKIT_SDK) $(notdir $@)
 
-$(BUILD_DIR)/Makefile: virtio_vswitch.mk
+$(BUILD_DIR)/Makefile: vswitch.mk
 	mkdir -p $(BUILD_DIR)
-	cp virtio_vswitch.mk $@
+	cp vswitch.mk $@
 
 FORCE:
