@@ -19,9 +19,9 @@ SERIAL_COMPONENTS := $(SDDF)/serial/components
 NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
-CLIENT_VM := $(VIRTIO_EXAMPLE)/client_vm
+CLIENT_VM = $(VSWITCH_EXAMPLE)/client_vm/$(ARCH)
 CLIENT_DTB := client_vm/vm.dtb
-METAPROGRAM := $(VIRTIO_EXAMPLE)/meta.py
+METAPROGRAM := $(VSWITCH_EXAMPLE)/meta.py
 
 SDDF_CUSTOM_LIBC := 1
 
@@ -30,7 +30,7 @@ SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
 	maaxboard
 
-SYSTEM_FILE := virtio.system
+SYSTEM_FILE := vswitch.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
@@ -38,7 +38,18 @@ include ${SDDF}/tools/make/board/common.mk
 
 CLIENT_VM_USERLEVEL_INIT := net_client_init
 
-vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
+ifeq ($(ARCH),aarch64)
+	LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
+	INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
+
+	QEMU_ARCH_ARGS := -machine virt,virtualization=on,secure=off \
+					  -cpu cortex-a53 -smp 4 \
+					  -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
+else
+$(error Unsupported architecture $(ARCH))
+endif
+
+vpath %.c $(SDDF) $(LIBVMM) $(VSWITCH_EXAMPLE)
 
 CFLAGS += \
 	  -Wall \
@@ -48,7 +59,7 @@ CFLAGS += \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
 	  -I$(LIBVMM)/include \
-	  -I$(VIRTIO_EXAMPLE)/include
+	  -I$(VSWITCH_EXAMPLE)/include
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
@@ -147,7 +158,10 @@ client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
-client_vm/vmm.o: $(VIRTIO_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
+client_vm/vmm.o: $(VSWITCH_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+client_vm/guest_arch_init.o: $(CLIENT_VM)/guest_arch_init.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
@@ -159,7 +173,7 @@ client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_M
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
-client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
+client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 # Stop make from deleting intermediate files
@@ -167,15 +181,13 @@ client_vmm.elf: client_vm/vmm.o client_vm/images.o libvmm.a |client_vm
 	client_vm/rootfs.cpio.gz client_vm/images.o client_vm/vmm.o
 
 qemu: $(IMAGE_FILE)
-	[ ${MICROKIT_BOARD} = qemu_virt_aarch64 ]
-	$(QEMU) -machine virt,virtualization=on,secure=off \
-			-cpu cortex-a53 -smp 4 \
+	[ "${MICROKIT_BOARD}" = "qemu_virt_aarch64" ] || [ "${MICROKIT_BOARD}" = "x86_64_generic_vtx" ]
+	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0 \
 			-m size=2G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
-			-device virtio-net-device,netdev=netdev0,bus=virtio-mmio-bus.0 \
+			$(QEMU_NET_ARGS) \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 
 clean::
