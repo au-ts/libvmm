@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 PYTHON ?= python3
+IASL ?= iasl
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
@@ -28,7 +29,8 @@ SDDF_CUSTOM_LIBC := 1
 TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
-	maaxboard
+	maaxboard \
+	x86_64_generic_vtx
 
 SYSTEM_FILE := vswitch.system
 IMAGE_FILE := loader.img
@@ -45,6 +47,12 @@ ifeq ($(ARCH),aarch64)
 	QEMU_ARCH_ARGS := -machine virt,virtualization=on,secure=off \
 					  -cpu cortex-a53 -smp 4 \
 					  -device loader,file=$(IMAGE_FILE),addr=0x70000000,cpu-num=0
+else ifeq ($(ARCH),x86_64)
+	LINUX ?= ad68a1c839149465454d059b32fb2a3593404268-linux
+	INITRD ?= a0b53ecb5c7d68a1c89b843d3ad07508ba9af9a3-rootfs.cpio.gz
+
+	QEMU_ARCH_ARGS := -accel kvm -cpu host,+fsgsbase,+pdpe1gb,+xsaveopt,+xsave,+vmx,+vme -smp 4 \
+					  -kernel sel4_32.elf -initrd $(IMAGE_FILE) -vga none
 else
 $(error Unsupported architecture $(ARCH))
 endif
@@ -55,6 +63,7 @@ CFLAGS += \
 	  -Wall \
 	  -Wno-unused-function \
 	  -DBOARD_$(MICROKIT_BOARD) \
+	  -DSDDF_VIRTIO_PCI_TRANSPORT_SKIP_BUS_CHECK \
 	  -I$(BOARD_DIR)/include \
 	  -I$(SDDF)/include \
 	  -I$(SDDF)/include/microkit \
@@ -69,11 +78,16 @@ include $(SERIAL_COMPONENTS)/serial_components.mk
 include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
 include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
 include $(NET_COMPONENTS)/network_components.mk
+include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
 include $(LIBVMM)/vmm.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
-IMAGES := client_vmm.elf timer_driver.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
+IMAGES = client_vmm.elf timer_driver.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
 	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf network_vswitch.elf
+
+ifeq ($(ARCH),x86_64)
+IMAGES += timer_driver.elf
+endif
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -87,7 +101,11 @@ all: ${IMAGE_FILE}
 
 $(IMAGES): libsddf_util_debug.a
 
+ifeq ($(ARCH),x86_64)
+$(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
+else
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
+endif
 	cp client_vmm.elf client_vmm0.elf
 	cp client_vmm.elf client_vmm1.elf
 	cp client_vmm.elf client_vmm2.elf
@@ -96,8 +114,20 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES) $(DTB) $(CLIENT_DTB)
 	cp network_copy.elf network_copy1.elf
 	cp network_copy.elf network_copy2.elf
 	cp network_copy.elf network_copy3.elf
-	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
 
+ifeq ($(ARCH),x86_64)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+else
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+endif
+
+ifeq ($(ARCH),x86_64)
+	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM0.data client_vmm0.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM1.data client_vmm1.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM2.data client_vmm2.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM3.data client_vmm3.elf
+endif
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
@@ -136,7 +166,11 @@ ${LINUX}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(LINUX).tar.gz -o $(LINUX).tar.gz
 	mkdir -p linux_download_dir
 	tar -xf $@.tar.gz -C linux_download_dir
+ifeq ($(ARCH),aarch64)
 	cp linux_download_dir/${LINUX}/Image ${LINUX}
+else ifeq ($(ARCH),x86_64)
+	cp linux_download_dir/${LINUX}/bzImage ${LINUX}
+endif
 
 ${INITRD}:
 	curl -L ${LIBVMM_DOWNLOADS}/$(INITRD).tar.gz -o $(INITRD).tar.gz
@@ -158,20 +192,34 @@ client_vm/vm.dts: $(CLIENT_VM)/linux.dts $(CLIENT_VM)/$(GIC_DT_OVERLAY) \
 client_vm/vm.dtb: client_vm/vm.dts
 	$(DTC) -q -I dts -O dtb $< > $@
 
+client_vm/vm_dsdt.aml: $(CLIENT_VM)/vswitch_dsdt.dsl |client_vm
+	$(IASL) -p $@ $^
+
 client_vm/vmm.o: $(VSWITCH_EXAMPLE)/client_vmm.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 client_vm/guest_arch_init.o: $(CLIENT_VM)/guest_arch_init.c $(CHECK_FLAGS_BOARD_MD5) |client_vm
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S $(CHECK_FLAGS_BOARD_MD5) \
-	${LINUX} client_vm/vm.dtb client_vm/rootfs.cpio.gz
+ifeq ($(ARCH),aarch64)
+client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S ${LINUX} $(CHECK_FLAGS_BOARD_MD5) \
+	                client_vm/vm.dtb client_vm/rootfs.cpio.gz
 	$(CC) -c -g3 -x assembler-with-cpp \
 					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
 					-DGUEST_DTB_IMAGE_PATH=\"client_vm/vm.dtb\" \
 					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
 					-target $(TARGET) \
 					$(LIBVMM)/tools/package_guest_images.S -o $@
+else ifeq ($(ARCH),x86_64)
+client_vm/images.o: $(LIBVMM)/tools/package_guest_images.S ${LINUX} $(CHECK_FLAGS_BOARD_MD5) \
+	                client_vm/vm_dsdt.aml client_vm/rootfs.cpio.gz
+	$(CC) -c -g3 -x assembler-with-cpp \
+					-DGUEST_KERNEL_IMAGE_PATH=\"${LINUX}\" \
+					-DGUEST_DSDT_AML_PATH=\"client_vm/vm_dsdt.aml\" \
+					-DGUEST_INITRD_IMAGE_PATH=\"client_vm/rootfs.cpio.gz\" \
+					-target $(TARGET) \
+					$(LIBVMM)/tools/package_guest_images.S -o $@
+endif
 
 client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o libvmm.a |client_vm
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
