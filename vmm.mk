@@ -52,13 +52,15 @@ ifeq ($(strip $(SDDF)),)
     $(error libvmm needs the location of the SDDF to build virtIO components)
 endif
 
+LIBVMM_CFLAGS = $(CFLAGS)
+
 # we need ${SDDF} for virtIO; we need ${LIBVMM} for all
 # the libvmm api interfaces
 ifeq ($(findstring ${SDDF}/include, ${CFLAGS}),)
-CFLAGS += -I${SDDF}/include -I${SDDF}/include/microkit
+LIBVMM_CFLAGS += -I${SDDF}/include -I${SDDF}/include/microkit
 endif
 ifeq ($(findstring ${LIBVMM_DIR}/include,${CFLAGS}),)
-CFLAGS += -I${LIBVMM_DIR}/include
+LIBVMM_CFLAGS += -I${LIBVMM_DIR}/include
 endif
 
 ARCH_INDEP_FILES := \
@@ -84,23 +86,23 @@ endif
 CFILES += ${ARCH_INDEP_FILES}
 OBJECTS := $(subst src,libvmm,${CFILES:.c=.o})
 
-CFLAGS += -Wall -Werror -Wno-unused-function
+LIBVMM_CFLAGS += -Wall -Werror -Wno-unused-function
 
 # Enable LLVM UBSAN to trap on detected undefined behaviour for debug configurations
 ifneq ($(findstring debug,$(MICROKIT_CONFIG)),)
-    CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined
+    LIBVMM_CFLAGS += -fsanitize=undefined -fsanitize-trap=undefined
 endif
 
 # Generate dependencies automatically
-CFLAGS += -MD -Wall -Werror -Wno-unused-function
+LIBVMM_CFLAGS += -MD -Wall -Werror -Wno-unused-function
 
-# Force rebuid if CFLAGS changes.
+# Force rebuid if LIBVMM_CFLAGS changes.
 # This will pick up (among other things} changes
 # to Microkit BOARD and CONFIG.
-CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${CFLAGS} | shasum | sed 's/ *-$$//')
+CHECK_LIBVMM_CFLAGS:=.libvmm_cflags.$(shell echo ${LIBVMM_CFLAGS} | shasum | sed 's/ *-$$//')
 .libvmm_cflags.%:
 	rm -f .libvmm_cflags.*
-	echo ${CFLAGS} > $@
+	echo ${LIBVMM_CFLAGS} > $@
 
 # This is ugly, but needed to distinguish  directories in the BUILD area
 # from directories in the source area.
@@ -122,7 +124,7 @@ ${OBJECTS}: directories ${SDDF}/include
 ${OBJECTS}: ${CHECK_LIBVMM_CFLAGS} | $(LIBVMM_LIBC_INCLUDE)
 
 libvmm/%.o: src/%.c
-	${CC} ${CFLAGS} -c -o $@ $<
+	${CC} ${LIBVMM_CFLAGS} -c -o $@ $<
 
 -include ${OBJECTS:.o=.d}
 
