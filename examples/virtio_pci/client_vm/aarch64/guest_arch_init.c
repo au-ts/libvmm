@@ -14,6 +14,7 @@
 #include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
+#include "../../guest_arch_init.h"
 
 /* These GPAs depends on what's defined in your guest DTB. */
 #define GUEST_RAM_START_GPA 0x40000000
@@ -121,7 +122,7 @@ bool virtio_arch_init(void)
 
     if (!virtio_pci_net_init(&virtio_net, 0, 2, ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, 50), &net_rx_queue, &net_tx_queue,
                              (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-                             net_config.tx.id, net_config.mac_addr.addr)) {
+                             net_config.tx.id, net_config.mac_addr.addr, HAVE_CSUM_OFFLOAD)) {
         LOG_VMM_ERR("Failed to initialise virtIO PCI Network device\n");
         return false;
     }

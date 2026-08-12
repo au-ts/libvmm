@@ -210,15 +210,15 @@ static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *n
         virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
     sddf_buffer.len = packet_len;
 
-#ifdef NETWORK_HW_HAS_CHECKSUM
-    /*
-     * The virtIO spec does not have a defined way to tell the guest to send packets without
-     * any checksums. When using native hardware that has TX checksum offloading, this means
-     * each virtIO net packet must be inspected and have the checksum cleared to avoid double
-     * checksumming. We inspect the packet and clear the IP and level 4 checksums.
-     */
-    sanitise_packet_for_hw_csum(dest_buf, sddf_buffer.len);
-#endif
+    if (((struct virtio_net_device *)dev->device_data)->dev_csum_offload) {
+        /*
+        * The virtIO spec does not have a defined way to tell the guest to send packets without
+        * any checksums at all. When using native hardware that has TX checksum offloading, this means
+        * each virtIO net packet must be inspected and have the checksum cleared to avoid double
+        * checksumming. We inspect the packet and clear the IP and level 4 checksums.
+        */
+        sanitise_packet_for_hw_csum(dest_buf, sddf_buffer.len);
+    }
 
     error = net_enqueue_active(&state->tx, sddf_buffer);
     /* This cannot fail as we've checked above */
@@ -353,7 +353,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
                                              irq_routing_info_t irq_routing_info, net_queue_handle_t *rx,
                                              net_queue_handle_t *tx, uintptr_t rx_data, uintptr_t tx_data,
                                              microkit_channel rx_ch, microkit_channel tx_ch,
-                                             uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+                                             uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ], bool csum_offload)
 {
     struct virtio_device *dev = &net_dev->virtio_device;
 
@@ -373,6 +373,7 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
     net_dev->tx_data = (void *)tx_data;
     net_dev->rx_ch = rx_ch;
     net_dev->tx_ch = tx_ch;
+    net_dev->dev_csum_offload = csum_offload;
 
     return dev;
 }
@@ -381,10 +382,10 @@ static struct virtio_device *virtio_net_init(struct virtio_net_device *net_dev, 
 bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_base, uintptr_t region_size,
                           irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
                           uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch, microkit_channel tx_ch,
-                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+                          uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ], bool csum_offload)
 {
     struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_MMIO, irq_routing_info, rx, tx, rx_data,
-                                                tx_data, rx_ch, tx_ch, mac);
+                                                tx_data, rx_ch, tx_ch, mac, csum_offload);
 
     return virtio_mmio_register_device(dev, region_base, region_size, irq_routing_info);
 }
@@ -393,10 +394,10 @@ bool virtio_mmio_net_init(struct virtio_net_device *net_dev, uintptr_t region_ba
 bool virtio_pci_net_init(struct virtio_net_device *net_dev, uint16_t pci_bus, uint16_t pci_dev,
                          irq_routing_info_t irq_routing_info, net_queue_handle_t *rx, net_queue_handle_t *tx,
                          uintptr_t rx_data, uintptr_t tx_data, microkit_channel rx_ch, microkit_channel tx_ch,
-                         uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ])
+                         uint8_t mac[VIRTIO_NET_CONFIG_MAC_SZ], bool csum_offload)
 {
     struct virtio_device *dev = virtio_net_init(net_dev, VIRTIO_TRANSPORT_PCI, irq_routing_info, rx, tx, rx_data,
-                                                tx_data, rx_ch, tx_ch, mac);
+                                                tx_data, rx_ch, tx_ch, mac, csum_offload);
 
     dev->transport.pci.device_id = VIRTIO_PCI_MODERN_BASE_DEVICE_ID + VIRTIO_DEVICE_ID_NET;
     dev->transport.pci.vendor_id = VIRTIO_PCI_VENDOR_ID;
