@@ -15,6 +15,7 @@
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
 #include <sddf/timer/config.h>
+#include "../../guest_arch_init.h"
 
 /* Device slot of the virtio console device on bus 0.
  * Host bridge = 0, ISA bridge = 1 so we must avoid these.
@@ -144,7 +145,7 @@ bool virtio_arch_init(void)
     if (!virtio_pci_net_init(&virtio_net, 0, VIRTIO_NET_PCI_DEVICE_SLOT,
                              X86_IOAPIC_IRQ_ROUTE(0, VIRTIO_NET_PCI_IOAPIC_PIN), &net_rx_queue, &net_tx_queue,
                              (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-                             net_config.tx.id, net_config.mac_addr.addr)) {
+                             net_config.tx.id, net_config.mac_addr.addr, HAVE_CSUM_OFFLOAD)) {
         LOG_VMM_ERR("Failed to initialise virtIO PCI Network device\n");
         return false;
     }

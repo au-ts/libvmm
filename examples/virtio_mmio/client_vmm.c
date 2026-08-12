@@ -12,6 +12,7 @@
 #include <sddf/blk/queue.h>
 #include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
+#include <sddf/network/constants.h>
 #include <sddf/network/config.h>
 #include <sddf/util/printf.h>
 
@@ -142,12 +143,20 @@ void init(void)
     net_queue_init(&net_tx_queue, net_config.tx.free_queue.vaddr, net_config.tx.active_queue.vaddr,
                    net_config.tx.num_buffers);
     net_buffers_init(&net_tx_queue, 0);
+
+    bool csum_offload;
+#ifdef NETWORK_HW_HAS_CHECKSUM
+    csum_offload = true;
+#else
+    csum_offload = false;
+#endif
+
     success = virtio_mmio_net_init(
         &virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
         vmm_config.virtio_mmio_devices[net_vdev_idx].size,
         ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[net_vdev_idx].irq), &net_rx_queue,
         &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-        net_config.tx.id, net_config.mac_addr.addr);
+        net_config.tx.id, net_config.mac_addr.addr, csum_offload);
     assert(success);
 
     /* Finally start the guest */
