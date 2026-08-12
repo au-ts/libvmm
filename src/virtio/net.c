@@ -59,6 +59,12 @@ static bool driver_ok(struct virtio_device *dev)
     return (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER_OK) && (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK);
 }
 
+/* Upstream networking device have checksum offloading? */
+static bool virtio_net_csum_offload(struct virtio_device *dev)
+{
+    return ((struct virtio_net_device *)dev->device_data)->dev_csum_offload;
+}
+
 static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
     LOG_NET("operation: get device features\n");
@@ -71,6 +77,11 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     /* Feature bits 0 to 31 */
     case 0:
         *features = BIT_LOW(VIRTIO_NET_F_MAC);
+        if (virtio_net_csum_offload(dev)) {
+            /* There is no need for the guest to compute full checksums in software
+             * since we will clear it anyways. */
+            *features |= BIT_LOW(VIRTIO_NET_F_CSUM);
+        }
         break;
     /* Features bits 32 to 63 */
     case 1:
@@ -91,7 +102,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     /* Feature bits 0 to 31 */
     case 0:
         /** F_MAC is required */
-        success = (features == BIT_LOW(VIRTIO_NET_F_MAC));
+        success = (features & BIT_LOW(VIRTIO_NET_F_MAC));
         break;
 
     /* Features bits 32 to 63 */
@@ -210,13 +221,9 @@ static void handle_tx_msg(struct virtio_device *dev, uint16_t desc_head, bool *n
         virtio_read_data_from_desc_chain(vq, desc_head, packet_len, sizeof(struct virtio_net_hdr_mrg_rxbuf), dest_buf));
     sddf_buffer.len = packet_len;
 
-    if (((struct virtio_net_device *)dev->device_data)->dev_csum_offload) {
-        /*
-        * The virtIO spec does not have a defined way to tell the guest to send packets without
-        * any checksums at all. When using native hardware that has TX checksum offloading, this means
-        * each virtIO net packet must be inspected and have the checksum cleared to avoid double
-        * checksumming. We inspect the packet and clear the IP and level 4 checksums.
-        */
+    if (virtio_net_csum_offload(dev)) {
+        /* Even for partially checksummed packets we need to clear all checksums,
+         * otherwise it causes double checksumming. */
         sanitise_packet_for_hw_csum(dest_buf, sddf_buffer.len);
     }
 
