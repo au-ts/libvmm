@@ -132,6 +132,8 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         "boards": [
             "qemu_virt_aarch64",
             "maaxboard",
+            # See https://github.com/au-ts/libvmm/issues/387
+            # "x86_64_generic_vtx",
         ],
         "tests_exclude": [],
     },
