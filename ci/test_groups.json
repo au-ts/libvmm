@@ -2,7 +2,7 @@
     "groups": [
         {
             "test_name": "virtIO Network",
-            "test_args": "virtio_network_download,virtio_network_ping,vswitch",
+            "test_args": "virtio_network_https_download,virtio_network_ping,vswitch",
             "artifact_suffix": "virtio-net"
         },
         {
