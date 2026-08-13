@@ -12,7 +12,8 @@
 #define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
 #define GUEST_FLASH_START_GPA 0xffa00000 /* Correspond to SDF */
-#define GUEST_CMDLINE "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE_HW "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8"
+#define GUEST_CMDLINE_QEMU "earlyprintk=serial,0x3f8,115200 debug console=ttyS0,115200 earlycon=serial,0x3f8,115200 loglevel=8 tsc=nowatchdog"
 
 #define SERIAL_IRQ_CH 1
 
@@ -99,8 +100,26 @@ void init(void)
         return;
     }
 
+    char *cmdline;
+    /* Reading a TSC does not cause a VM Exit, but the HPET does. On QEMU, the nested virtualisation overhead
+     * is too high, leading to Linux's watchdog timer complaining:
+     * [    3.568257] clocksource: Watchdog hpet read timed out. Readout sequence took: 57800ns
+     * [    4.064535] clocksource: Watchdog hpet read timed out. Readout sequence took: 62000ns
+     * [    9.064695] watchdog_print_freq_timeout: 7 callbacks suppressed
+     * [    9.066802] clocksource: Watchdog hpet read timed out. Readout sequence took: 217500ns
+     * [    9.568591] clocksource: Watchdog hpet read timed out. Readout sequence took: 72900ns
+     *
+     * So lets turn off the TSC watchdog if the VMM detects that it is running on QEMU. This is sound because
+     * the virtual HPET time is derived from the TSC, and this problem doesn't manifest on hardware.
+     */
+    if (hypervisor_present()) {
+        cmdline = GUEST_CMDLINE_QEMU;
+    } else {
+        cmdline = GUEST_CMDLINE_HW;
+    }
+
     if (!uefi_add_linux_boot((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                             (char *)GUEST_CMDLINE)) {
+                             (char *)cmdline)) {
         LOG_VMM_ERR("Failed to initialise UEFI firmware\n");
         return;
     }
