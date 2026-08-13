@@ -93,4 +93,6 @@ static inline void cpuid(uint32_t leaf, uint32_t subleaf, uint32_t *a, uint32_t 
 {
     __asm__ __volatile__("cpuid" : "=a"(*a), "=b"(*b), "=c"(*c), "=d"(*d) : "a"(leaf), "c"(subleaf));
 }
+
+bool hypervisor_present(void);
 #endif

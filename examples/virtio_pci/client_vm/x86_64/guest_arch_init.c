@@ -65,7 +65,8 @@ extern net_queue_handle_t net_tx_queue;
 static linux_x86_setup_ret_t linux_setup;
 static seL4_VCPUContext initial_regs;
 
-#define GUEST_CMDLINE "debug console=hvc0 loglevel=8"
+#define GUEST_CMDLINE_HW "debug console=hvc0 loglevel=8"
+#define GUEST_CMDLINE_QEMU "debug console=hvc0 loglevel=8 tsc=nowatchdog"
 #define GUEST_RAM_SIZE 0x10000000
 #define GUEST_RAM_HVA 0x20000000
 
@@ -115,8 +116,25 @@ bool guest_arch_init(void)
         return false;
     }
 
+    char *cmdline;
+    /* Reading a TSC does not cause a VM Exit, but the HPET does. On QEMU, the nested virtualisation overhead
+     * is too high, leading to Linux's watchdog timer complaining:
+     * [    3.568257] clocksource: Watchdog hpet read timed out. Readout sequence took: 57800ns
+     * [    4.064535] clocksource: Watchdog hpet read timed out. Readout sequence took: 62000ns
+     * [    9.064695] watchdog_print_freq_timeout: 7 callbacks suppressed
+     * [    9.066802] clocksource: Watchdog hpet read timed out. Readout sequence took: 217500ns
+     * [    9.568591] clocksource: Watchdog hpet read timed out. Readout sequence took: 72900ns
+     *
+     * So lets turn off the TSC watchdog if the VMM detects that it is running on QEMU. This is sound because
+     * the virtual HPET time is derived from the TSC, and this problem doesn't manifest on hardware.
+     */
+    if (hypervisor_present()) {
+        cmdline = GUEST_CMDLINE_QEMU;
+    } else {
+        cmdline = GUEST_CMDLINE_HW;
+    }
     if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
+                            _guest_dsdt_aml, dsdt_aml_size, cmdline, &initial_regs, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return false;
     }
