@@ -373,7 +373,7 @@ static void rx_process(void)
         // memcpy(buf_in_sddf_rx_data, frame, num_bytes);
         // isb_barrier(); uint64_t c1 = rdcnt(); isb_barrier();
         // acc_rx_copy += c1 - c0;
-        pkt_count++; 
+        // pkt_count++; 
 
         // Enqueue it to the active queue
         buffer.len = num_bytes;
