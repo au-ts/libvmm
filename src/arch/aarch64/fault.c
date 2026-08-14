@@ -277,7 +277,11 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
     case HSR_SMC_64_EXCEPTION:
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
+        #ifndef NOWFI
         return guest_wfi_handle(vcpu_id, hsr, &regs);
+        #else
+        return true;  
+        #endif 
     case HSR_SYSREG_64_EXCEPTION:
         return handle_sysreg_64_fault(vcpu_id, hsr, &regs);
     default:

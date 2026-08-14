@@ -20,6 +20,8 @@
 
 #define WFI_MAX_VCPUS 1
 
+#ifndef NOWFI
+
 typedef struct {
     bool suspended;
     guest_timeout_handle_t wake_timeout;
@@ -128,3 +130,5 @@ void guest_wfi_resume_if_suspended(size_t vcpu_id)
 
     seL4_TCB_Resume(BASE_VM_TCB_CAP + vcpu_id);
 }
+
+#endif 

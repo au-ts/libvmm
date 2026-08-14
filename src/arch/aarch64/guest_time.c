@@ -18,6 +18,8 @@
 
 #include <sddf/timer/config.h>
 
+#ifndef NOWFI
+
 extern timer_client_config_t timer_config;
 
 /* ARCH timer reference */
@@ -259,3 +261,5 @@ void guest_time_handle_timer_ntfn(void)
 
     guest_time_service_timeouts();
 }
+
+#endif

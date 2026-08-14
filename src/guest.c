@@ -55,10 +55,12 @@ bool guest_init(arch_guest_init_t init_args)
         LOG_VMM_ERR("Failed to initialise emulated interrupt controller\n");
     }
 
+    #ifndef NOWFI
     /* Initialise timekeeping and wfi support */
     guest_time_init(timer_config.driver_id);
 
     guest_wfi_init();
+    #endif
 
     return success;
 }

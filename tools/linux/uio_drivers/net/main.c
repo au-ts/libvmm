@@ -295,10 +295,10 @@ static void tx_process(void)
         sa.sll_ifindex = ifr.ifr_ifindex;
         sa.sll_halen = ETH_ALEN;
 
-        isb_barrier(); uint64_t s0 = rdcnt(); isb_barrier();
+        // isb_barrier(); uint64_t s0 = rdcnt(); isb_barrier();
         int sent_bytes = sendto(sock_fd, tx_frame, tx_buffer.len, 0, (struct sockaddr *)&sa, sizeof(sa));
-        isb_barrier(); uint64_t s1 = rdcnt(); isb_barrier();
-        acc_sendto += s1 - s0;
+        // isb_barrier(); uint64_t s1 = rdcnt(); isb_barrier();
+        // acc_sendto += s1 - s0;
         if (sent_bytes != tx_buffer.len) {
             perror("tx_process(): sendto()");
             LOG_NET_ERR("TX sent %d != expected %d. qutting.\n", sent_bytes, tx_buffer.len);
@@ -352,10 +352,10 @@ static void rx_process(void)
         char *buf_in_sddf_rx_data = (char *)((uintptr_t)rx_data + offset);
 
         // Write frame out to temp buffer
-        isb_barrier(); uint64_t r0 = rdcnt(); isb_barrier();
+        // isb_barrier(); uint64_t r0 = rdcnt(); isb_barrier();
         int num_bytes = recv(sock_fd, buf_in_sddf_rx_data, sizeof(frame) , 0);
-        isb_barrier(); uint64_t r1 = rdcnt(); isb_barrier();
-        acc_recv += r1 - r0;
+        // isb_barrier(); uint64_t r1 = rdcnt(); isb_barrier();
+        // acc_recv += r1 - r0;
 
         if (num_bytes < 0) {
             perror("rx_process(): recv()");
@@ -387,16 +387,16 @@ static void rx_process(void)
         rx_notify();
     }
 
-    if (pkt_count >= 10000) {
-        uint64_t f = rdfrq();
-        fprintf(logf, "recv=%llu rxcopy=0 txcopy=%llu sendto=%llu\n",
-            (acc_recv    * 1000000000ull / f) / pkt_count,
-            (acc_rx_copy * 1000000000ull / f) / pkt_count,
-            // (acc_tx_copy * 1000000000ull / f) / pkt_count,
-            (acc_sendto  * 1000000000ull / f) / pkt_count);
-        fflush(logf);
-        acc_recv = acc_rx_copy = acc_tx_copy = acc_sendto = pkt_count = 0;
-    }
+    // if (pkt_count >= 10000) {
+    //     uint64_t f = rdfrq();
+    //     fprintf(logf, "recv=%llu rxcopy=0 txcopy=0 sendto=%llu\n",
+    //         (acc_recv    * 1000000000ull / f) / pkt_count,
+    //         // (acc_rx_copy * 1000000000ull / f) / pkt_count,
+    //         // (acc_tx_copy * 1000000000ull / f) / pkt_count,
+    //         (acc_sendto  * 1000000000ull / f) / pkt_count);
+    //     fflush(logf);
+    //     acc_recv = acc_rx_copy = acc_tx_copy = acc_sendto = pkt_count = 0;
+    // }
 }
 
 int main(int argc, char **argv)
