@@ -44,24 +44,24 @@ bool initialise_cpuid(void)
 
     /* Check baseline of basic leafs */
     cpuid(0x1, 0, &a, &b, &c, &d);
-    if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c)) {
+    if (!check_baseline_bits(CPUID_1H_X64_ECX, c)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 ECX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_V2_BASELINE_ECX, c);
-        print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_ECX, c);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_ECX, c);
+        print_missing_baseline_bits(CPUID_1H_X64_ECX, c);
         return false;
     }
-    if (!check_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d)) {
+    if (!check_baseline_bits(CPUID_1H_X64_EDX, d)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x1 EDX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_V2_BASELINE_EDX, d);
-        print_missing_baseline_bits(CPUID_1H_X64_V2_BASELINE_EDX, d);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_1H_X64_EDX, d);
+        print_missing_baseline_bits(CPUID_1H_X64_EDX, d);
         return false;
     }
 
     cpuid(0x7, 0, &a, &b, &c, &d);
-    if (!check_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b)) {
+    if (!check_baseline_bits(CPUID_7H_0_X64_EBX, b)) {
         LOG_VMM_ERR("Missing required features in host CPUID leaf 0x7 EBX\n");
-        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_7H_0_X64_V2_BASELINE_EBX, b);
-        print_missing_baseline_bits(CPUID_7H_0_X64_V2_BASELINE_EBX, b);
+        LOG_VMM_ERR("Baseline: 0x%lx, actual: 0x%x\n", CPUID_7H_0_X64_EBX, b);
+        print_missing_baseline_bits(CPUID_7H_0_X64_EBX, b);
         return false;
     }
 
@@ -110,8 +110,8 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
         vctx->eax = CPUID_1H_EAX;
         vctx->ebx = clflush_line_size_mask;
-        vctx->ecx = CPUID_1H_X64_V2_BASELINE_ECX;
-        vctx->edx = CPUID_1H_X64_V2_BASELINE_EDX;
+        vctx->ecx = CPUID_1H_X64_ECX;
+        vctx->edx = CPUID_1H_X64_EDX;
 
         /* "A value of 1 indicates that the OS has set CR4.OSXSAVE[bit 18]
          * to enable XSETBV/XGETBV instructions to access XCR0 and to support
@@ -133,7 +133,7 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
 
     case 0x7: /* "Structured Extended Feature Flags Enumeration" */
         if (vctx->ecx == 0) {
-            vctx->ebx = CPUID_7H_0_X64_V2_BASELINE_EBX;
+            vctx->ebx = CPUID_7H_0_X64_EBX;
         } else {
             vctx->ebx = 0;
         }
