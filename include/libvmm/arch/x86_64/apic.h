@@ -19,7 +19,9 @@
 #define APIC_VIRT_LEVEL_SOFTWARE 1
 #define APIC_VIRT_LEVEL_APICV    2
 
+#ifndef APIC_VIRT_LEVEL
 #define APIC_VIRT_LEVEL APIC_VIRT_LEVEL_SOFTWARE
+#endif
 
 /* Documents referenced:
  * 1. Intel® 64 and IA-32 Architectures Software Developer’s Manual
