@@ -54,12 +54,12 @@ Ensure mkfs.fat is in your `$PATH`
 On apt based Linux distributions run the following commands:
 ```sh
 sudo apt-get install dosfstools gdisk
-pip3 install sdfgen==0.33.0
+pip3 install sdfgen==0.36.0
 ```
 
 If you get error: `externally-managed-environment` when installing via pip, instead run:
 ```sh
-pip3 install --break-system-packages sdfgen==0.33.0
+pip3 install --break-system-packages sdfgen==0.36.0
 ```
 
 This is sound because the `sdfgen` package does not have any dependencies.
@@ -69,12 +69,12 @@ This is sound because the `sdfgen` package does not have any dependencies.
 On macOS, you can install the dependencies via Homebrew:
 ```sh
 brew install dosfstools
-pip3 install sdfgen==0.33.0
+pip3 install sdfgen==0.36.0
 ```
 
 If you get error: `externally-managed-environment` when installing via pip, instead run:
 ```sh
-pip3 install --break-system-packages sdfgen==0.33.0
+pip3 install --break-system-packages sdfgen==0.36.0
 ```
 
 This is sound because the `sdfgen` package does not have any dependencies.
