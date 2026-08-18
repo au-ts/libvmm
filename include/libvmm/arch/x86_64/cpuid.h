@@ -16,6 +16,10 @@
  * 3. https://github.com/bochs-emu/Bochs/blob/master/bochs/cpu/cpudb/intel/corei7_skylake-x.txt
  */
 
+/* Bit 2 of XCR0 is AVX enable in XSAVE state. If the kernel is built with AVX support
+ * then we will expose a x86-64-v3 CPU, else a x86-64-v2. */
+#define AVX_ENABLED_KERNEL (CONFIG_XSAVE_FEATURE_SET & BIT(2))
+
 /* [1] Table 3-8. Information Returned by CPUID Instruction */
 #define CPUID_0H_EAX_MAX_BASIC_LEAF 0x16
 #define CPUID_0H_GENUINEINTEL_EBX 0x756e6547 /* "GenuineIntel" */
@@ -70,6 +74,7 @@
 
 #define CPUID_7H_00_EBX_FSGSBASE BIT(0)
 #define CPUID_7H_00_EBX_BMI1 BIT(3)
+#define CPUID_7H_00_EBX_AVX2 BIT(5)
 #define CPUID_7H_00_EBX_SMEP BIT(7) // SMEP: Supervisor Mode Execution Protection
 #define CPUID_7H_00_EBX_BMI2 BIT(8)
 #define CPUID_7H_00_EBX_DEPRECATE_FCS_FDS BIT(13) // Deprecates FPU CS and FPU DS values
@@ -101,7 +106,18 @@
  * x2APIC
  * TSC deadline mode for LAPIC timer
  */
-#define CPUID_1H_X64_V2_BASELINE_ECX ( \
+#if AVX_ENABLED_KERNEL
+#define CPUID_1H_ECX_AVX_FEATURES ( \
+    CPUID_1H_ECX_AVX | \
+    CPUID_1H_ECX_F16C | \
+    CPUID_1H_ECX_FMA \
+)
+#else
+#define CPUID_1H_ECX_AVX_FEATURES 0
+#endif
+
+#define CPUID_1H_X64_ECX ( \
+    CPUID_1H_ECX_AVX_FEATURES | \
     CPUID_1H_ECX_SSE3 | \
     CPUID_1H_ECX_PCLMULQDQ | \
     CPUID_1H_ECX_SSSE3 | \
@@ -123,7 +139,7 @@
  * MTRR
  * MCE
  */
-#define CPUID_1H_X64_V2_BASELINE_EDX ( \
+#define CPUID_1H_X64_EDX ( \
     CPUID_1H_EDX_FPU | \
     CPUID_1H_EDX_VME | \
     CPUID_1H_EDX_PAT | \
@@ -155,7 +171,18 @@
  * RDSEED
  * FPU DEPRECATE FCS FDS
  */
-#define CPUID_7H_0_X64_V2_BASELINE_EBX ( \
+#if AVX_ENABLED_KERNEL
+#define CPUID_7H_AVX_FEATURES ( \
+    CPUID_7H_00_EBX_AVX2 | \
+    CPUID_7H_00_EBX_BMI1 | \
+    CPUID_7H_00_EBX_BMI2 \
+)
+#else
+#define CPUID_7H_AVX_FEATURES 0
+#endif
+
+#define CPUID_7H_0_X64_EBX ( \
+    CPUID_7H_AVX_FEATURES | \
     CPUID_7H_00_EBX_FSGSBASE | \
     CPUID_7H_00_EBX_SMEP | \
     CPUID_7H_00_EBX_ADX | \
