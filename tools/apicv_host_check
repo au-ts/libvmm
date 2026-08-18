@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# Copyright 2026, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Check for Microkit-required features:
+if ! grep "flags" /proc/cpuinfo | grep "pat" >/dev/null; then
+    echo "Host CPU does not support Page Table Attribute (PAT)"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "xsave" >/dev/null; then
+    echo "Host CPU does not support XSAVE"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "fpu" >/dev/null; then
+    echo "Host CPU does not support FPU"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "sse" >/dev/null; then
+    echo "Host CPU does not support SSE"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "pdpe1gb" >/dev/null; then
+    echo "Host CPU does not support 1GB Huge Page"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "fsgsbase" >/dev/null; then
+    echo "Host CPU does not support fsgsbase"
+    exit 1
+fi
+
+if ! grep "flags" /proc/cpuinfo | grep "vmx" >/dev/null; then
+    echo "Host CPU does not support Intel Virtualisation extension"
+    exit 1
+fi
+
+# Now check for required VT-x features
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "unrestricted_guest" >/dev/null; then
+    echo "Host CPU does not support Unrestricted Guest"
+    exit 1
+fi
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "vtpr" >/dev/null; then
+    echo "Host CPU does not support Use TPR shadow"
+    exit 1
+fi
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "vapic" >/dev/null; then
+    echo "Host CPU does not support Virtualise APIC accesses"
+    exit 1
+fi
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "vapic_reg" >/dev/null; then
+    echo "Host CPU does not support APIC-register virtualisation"
+    exit 1
+fi
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "vid" >/dev/null; then
+    echo "Host CPU does not support Virtual Interrupt Delivery"
+    exit 1
+fi
+
+if ! grep "vmx flags" /proc/cpuinfo | grep "preemption_timer" >/dev/null; then
+    echo "Host CPU does not support VMX Preemption Timer"
+    exit 1
+fi
+
+echo "Host CPU supports all required features"
+exit 0
