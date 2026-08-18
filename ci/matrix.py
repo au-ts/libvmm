@@ -137,6 +137,17 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
         ],
         "tests_exclude": [],
     },
+    "windows": {
+        "configs": ["debug", "release"],
+        "build_systems": ["make"],
+        "boards": [
+            "x86_64_generic_vtx",
+        ],
+        "tests_exclude": [
+            { "config": "debug" },
+            { "config": "release" },
+        ],
+    },
 }
 
 ## Type Hinting + Sanity Checks ##
