@@ -5,6 +5,7 @@ Source: https://github.com/au-ts/libvmm
 Files:
     .gitmodules
     flake.lock
+    VERSION
     examples/rust/Cargo.lock
     examples/rust/.cargo/config.toml
     examples/rust/aarch64-microkit-minimal.json

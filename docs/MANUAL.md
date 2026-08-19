@@ -4,7 +4,7 @@
 -->
 
 ---
-title: libvmm User Manual (v0.1)
+title: libvmm User Manual (v0.2)
 papersize:
 - a4
 fontsize:
