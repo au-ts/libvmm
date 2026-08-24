@@ -111,14 +111,27 @@ static int guest_time_get_soonest_absolute_expiry_tsc(void)
     return min_idx;
 }
 
+/* Invariant: only called when there is at least 1 timeout that is due. */
 static void guest_time_service_timeouts(void)
 {
+    int serviced = 0;
     uint64_t tsc_now = guest_time_tsc_now();
     for (int i = 0; i < MAX_CONCURRENT_TIMEOUT; i++) {
         if (guest_timekeeping.timeouts[i].valid) {
             if (guest_timekeeping.timeouts[i].absolute_expiry_tsc <= tsc_now) {
                 guest_timekeeping.timeouts[i].valid = false;
                 guest_timekeeping.timeouts[i].callback_fn(guest_timekeeping.timeouts[i].cookie);
+                serviced += 1;
+            }
+        }
+    }
+
+    if (!serviced) {
+        LOG_VMM_ERR("timekeeping error, missed a deadline!\n");
+        LOG_VMM_ERR("current TSC: %lu\n", tsc_now);
+        for (int i = 0; i < MAX_CONCURRENT_TIMEOUT; i++) {
+            if (guest_timekeeping.timeouts[i].valid) {
+                LOG_VMM_ERR("timeout slot %u, expiry %lu\n", i, guest_timekeeping.timeouts[i].absolute_expiry_tsc);
             }
         }
     }
@@ -142,6 +155,15 @@ static void guest_time_set_timeout(uint64_t tsc_delta)
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_VMX_TIMER_ON);
 }
 
+static void vmx_timer_off(void)
+{
+    /* Turn off the VMX-preemption timer. No need for read-clear-write as the kernel will do that for us,
+     * this is only a problem if we set other bits somewhere else in the VMM but we don't right now. */
+    guest_timekeeping.timer_primed = false;
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PIN_EXECUTION_CONTROLS, 0);
+    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_DEFAULT);
+}
+
 static void guest_time_schedule_timeout(void)
 {
     guest_time_user_error_check();
@@ -149,41 +171,21 @@ static void guest_time_schedule_timeout(void)
     /* What is the soonest timeout to be concerned with? */
     int soonest_timeout_idx = guest_time_get_soonest_absolute_expiry_tsc();
     if (soonest_timeout_idx == -1) {
+        vmx_timer_off();
         return;
     }
 
     uint64_t soonest_absolute_expiry_tsc = guest_timekeeping.timeouts[soonest_timeout_idx].absolute_expiry_tsc;
     uint64_t tsc_now = guest_time_tsc_now();
-    uint64_t tsc_ticks_to_timeout = soonest_absolute_expiry_tsc - tsc_now;
 
     if (tsc_now >= soonest_absolute_expiry_tsc) {
         guest_time_set_timeout(0); // Force immediate VM exit upon entry
         return;
     }
 
-    bool timer_need_update = false;
-    if (!guest_timekeeping.timer_primed) {
-        timer_need_update = true;
-    } else {
-        /* There is a pending timeout. How many TSC ticks have passed since the timer was last primed,
-         * and how long until said timeout? */
-        uint64_t elapsed_tsc = tsc_now - guest_timekeeping.tsc_at_timer_prime;
-        uint64_t tsc_ticks_remaining_until_next_timeout = guest_timekeeping.tsc_ticks_to_timeout - elapsed_tsc;
-
-        if (elapsed_tsc >= guest_timekeeping.tsc_ticks_to_timeout) {
-            /* Timer will expire on next VM entry, no need to do anything. */
-            return;
-        }
-
-        if (tsc_ticks_to_timeout < tsc_ticks_remaining_until_next_timeout) {
-            /* Need an earlier timeout. */
-            timer_need_update = true;
-        }
-    }
-
-    if (timer_need_update) {
-        guest_time_set_timeout(tsc_ticks_to_timeout);
-    }
+    // Unconditionally recalculate and reprogram the timer to correct for host-time pauses.
+    uint64_t tsc_ticks_to_timeout = soonest_absolute_expiry_tsc - tsc_now;
+    guest_time_set_timeout(tsc_ticks_to_timeout);
 }
 
 guest_timeout_handle_t guest_time_request_timeout(uint64_t tsc_delta, guest_timeout_callback_t callback_fn,
@@ -224,21 +226,15 @@ bool guest_time_cancel_timeout(guest_timeout_handle_t handle)
         return false;
     }
     guest_timekeeping.timeouts[handle].valid = false;
-
+    vmx_timer_off();
+    guest_time_schedule_timeout();
     return true;
 }
 
 void guest_time_handle_timer_ntfn(void)
 {
     guest_time_user_error_check();
-    guest_timekeeping.timer_primed = false;
-
-    /* Turn off the VMX-preemption timer. No need for read-clear-write as the kernel will do that for us,
-     * this is only a problem if we set other bits somewhere else in the VMM but we don't right now. */
-    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_PIN_EXECUTION_CONTROLS, 0);
-    microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_DEFAULT);
-
+    vmx_timer_off();
     guest_time_service_timeouts();
-
     guest_time_schedule_timeout();
 }
