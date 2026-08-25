@@ -128,10 +128,8 @@
 #define VIRTIO_BLK_DEV_ID "libvmm"
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
-/* If we need to split up the guest's request into multiple chunks for reason explained above then
- * make the chunk equal to a quarter of the data region. This is arbitrarily chosen, can be increased
- * or decreased safely up to the data region size. */
-#define CHUNK_SIZE_BYTES ((SDDF_MAX_DATA_CELLS / 4) * BLK_TRANSFER_SIZE)
+/* Maximum number of segments in a request */
+#define VIRTIO_BLK_SEG_MAX 4
 
 #define LOG_BLOCK_WARN(...)               \
     do                                   \
@@ -150,6 +148,21 @@
 static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
 {
     return (struct virtio_blk_device *)dev->device_data;
+}
+
+/* Maximum size of any single segment, a quarter of the data region size is a safe number,
+ * since we will set VIRTIO_BLK_SEG_MAX to 4. */
+static size_t virtio_blk_size_max(struct virtio_device *dev)
+{
+    return (device_state(dev)->num_sddf_data_cells * BLK_TRANSFER_SIZE) / 4;
+}
+
+/* If we need to split up the guest's request into multiple chunks because it is too large
+ * to be handled in one go then service it in virtio_blk_size_max() chunks. This is only
+ * ever a problem on OVMF because it doesn't negotiate VIRTIO_BLK_SEG_MAX and VIRTIO_BLK_SIZE_MAX .*/
+static size_t virtio_blk_chunk_size_bytes(struct virtio_device *dev)
+{
+    return virtio_blk_size_max(dev);
 }
 
 static void virtio_blk_regs_init(struct virtio_device *dev)
@@ -389,7 +402,7 @@ static bool dispatch_request(struct virtio_device *dev, reqbk_t *reqbk, uint32_t
     uint64_t proposed_bytes = reqbk->bytes_remaining;
     uint64_t sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
     if (reqbk_to_sddf_num_blocks(reqbk, reqbk_to_body_bytes(reqbk)) > SDDF_MAX_DATA_CELLS) {
-        proposed_bytes = MIN(CHUNK_SIZE_BYTES, reqbk->bytes_remaining);
+        proposed_bytes = MIN(virtio_blk_chunk_size_bytes(dev), reqbk->bytes_remaining);
         sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
     }
 
@@ -785,7 +798,7 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
         blk_dev->config.blk_size = storage_info->sector_size;
     }
 
-    blk_dev->config.size_max = VIRTIO_BLK_SIZE_MAX;
+    blk_dev->config.size_max = virtio_blk_size_max(&blk_dev->virtio_device);
     blk_dev->config.seg_max = VIRTIO_BLK_SEG_MAX;
 
     blk_dev->config.topology.physical_block_exp =
@@ -828,6 +841,7 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
     size_t num_sddf_cells = (data_region_size / BLK_TRANSFER_SIZE) < SDDF_MAX_DATA_CELLS
                               ? (data_region_size / BLK_TRANSFER_SIZE)
                               : SDDF_MAX_DATA_CELLS;
+    blk_dev->num_sddf_data_cells = num_sddf_cells;
 
     virtio_blk_config_init(blk_dev);
 
