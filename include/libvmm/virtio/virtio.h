@@ -11,6 +11,9 @@
 #include <libvmm/virtio/pci.h>
 #include <libvmm/virtio/virtq.h>
 
+/* Handling feature bits in the high 32 bits of a 64 bits word */
+#define BIT_HIGH(n) (1ul<<(n - 32 ))
+
 /*
  * Default maximum capacity of each virtIO queue. Currently applies to all
  * virtIO queues for all virtIO devices. In the future, this could be

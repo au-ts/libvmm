@@ -12,9 +12,9 @@
  */
 
 #define SPSR_PMODE_EL1H 5
-#define SPSR_ASYNC_ABORT_MASK_BIT BIT_LOW(8)
-#define SPSR_IRQ_MASK_BIT BIT_LOW(7)
-#define SPSR_FIQ_MASK_BIT BIT_LOW(6)
+#define SPSR_ASYNC_ABORT_MASK_BIT BIT(8)
+#define SPSR_IRQ_MASK_BIT BIT(7)
+#define SPSR_FIQ_MASK_BIT BIT(6)
 
 /* Global state for managing the guest. */
 guest_t guest;

@@ -33,12 +33,11 @@ static void virtio_console_features_print(uint32_t features)
 {
     /* Dump the features given in a human-readable format */
     LOG_CONSOLE("Dumping features (0x%lx):\n", features);
-    LOG_CONSOLE("feature VIRTIO_CONSOLE_F_SIZE set to %s\n",
-                BIT_LOW(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
+    LOG_CONSOLE("feature VIRTIO_CONSOLE_F_SIZE set to %s\n", BIT(VIRTIO_CONSOLE_F_SIZE) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_MULTIPORT set to %s\n",
-                BIT_LOW(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
+                BIT(VIRTIO_CONSOLE_F_MULTIPORT) & features ? "true" : "false");
     LOG_CONSOLE("feature VIRTIO_CONSOLE_F_EMERG_WRITE set to %s\n",
-                BIT_LOW(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
+                BIT(VIRTIO_CONSOLE_F_EMERG_WRITE) & features ? "true" : "false");
 }
 
 static void virtio_console_regs_init(struct virtio_device *dev)

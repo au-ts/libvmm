@@ -209,7 +209,7 @@ static void vgic_redist_reset(struct gic_redist_map *redist, int vcpu_id, bool i
 
     if (is_last_vcpu) {
         // if this is the last vcpu in sequence, mark this redistributor frame as the last.
-        redist->typer |= BIT_LOW(4);
+        redist->typer |= BIT(4);
     }
 
     // set processor number

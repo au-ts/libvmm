@@ -185,11 +185,11 @@ static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uin
     switch (dev->regs.DeviceFeaturesSel) {
     /* feature bits 0 to 31 */
     case 0:
-        *features = BIT_LOW(VIRTIO_BLK_F_FLUSH);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
-        *features = *features | BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
+        *features = BIT(VIRTIO_BLK_F_FLUSH);
+        *features = *features | BIT(VIRTIO_BLK_F_BLK_SIZE);
+        *features = *features | BIT(VIRTIO_BLK_F_SIZE_MAX);
+        *features = *features | BIT(VIRTIO_BLK_F_SEG_MAX);
+        *features = *features | BIT(VIRTIO_BLK_F_TOPOLOGY);
         break;
     /* features bits 32 to 63 */
     case 1:
@@ -211,11 +211,11 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     bool success = false;
 
     uint32_t device_features = 0;
-    device_features |= BIT_LOW(VIRTIO_BLK_F_FLUSH);
-    device_features |= BIT_LOW(VIRTIO_BLK_F_BLK_SIZE);
-    device_features |= BIT_LOW(VIRTIO_BLK_F_SIZE_MAX);
-    device_features |= BIT_LOW(VIRTIO_BLK_F_SEG_MAX);
-    device_features |= BIT_LOW(VIRTIO_BLK_F_TOPOLOGY);
+    device_features |= BIT(VIRTIO_BLK_F_FLUSH);
+    device_features |= BIT(VIRTIO_BLK_F_BLK_SIZE);
+    device_features |= BIT(VIRTIO_BLK_F_SIZE_MAX);
+    device_features |= BIT(VIRTIO_BLK_F_SEG_MAX);
+    device_features |= BIT(VIRTIO_BLK_F_TOPOLOGY);
 
     switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
