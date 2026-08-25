@@ -136,14 +136,6 @@ struct virtio_blk_outhdr {
 
 /* Device (backend) implementation */
 
-/* Restrict the guest driver to only send 4x 32K segment per request at any given time.
- * Thus each request have a maximum size of 128K. Note that the sDDF Block data region size is 512K.
- * This limit is chosen to minimise fragmentation in the data region. */
-
-/* Maximum size of any single segment */
-#define VIRTIO_BLK_SIZE_MAX (BLK_TRANSFER_SIZE * 8)
-/* Maximum number of segments in a request */
-#define VIRTIO_BLK_SEG_MAX 4
 // TODO: instead of hardcoding these, get it from the tool
 /* Maximum number of buffers in sddf data region */
 #define SDDF_MAX_DATA_CELLS 32768
@@ -198,6 +190,7 @@ struct virtio_blk_device {
     reqbk_t reqsbk[SDDF_MAX_QUEUE_CAPACITY];
     /* Data struct that handles allocation and freeing of fixed size data cells
      * in sDDF memory region */
+    size_t num_sddf_data_cells;
     fsmalloc_t fsmalloc;
     bitarray_t fsmalloc_avail_bitarr;
     uint64_t fsmalloc_avail_bitarr_words[BITS_2_WORDS64(SDDF_MAX_DATA_CELLS)];
