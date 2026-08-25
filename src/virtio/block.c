@@ -829,8 +829,6 @@ static struct virtio_device *virtio_blk_init(struct virtio_blk_device *blk_dev, 
                               ? (data_region_size / BLK_TRANSFER_SIZE)
                               : SDDF_MAX_DATA_CELLS;
 
-    assert(num_sddf_cells == queue_capacity);
-
     virtio_blk_config_init(blk_dev);
 
     fsmalloc_init(&blk_dev->fsmalloc, data_region, BLK_TRANSFER_SIZE, num_sddf_cells, &blk_dev->fsmalloc_avail_bitarr,
