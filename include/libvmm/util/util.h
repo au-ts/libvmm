@@ -38,9 +38,6 @@ static void assert_fail(const char *assertion, const char *file, unsigned int li
     __builtin_trap();
 }
 
-#define BIT_LOW(n)  (1ul<<(n))
-#define BIT_HIGH(n) (1ul<<(n - 32 ))
-
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif

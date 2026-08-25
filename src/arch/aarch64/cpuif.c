@@ -82,7 +82,7 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
 static int sysreg_fault_get_rt(uint64_t hsr)
 {
     /* Make sure the instruction length bit == 1 for 32-bits instructions. */
-    if (BIT_LOW(ESR_EL2_IL_BIT)) {
+    if (BIT(ESR_EL2_IL_BIT)) {
         return (hsr >> ISS_SYSREG_RT_SHIFT) & ISS_SYSREG_RT_MASK;
     } else {
         printf("sysreg_fault_get_rt() for 16-bits instructions not implemented.\n");

@@ -146,7 +146,7 @@ static const char *code_to_str(uint32_t code)
 
 static void virtio_snd_respond(struct virtio_device *dev)
 {
-    dev->regs.InterruptStatus = BIT_LOW(0);
+    dev->regs.InterruptStatus = BIT(0);
     bool success = virq_inject(dev->virq);
     assert(success);
 }

@@ -76,11 +76,11 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     switch (dev->regs.DeviceFeaturesSel) {
     /* Feature bits 0 to 31 */
     case 0:
-        *features = BIT_LOW(VIRTIO_NET_F_MAC);
+        *features = BIT(VIRTIO_NET_F_MAC);
         if (virtio_net_csum_offload(dev)) {
             /* There is no need for the guest to compute full checksums in software
              * since we will clear it anyways. */
-            *features |= BIT_LOW(VIRTIO_NET_F_CSUM);
+            *features |= BIT(VIRTIO_NET_F_CSUM);
         }
         break;
     /* Features bits 32 to 63 */
@@ -102,7 +102,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     /* Feature bits 0 to 31 */
     case 0:
         /** F_MAC is required */
-        success = (features & BIT_LOW(VIRTIO_NET_F_MAC));
+        success = (features & BIT(VIRTIO_NET_F_MAC));
         break;
 
     /* Features bits 32 to 63 */
