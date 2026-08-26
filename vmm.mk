@@ -69,6 +69,7 @@ ARCH_INDEP_FILES := \
 			src/virtio/net.c \
 		    src/virtio/virtio.c \
 			src/virtio/pci.c \
+			src/virtio/iterator.c \
 		    src/util/util.c \
 			src/pci.c \
 			src/guest_ram.c \
