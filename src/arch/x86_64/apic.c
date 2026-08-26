@@ -274,11 +274,20 @@ static void lapic_write_tpr(uint8_t tpr)
 {
     uint8_t old_tpr = lapic_read_reg(REG_LAPIC_TPR);
     lapic_write_reg(REG_LAPIC_TPR, tpr);
-    if (tpr != old_tpr && vcpu_can_take_irq(0)) {
-        int vector = get_next_eligible_irq_vector();
-        if (vector != -1) {
-            assert(inject_lapic_irq(0, vector));
-        }
+    if (tpr == old_tpr) {
+        return;
+    }
+
+    if (get_next_eligible_irq_vector() == -1) {
+        return;
+    }
+
+    if (vcpu_can_take_irq(0)) {
+        lapic_maintenance();
+    } else {
+        /* Eligible by priority but IF is clear or we're in a blocking
+         * shadow. Arm the interrupt window so we get another shot. */
+        vcpu_exit_update_ppvc(VMCS_PPVC_WAIT_IRQ_WINDOW);
     }
 }
 
