@@ -67,6 +67,10 @@
 #define VIRTIO_F_ANY_LAYOUT     27
 #endif /* VIRTIO_CONFIG_NO_LEGACY */
 
+/* Negotiating this feature indicates that the driver can use
+ * descriptors with the VIRTQ_DESC_F_INDIRECT flag set */
+#define VIRTIO_F_INDIRECT_DESC 28
+
 /* v1.0 compliant. */
 #define VIRTIO_F_VERSION_1      32
 

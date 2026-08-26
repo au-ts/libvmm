@@ -203,6 +203,7 @@ static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uin
         *features = *features | BIT(VIRTIO_BLK_F_SIZE_MAX);
         *features = *features | BIT(VIRTIO_BLK_F_SEG_MAX);
         *features = *features | BIT(VIRTIO_BLK_F_TOPOLOGY);
+        *features = *features | BIT(VIRTIO_F_INDIRECT_DESC);
         break;
     /* features bits 32 to 63 */
     case 1:
@@ -229,6 +230,7 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     device_features |= BIT(VIRTIO_BLK_F_SIZE_MAX);
     device_features |= BIT(VIRTIO_BLK_F_SEG_MAX);
     device_features |= BIT(VIRTIO_BLK_F_TOPOLOGY);
+    device_features |= BIT(VIRTIO_F_INDIRECT_DESC);
 
     switch (dev->regs.DriverFeaturesSel) {
     /* feature bits 0 to 31 */
