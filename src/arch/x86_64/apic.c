@@ -171,7 +171,7 @@ static void mark_irq_in_service(uint8_t vector)
     assert(irr_reg_off <= REG_LAPIC_IRR_7);
 
     /* Should have been pending! */
-    assert(lapic_read_reg(irr_reg_off) | BIT(irr_idx));
+    assert(lapic_read_reg(irr_reg_off) & BIT(irr_idx));
 
     /* Clear pending bit */
     lapic_write_reg(irr_reg_off, lapic_read_reg(irr_reg_off) & ~BIT(irr_idx));
