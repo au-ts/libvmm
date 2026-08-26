@@ -480,7 +480,7 @@ static void lapic_write_init_count_reg(uint32_t data)
         LOG_APIC("LAPIC timer started, mode 0x%x, irq masked %d\n", (timer_reg >> 17) % 0x3, !!(timer_reg & BIT(16)));
 
         uint64_t delay_ticks = (uint64_t)data * (uint64_t)lapic_dcr_to_divider();
-        LOG_APIC("setting timeout for 0x%lx ticks\n", data);
+        LOG_APIC("setting timeout for 0x%x ticks\n", data);
 
         if (lapic_state.timeout_handle_valid) {
             /* Guest kernel has changed the timeout */
