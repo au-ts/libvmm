@@ -12,6 +12,7 @@
 #include <libvmm/pci.h>
 #include <libvmm/virtio/virtq.h>
 #include <libvmm/virtio/virtio.h>
+#include <libvmm/virtio/iterator.h>
 
 /* These are incorrect if VIRTIO_F_EVENT_IDX feature is negotitated, but we don't support that for now. */
 static inline size_t virtio_desc_ring_size_bytes(struct virtq *virtq)
@@ -52,118 +53,115 @@ struct virtq_used *virtio_get_used_ring(struct virtq *virtq)
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
     assert(vq_handler->ready);
-    struct virtq *virtq = &vq_handler->virtq;
-    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
 
-    uint64_t loop_iter_count = 0;
     uint64_t payload_len = 0;
-    uint16_t curr_desc = desc_head;
+    uint64_t unused, desc_len;
+    virtio_desc_chain_iterator_t iter;
+    if (!virtio_desc_chain_iterator_new(vq_handler, desc_head, &iter)) {
+        LOG_VMM_ERR("failed to create iterator\n");
+        return 0;
+    }
+
     while (true) {
-        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
-            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+        virtio_desc_chain_iterator_status_t status = virtio_desc_chain_iterator_next(&iter, &unused, &desc_len);
+        if (status == VIRTIO_ITERATOR_ERROR) {
             return 0;
+        } else if (status == VIRTIO_ITERATOR_MOVED) {
+            payload_len += desc_len;
+        } else if (status == VIRTIO_ITERATOR_EXHAUSTED) {
+            return payload_len;
         }
-
-        payload_len += desc_ring[curr_desc].len;
-        if (!(desc_ring[curr_desc].flags & VIRTQ_DESC_F_NEXT)) {
-            break;
-        }
-
-        curr_desc = desc_ring[curr_desc].next;
-        loop_iter_count++;
-    };
-    return payload_len;
+    }
 }
 
 bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint64_t bytes_to_read,
                                       uint64_t read_off, char *data)
 {
     assert(vq_handler->ready);
-    struct virtq *virtq = &vq_handler->virtq;
-    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
+
+    virtio_desc_chain_iterator_t iter;
+    if (!virtio_desc_chain_iterator_new(vq_handler, desc_head, &iter)) {
+        LOG_VMM_ERR("failed to create iterator\n");
+        return 0;
+    }
 
     uint64_t current_list_byte = read_off;
     uint64_t end_list_byte = read_off + bytes_to_read;
     uint64_t current_desc_start_byte = 0;
-
-    uint16_t curr_desc = desc_head;
-    uint64_t loop_iter_count = 0;
     while (true) {
-        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
-            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+        uint64_t desc_gpa, desc_len;
+        virtio_desc_chain_iterator_status_t status = virtio_desc_chain_iterator_next(&iter, &desc_gpa, &desc_len);
+        if (status == VIRTIO_ITERATOR_ERROR) {
             return false;
+        } else if (status == VIRTIO_ITERATOR_MOVED) {
+            uint64_t current_desc_end_byte = current_desc_start_byte + desc_len;
+
+            if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
+                /* This descriptor have what we need, copy it over to `data`. */
+                uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
+                uint64_t src_gpa = desc_gpa + (current_list_byte - current_desc_start_byte);
+                void *src_hva = gpa_to_hva(src_gpa, copy_size);
+                char *dest = data + (current_list_byte - read_off);
+
+                memcpy(dest, src_hva, copy_size);
+                current_list_byte += copy_size;
+            }
+
+            current_desc_start_byte += desc_len;
+
+            assert(current_list_byte <= end_list_byte);
+            if (current_list_byte == end_list_byte) {
+                return true;
+            }
+        } else if (status == VIRTIO_ITERATOR_EXHAUSTED) {
+            return current_list_byte == end_list_byte;
         }
-
-        struct virtq_desc *desc = &desc_ring[curr_desc];
-        uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
-
-        if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
-            /* This descriptor have what we need, copy it over to `data`. */
-            uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
-            uint64_t src_gpa = desc->addr + (current_list_byte - current_desc_start_byte);
-            void *src_hva = gpa_to_hva(src_gpa, copy_size);
-            char *dest = data + (current_list_byte - read_off);
-
-            memcpy(dest, src_hva, copy_size);
-            current_list_byte += copy_size;
-        }
-
-        assert(current_list_byte <= end_list_byte);
-        if (current_list_byte == end_list_byte) {
-            break;
-        }
-        loop_iter_count++;
-        current_desc_start_byte += desc->len;
-        curr_desc = desc_ring[curr_desc].next;
     }
-
-    return current_list_byte == end_list_byte;
 }
 
 bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint64_t bytes_to_write,
                                      uint64_t write_off, char *data)
 {
     assert(vq_handler->ready);
-    struct virtq *virtq = &vq_handler->virtq;
-    struct virtq_desc *desc_ring = virtio_get_desc_ring(virtq);
+
+    virtio_desc_chain_iterator_t iter;
+    if (!virtio_desc_chain_iterator_new(vq_handler, desc_head, &iter)) {
+        LOG_VMM_ERR("failed to create iterator\n");
+        return 0;
+    }
 
     uint64_t current_list_byte = write_off;
     uint64_t end_list_byte = write_off + bytes_to_write;
     uint64_t current_desc_start_byte = 0;
-
-    uint16_t curr_desc = desc_head;
-    uint64_t loop_iter_count = 0;
     while (true) {
-        if (loop_iter_count > virtq->num || curr_desc >= virtq->num) {
-            LOG_VMM_ERR("bad descriptor chain starting at %u\n", desc_head);
+        uint64_t desc_gpa, desc_len;
+        virtio_desc_chain_iterator_status_t status = virtio_desc_chain_iterator_next(&iter, &desc_gpa, &desc_len);
+        if (status == VIRTIO_ITERATOR_ERROR) {
             return false;
+        } else if (status == VIRTIO_ITERATOR_MOVED) {
+            uint64_t current_desc_end_byte = current_desc_start_byte + desc_len;
+
+            if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
+                /* This descriptor have what we need, copy `data` to guest RAM. */
+                uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
+                char *src = data + (current_list_byte - write_off);
+                uint64_t dest_gpa = desc_gpa + (current_list_byte - current_desc_start_byte);
+                void *dest_hva = gpa_to_hva(dest_gpa, copy_size);
+
+                memcpy(dest_hva, src, copy_size);
+                current_list_byte += copy_size;
+            }
+
+            current_desc_start_byte += desc_len;
+
+            assert(current_list_byte <= end_list_byte);
+            if (current_list_byte == end_list_byte) {
+                return true;
+            }
+        } else if (status == VIRTIO_ITERATOR_EXHAUSTED) {
+            return current_list_byte == end_list_byte;
         }
-
-        struct virtq_desc *desc = &desc_ring[curr_desc];
-        uint64_t current_desc_end_byte = current_desc_start_byte + desc->len;
-
-        if (current_list_byte >= current_desc_start_byte && current_list_byte < current_desc_end_byte) {
-            /* This descriptor have what we need, copy `data` to guest RAM. */
-            uint64_t copy_size = MIN(current_desc_end_byte, end_list_byte) - current_list_byte;
-            char *src = data + (current_list_byte - write_off);
-            uint64_t dest_gpa = desc->addr + (current_list_byte - current_desc_start_byte);
-            void *dest_hva = gpa_to_hva(dest_gpa, copy_size);
-
-            memcpy(dest_hva, src, copy_size);
-            current_list_byte += copy_size;
-        }
-
-        assert(current_list_byte <= end_list_byte);
-        if (current_list_byte == end_list_byte) {
-            break;
-        }
-
-        loop_iter_count++;
-        current_desc_start_byte += desc->len;
-        curr_desc = desc_ring[curr_desc].next;
     }
-
-    return true;
 }
 
 bool virtio_virtq_peek_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
