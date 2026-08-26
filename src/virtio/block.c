@@ -128,8 +128,8 @@
 #define VIRTIO_BLK_DEV_ID "libvmm"
 #define SECTORS_IN_TRANSFER_WINDOW (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE)
 
-/* Maximum number of segments in a request */
-#define VIRTIO_BLK_SEG_MAX 4
+/* Maximum size of any single segment */
+#define VIRTIO_BLK_SIZE_MAX 4096
 
 #define LOG_BLOCK_WARN(...)               \
     do                                   \
@@ -150,19 +150,19 @@ static inline struct virtio_blk_device *device_state(struct virtio_device *dev)
     return (struct virtio_blk_device *)dev->device_data;
 }
 
-/* Maximum size of any single segment, a quarter of the data region size is a safe number,
- * since we will set VIRTIO_BLK_SEG_MAX to 4. */
-static size_t virtio_blk_size_max(struct virtio_device *dev)
+/* Maximum number of segments in a request, a quarter of the data region should be a safe number.
+ * But virtio-win's viostor seems to misbehave if this number is creater than the queue size...  */
+static size_t virtio_blk_seg_max(struct virtio_device *dev)
 {
-    return (device_state(dev)->num_sddf_data_cells * BLK_TRANSFER_SIZE) / 4;
+    return MIN(VIRTIO_DEFAULT_QUEUE_SIZE, (device_state(dev)->num_sddf_data_cells) / 4);
 }
 
 /* If we need to split up the guest's request into multiple chunks because it is too large
- * to be handled in one go then service it in virtio_blk_size_max() chunks. This is only
+ * to be handled in one go then service it in chunks. This is only
  * ever a problem on OVMF because it doesn't negotiate VIRTIO_BLK_SEG_MAX and VIRTIO_BLK_SIZE_MAX .*/
 static size_t virtio_blk_chunk_size_bytes(struct virtio_device *dev)
 {
-    return virtio_blk_size_max(dev);
+    return ((device_state(dev)->num_sddf_data_cells) / 4) * BLK_TRANSFER_SIZE;
 }
 
 static void virtio_blk_regs_init(struct virtio_device *dev)
@@ -522,7 +522,11 @@ static bool handle_client_requests(struct virtio_device *dev, int *num_reqs_cons
              * or the guest was malicious. The former is more likely so we
              * will keep the assert for now to catch such issue for further
              * investigations. */
-            assert(state->reqsbk[req_id].bytes_remaining % VIRTIO_BLK_SECTOR_SIZE == 0);
+            if (state->reqsbk[req_id].bytes_remaining % VIRTIO_BLK_SECTOR_SIZE) {
+                LOG_BLOCK_ERR("request size %lu is not multiple of sector size\n",
+                              state->reqsbk[req_id].bytes_remaining);
+                assert(false);
+            }
 
             if (!dispatch_request(dev, &state->reqsbk[req_id], req_id)) {
                 /* Create backpressure, don't consume this request until the block virtualiser gives us
@@ -794,20 +798,16 @@ static inline void virtio_blk_config_init(struct virtio_blk_device *blk_dev)
     blk_storage_info_t *storage_info = blk_dev->storage_info;
 
     blk_dev->config.capacity = (BLK_TRANSFER_SIZE / VIRTIO_BLK_SECTOR_SIZE) * storage_info->capacity;
-    if (storage_info->block_size != 0) {
-        blk_dev->config.blk_size = storage_info->block_size * BLK_TRANSFER_SIZE;
-    } else {
-        blk_dev->config.blk_size = storage_info->sector_size;
-    }
+    blk_dev->config.blk_size = VIRTIO_BLK_SECTOR_SIZE;
 
-    blk_dev->config.size_max = virtio_blk_size_max(&blk_dev->virtio_device);
-    blk_dev->config.seg_max = VIRTIO_BLK_SEG_MAX;
+    blk_dev->config.size_max = VIRTIO_BLK_SIZE_MAX;
+    blk_dev->config.seg_max = virtio_blk_seg_max(&blk_dev->virtio_device);
 
     blk_dev->config.topology.physical_block_exp =
         3; // 2^3 = 8 logical blocks in 1 physical block (sDDF transfer window)
     blk_dev->config.topology.alignment_offset = 0;
     blk_dev->config.topology.min_io_size = 8;
-    blk_dev->config.topology.opt_io_size = blk_dev->config.topology.min_io_size;
+    blk_dev->config.topology.opt_io_size = 0;
 }
 
 static virtio_device_funs_t functions = {
