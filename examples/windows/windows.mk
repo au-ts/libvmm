@@ -158,9 +158,9 @@ qemu: $(IMAGE_FILE) ${GUEST_OS_DISK}
 			-display sdl \
 			-serial mon:stdio \
 			-m size=9G \
-			-global virtio-mmio.force-legacy=false \
-			-drive file=${GUEST_OS_DISK},format=raw,if=none,id=hd \
-			$(QEMU_BLK_ARGS) \
+			-object iothread,id=io0 \
+			-drive file=${GUEST_OS_DISK},format=raw,if=none,id=hd,cache=writeback,aio=io_uring \
+			-device virtio-blk-pci,drive=hd,addr=0x3.0,iothread=io0,disable-legacy=on \
 			$(QEMU_NET_ARGS) \
 			-netdev user,id=netdev0,hostfwd=tcp::1236-:1236,hostfwd=tcp::1237-:1237,hostfwd=udp::1235-:1235 \
 			-device bochs-display,addr=0x4.0,xres=1920,yres=1080
