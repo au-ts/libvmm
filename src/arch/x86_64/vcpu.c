@@ -410,6 +410,12 @@ uint64_t vcpu_exit_get_cr3(void)
     return vcpu_fault_state.cr3;
 }
 
+uint64_t vcpu_exit_get_gpa(void)
+{
+    assert(vcpu_fault_state.valid);
+    return vcpu_fault_state.gpa;
+}
+
 seL4_VCPUContext *vcpu_exit_get_context(void)
 {
     assert(vcpu_fault_state.valid);

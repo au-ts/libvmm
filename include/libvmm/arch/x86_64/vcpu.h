@@ -85,6 +85,7 @@ uint64_t vcpu_exit_get_instruction_len(void);
 uint64_t vcpu_exit_get_rflags(void);
 uint64_t vcpu_exit_get_interruptability(void);
 uint64_t vcpu_exit_get_cr3(void);
+uint64_t vcpu_exit_get_gpa(void);
 seL4_VCPUContext *vcpu_exit_get_context(void);
 void vcpu_exit_prepare_resume(uint64_t rip_additive);
 
