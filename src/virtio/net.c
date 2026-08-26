@@ -77,6 +77,7 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
     /* Feature bits 0 to 31 */
     case 0:
         *features = BIT(VIRTIO_NET_F_MAC);
+        *features |= BIT(VIRTIO_F_INDIRECT_DESC);
         if (virtio_net_csum_offload(dev)) {
             /* There is no need for the guest to compute full checksums in software
              * since we will clear it anyways. */
