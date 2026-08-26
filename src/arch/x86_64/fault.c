@@ -266,7 +266,7 @@ bool fault_register_ept_exception_handler(uintptr_t base, size_t size, ept_excep
 
 static bool handle_ept_fault(seL4_VCPUContext *vctx, seL4_Word qualification, decoded_instruction_ret_t decoded_ins)
 {
-    uint64_t addr = microkit_mr_get(SEL4_VMENTER_FAULT_GUEST_PHYSICAL_MR);
+    uint64_t addr = vcpu_exit_get_gpa();
 
     if (addr >= IOAPIC_GPA && addr < IOAPIC_GPA + IOAPIC_SIZE) {
         return ioapic_fault_handle(vctx, addr - IOAPIC_GPA, qualification, decoded_ins);
