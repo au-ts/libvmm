@@ -216,7 +216,7 @@ def generate(
     )
     blk_system = Sddf.Blk(sdf, None, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
-    blk_system.add_client(vmm_client0, partition=partition)
+    blk_system.add_client(vmm_client0, partition=partition, data_size=0x8000000) # 128MiB available for block reqs
     pds = [blk_driver, blk_virt]
     for pd in pds:
         sdf.add_pd(pd)
