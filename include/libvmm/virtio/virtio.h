@@ -19,7 +19,7 @@
  * virtIO queues for all virtIO devices. In the future, this could be
  * configurable but our use-cases have not required it yet.
  */
-#define VIRTIO_DEFAULT_QUEUE_SIZE 128
+#define VIRTIO_DEFAULT_QUEUE_SIZE 512
 
 /*
  * All terminology used and functionality of the virtIO device implementation
