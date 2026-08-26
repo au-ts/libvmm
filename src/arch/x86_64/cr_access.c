@@ -152,6 +152,8 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
             bool success = lapic_read_fault_handle(REG_LAPIC_TPR, &data);
             write_to_read_operand(vctx, qualification, (data >> 4) & 0xF);
             return success;
+        } else {
+            return false;
         }
     }
 #endif
@@ -188,6 +190,8 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
             /* It is architecturally impossible to get a VM Exit for CR0 read.
              * See "26.1.3 Instructions That Cause VM Exits Conditionally" of [1] */
             assert(false);
+        } else {
+            return false;
         }
     }
     default:
