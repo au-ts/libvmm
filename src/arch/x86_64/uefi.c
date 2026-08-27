@@ -21,6 +21,7 @@
 #include <sddf/util/util.h>
 
 extern guest_t guest;
+uint16_t cpu_count = 1; // @billn revisit for SMP
 
 /* Document referenced:
  * https://github.com/tianocore/edk2/blob/edk2-stable202605/OvmfPkg/README */
@@ -126,6 +127,12 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
     /* Initialise the fw cfg device to give the E820 memory map, ACPI tables and other important
      * things to OVMF. */
     if (!initialise_fw_cfg()) {
+        return false;
+    }
+
+    /* CPU count, read in PlatformMaxCpuCountInitialization() in PlatformInitLib */
+    if (!fw_cfg_add_file(QEMU_FW_CFG_ITEM_SMP_CPU_COUNT, (uint8_t *)&cpu_count, sizeof(uint16_t))) {
+        LOG_VMM_ERR("Failed to add CPU count file to fw cfg\n");
         return false;
     }
 
