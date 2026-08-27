@@ -15,6 +15,10 @@
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
 #include <sddf/timer/config.h>
+#include <sddf/timer/client.h>
+
+#include <libvmm/uefi/fw_cfg.h>
+#include <libvmm/uefi/ramfb.h>
 
 #include <guest_arch_init.h>
 
@@ -32,7 +36,7 @@
 #define VIRTIO_BLK_PCI_IOAPIC_PIN 17
 
 /* Data from sdfgen */
-__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
+extern timer_client_config_t timer_config;
 extern blk_client_config_t blk_config;
 extern net_client_config_t net_config;
 extern vmm_config_t vmm_config;
@@ -86,6 +90,15 @@ extern net_queue_handle_t net_tx_queue;
 /* Matches DSDT */
 #define PCI_MMIO_APERATURE_GPA 0xE0000000
 #define PCI_MMIO_APERATURE_SIZE 0x10000000
+
+static ramfb_config_t ramfb_fwcfg_file = (ramfb_config_t) {
+    .address = __builtin_bswap64(0x4000000000),
+    .four_cc = __builtin_bswap32(RAMFB_4CC_XRGB8888),
+    .flags = 0,
+    .width = __builtin_bswap32(640),
+    .height = __builtin_bswap32(480),
+    .stride = __builtin_bswap32(2560),
+};
 
 bool guest_arch_init(void)
 {
@@ -146,8 +159,11 @@ bool guest_arch_init(void)
     assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    /* Pass through QEMU Bochs display */
-    assert(register_qemu_bochs_display_on_pci_bus(0, DISPLAY_PCI_DEVICE_SLOT, 0));
+    // /* Pass through QEMU Bochs display */
+    // assert(register_qemu_bochs_display_on_pci_bus(0, DISPLAY_PCI_DEVICE_SLOT, 0));
+
+    assert(fw_cfg_add_named_file("etc/ramfb", strlen("etc/ramfb"), (uint8_t *)&ramfb_fwcfg_file,
+                                 sizeof(ramfb_fwcfg_file)));
 
     /* Pass through PS2 keyboard and mouse */
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, PS2_DATA_IO_PORT_ID, PS2_DATA_IO_PORT_ADDR,
@@ -159,6 +175,9 @@ bool guest_arch_init(void)
     assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(PS2_SECOND_IRQ_IOAPIC_CHIP, PS2_SECOND_IRQ_IOAPIC_PIN),
                                      PS2_SECOND_IRQ_ID));
     microkit_irq_ack(PS2_SECOND_IRQ_ID);
+
+    /* fb refresh tick */
+    sddf_timer_set_timeout(timer_config.driver_id, NS_IN_S / 30);
 
     return true;
 }
@@ -174,13 +193,13 @@ bool virtio_arch_init(void)
         return false;
     }
 
-    if (!virtio_pci_net_init(&virtio_net, 0, VIRTIO_NET_PCI_DEVICE_SLOT,
-                             X86_IOAPIC_IRQ_ROUTE(0, VIRTIO_NET_PCI_IOAPIC_PIN), &net_rx_queue, &net_tx_queue,
-                             (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-                             net_config.tx.id, net_config.mac_addr.addr, HAVE_CSUM_OFFLOAD)) {
-        LOG_VMM_ERR("Failed to initialise virtIO PCI Network device\n");
-        return false;
-    }
+    // if (!virtio_pci_net_init(&virtio_net, 0, VIRTIO_NET_PCI_DEVICE_SLOT,
+    //                          X86_IOAPIC_IRQ_ROUTE(0, VIRTIO_NET_PCI_IOAPIC_PIN), &net_rx_queue, &net_tx_queue,
+    //                          (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
+    //                          net_config.tx.id, net_config.mac_addr.addr, HAVE_CSUM_OFFLOAD)) {
+    //     LOG_VMM_ERR("Failed to initialise virtIO PCI Network device\n");
+    //     return false;
+    // }
 
     return true;
 }

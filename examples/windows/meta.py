@@ -132,6 +132,63 @@ def x86_virtio_blk(blk_driver):
     blk_driver.add_irq(virtio_blk_irq)
 
 
+def x86_nvme(blk_driver: ProtectionDomain, timer_system: Sddf.Timer):
+    dma_regions = [
+        ("nvme_admin_sq", 0x5EDF0000, 0x20100000, 0x1000),
+        ("nvme_admin_cq", 0x5EDF1000, 0x20101000, 0x1000),
+        ("nvme_io_sq", 0x5EDF2000, 0x20102000, 0x1000),
+        ("nvme_io_cq", 0x5EDF3000, 0x20103000, 0x1000),
+        ("nvme_identify", 0x5EDF4000, 0x20104000, 0x2000),
+        ("nvme_prp_list", 0x5F800000, 0x20200000, 0x80000),
+    ]
+
+    for name, paddr, vaddr, size in dma_regions:
+        mr = SystemDescription.MemoryRegion(sdf, name, size, paddr=paddr)
+        sdf.add_mr(mr)
+        blk_driver.add_map(SystemDescription.Map(mr, vaddr, "rw", cached=False))
+
+    # BAR0: MMIO (always uncached)
+    nvme_bar0_mr = SystemDescription.MemoryRegion(
+        sdf, "nvme_bar0", 0x4000, paddr=0x90400000
+    )
+
+    nvme_irq = SystemDescription.IrqIoapic(
+        ioapic_id=0,
+        pin=19,
+        vector=1,
+        id=17,
+        trigger=IrqIoapic.Trigger.LEVEL,
+        polarity=IrqIoapic.Polarity.ACTIVELOW,
+    )
+
+    sdf.add_mr(nvme_bar0_mr)
+    blk_driver.add_map(
+        SystemDescription.Map(nvme_bar0_mr, 0x20000000, "rw", cached=False)
+    )
+
+    blk_driver.add_irq(nvme_irq)
+
+    # IO ports
+    pci_config_addr_port = SystemDescription.IoPort(0xCF8, 4, 1)
+    blk_driver.add_ioport(pci_config_addr_port)
+
+    pci_config_data_port = SystemDescription.IoPort(0xCFC, 4, 2)
+    blk_driver.add_ioport(pci_config_data_port)
+
+    timer_system.add_client(blk_driver)
+
+
+def x86_bios_framebuffer(vmm: ProtectionDomain, vm: VirtualMachine):
+    fb_mr = MemoryRegion(
+        sdf,
+        name="framebuffer",
+        size=0x200000,
+        paddr=0x4000000000,
+    )
+    sdf.add_mr(fb_mr)
+    vmm.add_map(Map(fb_mr, vaddr=0x4000000000, perms="rwx"))
+
+
 def x86_ps2_keyboard_mouse(vmm: ProtectionDomain):
     # PS/2 KB+M passthrough
     # @billn, the ps2 data port is only 1 byte, but GRUB seems to hang if we only pass through
@@ -174,6 +231,7 @@ def x86_apicv(vmm: ProtectionDomain, vm: VirtualMachine):
 def generate(
     sdf_file: str,
     output_dir: str,
+    platform: str,
 ):
     # Client VM
     # We build the VMM with LLVM UBSAN to detect UB which can use more than the default amount of
@@ -221,7 +279,29 @@ def generate(
     for pd in pds:
         sdf.add_pd(pd)
 
-    if board.name == "x86_64_generic_vtx":
+    guest_ram_low_mr = MemoryRegion(sdf, name="guest_ram_low", size=0xD000_0000)
+    sdf.add_mr(guest_ram_low_mr)
+    vmm_client0.add_map(Map(guest_ram_low_mr, vaddr=0x20000000, perms="rw"))
+    vm_client0.add_map(Map(guest_ram_low_mr, vaddr=0x0, perms="rwx"))
+
+    guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x2_0000_0000)
+    sdf.add_mr(guest_ram_high_mr)
+    vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x1_0000_0000, perms="rw"))
+    vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x1_0000_0000, perms="rwx"))
+
+    guest_flash_mr = MemoryRegion(sdf, name="guest_flash", size=0x60_0000)
+    sdf.add_mr(guest_flash_mr)
+    vmm_client0.add_map(Map(guest_flash_mr, vaddr=0x10000000, perms="rw"))
+    # Flash's GPA + size == top of 4G
+    vm_client0.add_map(Map(guest_flash_mr, vaddr=0xFFA00000, perms="rwx"))
+
+    timer_driver = ProtectionDomain("timer_driver", "timer_driver.elf", priority=254)
+    timer_system = Sddf.Timer(sdf, None, timer_driver)
+    timer_system.add_client(vmm_client0)
+    sdf.add_pd(timer_driver)
+    add_x86_hpet(sdf, timer_driver)
+
+    if platform == "qemu":
         x86_serial(vmm_client0)
         x86_virtio_net(eth_driver)
         x86_virtio_blk(blk_driver)
@@ -229,34 +309,19 @@ def generate(
         x86_ps2_keyboard_mouse(vmm_client0)
         x86_apicv(vmm_client0, vm_client0)
 
-        # 8GB RAM
+    elif platform == "vb105":
+        x86_serial(vmm_client0)
+        x86_nvme(blk_driver, timer_system)
+        x86_ps2_keyboard_mouse(vmm_client0)
+        x86_apicv(vmm_client0, vm_client0)
+        x86_bios_framebuffer(vmm_client0, vm_client0)
 
-        guest_ram_low_mr = MemoryRegion(sdf, name="guest_ram_low", size=0xD000_0000)
-        sdf.add_mr(guest_ram_low_mr)
-        vmm_client0.add_map(Map(guest_ram_low_mr, vaddr=0x20000000, perms="rw"))
-        vm_client0.add_map(Map(guest_ram_low_mr, vaddr=0x0, perms="rwx"))
+    else:
+        print(f"unknown platform {platform}")
+        exit(1)
 
-        guest_ram_high_mr = MemoryRegion(sdf, name="guest_ram_high", size=0x1_2000_0000)
-        sdf.add_mr(guest_ram_high_mr)
-        vmm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x1_0000_0000, perms="rw"))
-        vm_client0.add_map(Map(guest_ram_high_mr, vaddr=0x1_0000_0000, perms="rwx"))
-
-        guest_flash_mr = MemoryRegion(sdf, name="guest_flash", size=0x60_0000)
-        sdf.add_mr(guest_flash_mr)
-        vmm_client0.add_map(Map(guest_flash_mr, vaddr=0x10000000, perms="rw"))
-        # Flash's GPA + size == top of 4G
-        vm_client0.add_map(Map(guest_flash_mr, vaddr=0xFFA00000, perms="rwx"))
-
-        timer_driver = ProtectionDomain(
-            "timer_driver", "timer_driver.elf", priority=254
-        )
-        timer_system = Sddf.Timer(sdf, None, timer_driver)
-        timer_system.add_client(vmm_client0)
-        sdf.add_pd(timer_driver)
-        add_x86_hpet(sdf, timer_driver)
-        assert timer_system.connect()
-        assert timer_system.serialise_config(output_dir)
-
+    assert timer_system.connect()
+    assert timer_system.serialise_config(output_dir)
     assert blk_system.connect()
     assert blk_system.serialise_config(output_dir)
     assert net_system.connect()
@@ -274,6 +339,7 @@ if __name__ == "__main__":
     parser.add_argument("--client-dtb", required=False)
     parser.add_argument("--sddf", required=True)
     parser.add_argument("--board", required=True, choices=[b.name for b in BOARDS])
+    parser.add_argument("--platform", required=True, choices=["qemu", "vb105"])
     parser.add_argument("--output", required=True)
     parser.add_argument("--sdf", required=True)
     parser.add_argument("--partition")
@@ -294,4 +360,4 @@ if __name__ == "__main__":
 
     sddf = Sddf(args.sddf)
 
-    generate(args.sdf, args.output)
+    generate(args.sdf, args.output, args.platform)

@@ -110,6 +110,7 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
             result = 0;
             break;
         default:
+            LOG_VMM("unhandled rdmsr 0x%lx\n", vctx->ecx);
             return false;
         }
     }
@@ -181,6 +182,7 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
             }
             break;
         default:
+            LOG_VMM("unhandled wrmsr 0x%lx\n", vctx->ecx);
             return false;
         }
     }

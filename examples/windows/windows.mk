@@ -50,6 +50,14 @@ else
 $(error Unsupported architecture $(ARCH))
 endif
 
+ifeq ($(PLATFORM),qemu)
+	BLOCK_DRIVER = virtio/pci
+else ifeq ($(PLATFORM),vb105)
+	BLOCK_DRIVER = nvme
+else
+$(error Unsupported platform $(PLATFORM))
+endif
+
 vpath %.c $(SDDF) $(LIBVMM) $(WINDOWS_EXAMPLE)
 
 CFLAGS += \
@@ -72,7 +80,7 @@ include $(SDDF)/util/util.mk
 include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
 include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
 include $(SERIAL_COMPONENTS)/serial_components.mk
-include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
+include ${SDDF}/drivers/blk/${BLOCK_DRIVER}/blk_driver.mk
 include $(BLK_COMPONENTS)/blk_components.mk
 include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
 include $(NET_COMPONENTS)/network_components.mk
@@ -97,7 +105,7 @@ all: ${IMAGE_FILE}
 $(IMAGES): libsddf_util_debug.a
 
 $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
-	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG) --platform $(PLATFORM)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
 	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM.data client_vmm.elf
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
@@ -111,6 +119,10 @@ $(SYSTEM_FILE): $(METAPROGRAM) $(IMAGES)
 	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
 	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
 	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM.data client_vmm.elf
+ifeq ($(PLATFORM),vb105)
+	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
+	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
+endif
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \

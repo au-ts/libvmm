@@ -403,8 +403,8 @@ static bool dispatch_request(struct virtio_device *dev, reqbk_t *reqbk, uint32_t
      * so once the request is chunked it stays chunked. */
     uint64_t proposed_bytes = reqbk->bytes_remaining;
     uint64_t sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
-    if (reqbk_to_sddf_num_blocks(reqbk, reqbk_to_body_bytes(reqbk)) > SDDF_MAX_DATA_CELLS) {
-        proposed_bytes = MIN(virtio_blk_chunk_size_bytes(dev), reqbk->bytes_remaining);
+    if (reqbk_to_sddf_num_blocks(reqbk, reqbk_to_body_bytes(reqbk)) > 32) {
+        proposed_bytes = MIN(32*4096, reqbk->bytes_remaining);
         sddf_num_blocks = reqbk_to_sddf_num_blocks(reqbk, proposed_bytes);
     }
 

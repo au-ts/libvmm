@@ -13,10 +13,13 @@
 #include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
+#include <sddf/timer/config.h>
+#include <sddf/timer/client.h>
 #include <sddf/util/printf.h>
 #include "guest_arch_init.h"
 
 /* Data from sdfgen */
+__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
 __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
@@ -72,6 +75,8 @@ void init(void)
     LOG_VMM("%s is ready\n", microkit_name);
 }
 
+#define HOST_FB_VADDR 0x4000000000
+
 void notified(microkit_channel ch)
 {
     if (ch == blk_config.virt.id) {
@@ -80,6 +85,10 @@ void notified(microkit_channel ch)
         virtio_net_handle_rx(&virtio_net);
     } else if (ch == net_config.tx.id) {
         /* Nothing to do */
+    } else if (ch == timer_config.driver_id) {
+        memcpy((void *) HOST_FB_VADDR, gpa_to_hva(0xCEE55000, 1), 640 * 480 * 4);
+        /* fb refresh tick */
+        sddf_timer_set_timeout(timer_config.driver_id, NS_IN_S / 10);
     } else {
         virq_handle_passthrough(ch);
     }
