@@ -486,6 +486,10 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     }
 #endif
 
+    /* The VMX preemption timer doesn't count down while the VMM is running.
+     * So we must correct for the time that the VMM stole away from the VM. */
+    guest_time_maintenance();
+
     if (success) {
         unsigned rip_additive = 0;
         if (!fault_is_trap_like(f_reason)) {

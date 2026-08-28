@@ -32,5 +32,7 @@ guest_timeout_handle_t guest_time_request_timeout(uint64_t tsc_delta, guest_time
 
 bool guest_time_cancel_timeout(guest_timeout_handle_t handle);
 
-/* Call this in your VMM's `notified()`! */
 void guest_time_handle_timer_ntfn(void);
+
+/* Recompute the next time out based on the current wall clock time. */
+void guest_time_maintenance(void);
