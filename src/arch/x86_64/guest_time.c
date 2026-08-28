@@ -164,7 +164,7 @@ static void vmx_timer_off(void)
     microkit_vcpu_x86_write_vmcs(0, VMX_CONTROL_EXIT_CONTROLS, VMCS_VEXC_DEFAULT);
 }
 
-static void guest_time_schedule_timeout(void)
+void guest_time_maintenance(void)
 {
     guest_time_user_error_check();
 
@@ -211,7 +211,7 @@ guest_timeout_handle_t guest_time_request_timeout(uint64_t tsc_delta, guest_time
     guest_timekeeping.timeouts[free_slot].valid = true;
 
     /* Prime the timer if needed. */
-    guest_time_schedule_timeout();
+    guest_time_maintenance();
     return free_slot;
 }
 
@@ -227,7 +227,7 @@ bool guest_time_cancel_timeout(guest_timeout_handle_t handle)
     }
     guest_timekeeping.timeouts[handle].valid = false;
     vmx_timer_off();
-    guest_time_schedule_timeout();
+    guest_time_maintenance();
     return true;
 }
 
@@ -236,5 +236,5 @@ void guest_time_handle_timer_ntfn(void)
     guest_time_user_error_check();
     vmx_timer_off();
     guest_time_service_timeouts();
-    guest_time_schedule_timeout();
+    guest_time_maintenance();
 }
