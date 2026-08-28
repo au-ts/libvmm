@@ -26,6 +26,9 @@
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xf9010000UL
+#elif defined(CONFIG_PLAT_BCM2711)
+#define GIC_V2
+#define GIC_DIST_PADDR      0xff841000ul
 #else
 #error Need to define GIC addresses
 #endif
