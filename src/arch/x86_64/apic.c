@@ -67,7 +67,11 @@ struct lapic_state {
     guest_timeout_handle_t timeout_handle;
 };
 
-struct lapic_state lapic_state;
+struct lapic_state lapic_state = {
+    .native_scaled_apic_ticks_when_timer_starts = 0,
+    .timeout_handle_valid = true,
+    .timeout_handle = 0,
+};
 
 static bool inject_lapic_irq(size_t vcpu_id, uint8_t vector);
 static bool inject_ioapic_irq(int ioapic, int pin);
