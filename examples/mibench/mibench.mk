@@ -70,22 +70,18 @@ ${LINUX}:
 	tar -xf $@.tar.gz -C linux_download_dir
 	cp linux_download_dir/${LINUX}/linux ${LINUX}
 
-# LINUX ?= /home/alexkv/thesis/slsph/guests/linux/linux/arch/arm64/boot/Image
-
-# ${INITRD}:
-# 	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
-# 	mkdir -p initrd_download_dir
-# 	tar xf $@.tar.gz -C initrd_download_dir
-# 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
+${INITRD}:
+	curl -L https://trustworthy.systems/Downloads/libvmm/images/${INITRD}.tar.gz -o $@.tar.gz
+	mkdir -p initrd_download_dir
+	tar xf $@.tar.gz -C initrd_download_dir
+	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 # Mine
-ROOTFS ?= /home/alexkv/thesis/buildroot-2022.08-rc2/output/images/rootfs.cpio.gz
+# ROOTFS ?= /home/alexkv/thesis/buildroot-2022.08-rc2/output/images/rootfs.cpio.gz
 
-# slsph
-# ROOTFS ?= /home/alexkv/thesis/slsph/guests/linux/buildroot/output/images/rootfs.cpio
 
-${INITRD}: ${ROOTFS}
-	cp $< $@
+# ${INITRD}: ${ROOTFS}
+# 	cp $< $@
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts $(CHECK_FLAGS_BOARD_MD5)
 	$(LIBVMM)/tools/dtscat $^ > $@
