@@ -469,8 +469,8 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
     size_t label = microkit_msginfo_get_label(msginfo);
     bool success = false;
 
-    volatile uint64_t *samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + NSAMPLES * 64);
-    volatile uint64_t *after_samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + 2* NSAMPLES * 64);
+    volatile uint64_t *samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + 2 * NSAMPLES * 64);
+    volatile uint64_t *after_samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + 3 * NSAMPLES * 64);
 
     switch (label) {
     case seL4_Fault_VMFault:
