@@ -59,6 +59,19 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
+// uintptr_t bench_vaddr;
+
+// #define NSAMPLES 10000
+// static volatile  uint64_t *samples;
+// static volatile uint32_t idx;
+
+// static inline uint64_t guest_cntpct_el0(void)
+// {
+//     uint64_t cntpct_el0;
+//     asm volatile("isb; mrs %0, cntpct_el0" : "=r"(cntpct_el0));
+//     return cntpct_el0;
+// }
+
 void init(void)
 {
     /* Initialise the VMM, the VCPU(s), and start the guest */
@@ -90,6 +103,9 @@ void init(void)
 
     success = virq_register_passthrough(GUEST_BOOT_VCPU_ID, SERIAL_IRQ, SERIAL_IRQ_CH);
     assert(success);
+
+    // samples = (volatile uint64_t *)((uint8_t *)bench_vaddr);
+
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
 }
@@ -98,6 +114,12 @@ void notified(microkit_channel ch)
 {
     switch (ch) {
     case SERIAL_IRQ_CH: {
+        // if (idx < NSAMPLES) {
+        //     samples[0] = idx;
+        //     samples[++idx] = (uint64_t)(guest_cntpct_el0());
+        //     LOG_VMM("idx: %u, %lu\n", idx, guest_cntpct_el0());
+        // }
+
         bool success = virq_handle_passthrough(ch);
         if (!success) {
             LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);

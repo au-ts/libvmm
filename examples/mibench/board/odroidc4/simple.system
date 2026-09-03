@@ -19,9 +19,12 @@
     <!-- To boot Linux, we need to map in the GIC virtual CPU interface. -->
     <memory_region name="gic_vcpu" size="0x1_000" phys_addr="0xffc06000" />
 
+    <memory_region name="bench" size="0x200000" phys_addr="0x10000000" />
+
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
         <map mr="guest_ram" vaddr="0x20000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <map mr="bench" vaddr="0x30000000" perms="rw" setvar_vaddr="bench_vaddr" cached="false" />
         <virtual_machine name="linux" >
             <vcpu id="0" />
             <map mr="guest_ram" vaddr="0x20000000" perms="rwx" />
@@ -29,6 +32,7 @@
             <map mr="bus2" vaddr="0xff800000" perms="rw" cached="false" />
             <map mr="bus3" vaddr="0xffd00000" perms="rw" cached="false" />
             <map mr="gic_vcpu" vaddr="0xffc02000" perms="rw" cached="false" />
+            <map mr="bench" vaddr="0x10000000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- Serial IRQ -->
         <irq irq="225" id="1" trigger="edge" />

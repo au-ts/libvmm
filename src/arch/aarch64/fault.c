@@ -452,19 +452,25 @@ bool fault_handle_vm_exception(size_t vcpu_id)
     return success;
 }
 
-// #define CYCLES_LOG_SIZE 1000
+uintptr_t bench_vaddr;
+
+#define NSAMPLES 10000
+static volatile uint32_t idx;
+
+static inline uint64_t guest_cntpct_el0(void)
+{
+    uint64_t cntpct_el0;
+    asm volatile("isb; mrs %0, cntpct_el0" : "=r"(cntpct_el0));
+    return cntpct_el0;
+}
 
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
 {
-    
-    // static volatile uint64_t cycle_log[CYCLES_LOG_SIZE];
-    // static volatile uint64_t request_count = 0; 
-
     size_t label = microkit_msginfo_get_label(msginfo);
     bool success = false;
 
-    // volatile uint64_t start_cycles;
-    // SEL4BENCH_READ_CCNT(start_cycles);
+    volatile uint64_t *samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + NSAMPLES * 64);
+    volatile uint64_t *after_samples = (volatile uint64_t *)((uint8_t *)bench_vaddr + 2* NSAMPLES * 64);
 
     switch (label) {
     case seL4_Fault_VMFault:
@@ -481,30 +487,21 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
         break;
     case seL4_Fault_VCPUFault:
         success = fault_handle_vcpu_exception(vcpu_id);
-        // volatile uint64_t end_cycles;
-        // SEL4BENCH_READ_CCNT(end_cycles);
-        // cycle_log[request_count] = end_cycles - start_cycles;
-        // request_count++;
         break;
     case seL4_Fault_VPPIEvent:
+        if (idx < NSAMPLES) {
+            samples[idx] = (uint64_t)(guest_cntpct_el0());
+        }
         success = fault_handle_vppi_event(vcpu_id);
+        if (idx < NSAMPLES) {
+            after_samples[idx++] = (uint64_t)(guest_cntpct_el0());
+        }
         break;
     default:
         /* We have reached a genuinely unexpected case, stop the guest. */
         LOG_VMM_ERR("unknown fault label 0x%lx, stopping guest with ID 0x%lx\n", label, vcpu_id);
         microkit_vcpu_stop(vcpu_id);
     }
-
-    // Breakpoint target when full
-    // if (request_count >= CYCLES_LOG_SIZE) {
-    //     // Put your GDB breakpoint on the NOP instruction below
-    //     asm volatile("nop");
-    //     request_count = 0;
-    //     printf("\nVcpu event fault cycle count\n");
-    //     for (int i = 0; i < CYCLES_LOG_SIZE; i++) {
-    //         printf("%d: %lu\n", i, cycle_log[i]);
-    //     }
-    // }
 
     if (!success) {
         LOG_VMM_ERR("Failed to handle %s fault\n", fault_to_string(label));
