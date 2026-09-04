@@ -11,7 +11,7 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_DIR := $(EXAMPLE_DIR)/board/$(MICROKIT_BOARD)
-SYSTEM_FILE := $(SYSTEM_DIR)/simple.system
+SYSTEM_FILE := $(SYSTEM_DIR)/mibench.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
@@ -77,11 +77,10 @@ ${INITRD}:
 	cp initrd_download_dir/${INITRD}/rootfs.cpio.gz ${INITRD}
 
 # Mine
-# ROOTFS ?= /home/alexkv/thesis/buildroot-2022.08-rc2/output/images/rootfs.cpio.gz
+ROOTFS ?= /home/alexkv/thesis/buildroot-2022.08-rc2/output/images/rootfs.cpio.gz
 
-
-# ${INITRD}: ${ROOTFS}
-# 	cp $< $@
+${INITRD}: ${ROOTFS}
+	cp $< $@
 
 vm.dts: $(SYSTEM_DIR)/linux.dts $(SYSTEM_DIR)/overlay.dts $(CHECK_FLAGS_BOARD_MD5)
 	$(LIBVMM)/tools/dtscat $^ > $@

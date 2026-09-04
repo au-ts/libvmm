@@ -20,7 +20,7 @@
     <memory_region name="syscon" size="0x10000" phys_addr="0x30360000" />
     <memory_region name="clock_controller" size="0x10000" phys_addr="0x30380000" />
 
-    <memory_region name="bench" size="0x200000" phys_addr="0x10000000" />
+    <memory_region name="bench" size="0x200000" phys_addr="0x50000000" />
 
     <protection_domain name="VMM" priority="254">
         <program_image path="vmm.elf" />
@@ -47,7 +47,7 @@
             <map mr="pinctrl" vaddr="0x30330000" perms="rw" cached="false" />
             <map mr="gpio" vaddr="0x30200000" perms="rw" cached="false" />
             <map mr="irqsteer" vaddr="0x32e2d000" perms="rw" cached="false" />
-            <map mr="bench" vaddr="0x10000000" perms="rw" cached="false" />
+            <map mr="bench" vaddr="0x50000000" perms="rw" cached="false" />
         </virtual_machine>
         <!-- UART interrupt -->
         <irq irq="58" id="1" />
