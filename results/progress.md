@@ -28,6 +28,8 @@ b09a3d0426abd2b81649f95ba0bdd30f1a6e27bb
 
 - Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown) compared to uio_blocking
 
+- Found the echo server does not use (or I have not turned on) the ipbench which means the warmup and cooldown contribute to PMU and cycles (odroidc4_no_warmup_cooldown) compared to uio_blocking
+
 The results and figures can be fold in this folder (odroidc4_memcpy_packets/util/ressults)
 
 # Next steps
