@@ -15,6 +15,7 @@ The example currently works on the following platforms:
 * HardKernel Odroid-C4
 * Avnet MaaXBoard
 * x86_64
+* ZCU102
 
 ## Building
 
@@ -28,6 +29,7 @@ Where `<MICROKIT_BOARD>` is one of:
 * `odroidc4`
 * `maaxboard`
 * `x86_64_generic_vtx`
+* `zcu102`
 
 Other configuration options can be passed to the Makefile such as `MICROKIT_CONFIG`
 and `BUILD_DIR`, see the Makefile for details.
@@ -66,4 +68,4 @@ not x86's. To run this example you therefore need:
 ### Hardware
 
 To run this example on hardware, you need:
-- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS,
+- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS.
