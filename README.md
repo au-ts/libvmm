@@ -21,16 +21,23 @@ itself is environment agnostic.
 
 For information on the project and how to use it, please see the [manual](docs/MANUAL.md).
 
-## Architecture support
+## Supported platforms
 
-This library supports creating Linux VMs on aarch64 and x86-64.
+This library supports creating Linux VMs on these Microkit platforms:
 
-When targeting x86-64, you can build the library and examples on any macOS/Linux machine,
-but you will only be able to run or virtualise it on a host with an Intel x86-64 CPU and
-VT-x enabled in your BIOS.
+| Microkit platform      | Architecture |
+| ---------------------- | ------------ |
+| `qemu_virt_aarch64`    | aarch64      |
+| `odroidc4`             | aarch64      |
+| `maaxboard`            | aarch64      |
+| `x86_64_generic_vtx`   | x86-64       |
 
-There is special hardware requirements when targeting ARM, for more details, please see
-the [manual](docs/MANUAL.md) or the examples for more details.
+There are no additional hardware requirements for aarch64.
+
+For x86-64 you can build the library and examples on any macOS or Linux machine, but
+running them requires an Intel CPU with VT-x enabled in the BIOS.
+
+Not all examples support all platforms. Check the individual example for details.
 
 ## Dependencies
 
