@@ -29,6 +29,10 @@
 #define GUEST_RAM_START_GPA 0x40000000
 #define GUEST_DTB_GPA 0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4c000000
+#elif defined(BOARD_rpi4b_1gb)
+#define GUEST_RAM_START_GPA 0x10000000
+#define GUEST_DTB_GPA 0x1f000000
+#define GUEST_INIT_RAM_DISK_GPA 0x1c000000
 #elif defined(BOARD_x86_64_generic_vtx)
 #define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
@@ -52,6 +56,8 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
+#elif defined(BOARD_rpi4b_1gb)
+#define SERIAL_IRQ 125
 #elif defined(BOARD_x86_64_generic_vtx)
 #define COM1_IOAPIC_CHIP 0
 #define COM1_IOAPIC_PIN 4
