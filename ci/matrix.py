@@ -84,6 +84,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "qemu_virt_aarch64",
             "odroidc4",
             "maaxboard",
+            "rpi4b_1gb",
             "x86_64_generic_vtx",
             "zcu102",
         ],
