@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2026, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+    <!-- We allocate 256MiB of RAM for the guest. -->
+    <memory_region name="guest_ram" size="0x10_000_000" />
+
+    <memory_region name="gic_vcpu" size="0x2000" phys_addr="0xff846000" />
+    <!-- We want to map in the serial@7e215040 to get input/output. -->
+    <!--
+        In addition to the serial device, the default Linux image requires access to
+        other devices. If you wanted to pass-through *just* the serial device memory,
+        changing the Linux configuration and/or DTS overlay is necessary.
+     -->
+    <memory_region name="serial0" size="0x1000" phys_addr="0xfe215000" />
+    <!-- cprman@7e101000 -->
+    <memory_region name="clocks" size="0x2000" phys_addr="0xfe101000" />
+    <!-- mailbox@7e00b880 -->
+    <memory_region name="mailbox" size="0x2000" phys_addr="0xfe00b000" />
+    <!-- dma-controller@7e007000 -->
+    <memory_region name="dmacon" size="0x1000" phys_addr="0xfe007000" />
+    <!-- gpio@7e200000 -->
+    <memory_region name="gpio" size="0x1000" phys_addr="0xfe200000" />
+    <!-- rng@7e104000 -->
+    <memory_region name="rng" size="0x1000" phys_addr="0xfe104000" />
+    <!-- emmc2bus/mmc@7e340000 -->
+    <memory_region name="emmc2bus" size="0x1000" phys_addr="0xfe340000" />
+
+    <protection_domain name="VMM" priority="254">
+        <program_image path="vmm.elf" />
+        <map mr="guest_ram" vaddr="0x10000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="linux" >
+            <vcpu id="0" />
+            <map mr="guest_ram" vaddr="0x10000000" perms="rwx" />
+            <map mr="gic_vcpu" vaddr="0xff842000" perms="rw" cached="false" />
+            <map mr="serial0" vaddr="0xfe215000" perms="rw" cached="false" />
+            <map mr="clocks" vaddr="0xfe101000" perms="rw" cached="false" />
+            <map mr="dmacon" vaddr="0xfe007000" perms="rw" cached="false" />
+            <map mr="gpio" vaddr="0xfe200000" perms="rw" cached="false" />
+            <map mr="rng" vaddr="0xfe104000" perms="rw" cached="false" />
+            <map mr="emmc2bus" vaddr="0xfe340000" perms="rw" cached="false" />
+        </virtual_machine>
+        <!-- UART interrupt -->
+        <irq irq="125" id="1" />
+    </protection_domain>
+</system>

@@ -28,6 +28,7 @@ Where `<MICROKIT_BOARD>` is one of:
 * `qemu_virt_aarch64`
 * `odroidc4`
 * `maaxboard`
+* `rpi4b_1gb` (you can run the produced image on the higher RAM variants)
 * `x86_64_generic_vtx`
 * `zcu102`
 

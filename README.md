@@ -30,6 +30,7 @@ This library supports creating Linux VMs on these Microkit platforms:
 | `qemu_virt_aarch64`    | aarch64      |
 | `odroidc4`             | aarch64      |
 | `maaxboard`            | aarch64      |
+| `rpi4b_*gb`            | aarch64      |
 | `zcu102`               | aarch64      |
 | `x86_64_generic_vtx`   | x86-64       |
 
