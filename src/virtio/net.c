@@ -33,8 +33,8 @@ static inline struct virtio_net_device *device_state(struct virtio_device *dev)
 
 static void virtio_net_regs_init(struct virtio_device *dev)
 {
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_NET;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+    dev->regs.device_id = VIRTIO_DEVICE_ID_NET;
+    dev->regs.vendor_id = VIRTIO_DEV_VENDOR_ID;
 }
 
 static void virtio_net_reset(struct virtio_device *dev)
@@ -56,7 +56,7 @@ static void virtio_net_reset(struct virtio_device *dev)
 
 static bool driver_ok(struct virtio_device *dev)
 {
-    return (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER_OK) && (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK);
+    return (dev->regs.status & VIRTIO_CONFIG_S_DRIVER_OK) && (dev->regs.status & VIRTIO_CONFIG_S_FEATURES_OK);
 }
 
 /* Upstream networking device have checksum offloading? */
@@ -69,11 +69,11 @@ static bool virtio_net_get_device_features(struct virtio_device *dev, uint32_t *
 {
     LOG_NET("operation: get device features\n");
 
-    if (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (dev->regs.status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_NET_ERR("Driver tried to read device features after FEATURES_OK\n");
     }
 
-    switch (dev->regs.DeviceFeaturesSel) {
+    switch (dev->regs.device_features_sel) {
     /* Feature bits 0 to 31 */
     case 0:
         *features = BIT(VIRTIO_NET_F_MAC);
@@ -99,7 +99,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
 {
     bool success = true;
 
-    switch (dev->regs.DriverFeaturesSel) {
+    switch (dev->regs.driver_features_sel) {
     /* Feature bits 0 to 31 */
     case 0:
         /** F_MAC is required */
@@ -113,7 +113,7 @@ static bool virtio_net_set_driver_features(struct virtio_device *dev, uint32_t f
     }
 
     if (success) {
-        dev->regs.DriverFeatures = features;
+        dev->regs.driver_features = features;
         dev->features_happy = 1;
     }
     return success;
@@ -250,7 +250,7 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         LOG_NET_ERR("Driver not ready\n");
         return false;
     }
-    if (dev->regs.QueueSel == VIRTIO_NET_RX_VIRTQ) {
+    if (dev->regs.queue_sel == VIRTIO_NET_RX_VIRTQ) {
         if (!dev->vqs[VIRTIO_NET_RX_VIRTQ].ready) {
             LOG_NET_ERR("RX virtq not ready\n");
             return false;
@@ -258,7 +258,7 @@ static bool virtio_net_queue_notify(struct virtio_device *dev)
         virtio_net_handle_rx(device_state(dev));
         return true;
     }
-    if (dev->regs.QueueSel == VIRTIO_NET_TX_VIRTQ && !dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
+    if (dev->regs.queue_sel == VIRTIO_NET_TX_VIRTQ && !dev->vqs[VIRTIO_NET_TX_VIRTQ].ready) {
         LOG_NET_ERR("TX virtq not ready\n");
         return false;
     }

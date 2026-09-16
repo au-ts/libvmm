@@ -167,8 +167,8 @@ static size_t virtio_blk_chunk_size_bytes(struct virtio_device *dev)
 
 static void virtio_blk_regs_init(struct virtio_device *dev)
 {
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_BLOCK;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+    dev->regs.device_id = VIRTIO_DEVICE_ID_BLOCK;
+    dev->regs.vendor_id = VIRTIO_DEV_VENDOR_ID;
 }
 
 static inline void virtio_blk_reset(struct virtio_device *dev)
@@ -191,11 +191,11 @@ static inline void virtio_blk_reset(struct virtio_device *dev)
 
 static inline bool virtio_blk_get_device_features(struct virtio_device *dev, uint32_t *features)
 {
-    if (dev->regs.Status & VIRTIO_CONFIG_S_FEATURES_OK) {
+    if (dev->regs.status & VIRTIO_CONFIG_S_FEATURES_OK) {
         LOG_BLOCK_ERR("driver somehow wants to read device features after FEATURES_OK\n");
     }
 
-    switch (dev->regs.DeviceFeaturesSel) {
+    switch (dev->regs.device_features_sel) {
     /* feature bits 0 to 31 */
     case 0:
         *features = BIT(VIRTIO_BLK_F_FLUSH);
@@ -232,7 +232,7 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     device_features |= BIT(VIRTIO_BLK_F_TOPOLOGY);
     device_features |= BIT(VIRTIO_F_INDIRECT_DESC);
 
-    switch (dev->regs.DriverFeaturesSel) {
+    switch (dev->regs.driver_features_sel) {
     /* feature bits 0 to 31 */
     case 0:
         success = (device_features & features) == features;
@@ -247,7 +247,7 @@ static inline bool virtio_blk_set_driver_features(struct virtio_device *dev, uin
     }
 
     if (success) {
-        dev->regs.DriverFeatures = features;
+        dev->regs.driver_features = features;
         dev->features_happy = 1;
     }
 
