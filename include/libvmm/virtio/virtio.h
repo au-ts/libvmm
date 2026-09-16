@@ -66,21 +66,21 @@ typedef struct virtio_emul_funs {
 
 /* Emulated common registers for the virtIO device */
 typedef struct virtio_device_regs {
-    uint32_t DeviceID;
-    uint32_t VendorID;
+    uint32_t device_id;
+    uint32_t vendor_id;
 
-    uint32_t DeviceFeaturesSel;
-    uint32_t DriverFeatures;
-    uint32_t DriverFeaturesSel;
+    uint32_t device_features_sel;
+    uint32_t driver_features;
+    uint32_t driver_features_sel;
 
-    uint32_t QueueSel;
-    uint32_t QueueNotify;
+    uint32_t queue_sel;
+    uint32_t queue_notify;
 
-    uint32_t InterruptStatus;
+    uint32_t interrupt_status;
 
-    uint32_t Status;
+    uint32_t status;
 
-    uint32_t ConfigGeneration;
+    uint32_t config_generation;
 } virtio_device_regs_t;
 
 /* Everything needed at runtime for a virtIO device to function. */
@@ -103,8 +103,8 @@ typedef struct virtio_device {
 
 static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
 {
-    assert(dev->regs.QueueSel < dev->num_vqs);
-    return &dev->vqs[dev->regs.QueueSel].virtq;
+    assert(dev->regs.queue_sel < dev->num_vqs);
+    return &dev->vqs[dev->regs.queue_sel].virtq;
 }
 
 struct virtq_desc *virtio_get_desc_ring(struct virtq *virtq);

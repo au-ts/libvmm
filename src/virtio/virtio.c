@@ -210,21 +210,21 @@ void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bo
     /* Set the reason of the irq.
        bit 0: used buffer
        bit 1: configuration change */
-    dev->regs.InterruptStatus = 0;
+    dev->regs.interrupt_status = 0;
     if (used_buffer) {
-        dev->regs.InterruptStatus |= 0x1;
+        dev->regs.interrupt_status |= 0x1;
     }
     if (config_change) {
-        dev->regs.InterruptStatus |= 0x2;
+        dev->regs.interrupt_status |= 0x2;
     }
 
     if (dev->transport_type == VIRTIO_TRANSPORT_PCI) {
         /*
          * virtIO spec 4.1.4.5.1 Device Requirements: ISR status capability
          */
-        assert(pci_device_set_irq_status(dev->transport.pci.pci_handle, dev->regs.InterruptStatus != 0));
+        assert(pci_device_set_irq_status(dev->transport.pci.pci_handle, dev->regs.interrupt_status != 0));
         /* Since PCI INTx IRQ is level triggered we must deassert the line. */
-        if (!dev->regs.InterruptStatus) {
+        if (!dev->regs.interrupt_status) {
             virq_set_level(dev->irq_routing_info, false);
         }
     }

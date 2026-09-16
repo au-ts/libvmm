@@ -30,41 +30,41 @@ static bool handle_virtio_pci_set_status_flag(virtio_device_t *dev, uint32_t reg
     bool success = true;
 
     // we only care about the new status
-    dev->regs.Status &= reg;
-    reg ^= dev->regs.Status;
+    dev->regs.status &= reg;
+    reg ^= dev->regs.status;
 
     switch (reg) {
     case VIRTIO_CONFIG_S_RESET:
-        dev->regs.Status = 0;
+        dev->regs.status = 0;
         dev->funs->device_reset(dev);
         break;
 
     case VIRTIO_CONFIG_S_ACKNOWLEDGE:
         // are we following the initialization protocol?
-        if (dev->regs.Status == 0) {
-            dev->regs.Status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
+        if (dev->regs.status == 0) {
+            dev->regs.status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
             // nothing to do from our side (as the virtio device).
         }
         break;
 
     case VIRTIO_CONFIG_S_DRIVER:
         // are we following the initialization protocol?
-        if (dev->regs.Status & VIRTIO_CONFIG_S_ACKNOWLEDGE) {
-            dev->regs.Status |= VIRTIO_CONFIG_S_DRIVER;
+        if (dev->regs.status & VIRTIO_CONFIG_S_ACKNOWLEDGE) {
+            dev->regs.status |= VIRTIO_CONFIG_S_DRIVER;
             // nothing to do from our side (as the virtio device).
         }
         break;
 
     case VIRTIO_CONFIG_S_FEATURES_OK:
         // are we following the initialization protocol?
-        if (dev->regs.Status & VIRTIO_CONFIG_S_DRIVER) {
+        if (dev->regs.status & VIRTIO_CONFIG_S_DRIVER) {
             // are features OK?
-            dev->regs.Status |= (dev->features_happy ? VIRTIO_CONFIG_S_FEATURES_OK : 0);
+            dev->regs.status |= (dev->features_happy ? VIRTIO_CONFIG_S_FEATURES_OK : 0);
         }
         break;
 
     case VIRTIO_CONFIG_S_DRIVER_OK:
-        dev->regs.Status |= VIRTIO_CONFIG_S_DRIVER_OK;
+        dev->regs.status |= VIRTIO_CONFIG_S_DRIVER_OK;
         // probably do some san checks here
         break;
 
@@ -85,10 +85,10 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
 
     switch (offset) {
     case VIRTIO_PCI_COMMON_DEV_FEATURE_SEL:
-        *data = dev->regs.DeviceFeaturesSel;
+        *data = dev->regs.device_features_sel;
         break;
     case VIRTIO_PCI_COMMON_DRI_FEATURE:
-        *data = dev->regs.DriverFeatures;
+        *data = dev->regs.driver_features;
         break;
     case VIRTIO_PCI_COMMON_DEV_FEATURE:
         success = dev->funs->get_device_features(dev, data);
@@ -97,20 +97,20 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
         *data = dev->num_vqs << 16; // @billn why << 16?
         break;
     case VIRTIO_PCI_COMMON_DEV_STATUS:
-        *data = dev->regs.Status;
+        *data = dev->regs.status;
         break;
     case VIRTIO_PCI_COMMON_CFG_GENERATION:
-        *data = dev->regs.ConfigGeneration;
+        *data = dev->regs.config_generation;
         break;
     case VIRTIO_PCI_COMMON_Q_SELECT:
-        *data = dev->regs.QueueSel;
+        *data = dev->regs.queue_sel;
         break;
     case VIRTIO_PCI_COMMON_Q_SIZE:
         *data = VIRTIO_DEFAULT_QUEUE_SIZE;
-        dev->vqs[dev->regs.QueueSel].virtq.num = VIRTIO_PCI_QUEUE_SIZE;
+        dev->vqs[dev->regs.queue_sel].virtq.num = VIRTIO_PCI_QUEUE_SIZE;
         break;
     case VIRTIO_PCI_COMMON_Q_ENABLE:
-        *data = dev->vqs[dev->regs.QueueSel].ready;
+        *data = dev->vqs[dev->regs.queue_sel].ready;
         break;
     case VIRTIO_PCI_COMMON_Q_NOTIF_OFF:
         /* virtIO spec 1.2:
@@ -131,10 +131,10 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t offset, uin
 
     switch (offset) {
     case VIRTIO_PCI_COMMON_DEV_FEATURE_SEL:
-        dev->regs.DeviceFeaturesSel = data;
+        dev->regs.device_features_sel = data;
         break;
     case VIRTIO_PCI_COMMON_DRI_FEATURE_SEL:
-        dev->regs.DriverFeaturesSel = data;
+        dev->regs.driver_features_sel = data;
         break;
     case VIRTIO_PCI_COMMON_DRI_FEATURE:
         success = dev->funs->set_driver_features(dev, data);
@@ -143,100 +143,100 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t offset, uin
         success = handle_virtio_pci_set_status_flag(dev, data);
         break;
     case VIRTIO_PCI_COMMON_Q_SELECT:
-        dev->regs.QueueSel = data;
+        dev->regs.queue_sel = data;
         break;
     case VIRTIO_PCI_COMMON_Q_SIZE:
-        if (dev->regs.QueueSel < dev->num_vqs) {
+        if (dev->regs.queue_sel < dev->num_vqs) {
             struct virtq *virtq = get_current_virtq_by_handler(dev);
             virtq->num = (unsigned int)data;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_SIZE\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_ENABLE:
         if (data == 0x1) {
-            dev->vqs[dev->regs.QueueSel].ready = true;
+            dev->vqs[dev->regs.queue_sel].ready = true;
             // the virtq is already in ram so we don't need to do any initiation
         }
         break;
     case VIRTIO_PCI_COMMON_Q_DESC_LO:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->desc_gpa;
             ptr |= data;
             virtq->desc_gpa = (struct virtq_desc *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_DESC_LO\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_DESC_HI:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->desc_gpa;
             ptr |= (uintptr_t)data << 32;
             virtq->desc_gpa = (struct virtq_desc *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_DESC_HI\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_AVAIL_LO:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->avail_gpa;
             ptr |= data;
             virtq->avail_gpa = (struct virtq_avail *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_AVAIL_LO\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_AVAIL_HI:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->avail_gpa;
             ptr |= (uintptr_t)data << 32;
             virtq->avail_gpa = (struct virtq_avail *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_AVAIL_HI\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_USED_LO:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->used_gpa;
             ptr |= data;
             virtq->used_gpa = (struct virtq_used *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_USED_LO\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
     case VIRTIO_PCI_COMMON_Q_USED_HI:
-        if (dev->regs.QueueSel < dev->num_vqs) {
-            struct virtq *virtq = &dev->vqs[dev->regs.QueueSel].virtq;
+        if (dev->regs.queue_sel < dev->num_vqs) {
+            struct virtq *virtq = &dev->vqs[dev->regs.queue_sel].virtq;
             uintptr_t ptr = (uintptr_t)virtq->used_gpa;
             ptr |= (uintptr_t)data << 32;
             virtq->used_gpa = (struct virtq_used *)ptr;
         } else {
             LOG_VIRTIO_PCI_ERR("invalid virtq index 0x%x (number of virtqs is 0x%lx) "
                                "given when accessing VIRTIO_PCI_COMMON_Q_USED_HI\n",
-                               dev->regs.QueueSel, dev->num_vqs);
+                               dev->regs.queue_sel, dev->num_vqs);
             success = false;
         }
         break;
@@ -250,7 +250,7 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t offset, uin
 
 static bool virtio_pci_isr_read(virtio_device_t *dev, size_t offset, uint32_t *data)
 {
-    *data = dev->regs.InterruptStatus;
+    *data = dev->regs.interrupt_status;
     /*
      * virtIO spec section 4.1.4.5.1 Device Requirements: ISR status capability
      * "The device MUST reset ISR status to 0 on driver read."
@@ -271,8 +271,8 @@ static bool virtio_pci_device_reg_write(virtio_device_t *dev, size_t offset, uin
 
 static bool virtio_pci_notify_reg_write(virtio_device_t *dev, size_t offset, uint32_t data)
 {
-    dev->regs.QueueNotify = data;
-    dev->regs.QueueSel = data;
+    dev->regs.queue_notify = data;
+    dev->regs.queue_sel = data;
     return dev->funs->queue_notify(dev);
 }
 
@@ -336,7 +336,7 @@ bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t
         .revision_id = VIRTIO_PCI_REVISION,
         .subclass = PCI_SUB_CLASS(dev->transport.pci.device_class),
         .class_code = PCI_CLASS_CODE(dev->transport.pci.device_class),
-        .subsystem_vendor_id = dev->regs.VendorID,
+        .subsystem_vendor_id = dev->regs.vendor_id,
         .subsystem_device_id = dev->transport.pci.device_id,
     };
 

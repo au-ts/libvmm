@@ -42,8 +42,8 @@ static void virtio_console_features_print(uint32_t features)
 
 static void virtio_console_regs_init(struct virtio_device *dev)
 {
-    dev->regs.DeviceID = VIRTIO_DEVICE_ID_CONSOLE;
-    dev->regs.VendorID = VIRTIO_DEV_VENDOR_ID;
+    dev->regs.device_id = VIRTIO_DEVICE_ID_CONSOLE;
+    dev->regs.vendor_id = VIRTIO_DEV_VENDOR_ID;
 }
 
 static void virtio_console_reset(struct virtio_device *dev)
@@ -68,7 +68,7 @@ static bool virtio_console_get_device_features(struct virtio_device *dev, uint32
 {
     LOG_CONSOLE("operation: get device features\n");
 
-    switch (dev->regs.DeviceFeaturesSel) {
+    switch (dev->regs.device_features_sel) {
     case 0:
         *features = 0;
         break;
@@ -90,7 +90,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
 
     bool success = false;
 
-    switch (dev->regs.DriverFeaturesSel) {
+    switch (dev->regs.driver_features_sel) {
     // feature bits 0 to 31
     case 0:
         /* We do not offer any features in the first 32-bit bits */
@@ -105,7 +105,7 @@ static bool virtio_console_set_driver_features(struct virtio_device *dev, uint32
     }
 
     if (success) {
-        dev->regs.DriverFeatures = features;
+        dev->regs.driver_features = features;
         dev->features_happy = 1;
         LOG_CONSOLE("device is feature happy\n");
     }
@@ -129,7 +129,7 @@ static bool virtio_console_handle_tx(struct virtio_device *dev)
 {
     LOG_CONSOLE("operation: handle transmit\n");
 
-    if (dev->regs.QueueSel != TX_QUEUE) {
+    if (dev->regs.queue_sel != TX_QUEUE) {
         return true;
     }
 
