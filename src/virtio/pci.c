@@ -93,6 +93,9 @@ static bool virtio_pci_common_reg_read(virtio_device_t *dev, size_t offset, uint
     case VIRTIO_PCI_COMMON_DEV_FEATURE:
         success = dev->funs->get_device_features(dev, data);
         break;
+    case VIRTIO_PCI_COMMON_MSIX:
+        *data = dev->regs.config_msix_vector;
+        break;
     case VIRTIO_PCI_COMMON_NUM_QUEUES:
         *data = dev->num_vqs << 16; // @billn why << 16?
         break;
@@ -138,6 +141,9 @@ static bool virtio_pci_common_reg_write(virtio_device_t *dev, size_t offset, uin
         break;
     case VIRTIO_PCI_COMMON_DRI_FEATURE:
         success = dev->funs->set_driver_features(dev, data);
+        break;
+    case VIRTIO_PCI_COMMON_MSIX:
+        dev->regs.config_msix_vector = data;
         break;
     case VIRTIO_PCI_COMMON_DEV_STATUS:
         success = handle_virtio_pci_set_status_flag(dev, data);

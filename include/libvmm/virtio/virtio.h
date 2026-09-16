@@ -81,6 +81,8 @@ typedef struct virtio_device_regs {
     uint32_t status;
 
     uint32_t config_generation;
+
+    uint16_t config_msix_vector;
 } virtio_device_regs_t;
 
 /* Everything needed at runtime for a virtIO device to function. */
