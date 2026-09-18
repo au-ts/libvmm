@@ -98,12 +98,14 @@ First, download the Windows 11 installation ISO from
 We have tested with `Win11_25H2_EnglishInternational_x64_v2.iso` specifically.
 
 You also need the VirtIO driver package, as the Windows kernel does not ship with
-these drivers built in. Download it from the
-[virtio-win project](https://github.com/virtio-win/virtio-win-pkg-scripts/blob/master/README.md)
-by clicking "Stable virtio-win ISO". We have tested with `virtio-win-0.1.285.iso`
-specifically.
+these drivers built in. We have tested with `virtio-win-0.1.302.iso`
+specifically, you can download it from
+[here](https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/archive-virtio/virtio-win-0.1.302-1/virtio-win-0.1.302.iso).
+Alternatively you can download the latest version
+[here](https://github.com/virtio-win/virtio-win-pkg-scripts/blob/master/README.md)
+if it is different.
 
-Once both images have downloaded, you can start the installation.
+Once both images are downloaded, you can start the installation.
 
 ### Automation
 
