@@ -170,6 +170,11 @@ bool vcpu_set_up_long_mode(uint64_t cr3, uint64_t gdt_gpa, uint64_t gdt_limit)
         return false;
     }
 
+#if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_VIRTUAL_APIC_ADDRESS, 0x13000000);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_APIC_ACCESS_ADDRESS, 0x13001000);
+#endif
+
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, IA32_EFER_LM_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, RFLAGS_DEFAULT);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_GDTR_BASE, gdt_gpa);
@@ -232,6 +237,11 @@ bool vcpu_set_up_reset_state(void)
         LOG_VMM_ERR("failed to setup Entry and Exit Controls\n");
         return false;
     }
+
+#if APIC_VIRT_LEVEL == APIC_VIRT_LEVEL_APICV
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_VIRTUAL_APIC_ADDRESS, 0x13000000);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_APIC_ACCESS_ADDRESS, 0x13001000);
+#endif
 
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_RFLAGS, 0x2);
     microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_GUEST_EFER, 0);
