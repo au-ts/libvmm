@@ -166,12 +166,8 @@ jobs:
     needs: build_linux_x86_64_nix
     strategy:
       fail-fast: false
-      # We 2x of each: Odroid C4, MaaXBoard, ZCU102
-      max-parallel: 2
+      max-parallel: 1
       matrix: ${{ fromJSON(needs.build_linux_x86_64_nix.outputs.test_groups) }}
-    concurrency:
-      group: ${{ github.workflow }}-libvmm-hardware-tests-${{ github.event.number }}-${{ matrix.artifact_suffix }}
-      cancel-in-progress: true
     steps:
       - name: Checkout sDDF repository
         uses: actions/checkout@v6
