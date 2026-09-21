@@ -50,9 +50,9 @@ These are the required software packages to build libvmm:
 * iASL: ACPI Source Language Optimizing Compiler/Disassembler
 * Clang/LLVM tools
 * QEMU
-* Microkit SDK (version 2.3.0)
+* Microkit SDK (version 2.3.1)
 
-For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.3.0).
+For the Microkit SDK, you can download it [here](https://github.com/seL4/microkit/releases/2.3.1).
 
 For all other dependencies, see the below instructions depending on your machine.
 
