@@ -19,10 +19,6 @@
 
 #define SEL4_USER_CONTEXT_SIZE (sizeof(seL4_UserContext) / sizeof(seL4_Word))
 
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
-#endif
-
 #define CTZ(x) __builtin_ctz(x)
 
 #if __STDC_VERSION__ >= 201112L && !defined(__cplusplus)
@@ -46,24 +42,6 @@ static void assert_fail(const char *assertion, const char *file, unsigned int li
 #endif
 
 #define REG_RANGE(r0, r1)   r0 ... (r1 - 1)
-
-#ifndef assert
-#ifndef CONFIG_DEBUG_BUILD
-
-#define _unused(x) ((void)(x))
-#define assert(expr) _unused(expr)
-
-#else
-
-#define assert(expr) \
-    do { \
-        if (!(expr)) { \
-            assert_fail(#expr, __FILE__, __LINE__, __FUNCTION__); \
-        } \
-    } while(0)
-
-#endif
-#endif
 
 /* Returns true if all set bits in `baseline` are also set in `actual` */
 bool check_baseline_bits(uint64_t baseline, uint64_t actual);
