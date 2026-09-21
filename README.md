@@ -21,6 +21,35 @@ itself is environment agnostic.
 
 For information on the project and how to use it, please see the [manual](docs/MANUAL.md).
 
+## Features
+
+This is a summary of what libvmm currently supports on each architecture,
+followed by the guest facilities it provides and current limitations.
+
+### ARM
+
+* Booting a default-configured Linux kernel with an initrd image.
+* Multicore guests (more than one VCPU) via PSCI.
+* Hardware-accelerated GIC virtualisation.
+
+### x86
+
+* ACPI implementation.
+* Booting a default-configured Linux kernel with an initrd image.
+* Booting any EFI guest via TianoCore OVMF firmware.
+* Software-virtualised APIC in xAPIC mode and single I/O APIC.
+
+### Guest facilities
+
+* VirtIO PCI transport, plus VirtIO MMIO transport on ARM.
+* Networking via virtIO Network, either through a NIC or Virtual Switch.
+* Storage via virtIO Block.
+* Console via serial passthrough, virtIO Console or in-guest methods (e.g. SSH).
+
+### Limitations
+
+* x86 guests are limited to a single VCPU.
+
 ## Supported platforms
 
 This library supports creating Linux VMs on these Microkit platforms:
