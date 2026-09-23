@@ -41,6 +41,11 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
 
     uint64_t pml4_gpa = vcpu_exit_get_cr3() & ~0xfff;
     uint64_t *pml4 = gpa_to_hva(pml4_gpa, X86_PAGING_OBJECT_SIZE);
+    if (!pml4) {
+        LOG_VMM_ERR("PML4 GPA 0x%lx is not in valid guest RAM\n", pml4_gpa);
+        return false;
+    }
+
     uint64_t pml4_idx = (gva >> (12 + (9 * 3))) & 0x1ff;
     uint64_t pml4_pte = pml4[pml4_idx];
     if (!pte_present(pml4_pte)) {
@@ -50,6 +55,11 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
 
     uint64_t pdpt_gpa = pte_to_gpa(pml4_pte);
     uint64_t *pdpt = gpa_to_hva(pdpt_gpa, X86_PAGING_OBJECT_SIZE);
+    if (!pdpt) {
+        LOG_VMM_ERR("PDPT GPA 0x%lx is not in valid guest RAM\n", pdpt_gpa);
+        return false;
+    }
+
     uint64_t pdpt_idx = (gva >> (12 + (9 * 2))) & 0x1ff;
     uint64_t pdpt_pte = pdpt[pdpt_idx];
     if (!pte_present(pdpt_pte)) {
@@ -59,6 +69,11 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
 
     uint64_t pd_gpa = pte_to_gpa(pdpt_pte);
     uint64_t *pd = gpa_to_hva(pd_gpa, X86_PAGING_OBJECT_SIZE);
+    if (!pd) {
+        LOG_VMM_ERR("PD GPA 0x%lx is not in valid guest RAM\n", pd_gpa);
+        return false;
+    }
+
     uint64_t pd_idx = (gva >> (12 + (9 * 1))) & 0x1ff;
     uint64_t pd_pte = pd[pd_idx];
     if (!pte_present(pd_pte)) {
@@ -76,6 +91,11 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
         // 4k page
         uint64_t pt_gpa = pte_to_gpa(pd_pte);
         uint64_t *pt = gpa_to_hva(pt_gpa, X86_PAGING_OBJECT_SIZE);
+        if (!pt) {
+            LOG_VMM_ERR("PT GPA 0x%lx is not in valid guest RAM\n", pt_gpa);
+            return false;
+        }
+
         uint64_t pt_idx = (gva >> (12)) & 0x1ff;
         uint64_t pt_pte = pt[pt_idx];
         if (!pte_present(pt_pte)) {
