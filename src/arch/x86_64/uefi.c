@@ -214,14 +214,20 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         char *file_name = ACPI_XSDP_FWCFG_FILENAME;
         uint32_t alignment = 1;
         bool use_fseg = true;
-        assert(table_loader_allocate(&uefi_table_loader[num_cmd], file_name, alignment, use_fseg));
+        if (!table_loader_allocate(&uefi_table_loader[num_cmd], file_name, alignment, use_fseg)) {
+            LOG_VMM_ERR("Failed to create XSDP fwcfg file\n");
+            return false;
+        }
         num_cmd++;
     }
     {
         char *file_name = ACPI_TABLES_FWCFG_FILENAME;
         uint32_t alignment = 1;
         bool use_fseg = false;
-        assert(table_loader_allocate(&uefi_table_loader[num_cmd], file_name, alignment, use_fseg));
+        if (!table_loader_allocate(&uefi_table_loader[num_cmd], file_name, alignment, use_fseg)) {
+            LOG_VMM_ERR("Failed to create ACPI tables fwcfg file\n");
+            return false;
+        }
         num_cmd++;
     }
 
@@ -234,8 +240,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct xsdp, xsdt_gpa);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, xsdt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for linking XSDP to XSDT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -245,8 +254,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t start_offset = 0;
         uint32_t length = offsetof(struct xsdp, length); /* Checksum up only the legacy part */
         uint32_t checksum_offset = offsetof(struct xsdp, checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
-                                         checksum_offset));
+        if (!table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
+                                       checksum_offset)) {
+            LOG_VMM_ERR("Failed to make command for checksumming XSDP\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -256,8 +268,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t start_offset = 0;
         uint32_t length = sizeof(struct xsdp);
         uint32_t checksum_offset = offsetof(struct xsdp, ext_checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
-                                         checksum_offset));
+        if (!table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
+                                       checksum_offset)) {
+            LOG_VMM_ERR("Failed to make command for extended checksumming XSDP\n");
+            return false;
+        }
         num_cmd++;
     }
 
@@ -270,8 +285,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, fadt.X_FirmwareControl);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, facs);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for connecting FACS to FADT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -282,8 +300,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, fadt.X_Dsdt);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, dsdt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for connecting DSDT to FADT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -293,8 +314,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t start_offset = offsetof(struct uefi_acpi_tables, fadt);
         uint32_t length = sizeof(struct fadt);
         uint32_t checksum_offset = offsetof(struct uefi_acpi_tables, fadt.h.checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
-                                         checksum_offset));
+        if (!table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
+                                       checksum_offset)) {
+            LOG_VMM_ERR("Failed to make command for checksumming FADT\n");
+            return false;
+        }
         num_cmd++;
     }
 
@@ -307,8 +331,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[0]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, fadt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for connecting FADT to XSDT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -319,8 +346,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[1]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, hpet);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for connecting HPET to XSDT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -331,8 +361,11 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t patch_offset = offsetof(struct uefi_acpi_tables, xsdt.tables[2]);
         uint8_t patch_size = sizeof(uint64_t);
         uint32_t src_offset = offsetof(struct uefi_acpi_tables, madt);
-        assert(table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
-                                        patch_offset, patch_size, src_offset));
+        if (!table_loader_add_pointer(&uefi_table_loader[num_cmd], dest_file, src_file, dest_blob, blob_size,
+                                      patch_offset, patch_size, src_offset)) {
+            LOG_VMM_ERR("Failed to make command for connecting MADT to XSDT\n");
+            return false;
+        }
         num_cmd++;
     }
     {
@@ -342,12 +375,18 @@ bool uefi_setup_images(uintptr_t firm_src, size_t firm_size, uintptr_t dsdt_src,
         uint32_t start_offset = offsetof(struct uefi_acpi_tables, xsdt);
         uint32_t length = sizeof(struct xsdt);
         uint32_t checksum_offset = offsetof(struct uefi_acpi_tables, xsdt.h.checksum);
-        assert(table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
-                                         checksum_offset));
+        if (!table_loader_add_checksum(&uefi_table_loader[num_cmd], file_name, blob, blob_size, start_offset, length,
+                                       checksum_offset)) {
+            LOG_VMM_ERR("Failed to make command for checksumming XSDT\n");
+            return false;
+        }
         num_cmd++;
     }
 
-    assert(num_cmd < UEFI_MAX_NUM_TABLE_LOADER_CMD);
+    if (num_cmd >= UEFI_MAX_NUM_TABLE_LOADER_CMD) {
+        LOG_VMM_ERR("num_cmd %u is out of bound\n", num_cmd);
+        return false;
+    }
 
     if (!fw_cfg_add_named_file(TABLE_LOADER_FWCFG_FILENAME, strlen(TABLE_LOADER_FWCFG_FILENAME),
                                (uint8_t *)&uefi_table_loader, sizeof(qemu_loader_entry_t) * num_cmd)) {

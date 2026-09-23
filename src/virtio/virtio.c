@@ -52,7 +52,9 @@ struct virtq_used *virtio_get_used_ring(struct virtq *virtq)
 
 uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint16_t desc_head)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
 
     uint64_t payload_len = 0;
     uint64_t unused, desc_len;
@@ -77,7 +79,9 @@ uint64_t virtio_desc_chain_payload_len(virtio_queue_handler_t *vq_handler, uint1
 bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint64_t bytes_to_read,
                                       uint64_t read_off, char *data)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
 
     virtio_desc_chain_iterator_t iter;
     if (!virtio_desc_chain_iterator_new(vq_handler, desc_head, &iter)) {
@@ -122,7 +126,9 @@ bool virtio_read_data_from_desc_chain(virtio_queue_handler_t *vq_handler, uint16
 bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint64_t bytes_to_write,
                                      uint64_t write_off, char *data)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
 
     virtio_desc_chain_iterator_t iter;
     if (!virtio_desc_chain_iterator_new(vq_handler, desc_head, &iter)) {
@@ -166,7 +172,10 @@ bool virtio_write_data_to_desc_chain(virtio_queue_handler_t *vq_handler, uint16_
 
 bool virtio_virtq_peek_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
+
     struct virtq *virtq = &vq_handler->virtq;
     struct virtq_avail *avail_ring = virtio_get_avail_ring(virtq);
 
@@ -180,7 +189,9 @@ bool virtio_virtq_peek_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
 
 bool virtio_virtq_pop_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
 
     uint16_t desc_head;
     bool available = virtio_virtq_peek_avail(vq_handler, &desc_head);
@@ -195,7 +206,10 @@ bool virtio_virtq_pop_avail(virtio_queue_handler_t *vq_handler, uint16_t *ret)
 
 void virtio_virtq_add_used(virtio_queue_handler_t *vq_handler, uint16_t desc_head, uint32_t len)
 {
-    assert(vq_handler->ready);
+    if (!(vq_handler->ready)) {
+        LOG_VMM_ERR("vq is not ready!\n");
+    }
+
     struct virtq *virtq = &vq_handler->virtq;
     struct virtq_used *used_ring = virtio_get_used_ring(virtq);
 
@@ -222,7 +236,9 @@ void virtio_set_interrupt_status(struct virtio_device *dev, bool used_buffer, bo
         /*
          * virtIO spec 4.1.4.5.1 Device Requirements: ISR status capability
          */
-        assert(pci_device_set_irq_status(dev->transport.pci.pci_handle, dev->regs.interrupt_status != 0));
+        if (!pci_device_set_irq_status(dev->transport.pci.pci_handle, dev->regs.interrupt_status != 0)) {
+            LOG_VMM_ERR("failed to set IRQ status\n");
+        }
         /* Since PCI INTx IRQ is level triggered we must deassert the line. */
         if (!dev->regs.interrupt_status) {
             virq_set_level(dev->irq_routing_info, false);
@@ -239,7 +255,6 @@ bool virtio_inject_interrupt(struct virtio_device *dev)
     case VIRTIO_TRANSPORT_MMIO:
         return virq_inject(dev->irq_routing_info);
     default:
-        assert(0);
         return false;
     }
 }

@@ -105,7 +105,10 @@ typedef struct virtio_device {
 
 static inline struct virtq *get_current_virtq_by_handler(virtio_device_t *dev)
 {
-    assert(dev->regs.queue_sel < dev->num_vqs);
+    if (dev->regs.queue_sel >= dev->num_vqs) {
+        LOG_VMM_ERR("queue_sel = %u is out of bound, num_vqs = %zu\n", dev->regs.queue_sel, dev->num_vqs);
+        return NULL;
+    }
     return &dev->vqs[dev->regs.queue_sel].virtq;
 }
 

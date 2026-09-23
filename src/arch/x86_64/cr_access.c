@@ -189,7 +189,7 @@ bool handle_cr_access(seL4_VCPUContext *vctx, seL4_Word qualification)
         } else if (get_access_type(qualification) == MOV_FROM_CR) {
             /* It is architecturally impossible to get a VM Exit for CR0 read.
              * See "26.1.3 Instructions That Cause VM Exits Conditionally" of [1] */
-            assert(false);
+            return false;
         } else {
             return false;
         }

@@ -149,7 +149,7 @@ static int lapic_dcr_to_divider(void)
         return 1;
     default:
         LOG_VMM_ERR("unknown LAPIC DCR register encoding: 0x%x\n", lapic_read_reg(REG_LAPIC_DCR));
-        assert(false);
+        break;
     }
 
     return -1;

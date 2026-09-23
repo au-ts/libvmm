@@ -366,8 +366,11 @@ bool decode_virtio_block_request(virtio_queue_handler_t *vq_handler, uint16_t de
 
     /* Step 2: read the request header from the scatter-gather list */
     struct virtio_blk_outhdr header;
-    assert(
-        virtio_read_data_from_desc_chain(vq_handler, desc_head, sizeof(struct virtio_blk_outhdr), 0, (char *)&header));
+    if (!virtio_read_data_from_desc_chain(vq_handler, desc_head, sizeof(struct virtio_blk_outhdr), 0,
+                                          (char *)&header)) {
+        LOG_BLOCK_ERR("Failed to read request header\n");
+        return false;
+    }
 
     ret->virtio_req_type = header.type;
     ret->virtio_sector = header.sector;

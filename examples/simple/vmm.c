@@ -107,8 +107,8 @@ void init(void)
         .guest_ram_regions = { (struct guest_ram_region) {
             .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } }
     };
-    bool success = guest_init(args);
-    if (!success) {
+
+    if (!guest_init(args)) {
         LOG_VMM_ERR("Failed to initialise guest\n");
         return;
     }
@@ -165,7 +165,10 @@ void init(void)
     microkit_irq_ack(SERIAL_IRQ_CH);
 
     /* Pass through serial IRQs */
-    assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
+    if (!virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH)) {
+        LOG_VMM_ERR("Failed to passthrough COM1 IRQ\n");
+        return;
+    }
 
     guest_start_long_mode(linux_setup.kernel_entry_gpa, linux_setup.pml4_gpa, linux_setup.gdt_gpa,
                           linux_setup.gdt_limit, &initial_regs);
@@ -186,15 +189,17 @@ void init(void)
 
 #if defined(BOARD_zcu102)
     /* Initialise the SMC SIP Handler */
-    success = smc_register_sip_handler(smc_sip_forward);
-    if (!success) {
+    if (!smc_register_sip_handler(smc_sip_forward)) {
         LOG_VMM_ERR("Failed to initialise SMC SIP Handler\n");
         return;
     }
 #endif
 
-    success = virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH);
-    assert(success);
+    if (!virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH)) {
+        LOG_VMM_ERR("Failed to passthrough serial IRQ\n");
+        return;
+    }
+
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
 #endif

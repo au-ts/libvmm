@@ -96,7 +96,6 @@ bool guest_start(uintptr_t kernel_pc, uintptr_t dtb, uintptr_t initrd)
                                             false, // We'll explcitly start the guest below rather than in this call
                                             0, // No flags
                                             SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Failed to write registers to boot vCPU's TCB (id is 0x%lx), error is: 0x%lx\n", GUEST_BOOT_VCPU_ID,
                     err);

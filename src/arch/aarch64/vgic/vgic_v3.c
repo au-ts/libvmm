@@ -57,8 +57,12 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
     size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
-    assert(target_vcpu_id < guest.num_vcpus);
-    assert(vcpu_id < guest.num_vcpus);
+    if (target_vcpu_id >= guest.num_vcpus) {
+        LOG_VMM_ERR("target_vcpu_id %ld is out of bound of %zu\n", target_vcpu_id, guest.num_vcpus);
+    }
+    if (vcpu_id >= guest.num_vcpus) {
+        LOG_VMM_ERR("vcpu_id %ld is out of bound of %zu\n", vcpu_id, guest.num_vcpus);
+    }
 
     struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers, target_vcpu_id);
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
@@ -89,11 +93,11 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
     default:
         LOG_VMM_ERR("Unknown vgic redist register read offset 0x%lx from vcpu %lu for vcpu %lu\n", real_offset, vcpu_id,
                     target_vcpu_id);
-        assert(false);
+        return false;
         // @ivanv: used to be ignore_fault, double check this is right
-        bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
+        // bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
         // @ivanv: todo error handling
-        assert(success);
+        // assert(success);
     }
 
     uint64_t mask = fault_get_data_mask(offset, fsr);
@@ -109,8 +113,14 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
     size_t target_vcpu_id = offset / GIC_REDIST_INDIVIDUAL_SIZE;
     uint64_t real_offset = offset % GIC_REDIST_INDIVIDUAL_SIZE;
 
-    assert(vcpu_id < guest.num_vcpus);
-    assert(target_vcpu_id < guest.num_vcpus);
+    if (vcpu_id >= guest.num_vcpus) {
+        LOG_VMM_ERR("vcpu_id %lu is out of bound of guest.num_vcpus %zu\n", vcpu_id, guest.num_vcpus);
+        return false;
+    }
+    if (target_vcpu_id >= guest.num_vcpus) {
+        LOG_VMM_ERR("target_vcpu_id %lu is out of bound of guest.num_vcpus %zu\n", target_vcpu_id, guest.num_vcpus);
+        return false;
+    }
 
     struct gic_redist_sgi_ppi_map *gic_redist_sgi_ppi = vgic_get_redist_sgi_ppi(vgic->registers, target_vcpu_id);
 
@@ -162,7 +172,7 @@ static bool vgic_handle_fault_redist_write(size_t vcpu_id, vgic_t *vgic, uint64_
     default:
         LOG_VMM_ERR("Unknown vgic redist register write offset 0x%lx from vcpu %lu for vcpu %lu, value: 0x%lx\n",
                     real_offset, vcpu_id, target_vcpu_id, fault_get_data(regs, fsr));
-        assert(false);
+        return false;
     }
 
     return true;

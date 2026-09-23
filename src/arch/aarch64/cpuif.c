@@ -85,7 +85,7 @@ static int sysreg_fault_get_rt(uint64_t hsr)
     if (BIT(ESR_EL2_IL_BIT)) {
         return (hsr >> ISS_SYSREG_RT_SHIFT) & ISS_SYSREG_RT_MASK;
     } else {
-        printf("sysreg_fault_get_rt() for 16-bits instructions not implemented.\n");
+        LOG_VMM_ERR("sysreg_fault_get_rt() for 16-bits instructions not implemented.\n");
         assert(false);
     }
 }

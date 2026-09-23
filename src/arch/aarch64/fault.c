@@ -33,8 +33,6 @@ bool fault_advance_vcpu(size_t vcpu_id, seL4_UserContext *regs, size_t regs_size
      * fault which will result in the TCB being restarted.
      */
     int err = seL4_TCB_WriteRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, regs_size, regs);
-    assert(err == seL4_NoError);
-
     return (err == seL4_NoError);
 }
 
@@ -83,7 +81,7 @@ int fault_get_width_bytes(uint64_t fsr)
         case WIDTH_DOUBLEWORD:
             return 8;
         default:
-                /* unreachable */
+            /* unreachable */
             assert(false);
         }
     } else {
@@ -218,7 +216,7 @@ static int get_rt(uint64_t fsr)
     if (HSR_IS_SYNDROME_VALID(fsr)) {
         rt = HSR_SYNDROME_RT(fsr);
     } else {
-        printf("decode_insturction for AArch64 not implemented\n");
+        LOG_VMM_ERR("decode_insturction for AArch64 not implemented\n");
         assert(0);
         // @ivanv: implement decode instruction for aarch64
         // rt = decode_instruction(f);
@@ -283,7 +281,10 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
 
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
+    if (err != seL4_NoError) {
+        LOG_VMM_ERR("seL4_TCB_ReadRegisters returned %d\n", err);
+        return false;
+    }
 
     switch (hsr_ec_class) {
     case HSR_SMC_64_EXCEPTION:
@@ -438,7 +439,10 @@ bool fault_handle_vm_exception(size_t vcpu_id)
 
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
+    if (err != seL4_NoError) {
+        LOG_VMM_ERR("seL4_TCB_ReadRegisters returned %d\n", err);
+        return false;
+    }
 
     bool success = fault_handle_registered_vm_exceptions(vcpu_id, addr, fsr, &regs);
     if (!success) {

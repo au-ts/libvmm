@@ -60,7 +60,10 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
 
                 /* TODO: support more than 16 vCPUs, we need to correctly set the affinity
                  * bits in VMPIDR_EL2. */
-                assert(vcpu_id < 16);
+                if (vcpu_id >= 16) {
+                    LOG_VMM_ERR("more than 16 VCPUs is not supported\n");
+                    return false;
+                }
                 microkit_vcpu_arm_write_reg(target_vcpu, seL4_VCPUReg_VMPIDR_EL2, target_vcpu);
 
                 seL4_Error err = seL4_TCB_WriteRegisters(
@@ -68,8 +71,8 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
                     false, // We'll explcitly start the guest below rather than in this call
                     0, // No flags
                     SEL4_USER_CONTEXT_SIZE, &vcpu_regs);
-                assert(err == seL4_NoError);
                 if (err != seL4_NoError) {
+                    LOG_VMM_ERR("seL4_TCB_WriteRegisters returned error %d", err);
                     return err;
                 }
 
@@ -132,7 +135,5 @@ bool handle_psci(size_t vcpu_id, seL4_UserContext *regs, uint64_t fn_number, uin
     }
 
     bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
-    assert(success);
-
     return success;
 }

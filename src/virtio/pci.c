@@ -332,7 +332,10 @@ bool virtio_pci_bar_fault_handle(pci_dev_handle_t pci_dev_handle, uint64_t bar_o
 bool virtio_pci_register_device(virtio_device_t *dev, uint16_t pci_bus, uint16_t pci_dev,
                                 irq_routing_info_t irq_routing_info)
 {
-    assert(dev->transport_type == VIRTIO_TRANSPORT_PCI);
+    if (dev->transport_type != VIRTIO_TRANSPORT_PCI) {
+        LOG_VMM_ERR("incorrect transport type %u\n", dev->transport_type);
+        return false;
+    }
 
     pci_device_register_data_t device_data = (pci_device_register_data_t) {
         .vendor_id = dev->transport.pci.vendor_id,

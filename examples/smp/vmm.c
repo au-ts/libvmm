@@ -88,8 +88,11 @@ void init(void)
         return;
     }
 
-    success = virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH);
-    assert(success);
+    if (!virq_register_passthrough(ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, SERIAL_IRQ), SERIAL_IRQ_CH)) {
+        LOG_VMM_ERR("Failed to passthrough serial IRQ\n");
+        return;
+    }
+
     /* Finally start the guest */
     guest_start(kernel_pc, GUEST_DTB_GPA, GUEST_INIT_RAM_DISK_GPA);
 }

@@ -183,7 +183,6 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     /* First check that we find vIRQ data in case the vIRQ has not been
      * registered yet. */
     struct virq_handle *virq_data = virq_find_irq_data(vgic, vcpu_id, irq);
-    assert(virq_data);
     if (!virq_data) {
         LOG_VMM_ERR("could not find vIRQ data for vIRQ 0x%x on vCPU 0x%lx\n", irq, vcpu_id);
         return false;
@@ -217,7 +216,6 @@ static bool vgic_dist_set_pending_irq(vgic_t *vgic, size_t vcpu_id, int irq)
     bool success = vgic_irq_enqueue(vgic, vcpu_id, virq_data);
     if (!success) {
         LOG_VMM_ERR("Failure enqueueing IRQ, increase MAX_IRQ_QUEUE_LEN");
-        assert(0);
         return false;
     }
 
@@ -566,7 +564,6 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
         for (int i = 0; i < guest.num_vcpus; i++) {
             if ((1 << i) & target_list && vcpu_is_on(i)) {
                 success = vgic_inject_irq(i, virq);
-                assert(success);
                 if (!success) {
                     return false;
                 }
@@ -598,10 +595,9 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
 #endif
     default:
         LOG_VMM_ERR("Unknown register offset 0x%lx", offset);
-        assert(0);
+        success = false;
     }
 ignore_fault:
-    assert(success);
     if (!success) {
         return false;
     }

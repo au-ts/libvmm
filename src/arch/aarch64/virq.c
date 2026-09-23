@@ -130,7 +130,6 @@ bool virq_register_passthrough(irq_routing_info_t irq_routing_info, microkit_cha
     virq_passthrough_map[irq_ch] = irq_routing_info;
 
     bool success = virq_register(irq_routing_info, &virq_passthrough_ack, (void *)(size_t)irq_ch);
-    assert(success);
     if (!success) {
         LOG_VMM_ERR("Failed to register passthrough vIRQ 0x%x\n", IRQ_ROUTE_TO_ARM_INTID(irq_routing_info));
         return false;
