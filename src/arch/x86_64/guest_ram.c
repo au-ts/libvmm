@@ -35,6 +35,8 @@ bool gva_to_gpa(size_t vcpu_id, uint64_t gva, uint64_t *gpa, size_t *bytes_remai
 {
     if (!guest_paging_on()) {
         *gpa = gva;
+        *bytes_remaining = 0x1000 - (gva & 0xfff);
+        return true;
     }
 
     uint64_t pml4_gpa = vcpu_exit_get_cr3() & ~0xfff;
