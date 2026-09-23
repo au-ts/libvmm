@@ -92,14 +92,12 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
     }
 
     // Linux does not allow the DTB to be greater than 2 megabytes in size.
-    assert(dtb_size <= (1 << 21));
     if (dtb_size > (1 << 21)) {
         LOG_VMM_ERR("Linux expects size of DTB to be less than 2MB, DTB size is 0x%lx bytes\n", dtb_size);
         return 0;
     }
 
     // Linux expects the address of the DTB to be on an 8-byte boundary.
-    assert(dtb_dest_gpa % 0x8 == 0);
     if (dtb_dest_gpa % 0x8) {
         LOG_VMM_ERR("Linux expects DTB address to be on an 8-byte boundary, DTB address is 0x%lx\n", dtb_dest_gpa);
         return 0;

@@ -80,11 +80,22 @@ static bool qemu_fw_cfg_select_handler(size_t vcpu_id, uint16_t port_offset, siz
                                        seL4_VCPUContext *vctx, void *cookie)
 {
     if (pio_fault_is_read(qualification)) {
-        pio_emulate_read(qualification, vctx, fw_cfg_state.selected);
+        if (!pio_emulate_read(qualification, vctx, fw_cfg_state.selected)) {
+            LOG_VMM_ERR("failed to set read operand\n");
+            return false;
+        }
     } else {
-        assert(!pio_fault_is_string_op(qualification));
+        if (pio_fault_is_string_op(qualification)) {
+            LOG_VMM_ERR("cannot use string op on fw cfg select port\n");
+            return false;
+        }
 
-        fw_cfg_state.selected = pio_get_write_data(qualification, vctx);
+        uint32_t sel;
+        if (!pio_get_write_data(qualification, vctx, &sel)) {
+            LOG_VMM_ERR("failed to get write operand\n");
+            return false;
+        }
+        fw_cfg_state.selected = sel;
         fw_cfg_state.selected_data = NULL;
         fw_cfg_state.selected_index = 0;
         fw_cfg_state.selected_size = 0;
@@ -108,14 +119,20 @@ static bool qemu_fw_cfg_data_handler(size_t vcpu_id, uint16_t port_offset, size_
                     qualification, vctx, data_ptr, fw_cfg_state.selected_size - fw_cfg_state.selected_index);
             }
         } else {
-            assert(pio_fault_to_access_width_bytes(qualification) == 1);
+            if (pio_fault_to_access_width_bytes(qualification) != 1) {
+                LOG_VMM_ERR("access width must be one byte\n");
+                return false;
+            }
             uint32_t data = 0;
             if (fw_cfg_state.selected_size && fw_cfg_state.selected_index < fw_cfg_state.selected_size) {
                 uint8_t *data_ptr = fw_cfg_state.selected_data + fw_cfg_state.selected_index;
                 data = *data_ptr;
                 fw_cfg_state.selected_index++;
             }
-            pio_emulate_read(qualification, vctx, data);
+            if (!pio_emulate_read(qualification, vctx, data)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
         }
     }
     return true;

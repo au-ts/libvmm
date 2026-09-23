@@ -128,8 +128,10 @@ void init(void)
     microkit_vcpu_x86_enable_ioport(GUEST_BOOT_VCPU_ID, COM1_IO_PORT_ID, COM1_IO_PORT_ADDR, COM1_IO_PORT_SIZE);
     microkit_irq_ack(SERIAL_IRQ_CH);
 
-    /* Pass through serial IRQs */
-    assert(virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH));
+    if (!virq_register_passthrough(X86_IOAPIC_IRQ_ROUTE(COM1_IOAPIC_CHIP, COM1_IOAPIC_PIN), SERIAL_IRQ_CH)) {
+        LOG_VMM_ERR("Failed to passthrough COM1 IRQ\n");
+        return;
+    }
 
     guest_start_reset_state();
 }

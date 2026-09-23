@@ -201,7 +201,9 @@ static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t qualific
 
     struct pci_device *pci_device = pci_get_device(handle);
     uint8_t bar_idx = ((uint64_t)cookie) >> 61;
-    assert(bar_idx < PCI_NUM_BARS_PER_CONFIG_SPACE);
+    if (bar_idx >= PCI_NUM_BARS_PER_CONFIG_SPACE) {
+        LOG_PCI_ERR("bar_idx %u is out of bound of %u\n", bar_idx, PCI_NUM_BARS_PER_CONFIG_SPACE);
+    }
 
     bool is_read;
     int access_width_bytes;
@@ -219,7 +221,10 @@ static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t qualific
 #if defined(CONFIG_ARCH_ARM)
         data = fault_get_data(regs, fsr);
 #elif defined(CONFIG_ARCH_X86)
-        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+        if (!mem_write_get_data(decoded_ins, qualification, vctx, &data)) {
+            LOG_PCI_ERR("Failed to get write operand\n");
+            return false;
+        }
 #endif
     }
 
@@ -233,7 +238,10 @@ static bool pci_bar_fault_handler(size_t vcpu_id, size_t offset, size_t qualific
 #if defined(CONFIG_ARCH_ARM)
         fault_emulate_write(regs, offset, fsr, data);
 #elif defined(CONFIG_ARCH_X86)
-        assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
+        if (!mem_read_set_data(decoded_ins, qualification, vctx, offset, data)) {
+            LOG_PCI_ERR("Failed to set read operand\n");
+            return false;
+        }
 #endif
     }
 
@@ -259,7 +267,10 @@ static bool pci_ecam_emulate_access(pci_dev_handle_t handle, bool is_read, int a
         }
         case REG_RANGE(PCI_CFG_OFFSET_BAR1, PCI_CFG_OFFSET_CARDBUS): {
             uint8_t dev_bar_id = (config_space_offset - PCI_CFG_OFFSET_BAR1) / sizeof(uint32_t);
-            assert(dev_bar_id < PCI_NUM_BARS_PER_CONFIG_SPACE);
+            if (dev_bar_id >= PCI_NUM_BARS_PER_CONFIG_SPACE) {
+                LOG_PCI_ERR("dev_bar_id %u is out of bound of %u\n", dev_bar_id, PCI_NUM_BARS_PER_CONFIG_SPACE);
+                return false;
+            }
 
             // @billn handle 64-bit BARs
             // Memory negotiation process:
@@ -389,7 +400,10 @@ static bool pci_ecam_memory_fault_handle(size_t qualification, size_t ecam_offse
 #if defined(CONFIG_ARCH_ARM)
         data = fault_get_data(regs, fsr);
 #elif defined(CONFIG_ARCH_X86)
-        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+        if (!mem_write_get_data(decoded_ins, qualification, vctx, &data)) {
+            LOG_PCI_ERR("Failed to get write operand\n");
+            return false;
+        }
 #endif
     }
 
@@ -399,7 +413,10 @@ static bool pci_ecam_memory_fault_handle(size_t qualification, size_t ecam_offse
 #if defined(CONFIG_ARCH_ARM)
         fault_emulate_write(regs, offset, fsr, data);
 #elif defined(CONFIG_ARCH_X86)
-        assert(mem_read_set_data(decoded_ins, qualification, vctx, ecam_offset, data));
+        if (!mem_read_set_data(decoded_ins, qualification, vctx, offset, data)) {
+            LOG_PCI_ERR("Failed to set read operand\n");
+            return false;
+        }
 #endif
     }
 
@@ -410,10 +427,21 @@ static bool pci_ecam_memory_fault_handle(size_t qualification, size_t ecam_offse
 static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
                                         seL4_VCPUContext *vctx, void *cookie)
 {
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_PCI_ERR("I/O port string operation is not supported on PCI access mechanism #1\n");
+        return false;
+    }
+
     if (pio_fault_is_read(qualification)) {
-        pio_emulate_read(qualification, vctx, pci_bus.pio_addr_value);
+        if (!pio_emulate_read(qualification, vctx, pci_bus.pio_addr_value)) {
+            LOG_PCI_ERR("failed to set read operand\n");
+            return false;
+        }
     } else {
-        pci_bus.pio_addr_value = pio_get_write_data(qualification, vctx);
+        if (!pio_get_write_data(qualification, vctx, &pci_bus.pio_addr_value)) {
+            LOG_PCI_ERR("failed to get write operand\n");
+            return false;
+        }
     }
 
     return true;
@@ -422,7 +450,10 @@ static bool pci_pio_select_fault_handle(size_t vcpu_id, uint16_t port_offset, si
 static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification,
                                       seL4_VCPUContext *vctx, void *cookie)
 {
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_PCI_ERR("I/O port string operation is not supported on PCI access mechanism #1\n");
+        return false;
+    }
 
     if (!pci_pio_addr_reg_enable(pci_bus.pio_addr_value)) {
         emulate_ioport_noop_access(qualification, vctx);
@@ -466,9 +497,16 @@ static bool pci_pio_data_fault_handle(size_t vcpu_id, uint16_t port_offset, size
          * the correct data. */
         result >>= (config_space_off - ROUND_DOWN(config_space_off, 4)) * 8;
 
-        pio_emulate_read(qualification, vctx, result);
+        if (!pio_emulate_read(qualification, vctx, result)) {
+            LOG_PCI_ERR("failed to set read operand\n");
+            return false;
+        }
     } else {
-        uint64_t data = pio_get_write_data(qualification, vctx);
+        uint64_t data = 0;
+        if (!pio_get_write_data(qualification, vctx, (uint32_t *)&data)) {
+            LOG_PCI_ERR("failed to get write operand\n");
+            return false;
+        }
         success = pci_ecam_emulate_access(handle, pio_fault_is_read(qualification), access_width_bytes,
                                           config_space_off, &data);
     }
@@ -583,7 +621,9 @@ bool pci_register_device_irq(pci_dev_handle_t pci_dev_handle, irq_routing_info_t
         pci_device->config_space.interrupt_line = irq_routing_info.hw.x86_ioapic.pin;
         break;
     default:
-        assert(0);
+        success = false;
+        LOG_PCI_INFO("IRQ type %u is unsupported\n", irq_routing_info.type);
+        break;
     }
 
     pci_device->virq_registered = success;
@@ -652,7 +692,9 @@ bool pci_register_device_capability(pci_dev_handle_t pci_dev_handle, uint8_t cap
 
     struct pci_capability_header *dest = (struct pci_capability_header *)(((char *)config_space)
                                                                           + pci_device->next_available_cap_ptr);
-    assert(((uint16_t)pci_device->next_available_cap_ptr) + cap_size <= sizeof(struct pci_config_space));
+    if (((uint16_t)pci_device->next_available_cap_ptr) + cap_size > sizeof(struct pci_config_space)) {
+        LOG_PCI_ERR("internal bug: should not run out of space by this point\n");
+    }
 
     dest->cap_id = cap_id;
     dest->next_ptr = 0;

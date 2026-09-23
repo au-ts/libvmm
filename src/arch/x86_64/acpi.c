@@ -153,9 +153,9 @@ size_t hpet_build(struct hpet *hpet)
     return sizeof(struct hpet);
 }
 
-static uint16_t pm1_enable_reg = 0;
-static uint16_t pm1_control_reg = 0;
-static uint16_t pm1_status_reg = 0;
+static uint32_t pm1_enable_reg = 0;
+static uint32_t pm1_control_reg = 0;
+static uint32_t pm1_status_reg = 0;
 
 #define TMR_EN BIT(0) /* Timer Enable */
 #define GBL_EN BIT(5) /* Global Enable */
@@ -167,15 +167,27 @@ bool acpi_pm_timer_can_irq(void)
 bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("I/O string op is unsupported for this operation\n");
+        return false;
+    }
     int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
-    assert(access_width_bytes == 2);
+    if (access_width_bytes != 2) {
+        LOG_VMM_ERR("unexpected access width bytes %u\n", access_width_bytes);
+        return false;
+    }
 
     if (port_offset == 0) {
         if (pio_fault_is_read(qualification)) {
-            pio_emulate_read(qualification, vctx, pm1_control_reg);
+            if (!pio_emulate_read(qualification, vctx, pm1_control_reg)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
         } else {
-            pm1_control_reg = pio_get_write_data(qualification, vctx);
+            if (!pio_get_write_data(qualification, vctx, &pm1_control_reg)) {
+                LOG_VMM_ERR("failed to get write operand\n");
+                return false;
+            }
         }
 
     } else {
@@ -188,26 +200,44 @@ bool pm1a_cnt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("I/O string op is unsupported for this operation\n");
+        return false;
+    }
     int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
-    assert(access_width_bytes == 2);
+    if (access_width_bytes != 2) {
+        LOG_VMM_ERR("unexpected access width bytes %u\n", access_width_bytes);
+        return false;
+    }
 
     if (port_offset == 2) {
         if (pio_fault_is_read(qualification)) {
-            pio_emulate_read(qualification, vctx, pm1_enable_reg);
+            if (!pio_emulate_read(qualification, vctx, pm1_enable_reg)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
         } else {
-            pm1_enable_reg = pio_get_write_data(qualification, vctx);
+            if (!pio_get_write_data(qualification, vctx, &pm1_enable_reg)) {
+                LOG_VMM_ERR("failed to get write operand\n");
+                return false;
+            }
             if (acpi_pm_timer_can_irq()) {
                 LOG_ACPI_INFO("ACPI PM Timer Overflow IRQ ON!\n");
-                assert(false);
+                return false; // unimplemented
             }
         }
     } else if (port_offset == 0) {
         if (pio_fault_is_read(qualification)) {
-            pio_emulate_read(qualification, vctx, pm1_status_reg);
+            if (!pio_emulate_read(qualification, vctx, pm1_status_reg)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
         } else {
             // @billn sus implement proper set to clear
-            pm1_status_reg = pio_get_write_data(qualification, vctx);
+            if (!pio_get_write_data(qualification, vctx, &pm1_status_reg)) {
+                LOG_VMM_ERR("failed to get write operand\n");
+                return false;
+            }
         }
     } else {
         return false;
@@ -219,26 +249,50 @@ bool pm1a_evt_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qual
 bool pm_timer_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                                void *cookie)
 {
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("I/O string op is unsupported for this operation\n");
+        return false;
+    }
     int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
-    assert(access_width_bytes == 4);
-    assert(pio_fault_is_read(qualification));
+    if (access_width_bytes != 4) {
+        LOG_VMM_ERR("unexpected access width bytes %u\n", access_width_bytes);
+        return false;
+    }
+    if (!pio_fault_is_read(qualification)) {
+        LOG_VMM_ERR("ACPI PM timer is read only\n");
+        return false;
+    }
 
     uint32_t result = convert_ticks_by_frequency(guest_time_tsc_now(), guest_time_tsc_hz(), ACPI_PMT_FREQ_HZ);
-    pio_emulate_read(qualification, vctx, result);
-
+    if (!pio_emulate_read(qualification, vctx, result)) {
+        LOG_VMM_ERR("failed to set read operand\n");
+        return false;
+    }
     return true;
 }
 
 bool smi_cmd_pio_fault_handle(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
                               void *cookie)
 {
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("I/O string op is unsupported for this operation\n");
+        return false;
+    }
     int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
-    assert(access_width_bytes == 1);
-    assert(pio_fault_is_write(qualification));
+    if (access_width_bytes != 1) {
+        LOG_VMM_ERR("unexpected access width bytes %u\n", access_width_bytes);
+        return false;
+    }
+    if (!pio_fault_is_write(qualification)) {
+        LOG_VMM_ERR("SMI command port is write only\n");
+        return false;
+    }
 
-    uint8_t cmd = pio_get_write_data(qualification, vctx);
+    uint32_t cmd;
+    if (!pio_get_write_data(qualification, vctx, &cmd)) {
+        LOG_VMM_ERR("failed to get write operand\n");
+        return false;
+    }
     if (cmd == ACPI_ENABLE) {
         pm1_control_reg |= BIT(0);
     } else if (cmd == ACPI_DISABLE) {
@@ -299,9 +353,8 @@ size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->SMI_CommandPort = SMI_CMD_PIO_ADDR;
     fadt->AcpiEnable = ACPI_ENABLE;
     fadt->AcpiDisable = ACPI_DISABLE;
-    {
-        bool success = fault_register_pio_exception_handler(SMI_CMD_PIO_ADDR, 1, smi_cmd_pio_fault_handle, NULL);
-        assert(success);
+    if (!fault_register_pio_exception_handler(SMI_CMD_PIO_ADDR, 1, smi_cmd_pio_fault_handle, NULL)) {
+        return 0;
     }
 
     fadt->PM1aEventBlock = PM1A_EVT_BLK_PIO_ADDR;
@@ -311,10 +364,9 @@ size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->X_PM1aEventBlock.register_bit_offset = 0;
     fadt->X_PM1aEventBlock.access_size = 2;
     fadt->X_PM1aEventBlock.address = PM1A_EVT_BLK_PIO_ADDR;
-    {
-        bool success = fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN,
-                                                            pm1a_evt_pio_fault_handle, NULL);
-        assert(success);
+    if (!fault_register_pio_exception_handler(PM1A_EVT_BLK_PIO_ADDR, PM1A_EVT_BLK_PIO_LEN, pm1a_evt_pio_fault_handle,
+                                              NULL)) {
+        return 0;
     }
 
     fadt->PM1aControlBlock = PM1A_CNT_BLK_PIO_ADDR;
@@ -324,10 +376,9 @@ size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->X_PM1aControlBlock.register_bit_offset = 0;
     fadt->X_PM1aControlBlock.access_size = 2;
     fadt->X_PM1aControlBlock.address = PM1A_CNT_BLK_PIO_ADDR;
-    {
-        bool success = fault_register_pio_exception_handler(PM1A_CNT_BLK_PIO_ADDR, PM1A_CNT_BLK_PIO_LEN,
-                                                            pm1a_cnt_pio_fault_handle, NULL);
-        assert(success);
+    if (!fault_register_pio_exception_handler(PM1A_CNT_BLK_PIO_ADDR, PM1A_CNT_BLK_PIO_LEN, pm1a_cnt_pio_fault_handle,
+                                              NULL)) {
+        return 0;
     }
 
     fadt->PMTimerBlock = PM_TMR_BLK_PIO_ADDR;
@@ -337,17 +388,14 @@ size_t fadt_build(struct fadt *fadt, uint64_t dsdt_gpa, uint64_t facs_gpa)
     fadt->X_PMTimerBlock.register_bit_offset = 0;
     fadt->X_PMTimerBlock.access_size = 3;
     fadt->X_PMTimerBlock.address = PM_TMR_BLK_PIO_ADDR;
-    {
-        bool success = fault_register_pio_exception_handler(PM_TMR_BLK_PIO_ADDR, PM_TMR_BLK_PIO_LEN,
-                                                            pm_timer_pio_fault_handle, NULL);
-        assert(success);
+    if (!fault_register_pio_exception_handler(PM_TMR_BLK_PIO_ADDR, PM_TMR_BLK_PIO_LEN, pm_timer_pio_fault_handle,
+                                              NULL)) {
+        return 0;
     }
     // @billn sus, OVMF always think that its running on Xen, which places the ACPI PM timer is at 0xb008
     // Not sure if this is it's quirk or our fault somewhwere
-    {
-        bool success = fault_register_pio_exception_handler(0xb008, PM_TMR_BLK_PIO_LEN, pm_timer_pio_fault_handle,
-                                                            NULL);
-        assert(success);
+    if (!fault_register_pio_exception_handler(0xb008, PM_TMR_BLK_PIO_LEN, pm_timer_pio_fault_handle, NULL)) {
+        return 0;
     }
 
     fadt->h.checksum = acpi_compute_checksum((char *)fadt, fadt->h.length);
@@ -374,7 +422,10 @@ size_t xsdt_build(struct xsdt *xsdt, uint64_t *table_ptrs, size_t num_table_ptrs
     xsdt->h.creator_revision = 1;
 
     // TODO: remove limitation
-    assert(num_table_ptrs == XSDT_ENTRIES);
+    if (num_table_ptrs != XSDT_ENTRIES) {
+        LOG_VMM_ERR("unexpected number of XSDT entries %lu\n", num_table_ptrs);
+        return 0;
+    }
     for (int i = 0; i < num_table_ptrs; i++) {
         xsdt->tables[i] = table_ptrs[i];
     }

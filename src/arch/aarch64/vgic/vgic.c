@@ -64,7 +64,6 @@ bool vgic_handle_fault_maintenance(size_t vcpu_id)
 
     if (!success) {
         LOG_VMM_ERR("vGIC maintenance handler failed\n");
-        assert(0);
     }
 
     return success;
@@ -75,10 +74,8 @@ bool vgic_handle_fault_dist(size_t vcpu_id, size_t offset, size_t fsr, seL4_User
     bool success = false;
     if (fault_is_read(fsr)) {
         success = vgic_handle_fault_dist_read(vcpu_id, &vgic, offset, fsr, regs);
-        assert(success);
     } else {
         success = vgic_handle_fault_dist_write(vcpu_id, &vgic, offset, fsr, regs);
-        assert(success);
     }
 
     return success;
@@ -86,7 +83,10 @@ bool vgic_handle_fault_dist(size_t vcpu_id, size_t offset, size_t fsr, seL4_User
 
 bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void *ack_data)
 {
-    assert(virq_num >= 0 && virq_num != VIRQ_INVALID);
+    if (virq_num < 0) {
+        LOG_VMM_ERR("virq_num can't be negative\n");
+        return false;
+    }
     struct virq_handle virq = {
         .virq = virq_num,
         .ack_fn = ack_fn,

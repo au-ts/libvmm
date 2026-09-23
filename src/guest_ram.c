@@ -57,8 +57,6 @@ struct guest_ram_region *guest_ram_get_regions(int *num_regions)
 
 void *gpa_to_hva(uint64_t gpa, size_t size)
 {
-    assert(guest.guest_ram_regions_len);
-
     for (int i = 0; i < guest.guest_ram_regions_len; i++) {
         uint64_t this_region_gpa_start = guest.guest_ram_regions[i].gpa_start;
         uint64_t this_region_gpa_end = this_region_gpa_start + guest.guest_ram_regions[i].size;

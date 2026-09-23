@@ -55,7 +55,10 @@ bool initialise_msrs(bool bsp)
          * Is a boot strap processor. */
         apic_base_msr_mask = BIT(8);
 
-        assert(initialise_mtrr());
+        if (!initialise_mtrr()) {
+            LOG_VMM_ERR("Failed to initialise MTRR\n");
+            return false;
+        }
     }
 
     msrs_initialised = true;
@@ -73,9 +76,15 @@ bool emulate_rdmsr(seL4_VCPUContext *vctx)
     uint64_t result = 0;
 
     if (msr_is_mtrr(vctx->ecx, true)) {
-        assert(handle_mtrr_msr_read(vctx->ecx, &result));
+        if (!handle_mtrr_msr_read(vctx->ecx, &result)) {
+            LOG_VMM_ERR("Failed to read MTRR MSR 0x%lx\n", vctx->ecx);
+            return false;
+        }
     } else if (msr_is_machine_check(vctx->ecx, true)) {
-        assert(handle_machine_check_msr_read(vctx->ecx, &result));
+        if (!handle_machine_check_msr_read(vctx->ecx, &result)) {
+            LOG_VMM_ERR("Failed to read machine check MSR 0x%lx\n", vctx->ecx);
+            return false;
+        }
     } else {
         switch (vctx->ecx) {
         case MSR_EFER:
@@ -126,14 +135,20 @@ bool emulate_wrmsr(seL4_VCPUContext *vctx)
     uint64_t value = (uint64_t)((vctx->edx & 0xffffffff) << 32) | (uint64_t)(vctx->eax & 0xffffffff);
 
     if (msr_is_mtrr(vctx->ecx, false)) {
-        assert(handle_mtrr_msr_write(vctx->ecx, value));
+        if (!handle_mtrr_msr_write(vctx->ecx, value)) {
+            LOG_VMM_ERR("Failed to write MTRR MSR 0x%lx, value 0x%lx\n", vctx->ecx, value);
+            return false;
+        }
     } else if (msr_is_machine_check(vctx->ecx, false)) {
-        assert(handle_machine_check_msr_write(vctx->ecx, value));
+        if (!handle_machine_check_msr_write(vctx->ecx, value)) {
+            LOG_VMM_ERR("Failed to write machine check MSR 0x%lx, value 0x%lx\n", vctx->ecx, value);
+            return false;
+        }
     } else {
         switch (vctx->ecx) {
         case IA32_APIC_BASE:
-        /* Make sure that the guest isn't transitioning our virtual APIC into an invalid state.
-         * See Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family) for bit definitions. */
+            /* Make sure that the guest isn't transitioning our virtual APIC into an invalid state.
+             * See Figure 11-5. IA32_APIC_BASE MSR (APIC_BASE_MSR in P6 Family) for bit definitions. */
             if (value & BIT(10)) {
                 LOG_VMM_ERR("guest tried to enable x2APIC via IA32_APIC_BASE\n");
                 return false;

@@ -64,9 +64,17 @@ static struct cmos_state cmos_state;
 static bool handle_select_port(size_t qualification, seL4_VCPUContext *vctx)
 {
     if (pio_fault_is_read(qualification)) {
-        pio_emulate_read(qualification, vctx, cmos_state.select_reg);
+        if (!pio_emulate_read(qualification, vctx, cmos_state.select_reg)) {
+            LOG_VMM_ERR("failed to set read operand\n");
+            return false;
+        }
     } else {
-        cmos_state.select_reg = pio_get_write_data(qualification, vctx);
+        uint32_t select;
+        if (!pio_get_write_data(qualification, vctx, &select)) {
+            LOG_VMM_ERR("failed to get write operand\n");
+            return false;
+        }
+        cmos_state.select_reg = select;
     }
     return true;
 }
@@ -152,7 +160,10 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             result = cmos_state.registers[selected_cmos_port()];
             break;
         }
-        pio_emulate_read(qualification, vctx, result);
+        if (!pio_emulate_read(qualification, vctx, result)) {
+            LOG_VMM_ERR("failed to set read operand\n");
+            return false;
+        }
     } else {
         switch (selected_cmos_port()) {
         case CMOS_REG_STS_D:
@@ -163,17 +174,27 @@ static bool handle_data_port(size_t qualification, seL4_VCPUContext *vctx)
             LOG_VMM_ERR("CMOS alarm is unimplemented\n");
             break;
         case CMOS_REG_STS_B: {
-            uint8_t old_sts_b = cmos_state.registers[CMOS_REG_STS_B];
-            cmos_state.registers[CMOS_REG_STS_B] = pio_get_write_data(qualification, vctx);
-            uint8_t new_sts_b = cmos_state.registers[CMOS_REG_STS_B];
+            uint32_t old_sts_b = cmos_state.registers[CMOS_REG_STS_B];
+            uint32_t new_sts_b;
+            if (!pio_get_write_data(qualification, vctx, &new_sts_b)) {
+                LOG_VMM_ERR("failed to get write operand\n");
+                return false;
+            }
+            cmos_state.registers[CMOS_REG_STS_B] = new_sts_b;
             if (!(old_sts_b & BIT(CMOS_STS_B_UIE)) && (new_sts_b & BIT(CMOS_STS_B_UIE))) {
                 LOG_VMM_ERR("rtc update ended interrupt unimplemented\n");
                 return false;
             }
             break;
         }
-        default:
-            cmos_state.registers[selected_cmos_port()] = pio_get_write_data(qualification, vctx);
+        default: {
+            uint32_t val;
+            if (!pio_get_write_data(qualification, vctx, &val)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
+            cmos_state.registers[selected_cmos_port()] = val;
+        }
         }
     }
 

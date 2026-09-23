@@ -426,10 +426,17 @@ bool hpet_fault_handle(seL4_VCPUContext *vctx, uint64_t offset, seL4_Word qualif
             LOG_VMM_ERR("Reading unknown HPET register offset 0x%lx\n", offset);
             return false;
         }
-        assert(mem_read_set_data(decoded_ins, qualification, vctx, offset, data));
+
+        if (!mem_read_set_data(decoded_ins, qualification, vctx, offset, data)) {
+            LOG_VMM_ERR("Failed to set read operand\n");
+            return false;
+        }
     } else {
         uint64_t data;
-        assert(mem_write_get_data(decoded_ins, qualification, vctx, &data));
+        if (!mem_write_get_data(decoded_ins, qualification, vctx, &data)) {
+            LOG_VMM_ERR("Failed to get write operand\n");
+            return false;
+        }
 
         if (offset == GENERAL_CONFIG_REG_MMIO_OFF) {
             uint64_t old_config = hpet_regs.general_config;

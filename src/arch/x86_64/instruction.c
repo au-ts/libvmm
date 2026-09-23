@@ -77,8 +77,10 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
     bool success = true;
 
     int access_width_bytes = mem_access_width_to_bytes(decoded_ins);
-    assert(access_width_bytes != 0);
-    assert(access_width_bytes <= 8);
+    if (!access_width_bytes) {
+        LOG_VMM_ERR("Failed to get memory instruction access width\n");
+        return false;
+    }
 
     switch (decoded_ins.type) {
     case INSTRUCTION_MEMORY:
@@ -90,7 +92,10 @@ bool mem_write_get_data(decoded_instruction_ret_t decoded_ins, size_t ept_fault_
         }
         break;
     case INSTRUCTION_WRITE_IMM:
-        assert(ept_fault_is_write(ept_fault_qualification));
+        if (!ept_fault_is_write(ept_fault_qualification)) {
+            LOG_VMM_ERR("unexpected EPT read fault for write immediate instruction?\n");
+            return false;
+        }
         *ret = decoded_ins.decoded.write_imm_instruction.value;
         break;
     default:
@@ -243,8 +248,8 @@ static char *vctx_idx_to_name(int vctx_idx)
     case R15_IDX:
         return "r15";
     default:
-        assert(false);
-        return "";
+        LOG_VMM_ERR("unknown vctx idx: %d\n", vctx_idx);
+        return NULL;
     }
 }
 
@@ -288,10 +293,16 @@ decoded_instruction_ret_t decode_instruction(size_t vcpu_id, seL4_Word rip)
     uint8_t instruction_buf[X86_MAX_INSTRUCTION_LENGTH];
     uint64_t rip_gpa;
     size_t bytes_remaining;
-    assert(gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining));
+    if (!gva_to_gpa(vcpu_id, rip, &rip_gpa, &bytes_remaining)) {
+        LOG_VMM_ERR("failed to translate guest RIP 0x%lx to GPA\n", rip);
+        return (decoded_instruction_ret_t) { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
+    }
 
     // @billn fix lazyness, crashes if the instruction crosses a page boundary
-    assert(bytes_remaining >= X86_MAX_INSTRUCTION_LENGTH);
+    if (bytes_remaining < X86_MAX_INSTRUCTION_LENGTH) {
+        LOG_VMM_ERR("instruction crosses a page boundary, bytes remaining %zu :(\n", bytes_remaining);
+        return (decoded_instruction_ret_t) { .type = INSTRUCTION_DECODE_FAIL, .decoded = {} };
+    }
 
     /* Copy 15 bytes of instruction from guest RAM, the actual number of bytes parsed will be less.
      * We have to derive the instruction length ourselves, as the silicon won't tell us... */

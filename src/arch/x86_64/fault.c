@@ -179,7 +179,10 @@ uint64_t vm_exit_total = 0;
 
 char *fault_to_string(int exit_reason)
 {
-    assert(exit_reason < NUM_EXIT_REASONS);
+    if (exit_reason >= NUM_EXIT_REASONS) {
+        LOG_VMM_ERR("exit_reason %d is out of bound\n", exit_reason);
+        return NULL;
+    }
     assert(exit_reason_strs[exit_reason] != NULL);
     return exit_reason_strs[exit_reason];
 }
@@ -446,14 +449,27 @@ bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
             uint32_t data;
             success = lapic_read_fault_handle(offset, &data);
             decoded_ins = decode_instruction(vcpu_id, rip);
-            assert(decoded_ins.type == INSTRUCTION_MEMORY);
+            if (decoded_ins.type != INSTRUCTION_MEMORY) {
+                LOG_VMM_ERR("expected memory instruction type, got type %d\n", decoded_ins.type);
+                success = false;
+                break;
+            }
             uint64_t *vctx_raw = (uint64_t *)vctx;
             vctx_raw[decoded_ins.decoded.memory_instruction.target_reg] = data;
         } else if (access_type == 1) {
             decoded_ins = decode_instruction(vcpu_id, rip);
-            assert(decoded_ins.type == INSTRUCTION_MEMORY);
-            // TODO: probably do not have this assert
-            assert(mem_access_width_to_bytes(decoded_ins) == 4);
+            if (decoded_ins.type != INSTRUCTION_MEMORY) {
+                LOG_VMM_ERR("expected memory instruction type, got type %d\n", decoded_ins.type);
+                success = false;
+                break;
+            }
+
+            int access_width = mem_access_width_to_bytes(decoded_ins);
+            if (access_width != 4) {
+                LOG_VMM_ERR("expected access width 4, got %d\n", access_width);
+                success = false;
+                break;
+            }
             uint64_t *vctx_raw = (uint64_t *)vctx;
             // TODO: probably use wrapper for getting write value.
             success = lapic_write_fault_handle(offset, vctx_raw[decoded_ins.decoded.memory_instruction.target_reg]);

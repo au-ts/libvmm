@@ -44,8 +44,7 @@ int pio_fault_to_access_width_bytes(seL4_Word qualification)
     case IOPORT_DWORD_ACCESS_QUAL:
         return 4;
     default:
-        /* Hardware bug or wrong type of qualification */
-        assert(false);
+        LOG_VMM_ERR("Failed to get access width, hardware bug or wrong type of qualification\n");
         return 0;
     }
 }
@@ -103,8 +102,14 @@ static void pio_string_read_byte(seL4_VCPUContext *vctx, uint8_t data)
 
 int pio_emulate_string_read(uint64_t qualification, seL4_VCPUContext *vctx, uint8_t *data, size_t data_len)
 {
-    assert(pio_fault_is_read(qualification));
-    assert(pio_fault_is_string_op(qualification));
+    if (!pio_fault_is_read(qualification)) {
+        LOG_VMM_ERR("Unexpected write op\n");
+        return 0;
+    }
+    if (!pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("Expected string op\n");
+        return 0;
+    }
 
     uint64_t rep = 1;
     if (qualification & PIO_VIOLATION_REP_PREFIX_BIT) {
@@ -132,10 +137,16 @@ int pio_emulate_string_read(uint64_t qualification, seL4_VCPUContext *vctx, uint
     return bytes_to_copy;
 }
 
-void pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t data)
+bool pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t data)
 {
-    assert(pio_fault_is_read(qualification));
-    assert(!pio_fault_is_string_op(qualification));
+    if (!pio_fault_is_read(qualification)) {
+        LOG_VMM_ERR("Unexpected write op\n");
+        return false;
+    }
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("Unexpected string op\n");
+        return false;
+    }
 
     int access_width_bytes = pio_fault_to_access_width_bytes(qualification);
     /* We need to preserve the upper bits */
@@ -152,26 +163,38 @@ void pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t d
         break;
     default:
         LOG_VMM_ERR("unreachable!\n");
-        assert(false);
+        return false;
     }
+
+    return true;
 }
 
-uint32_t pio_get_write_data(uint64_t qualification, seL4_VCPUContext *vctx)
+bool pio_get_write_data(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t *result)
 {
-    assert(!pio_fault_is_read(qualification));
-    assert(!pio_fault_is_string_op(qualification));
+    if (pio_fault_is_read(qualification)) {
+        LOG_VMM_ERR("Unexpected read op\n");
+        return false;
+    }
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("Unexpected string op\n");
+        return false;
+    }
+
     switch (pio_fault_to_access_width_bytes(qualification)) {
     case 1:
-        return vctx->eax & 0xFFULL;
+        *result = vctx->eax & 0xFFULL;
+        break;
     case 2:
-        return vctx->eax & 0xFFFFULL;
+        *result = vctx->eax & 0xFFFFULL;
+        break;
     case 4:
-        return vctx->eax & 0xFFFFFFFFULL;
+        *result = vctx->eax & 0xFFFFFFFFULL;
+        break;
     default:
         LOG_VMM_ERR("unreachable!\n");
-        assert(false);
-        return 0;
+        return false;
     }
+    return true;
 }
 
 void emulate_ioport_noop_access(uint64_t qualification, seL4_VCPUContext *vctx)
@@ -182,7 +205,10 @@ void emulate_ioport_noop_access(uint64_t qualification, seL4_VCPUContext *vctx)
             pio_emulate_string_read(qualification, vctx, NULL, 0);
         } else {
             uint32_t data = 0xFFFFFFFF;
-            pio_emulate_read(qualification, vctx, data);
+            if (!pio_emulate_read(qualification, vctx, data)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return;
+            }
         }
     }
 }

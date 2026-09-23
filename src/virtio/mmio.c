@@ -317,7 +317,10 @@ bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, ui
                                  irq_routing_info_t irq_routing_info)
 {
     bool success;
-    assert(dev->transport_type == VIRTIO_TRANSPORT_MMIO);
+    if (dev->transport_type != VIRTIO_TRANSPORT_MMIO) {
+        LOG_VMM_ERR("Incorrect transport type %u\n", dev->transport_type);
+        return false;
+    }
     success = fault_register_vm_exception_handler(region_base, region_size, &virtio_mmio_fault_handle, dev);
     if (!success) {
         LOG_VMM_ERR("Could not register virtual memory fault handler for "
@@ -330,7 +333,5 @@ bool virtio_mmio_register_device(virtio_device_t *dev, uintptr_t region_base, ui
      * to the guest. This assumes that the interrupt controller is already setup. */
     // @ivanv: we should check that (on AArch64) the virq is an SPI.
     success = virq_register(irq_routing_info, &virtio_virq_default_ack, NULL);
-    assert(success);
-
     return success;
 }

@@ -87,7 +87,10 @@
 // Assume 2MiB large page
 static bool map_page(uint64_t paging_objects_start_gpa, void *pml4, uint64_t target_gpa, uint64_t *n_pt_created)
 {
-    assert(target_gpa % PAGE_SIZE_2M == 0);
+    if (target_gpa % PAGE_SIZE_2M) {
+        LOG_VMM_ERR("target_gpa 0x%lx is not a multiple of 2MiB\n", target_gpa);
+        return false;
+    }
 
     uint16_t pml4_idx = (target_gpa >> (12 + 9 + 9 + 9)) & 0x1ff;
     uint16_t pdpt_idx = (target_gpa >> (12 + 9 + 9)) & 0x1ff;
@@ -154,7 +157,10 @@ static uintptr_t build_initial_kernel_page_table(uint64_t paging_objects_start_g
                                                  uint64_t ident_map_end_gpa, uint64_t *ret_paging_objs_bytes)
 {
     /* Create the PML4 object */
-    assert(paging_objects_start_gpa % PAGE_SIZE_4K == 0);
+    if (paging_objects_start_gpa % PAGE_SIZE_4K) {
+        LOG_VMM_ERR("paging_objects_start_gpa 0x%lx is not a multiple of 4KiB\n", paging_objects_start_gpa);
+        return 0;
+    }
     uintptr_t pml4_gpa = paging_objects_start_gpa;
     uint64_t n_pt_created = 1;
 
@@ -243,7 +249,10 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t kernel_load_size = setup_header.syssize * 16; // code size
     uint64_t kernel_end_gpa = kernel_load_gpa + setup_header.init_size
                             + KERNEL_END_PADDING; // code + data size + safety margin
-    assert(kernel_load_size < kernel_size);
+    if (kernel_load_size >= kernel_size) {
+        LOG_VMM_ERR("kernel_load_size %lu >= kernel_size %lu ?? Dodgy image?\n", kernel_load_size, kernel_size);
+        return false;
+    }
     if (!(kernel_load_gpa >= ram_start_gpa && kernel_end_gpa <= ram_end_gpa)) {
         LOG_VMM_ERR("linux_setup_images(): the first memory region [0x%lx..0x%lx) does not cover Linux kernel load "
                     "destination [0x%lx..0x%lx)\n",
@@ -338,6 +347,11 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t paging_objs_bytes;
     uintptr_t pml4_gpa = build_initial_kernel_page_table(paging_objects_start_gpa, ident_map_start_gpa,
                                                          ident_map_end_gpa, &paging_objs_bytes);
+    if (!pml4_gpa) {
+        LOG_VMM_ERR("failed to create initial kernel page table\n");
+        return false;
+    }
+
     uint64_t paging_objects_end_gpa = paging_objects_start_gpa + paging_objs_bytes;
     LOG_VMM("linux_setup_images(): Identity paging objects GPA: [0x%lx..0x%lx), %lu paging objects created\n",
             paging_objects_start_gpa, paging_objects_end_gpa, paging_objs_bytes / PAGE_SIZE_4K);
@@ -379,7 +393,6 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     *e820_entries = 3;
     struct boot_e820_entry *e820_table = (struct boot_e820_entry *)((uintptr_t)zero_page_dest
                                                                     + ZERO_PAGE_E820_TABLE_OFFSET);
-    assert(*e820_entries <= E820_MAX_ENTRIES_ZEROPAGE);
     /* Everything from start of RAM to ACPI tables */
     e820_table[0] = (struct boot_e820_entry) {
         .addr = ram_start_gpa,
@@ -413,6 +426,11 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
             .type = E820_RAM,
         };
         *e820_entries = *e820_entries + 1;
+    }
+
+    if (*e820_entries >= E820_MAX_ENTRIES_ZEROPAGE) {
+        LOG_VMM_ERR("Number of E820 entries %hhu exceed Linux max\n", *e820_entries);
+        return false;
     }
 
     /* Linux boot ABI expects physical address of zero page to be in RSI.

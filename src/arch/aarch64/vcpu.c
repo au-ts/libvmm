@@ -28,7 +28,6 @@ extern guest_t guest;
 
 bool vcpu_is_on(size_t vcpu_id)
 {
-    assert(vcpu_id < guest.num_vcpus);
     if (vcpu_id >= guest.num_vcpus) {
         return false;
     }
@@ -38,7 +37,6 @@ bool vcpu_is_on(size_t vcpu_id)
 
 void vcpu_set_on(size_t vcpu_id, bool on)
 {
-    assert(vcpu_id < guest.num_vcpus);
     if (vcpu_id >= guest.num_vcpus) {
         return;
     }
@@ -71,7 +69,10 @@ void vcpu_reset(size_t vcpu_id)
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1, 0);
 #if CONFIG_MAX_NUM_NODES > 1
     /* Virtualisation Multiprocessor ID Register */
-    assert(vcpu_id < 16);
+    if (vcpu_id >= 16) {
+        LOG_VMM_ERR("more than 16 VCPUs is not supported\n");
+        return;
+    }
     /* TODO: support more than 16 vCPUs, we need to correctly set the affinity
      * bits in VMPIDR_EL2. */
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_VMPIDR_EL2, vcpu_id);

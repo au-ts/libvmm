@@ -25,9 +25,9 @@ int pio_emulate_string_read(uint64_t qualification, seL4_VCPUContext *vctx, uint
 
 /* Write the result of a port IO read emulation to vCPU general purpose registers
  * while respecting architectural rules. */
-void pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t data);
+bool pio_emulate_read(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t data);
 
 /* Retrieve the data of a port IO write instruction. */
-uint32_t pio_get_write_data(uint64_t qualification, seL4_VCPUContext *vctx);
+bool pio_get_write_data(uint64_t qualification, seL4_VCPUContext *vctx, uint32_t *result);
 
 void emulate_ioport_noop_access(uint64_t qualification, seL4_VCPUContext *vctx);

@@ -20,7 +20,6 @@ void tcb_print_regs(size_t vcpu_id)
      */
     seL4_UserContext regs;
     seL4_Error err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
     if (err != seL4_NoError) {
         LOG_VMM_ERR("Could not read TCB registers when trying to print TCB registers\n");
         return;

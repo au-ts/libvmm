@@ -38,7 +38,11 @@ typedef enum {
 static smc_call_id_t smc_get_call(size_t func_id)
 {
     uint64_t service = ((func_id >> SMC_SERVICE_CALL_SHIFT) & SMC_SERVICE_CALL_MASK);
-    assert(service >= 0 && service <= 0xFFFF);
+
+    if (service > SMC_FUNC_ID_MASK) {
+        LOG_VMM_ERR("service 0x%lx is out of bound\n", service);
+        return false;
+    }
 
     if (service <= SMC_CALL_VENDOR_HYP_SERVICE) {
         return service;
@@ -171,10 +175,7 @@ bool smc_sip_forward(size_t vcpu_id, seL4_UserContext *regs, size_t fn_number)
     regs->x6 = response.x6;
     regs->x7 = response.x7;
 
-    bool success = fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
-    assert(success);
-
-    return success;
+    return fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
 }
 #endif
 
@@ -196,7 +197,10 @@ bool smc_handle(size_t vcpu_id, uint64_t hsr)
 {
     seL4_UserContext regs;
     int err = seL4_TCB_ReadRegisters(BASE_VM_TCB_CAP + vcpu_id, false, 0, SEL4_USER_CONTEXT_SIZE, &regs);
-    assert(err == seL4_NoError);
+    if (err != seL4_NoError) {
+        LOG_VMM_ERR("seL4_TCB_ReadRegisters returned error %d\n", err);
+        return false;
+    }
 
     size_t fn_number = smc_get_function_number(&regs);
     smc_call_id_t service = smc_get_call(regs.x0);
