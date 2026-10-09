@@ -108,7 +108,7 @@ void vcpu_print_regs(size_t vcpu_id)
     printf("    afsr1: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_AFSR1));
     printf("    esr: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_ESR));
     printf("    far: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_FAR));
-    printf("    par: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_PAR));
+    printf("    par: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_FAR));
     printf("    vbar: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_VBAR));
     /* thread pointer/ID registers EL0/EL1 */
     printf("    tpidr_el1: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_TPIDR_EL1));
