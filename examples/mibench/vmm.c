@@ -9,6 +9,10 @@
 #include <microkit.h>
 #include <libvmm/libvmm.h>
 
+#include <sddf/timer/config.h>
+
+#include <sddf/benchmark/sel4bench.h>
+
 /*
  * As this is just an example, for simplicity we just make the size of the
  * guest's "RAM" the same for all platforms. For just booting Linux with a
@@ -59,7 +63,10 @@ extern char _guest_initrd_image_end[];
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
 
-// uintptr_t bench_vaddr;
+__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
+
+#define BENCH_VADDR 0x30000000
+extern uintptr_t bench_vaddr;
 
 // #define NSAMPLES 10000
 // static volatile  uint64_t *samples;
@@ -74,6 +81,13 @@ uintptr_t guest_ram_vaddr;
 
 void init(void)
 {
+    bench_vaddr = BENCH_VADDR;
+    #ifndef NOWFI
+    assert(timer_config_check_magic(&timer_config));
+    #endif
+
+    sel4bench_init();
+
     /* Initialise the VMM, the VCPU(s), and start the guest */
     LOG_VMM("starting \"%s\"\n", microkit_name);
 
@@ -112,23 +126,49 @@ void init(void)
 
 void notified(microkit_channel ch)
 {
-    switch (ch) {
-    case SERIAL_IRQ_CH: {
-        // if (idx < NSAMPLES) {
-        //     samples[0] = idx;
-        //     samples[++idx] = (uint64_t)(guest_cntpct_el0());
-        //     LOG_VMM("idx: %u, %lu\n", idx, guest_cntpct_el0());
-        // }
+    #ifndef NOWFI
+    if (ch == timer_config.driver_id) {
+        // LOG_VMM("Timer driver notification recieved\n");
+        guest_time_handle_timer_ntfn();
+    } else {
+        switch (ch) {
+        case SERIAL_IRQ_CH: {
+            // if (idx < NSAMPLES) {
+            //     samples[0] = idx;
+            //     samples[++idx] = (uint64_t)(guest_cntpct_el0());
+            //     LOG_VMM("idx: %u, %lu\n", idx, guest_cntpct_el0());
+            // }
 
-        bool success = virq_handle_passthrough(ch);
-        if (!success) {
-            LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
+            bool success = virq_handle_passthrough(ch);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
+            }
+            break;
         }
-        break;
+        default:
+            printf("Unexpected channel, ch: 0x%x\n", ch);
+        }
+        guest_wfi_resume_if_suspended(0);
     }
-    default:
-        printf("Unexpected channel, ch: 0x%x\n", ch);
-    }
+    #else
+    switch (ch) {
+        case SERIAL_IRQ_CH: {
+            // if (idx < NSAMPLES) {
+            //     samples[0] = idx;
+            //     samples[++idx] = (uint64_t)(guest_cntpct_el0());
+            //     LOG_VMM("idx: %u, %lu\n", idx, guest_cntpct_el0());
+            // }
+
+            bool success = virq_handle_passthrough(ch);
+            if (!success) {
+                LOG_VMM_ERR("IRQ %d dropped\n", SERIAL_IRQ);
+            }
+            break;
+        }
+        default:
+            printf("Unexpected channel, ch: 0x%x\n", ch);
+        }
+    #endif
 }
 
 /*

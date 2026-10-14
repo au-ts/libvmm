@@ -59,6 +59,16 @@
         gpu@ffe40000 {
             status = "disabled";
         };
+
+        bus@ffd00000 {
+            interrupt-controller@f080 {
+                status = "disabled";
+            };
+
+            watchdog@f0d0 {
+                status = "disabled";
+            };
+};
     };
 
     chosen {

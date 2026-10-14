@@ -464,6 +464,13 @@ static inline uint64_t guest_cntpct_el0(void)
     return cntpct_el0;
 }
 
+static inline uint64_t guest_pmccntr_el0(void)
+{
+    uint64_t pmccntr_el0;
+    asm volatile("isb; mrs %0, pmccntr_el0" : "=r"(pmccntr_el0));
+    return pmccntr_el0;
+}
+
 bool fault_handle(size_t vcpu_id, microkit_msginfo msginfo)
 {
     size_t label = microkit_msginfo_get_label(msginfo);
