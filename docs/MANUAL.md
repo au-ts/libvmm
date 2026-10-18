@@ -409,11 +409,9 @@ in sDDF which will unlock more hardware support.
 
 The library itself is intended to need minimal changes to add a new platform.
 
-The following changes are necessary:
+The following change is necessary:
 
 * Platform vGIC version and physical address (see `src/arch/aarch64/vgic/vgic.h`).
-* If the platform uses GICv3, you will need to change the top-level Makefile snippet
-  (`vmm.mk`) to account for that.
 
 Before you can get a guest working on your desired platform you must have the following:
 
