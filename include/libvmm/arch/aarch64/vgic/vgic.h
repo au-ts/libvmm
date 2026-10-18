@@ -23,6 +23,9 @@
 #elif defined(CONFIG_PLAT_MAAXBOARD)
 #define GIC_DIST_PADDR      0x38800000UL
 #define GIC_REDIST_PADDR    0x38880000UL
+#elif defined(CONFIG_PLAT_RK3568)
+#define GIC_DIST_PADDR      0xfd400000UL
+#define GIC_REDIST_PADDR    0xfd460000UL
 #elif defined(CONFIG_PLAT_ZYNQMP)
 #define GIC_V2
 #define GIC_DIST_PADDR      0xf9010000UL
