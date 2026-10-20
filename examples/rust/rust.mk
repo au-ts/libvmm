@@ -9,6 +9,12 @@ ifeq ($(strip $(MICROKIT_SDK)),)
 $(error MICROKIT_SDK must be specified)
 endif
 
+TOOLCHAIN ?= clang
+
+SUPPORTED_BOARDS := qemu_virt_aarch64
+
+SDDF_CUSTOM_LIBC := 1
+
 # Download the Linux kernel and initrd from Trustworthy Systems website
 LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
 INITRD ?= e800d52939b73281670df8598cb9c616dfd44f10-rootfs.cpio.gz
@@ -27,8 +33,8 @@ BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
 SYSTEM_FILE := $(EXAMPLE_DIR)/rust_vmm.system
 
-DTS := $(EXAMPLE_DIR)/images/linux.dts
-DTB := linux.dtb
+GUEST_DTS = $(EXAMPLE_DIR)/images/linux.dts
+GUEST_DTB = linux.dtb
 
 IMAGE_FILE = loader.img
 REPORT_FILE = report.txt
@@ -77,8 +83,6 @@ all: $(IMAGE_FILE)
 
 -include vmm.d
 
-$(IMAGES): vmm.elf
-
 qemu: $(IMAGE_FILE)
 	$(QEMU) -machine virt,virtualization=on,highmem=off,secure=off \
 			-cpu cortex-a53 \
@@ -101,13 +105,12 @@ ${INITRD}:
 	tar xf $(BUILD_DIR)/$@.tar.gz -C $(BUILD_DIR)/initrd_download_dir
 	$(eval INITRD=$(BUILD_DIR)/initrd_download_dir/${INITRD}/rootfs.cpio.gz)
 
-$(DTB): $(DTS)
+$(GUEST_DTB): $(GUEST_DTS)
 	$(DTC) -q -I dts -O dtb $< > $@
 
 include $(LIBVMM)/vmm.mk
-include $(SDDF)/util/util.mk
 
-vmm.elf: ${EXAMPLE_DIR}/src/vmm.rs ${LINUX} ${INITRD} $(DTB) libvmm.a libsddf_util_debug.a
+vmm.elf: ${EXAMPLE_DIR}/src/vmm.rs ${LINUX} ${INITRD} $(GUEST_DTB) libvmm.a libsddf_util_debug.a
 	cp ${EXAMPLE_DIR}/rust-toolchain.toml .
 	$(RUST_ENV) \
 		cargo build $(RUST_OPTIONS)

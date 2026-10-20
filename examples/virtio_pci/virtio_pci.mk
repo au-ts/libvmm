@@ -6,6 +6,8 @@
 PYTHON ?= python3
 IASL ?= iasl
 
+TOOLCHAIN ?= clang
+
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
 LIBVMM_TOOLS := $(LIBVMM)/tools
@@ -37,10 +39,27 @@ SYSTEM_FILE := virtio_pci.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-include ${SDDF}/tools/make/board/common.mk
-
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
+
+vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
+
+CFLAGS += \
+	  -Wall \
+	  -Wno-unused-function \
+	  -DBOARD_$(MICROKIT_BOARD) \
+	  -DSDDF_VIRTIO_PCI_TRANSPORT_SKIP_BUS_CHECK \
+	  -I$(BOARD_DIR)/include \
+	  -I$(SDDF)/include \
+	  -I$(SDDF)/include/microkit \
+	  -I$(LIBVMM)/include \
+	  -I$(VIRTIO_EXAMPLE)/include
+
+LIBS := libsddf_util_debug.a
+
+include $(LIBVMM)/vmm.mk
+include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
+include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 ifeq ($(ARCH),aarch64)
 	LINUX ?= 8b1d3a8587c60428c79d3e1981e7b6a7c653e1f8-linux
@@ -59,33 +78,6 @@ else
 $(error Unsupported architecture $(ARCH))
 endif
 
-vpath %.c $(SDDF) $(LIBVMM) $(VIRTIO_EXAMPLE)
-
-CFLAGS += \
-	  -Wall \
-	  -Wno-unused-function \
-	  -DBOARD_$(MICROKIT_BOARD) \
-	  -DSDDF_VIRTIO_PCI_TRANSPORT_SKIP_BUS_CHECK \
-	  -I$(BOARD_DIR)/include \
-	  -I$(SDDF)/include \
-	  -I$(SDDF)/include/microkit \
-	  -I$(LIBVMM)/include \
-	  -I$(VIRTIO_EXAMPLE)/include
-
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
-
-include $(SDDF)/util/util.mk
-include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
-include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
-include $(SERIAL_COMPONENTS)/serial_components.mk
-include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
-include $(BLK_COMPONENTS)/blk_components.mk
-include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
-include $(NET_COMPONENTS)/network_components.mk
-include $(LIBVMM)/vmm.mk
-include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
-include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
 	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf

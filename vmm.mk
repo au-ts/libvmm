@@ -6,6 +6,11 @@
 # Snippet to build libvmm.a, to be included in a full-system Makefile.
 #
 
+ifeq ($(strip $(SDDF)),)
+    $(error libvmm needs the location of the SDDF for utilities, custom libc and to build virtIO components)
+endif
+include ${SDDF}/tools/make/sddf.mk
+
 LIBVMM_DIR :=  $(abspath $(dir $(lastword ${MAKEFILE_LIST})))
 
 AARCH64_FILES := src/arch/aarch64/fault.c \
@@ -47,14 +52,9 @@ X86_64_FILES = src/arch/x86_64/fault.c \
 			   src/arch/x86_64/mtrr.c \
 			   src/arch/x86_64/machine_check.c
 
-# VIRTIO MMIO and PCI depends on sddf
-ifeq ($(strip $(SDDF)),)
-    $(error libvmm needs the location of the SDDF to build virtIO components)
-endif
-
 LIBVMM_CFLAGS = $(CFLAGS)
 
-# we need ${SDDF} for virtIO; we need ${LIBVMM} for all
+# we need ${SDDF} for virtIO, libc and utilities; we need ${LIBVMM} for all
 # the libvmm api interfaces
 ifeq ($(findstring ${SDDF}/include, ${CFLAGS}),)
 LIBVMM_CFLAGS += -I${SDDF}/include -I${SDDF}/include/microkit
