@@ -7,6 +7,8 @@ PYTHON ?= python3
 
 LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
+TOOLCHAIN ?= clang
+
 LIBVMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 SDDF_INCLUDE := $(SDDF)/include/sddf
@@ -36,8 +38,6 @@ SYSTEM_FILE := virtio.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-include ${SDDF}/tools/make/board/common.mk
-
 CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
 CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
 
@@ -53,21 +53,9 @@ CFLAGS += \
 	  -I$(LIBVMM)/include \
 	  -I$(VIRTIO_EXAMPLE)/include
 
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
+LIBS := libsddf_util_debug.a
 
-include $(SDDF)/util/util.mk
-ifeq ($(MICROKIT_BOARD), maaxboard)
-include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
-endif
-include $(SERIAL_COMPONENTS)/serial_components.mk
-include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
-include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
-include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
-include $(BLK_COMPONENTS)/blk_components.mk
-include $(NET_COMPONENTS)/network_components.mk
 include $(LIBVMM)/vmm.mk
-include $(LIBVMM_TOOLS)/linux/uio/uio.mk
 include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
 include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 

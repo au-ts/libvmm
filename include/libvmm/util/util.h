@@ -28,12 +28,6 @@
 #define LOG_VMM(...) do{ printf("%s|INFO: ", microkit_name); printf(__VA_ARGS__); }while(0)
 #define LOG_VMM_ERR(...) do{ printf("%s|ERROR (%s:%u): ", microkit_name, __FUNCTION__, __LINE__); printf(__VA_ARGS__); }while(0)
 
-static void assert_fail(const char *assertion, const char *file, unsigned int line, const char *function)
-{
-    printf("Failed assertion '%s' at %s:%u in function %s\n", assertion, file, line, function);
-    __builtin_trap();
-}
-
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif

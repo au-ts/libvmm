@@ -7,6 +7,8 @@ QEMU := qemu-system-aarch64
 
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 
+TOOLCHAIN ?= clang
+
 LIBVMM_TOOLS := $(LIBVMM)/tools
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 ARCH := ${shell grep 'CONFIG_SEL4_ARCH  ' $(BOARD_DIR)/include/kernel/gen_config.h | cut -d' ' -f4}
@@ -16,6 +18,10 @@ IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
 SDDF_CUSTOM_LIBC := 1
+
+SUPPORTED_BOARDS := qemu_virt_aarch64 \
+					odroidc4 \
+					maaxboard
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 
@@ -41,8 +47,7 @@ CFLAGS := \
 	  -MP \
 	  -target $(TARGET)
 
-LDFLAGS := -L$(BOARD_DIR)/lib
-LIBS := --start-group -lmicrokit -Tmicrokit.ld libvmm.a libsddf_util_debug.a --end-group
+LIBS := libsddf_util_debug.a
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -50,7 +55,7 @@ $(CHECK_FLAGS_BOARD_MD5):
 	-rm -f .board_cflags-*
 	touch $@
 
-vmm.elf: vmm.o images.o
+vmm.elf: vmm.o images.o libvmm.a
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 all: loader.img
@@ -101,7 +106,6 @@ images.o: $(LIBVMM)/tools/package_guest_images.S $(LINUX) packed_rootfs.cpio.gz 
 					$(LIBVMM)/tools/package_guest_images.S -o $@
 
 include $(LIBVMM)/vmm.mk
-include ${SDDF}/util/util.mk
 
 qemu: $(IMAGE_FILE)
 	if ! command -v $(QEMU) > /dev/null 2>&1; then echo "Could not find dependency: qemu-system-aarch64"; exit 1; fi
