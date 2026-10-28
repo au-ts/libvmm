@@ -73,6 +73,7 @@ RUST_OPTIONS := \
 	-Z build-std=core,alloc,compiler_builtins \
 	-Z build-std-features=compiler-builtins-mem \
 	-Z bindeps \
+	--config 'build.rustflags=["-Zunstable-options"]' \
 	--release \
 	--manifest-path $(EXAMPLE_DIR)/Cargo.toml \
 	--target $(RUST_MICROKIT_TARGET) \
