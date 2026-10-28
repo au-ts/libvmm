@@ -49,6 +49,17 @@ typedef struct aarch64_sysreg_info {
     sysreg_write_exception_handler_t write_fn;
 } aarch64_sysreg_info_t;
 
+static bool sysreg_read_no_op(size_t vcpu_id, seL4_UserContext *regs, uint64_t *data)
+{
+    *data = 0;
+    return true;
+}
+
+static bool sysreg_write_no_op(size_t vcpu_id, seL4_UserContext *regs, uint64_t data)
+{
+    return true;
+}
+
 static const aarch64_sysreg_info_t cpuif_reginfo[] = {
 #if defined(GIC_V3)
     /* The following registers values were taken from:
@@ -77,8 +88,19 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
         .write_fn = NULL,
     },
 #endif
+    /* See "Arm® Architecture Reference Manual for A-profile architecture"
+       ARM DDI 0487, version M.d */
     {
-
+        /* "D24.3.20 MDSCR_EL1, Monitor Debug System Control Register"`
+         * Page D24-10282 */
+        .name = "MDSCR_EL1",
+        .opc0 = 2,
+        .opc1 = 0,
+        .crn = 0,
+        .crm = 2,
+        .opc2 = 2,
+        .read_fn = sysreg_read_no_op,
+        .write_fn = sysreg_write_no_op,
     },
 };
 
