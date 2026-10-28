@@ -168,6 +168,16 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     if (op0 == 2 && op1 == 0 && crn == 0 && op2 >= 4 && op2 <= 7) {
         /* DBG{B,W}{V,C}R<crm>_EL1: RAZ/WI */
         success = true;
+    } else if (op0 == 3 && op1 == 3 && crn == 9) {
+        /* PMCR, PMCNTEN{SET,CLR}, PMOVS{SET,CLR}, PMSWINC, PMSELR, PMCEID0/1,
+        PMCCNTR, PMXEV{TYPER,CNTR}, PMUSERENR, PMOVSSET, etc. */
+        success = true;
+    } else if (op0 == 3 && op1 == 3 && crn == 14 && crm >= 8) {
+        /* PMEVCNTR<n>_EL0 (CRm 8..11), PMEVTYPER<n>_EL0 (CRm 12..15), PMCCFILTR_EL0 */
+        success = true;
+    } else if (op0 == 3 && op1 == 0 && crn == 9 && crm == 14) {
+        /* PMINTEN{SET,CLR}_EL1, PMMIR_EL1 and other EL1 PMU controls */
+        success = true;
     } else {
         for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
             if (cpuif_reginfo[i].opc0 == op0 && cpuif_reginfo[i].opc1 == op1 && cpuif_reginfo[i].crn == crn
