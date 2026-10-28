@@ -114,6 +114,18 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
         .read_fn = sysreg_read_no_op,
         .write_fn = sysreg_write_no_op,
     },
+    {
+        /* "D24.3.27 OSLAR_EL1, OS Lock Access Register"
+         * Page D24-10311 */
+        .name = "OSLAR_EL1",
+        .opc0 = 2,
+        .opc1 = 0,
+        .crn = 1,
+        .crm = 0,
+        .opc2 = 4,
+        .read_fn = sysreg_read_no_op,
+        .write_fn = sysreg_write_no_op,
+    },
 };
 
 static int sysreg_fault_get_rt(uint64_t hsr)
