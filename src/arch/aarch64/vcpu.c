@@ -57,7 +57,6 @@ void vcpu_reset(size_t vcpu_id)
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_AMAIR, 0);
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_CIDR, 0);
     /* other system registers EL1 */
-    microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_ACTLR, 0);
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_CPACR, 0);
     /* exception handling registers EL1 */
     microkit_vcpu_arm_write_reg(vcpu_id, seL4_VCPUReg_AFSR0, 0);
@@ -101,7 +100,6 @@ void vcpu_print_regs(size_t vcpu_id)
     printf("    amair: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_AMAIR));
     printf("    cidr: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CIDR));
     /* other system registers EL1 */
-    printf("    actlr: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_ACTLR));
     printf("    cpacr: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_CPACR));
     /* exception handling registers EL1 */
     printf("    afsr0: 0x%016lx\n", microkit_vcpu_arm_read_reg(vcpu_id, seL4_VCPUReg_AFSR0));
