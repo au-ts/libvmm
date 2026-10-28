@@ -75,8 +75,11 @@ static const aarch64_sysreg_info_t cpuif_reginfo[] = {
         .opc2 = 5,
         .read_fn = icc_sre_el1_read,
         .write_fn = NULL,
-    }
+    },
 #endif
+    {
+
+    },
 };
 
 static int sysreg_fault_get_rt(uint64_t hsr)
@@ -136,7 +139,8 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     if (success) {
         return fault_advance_vcpu(vcpu_id, regs, SEL4_USER_CONTEXT_SIZE);
     } else {
-        LOG_VMM("failed to handle sysreg 64 exception with instruction: op0 %u, op2 %u, op1 %u, crn %u, crm %u, is "
+        LOG_VMM("failed to handle sysreg 64 exception with instruction: op0 0x%x, op2 0x%x, op1 0x%x, crn 0x%x, crm "
+                "0x%x, is "
                 "read %u\n",
                 op0, op2, op1, crn, crm, is_read);
     }
