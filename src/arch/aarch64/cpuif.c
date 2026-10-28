@@ -165,20 +165,25 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     bool is_read = (iss >> ISS_SYSREG_IS_READ_BIT) & 0x1;
     bool success = false;
 
-    for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
-        if (cpuif_reginfo[i].opc0 == op0 && cpuif_reginfo[i].opc1 == op1 && cpuif_reginfo[i].crn == crn
-            && cpuif_reginfo[i].crm == crm && cpuif_reginfo[i].opc2 == op2) {
-            /* Check access rights */
-            if (is_read && cpuif_reginfo[i].read_fn) {
-                uint64_t data;
-                success = cpuif_reginfo[i].read_fn(vcpu_id, regs, &data);
-                sysreg_fault_set_data(regs, hsr, data);
-            } else if (!is_read && cpuif_reginfo[i].write_fn) {
-                uint64_t data = sysreg_fault_get_data(regs, hsr);
-                success = cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
-            }
+    if (op0 == 2 && op1 == 0 && crn == 0 && op2 >= 4 && op2 <= 7) {
+        /* DBG{B,W}{V,C}R<crm>_EL1: RAZ/WI */
+        success = true;
+    } else {
+        for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
+            if (cpuif_reginfo[i].opc0 == op0 && cpuif_reginfo[i].opc1 == op1 && cpuif_reginfo[i].crn == crn
+                && cpuif_reginfo[i].crm == crm && cpuif_reginfo[i].opc2 == op2) {
+                /* Check access rights */
+                if (is_read && cpuif_reginfo[i].read_fn) {
+                    uint64_t data;
+                    success = cpuif_reginfo[i].read_fn(vcpu_id, regs, &data);
+                    sysreg_fault_set_data(regs, hsr, data);
+                } else if (!is_read && cpuif_reginfo[i].write_fn) {
+                    uint64_t data = sysreg_fault_get_data(regs, hsr);
+                    success = cpuif_reginfo[i].write_fn(vcpu_id, regs, data);
+                }
 
-            break;
+                break;
+            }
         }
     }
 
