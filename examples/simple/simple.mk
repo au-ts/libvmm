@@ -20,6 +20,7 @@ SDDF_CUSTOM_LIBC := 1
 SUPPORTED_BOARDS := qemu_virt_aarch64 \
 					odroidc4 \
 					maaxboard \
+					rock3b \
 					rpi4b_1gb \
 					zcu102 \
 					x86_64_generic_vtx

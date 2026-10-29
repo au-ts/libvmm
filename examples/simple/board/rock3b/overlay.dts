@@ -1,0 +1,69 @@
+/*
+ * Copyright 2026, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/* The goal of this DTS overlay is to disable all devices that are not pertinent to
+ * get userspace working and allow Linux to boot in our VMM by telling it where
+ * we mapped guest RAM.
+ */
+
+/ {
+    memory@10000000 {
+        device_type = "memory";
+        // 256MiB of guest RAM at GPA 0x10000000
+        reg = <0x00 0x10000000 0x00 0x10000000>;
+    };
+
+    interrupt-controller@fd400000 {
+        msi-controller@fd440000 {
+            status = "disabled";
+        };
+    };
+
+    // The clocks/pins are already set up by U-Boot
+    serial@fe660000 {
+        /delete-property/ clocks;
+        /delete-property/ clock-names;
+        /delete-property/ pinctrl-0;
+        /delete-property/ pinctrl-names;
+        clock-frequency = <24000000>;
+    };
+
+    firmware {
+        scmi {
+            status = "disabled";
+        };
+    };
+
+    clock-controller@fdd00000 {
+        status = "disabled";
+    };
+
+    clock-controller@fdd20000 {
+        status = "disabled";
+    };
+
+    pinctrl {
+        status = "disabled";
+    };
+
+    usb2phy@fe8a0000 {
+        status = "disabled";
+    };
+
+    usb2phy@fe8b0000 {
+        status = "disabled";
+    };
+
+    phy@fe8c0000 {
+        status = "disabled";
+    };
+
+    chosen {
+        linux,initrd-start = <0x00000000 0x1c000000>;
+        linux,initrd-end = <0x00000000 0x1f000000>;
+        bootargs = "console=ttyS2,1500000n8 earlycon=uart8250,mmio32,0xfe660000 nosmp maxcpus=1 rw debug loglevel=8";
+    };
+};
