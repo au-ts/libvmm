@@ -1,0 +1,26 @@
+#!/bin/sh
+
+# Copyright 2025, UNSW
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+UPLINK_DELAY_SECONDS=10
+
+# Change this if your network interface name is different
+NET_INF='eth0'
+
+# Turn off HW offloading to prevent Linux from joining 2 TCP segments together which
+# messes with lwIP on the native side
+echo "ethtool -K $NET_INF gso off" && \
+ethtool -K "$NET_INF" gso off && \
+echo "ethtool -K $NET_INF gro off" && \
+ethtool -K "$NET_INF" gro off && \
+echo "ethtool -K $NET_INF tx off rx off" && \
+ethtool -K "$NET_INF" tx off rx off && \
+
+# The sleep command is needed because the full eth uplink actually take place some time later
+# after the `ip link set "$NET_INF" up` finish
+ip link show && ip link set "$NET_INF" up && sleep "$UPLINK_DELAY_SECONDS" && \
+
+
+chmod +x /root/uio_net_driver && /root/uio_net_driver "$NET_INF"
