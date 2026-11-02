@@ -24,7 +24,7 @@ not x86's. To run this example you therefore need:
 ### Required CPU features
 
 Your CPU must support the following VT-x features, in addition to every feature
-required by the Microkit 2.3.0 manual:
+required by the Microkit 2.4.0 manual:
 
 - `unrestricted_guest`
 - `vtpr`
@@ -44,7 +44,7 @@ dependencies are needed:
 1. A custom kernel that enables Intel APICv operation, since APICv is not officially
 supported in the kernel. We are preparing an RFC to resolve this. You can either
 download a pre-built SDK containing the custom kernel
-[here](https://trustworthy.systems/Downloads/libvmm/images/microkit-sdk-2.3.0-apicv.tar.gz),
+[here](https://trustworthy.systems/Downloads/libvmm/images/microkit-sdk-2.4.0-apicv.tar.gz),
 or build the SDK from source yourself, see [docs/custom_microkit.md](docs/custom_microkit.md)
 for more details.
 

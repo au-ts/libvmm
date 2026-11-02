@@ -9,13 +9,18 @@ To build the Microkit SDK with a kernel patch that enable Intel APICv operation,
 follow the standard steps for building the SDK
 [here](https://github.com/seL4/microkit/blob/main/DEVELOPER.md).
 
-Both version 2.3.0 and 2.3.1 will work.
+Use Microkit version 2.4.0:
+```
+git clone https://github.com/seL4/microkit.git
+cd microkit
+git checkout 2.4.0
+```
 
-At the "Building the SDK" step, you will need to clone seL4 v16:
+At the "Building the SDK" step, you will need to clone seL4 v17:
 ```
 git clone https://github.com/seL4/seL4.git
 cd seL4
-git checkout 16.0.0
+git checkout 17.0.0
 ```
 
 Apply the APICv patch:
