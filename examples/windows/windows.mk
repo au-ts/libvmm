@@ -134,12 +134,11 @@ client_vmm.elf: client_vm/vmm.o client_vm/guest_arch_init.o client_vm/images.o l
 # Stop make from deleting intermediate files
 .PRECIOUS: client_vm client_vm/images.o client_vm/vmm.o
 
-# In my experience, SDL have dramatically higher performance and
-# does not apply fractional scaling so it give a pixel perfect output.
+qemu: export GDK_BACKEND := x11
 qemu: $(IMAGE_FILE) ${GUEST_OS_DISK}
 	[ "${MICROKIT_BOARD}" = "x86_64_generic_vtx" ]
 	taskset -c 0-3 $(QEMU) $(QEMU_ARCH_ARGS) \
-			-display sdl \
+			-display gtk,gl=on \
 			-serial mon:stdio \
 			-m size=9G \
 			-object iothread,id=io0 \
