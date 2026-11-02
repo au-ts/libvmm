@@ -34,10 +34,9 @@ SYSTEM_FILE := windows.system
 IMAGE_FILE := loader.img
 REPORT_FILE := report.txt
 
-include ${SDDF}/tools/make/board/common.mk
+vpath %.c $(SDDF) $(LIBVMM) $(WINDOWS_EXAMPLE)
 
-CLIENT_VM_USERLEVEL_INIT := blk_client_init net_client_init
-CLIENT_VM_USERLEVEL_HOME := $(LIBVMM_TOOLS)/linux/blk/blk_integration_tests.sh $(LIBVMM_TOOLS)/linux/blk/blk_bench.sh
+include $(LIBVMM)/vmm.mk
 
 ifeq ($(ARCH),x86_64)
 	OVMF ?= a80a6dbe981a74c48d237c30885dbfa07f9c6225-OVMF.fd
@@ -49,8 +48,6 @@ ifeq ($(ARCH),x86_64)
 else
 $(error Unsupported architecture $(ARCH))
 endif
-
-vpath %.c $(SDDF) $(LIBVMM) $(WINDOWS_EXAMPLE)
 
 CFLAGS += \
 	  -Wall \
@@ -67,19 +64,6 @@ CFLAGS += \
 
 LDFLAGS := -L$(BOARD_DIR)/lib
 LIBS := --start-group -lmicrokit -Tmicrokit.ld libsddf_util_debug.a --end-group
-
-include $(SDDF)/util/util.mk
-include ${SDDF}/drivers/timer/${TIMER_DRIV_DIR}/timer_driver.mk
-include ${SDDF}/drivers/serial/${UART_DRIV_DIR}/serial_driver.mk
-include $(SERIAL_COMPONENTS)/serial_components.mk
-include ${SDDF}/drivers/blk/${BLK_DRIV_DIR}/blk_driver.mk
-include $(BLK_COMPONENTS)/blk_components.mk
-include ${SDDF}/drivers/network/${NET_DRIV_DIR}/eth_driver.mk
-include $(NET_COMPONENTS)/network_components.mk
-include $(LIBVMM)/vmm.mk
-include $(LIBVMM_TOOLS)/linux/uio/uio.mk
-include $(LIBVMM_TOOLS)/linux/blk/blk_init.mk
-include $(LIBVMM_TOOLS)/linux/net/net_init.mk
 
 IMAGES := client_vmm.elf timer_driver.elf blk_driver.elf blk_virt.elf \
 	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf
