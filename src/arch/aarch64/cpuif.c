@@ -178,6 +178,11 @@ bool handle_sysreg_64_fault(size_t vcpu_id, uint64_t hsr, seL4_UserContext *regs
     } else if (op0 == 3 && op1 == 0 && crn == 9 && crm == 14) {
         /* PMINTEN{SET,CLR}_EL1, PMMIR_EL1 and other EL1 PMU controls */
         success = true;
+#if defined(GIC_V3)
+    } else if (op0 == 3 && op1 == 0 && crn == 12 && ((crm == 8 && op2 >= 4) || (crm == 9 && op2 <= 3))) {
+        /* ICC_AP0R<n>_EL1 (CRm 8, op2 4..7), ICC_AP1R<n>_EL1 (CRm 9, op2 0..3) */
+        success = true;
+#endif
     } else {
         for (int i = 0; i < ARRAY_SIZE(cpuif_reginfo); i++) {
             if (cpuif_reginfo[i].opc0 == op0 && cpuif_reginfo[i].opc1 == op1 && cpuif_reginfo[i].crn == crn
