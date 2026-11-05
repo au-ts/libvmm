@@ -60,11 +60,15 @@ void init(void)
 
     arch_guest_init_t args = {
         .num_vcpus = 1,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } },
         .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
     };
+    for (int i = 0; i < vmm_config.num_ram_regions; i++) {
+        args.guest_ram_regions[i].gpa_start = vmm_config.ram_regions[i].gpa;
+        args.guest_ram_regions[i].size = vmm_config.ram_regions[i].size;
+        args.guest_ram_regions[i].vmm_vaddr = (void *) vmm_config.ram_regions[i].vmm_vaddr;
+    }
+    args.num_guest_ram_regions = vmm_config.num_ram_regions;
+
     bool success = guest_init(args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
