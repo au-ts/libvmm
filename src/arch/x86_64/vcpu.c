@@ -105,8 +105,12 @@ static bool vcpu_set_up_control_registers(uint64_t cr0, uint64_t cr3, uint64_t c
      *
      * We must also set CR0_PG as there are side effects when the guest turns OFF paging.
      * See handle_cr_access() of cr_access.c for more details.
+     *
+     * Finally, set CR0.NW and CR0.CD to prevent the guest from ever turning off the cache.
+     * Since CR0.NW and CR0.CD specifically are not context switched by hardware on VM Enter
+     * and exit. This is a workaround for https://github.com/seL4/seL4/pull/1847.
      */
-    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR0_MASK, CR0_NE | CR0_PG);
+    microkit_vcpu_x86_write_vmcs(GUEST_BOOT_VCPU_ID, VMX_CONTROL_CR0_MASK, CR0_NE | CR0_PG | CR0_NW | CR0_CD);
 
     /* Check that all CR0 and CR4 features we need are supported by the host.
      * We perform this check because seL4 will clear any unsupported feature bits. */
