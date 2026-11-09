@@ -13,3 +13,4 @@ rust/target/
 compile_commands.json
 *.orig
 __pycache__/
+result
