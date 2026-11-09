@@ -93,9 +93,9 @@ bool guest_arch_init(void)
         return false;
     }
 
-    kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
-                                   (uintptr_t)_guest_dtb_image, vmm_config.dtb, dtb_size,
-                                   (uintptr_t)_guest_initrd_image, vmm_config.initrd, initrd_size);
+    kernel_pc = linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_dtb_image,
+                                   vmm_config.dtb, dtb_size, (uintptr_t)_guest_initrd_image, vmm_config.initrd,
+                                   initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return false;

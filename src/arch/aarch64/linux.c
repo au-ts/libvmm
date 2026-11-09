@@ -10,9 +10,8 @@
 #include <libvmm/arch/aarch64/linux.h>
 #include <sddf/util/cache.h>
 
-uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t kernel_size, uintptr_t dtb_src,
-                            uint64_t dtb_dest_gpa, size_t dtb_size, uintptr_t initrd_src, uint64_t initrd_dest_gpa,
-                            size_t initrd_size)
+uint64_t linux_setup_images(uintptr_t kernel, size_t kernel_size, uintptr_t dtb_src, uint64_t dtb_dest_gpa,
+                            size_t dtb_size, uintptr_t initrd_src, uint64_t initrd_dest_gpa, size_t initrd_size)
 {
     // Before doing any copying, let's sanity check the addresses.
     // Check that the kernel and DTB to do not overlap
@@ -53,6 +52,14 @@ uint64_t linux_setup_images(uint64_t ram_start_gpa, uintptr_t kernel, size_t ker
         LOG_VMM_ERR("Linux kernel image magic check failed\n");
         return 0;
     }
+
+    int num_guest_ram_regions;
+    struct guest_ram_region *guest_ram_regions = guest_ram_get_regions(&num_guest_ram_regions);
+    if (!num_guest_ram_regions) {
+        LOG_VMM_ERR("no recorded guest RAM region, have you called guest_ram_add_region()?\n");
+        return false;
+    }
+    uint64_t ram_start_gpa = guest_ram_regions[0].gpa_start;
 
     // Check that the kernel image destination is in valid guest RAM, then copy
     uint64_t kernel_dest_gpa = ram_start_gpa + image_header.text_offset;
