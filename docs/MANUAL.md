@@ -226,7 +226,8 @@ the VMM will manage is configured when setting up the guest via `guest_init`.
 libvmm expects the vCPU IDs to be consecutive, with zero being the boot vCPU ID.
 
 When making use of multiple vCPUs make sure that the guest is aware there are
-multiple CPUs enabled (e.g in the Device Tree).
+multiple CPUs enabled (e.g in the Device Tree). The only supported CPU enable method
+is PSCI.
 
 Support for multiple vCPUs on x86 is in progress.
 
