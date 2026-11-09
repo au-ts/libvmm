@@ -41,7 +41,6 @@ const UART_CH: Channel = Channel::new(1);
 extern "C" {
     fn guest_init(init_args: arch_guest_init) -> bool;
     fn linux_setup_images(
-        ram_start: usize,
         kernel: usize,
         kernel_size: usize,
         dtb_src: usize,
@@ -161,7 +160,6 @@ fn init() -> VmmHandler {
         assert!(success);
 
         let guest_pc = linux_setup_images(
-            GUEST_RAM_START_GPA,
             linux_addr,
             linux.len(),
             dtb_addr,

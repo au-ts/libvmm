@@ -179,9 +179,9 @@ void init(void)
         return;
     }
 
-    uintptr_t kernel_pc = linux_setup_images(GUEST_RAM_START_GPA, (uintptr_t)_guest_kernel_image, kernel_size,
-                                             (uintptr_t)_guest_dtb_image, GUEST_DTB_GPA, dtb_size,
-                                             (uintptr_t)_guest_initrd_image, GUEST_INIT_RAM_DISK_GPA, initrd_size);
+    uintptr_t kernel_pc = linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_dtb_image,
+                                             GUEST_DTB_GPA, dtb_size, (uintptr_t)_guest_initrd_image,
+                                             GUEST_INIT_RAM_DISK_GPA, initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
