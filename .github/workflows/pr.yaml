@@ -11,13 +11,13 @@ on: [pull_request]
 jobs:
   whitespace:
     name: 'Trailing Whitespace'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
     - uses: seL4/ci-actions/git-diff-check@master
 
   style_c:
     name: Style (C)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
         # We use this form as this creates a "test-revision" rev in the git repo,
