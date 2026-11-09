@@ -12,6 +12,7 @@ import sys
 import os
 import subprocess
 import tempfile
+import json
 from typing import Callable, Awaitable
 import types
 
@@ -260,6 +261,11 @@ def run_tests(tests: list[TestConfig]) -> None:
         action=argparse.BooleanOptionalAction,
         help="select only QEMU tests",
     )
+    filters.add_argument(
+        "--print-hw-matrix",
+        action="store_true",
+        help="print a matrix of (board, test group) pairs for hardware test in CI",
+    )
 
     add_runner_arguments(parser)
 
@@ -270,6 +276,18 @@ def run_tests(tests: list[TestConfig]) -> None:
     )
 
     tests = subset_test_cases(tests, filter_args)
+
+    if args.print_hw_matrix:
+        groups = json.loads((LIBVMM / "ci" / "test_groups.json").read_text())["groups"]
+        include = [
+            group | {"board": board}
+            for group in groups
+            for board in sorted(
+                {t.board for t in tests if t.test in group["test_args"].split(",")}
+            )
+        ]
+        print(json.dumps({"include": include}))
+        exit(0)
 
     tests = apply_runner_arguments(parser, args, tests, test_case_summary)
 
