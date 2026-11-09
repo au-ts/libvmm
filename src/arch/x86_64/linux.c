@@ -199,7 +199,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     int num_guest_ram_regions;
     struct guest_ram_region *guest_ram_regions = guest_ram_get_regions(&num_guest_ram_regions);
     if (!num_guest_ram_regions) {
-        LOG_VMM_ERR("linux_setup_images(): no recorded guest RAM region, have you called guest_ram_add_region()?\n");
+        LOG_VMM_ERR("no recorded guest RAM region, have you called guest_ram_add_region()?\n");
         return false;
     }
 
@@ -219,7 +219,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     memcpy(&setup_header, setup_header_src, sizeof(struct setup_header));
 
     if (setup_header.header != BZIMAGE_MAGIC) {
-        LOG_VMM_ERR("linux_setup_images(): invalid Linux kernel magic or boot protocol too old (< 2.0): expected magic "
+        LOG_VMM_ERR("invalid Linux kernel magic or boot protocol too old (< 2.0): expected magic "
                     "0x%x, got 0x%x\n",
                     BZIMAGE_MAGIC, setup_header.header);
         return false;
@@ -229,8 +229,8 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint8_t protocol_version_major = protocol_version >> 8;
     uint8_t protocol_version_minor = protocol_version & 0xff;
     if (protocol_version_major < MINIMUM_BOOT_PROT_MAJOR || protocol_version_minor < MINIMUM_BOOT_PROT_MINOR) {
-        LOG_VMM_ERR("linux_setup_images(): boot protocol too old (< %d.%d): got %d.%d\n", MINIMUM_BOOT_PROT_MAJOR,
-                    MINIMUM_BOOT_PROT_MINOR, protocol_version_major, protocol_version_minor);
+        LOG_VMM_ERR("boot protocol too old (< %d.%d): got %d.%d\n", MINIMUM_BOOT_PROT_MAJOR, MINIMUM_BOOT_PROT_MINOR,
+                    protocol_version_major, protocol_version_minor);
         return false;
     }
 
@@ -254,7 +254,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
         return false;
     }
     if (!(kernel_load_gpa >= ram_start_gpa && kernel_end_gpa <= ram_end_gpa)) {
-        LOG_VMM_ERR("linux_setup_images(): the first memory region [0x%lx..0x%lx) does not cover Linux kernel load "
+        LOG_VMM_ERR("the first memory region [0x%lx..0x%lx) does not cover Linux kernel load "
                     "destination [0x%lx..0x%lx)\n",
                     ram_start_gpa, ram_end_gpa, kernel_load_gpa, kernel_end_gpa);
         return false;
@@ -280,7 +280,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t initrd_end_gpa = initrd_gpa + initrd_size;
     void *initrd_dest = gpa_to_hva(initrd_gpa, initrd_size);
     if (!initrd_dest) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for initrd, needed %lu\n", initrd_size);
+        LOG_VMM_ERR("out of memory for initrd, needed %lu\n", initrd_size);
         return false;
     }
     LOG_VMM("linux_setup_images(): ramdisk GPA 0x%lx, size %lu bytes\n", initrd_gpa, initrd_size);
@@ -290,14 +290,13 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t cmdline_gpa = ROUND_UP(initrd_end_gpa, PAGE_SIZE_4K);
     uint64_t cmdline_len = strlen(cmdline);
     if (cmdline_len > setup_header.cmdline_size) {
-        LOG_VMM_ERR("linux_setup_images(): cmdline length %lu bytes > max %u bytes\n", cmdline_len,
-                    setup_header.cmdline_size);
+        LOG_VMM_ERR("cmdline length %lu bytes > max %u bytes\n", cmdline_len, setup_header.cmdline_size);
         return false;
     }
 
     void *cmdline_dest = gpa_to_hva(cmdline_gpa, cmdline_len + 1);
     if (!cmdline_dest) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for cmdline, needed %lu\n", cmdline_len);
+        LOG_VMM_ERR("out of memory for cmdline, needed %lu\n", cmdline_len);
         return false;
     }
     strcpy((char *)(cmdline_dest), cmdline);
@@ -309,7 +308,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t zero_page_end_gpa = zero_page_gpa + PAGE_SIZE_4K;
     void *zero_page_dest = gpa_to_hva(zero_page_gpa, PAGE_SIZE_4K);
     if (!zero_page_dest) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for zero page, needed %d\n", PAGE_SIZE_4K);
+        LOG_VMM_ERR("out of memory for zero page, needed %d\n", PAGE_SIZE_4K);
         return false;
     }
 
@@ -325,7 +324,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     setup_header.cmd_line_ptr = cmdline_gpa;
 
     if (!(setup_header.xloadflags & XLF_KERNEL_64)) {
-        LOG_VMM_ERR("linux_setup_images(): Kernel must support the 64-bit entry point flag XLF_KERNEL_64\n");
+        LOG_VMM_ERR("Kernel must support the 64-bit entry point flag XLF_KERNEL_64\n");
         return false;
     }
 
@@ -362,7 +361,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     LOG_VMM("linux_setup_images(): GDT GPA: 0x%lx\n", gdt_gpa);
     uint64_t *gdt = gpa_to_hva(gdt_gpa, PAGE_SIZE_4K);
     if (!gdt) {
-        LOG_VMM_ERR("linux_setup_images(): out of memory for GDT, needed %d\n", PAGE_SIZE_4K);
+        LOG_VMM_ERR("out of memory for GDT, needed %d\n", PAGE_SIZE_4K);
         return false;
     }
     gdt[0] = 0;
@@ -377,7 +376,7 @@ bool linux_setup_images(uintptr_t kernel_src, size_t kernel_size, uintptr_t init
     uint64_t num_bytes_used_for_acpi = 0;
     uint64_t acpi_rsdp_gpa = acpi_build_all(acpi_start_gpa, dsdt_blob, dsdt_blob_size, &num_bytes_used_for_acpi);
     if (!num_bytes_used_for_acpi) {
-        LOG_VMM_ERR("linux_setup_images(): could not create ACPI tables\n");
+        LOG_VMM_ERR("could not create ACPI tables\n");
         return false;
     }
     uint64_t acpi_end_gpa = acpi_start_gpa + num_bytes_used_for_acpi;
