@@ -14,6 +14,7 @@ The example currently works on the following platforms:
 * QEMU virt AArch64
 * HardKernel Odroid-C4
 * Avnet MaaXBoard
+* Raspberry Pi 4B
 * x86_64
 * ZCU102
 
