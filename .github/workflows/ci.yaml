@@ -111,7 +111,7 @@ jobs:
           if-no-files-found: error
 
   run_qemu_tests:
-    name: Run ${{ matrix.test_name }} tests (QEMU)
+    name: Run QEMU - ${{ matrix.test_name }} tests
     runs-on: [self-hosted, Linux, X64]
     needs: build_linux_x86_64_nix
     permissions:
@@ -149,9 +149,9 @@ jobs:
           path: ci_logs
           if-no-files-found: error
 
-  run_hardware:
-    name: Run ${{ matrix.test_name }} tests (Hardware)
-    runs-on: [self-hosted, Linux, X64]
+  get_hw_matrix:
+    name: Get hardware test matrix
+    runs-on: ubuntu-24.04
     if: ${{ github.repository_owner == 'au-ts' &&
               (
                 (github.event_name == 'schedule') ||
@@ -163,29 +163,56 @@ jobs:
                 )
               )
          }}
-    needs: build_linux_x86_64_nix
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Checkout libvmm repository
+        uses: actions/checkout@v6
+      - name: Setup systems-ci
+        uses: au-ts/systems-ci@main
+      - id: matrix
+        run: echo "matrix=$(./ci/run.py --print-hw-matrix --no-only-qemu)" >> "$GITHUB_OUTPUT"
+
+  run_hw_tests:
+    name: Run hardware - ${{ matrix.board }} - ${{ matrix.test_name }} tests
+    runs-on: ubuntu-24.04
+    if: ${{ github.repository_owner == 'au-ts' &&
+              (
+                (github.event_name == 'schedule') ||
+                (github.event_name == 'pull_request' &&
+                  (
+                    (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'hardware-test')) ||
+                    (github.event.action == 'labeled' && github.event.label.name == 'hardware-test')
+                  )
+                )
+              )
+         }}
+    needs: [build_linux_x86_64_nix, get_hw_matrix]
     strategy:
       fail-fast: false
-      max-parallel: 1
-      matrix: ${{ fromJSON(needs.build_linux_x86_64_nix.outputs.test_groups) }}
+      matrix: ${{ fromJSON(needs.get_hw_matrix.outputs.matrix) }}
+    # Only one job per board at a time; the other test groups for that board
+    # wait in the queue. `queue: max` is needed as the default only keeps one
+    # pending job per group and cancels any older one. It cannot be combined
+    # with `cancel-in-progress: true`. See:
+    # https://github.blog/changelog/2026-05-07-github-actions-concurrency-groups-now-allow-larger-queues/
+    concurrency:
+      group: ${{ github.workflow }}-libvmm-hardware-tests-${{ github.event.number }}-${{ matrix.board }}
+      queue: max
     steps:
-      - name: Checkout sDDF repository
+      - name: Checkout libvmm repository
         uses: actions/checkout@v6
       - name: Get machine queue
         uses: actions/checkout@v6
         with:
           repository: seL4/machine_queue
           path: machine_queue
-
-      # GitHub seems to limit download speed of artifacts from their runners to self hosted runners.
-      # So applying a workaround from https://github.com/actions/download-artifact/issues/362#issuecomment-3060841829
-      - name: Download images using azcopy
-        run: |
-          artifact_url="https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ needs.build_linux_x86_64_nix.outputs.artifact_id }}/zip"
-          signed_url="$(curl -L -I -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -o /dev/null -w "%{url_effective}" "$artifact_url")"
-          azcopy copy "$signed_url" "loader-images.zip"
-          unzip -q loader-images.zip -d ci_build
-          rm loader-images.zip
+      - name: Download images
+        uses: actions/download-artifact@v8
+        with:
+          pattern: loader-images*
+          path: ci_build
+          merge-multiple: true
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
       - name: Setup machine queue SSH key
@@ -197,11 +224,11 @@ jobs:
           export PATH="$(pwd)/machine_queue":$PATH
           # GitHub Actions is broken
           # https://github.com/ringerc/github-actions-signal-handling-demo#why-child-process-tasks-dont-get-a-chance-to-clean-up-on-job-cancel
-          exec ./ci/run.py --no-only-qemu --tests ${{ matrix.test_args }}
+          exec ./ci/run.py --no-only-qemu --boards ${{ matrix.board }} --tests ${{ matrix.test_args }}
       - name: Archive logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-logs-hardware-${{ matrix.artifact_suffix }}
+          name: ci-logs-hardware-${{ matrix.board }}-${{ matrix.artifact_suffix }}
           path: ci_logs
           if-no-files-found: error
