@@ -35,3 +35,14 @@ jobs:
       - name: Check formatting
         run: |
           git clang-format-18 --diff ${GITHUB_BASE_REF} test-revision --verbose
+
+  style_python:
+    name: Style (Python)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - uses: psf/black@stable
+        with:
+          # black guarantees formatting stability within a calendar year version
+          version: "~= 25.0"
