@@ -14,6 +14,7 @@ The example currently works on the following platforms:
 * QEMU virt AArch64
 * HardKernel Odroid-C4
 * Avnet MaaXBoard
+* ZCU102
 
 ## Building
 
@@ -26,6 +27,7 @@ Where `<MICROKIT_BOARD>` is one of:
 * `qemu_virt_aarch64`
 * `odroidc4`
 * `maaxboard`
+* `zcu102`
 
 Other configuration options can be passed to the Makefile such as `MICROKIT_CONFIG`
 and `BUILD_DIR`, see the Makefile for details.

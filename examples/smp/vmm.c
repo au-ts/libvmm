@@ -28,6 +28,10 @@
 #define GUEST_RAM_START_GPA 0x40000000
 #define GUEST_DTB_GPA 0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4c000000
+#elif defined(BOARD_zcu102)
+#define GUEST_RAM_START_GPA     0x800000000
+#define GUEST_DTB_GPA           0x80E000000
+#define GUEST_INIT_RAM_DISK_GPA 0x80D000000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -42,6 +46,8 @@
 #define SERIAL_IRQ 225
 #elif defined(BOARD_maaxboard)
 #define SERIAL_IRQ 58
+#elif defined(BOARD_zcu102)
+#define SERIAL_IRQ 53
 #else
 #error Need to define serial interrupt
 #endif

@@ -1,0 +1,84 @@
+/*
+ * Copyright 2026, DornerWorks
+ * Copyright 2026, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/ {
+	/* PMU firmware: clocks, power domains, resets, pinctrl, FPGA, AES, nvmem */
+	/delete-node/ firmware;
+	/* IPI mailbox to the PMU (real registers + SPI 35) */
+	/delete-node/ zynqmp_ipi;
+	/* FPGA region, references pcap under firmware */
+	/delete-node/ fpga-full;
+
+	/* Board peripherals behind GPIO / I2C, which the guest doesn't own */
+	/delete-node/ gpio-keys;
+	/delete-node/ leds;
+	/delete-node/ ina226-u76;
+	/delete-node/ ina226-u77;
+	/delete-node/ ina226-u78;
+	/delete-node/ ina226-u87;
+	/delete-node/ ina226-u85;
+	/delete-node/ ina226-u86;
+	/delete-node/ ina226-u93;
+	/delete-node/ ina226-u88;
+	/delete-node/ ina226-u15;
+	/delete-node/ ina226-u92;
+	/delete-node/ ina226-u79;
+	/delete-node/ ina226-u81;
+	/delete-node/ ina226-u80;
+	/delete-node/ ina226-u84;
+	/delete-node/ ina226-u16;
+	/delete-node/ ina226-u65;
+	/delete-node/ ina226-u74;
+	/delete-node/ ina226-u75;
+
+	/* Host debug channel */
+	/delete-node/ dcc;
+
+	/* Optional: physical PMU SPIs 143-146. Drop unless you want perf in the guest */
+	/delete-node/ pmu;
+
+	aliases {
+		/delete-property/ serial2;
+	};
+};
+
+/ {
+	chosen {
+		bootargs = "console=ttyPS0,115200 root=/dev/ram0 clk_ignore_unused earlycon debug loglevel=8";
+		stdout-path = "serial0:115200n8";
+		#size-cells = <0x02>;
+		linux,initrd-start = <0x08 0x0D000000>;
+		linux,initrd-end = <0x8 0x0E000000>;
+	};
+
+	memory@0 {
+		device_type = "memory";
+		reg = <0x08 0x00000000 0x00 0x10000000>;
+	};
+
+	/* UART ref clock as set up by the bootloader (base_baud 6249999 * 16) */
+	uart_ref_clk: uart-ref-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0x00>;
+		clock-frequency = <99999999>;
+	};
+};
+
+&{/axi/interrupt-controller@f9010000} {
+	reg = <0x00 0xf9010000 0x00 0x10000
+	       0x00 0xf9020000 0x00 0x20000>;
+	/delete-property/ interrupts;
+};
+
+&serial0 {
+	/delete-property/ power-domains;
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+	clocks = <&uart_ref_clk>, <&uart_ref_clk>;
+	clock-names = "uart_clk", "pclk";
+	status = "okay";
+};

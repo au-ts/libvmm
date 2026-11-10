@@ -21,6 +21,8 @@
 
 #define SMC_FUNC_ID_MASK 0xFFFF
 
+#define SMCCC_RET_NOT_SUPPORTED ((uint64_t)-1)
+
 /* SMC and HVC function identifiers */
 typedef enum {
     SMC_CALL_ARM_ARCH = 0,
@@ -218,8 +220,9 @@ bool smc_handle(size_t vcpu_id, uint64_t hsr)
         }
     /* If we don't have a SiP handler registered, drop to the default case. */
     default:
-        LOG_VMM_ERR("Unhandled SMC: unknown value service: 0x%x, function number: 0x%lx\n", service, fn_number);
-        break;
+        LOG_VMM("Unhandled SMC 0x%x on vCPU ID %lu, returning NOT_SUPPORTED\n", service, vcpu_id);
+        regs.x0 = SMCCC_RET_NOT_SUPPORTED;
+        return fault_advance_vcpu(vcpu_id, &regs, SEL4_USER_CONTEXT_SIZE);
     }
 
     return false;
