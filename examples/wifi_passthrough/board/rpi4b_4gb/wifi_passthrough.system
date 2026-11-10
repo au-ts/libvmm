@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2026, UNSW
+
+ SPDX-License-Identifier: BSD-2-Clause
+-->
+<system>
+    <memory_region name="guest_ram" size="0x40000000" phys_addr="0x10000000" />
+    <memory_region name="gic_vcpu" size="0x2000" phys_addr="0xff846000" />
+    <!-- serial@7e215040 -->
+    <memory_region name="serial0" size="0x1000" phys_addr="0xfe215000" />
+    <!-- cprman@7e101000 -->
+    <memory_region name="clocks" size="0x2000" phys_addr="0xfe101000" />
+    <!-- mailbox@7e00b880 -->
+    <memory_region name="mailbox" size="0x2000" phys_addr="0xfe00b000" />
+    <!-- dma-controller@7e007000 -->
+    <memory_region name="dmacon" size="0x1000" phys_addr="0xfe007000" />
+    <!-- gpio@7e200000 -->
+    <memory_region name="gpio" size="0x1000" phys_addr="0xfe200000" />
+    <!-- rng@7e104000 -->
+    <memory_region name="rng" size="0x1000" phys_addr="0xfe104000" />
+    <!-- mmcnr@7e300000 -->
+    <memory_region name="wifi" size="0x1000" phys_addr="0xfe300000" />
+    <!-- emmc2bus/mmc@7e340000 -->
+    <memory_region name="emmc2bus" size="0x1000" phys_addr="0xfe340000" />
+    <!-- ethernet@7d580000, it is not required for Wi-Fi passthrough, but Buildroot
+         spinwaits for the ethernet device which is annoying so I passed it through -->
+    <memory_region name="ethernet" size="0x10000" phys_addr="0xfd580000" />
+
+    <protection_domain name="VMM" priority="254">
+        <program_image path="vmm.elf" />
+        <map mr="guest_ram" vaddr="0x10000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
+        <virtual_machine name="linux" >
+            <vcpu id="0" />
+            <map mr="guest_ram" vaddr="0x10000000" perms="rwx" />
+            <map mr="gic_vcpu" vaddr="0xff842000" perms="rw" cached="false" />
+            <map mr="serial0" vaddr="0xfe215000" perms="rw" cached="false" />
+            <map mr="clocks" vaddr="0xfe101000" perms="rw" cached="false" />
+            <map mr="mailbox" vaddr="0xfe00b000" perms="rw" cached="false" />
+            <map mr="dmacon" vaddr="0xfe007000" perms="rw" cached="false" />
+            <map mr="gpio" vaddr="0xfe200000" perms="rw" cached="false" />
+            <map mr="rng" vaddr="0xfe104000" perms="rw" cached="false" />
+            <map mr="wifi" vaddr="0xfe300000" perms="rw" cached="false" />
+            <map mr="emmc2bus" vaddr="0xfe340000" perms="rw" cached="false" />
+            <map mr="ethernet" vaddr="0xfd580000" perms="rw" cached="false" />
+        </virtual_machine>
+        <!-- UART interrupt -->
+        <irq irq="125" id="1" />
+        <!-- Mailbox interrupt -->
+        <irq irq="65" id="2" />
+        <!-- vchiq interrupt -->
+        <irq irq="66" id="3" />
+        <!-- emmc2bus/wifi interrupt -->
+        <irq irq="158" id="4" />
+        <!-- GPIO interrupts -->
+        <irq irq="145" id="5" />
+        <irq irq="146" id="6" />
+        <!-- Ethernet interrupts -->
+        <irq irq="189" id="7" />
+        <irq irq="190" id="8" />
+        <!-- DMA controller channel 0-10 interrupt -->
+        <irq irq="112" id="9" />
+        <irq irq="113" id="10" />
+        <irq irq="114" id="11" />
+        <irq irq="115" id="12" />
+        <irq irq="116" id="13" />
+        <irq irq="117" id="14" />
+        <irq irq="118" id="15" />
+        <irq irq="119" id="16" />
+        <irq irq="120" id="17" />
+        <irq irq="121" id="18" />
+    </protection_domain>
+</system>

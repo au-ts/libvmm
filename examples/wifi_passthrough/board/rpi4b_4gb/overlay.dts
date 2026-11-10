@@ -1,0 +1,97 @@
+/*
+ * Copyright 2026, UNSW
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ */
+
+/* The goal of this DTS overlay is to disable all devices that are not pertinent to
+ * get WiFi passthrough working and allow Linux to boot in our VMM by telling it where
+ * we mapped guest RAM, and the correct DMA-able memory range.
+ */
+
+/ {
+    memory@10000000 {
+        device_type = "memory";
+        // 1GB of guest RAM at GPA 0x10000000
+        reg = <0x00 0x10000000 0x40000000>;
+    };
+
+    cpus {
+        cpu@0 {
+            /delete-property/ enable-method;
+            /delete-property/ cpu-release-addr;
+            enable-method = "psci";
+        };
+        cpu@1 {
+            /delete-property/ enable-method;
+            /delete-property/ cpu-release-addr;
+            enable-method = "psci";
+        };
+        cpu@2 {
+            /delete-property/ enable-method;
+            /delete-property/ cpu-release-addr;
+            enable-method = "psci";
+        };
+        cpu@3 {
+            /delete-property/ enable-method;
+            /delete-property/ cpu-release-addr;
+            enable-method = "psci";
+        };
+    };
+
+    soc {
+        /delete-property/ dma-ranges;
+
+        // Since we start guest RAM at 0x1000_0000 and it goes to 0x5000_0000,
+        // guest RAM would fall outside the VideoCore DMA range of 0x0..0x3C000000.
+        // Thus we need to tell the guest kernel the correct DMA-able memory range.
+        dma-ranges = <0xd0000000 0x10000000 0x2c000000>;
+
+        dma-controller@7e007000 {
+            /delete-property/ brcm,dma-channel-mask;
+
+            // Just use the first channel, so we don't need to pass through all the IRQs.
+            brcm,dma-channel-mask = <0x001>;
+        };
+
+        avs-monitor@7d5d2000 {
+            status = "disabled";
+        };
+
+        // bluetooth
+        serial@7e201000 {
+            status = "disabled";
+        };
+
+        watchdog@7e100000 {
+            status = "disabled";
+        };
+
+        mmc@7e300000 {
+            status = "disabled";
+        };
+
+    };
+
+    scb {
+        pcie@7d500000 {
+            status = "disabled";
+        };
+    };
+
+	psci {
+		migrate = <0xc4000005>;
+		cpu_on = <0xc4000003>;
+		cpu_off = <0x84000002>;
+		cpu_suspend = <0xc4000001>;
+		method = "smc";
+		compatible = "arm,psci-0.2\0arm,psci";
+	};
+
+    chosen {
+        stdout-path = "serial0:115200n8";
+        linux,initrd-start = <0x00000000 0x4c000000>;
+        linux,initrd-end = <0x00000000 0x4f000000>;
+        bootargs = "irqpoll coherent_pool=1M 8250.nr_uarts=1 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 nosmp debug earlycon maxcpus=1 loglevel=8 console=ttyS0,115200n8";
+    };
+};
