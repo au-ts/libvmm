@@ -104,27 +104,27 @@ endif
 
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_blk_driver.data blk_driver.elf
+	$(OBJCOPY) --update-section .timer_client_config=blk_driver_timer_client_config.data blk_driver.elf
 else ifeq ($(ARCH),x86_64)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .timer_client_config=client_vmm_timer_client_config.data client_vmm.elf
 endif
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
-	$(OBJCOPY) --update-section .blk_driver_config=blk_driver.data blk_driver.elf
-	$(OBJCOPY) --update-section .blk_virt_config=blk_virt.data blk_virt.elf
-	$(OBJCOPY) --update-section .blk_client_config=blk_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .blk_driver_config=blk_driver_blk_driver_config.data blk_driver.elf
+	$(OBJCOPY) --update-section .blk_virt_config=blk_virt_blk_virt_config.data blk_virt.elf
+	$(OBJCOPY) --update-section .blk_client_config=client_vmm_blk_client_config.data client_vmm.elf
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
-	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
-	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
-	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM.data client_vmm.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_serial_driver_config.data serial_driver.elf
+	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx_serial_virt_rx_config.data serial_virt_rx.elf
+	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx_serial_virt_tx_config.data serial_virt_tx.elf
+	$(OBJCOPY) --update-section .serial_client_config=client_vmm_serial_client_config.data client_vmm.elf
+	$(OBJCOPY) --update-section .vmm_config=client_vmm_vmm_config.data client_vmm.elf
 	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
-	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
-	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
-	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy.elf network_copy.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM.data client_vmm.elf
+	$(OBJCOPY) --update-section .net_driver_config=eth_driver_net_driver_config.data eth_driver.elf
+	$(OBJCOPY) --update-section .net_virt_rx_config=network_virt_rx_net_virt_rx_config.data network_virt_rx.elf
+	$(OBJCOPY) --update-section .net_virt_tx_config=network_virt_tx_net_virt_tx_config.data network_virt_tx.elf
+	$(OBJCOPY) --update-section .net_copy_config=network_copy_net_copy_config.data network_copy.elf network_copy.elf
+	$(OBJCOPY) --update-section .net_client_config=client_vmm_net_client_config.data client_vmm.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
@@ -207,7 +207,7 @@ qemu: $(IMAGE_FILE) blk_storage
 	[ "${MICROKIT_BOARD}" = "qemu_virt_aarch64" ] || [ "${MICROKIT_BOARD}" = "x86_64_generic_vtx" ]
 	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-m size=2G \
+			-m size=3G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
 			-drive file=blk_storage,format=raw,if=none,id=hd \
