@@ -20,7 +20,6 @@ on:
 env:
   MICROKIT_VERSION: 2.4.0
   MICROKIT_URL: https://github.com/seL4/microkit/releases/download/2.4.0/
-  SDFGEN_VERSION: 0.35.0
 
 jobs:
   build_manual:
@@ -61,7 +60,7 @@ jobs:
       - name: Setup pyenv
         run: |
           python3.13 -m venv venv
-          ./venv/bin/pip install --upgrade sdfgen==${{ env.SDFGEN_VERSION }}
+          ./venv/bin/pip install git+https://github.com/au-ts/microkit_acacia
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
       - name: Build examples
