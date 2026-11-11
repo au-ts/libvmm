@@ -28,7 +28,7 @@
 #define VIRTIO_NET_PCI_DEVICE_SLOT 4
 #define VIRTIO_NET_PCI_IOAPIC_PIN 10
 
-/* Data from sdfgen */
+/* Data from Acacia */
 __attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
 extern serial_client_config_t serial_config;
 extern blk_client_config_t blk_config;
@@ -61,7 +61,6 @@ static seL4_VCPUContext initial_regs;
 
 #define GUEST_CMDLINE "debug console=hvc0 loglevel=8"
 #define GUEST_RAM_SIZE 0x10000000
-#define GUEST_RAM_HVA 0x20000000
 
 /* Matches DSDT */
 #define PCI_MMIO_APERATURE_GPA 0x40000000
@@ -71,22 +70,20 @@ bool guest_arch_init(void)
 {
     assert(timer_config_check_magic(&timer_config));
 
-    arch_guest_init_t args = {
-        .bsp = true,
-        .timer_ch = timer_config.driver_id,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = LOW_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)GUEST_RAM_HVA },
-        },
-        .pci_init = (struct guest_pci_init) {
-                                   .ecam_gpa = 0,
-                                   .ecam_size = 0,
-                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
-                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
-                               },
-    };
+    arch_guest_init_t lib_init_args;
+    memset(&lib_init_args, 0, sizeof(lib_init_args));
+    if (!vmm_config_fill_guest_init(&vmm_config, &lib_init_args)) {
+        LOG_VMM_ERR("Invalid VMM config\n");
+        return false;
+    }
 
-    if (!guest_init(args)) {
+    lib_init_args.bsp = true;
+    lib_init_args.timer_ch = timer_config.driver_id;
+    lib_init_args.pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA;
+    lib_init_args.pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE;
+
+    bool success = guest_init(lib_init_args);
+    if (!success) {
         LOG_VMM_ERR("Failed to initialise VMM\n");
         return false;
     }

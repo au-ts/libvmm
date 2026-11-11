@@ -14,6 +14,7 @@
 #include <sddf/util/printf.h>
 #include "guest_arch_init.h"
 
+/* Data from Acacia */
 __attribute__((__section__(".serial_client_config"))) serial_client_config_t serial_config;
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;

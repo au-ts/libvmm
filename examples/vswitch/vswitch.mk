@@ -29,8 +29,7 @@ SDDF_CUSTOM_LIBC := 1
 TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
-	maaxboard \
-	x86_64_generic_vtx
+	maaxboard
 
 SYSTEM_FILE := vswitch.system
 IMAGE_FILE := loader.img
@@ -107,43 +106,43 @@ endif
 	cp network_copy.elf network_copy3.elf
 
 ifeq ($(ARCH),x86_64)
-	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --output . --sdf $(SYSTEM_FILE)
 else
-	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE) $(PARTITION_ARG)
+	PYTHONPATH=${SDDF}/tools/meta:$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE)
 endif
 
 ifeq ($(ARCH),x86_64)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM0.data client_vmm0.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM1.data client_vmm1.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM2.data client_vmm2.elf
-	$(OBJCOPY) --update-section .timer_client_config=timer_client_CLIENT_VMM3.data client_vmm3.elf
+	$(OBJCOPY) --update-section .timer_client_config=client_vmm0_timer_client_config.data client_vmm0.elf
+	$(OBJCOPY) --update-section .timer_client_config=client_vmm1_timer_client_config.data client_vmm1.elf
+	$(OBJCOPY) --update-section .timer_client_config=client_vmm2_timer_client_config.data client_vmm2.elf
+	$(OBJCOPY) --update-section .timer_client_config=client_vmm3_timer_client_config.data client_vmm3.elf
 endif
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
-	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_config.data serial_driver.elf
-	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx.data serial_virt_rx.elf
-	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx.data serial_virt_tx.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM0.data client_vmm0.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM1.data client_vmm1.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM2.data client_vmm2.elf
-	$(OBJCOPY) --update-section .serial_client_config=serial_client_CLIENT_VMM3.data client_vmm3.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM0.data client_vmm0.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM1.data client_vmm1.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM2.data client_vmm2.elf
-	$(OBJCOPY) --update-section .vmm_config=vmm_CLIENT_VMM3.data client_vmm3.elf
+	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_serial_driver_config.data serial_driver.elf
+	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx_serial_virt_rx_config.data serial_virt_rx.elf
+	$(OBJCOPY) --update-section .serial_virt_tx_config=serial_virt_tx_serial_virt_tx_config.data serial_virt_tx.elf
+	$(OBJCOPY) --update-section .serial_client_config=client_vmm0_serial_client_config.data client_vmm0.elf
+	$(OBJCOPY) --update-section .serial_client_config=client_vmm1_serial_client_config.data client_vmm1.elf
+	$(OBJCOPY) --update-section .serial_client_config=client_vmm2_serial_client_config.data client_vmm2.elf
+	$(OBJCOPY) --update-section .serial_client_config=client_vmm3_serial_client_config.data client_vmm3.elf
+	$(OBJCOPY) --update-section .vmm_config=client_vmm0_vmm_config.data client_vmm0.elf
+	$(OBJCOPY) --update-section .vmm_config=client_vmm1_vmm_config.data client_vmm1.elf
+	$(OBJCOPY) --update-section .vmm_config=client_vmm2_vmm_config.data client_vmm2.elf
+	$(OBJCOPY) --update-section .vmm_config=client_vmm3_vmm_config.data client_vmm3.elf
 	$(OBJCOPY) --update-section .device_resources=eth_driver_device_resources.data eth_driver.elf
-	$(OBJCOPY) --update-section .net_driver_config=net_driver.data eth_driver.elf
-	$(OBJCOPY) --update-section .net_virt_rx_config=net_virt_rx.data network_virt_rx.elf
-	$(OBJCOPY) --update-section .net_virt_tx_config=net_virt_tx.data network_virt_tx.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client0_net_copier.data network_copy0.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client1_net_copier.data network_copy1.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client2_net_copier.data network_copy2.elf
-	$(OBJCOPY) --update-section .net_copy_config=net_copy_client3_net_copier.data network_copy3.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM0.data client_vmm0.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM1.data client_vmm1.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM2.data client_vmm2.elf
-	$(OBJCOPY) --update-section .net_client_config=net_client_CLIENT_VMM3.data client_vmm3.elf
-	$(OBJCOPY) --update-section .net_vswitch_config=net_vswitch.data network_vswitch.elf
+	$(OBJCOPY) --update-section .net_driver_config=eth_driver_net_driver_config.data eth_driver.elf
+	$(OBJCOPY) --update-section .net_virt_rx_config=network_virt_rx_net_virt_rx_config.data network_virt_rx.elf
+	$(OBJCOPY) --update-section .net_virt_tx_config=network_virt_tx_net_virt_tx_config.data network_virt_tx.elf
+	$(OBJCOPY) --update-section .net_copy_config=network_copy0_net_copy_config.data network_copy0.elf
+	$(OBJCOPY) --update-section .net_copy_config=network_copy1_net_copy_config.data network_copy1.elf
+	$(OBJCOPY) --update-section .net_copy_config=network_copy2_net_copy_config.data network_copy2.elf
+	$(OBJCOPY) --update-section .net_copy_config=network_copy3_net_copy_config.data network_copy3.elf
+	$(OBJCOPY) --update-section .net_client_config=client_vmm0_net_client_config.data client_vmm0.elf
+	$(OBJCOPY) --update-section .net_client_config=client_vmm1_net_client_config.data client_vmm1.elf
+	$(OBJCOPY) --update-section .net_client_config=client_vmm2_net_client_config.data client_vmm2.elf
+	$(OBJCOPY) --update-section .net_client_config=client_vmm3_net_client_config.data client_vmm3.elf
+	$(OBJCOPY) --update-section .net_vswitch_config=network_vswitch_net_vswitch_config.data network_vswitch.elf
 
 $(IMAGE_FILE) $(REPORT_FILE): $(IMAGES) $(SYSTEM_FILE)
 	$(MICROKIT_TOOL) $(SYSTEM_FILE) --search-path $(BUILD_DIR) --board $(MICROKIT_BOARD) \
@@ -223,7 +222,7 @@ qemu: $(IMAGE_FILE)
 	[ "${MICROKIT_BOARD}" = "qemu_virt_aarch64" ] || [ "${MICROKIT_BOARD}" = "x86_64_generic_vtx" ]
 	$(QEMU) $(QEMU_ARCH_ARGS) \
 			-serial mon:stdio \
-			-m size=2G \
+			-m size=3G \
 			-nographic \
 			-global virtio-mmio.force-legacy=false \
 			$(QEMU_NET_ARGS) \
