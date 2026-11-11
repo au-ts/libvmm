@@ -166,7 +166,11 @@ for ex in EXAMPLES.values():
 
 
 class _ExampleMatrixType(TypedDict):
-    configs: list[Literal["debug", "release", "benchmark", "smp-debug", "smp-release", "smp-benchmark"]]
+    configs: list[
+        Literal[
+            "debug", "release", "benchmark", "smp-debug", "smp-release", "smp-benchmark"
+        ]
+    ]
     build_systems: list[Literal["make"]]
     boards: list[_BoardNames]
     tests_exclude: list[dict[str, str]]

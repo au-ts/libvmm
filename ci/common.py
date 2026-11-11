@@ -83,8 +83,10 @@ def backend_fn(
                 "-kernel", str((loader_img.parent / "sel4_32.elf").resolve()),
                 "-initrd", str(loader_img.resolve()),
                 # fmt: on
-                "-smp", "4",
-                "-vga", "none",
+                "-smp",
+                "4",
+                "-vga",
+                "none",
                 *QEMU_COMMON_FLAGS,
             )
         else:
@@ -169,10 +171,7 @@ class TestConfig(TestCase):
         return self.backend_fn(self, loader_img)
 
     def loader_img(self) -> Path:
-        return (
-            example_build_path(self)
-            / "loader.img"
-        )
+        return example_build_path(self) / "loader.img"
 
     async def run(self, backend: HardwareBackend) -> None:
         await self.test_fn(backend, self)

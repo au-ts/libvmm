@@ -42,9 +42,12 @@ async def test_virtio_net_wget(
         await wait_for_output(backend, b"# ")
 
         # Get VM 0 IP addr
-        await send_input(backend, b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n")
+        await send_input(
+            backend,
+            b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n",
+        )
         await wait_for_output(backend, b"\r\n")
-        vm0_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode() # type: ignore
+        vm0_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode()  # type: ignore
 
         # Switch to VM 1, make sure it can get to the internet, then get its IP addr
         await send_input(backend, b"\x1c1\r")
@@ -57,19 +60,26 @@ async def test_virtio_net_wget(
         await wait_for_output(backend, b"Implementation deep and fine.")
         await wait_for_output(backend, b"# ")
 
-        await send_input(backend, b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n")
+        await send_input(
+            backend,
+            b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n",
+        )
         await wait_for_output(backend, b"\r\n")
-        vm1_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode() # type: ignore
+        vm1_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode()  # type: ignore
 
         # VM 1 should be able to ping VM 0
-        await send_input(backend, f"ping -c 5 {vm0_ip}\n".encode('utf-8'))
-        await wait_for_output(backend, b"5 packets transmitted, 5 packets received, 0% packet loss")
+        await send_input(backend, f"ping -c 5 {vm0_ip}\n".encode("utf-8"))
+        await wait_for_output(
+            backend, b"5 packets transmitted, 5 packets received, 0% packet loss"
+        )
         await wait_for_output(backend, b"# ")
 
         # VM 0 should be able to ping VM 1
         await send_input(backend, b"\x1c0\r")
-        await send_input(backend, f"ping -c 5 {vm1_ip}\n".encode('utf-8'))
-        await wait_for_output(backend, b"5 packets transmitted, 5 packets received, 0% packet loss")
+        await send_input(backend, f"ping -c 5 {vm1_ip}\n".encode("utf-8"))
+        await wait_for_output(
+            backend, b"5 packets transmitted, 5 packets received, 0% packet loss"
+        )
         await wait_for_output(backend, b"# ")
 
         # Switch to VM 2, make sure it can get to the internet, then get its IP addr
@@ -83,20 +93,28 @@ async def test_virtio_net_wget(
         await wait_for_output(backend, b"Implementation deep and fine.")
         await wait_for_output(backend, b"# ")
 
-        await send_input(backend, b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n")
+        await send_input(
+            backend,
+            b"ifconfig eth0 | grep 'inet addr' | xargs | cut -d' ' -f2 | cut -d':' -f2\n",
+        )
         await wait_for_output(backend, b"\r\n")
-        vm2_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode() # type: ignore
+        vm2_ip = re.search(rb"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", await wait_for_output(backend, b"# ")).group(0).decode()  # type: ignore
 
         # VM 2 shouldn't be able to ping VM 1
-        await send_input(backend, f"ping -c 5 {vm1_ip}\n".encode('utf-8'))
-        await wait_for_output(backend, b"5 packets transmitted, 0 packets received, 100% packet loss")
+        await send_input(backend, f"ping -c 5 {vm1_ip}\n".encode("utf-8"))
+        await wait_for_output(
+            backend, b"5 packets transmitted, 0 packets received, 100% packet loss"
+        )
         await wait_for_output(backend, b"# ")
 
         # VM 1 shouldn't be able to ping VM 2
         await send_input(backend, b"\x1c1\r")
-        await send_input(backend, f"ping -c 5 {vm2_ip}\n".encode('utf-8'))
-        await wait_for_output(backend, b"5 packets transmitted, 0 packets received, 100% packet loss")
+        await send_input(backend, f"ping -c 5 {vm2_ip}\n".encode("utf-8"))
+        await wait_for_output(
+            backend, b"5 packets transmitted, 0 packets received, 100% packet loss"
+        )
         await wait_for_output(backend, b"# ")
+
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(

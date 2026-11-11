@@ -26,9 +26,13 @@ async def test_virtio_net_ping(
         await wait_for_output(backend, b"# ")
         # Ping the default gateway, it would be great if we can ping the internet,
         # but the GitHub runners block ICMP so...
-        await send_input(backend, b"ping -c 10 $(ip route | grep default | cut -d' ' -f3)\n")
+        await send_input(
+            backend, b"ping -c 10 $(ip route | grep default | cut -d' ' -f3)\n"
+        )
         await wait_for_output(backend, b"64 bytes from")
-        await wait_for_output(backend, b"10 packets transmitted, 10 packets received, 0% packet loss")
+        await wait_for_output(
+            backend, b"10 packets transmitted, 10 packets received, 0% packet loss"
+        )
 
 
 # export
