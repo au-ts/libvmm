@@ -23,21 +23,30 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
     async with asyncio.timeout(60):
         if "x86" in test_config.board:
             # HPET detected?
-            await wait_for_output(backend, b"clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff")
+            await wait_for_output(
+                backend, b"clocksource: hpet: mask: 0xffffffff max_cycles: 0xffffffff"
+            )
             # TSC-early detected?
-            await wait_for_output(backend, b"clocksource: tsc-early: mask: 0xffffffffffffffff")
+            await wait_for_output(
+                backend, b"clocksource: tsc-early: mask: 0xffffffffffffffff"
+            )
             # ACPI PM timer detected?
             await wait_for_output(backend, b"clocksource: acpi_pm:")
             # Should switch from TSC-early to TSC now, if the switch doesn't happen then one of the clocksources
             # isn't agreeing with each others on what the time is, or the APIC code is dropping interrupts.
-            await wait_for_output(backend, b"clocksource: tsc: mask: 0xffffffffffffffff")
+            await wait_for_output(
+                backend, b"clocksource: tsc: mask: 0xffffffffffffffff"
+            )
             await wait_for_output(backend, b"clocksource: Switched to clocksource tsc")
             # Schedclock should be stable now
             await wait_for_output(backend, b"sched_clock: Marking stable")
         else:
-            await wait_for_output(backend, b"clocksource: Switched to clocksource arch_sys_counter")
+            await wait_for_output(
+                backend, b"clocksource: Switched to clocksource arch_sys_counter"
+            )
 
         # @billn extend in the future to use kselftest or something like that
+
 
 # export
 TEST_CASES = matrix.generate_example_test_cases(
