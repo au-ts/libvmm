@@ -55,7 +55,7 @@ def backend_fn(
     if test_config.is_qemu():
         QEMU_COMMON_FLAGS = (
             # fmt: off
-            "-m", "size=2G",
+            "-m", "size=3G",
             "-serial", "mon:stdio",
             "-nographic",
             "-d", "guest_errors",
