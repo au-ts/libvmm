@@ -13,7 +13,7 @@
     };
     systems-ci.url = "github:au-ts/systems-ci/main";
     systems-ci.flake = false;
-    acacia.url = "github:au-ts/microkit_acacia/main";
+    acacia.url = "github:au-ts/microkit_acacia/Courtney/ConfigStructRewrite";
     acacia.flake = false;
   };
 

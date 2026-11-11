@@ -60,7 +60,7 @@ jobs:
       - name: Setup pyenv
         run: |
           python3.13 -m venv venv
-          ./venv/bin/pip install git+https://github.com/au-ts/microkit_acacia
+          ./venv/bin/pip install git+https://github.com/au-ts/microkit_acacia@Courtney/ConfigStructRewrite
       - name: Setup systems-ci
         uses: au-ts/systems-ci@main
       - name: Build examples
