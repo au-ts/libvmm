@@ -24,12 +24,15 @@ VIRTIO_NET_VQUEUES_PADDR = 0x7A00_0000
 VIRTIO_NET_PCI_BAR_PADDR = 0xFEBF_C000
 VIRTIO_NET_PCI_IRQ = 10
 
+
 def x86_virtio_net(eth_driver):
     hw_net_rings = SystemDescription.MemoryRegion(
         sdf, "hw_net_rings", 0x10000, paddr=VIRTIO_NET_VQUEUES_PADDR
     )
     sdf.add_mr(hw_net_rings)
-    hw_net_rings_map = SystemDescription.Map(hw_net_rings, 0x7000_0000, "rw", cached=False)
+    hw_net_rings_map = SystemDescription.Map(
+        hw_net_rings, 0x7000_0000, "rw", cached=False
+    )
     eth_driver.add_map(hw_net_rings_map)
 
     virtio_net_regs = SystemDescription.MemoryRegion(
@@ -51,6 +54,7 @@ def x86_virtio_net(eth_driver):
     )
     eth_driver.add_irq(virtio_net_irq)
 
+
 def x86_serial(serial_driver):
     serial_port = SystemDescription.IoPort(0x3F8, 8, 0)
     serial_driver.add_ioport(serial_port)
@@ -65,25 +69,33 @@ def generate(
     client_dtb: Optional[DeviceTree],
 ):
     # Client0 VM
-    vmm_client0 = ProtectionDomain("CLIENT_VMM0", "client_vmm0.elf", priority=0, cpu=0, stack_size=0x4000)
+    vmm_client0 = ProtectionDomain(
+        "CLIENT_VMM0", "client_vmm0.elf", priority=0, cpu=0, stack_size=0x4000
+    )
     vm_client0 = VirtualMachine("client0_linux", [VirtualMachine.Vcpu(id=0)])
     client0 = Vmm(sdf, vmm_client0, vm_client0, client_dtb)
     sdf.add_pd(vmm_client0)
 
     # Client1 VM
-    vmm_client1 = ProtectionDomain("CLIENT_VMM1", "client_vmm1.elf", priority=0, cpu=1, stack_size=0x4000)
+    vmm_client1 = ProtectionDomain(
+        "CLIENT_VMM1", "client_vmm1.elf", priority=0, cpu=1, stack_size=0x4000
+    )
     vm_client1 = VirtualMachine("client1_linux", [VirtualMachine.Vcpu(id=0)])
     client1 = Vmm(sdf, vmm_client1, vm_client1, client_dtb)
     sdf.add_pd(vmm_client1)
 
     # Client2 VM
-    vmm_client2 = ProtectionDomain("CLIENT_VMM2", "client_vmm2.elf", priority=0, cpu=2, stack_size=0x4000)
+    vmm_client2 = ProtectionDomain(
+        "CLIENT_VMM2", "client_vmm2.elf", priority=0, cpu=2, stack_size=0x4000
+    )
     vm_client2 = VirtualMachine("client2_linux", [VirtualMachine.Vcpu(id=0)])
     client2 = Vmm(sdf, vmm_client2, vm_client2, client_dtb)
     sdf.add_pd(vmm_client2)
 
     # Client3 VM - Outside vswitch
-    vmm_client3 = ProtectionDomain("CLIENT_VMM3", "client_vmm3.elf", priority=0, cpu=3, stack_size=0x4000)
+    vmm_client3 = ProtectionDomain(
+        "CLIENT_VMM3", "client_vmm3.elf", priority=0, cpu=3, stack_size=0x4000
+    )
     vm_client3 = VirtualMachine("client3_linux", [VirtualMachine.Vcpu(id=0)])
     client3 = Vmm(sdf, vmm_client3, vm_client3, client_dtb)
     sdf.add_pd(vmm_client3)
@@ -204,7 +216,6 @@ def generate(
 
         assert timer_system.connect()
         assert timer_system.serialise_config(output_dir)
-
 
     assert serial_system.connect()
     assert serial_system.serialise_config(output_dir)
