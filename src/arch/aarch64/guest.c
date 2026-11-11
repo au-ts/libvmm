@@ -58,13 +58,15 @@ bool guest_init(arch_guest_init_t init_args)
     bool success = virq_controller_init();
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual interrupt controller\n");
+        return false;
     }
 
     if (init_args.pci_init.ecam_size && init_args.pci_init.mmio_aperature_size) {
         success = pci_bus_init(init_args.pci_init.ecam_gpa, init_args.pci_init.ecam_size,
                                init_args.pci_init.mmio_aperature_gpa, init_args.pci_init.mmio_aperature_size);
         if (!success) {
-            LOG_VMM_ERR("Failed to initialise virtual PCII bus\n");
+            LOG_VMM_ERR("Failed to initialise virtual PCI bus\n");
+            return false;
         }
     }
 

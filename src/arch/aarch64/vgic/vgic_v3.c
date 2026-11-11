@@ -59,9 +59,11 @@ static bool vgic_handle_fault_redist_read(size_t vcpu_id, vgic_t *vgic, uint64_t
 
     if (target_vcpu_id >= guest.num_vcpus) {
         LOG_VMM_ERR("target_vcpu_id %ld is out of bound of %zu\n", target_vcpu_id, guest.num_vcpus);
+        return false;
     }
     if (vcpu_id >= guest.num_vcpus) {
         LOG_VMM_ERR("vcpu_id %ld is out of bound of %zu\n", vcpu_id, guest.num_vcpus);
+        return false;
     }
 
     struct gic_redist_map *gic_redist = vgic_get_redist(vgic->registers, target_vcpu_id);
