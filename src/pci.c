@@ -151,7 +151,7 @@ static struct pci_bus pci_bus;
 // Translate PCI Geographic Address, represented as Bus:Device.Function, to an index to `config_spaces`.
 static pci_dev_handle_t pci_geo_addr_to_internal_index(uint8_t bus, uint8_t dev, uint8_t func)
 {
-    return (pci_dev_handle_t)((bus * PCI_DEV_PER_BUS) + (dev * PCI_FUNC_PER_DEV) + func);
+    return (pci_dev_handle_t)((bus * PCI_DEV_PER_BUS * PCI_FUNC_PER_DEV) + (dev * PCI_FUNC_PER_DEV) + func);
 }
 
 static struct pci_device *pci_get_device(pci_dev_handle_t pci_dev_handle)
