@@ -29,18 +29,18 @@ and `BUILD_DIR`, see the Makefile for details.
 
 If you would like to simulate the QEMU board you can run the following command:
 ```sh
-make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk qemu
+make MICROKIT_BOARD=x86_64_generic_vtx MICROKIT_SDK=/path/to/sdk qemu
 ```
 
 This will build the example code as well as run the QEMU command to simulate a
 system running the whole system.
 
-By default the build system fetches the UEFI firmware, Linux kernel and initrd images from
+By default, the build system fetches the UEFI firmware, Linux kernel and initrd images from
 Trustworthy Systems' website on-demand. To override this and use your own images,
 specify `FIRMWARE`, `LINUX` and/or `INITRD`. For example:
 
 ```sh
-make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd FIRMWARE=/path/to/firmware qemu
+make MICROKIT_BOARD=x86_64_generic_vtx MICROKIT_SDK=/path/to/sdk LINUX=/path/to/linux INITRD=/path/to/initrd FIRMWARE=/path/to/firmware qemu
 ```
 
 ## Running
