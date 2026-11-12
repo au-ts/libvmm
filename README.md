@@ -7,16 +7,22 @@
 
 The purpose of this project is to make it easy to run Virtual Machines (VMs) on top of the seL4 microkernel.
 
-This project contains three parts:
+This project contains:
 
+* `include/`: The public headers.
 * `src/`: The source code of libvmm, a library for Virtual Machine Monitors (VMMs) to create and manage VMs on seL4.
+* `vmm.mk`: A Makefile snippet for building `libvmm.a`, to be included from your system's Makefile (the examples use it too).
 * `examples/`: Examples for using libvmm.
 * `tools/`: Tools that are useful when developing systems using VMs, but are not
   necessary for using the library.
 
-This project is currently in-development and is frequently changing. It is not ready for
-production use. The project also depends on the [seL4 Microkit](https://github.com/seL4/microkit)
-SDK and expects to be used in a Microkit environment, in the future this may change such that libvmm
+This project is currently in development and is frequently changing. It is not ready for
+production use. The project depends on:
+
+* the [seL4 Microkit SDK](https://github.com/seL4/microkit)
+* the [seL4 Device Driver Framework (sDDF)](https://github.com/au-ts/sddf), included as a git submodule in `dep/sddf`
+
+This project expects to be used in a Microkit environment. In the future this may change such that libvmm
 itself is environment agnostic.
 
 For information on the project and how to use it, please see the [manual](docs/MANUAL.md).
@@ -29,26 +35,28 @@ followed by the guest facilities it provides and current limitations.
 ### ARM
 
 * Booting a default-configured Linux kernel with an initrd image.
-* Multicore guests (more than one VCPU) via PSCI.
+* Multicore guests (more than one vCPU) via PSCI.
 * Hardware-accelerated GIC virtualisation.
 
 ### x86
 
 * ACPI implementation.
 * Booting a default-configured Linux kernel with an initrd image.
-* Booting any EFI guest via TianoCore OVMF firmware.
+* Booting EFI guests via TianoCore OVMF (tested with Linux).
 * Software-virtualised APIC in xAPIC mode and single I/O APIC.
 
 ### Guest facilities
 
-* VirtIO PCI transport, plus VirtIO MMIO transport on ARM.
+* virtIO PCI transport, plus virtIO MMIO transport on ARM.
 * Networking via virtIO Network, either through a NIC or Virtual Switch.
 * Storage via virtIO Block.
 * Console via serial passthrough, virtIO Console or in-guest methods (e.g. SSH).
+* Device passthrough.
 
 ### Limitations
 
-* x86 guests are limited to a single VCPU.
+* x86 guests are limited to a single vCPU.
+* DMA-capable device passthrough isn't isolated by an IOMMU on ARM.
 
 ## Supported platforms
 
@@ -85,19 +93,19 @@ For the Microkit SDK, you can download it [here](https://github.com/seL4/microki
 
 For all other dependencies, see the below instructions depending on your machine.
 
-### Ubuntu/Debian (apt):
+### Ubuntu/Debian (apt)
 
 ```sh
 sudo apt install -y make clang lld llvm qemu-system-arm qemu-system-x86 device-tree-compiler acpica-tools
 ```
 
-### Arch (pacman):
+### Arch (pacman)
 
 ```sh
 sudo pacman -S make clang lld llvm qemu-system-aarch64 qemu-system-x86 dtc acpica
 ```
 
-### macOS (Homebrew):
+### macOS (Homebrew)
 
 If you do not have Homebrew installed, you can install it [here](https://brew.sh/).
 
@@ -110,7 +118,7 @@ less friction on a Linux machine.
 # Note that you should make sure that the LLVM tools are in your path after running
 # the install command. Homebrew does not do it automatically but does print out a
 # message on how to do it.
-brew install make qemu dtc llvm acpica
+brew install make lld qemu dtc llvm acpica
 ```
 
 ### Nix
@@ -131,7 +139,7 @@ intended to simply boot a Linux guest that has serial input and output.
 
 ### Building and running
 
-First, initialize the repository:
+First, initialise the repository:
 
 ```sh
 git clone https://github.com/au-ts/libvmm
@@ -139,7 +147,7 @@ cd libvmm
 git submodule update --init
 ```
 
-Finally, we can simulate a basic system with a single Linux guest with the
+Then, we can simulate a basic system with a single Linux guest with the
 following commands:
 ```sh
 cd examples/simple
@@ -177,3 +185,7 @@ Other examples are under `examples/`. Each example has its own documentation for
 how to build and use it.
 
 For more information, have a look at the [manual](docs/MANUAL.md).
+
+## License
+
+See [LICENSE.md](LICENSE.md).
