@@ -1,0 +1,109 @@
+diff --git a/include/arch/x86/arch/object/vcpu.h b/include/arch/x86/arch/object/vcpu.h
+index 51199fd31..9dfa30b55 100644
+--- a/include/arch/x86/arch/object/vcpu.h
++++ b/include/arch/x86/arch/object/vcpu.h
+@@ -22,6 +22,7 @@
+ #define VMX_GUEST_GS_SELECTOR 0x0000080A
+ #define VMX_GUEST_LDTR_SELECTOR 0x0000080C
+ #define VMX_GUEST_TR_SELECTOR 0x0000080E
++#define VMX_GUEST_INTERRUPT_STATUS 0x00000810
+
+ #define VMX_HOST_ES_SELECTOR 0x00000C00
+ #define VMX_HOST_CS_SELECTOR 0x00000C02
+@@ -42,6 +43,10 @@
+ #define VMX_CONTROL_VIRTUAL_APIC_ADDRESS 0x00002012
+ #define VMX_CONTROL_APIC_ACCESS_ADDRESS 0x00002014
+ #define VMX_CONTROL_EPT_POINTER 0x0000201A
++#define VMX_CONTROL_EOI_EXIT_BITMAP_0 0x0000201C
++#define VMX_CONTROL_EOI_EXIT_BITMAP_1 0x0000201E
++#define VMX_CONTROL_EOI_EXIT_BITMAP_2 0x00002020
++#define VMX_CONTROL_EOI_EXIT_BITMAP_3 0x00002022
+
+ #define VMX_DATA_GUEST_PHYSICAL 0x00002400
+
+@@ -211,6 +216,7 @@ enum exit_reasons {
+     /* 0x2A */
+     TPR_BELOW_THRESHOLD = 0x2B,
+     APIC_ACCESS = 0x2C,
++    VIRTUALIZED_EOI = 0x2D,
+     GDTR_OR_IDTR = 0x2E,
+     LDTR_OR_TR = 0x2F,
+     EPT_VIOLATION = 0x30,
+@@ -220,7 +226,8 @@ enum exit_reasons {
+     VMX_PREEMPTION_TIMER = 0x34,
+     INVVPID = 0x35,
+     WBINVD = 0x36,
+-    XSETBV = 0x37
++    XSETBV = 0x37,
++    APIC_WRITE = 0x38
+ };
+
+ #define VPID_INVALID 0
+diff --git a/src/arch/x86/config.cmake b/src/arch/x86/config.cmake
+index 09d66f9e9..04607002f 100644
+--- a/src/arch/x86/config.cmake
++++ b/src/arch/x86/config.cmake
+@@ -72,6 +72,16 @@ config_option(KernelVTX VTX "VTX support" DEFAULT OFF
+ config_option(KernelX86_64VTX64BitGuests X86_64_VTX_64BIT_GUESTS "Support 64-bit guests" DEFAULT OFF
+               DEPENDS "KernelArchX86;KernelVTX;NOT KernelVerificationBuild")
+
++config_option(
++  KernelIntelApicv
++  INTEL_APICV
++  "Enable support for Intel APIC Virtualization Technology (APICv). This allows userspace VMM
++   software to use hardware support for emulating many virtual APIC accesses, tracking virtual APIC
++   state, and delivering virtual interrupts directly in VMX non-root operation without requiring a
++   VM exit. APICv is not available on all machines."
++  DEFAULT OFF
++  DEPENDS "KernelArchX86;KernelVTX;NOT KernelVerificationBuild")
++
+ config_option(KernelIOMMU IOMMU "IOMMU support for VT-d enabled chipset" DEFAULT ON
+               DEPENDS "KernelPlatPC99; NOT KernelVerificationBuild" DEFAULT_DISABLED OFF)
+
+diff --git a/src/arch/x86/object/vcpu.c b/src/arch/x86/object/vcpu.c
+index 24725cdd7..30d318f0a 100644
+--- a/src/arch/x86/object/vcpu.c
++++ b/src/arch/x86/object/vcpu.c
+@@ -897,6 +897,15 @@ static exception_t decodeWriteVMCS(cap_t cap, word_t length, bool_t call, word_t
+     case VMX_CONTROL_EXCEPTION_BITMAP:
+     case VMX_CONTROL_ENTRY_INTERRUPTION_INFO:
+     case VMX_CONTROL_ENTRY_EXCEPTION_ERROR_CODE:
++#ifdef CONFIG_INTEL_APICV
++    case VMX_CONTROL_VIRTUAL_APIC_ADDRESS:
++    case VMX_CONTROL_APIC_ACCESS_ADDRESS:
++    case VMX_GUEST_INTERRUPT_STATUS:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_0:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_1:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_2:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_3:
++#endif /* CONFIG_INTEL_APICV */
+         break;
+     case VMX_CONTROL_PIN_EXECUTION_CONTROLS:
+         value = applyFixedBits(value, pin_control_high, pin_control_low);
+@@ -1052,6 +1061,15 @@ static exception_t decodeReadVMCS(cap_t cap, word_t length, bool_t call, word_t
+     case VMX_GUEST_CR0:
+     case VMX_GUEST_CR3:
+     case VMX_GUEST_CR4:
++#ifdef CONFIG_INTEL_APICV
++    case VMX_CONTROL_VIRTUAL_APIC_ADDRESS:
++    case VMX_CONTROL_APIC_ACCESS_ADDRESS:
++    case VMX_GUEST_INTERRUPT_STATUS:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_0:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_1:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_2:
++    case VMX_CONTROL_EOI_EXIT_BITMAP_3:
++#endif /* CONFIG_INTEL_APICV */
+         break;
+     default:
+         userError("VCPU ReadVMCS: Invalid field %lx.", (long)field);
+@@ -1369,6 +1387,10 @@ exception_t handleVmexit(void)
+     case LDTR_OR_TR:
+     case TPR_BELOW_THRESHOLD:
+     case APIC_ACCESS:
++#ifdef CONFIG_INTEL_APICV
++    case APIC_WRITE:
++    case VIRTUALIZED_EOI:
++#endif /* CONFIG_INTEL_APICV */
+         qualification = vmread(VMX_DATA_EXIT_QUALIFICATION);
+         break;
+     default:

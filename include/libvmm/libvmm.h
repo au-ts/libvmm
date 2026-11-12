@@ -34,4 +34,5 @@
 #include <libvmm/arch/x86_64/memory_space.h>
 #include <libvmm/arch/x86_64/guest_time.h>
 #include <libvmm/arch/x86_64/uefi.h>
+#include <libvmm/arch/x86_64/bochs-display.h>
 #endif
