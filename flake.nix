@@ -6,18 +6,18 @@
   description = "A flake for building libvmm and its examples";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
-    sdfgen.url = "github:au-ts/microkit_sdf_gen/0.35.0";
-    sdfgen.inputs.nixpkgs.follows = "nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     systems-ci.url = "github:au-ts/systems-ci/main";
     systems-ci.flake = false;
+    acacia.url = "github:au-ts/microkit_acacia/Courtney/ConfigStructRewrite";
+    acacia.flake = false;
   };
 
-  outputs = { nixpkgs, rust-overlay, sdfgen, systems-ci, ... }:
+  outputs = { nixpkgs, rust-overlay, systems-ci, acacia, ... }:
     let
       microkit-version = "2.4.0";
       microkit-url = "https://github.com/seL4/microkit/releases/download/2.4.0/";
@@ -42,6 +42,10 @@
           llvm = pkgs.llvmPackages_18;
           rust = pkgs.rust-bin.fromRustupToolchainFile ./examples/rust/rust-toolchain.toml;
 
+          mk_acacia = pkgs.callPackage "${acacia}/package.nix" {
+            python3Packages = pkgs.python312Packages;
+          };
+
           clang-complete = (pkgs.symlinkJoin {
             name = "clang-complete";
             paths = llvm.clang-unwrapped.all;
@@ -65,14 +69,12 @@
             '';
           });
 
-          pysdfgen = sdfgen.packages.${system}.pysdfgen.override { pythonPackages = pkgs.python312Packages; };
-
           ts_ci = pkgs.callPackage "${systems-ci}/ts_ci/package.nix" {
             python3Packages = pkgs.python312Packages;
           };
 
-          python = pkgs.python312.withPackages (ps: [
-            pysdfgen
+          pythonTool = pkgs.python312.withPackages (ps: [
+            mk_acacia
             ts_ci
           ]);
         in
@@ -115,7 +117,7 @@
                 llvm.libllvm
                 clang-complete
                 dtc
-                python
+                pythonTool
                 util-linux
                 # Needed for CI testing
                 expect

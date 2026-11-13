@@ -17,13 +17,12 @@
 #include "../../guest_arch_init.h"
 
 /* These GPAs depends on what's defined in your guest DTB. */
-#define GUEST_RAM_START_GPA 0x40000000
 #define PCI_ECAM_GPA 0x10000000
 #define PCI_ECAM_SIZE 0x100000
 #define PCI_MMIO_APERATURE_GPA 0x20100000
 #define PCI_MMIO_APERATURE_SIZE 0x0ff00000
 
-/* Data from sdfgen */
+/* Data from Acacia */
 extern serial_client_config_t serial_config;
 extern blk_client_config_t blk_config;
 extern net_client_config_t net_config;
@@ -57,20 +56,20 @@ static uintptr_t kernel_pc = 0;
 
 bool guest_arch_init(void)
 {
-    arch_guest_init_t args = { .num_vcpus = 1,
-                               .num_guest_ram_regions = 1,
-                               .guest_ram_regions = { (struct guest_ram_region) {
-                                   .gpa_start = GUEST_RAM_START_GPA,
-                                   .size = vmm_config.ram_size,
-                                   .vmm_vaddr = (void *)vmm_config.ram } },
-                               .pci_init = (struct guest_pci_init) {
-                                   .ecam_gpa = PCI_ECAM_GPA,
-                                   .ecam_size = PCI_ECAM_SIZE,
-                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
-                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
-                               } };
+    arch_guest_init_t lib_init_args;
+    memset(&lib_init_args, 0, sizeof(lib_init_args));
+    if (!vmm_config_fill_guest_init(&vmm_config, &lib_init_args)) {
+        LOG_VMM_ERR("Invalid VMM config\n");
+        return false;
+    }
 
-    if (!guest_init(args)) {
+    lib_init_args.pci_init.ecam_gpa = PCI_ECAM_GPA;
+    lib_init_args.pci_init.ecam_size = PCI_ECAM_SIZE;
+    lib_init_args.pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA;
+    lib_init_args.pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE;
+
+    bool success = guest_init(lib_init_args);
+    if (!success) {
         LOG_VMM_ERR("Failed to initialise VMM\n");
         return false;
     }
@@ -94,7 +93,7 @@ bool guest_arch_init(void)
     }
 
     kernel_pc = linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_dtb_image,
-                                   vmm_config.dtb, dtb_size, (uintptr_t)_guest_initrd_image, vmm_config.initrd,
+                                   vmm_config.dtb_gpa, dtb_size, (uintptr_t)_guest_initrd_image, vmm_config.initrd_gpa,
                                    initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
@@ -132,5 +131,5 @@ bool virtio_arch_init(void)
 
 bool guest_arch_start(void)
 {
-    return guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
+    return guest_start(kernel_pc, vmm_config.dtb_gpa, vmm_config.initrd_gpa);
 }
