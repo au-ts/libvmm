@@ -6,17 +6,20 @@
 # Virtual Network Switch example
 
 This example shows off four VMs on different cores communicating
-with each others using a Virtual Network Switch (VSwitch) component
+with each other using a Virtual Network Switch (VSwitch) component
 implemented in sDDF. See [this document](../../dep/sddf/docs/network/vswitch.md)
 for more details on how the VSwitch works.
 
-Traffic flows in and out of the VMs through the emulated virtIO network
+Traffic flows in and out of the VMs through the emulated virtIO PCI network
 device. The ACL in the metaprogram controls which VM can and can't talk
 to another.
 
 This is a high level overview of the system and the ACL rules:
 
 ![Arch diagram](docs/arch_diagram.png)
+
+In-guest networking is implemented in this example similarly
+to the `virtio_pci` example.
 
 The example currently works on the following platforms:
 

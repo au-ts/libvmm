@@ -15,11 +15,30 @@ This example makes use of the following virtIO devices emulated by libvmm:
 * block
 * network
 
-All of the virtIO devices are emulated with their corresponding native drivers
+All the virtIO devices are backed with their corresponding native drivers
 from sDDF. The guest will interact with the virtIO devices on the virtual PCI bus.
 
 On ARM, this is accomplished by declaring a PCI bus and ECAM window in the device
-tree. Linux will detects the PCI bus, probes it, finds then drives our virtIO devices.
+tree. Linux will detect the PCI bus, probes it, finds then drives our virtIO devices.
+
+Unlike the `simple` example, the guest device tree is stripped down to the minimal
+set of devices needed for Linux to boot into userspace and demonstrate the
+capabilities of the virtIO devices. It only describes, in generic terms, the
+virtual hardware that the VMM provides and the boot information Linux needs:
+
+* Firmware interface via PSCI
+* CPU
+* Interrupt controller (via an overlay)
+* Architectural timer
+* Memory
+* Linux kernel command line
+* Initrd placement
+
+We do it this way to avoid "leaking" information about the host's hardware, so we
+don't have to handle cases where Linux tries to initialise board-specific things
+like the firmware or mailbox. This means the same guest device tree works on every
+supported platform. Only the interrupt controller overlay changes, to match the
+board's GIC version.
 
 On x86, Linux will assume that a PCI bus exists at the legacy I/O Ports so we just
 need to place the virtIO devices on the virtual bus.
