@@ -35,6 +35,11 @@ Copyright: Linux
 License: GPL-2.0-or-later
 
 Files:
+    examples/simple/board/rock3b/linux.dts
+Copyright: Linux Kernel Team
+License: GPL-2.0-only
+
+Files:
     */buildroot_config
     examples/*/images/rootfs.cpio.gz
     examples/*/board/*/rootfs.cpio.gz
