@@ -15,11 +15,31 @@ This example makes use of the following virtIO devices emulated by libvmm:
 * block
 * network
 
-All of the virtIO devices are emulated with their corresponding native drivers
+All the virtIO devices are backed by their corresponding native drivers
 from sDDF. The guest will interact with the virtIO devices via MMIO.
 
-On ARM, this is accomplished by adding virtIO devices nodes into the device tree,
-so that Linux knows where the device is in guest-physical address space.
+On ARM, this is accomplished by adding virtIO device nodes into the device tree,
+so that Linux knows where each device is in guest-physical address space.
+
+Unlike the `simple` example, the guest device tree is stripped down to the minimal
+set of devices needed for Linux to boot into userspace and demonstrate the
+capabilities of the virtIO devices. It only describes, in generic terms, the
+virtual hardware that the VMM provides and the boot information Linux needs:
+
+* Firmware interface via PSCI
+* CPU
+* Interrupt controller (via an overlay)
+* Architectural timer
+* Memory
+* Linux kernel command line
+* Initrd placement
+* virtIO MMIO devices
+
+We do it this way to avoid "leaking" information about the host's hardware, so we
+don't have to handle cases where Linux tries to initialise board-specific things
+like the firmware or mailbox. This means the same guest device tree works on every
+supported platform. Only the interrupt controller overlay changes, to match the
+board's GIC version.
 
 The example currently works on the following platforms:
 
