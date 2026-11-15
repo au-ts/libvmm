@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
+#include <libvmm/guest_ram.h>
 #include <microkit.h>
 #include <libvmm/uefi/fw_cfg.h>
 #include <libvmm/util/util.h>
@@ -20,8 +21,12 @@
 
 static char fw_cfg_sig[] = "QEMU";
 
+#define FW_CFG_DMA_MAGIC_LOW    __builtin_bswap32(0x51454d55)
+#define FW_CFG_DMA_MAGIC_HIGH   __builtin_bswap32(0x20434647)
+
 #define FW_CFG_ID_TRADITIONAL BIT(0)
-static uint32_t fw_cfg_id = FW_CFG_ID_TRADITIONAL;
+#define FW_CFG_ID_DMA         BIT(1)
+static uint32_t fw_cfg_id = FW_CFG_ID_TRADITIONAL | FW_CFG_ID_DMA;
 
 /* "File Directory (Key 0x0019, FW_CFG_FILE_DIR)
  * Firmware configuration items stored at selector keys 0x0020 or higher
@@ -43,6 +48,18 @@ struct fw_cfg_files {       /* the entire file directory fw_cfg item */
     struct fw_cfg_file f[MAX_FW_CFG_NAMED_FILES]; /* array of file entries */
 } __attribute__((packed));
 
+#define FW_CFG_CONTROL_ERROR    BIT(0)
+#define FW_CFG_CONTROL_READ     BIT(1)
+#define FW_CFG_CONTROL_SKIP     BIT(2)
+#define FW_CFG_CONTROL_SELECT   BIT(3)
+#define FW_CFG_CONTROL_WRITE    BIT(4)
+
+struct fw_cfg_dma {
+    uint32_t control;
+    uint32_t length;
+    uint64_t address;
+};
+
 #define MAX_SELECT_KEY (QEMU_FW_CFG_FILE_FIRST + MAX_FW_CFG_NAMED_FILES) /* Exclusive */
 
 struct fw_cfg_file_bookkeep {
@@ -58,6 +75,8 @@ struct fw_cfg_state {
     uint8_t *selected_data;
     size_t selected_index;
     size_t selected_size;
+
+    uint64_t dma_address;
 
     /* Data for QEMU_FW_CFG_ITEM_FILE_DIR */
     size_t num_named_files;
@@ -75,6 +94,37 @@ static struct fw_cfg_state fw_cfg_state;
 
 #define QEMU_FW_CFG_X86_SELECT_PORT 0x510
 #define QEMU_FW_CFG_X86_DATA_PORT 0x511
+#define QEMU_FW_CFG_X86_DMA_PORT 0x514
+
+static void qemu_fw_cfg_select_item(uint32_t sel)
+{
+    fw_cfg_state.selected = sel;
+    fw_cfg_state.selected_data = NULL;
+    fw_cfg_state.selected_index = 0;
+    fw_cfg_state.selected_size = 0;
+
+    if (fw_cfg_state.selected < MAX_SELECT_KEY) {
+        fw_cfg_state.selected_data = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].data;
+        fw_cfg_state.selected_size = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].size;
+    }
+}
+
+static void qemu_fw_cfg_read_content(void *dst, size_t size)
+{
+    /* QEMU allows to read OOB and non-present items. In such case DMA unfilled buffer is just
+     * zeroed. See fw_cfg_data_read() in qemu sources. */
+    if (fw_cfg_state.selected_size) {
+        size_t available = fw_cfg_state.selected_size - fw_cfg_state.selected_index;
+        size_t can_read = MIN(available, size);
+        uint8_t *data_ptr = fw_cfg_state.selected_data + fw_cfg_state.selected_index;
+
+        memcpy(dst, data_ptr, can_read);
+        memset(dst + can_read, 0, size - can_read);
+        fw_cfg_state.selected_index += can_read;
+    } else {
+        memset(dst, 0, size);
+    }
+}
 
 static bool qemu_fw_cfg_select_handler(size_t vcpu_id, uint16_t port_offset, size_t qualification,
                                        seL4_VCPUContext *vctx, void *cookie)
@@ -95,15 +145,8 @@ static bool qemu_fw_cfg_select_handler(size_t vcpu_id, uint16_t port_offset, siz
             LOG_VMM_ERR("failed to get write operand\n");
             return false;
         }
-        fw_cfg_state.selected = sel;
-        fw_cfg_state.selected_data = NULL;
-        fw_cfg_state.selected_index = 0;
-        fw_cfg_state.selected_size = 0;
 
-        if (fw_cfg_state.selected < MAX_SELECT_KEY) {
-            fw_cfg_state.selected_data = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].data;
-            fw_cfg_state.selected_size = fw_cfg_state.bookkeeped_files[fw_cfg_state.selected].size;
-        }
+        qemu_fw_cfg_select_item(sel);
     }
     return true;
 }
@@ -124,11 +167,9 @@ static bool qemu_fw_cfg_data_handler(size_t vcpu_id, uint16_t port_offset, size_
                 return false;
             }
             uint32_t data = 0;
-            if (fw_cfg_state.selected_size && fw_cfg_state.selected_index < fw_cfg_state.selected_size) {
-                uint8_t *data_ptr = fw_cfg_state.selected_data + fw_cfg_state.selected_index;
-                data = *data_ptr;
-                fw_cfg_state.selected_index++;
-            }
+
+            qemu_fw_cfg_read_content(&data, 1);
+
             if (!pio_emulate_read(qualification, vctx, data)) {
                 LOG_VMM_ERR("failed to set read operand\n");
                 return false;
@@ -136,6 +177,108 @@ static bool qemu_fw_cfg_data_handler(size_t vcpu_id, uint16_t port_offset, size_
         }
     }
     return true;
+}
+
+static void qemu_fw_cfg_do_dma(struct fw_cfg_dma *dma)
+{
+    uint32_t control = __builtin_bswap32(dma->control);
+    uint32_t length = __builtin_bswap32(dma->length);
+    uint64_t address = __builtin_bswap64(dma->address);
+    bool success = true;
+
+    if (control & FW_CFG_CONTROL_SELECT) {
+        qemu_fw_cfg_select_item(control >> 16);
+    }
+
+    if (control & FW_CFG_CONTROL_READ) {
+        void *buffer = gpa_to_hva(address, length);
+
+        if (buffer) {
+            qemu_fw_cfg_read_content(buffer, length);
+        } else {
+            success = false;
+        }
+    } else if (control & FW_CFG_CONTROL_WRITE) {
+        LOG_VMM_ERR("Unsupported write request\n");
+        success = false;
+    } else if (control & FW_CFG_CONTROL_SKIP) {
+        fw_cfg_state.selected_index = MIN(fw_cfg_state.selected_size, fw_cfg_state.selected_index + length);
+    }
+
+    dma->control = __builtin_bswap32(success ? 0 : FW_CFG_CONTROL_ERROR);
+}
+
+static bool qemu_fw_cfg_dma_handler(size_t vcpu_id, uint16_t port_offset, size_t qualification, seL4_VCPUContext *vctx,
+                                    void *cookie)
+{
+    if (pio_fault_to_access_width_bytes(qualification) != 4) {
+        LOG_VMM_ERR("Invalid DMA port access size\n");
+        return false;
+    }
+
+    if (pio_fault_is_string_op(qualification)) {
+        LOG_VMM_ERR("String ops are not supported on DMA port\n");
+        return false;
+    }
+
+    if (pio_fault_is_read(qualification)) {
+        /* See QEMU spec. It's 'QEMU CFG' in big-endian format. */
+        switch (port_offset) {
+        case 0:
+            if (!pio_emulate_read(qualification, vctx, FW_CFG_DMA_MAGIC_LOW)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
+            break;
+        case 4:
+            if (!pio_emulate_read(qualification, vctx, FW_CFG_DMA_MAGIC_HIGH)) {
+                LOG_VMM_ERR("failed to set read operand\n");
+                return false;
+            }
+            break;
+        default:
+            LOG_VMM_ERR("Invalid DMA port access\n");
+            return false;
+        }
+
+        return true;
+    } else {
+        uint32_t data;
+        uint64_t gpa;
+        struct fw_cfg_dma dma;
+        void *guest_dma_req;
+
+        pio_get_write_data(qualification, vctx, &data);
+
+        switch (port_offset) {
+        case 0:
+            fw_cfg_state.dma_address &= 0xffffffff;
+            fw_cfg_state.dma_address |= (uint64_t)__builtin_bswap32(data) << 32;
+            return true;
+        case 4:
+            gpa = fw_cfg_state.dma_address | __builtin_bswap32(data);
+
+            /* Reset before each transfer, so a guest that only
+             * writes the low half gets a zero high half. */
+            fw_cfg_state.dma_address = 0;
+            break;
+        default:
+            LOG_VMM_ERR("Invalid DMA port access\n");
+            return false;
+        }
+
+        guest_dma_req = gpa_to_hva(gpa, sizeof(dma));
+        if (!guest_dma_req) {
+            LOG_VMM_ERR("Invalid DMA gpa\n");
+            return false;
+        }
+
+        memcpy(&dma, guest_dma_req, sizeof(dma));
+        qemu_fw_cfg_do_dma(&dma);
+        memcpy((uint8_t *)guest_dma_req + offsetof(struct fw_cfg_dma, control), &dma.control, sizeof(dma.control));
+
+        return true;
+    }
 }
 
 static bool arch_init_fw_cfg(void)
@@ -149,6 +292,11 @@ static bool arch_init_fw_cfg(void)
     success = fault_register_pio_exception_handler(QEMU_FW_CFG_X86_DATA_PORT, 1, &qemu_fw_cfg_data_handler, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register PIO handler for fw cfg data port\n");
+        return false;
+    }
+    success = fault_register_pio_exception_handler(QEMU_FW_CFG_X86_DMA_PORT, 8, &qemu_fw_cfg_dma_handler, NULL);
+    if (!success) {
+        LOG_VMM_ERR("Failed to register PIO handler for fw cfg dma port\n");
         return false;
     }
 
