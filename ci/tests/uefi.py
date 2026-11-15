@@ -23,6 +23,8 @@ async def test(backend: HardwareBackend, test_config: common.TestConfig):
         await wait_for_output(backend, b"SecCoreStartupWithStack")
         # Firmware should see our virtual fw cfg device
         await wait_for_output(backend, b"QemuFwCfgProbe: Supported 1")
+        # Firmware should see fw cfg DMA support
+        await wait_for_output(backend, b"QemuFwCfg interface (DMA) is supported")
         # Firmware should load all our ACPI table
         await wait_for_output(backend, b"InstallQemuFwCfgTables: installed 5 tables")
         # Linux should detect EFI
