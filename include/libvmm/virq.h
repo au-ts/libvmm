@@ -69,7 +69,7 @@ typedef void (*virq_ack_fn_t)(irq_routing_info_t irq_routing_info, void *cookie)
  * Initialise the architecture-depedent virtual interrupt controller.
  * On ARM, this is the virtual Generic Interrupt Controller (vGIC).
  */
-bool virq_controller_init();
+bool virq_controller_init(uint64_t gic_dist_gpa, uint64_t gic_redist_gpa);
 #elif defined(CONFIG_ARCH_X86)
 /*
  * Initialise the virtual LAPIC and I/O APIC.

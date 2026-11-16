@@ -124,6 +124,10 @@ class VmmConfig:
     initrd: int = 0
     guest_dt_devices: List[GuestDtDevice] = field(default_factory=list)
 
+    # ARM guests only.
+    gic_dist_gpa: int = 0
+    gic_redist_gpa: int = 0
+
     # x86 guests only.
     ioports: List[IOPort] = field(default_factory=list)
 
@@ -142,6 +146,8 @@ class VmmConfig:
             "vcpus": [
                 ConfigStruct({"id": i}, "vmm_config_vcpu_t") for i in self.vcpu_ids
             ],
+            "gic_dist_gpa": self.gic_dist_gpa,
+            "gic_redist_gpa": self.gic_redist_gpa,
             "num_ioports": len(self.ioports),
             "ioports": [_ioport_to_config(io) for io in self.ioports],
         }

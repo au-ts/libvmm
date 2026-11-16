@@ -17,17 +17,23 @@
 #define GUEST_RAM_SIZE 0x10000000
 
 #if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_RAM_START_GPA 0x40000000
-#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_RAM_START_GPA     0x40000000
+#define GUEST_DTB_GPA           0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4d000000
+#define GUEST_GIC_DIST_GPA      0x8000000
+#define GUEST_GIC_REDIST_GPA    0
 #elif defined(BOARD_odroidc4)
-#define GUEST_RAM_START_GPA 0x20000000
-#define GUEST_DTB_GPA 0x2f000000
+#define GUEST_RAM_START_GPA     0x20000000
+#define GUEST_DTB_GPA           0x2f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x2d000000
+#define GUEST_GIC_DIST_GPA      0xffc01000
+#define GUEST_GIC_REDIST_GPA    0
 #elif defined(BOARD_maaxboard)
-#define GUEST_RAM_START_GPA 0x40000000
-#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_RAM_START_GPA     0x40000000
+#define GUEST_DTB_GPA           0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4c000000
+#define GUEST_GIC_DIST_GPA      0x38800000
+#define GUEST_GIC_REDIST_GPA    0x38880000
 #else
 #error Need to define guest kernel image address and DTB address
 #endif
@@ -66,6 +72,8 @@ void init(void)
     arch_guest_init_t args = {
         .num_vcpus = 4,
         .num_guest_ram_regions = 1,
+        .gic_dist_gpa = GUEST_GIC_DIST_GPA,
+        .gic_redist_gpa = GUEST_GIC_REDIST_GPA,
         .guest_ram_regions = { (struct guest_ram_region) {
             .gpa_start = GUEST_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)guest_ram_vaddr } },
         .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */

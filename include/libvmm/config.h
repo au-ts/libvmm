@@ -85,6 +85,9 @@ typedef struct vmm_config {
     /* vCPU IDs are always 0 to num_vcpus - 1 */
     uint8_t num_vcpus;
     vmm_config_vcpu_t vcpus[VMM_MAX_VCPUS];
+    /* Begin ARM guest only fields */
+    uint64_t gic_dist_gpa, gic_redist_gpa;
+    /* End ARM guest only fields */
     /* Begin x86 guest only fields */
     uint8_t num_ioports;
     vmm_config_ioport_t ioports[VMM_MAX_IOPORTS];
@@ -135,6 +138,8 @@ static inline bool vmm_config_fill_guest_init(const vmm_config_t *config, arch_g
 
 #if defined(CONFIG_ARCH_ARM)
     args->num_vcpus = config->num_vcpus;
+    args->gic_dist_gpa = config->gic_dist_gpa;
+    args->gic_redist_gpa = config->gic_redist_gpa;
 #endif
 
     return true;

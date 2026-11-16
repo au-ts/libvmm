@@ -25,27 +25,39 @@ static void sgi_ack(irq_routing_info_t irq_routing_info, void *cookie)
 {
 }
 
-bool virq_controller_init()
+bool virq_controller_init(uint64_t gic_dist_gpa, uint64_t gic_redist_gpa)
 {
-    bool success;
+    if (!gic_dist_gpa) {
+        LOG_VMM_ERR("GIC distributor GPA must be given\n");
+        return false;
+    }
+#if defined(GIC_V3)
+    if (!gic_redist_gpa) {
+        LOG_VMM_ERR("GICv3 redistributor GPA must be given\n");
+        return false;
+    }
+#endif
 
-    vgic_init();
+
 #if defined(GIC_V2)
-    LOG_VMM("initialised virtual GICv2 (distributor: 0x%lx)\n", GIC_DIST_PADDR);
+    vgic_init(gic_dist_gpa);
+    LOG_VMM("initialised virtual GICv2 (distributor: 0x%lx)\n", gic_dist_gpa);
 #elif defined(GIC_V3)
-    LOG_VMM("initialised virtual GICv3 (distributor: 0x%lx, redistributor: 0x%lx)\n", GIC_DIST_PADDR, GIC_REDIST_PADDR);
+    vgic_init(gic_dist_gpa, gic_redist_gpa);
+    LOG_VMM("initialised virtual GICv3 (distributor: 0x%lx, redistributor: 0x%lx)\n", gic_dist_gpa, gic_redist_gpa);
 #else
 #error "Unsupported GIC version"
 #endif
 
+    bool success;
     /* Register the fault handler */
-    success = fault_register_vm_exception_handler(GIC_DIST_PADDR, GIC_DIST_SIZE, vgic_handle_fault_dist, NULL);
+    success = fault_register_vm_exception_handler(gic_dist_gpa, GIC_DIST_SIZE, vgic_handle_fault_dist, NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register fault handler for GIC distributor region\n");
         return false;
     }
 #if defined(GIC_V3)
-    success = fault_register_vm_exception_handler(GIC_REDIST_PADDR, GIC_REDIST_TOTAL_SIZE, vgic_handle_fault_redist,
+    success = fault_register_vm_exception_handler(gic_redist_gpa, GIC_REDIST_TOTAL_SIZE, vgic_handle_fault_redist,
                                                   NULL);
     if (!success) {
         LOG_VMM_ERR("Failed to register fault handler for GIC redistributor region\n");

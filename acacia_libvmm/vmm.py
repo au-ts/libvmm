@@ -398,7 +398,7 @@ class LibvmmVirtMachine(Subsystem):
         self, dtb_rdr: LibvmmDtbReader, one_to_one_ram: bool
     ) -> None:
         if self.sdf.arch.is_arm():
-            self._map_gic_vcpu_interface()
+            self._configure_gic()
 
         memory = dtb_rdr.memory()
         if not memory:
@@ -412,30 +412,39 @@ class LibvmmVirtMachine(Subsystem):
         dtb_size = len(dtb_rdr.dtb.fdt.as_bytearray())
         self._place_initrd_and_dtb(dtb_rdr.initrd(), dtb_size)
 
-    def _map_gic_vcpu_interface(self) -> None:
-        """Show the guest the GIC's vCPU interface where it expects the CPU interface."""
-        gic = Arm_GIC.create(self.sdf.arch, self.guest_dtb)
-        if gic is None:
+    def _configure_gic(self) -> None:
+        """Show the guest the host GIC's vCPU interface where it expects the CPU interface."""
+        arch = self.sdf.arch
+        guest_gic = Arm_GIC.create(arch, self.guest_dtb)
+        if guest_gic is None:
             raise ValueError(f"Guest DTB for '{self.vm.name}' has no GIC node")
-        if not gic.has_mmio_cpu_interface():
+        if len(guest_gic.redists) > 1:
+            raise ValueError(f"Guest DTB for '{self.vm.name}': libvmm supports only one GICR region")
+
+        self.config.gic_dist_gpa = guest_gic.dist.paddr
+        self.config.gic_redist_gpa = guest_gic.redists[0].paddr if len(guest_gic.redists) > 0 else 0
+
+        if not guest_gic.has_mmio_cpu_interface():
             return  # GICv3 with a system register CPU interface.
-        if gic.vcpu_paddr is None or gic.vcpu_size is None:
-            raise ValueError(
-                "GIC has an MMIO CPU interface but no vCPU interface 'reg' entry"
-            )
+
+        if self.sdf.dtb is None:
+            raise ValueError("Mapping the GIC vCPU interface needs the host's DTB")
+        host_gic = Arm_GIC.create(arch, self.sdf.dtb)
+        if host_gic is None or host_gic.vcpu is None:
+            raise ValueError("Host DTB has no GIC vCPU interface (GICV) 'reg' entry")
 
         mr = next((m for m in self.sdf.mrs if m.name == GIC_VCPU_MR_NAME), None)
         if mr is None:
             mr = MemoryRegion(
                 self.sdf,
                 GIC_VCPU_MR_NAME,
-                self.sdf.arch.roundup_to_page(gic.vcpu_size),
-                paddr=gic.vcpu_paddr,
+                arch.roundup_to_page(host_gic.vcpu.size),
+                paddr=host_gic.vcpu.paddr,
                 cached=False,
             )
         self.gic_vcpu_mr = mr
-        self._check_gpa_range_free(gic.cpu_paddr, mr.size, "GIC CPU interface")
-        self.vm.add_map(Map(mr, gic.cpu_paddr, "rw"))
+        self._check_gpa_range_free(guest_gic.cpu.paddr, mr.size, "GIC CPU interface")
+        self.vm.add_map(Map(mr, guest_gic.cpu.paddr, "rw"))
 
     def _place_initrd_and_dtb(self, initrd: Optional[Range], dtb_size: int) -> None:
         """

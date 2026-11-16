@@ -412,8 +412,8 @@ static bool vgic_handle_fault_dist_read(size_t vcpu_id, vgic_t *vgic, uint64_t o
         /* Pretend that everything is fine */
         return true;
     }
-    uint32_t mask = fault_get_data_mask(GIC_DIST_PADDR + offset, fsr);
-    fault_emulate_write(regs, GIC_DIST_PADDR + offset, fsr, reg & mask);
+    uint32_t mask = fault_get_data_mask(vgic->gic_dist_gpa + offset, fsr);
+    fault_emulate_write(regs, vgic->gic_dist_gpa + offset, fsr, reg & mask);
 
     return true;
 }
@@ -428,7 +428,7 @@ static bool vgic_handle_fault_dist_write(size_t vcpu_id, vgic_t *vgic, uint64_t 
 {
     bool success = true;
     struct gic_dist_map *gic_dist = vgic_get_dist(vgic->registers);
-    uint64_t addr = GIC_DIST_PADDR + offset;
+    uint64_t addr = vgic->gic_dist_gpa + offset;
     uint32_t mask = fault_get_data_mask(addr, fsr);
     uint32_t reg_offset = 0;
     uint32_t data = fault_get_data(regs, fsr) & mask;
