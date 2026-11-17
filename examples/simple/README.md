@@ -56,9 +56,14 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/l
 
 The username to login is `root`. There is no password required.
 
-## x86_64 Hardware Requirements
+### ARM
 
-### QEMU
+For instructions on how to load the image, please refer to the Microkit manual section for your board:
+https://github.com/seL4/microkit/blob/main/docs/manual.md#board-support-packages-bsps.
+
+### x86_64
+
+#### QEMU
 
 QEMU's Tiny Code Generator (TCG) emulates ARM's virtualisation extensions, but
 not x86's. To run this example you therefore need:
@@ -67,7 +72,11 @@ not x86's. To run this example you therefore need:
 - a Linux host, and
 - KVM enabled.
 
-### Hardware
+#### Hardware
 
-To run this example on hardware, you need:
-- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS.
+To run this example on hardware, you need an x86_64 Intel CPU with virtualisation (VT-x)
+enabled in your BIOS.
+
+On the software side, you will need to bring your own Multiboot 2-compliant bootloader
+such as GRUB. Please see the seL4 docs website for an example:
+https://docs.sel4.systems/Hardware/X64.html.

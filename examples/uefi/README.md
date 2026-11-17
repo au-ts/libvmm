@@ -62,5 +62,9 @@ not x86's. To run this example you therefore need:
 
 ### Hardware
 
-To run this example on hardware, you need:
-- an x86_64 Intel CPU with virtualisation (VT-x) enabled in your BIOS,
+To run this example on hardware, you need an x86_64 Intel CPU with virtualisation (VT-x)
+enabled in your BIOS.
+
+On the software side, you will need to bring your own Multiboot 2-compliant bootloader
+such as GRUB. Please see the seL4 docs website for an example:
+https://docs.sel4.systems/Hardware/X64.html.

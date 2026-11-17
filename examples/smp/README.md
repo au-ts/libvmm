@@ -49,3 +49,8 @@ make MICROKIT_BOARD=qemu_virt_aarch64 MICROKIT_SDK=/path/to/sdk LINUX=/path/to/l
 ## Running
 
 The username to login is `root`. There is no password required.
+
+### ARM
+
+For instructions on how to load the image, please refer to the Microkit manual section for your board:
+https://github.com/seL4/microkit/blob/main/docs/manual.md#board-support-packages-bsps.
