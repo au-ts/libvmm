@@ -213,6 +213,9 @@ The guest has a DNS resolver so you can also ping a URL.
 
 ## aarch64 Hardware Requirements
 
+For instructions on how to load the image, please refer to the Microkit manual section for your board:
+https://github.com/seL4/microkit/blob/main/docs/manual.md#board-support-packages-bsps.
+
 ### QEMU
 
 When running on QEMU, read and writes go to an emulated ramdisk instead of to your

@@ -139,3 +139,8 @@ VM 1:
 But VM 1 can't ping VM 2:
 
 ![Example 2](docs/example_2.png)
+
+### ARM
+
+For instructions on how to load the image, please refer to the Microkit manual section for your board:
+https://github.com/seL4/microkit/blob/main/docs/manual.md#board-support-packages-bsps.

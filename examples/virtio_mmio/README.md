@@ -215,6 +215,9 @@ time to contain a FAT filesystem for both partitions.
 
 ### Hardware set up
 
+For instructions on how to load the image, please refer to the Microkit manual section for your board:
+https://github.com/seL4/microkit/blob/main/docs/manual.md#board-support-packages-bsps.
+
 When running on one of the supported hardware platforms, the system expects to
 read and write from the SD card. You will need to format the SD card prior to
 booting.
