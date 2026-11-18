@@ -3,16 +3,16 @@
     "acacia": {
       "flake": false,
       "locked": {
-        "lastModified": 1794972775,
-        "narHash": "sha256-/HwtFleP+6qDXOhov7s6M1xTVHSyqZQOW2KC6cXwlLU=",
+        "lastModified": 1795049818,
+        "narHash": "sha256-g/jQ4IIL6LyhGjnexzgWZp8xip/StFH4Y53xaTcB++g=",
         "owner": "au-ts",
         "repo": "microkit_acacia",
-        "rev": "b37117749357cdea905e93da3ed0c4f6052fc75e",
+        "rev": "8cd6846181ee3db57163350a48c6abb03a73deb9",
         "type": "github"
       },
       "original": {
         "owner": "au-ts",
-        "ref": "main",
+        "ref": "libvmm_acacia_testing",
         "repo": "microkit_acacia",
         "type": "github"
       }
