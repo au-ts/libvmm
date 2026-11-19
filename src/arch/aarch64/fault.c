@@ -291,7 +291,7 @@ bool fault_handle_vcpu_exception(size_t vcpu_id)
         return smc_handle(vcpu_id, hsr);
     case HSR_WFx_EXCEPTION:
         // If we get a WFI exception, we just do nothing in the VMM.
-        return true;
+        return fault_advance_vcpu(vcpu_id, &regs, SEL4_USER_CONTEXT_SIZE);
     case HSR_SYSREG_64_EXCEPTION:
         return handle_sysreg_64_fault(vcpu_id, hsr, &regs);
     default:
