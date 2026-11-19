@@ -21,7 +21,8 @@ SDDF_CUSTOM_LIBC := 1
 
 SUPPORTED_BOARDS := qemu_virt_aarch64 \
 					odroidc4 \
-					maaxboard
+					maaxboard \
+					rpi4b_1gb
 
 vpath %.c $(LIBVMM) $(EXAMPLE_DIR)
 

@@ -105,6 +105,7 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "qemu_virt_aarch64",
             "odroidc4",
             "maaxboard",
+            "rpi4b_1gb",
         ],
         "tests_exclude": [],
     },
