@@ -14,7 +14,6 @@
 #include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
-#include <sddf/timer/config.h>
 #include "../../guest_arch_init.h"
 
 /* Device slot of the virtio console device on bus 0.
@@ -28,10 +27,8 @@
 #define VIRTIO_NET_PCI_DEVICE_SLOT 4
 #define VIRTIO_NET_PCI_IOAPIC_PIN 10
 
-/* Data from sdfgen */
-__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
+/* Data from Acacia */
 extern serial_client_config_t serial_config;
-extern blk_client_config_t blk_config;
 extern net_client_config_t net_config;
 extern vmm_config_t vmm_config;
 
@@ -59,9 +56,8 @@ extern net_queue_handle_t net_tx_queue;
 static linux_x86_setup_ret_t linux_setup;
 static seL4_VCPUContext initial_regs;
 
-#define GUEST_CMDLINE "debug console=hvc0 loglevel=8"
-#define GUEST_RAM_SIZE 0x10000000
-#define GUEST_RAM_HVA 0x20000000
+#define GUEST_CMDLINE_HW "debug console=hvc0 loglevel=8"
+#define GUEST_CMDLINE_QEMU "debug console=hvc0 loglevel=8 tsc=nowatchdog"
 
 /* Matches DSDT */
 #define PCI_MMIO_APERATURE_GPA 0x40000000
@@ -69,24 +65,19 @@ static seL4_VCPUContext initial_regs;
 
 bool guest_arch_init(void)
 {
-    assert(timer_config_check_magic(&timer_config));
+    arch_guest_init_t lib_init_args;
+    memset(&lib_init_args, 0, sizeof(lib_init_args));
+    if (!vmm_config_fill_guest_init(&vmm_config, &lib_init_args)) {
+        LOG_VMM_ERR("Invalid VMM config\n");
+        return false;
+    }
 
-    arch_guest_init_t args = {
-        .bsp = true,
-        .timer_ch = timer_config.driver_id,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = LOW_RAM_START_GPA, .size = GUEST_RAM_SIZE, .vmm_vaddr = (void *)GUEST_RAM_HVA },
-        },
-        .pci_init = (struct guest_pci_init) {
-                                   .ecam_gpa = 0,
-                                   .ecam_size = 0,
-                                   .mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
-                                   .mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
-                               },
-    };
+    lib_init_args.bsp = true;
+    lib_init_args.pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA;
+    lib_init_args.pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE;
 
-    if (!guest_init(args)) {
+    bool success = guest_init(lib_init_args);
+    if (!success) {
         LOG_VMM_ERR("Failed to initialise VMM\n");
         return false;
     }
@@ -109,8 +100,25 @@ bool guest_arch_init(void)
         return false;
     }
 
+    char *cmdline;
+    /* Reading a TSC does not cause a VM Exit, but the HPET does. On QEMU, the nested virtualisation overhead
+     * is too high, leading to Linux's watchdog timer complaining:
+     * [    3.568257] clocksource: Watchdog hpet read timed out. Readout sequence took: 57800ns
+     * [    4.064535] clocksource: Watchdog hpet read timed out. Readout sequence took: 62000ns
+     * [    9.064695] watchdog_print_freq_timeout: 7 callbacks suppressed
+     * [    9.066802] clocksource: Watchdog hpet read timed out. Readout sequence took: 217500ns
+     * [    9.568591] clocksource: Watchdog hpet read timed out. Readout sequence took: 72900ns
+     *
+     * So lets turn off the TSC watchdog if the VMM detects that it is running on QEMU. This is sound because
+     * the virtual HPET time is derived from the TSC, and this problem doesn't manifest on hardware.
+     */
+    if (hypervisor_present()) {
+        cmdline = GUEST_CMDLINE_QEMU;
+    } else {
+        cmdline = GUEST_CMDLINE_HW;
+    }
     if (!linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_initrd_image, initrd_size,
-                            _guest_dsdt_aml, dsdt_aml_size, GUEST_CMDLINE, &initial_regs, &linux_setup)) {
+                            _guest_dsdt_aml, dsdt_aml_size, cmdline, &initial_regs, &linux_setup)) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return false;
     }

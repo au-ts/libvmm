@@ -33,7 +33,7 @@ struct guest_pci_init {
 
 #if defined(CONFIG_ARCH_X86_64)
 typedef struct guest {
-    uint64_t tsc_hz;
+    uint64_t host_tsc_hz;
 
     size_t guest_ram_regions_len;
     struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
@@ -42,9 +42,8 @@ typedef struct guest {
 typedef struct arch_guest_init {
     /* Is Boot Strap Processor? */
     bool bsp;
-    /* Channel to a timer driver to measure the host CPU's TSC frequency
-     * if it cannot be inferred from CPUID. */
-    microkit_channel timer_ch;
+
+    uint64_t host_tsc_hz;
 
     /* HVA to the "virtual APIC" page for Intel APICv operation. */
     uintptr_t apicv_hva;
