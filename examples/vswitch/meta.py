@@ -7,6 +7,9 @@ from pathlib import Path
 from acacia import (
     Arch,
     DeviceTreeBlob,
+    IrqIoapic,
+    Map,
+    MemoryRegion,
     ProtectionDomain,
     SchedulingProperties,
     System,
@@ -17,6 +20,39 @@ from acacia_sddf import BOARDS, Board, sDDFEthernet, sDDFSerial
 from acacia_libvmm import LibvmmVirtMachine
 
 NUM_CLIENT_VMS = 4
+
+# @billn very hacky, resolve properly once PCI driver is merged in sDDF
+# these need to match what the driver hardcoded
+X86_VIRTIO_NET_VQUEUES_PADDR = 0x7A00_0000
+# these need to match what QEMU sets up, check readme for more info
+X86_VIRTIO_NET_PCI_BAR_PADDR = 0xFEBF_C000
+X86_VIRTIO_NET_PCI_IRQ = 10
+
+X86_GUEST_RAM_SIZE = 0x1000_0000
+
+
+def x86_virtio_net(sdf: System, eth_driver: ProtectionDomain):
+    hw_net_rings = MemoryRegion(
+        sdf, "hw_net_rings", 0x10000, paddr=X86_VIRTIO_NET_VQUEUES_PADDR, cached=False
+    )
+    hw_net_rings_map = Map(hw_net_rings, 0x7000_0000, "rw")
+    eth_driver.add_map(hw_net_rings_map)
+
+    virtio_net_regs = MemoryRegion(
+        sdf, "virtio_net_regs", 0x4000, paddr=X86_VIRTIO_NET_PCI_BAR_PADDR, cached=False
+    )
+    virtio_net_regs_map = Map(virtio_net_regs, 0x6000_0000, "rw")
+    eth_driver.add_map(virtio_net_regs_map)
+
+    virtio_net_irq = IrqIoapic(
+        ioapic_id=0,
+        pin=X86_VIRTIO_NET_PCI_IRQ,
+        vector=1,
+        id=16,
+        trigger=IrqIoapic.Trigger.LEVEL,
+        polarity=IrqIoapic.Polarity.ACTIVELOW,
+    )
+    eth_driver.add_irq(virtio_net_irq)
 
 
 def generate(
@@ -39,7 +75,11 @@ def generate(
         vm_client = VirtualMachine(name=f"linux{i}", vcpus=[VirtualMachine.VCPU(id=0)])
         vmm_client.add_vm(vm_client)
 
-        libvmm_vms.append(LibvmmVirtMachine(sdf, vmm=vmm_client, guest_dtb=client_dtb))
+        libvmm_vm = LibvmmVirtMachine(sdf, vmm=vmm_client, guest_dtb=client_dtb)
+        if board.name == "x86_64_generic_vtx":
+            libvmm_vm.add_x86_ram(X86_GUEST_RAM_SIZE)
+
+        libvmm_vms.append(libvmm_vm)
 
     # Serial subsystem
     serial = sDDFSerial(
@@ -71,6 +111,9 @@ def generate(
         virt_rx_prio=99,
         vswitch=vswitch,
     )
+
+    if board.name == "x86_64_generic_vtx":
+        x86_virtio_net(sdf, ethernet.driver)
 
     for i in range(NUM_CLIENT_VMS):
         client_copier = ProtectionDomain(

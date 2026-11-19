@@ -13,7 +13,6 @@ MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
 SDDF_INCLUDE := $(SDDF)/include/sddf
 UTIL := $(SDDF)/util
 
-TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER)
 SERIAL_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
 ETH_DRIVER := $(SDDF)/drivers/network/$(ETH_DRIVER)
 SERIAL_COMPONENTS := $(SDDF)/serial/components
@@ -29,7 +28,8 @@ SDDF_CUSTOM_LIBC := 1
 TOOLCHAIN ?= clang
 SUPPORTED_BOARDS := \
 	qemu_virt_aarch64 \
-	maaxboard
+	maaxboard \
+	x86_64_generic_vtx
 
 SYSTEM_FILE := vswitch.system
 IMAGE_FILE := loader.img
@@ -72,12 +72,8 @@ else
 $(error Unsupported architecture $(ARCH))
 endif
 
-IMAGES = client_vmm.elf timer_driver.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
+IMAGES = client_vmm.elf serial_driver.elf serial_virt_tx.elf serial_virt_rx.elf \
 	network_virt_rx.elf network_virt_tx.elf eth_driver.elf network_copy.elf network_vswitch.elf
-
-ifeq ($(ARCH),x86_64)
-IMAGES += timer_driver.elf
-endif
 
 CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
@@ -111,13 +107,6 @@ else
 	PYTHONPATH=$(SDDF):$(LIBVMM):$$PYTHONPATH $(PYTHON) $(METAPROGRAM) --sddf $(SDDF) --board $(MICROKIT_BOARD) --dtb $(DTB) --client-dtb $(CLIENT_DTB) --output . --sdf $(SYSTEM_FILE)
 endif
 
-ifeq ($(ARCH),x86_64)
-	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=client_vmm0_timer_client_config.data client_vmm0.elf
-	$(OBJCOPY) --update-section .timer_client_config=client_vmm1_timer_client_config.data client_vmm1.elf
-	$(OBJCOPY) --update-section .timer_client_config=client_vmm2_timer_client_config.data client_vmm2.elf
-	$(OBJCOPY) --update-section .timer_client_config=client_vmm3_timer_client_config.data client_vmm3.elf
-endif
 	$(OBJCOPY) --update-section .device_resources=serial_driver_device_resources.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_driver_config=serial_driver_serial_driver_config.data serial_driver.elf
 	$(OBJCOPY) --update-section .serial_virt_rx_config=serial_virt_rx_serial_virt_rx_config.data serial_virt_rx.elf
