@@ -98,7 +98,7 @@ bool vgic_register_irq(size_t vcpu_id, int virq_num, virq_ack_fn_t ack_fn, void 
 
 bool vgic_inject_irq(size_t vcpu_id, int irq)
 {
-    LOG_IRQ("(vCPU %d) injecting IRQ %d\n", vcpu_id, irq);
+    LOG_IRQ("(vCPU %zu) injecting IRQ %d\n", vcpu_id, irq);
 
     return vgic_dist_set_pending_irq(&vgic, vcpu_id, irq);
 }
