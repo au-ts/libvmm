@@ -80,10 +80,10 @@ ifeq ($(ARCH),x86_64)
 IMAGES += timer_driver.elf
 endif
 
-CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
+CHECK_FLAGS_BOARD_MD5 := .libvmm_board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
 $(CHECK_FLAGS_BOARD_MD5):
-	-rm -f .board_cflags-*
+	-rm -f .libvmm_board_cflags-*
 	touch $@
 
 all: ${IMAGE_FILE}
