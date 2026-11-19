@@ -105,9 +105,6 @@ endif
 ifeq ($(MICROKIT_BOARD), maaxboard)
 	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
 	$(OBJCOPY) --update-section .timer_client_config=blk_driver_timer_client_config.data blk_driver.elf
-else ifeq ($(ARCH),x86_64)
-	$(OBJCOPY) --update-section .device_resources=timer_driver_device_resources.data timer_driver.elf
-	$(OBJCOPY) --update-section .timer_client_config=client_vmm_timer_client_config.data client_vmm.elf
 endif
 	$(OBJCOPY) --update-section .device_resources=blk_driver_device_resources.data blk_driver.elf
 	$(OBJCOPY) --update-section .blk_driver_config=blk_driver_blk_driver_config.data blk_driver.elf

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <libvmm/guest.h>
 #include <libvmm/guest_ram.h>
+#include <libvmm/arch/x86_64/tsc.h>
 
 #define VMM_MAGIC_LEN 4
 static const char VMM_MAGIC[VMM_MAGIC_LEN] = { 'v', 'm', 'm', 0x1 };
@@ -85,6 +86,7 @@ typedef struct vmm_config {
     /* vCPU IDs are always 0 to num_vcpus - 1 */
     uint8_t num_vcpus;
     /* Begin x86 guest only fields */
+    seL4_BootInfoHeader *tsc_bootinfo_mr;
     uint8_t num_ioports;
     vmm_config_ioport_t ioports[VMM_MAX_IOPORTS];
     /* End x86 guest only fields */
@@ -134,6 +136,8 @@ static inline bool vmm_config_fill_guest_init(const vmm_config_t *config, arch_g
 
 #if defined(CONFIG_ARCH_ARM)
     args->num_vcpus = config->num_vcpus;
+#elif defined(CONFIG_ARCH_X86)
+    args->host_tsc_hz = tsc_hz_from_bootinfo(config->tsc_bootinfo_mr);
 #endif
 
     return true;

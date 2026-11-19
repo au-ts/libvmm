@@ -27,13 +27,19 @@ guest_t guest;
 
 bool guest_init(arch_guest_init_t init_args)
 {
+    if (init_args.host_tsc_hz == 0) {
+        LOG_VMM_ERR("Host TSC frequency must be given\n");
+        return false;
+    }
+    guest.host_tsc_hz = init_args.host_tsc_hz;
+
     if (init_args.num_guest_ram_regions == 0) {
-        LOG_VMM_ERR("number of guest RAM regions must be greater than zero");
+        LOG_VMM_ERR("number of guest RAM regions must be greater than zero\n");
         return false;
     }
 
     if (init_args.num_guest_ram_regions > GUEST_MAX_RAM_REGIONS) {
-        LOG_VMM_ERR("number of guest RAM regions (%lu) is more than maximum (%d)", init_args.num_guest_ram_regions,
+        LOG_VMM_ERR("number of guest RAM regions (%lu) is more than maximum (%d)\n", init_args.num_guest_ram_regions,
                     GUEST_MAX_RAM_REGIONS);
         return false;
     }
@@ -46,7 +52,7 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise guest time library */
-    if (!initialise_guest_time(init_args.timer_ch)) {
+    if (!initialise_guest_time()) {
         LOG_VMM_ERR("failed to initialise guest time keeper.\n");
         return false;
     }

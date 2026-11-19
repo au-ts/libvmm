@@ -162,9 +162,6 @@ def generate(
 
         libvmm_vm.add_x86_ram(X86_GUEST_RAM_SIZE)
 
-        timer = sDDFTimer(sdf, board.timer.compatible, board.timer.node_path)
-        timer.add_client(libvmm_vm.vmm)
-
     out_file = f"{output_dir}/{sdf_file}"
     sdf.make_config_structs(Path(output_dir))
     print(f"Saving to {out_file}")

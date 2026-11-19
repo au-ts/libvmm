@@ -74,6 +74,8 @@ X86_IOPORT_SPACE_SIZE = 0x1_0000
 
 # One MR for the physical GIC vCPU interface, shared by every VMM in the system.
 GIC_VCPU_MR_NAME = "gic_vcpu"
+# Same idea for the x86 TSC frequency MR to be filled from kernel bootinfo
+X86_TSC_FREQ_BOOTINFO_MR_NAME = "tsc_freq_bootinfo"
 
 
 class LibvmmVirtMachine(Subsystem):
@@ -107,6 +109,9 @@ class LibvmmVirtMachine(Subsystem):
 
         if guest_dtb is not None:
             self._configure_from_guest_dtb(one_to_one_ram)
+
+        if sdf.arch.is_x86():
+            self._map_x86_tsc_boot_info_mr()
 
     @property
     def vmm(self) -> ProtectionDomain:
@@ -382,6 +387,25 @@ class LibvmmVirtMachine(Subsystem):
 
     def generate_config_structs(self) -> list[ConfigStruct]:
         return [self.config.to_config_struct(target_file=self.vmm.prog_image)]
+
+    # ------------------------------------------------------------------
+    # Setting up a x86 guest
+    # ------------------------------------------------------------------
+
+    def _map_x86_tsc_boot_info_mr(self) -> None:
+        mr = next(
+            (m for m in self.sdf.mrs if m.name == X86_TSC_FREQ_BOOTINFO_MR_NAME), None
+        )
+        if mr is None:
+            mr = MemoryRegion(
+                self.sdf,
+                X86_TSC_FREQ_BOOTINFO_MR_NAME,
+                self.sdf.arch.default_page_size_bytes(),
+                prefill_bootinfo="x86_tsc_freq",
+            )
+
+        map = self.vmm.create_automap(mr, "r")
+        self.config.tsc_bootinfo_mr_hva = map.vaddr
 
     # ------------------------------------------------------------------
     # Setting up a DTB guest

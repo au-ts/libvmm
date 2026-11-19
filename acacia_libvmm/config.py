@@ -120,6 +120,7 @@ class VmmConfig:
     guest_dt_devices: list[GuestDtDevice] = field(default_factory=list)
 
     # x86 guests only.
+    tsc_bootinfo_mr_hva: int = 0
     ioports: list[IOPort] = field(default_factory=list)
 
     def to_config_struct(self, target_file: str) -> ConfigStruct:
@@ -137,6 +138,7 @@ class VmmConfig:
             "num_irqs": len(self.irqs),
             "irqs": [i.to_config() for i in self.irqs],
             "num_vcpus": len(self.vmm.vm.vcpus),
+            "tsc_bootinfo_mr": self.tsc_bootinfo_mr_hva,
             "num_ioports": len(self.ioports),
             "ioports": [_ioport_to_config(io) for io in self.ioports],
         }

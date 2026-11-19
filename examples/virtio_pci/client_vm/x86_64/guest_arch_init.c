@@ -14,7 +14,6 @@
 #include <sddf/blk/config.h>
 #include <sddf/network/queue.h>
 #include <sddf/network/config.h>
-#include <sddf/timer/config.h>
 #include "../../guest_arch_init.h"
 
 /* Device slot of the virtio console device on bus 0.
@@ -32,7 +31,6 @@
 #define VIRTIO_BLK_PCI_IOAPIC_PIN 11
 
 /* Data from Acacia */
-__attribute__((__section__(".timer_client_config"))) timer_client_config_t timer_config;
 extern serial_client_config_t serial_config;
 extern blk_client_config_t blk_config;
 extern net_client_config_t net_config;
@@ -67,7 +65,6 @@ static seL4_VCPUContext initial_regs;
 
 #define GUEST_CMDLINE_HW "debug console=hvc0 loglevel=8"
 #define GUEST_CMDLINE_QEMU "debug console=hvc0 loglevel=8 tsc=nowatchdog"
-#define GUEST_RAM_SIZE 0x10000000
 
 /* Matches DSDT */
 #define PCI_MMIO_APERATURE_GPA 0x40000000
@@ -75,8 +72,6 @@ static seL4_VCPUContext initial_regs;
 
 bool guest_arch_init(void)
 {
-    assert(timer_config_check_magic(&timer_config));
-
     arch_guest_init_t lib_init_args;
     memset(&lib_init_args, 0, sizeof(lib_init_args));
     if (!vmm_config_fill_guest_init(&vmm_config, &lib_init_args)) {
@@ -85,7 +80,6 @@ bool guest_arch_init(void)
     }
 
     lib_init_args.bsp = true;
-    lib_init_args.timer_ch = timer_config.driver_id;
     lib_init_args.pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA;
     lib_init_args.pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE;
 
