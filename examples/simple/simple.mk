@@ -65,10 +65,10 @@ CFLAGS := \
 
 LIBS := libsddf_util_debug.a
 
-CHECK_FLAGS_BOARD_MD5 := .board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
+CHECK_FLAGS_BOARD_MD5 := .libvmm_board_cflags-$(shell echo -- $(CFLAGS) $(BOARD) $(MICROKIT_CONFIG) | shasum | sed 's/ *-//')
 
 $(CHECK_FLAGS_BOARD_MD5):
-	-rm -f .board_cflags-*
+	-rm -f .libvmm_board_cflags-*
 	touch $@
 
 vmm.elf: vmm.o images.o libvmm.a
