@@ -229,10 +229,10 @@ uint64_t fault_get_data(seL4_UserContext *regs, uint64_t fsr)
 {
     /* Get register opearand */
     int rt = get_rt(fsr);
-
     uint64_t data = *decode_rt(rt, regs);
+    uint64_t mask = fault_get_data_mask(0, fsr);
 
-    return data;
+    return data & mask;
 }
 
 uint64_t fault_emulate(seL4_UserContext *regs, uint64_t reg, uint64_t addr, uint64_t fsr, uint64_t reg_val)
