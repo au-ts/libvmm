@@ -4,8 +4,21 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-ip link set eth0 up
-udhcpc
+start() {
+    ip link set eth0 up
+    udhcpc
 
-# Set the time via NTP so that HTTPS works
-ntpd -q -n -p 0.pool.ntp.org
+    # Set the time via NTP so that HTTPS works
+    ntpd -q -n -p 0.pool.ntp.org
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        ;;
+    *)
+        exit 1
+        ;;
+esac
