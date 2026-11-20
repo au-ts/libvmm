@@ -10,14 +10,6 @@ LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
 LIBVMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-SDDF_INCLUDE := $(SDDF)/include/sddf
-UTIL := $(SDDF)/util
-
-TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER)
-SERIAL_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
-ETH_DRIVER := $(SDDF)/drivers/network/$(ETH_DRIVER)
-SERIAL_COMPONENTS := $(SDDF)/serial/components
-NET_COMPONENTS := $(SDDF)/network/components
 
 BOARD_DIR := $(MICROKIT_SDK)/board/$(MICROKIT_BOARD)/$(MICROKIT_CONFIG)
 CLIENT_VM = $(VSWITCH_EXAMPLE)/client_vm/$(ARCH)
