@@ -21,9 +21,6 @@ __attribute__((__section__(".blk_client_config"))) blk_client_config_t blk_confi
 __attribute__((__section__(".net_client_config"))) net_client_config_t net_config;
 __attribute__((__section__(".vmm_config"))) vmm_config_t vmm_config;
 
-/* RAM base in guest physical address space depends on what's defined in your DTB. */
-#define GUEST_RAM_START_GPA 0x40000000
-
 /* Data for the guest's kernel image. */
 extern char _guest_kernel_image[];
 extern char _guest_kernel_image_end[];
@@ -33,8 +30,6 @@ extern char _guest_dtb_image_end[];
 /* Data for the initial RAM disk to be passed to the kernel. */
 extern char _guest_initrd_image[];
 extern char _guest_initrd_image_end[];
-/* Microkit will set this variable to the start of the guest RAM memory region. */
-uintptr_t guest_ram_vaddr;
 
 /* Virtio Console */
 serial_queue_handle_t serial_rx_queue;
@@ -58,14 +53,13 @@ void init(void)
     assert(vmm_config_check_magic(&vmm_config));
     assert(net_config_check_magic(&net_config));
 
-    arch_guest_init_t args = {
-        .num_vcpus = 1,
-        .num_guest_ram_regions = 1,
-        .guest_ram_regions = { (struct guest_ram_region) {
-            .gpa_start = GUEST_RAM_START_GPA, .size = vmm_config.ram_size, .vmm_vaddr = (void *)vmm_config.ram } },
-        .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
-    };
-    bool success = guest_init(args);
+    arch_guest_init_t lib_init_args;
+    memset(&lib_init_args, 0, sizeof(lib_init_args));
+    if (!vmm_config_fill_guest_init(&vmm_config, &lib_init_args)) {
+        LOG_VMM_ERR("Invalid VMM config\n");
+        return;
+    }
+    bool success = guest_init(lib_init_args);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise guest\n");
         return;
@@ -86,34 +80,29 @@ void init(void)
     size_t dtb_size = _guest_dtb_image_end - _guest_dtb_image;
     size_t initrd_size = _guest_initrd_image_end - _guest_initrd_image;
     uintptr_t kernel_pc = linux_setup_images((uintptr_t)_guest_kernel_image, kernel_size, (uintptr_t)_guest_dtb_image,
-                                             vmm_config.dtb, dtb_size, (uintptr_t)_guest_initrd_image,
-                                             vmm_config.initrd, initrd_size);
+                                             vmm_config.dtb_gpa, dtb_size, (uintptr_t)_guest_initrd_image,
+                                             vmm_config.initrd_gpa, initrd_size);
     if (!kernel_pc) {
         LOG_VMM_ERR("Failed to initialise guest images\n");
         return;
     }
 
-    /* Find the details of VirtIO console, net and block devices from sdfgen */
-    int console_vdev_idx = -1;
-    int blk_vdev_idx = -1;
-    int net_vdev_idx = -1;
-    assert(vmm_config.num_virtio_mmio_devices == 3);
-    for (int i = 0; i < vmm_config.num_virtio_mmio_devices; i += 1) {
-        switch (vmm_config.virtio_mmio_devices[i].type) {
-        case VIRTIO_DEVICE_ID_CONSOLE:
-            console_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_BLOCK:
-            blk_vdev_idx = i;
-            break;
-        case VIRTIO_DEVICE_ID_NET:
-            net_vdev_idx = i;
-            break;
-        }
+    /* Find the details of VirtIO console, net and block devices from the build time tooling (Acacia) */
+    const vmm_config_guest_dt_device_t *console_vdev = vmm_config_find_dt_dev_from_name(&vmm_config, "virtio-console");
+    if (!console_vdev) {
+        LOG_VMM_ERR("Could not find virtIO MMIO console device details\n");
+        return;
     }
-    assert(console_vdev_idx != -1);
-    assert(blk_vdev_idx != -1);
-    assert(net_vdev_idx != -1);
+    const vmm_config_guest_dt_device_t *blk_vdev = vmm_config_find_dt_dev_from_name(&vmm_config, "virtio-blk");
+    if (!blk_vdev) {
+        LOG_VMM_ERR("Could not find virtIO MMIO block device details\n");
+        return;
+    }
+    const vmm_config_guest_dt_device_t *net_vdev = vmm_config_find_dt_dev_from_name(&vmm_config, "virtio-net");
+    if (!net_vdev) {
+        LOG_VMM_ERR("Could not find virtIO MMIO net device details\n");
+        return;
+    }
 
     serial_queue_init(&serial_rx_queue, serial_config.rx.queue.vaddr, serial_config.rx.data.size,
                       serial_config.rx.data.vaddr);
@@ -121,20 +110,16 @@ void init(void)
                       serial_config.tx.data.vaddr);
 
     /* Initialise virtIO console device */
-    success = virtio_mmio_console_init(
-        &virtio_console, vmm_config.virtio_mmio_devices[console_vdev_idx].base,
-        vmm_config.virtio_mmio_devices[console_vdev_idx].size,
-        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[console_vdev_idx].irq), &serial_rx_queue,
-        &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
+    success = virtio_mmio_console_init(&virtio_console, console_vdev->gpa_base, console_vdev->size,
+                                       ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, console_vdev->irq), &serial_rx_queue,
+                                       &serial_tx_queue, serial_config.tx.id, serial_config.rx.id);
     assert(success);
 
     /* Initialise virtIO block device */
-    success = virtio_mmio_blk_init(
-        &virtio_blk, vmm_config.virtio_mmio_devices[blk_vdev_idx].base,
-        vmm_config.virtio_mmio_devices[blk_vdev_idx].size,
-        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[blk_vdev_idx].irq),
-        (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue, blk_config.virt.num_buffers,
-        blk_config.virt.id);
+    success = virtio_mmio_blk_init(&virtio_blk, blk_vdev->gpa_base, blk_vdev->size,
+                                   ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, blk_vdev->irq),
+                                   (uintptr_t)blk_config.data.vaddr, blk_config.data.size, storage_info, &blk_queue,
+                                   blk_config.virt.num_buffers, blk_config.virt.id);
     assert(success);
 
     /* Initialise virtIO net device */
@@ -151,16 +136,14 @@ void init(void)
     csum_offload = false;
 #endif
 
-    success = virtio_mmio_net_init(
-        &virtio_net, vmm_config.virtio_mmio_devices[net_vdev_idx].base,
-        vmm_config.virtio_mmio_devices[net_vdev_idx].size,
-        ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, vmm_config.virtio_mmio_devices[net_vdev_idx].irq), &net_rx_queue,
-        &net_tx_queue, (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr, net_config.rx.id,
-        net_config.tx.id, net_config.mac_addr.addr, csum_offload);
+    success = virtio_mmio_net_init(&virtio_net, net_vdev->gpa_base, net_vdev->size,
+                                   ARM_GIC_IRQ_ROUTE(GUEST_BOOT_VCPU_ID, net_vdev->irq), &net_rx_queue, &net_tx_queue,
+                                   (uintptr_t)net_config.rx_data.vaddr, (uintptr_t)net_config.tx_data.vaddr,
+                                   net_config.rx.id, net_config.tx.id, net_config.mac_addr.addr, csum_offload);
     assert(success);
 
     /* Finally start the guest */
-    guest_start(kernel_pc, vmm_config.dtb, vmm_config.initrd);
+    guest_start(kernel_pc, vmm_config.dtb_gpa, vmm_config.initrd_gpa);
     LOG_VMM("%s is ready\n", microkit_name);
 }
 

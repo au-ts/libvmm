@@ -185,15 +185,15 @@ bool emulate_cpuid(seL4_VCPUContext *vctx)
     case 0x15: /* "Time Stamp Counter and Nominal Core Crystal Clock" */
         vctx->eax = 1; /* Making ratio between Crystal and TSC 1-to-1 */
         vctx->ebx = 1;
-        vctx->ecx = guest.tsc_hz;
+        vctx->ecx = guest.host_tsc_hz;
         vctx->edx = 0;
         break;
 
     case 0x16: /* "Processor Frequency Information Leaf" */
         /* CPU base, max and bus frequency in MHz */
-        vctx->eax = guest.tsc_hz / 1000000;
-        vctx->ebx = guest.tsc_hz / 1000000;
-        vctx->ecx = guest.tsc_hz / 1000000;
+        vctx->eax = guest.host_tsc_hz / 1000000;
+        vctx->ebx = guest.host_tsc_hz / 1000000;
+        vctx->ecx = guest.host_tsc_hz / 1000000;
         vctx->edx = 0;
         break;
 

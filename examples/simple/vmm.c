@@ -89,6 +89,11 @@ extern char _guest_dtb_image_end[];
 
 /* Microkit will set this variable to the start of the guest RAM memory region. */
 uintptr_t guest_ram_vaddr;
+/* Same idea but for the TSC frequency bootinfo MR. The information comes from the kernel
+ * then get patched here. */
+#if defined(CONFIG_ARCH_X86_64)
+seL4_BootInfoHeader *tsc_bootinfo_vaddr;
+#endif
 
 void init(void)
 {
@@ -99,7 +104,7 @@ void init(void)
         .pci_init.mmio_aperature_size = 0, /* Disable the virtual PCI bus */
 #if defined(CONFIG_ARCH_X86_64)
         .bsp = true,
-        .timer_ch = TIMER_DRV_CH,
+        .host_tsc_hz = tsc_hz_from_bootinfo(tsc_bootinfo_vaddr),
 #elif defined(CONFIG_ARCH_ARM)
         .num_vcpus = 1,
 #endif
