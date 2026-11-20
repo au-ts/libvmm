@@ -12,16 +12,6 @@ LIBVMM_DOWNLOADS := https://trustworthy.systems/Downloads/libvmm/images/
 
 LIBVMM_TOOLS := $(LIBVMM)/tools
 MICROKIT_TOOL ?= $(MICROKIT_SDK)/bin/microkit
-SDDF_INCLUDE := $(SDDF)/include/sddf
-UTIL := $(SDDF)/util
-
-TIMER_DRIVER := $(SDDF)/drivers/timer/$(TIMER_DRIVER)
-SERIAL_DRIVER := $(SDDF)/drivers/serial/$(UART_DRIVER)
-BLK_DRIVER := $(SDDF)/drivers/blk/$(BLK_DRIVER)
-ETH_DRIVER := $(SDDF)/drivers/network/$(ETH_DRIVER)
-SERIAL_COMPONENTS := $(SDDF)/serial/components
-BLK_COMPONENTS := $(SDDF)/blk/components
-NET_COMPONENTS := $(SDDF)/network/components
 
 CLIENT_VM = $(VIRTIO_EXAMPLE)/client_vm/$(ARCH)
 CLIENT_DTB := client_vm/vm.dtb
