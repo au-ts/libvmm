@@ -18,8 +18,6 @@ from ci import common, matrix
 
 
 async def test(backend: HardwareBackend, test_config: common.TestConfig):
-    # The timeout is double of other tests because we are running 4 VCPUs
-    # on 1 physical CPU due to https://github.com/seL4/seL4/issues/1645
     async with asyncio.timeout(60):
         await wait_for_output(backend, b"smp: Brought up 1 node, 4 CPUs")
         await wait_for_output(backend, b"SMP: Total of 4 processors activated.")
