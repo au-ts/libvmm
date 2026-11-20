@@ -256,7 +256,7 @@ struct gic_redist_map redist[GUEST_MAX_NUM_VCPUS];
 struct gic_redist_sgi_ppi_map redist_sgi_ppi[GUEST_MAX_NUM_VCPUS];
 vgic_reg_t vgic_regs;
 
-void vgic_init()
+void vgic_init(uint64_t gic_dist_gpa, uint64_t gic_redist_gpa)
 {
     // @ivanv: audit
     for (int i = 0; i < NUM_SLOTS_SPI_VIRQ; i++) {
@@ -277,6 +277,8 @@ void vgic_init()
         vgic_regs.sgi[vcpu] = &redist_sgi_ppi[vcpu];
     }
 
+    vgic.gic_dist_gpa = gic_dist_gpa;
+    vgic.gic_redist_gpa = gic_redist_gpa;
     vgic.registers = &vgic_regs;
     vgic_regs.dist = &dist;
 

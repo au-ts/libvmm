@@ -55,7 +55,7 @@ bool guest_init(arch_guest_init_t init_args)
     }
 
     /* Initialise the virtual GIC driver */
-    bool success = virq_controller_init();
+    bool success = virq_controller_init(init_args.gic_dist_gpa, init_args.gic_redist_gpa);
     if (!success) {
         LOG_VMM_ERR("Failed to initialise virtual interrupt controller\n");
         return false;

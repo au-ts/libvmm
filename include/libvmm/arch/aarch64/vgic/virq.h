@@ -89,6 +89,10 @@ typedef struct vgic_vcpu {
 
 /* GIC global interrupt context */
 typedef struct vgic {
+    uint64_t gic_dist_gpa;
+#if defined(GIC_V3)
+    uint64_t gic_redist_gpa;
+#endif
     /* virtual registers */
     void *registers;
     /* registered global interrupts (SPI) */

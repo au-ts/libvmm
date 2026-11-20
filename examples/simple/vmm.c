@@ -18,21 +18,29 @@
 
 /* For ARM, these constants depends on what's defined in your DTB. */
 #if defined(BOARD_qemu_virt_aarch64)
-#define GUEST_RAM_START_GPA 0x40000000
-#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_RAM_START_GPA     0x40000000
+#define GUEST_DTB_GPA           0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4d000000
+#define GUEST_GIC_DIST_GPA      0x8000000
+#define GUEST_GIC_REDIST_GPA    0
 #elif defined(BOARD_odroidc4)
-#define GUEST_RAM_START_GPA 0x20000000
-#define GUEST_DTB_GPA 0x2f000000
+#define GUEST_RAM_START_GPA     0x20000000
+#define GUEST_DTB_GPA           0x2f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x2d000000
+#define GUEST_GIC_DIST_GPA      0xffc01000
+#define GUEST_GIC_REDIST_GPA    0
 #elif defined(BOARD_maaxboard)
-#define GUEST_RAM_START_GPA 0x40000000
-#define GUEST_DTB_GPA 0x4f000000
+#define GUEST_RAM_START_GPA     0x40000000
+#define GUEST_DTB_GPA           0x4f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x4c000000
+#define GUEST_GIC_DIST_GPA      0x38800000
+#define GUEST_GIC_REDIST_GPA    0x38880000
 #elif defined(BOARD_rpi4b_1gb)
-#define GUEST_RAM_START_GPA 0x10000000
-#define GUEST_DTB_GPA 0x1f000000
+#define GUEST_RAM_START_GPA     0x10000000
+#define GUEST_DTB_GPA           0x1f000000
 #define GUEST_INIT_RAM_DISK_GPA 0x1c000000
+#define GUEST_GIC_DIST_GPA      0xFF841000
+#define GUEST_GIC_REDIST_GPA    0
 #elif defined(BOARD_x86_64_generic_vtx)
 #define TIMER_DRV_CH 10
 #define GUEST_RAM_START_GPA LOW_RAM_START_GPA
@@ -42,8 +50,10 @@
 #define GUEST_RAM_START_GPA     0x800000000
 #define GUEST_DTB_GPA           0x80E000000
 #define GUEST_INIT_RAM_DISK_GPA 0x80D000000
+#define GUEST_GIC_DIST_GPA      0xF9010000
+#define GUEST_GIC_REDIST_GPA    0
 #else
-#error Need to define guest kernel image address and DTB address
+#error Need to define guest kernel image, DTB and GIC addresses
 #endif
 
 /* For simplicity we just enforce the serial IRQ channel number to be the same
@@ -102,6 +112,8 @@ void init(void)
         .timer_ch = TIMER_DRV_CH,
 #elif defined(CONFIG_ARCH_ARM)
         .num_vcpus = 1,
+        .gic_dist_gpa = GUEST_GIC_DIST_GPA,
+        .gic_redist_gpa = GUEST_GIC_REDIST_GPA,
 #endif
         .num_guest_ram_regions = 1,
         .guest_ram_regions = { (struct guest_ram_region) {
