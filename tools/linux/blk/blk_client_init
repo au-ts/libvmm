@@ -9,16 +9,38 @@ set -e
 BLOCK_DEV=/dev/vda
 MOUNT_POINT=/mnt
 
-if ! ls "$BLOCK_DEV" >/dev/null;
-then
-    echo "ERROR: virtio block device does not exist!"
-    exit 1
-fi
+start() {
+    if ! ls "$BLOCK_DEV" >/dev/null;
+    then
+        echo "ERROR: virtio block device does not exist!"
+        exit 1
+    fi
 
-if ! mount "$BLOCK_DEV" "$MOUNT_POINT";
-then
-    echo "ERROR: failed to mount $BLOCK_DEV"
-    exit 1
-fi
+    if ! mount "$BLOCK_DEV" "$MOUNT_POINT";
+    then
+        echo "ERROR: failed to mount $BLOCK_DEV"
+        exit 1
+    fi
 
-echo "$BLOCK_DEV" successfully mounted at "$MOUNT_POINT"
+    echo "$BLOCK_DEV" successfully mounted at "$MOUNT_POINT"
+}
+
+stop() {
+    if ! umount "$MOUNT_POINT";
+    then
+        echo "ERROR: failed to umount $BLOCK_DEV"
+        exit 1
+    fi
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    *)
+        exit 1
+        ;;
+esac
