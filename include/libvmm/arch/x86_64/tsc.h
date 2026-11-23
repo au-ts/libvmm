@@ -6,11 +6,14 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdbool.h>
 #include <microkit.h>
 
-/* Determines the host CPU's TSC frequency. First attempt to
-   calculate it from values in the appropriate CPUID leafs. If
-   they aren't enumerated, which happens under QEMU. Measure
-   it with the timer. */
-uint64_t get_host_tsc_hz(microkit_channel timer_ch);
+static inline uint64_t tsc_hz_from_bootinfo(seL4_BootInfoHeader *tsc_bootinfo_mr)
+{
+    if (!tsc_bootinfo_mr || tsc_bootinfo_mr->id != SEL4_BOOTINFO_HEADER_X86_TSC_FREQ
+        || tsc_bootinfo_mr->len < sizeof(*tsc_bootinfo_mr) + sizeof(uint32_t)) {
+        return 0;
+    }
+    uint32_t tsc_mhz = *(uint32_t *)(((uint8_t *)tsc_bootinfo_mr) + sizeof(seL4_BootInfoHeader));
+    return tsc_mhz * 1000000ull;
+}

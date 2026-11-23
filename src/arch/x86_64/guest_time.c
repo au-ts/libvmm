@@ -53,12 +53,8 @@ static struct guest_timekeeping guest_timekeeping;
 
 extern guest_t guest;
 
-// @billn revisit removing timer_ch
-// by implementing "setvar_tsc_freq" or similar in Microkit
-bool initialise_guest_time(microkit_channel timer_ch)
+bool initialise_guest_time(void)
 {
-    guest_timekeeping.timer_ch = timer_ch;
-    guest.tsc_hz = get_host_tsc_hz(timer_ch);
     for (int i = 0; i < MAX_CONCURRENT_TIMEOUT; i++) {
         guest_timekeeping.timeouts[i].valid = false;
     }
@@ -85,7 +81,7 @@ static inline void guest_time_user_error_check(void)
 uint64_t guest_time_tsc_hz(void)
 {
     guest_time_user_error_check();
-    return guest.tsc_hz;
+    return guest.host_tsc_hz;
 }
 
 uint64_t guest_time_tsc_now(void)

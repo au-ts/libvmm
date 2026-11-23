@@ -117,15 +117,16 @@ You will also see that three memory regions (MRs) exist in the system.
 3. `gic_vcpu` for the Generic Interrupt Controller vCPU interface.
 
 ### x86-64
-There are more components involved on x86. The following is what is in the
-QEMU example system, `examples/simple/board/x86_64_generic_vtx/simple.system`:
+The following is what is in the QEMU example system,
+`examples/simple/board/x86_64_generic_vtx/simple.system`:
 
 ```xml
-<memory_region name="hpet_regs" size="0x1000" phys_addr="0xfed00000" />
+<memory_region name="tsc_bootinfo" size="0x1000" prefill_bootinfo="x86_tsc_freq" />
 <memory_region name="guest_ram" size="0x10_000_000" />
 
 <protection_domain name="VMM" priority="0" stack_size="0x2000">
     <program_image path="vmm.elf" />
+    <map mr="tsc_bootinfo" vaddr="0x70000000" perms="r" setvar_vaddr="tsc_bootinfo_vaddr" />
     <map mr="guest_ram" vaddr="0x80000000" perms="rw" setvar_vaddr="guest_ram_vaddr" />
     <virtual_machine name="linux">
         <vcpu id="0"/>
@@ -135,20 +136,9 @@ QEMU example system, `examples/simple/board/x86_64_generic_vtx/simple.system`:
     <ioport id="0" addr="0x3f8" size="8" />
     <irq pin="4" vector="41" id="1" ioapic="0" trigger="edge"/>
 </protection_domain>
-
-<protection_domain name="timer_driver" priority="254" passive="true">
-    <program_image path="timer_driver.elf" />
-    <map mr="hpet_regs" vaddr="0x50000000" perms="rw" cached="false" />
-    <irq pin="2" vector="107" id="0" ioapic="0" trigger="edge" />
-</protection_domain>
-
-<channel>
-    <end pd="timer_driver" id="1" />
-    <end pd="VMM" id="10" notify="false" pp="true" />
-</channel>
 ```
 
-The general structure of the protection domain is the same, but the underlying
+The general structure of the protection domain and system is the same, but the underlying
 implementation details are different. There is only 1 TCB and 1 vCPU object inside
 the VMM protection domain. The VMM switches between guest and non-guest execution
 mode depending on the current state of the virtual machine.
@@ -161,9 +151,9 @@ acceleration is currently being worked on.
 For serial output, we pass through the host's COM1 port (0x3f8) and IRQ
 (conventionally pin 4) to the guest.
 
-You will also see that there is a timer driver for the VMM. This is for the VMM
-to measure the frequency of the CPU's Time Stamp Counter (TSC) in cases where it
-cannot be inferred.
+You will also see that we ask the Microkit tool to patch in the TSC frequency
+as measured/detected by the kernel. This is needed to emulate all the guest
+visible timer devices, which are all driven from the TSC.
 
 ## Guest RAM region
 

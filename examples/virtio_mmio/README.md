@@ -49,7 +49,7 @@ The example currently works on the following platforms:
 ### Metaprogram
 
 Unlike the other examples, this one uses a metaprogram (`meta.py`) with
-the [sdfgen](https://github.com/au-ts/microkit_sdf_gen) tooling to generate the
+the [Acacia](https://github.com/au-ts/microkit_acacia) tooling to generate the
 System Description File (SDF) and other necessary artefacts. Previously,
 SDFs were written manually, along with C headers for sDDF-specific configurations,
 but this approach was tedious and error-prone. With this tooling, we can describe
@@ -61,7 +61,7 @@ In addition to the dependencies outlined in the top-level README, the following
 dependencies are needed:
 * mkfs.fat
 * gdisk
-* sdfgen (for generating the System Description File with a metaprogram).
+* acacia (for generating the System Description File with a metaprogram).
 
 Ensure mkfs.fat is in your `$PATH`
 
@@ -70,30 +70,32 @@ Ensure mkfs.fat is in your `$PATH`
 On apt based Linux distributions run the following commands:
 ```sh
 sudo apt-get install dosfstools gdisk
-pip3 install sdfgen==0.35.0
+pip3 install git+https://github.com/au-ts/microkit_acacia
 ```
 
-If you get error: `externally-managed-environment` when installing via pip, instead run:
+If you get `error: externally-managed-environment` when installing via pip, please
+create a virtual environment to use with libvmm.
 ```sh
-pip3 install --break-system-packages sdfgen==0.35.0
+python3 -m venv YOUR_VENV_NAME
+source ./YOUR_VENV_NAME/bin/activate
+pip3 install git+https://github.com/au-ts/microkit_acacia
 ```
-
-This is sound because the `sdfgen` package does not have any dependencies.
 
 ### macOS
 
 On macOS, you can install the dependencies via Homebrew:
 ```sh
 brew install dosfstools
-pip3 install sdfgen==0.35.0
+pip3 install git+https://github.com/au-ts/microkit_acacia
 ```
 
-If you get error: `externally-managed-environment` when installing via pip, instead run:
+If you get `error: externally-managed-environment` when installing via pip, please
+create a virtual environment to use with libvmm.
 ```sh
-pip3 install --break-system-packages sdfgen==0.35.0
+python3 -m venv YOUR_VENV_NAME
+source ./YOUR_VENV_NAME/bin/activate
+pip3 install git+https://github.com/au-ts/microkit_acacia
 ```
-
-This is sound because the `sdfgen` package does not have any dependencies.
 
 ### Nix
 

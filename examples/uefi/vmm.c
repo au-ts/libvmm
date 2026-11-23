@@ -41,6 +41,9 @@ uintptr_t guest_ram_vaddr;
 uint64_t guest_ram_size;
 uintptr_t guest_flash_vaddr;
 uint64_t guest_flash_size;
+/* Same idea but for the TSC frequency bootinfo MR. The information comes from the kernel
+ * then get patched here. */
+seL4_BootInfoHeader *tsc_bootinfo_vaddr;
 
 /* OVMF expects a standard PC PCI bus, so we just make a small aperature at an arbitrary guest
  * RAM location to trigger libvmm to build a virtual PCI bus. But otherwise this example doesn't
@@ -56,7 +59,7 @@ void init(void)
     arch_guest_init_t args = { .pci_init.mmio_aperature_gpa = PCI_MMIO_APERATURE_GPA,
                                .pci_init.mmio_aperature_size = PCI_MMIO_APERATURE_SIZE,
                                .bsp = true,
-                               .timer_ch = TIMER_DRV_CH,
+                               .host_tsc_hz = tsc_hz_from_bootinfo(tsc_bootinfo_vaddr),
                                .num_guest_ram_regions = 2,
                                .guest_ram_regions = {
                                    (struct guest_ram_region) { .gpa_start = GUEST_RAM_START_GPA,

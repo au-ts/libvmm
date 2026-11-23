@@ -18,7 +18,7 @@ typedef void (*guest_timeout_callback_t)(size_t cookie);
 typedef int guest_timeout_handle_t;
 
 /* Initialises the guest time library. */
-bool initialise_guest_time(microkit_channel timer_ch);
+bool initialise_guest_time(void);
 
 /* Returns the host CPU's TSC frequency as measured or detected. */
 uint64_t guest_time_tsc_hz(void);
