@@ -16,23 +16,6 @@
 #define GIC_V2
 #endif
 
-#if defined(CONFIG_PLAT_QEMU_ARM_VIRT)
-#define GIC_DIST_PADDR      0x8000000UL
-#elif defined(CONFIG_PLAT_ODROIDC4)
-#define GIC_DIST_PADDR      0xffc01000UL
-#elif defined(CONFIG_PLAT_MAAXBOARD)
-#define GIC_DIST_PADDR      0x38800000UL
-#define GIC_REDIST_PADDR    0x38880000UL
-#elif defined(CONFIG_PLAT_ZYNQMP)
-#define GIC_V2
-#define GIC_DIST_PADDR      0xf9010000UL
-#elif defined(CONFIG_PLAT_BCM2711)
-#define GIC_V2
-#define GIC_DIST_PADDR      0xff841000ul
-#else
-#error Need to define GIC addresses
-#endif
-
 #if defined(GIC_V2)
 #define GIC_DIST_SIZE 0x1000
 #elif defined(GIC_V3)
@@ -62,7 +45,11 @@
 #define IRQ_IDX(irq) ((irq) / 32)
 #define IRQ_BIT(irq) (1U << ((irq) % 32))
 
-void vgic_init();
+#if defined(GIC_V2)
+void vgic_init(uint64_t gic_dist_gpa);
+#elif defined(GIC_V3)
+void vgic_init(uint64_t gic_dist_gpa, uint64_t gic_redist_gpa);
+#endif
 
 bool vgic_handle_fault_maintenance(size_t vcpu_id);
 

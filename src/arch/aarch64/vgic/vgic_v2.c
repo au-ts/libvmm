@@ -112,8 +112,9 @@ static void vgic_dist_reset(struct gic_dist_map *gic_dist)
     gic_dist->component_id[3] = 0x000000b1; /* RO */
 }
 
-void vgic_init()
+void vgic_init(uint64_t gic_dist_gpa)
 {
+    assert(gic_dist_gpa);
     memset(&vgic, 0, sizeof(vgic_t));
 
     for (int vcpu = 0; vcpu < GUEST_MAX_NUM_VCPUS; vcpu++) {
@@ -133,6 +134,7 @@ void vgic_init()
         }
     }
 
+    vgic.gic_dist_gpa = gic_dist_gpa;
     vgic.registers = &dist;
     memset(vgic.registers, 0, sizeof(struct gic_dist_map));
     vgic_dist_reset(vgic_get_dist(vgic.registers));

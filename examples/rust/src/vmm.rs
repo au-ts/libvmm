@@ -19,6 +19,7 @@ const GUEST_DTB_GPA: usize = 0x4f000000;
 const GUEST_INIT_RAM_DISK_GPA: usize = 0x4d000000;
 const GUEST_RAM_SIZE: usize = 0x10000000;
 const GUEST_BOOT_VCPU_ID: usize = 0;
+const GUEST_GIC_DIST_GPA: usize = 0x8000000;
 
 /// On the QEMU virt AArch64 platform the UART we are using has an IRQ number of 33.
 const UART_IRQ: usize = 33;
@@ -76,6 +77,8 @@ pub struct guest_pci_init {
 #[repr(C)]
 pub struct arch_guest_init {
     pub num_vcpus: usize,
+    pub gic_dist_gpa: usize,
+    pub gic_redist_gpa: usize,
     pub num_guest_ram_regions: usize,
     pub guest_ram_regions: [guest_ram_region; GUEST_MAX_RAM_REGIONS],
     pub pci_init: guest_pci_init,
@@ -133,6 +136,8 @@ fn init() -> VmmHandler {
         let success = guest_init(arch_guest_init {
             num_vcpus: 1,
             num_guest_ram_regions: 1,
+            gic_dist_gpa: GUEST_GIC_DIST_GPA,
+            gic_redist_gpa: 0,
             guest_ram_regions: [
                 guest_ram_region {
                     gpa_start: GUEST_RAM_START_GPA,

@@ -66,6 +66,8 @@ typedef struct guest {
 typedef struct arch_guest_init {
     size_t num_vcpus;
 
+    uint64_t gic_dist_gpa, gic_redist_gpa;
+
     size_t num_guest_ram_regions;
     struct guest_ram_region guest_ram_regions[GUEST_MAX_RAM_REGIONS];
 
