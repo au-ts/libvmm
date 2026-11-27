@@ -1,10 +1,11 @@
 # Copyright 2025, UNSW
 # SPDX-License-Identifier: BSD-2-Clause
 import argparse
-from typing import Optional
-from board import BOARDS, add_x86_hpet
-from sdfgen import SystemDescription, Sddf, DeviceTree, Vmm
+import sys
 from importlib.metadata import version
+
+from board import BOARDS, add_x86_hpet
+from sdfgen import Sddf, SystemDescription, Vmm
 
 assert version("sdfgen").split(".")[1] == "35", "Unexpected sdfgen version"
 
@@ -216,7 +217,9 @@ def generate(
     )
     blk_system = Sddf.Blk(sdf, None, blk_driver, blk_virt)
     partition = int(args.partition) if args.partition else board.partition
-    blk_system.add_client(vmm_client0, partition=partition, data_size=0x8000000) # 128MiB available for block reqs
+    blk_system.add_client(
+        vmm_client0, partition=partition, data_size=0x8000000
+    )  # 128MiB available for block reqs
     pds = [blk_driver, blk_virt]
     for pd in pds:
         sdf.add_pd(pd)
@@ -284,7 +287,7 @@ if __name__ == "__main__":
 
     if board.name != "x86_64_generic_vtx":
         print("--board must be x86_64_generic_vtx")
-        exit(1)
+        sys.exit(1)
 
     # We don't use the value from sDDF common files so that we have
     # freedom to move memory regions around.
