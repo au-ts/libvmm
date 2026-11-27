@@ -19,6 +19,8 @@ Files:
     docs/assets/virtio_console_example.svg
     examples/virtio-snd/docs/sound-structure.svg
     examples/virtio-snd/docs/virtio-snd.svg
+    examples/windows/docs/uefi_boot.png
+    examples/windows/docs/apicv.patch
 Copyright: UNSW
 License: CC-BY-SA-4.0
 
@@ -40,3 +42,9 @@ Files:
     examples/*/board/*/rootfs.cpio.gz
 Copyright: Buildroot
 License: GPL-2.0-or-later
+
+Files:
+    examples/windows/images/autounattend.xml
+    examples/windows/images/unattend.iso
+Copyright: Christoph Schneegans
+License: MIT
