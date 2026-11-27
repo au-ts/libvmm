@@ -145,8 +145,8 @@ EXAMPLES: dict[str, _ExampleMatrixType] = {
             "x86_64_generic_vtx",
         ],
         "tests_exclude": [
-            { "config": "debug" },
-            { "config": "release" },
+            {"config": "debug"},
+            {"config": "release"},
         ],
     },
 }
