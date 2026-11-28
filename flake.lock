@@ -3,16 +3,16 @@
     "acacia": {
       "flake": false,
       "locked": {
-        "lastModified": 1794972775,
-        "narHash": "sha256-/HwtFleP+6qDXOhov7s6M1xTVHSyqZQOW2KC6cXwlLU=",
+        "lastModified": 1795852255,
+        "narHash": "sha256-EHH59uw4XowhP5OG+L2RUlfb+g52/NinV8lJgw0rY0s=",
         "owner": "au-ts",
         "repo": "microkit_acacia",
-        "rev": "b37117749357cdea905e93da3ed0c4f6052fc75e",
+        "rev": "a006e2cd265a94759eb1320f5f00b40c2800b36e",
         "type": "github"
       },
       "original": {
         "owner": "au-ts",
-        "ref": "main",
+        "ref": "Courtney/ConfigStructRewrite",
         "repo": "microkit_acacia",
         "type": "github"
       }
